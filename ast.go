@@ -4,83 +4,83 @@
 package main
 
 type visitor interface {
-        visitStmtList(stmtlistNode)
-        visitExprList(exprlistNode)
-        visitCond(condNode)
-        visitRegex(regexNode)
-        visitId(idNode)
-        visitCapref(caprefNode)
-        visitString(stringNode)
-        visitBuiltin(builtinNode)
+	visitStmtList(stmtlistNode)
+	visitExprList(exprlistNode)
+	visitCond(condNode)
+	visitRegex(regexNode)
+	visitId(idNode)
+	visitCapref(caprefNode)
+	visitString(stringNode)
+	visitBuiltin(builtinNode)
 }
 
 type node interface {
-        acceptVisitor(visitor)
+	acceptVisitor(visitor)
 }
 
 type stmtlistNode struct {
-        s        *scope
-        children []node
+	s        *scope
+	children []node
 }
 
 func (s stmtlistNode) acceptVisitor(visit visitor) {
-        visit.visitStmtList(s)
+	visit.visitStmtList(s)
 }
 
 type exprlistNode struct {
-        children []node
+	children []node
 }
 
 func (e exprlistNode) acceptVisitor(visit visitor) {
-        visit.visitExprList(e)
+	visit.visitExprList(e)
 }
 
 type condNode struct {
-        cond     node
-        children []node
+	cond     node
+	children []node
 }
 
 func (c condNode) acceptVisitor(visit visitor) {
-        visit.visitCond(c)
+	visit.visitCond(c)
 }
 
 type regexNode struct {
-        pattern string
+	pattern string
 }
 
 func (r regexNode) acceptVisitor(visit visitor) {
-        visit.visitRegex(r)
+	visit.visitRegex(r)
 }
 
 type stringNode struct {
-        text string
+	text string
 }
 
 func (s stringNode) acceptVisitor(visit visitor) {
-        visit.visitString(s)
+	visit.visitString(s)
 }
 
 type idNode struct {
-        name string
+	name string
 }
 
 func (i idNode) acceptVisitor(visit visitor) {
-        visit.visitId(i)
+	visit.visitId(i)
 }
 
 type caprefNode struct {
-        name string
+	name string
 }
 
 func (c caprefNode) acceptVisitor(visit visitor) {
-        visit.visitCapref(c)
+	visit.visitCapref(c)
 }
 
 type builtinNode struct {
-        name     string
-        children []node
+	name     string
+	children []node
 }
 
 func (b builtinNode) acceptVisitor(visit visitor) {
-        visit.visitBuiltin(b)
+	visit.visitBuiltin(b)
 }
