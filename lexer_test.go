@@ -32,11 +32,12 @@ var lexerTests = []lexerTest{
 		Token{COMMA, ",", Position{0, 4, 4}},
 		Token{EOF, "", Position{0, 5, 5}}}},
 	{"keywords",
-		"inc\ntag\nstrptime\n", []Token{
+		"inc\nset\ntag\nstrptime\n", []Token{
 			Token{BUILTIN, "inc", Position{0, 0, 2}},
-			Token{BUILTIN, "tag", Position{1, 0, 2}},
-			Token{BUILTIN, "strptime", Position{2, 0, 7}},
-			Token{EOF, "", Position{3, 0, 0}}}},
+			Token{BUILTIN, "set", Position{1, 0, 2}},
+			Token{BUILTIN, "tag", Position{2, 0, 2}},
+			Token{BUILTIN, "strptime", Position{3, 0, 7}},
+			Token{EOF, "", Position{4, 0, 0}}}},
 	{"identifer", "a be foo\nquux line-count", []Token{
 		Token{ID, "a", Position{0, 0, 0}},
 		Token{ID, "be", Position{0, 2, 3}},

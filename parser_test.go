@@ -46,22 +46,23 @@ var kMtailPrograms = []validProgram{
 	// 		"  inc(foo)\n" +
 	// 		"}"},
 
-	// {"nested match conditions",
-	// 	"/match(\\d+)/ {\n" +
-	// 		"  inc(foo, $1)\n" +
-	// 		"  /^bleh (\\S+)/ {\n" +
-	// 		"    inc(bar)\n" +
-	// 		"    inc($1)\n" +
-	// 		"  }\n" +
-	// 		"}\n"},
+	{"nested match conditions",
+		"/match(\\d+)/ {\n" +
+			"  inc(foo, $1)\n" +
+			"  /^bleh (\\S+)/ {\n" +
+			"    inc(bar)\n" +
+			"    inc($1)\n" +
+			"  }\n" +
+			"}\n"},
 
-	// {"nested scope",
-	// 	"/fo(o)/ {\n" +
-	// 		"  inc($1)\n" +
-	// 		"  /bar(xxx)/ {\n" +
-	// 		"    inc($1, $1)\n" +
-	// 		"  }\n" +
-	// 		"}\n"},
+	{"nested scope",
+		"/fo(o)/ {\n" +
+			"  inc($1)\n" +
+			"  /bar(xxx)/ {\n" +
+			"    inc($1, $1)\n" +
+			"    set(foo, $1)\n" +
+			"  }\n" +
+			"}\n"},
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -123,12 +124,10 @@ var InvalidPrograms = []InvalidProgram{
 		[]string{"invalid regex 2:1:1-14: error parsing regexp: invalid named capture: `(?P<x.)`",
 			"invalid regex 2:2:1: syntax error"}},
 
-	// {"invalid regex 3",
-	// 	"/blurg(?P<x>[[:alph:]])/\n",
-	// 	//[]string{"Invalid regular expression: invalid character class range: [:alph:]\n" +
-	// 	//"/blurg(?P<x>[[:alph:]])/\n" +
-	// 	//"             ^------^"},
-	// 	[]string{"invalid regex 3:2:1: syntax error"}},
+	{"invalid regex 3",
+		"/blurg(?P<x>[[:alph:]])/\n",
+		[]string{"invalid regex 3:1:1-24: error parsing regexp: invalid character class range: `[:alph:]`",
+			"invalid regex 3:2:1: syntax error"}},
 
 	{"unterminated string",
 		" inc(\"foo) }\n",
@@ -143,24 +142,17 @@ var InvalidPrograms = []InvalidProgram{
 	// 		"               ^----^"},
 	// },
 
-	// {"out of bounds capref",
-	// 	"/(blyurg)/  inc($2) }\n",
-	// 	[]string{"Capture group undefined by prior regular expression " +
-	// 		"in this or outer scopes: $2\n" +
-	// 		"/(blyurg)/  inc($2) }\n" +
-	// 		"                 ^^"},
-	// },
+	{"out of bounds capref",
+		"/(blyurg)/ { inc($2) }\n",
+		[]string{"out of bounds capref:1:18-19: Capture group $2 not defined by prior regular expression " +
+			"in this or outer scopes"},
+	},
 }
 
 func TestInvalidPrograms(t *testing.T) {
 	for _, tc := range InvalidPrograms {
 		p := NewParser(tc.name, strings.NewReader(tc.program))
 		EmtailParse(p)
-
-		// if p.root != nil {
-		// 	t.Errorf("%s parsed unexpectedly", tc.name)
-		// 	continue
-		// }
 
 		if !reflect.DeepEqual(tc.errors, p.errors) {
 			t.Errorf("Incorrect error for %s\n\texpected: %q\n\treceived: %q\n", tc.name, tc.errors, p.errors)

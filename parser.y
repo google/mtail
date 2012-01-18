@@ -81,7 +81,7 @@ stmt
   }
   | BUILTIN LPAREN opt_expr_list RPAREN
   {
-      $$ = &builtinNode{$1, []node{$3}}
+    $$ = &builtinNode{$1, *$3.(*exprlistNode)}
   }
   ;
 
@@ -97,14 +97,14 @@ opt_expr_list
   ;
 
 expr_list
-  : expr
-  {
-      $$ = &exprlistNode{[]node{$1}}
-  }
-  | expr_list COMMA expr
+  : expr_list COMMA expr
   {
       $$ = $1
       $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
+  }
+  | expr
+  {
+      $$ = &exprlistNode{[]node{$1}}
   }
   ;
 

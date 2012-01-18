@@ -53,8 +53,6 @@ func (p *unparser) visitCapref(c caprefNode) {
 
 func (p *unparser) visitBuiltin(b builtinNode) {
 	p.output += b.name + "("
-	for _, child := range b.children {
-		child.acceptVisitor(p)
-	}
+	b.args.acceptVisitor(p)
 	p.output += ")"
 }

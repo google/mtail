@@ -44,6 +44,7 @@ func (t Lexeme) String() string {
 // List of builtin functions.  Keep this list sorted!
 var builtins = []string{
 	"inc",
+	"set",
 	"strptime",
 	"tag",
 }

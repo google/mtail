@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	_ "net/http/pprof"
 )
@@ -20,13 +21,19 @@ import (
 var port *string = flag.String("port", "3903", "HTTP port to listen on.")
 var logs *string = flag.String("logs", "", "List of files to monitor.")
 var progs *string = flag.String("progs", "", "Directory containing programs")
+var compile *bool = flag.Bool("compile", false, "Compile only.")
 
 // Global metrics storage.
-var metrics []*Metric
+var (
+	metric_lock sync.RWMutex
+	metrics     []*Metric
+)
 
 // CSV export
 func handleCsv(w http.ResponseWriter, r *http.Request) {
 	c := csv.NewWriter(w)
+	metric_lock.RLock()
+	defer metric_lock.Unlock()
 	for _, m := range metrics {
 		record := []string{m.Name,
 			fmt.Sprintf("%f", m.Value),
@@ -47,6 +54,8 @@ type Foo struct {
 
 // JSON export
 func handleJson(w http.ResponseWriter, r *http.Request) {
+	metric_lock.RLock()
+	defer metric_lock.Unlock()
 	b, err := json.Marshal(metrics)
 	if err != nil {
 		log.Println("error marshalling metrics into json:", err.Error())
@@ -71,6 +80,7 @@ func RunVms(lines chan string) {
 }
 
 func main() {
+	EmtailDebug = 1
 	flag.Parse()
 	w := NewWatcher()
 	t := NewTailer(w)
@@ -79,6 +89,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failure reading progs from %q: %s", *progs, err)
 	}
+
+	errors := 0
 	for _, fi := range fis {
 		if fi.IsDir() {
 			continue
@@ -89,14 +101,19 @@ func main() {
 			continue
 		}
 		defer f.Close()
-		vm, errors := Compile(fi.Name(), f)
-		if errors != nil {
-			for _, e := range errors {
+		vm, errs := Compile(fi.Name(), f)
+		if errs != nil {
+			errors = 1
+			for _, e := range errs {
 				log.Printf(e)
 			}
 			continue
 		}
 		vms = append(vms, vm)
+	}
+
+	if *compile {
+		os.Exit(errors)
 	}
 
 	go RunVms(t.Line)

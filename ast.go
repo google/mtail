@@ -77,8 +77,8 @@ func (c caprefNode) acceptVisitor(visit visitor) {
 }
 
 type builtinNode struct {
-	name     string
-	children []node
+	name string
+	args exprlistNode
 }
 
 func (b builtinNode) acceptVisitor(visit visitor) {

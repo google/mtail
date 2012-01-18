@@ -30,7 +30,7 @@ var programs = []testProgram{
 			instr{match, 0},
 			instr{jnm, 5},
 			instr{push, 0},
-			instr{inc, 0},
+			instr{inc, 1},
 			instr{ret, 1}},
 		[]in_out{in_out{"", true}}},
 	{"count a",
@@ -39,7 +39,7 @@ var programs = []testProgram{
 			instr{match, 0},
 			instr{jnm, 5},
 			instr{push, 0},
-			instr{inc, 0},
+			instr{inc, 1},
 			instr{ret, 1}},
 		[]in_out{
 			in_out{"", false},
@@ -52,12 +52,29 @@ var programs = []testProgram{
 			instr{jnm, 8},
 			instr{capref, 1},
 			instr{load, 0},
-			instr{strptime, 0},
+			instr{strptime, 2},
 			instr{push, 0},
-			instr{inc, 0},
+			instr{inc, 1},
 			instr{ret, 1}},
 		[]in_out{
 			in_out{"2006-01-02T15:04:05", true}}},
+	{"inc by and set",
+		"/(.*)/ {\n" +
+			"inc(foo, $1)\n" +
+			"set(bar, $1)\n" +
+			"}",
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 9},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{inc, 2},
+			instr{push, 1},
+			instr{capref, 1},
+			instr{set, 2},
+			instr{ret, 1}},
+		[]in_out{
+			in_out{"37", true}}},
 }
 
 func TestCompile(t *testing.T) {
@@ -69,8 +86,8 @@ func TestCompile(t *testing.T) {
 			continue
 		}
 		if !reflect.DeepEqual(tc.prog, v.prog) {
-			t.Errorf("VM prog doesn't match.\n\texpected: %q\n\treceived: %q\n",
-				tc.prog, v.prog)
+			t.Errorf("%s: VM prog doesn't match.\n\texpected: %q\n\treceived: %q\n",
+				tc.name, tc.prog, v.prog)
 		}
 	}
 }
@@ -104,13 +121,46 @@ type instrTest struct {
 
 var instructions = []instrTest{
 	{"inc",
-		[]instr{instr{inc, 0}},
+		[]instr{instr{inc, 1}},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{0},
 		[]interface{}{},
 		thread{pc: 1},
 	},
+	{"inc by int",
+		[]instr{instr{inc, 2}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{0, 1}, // first is metric 0 "foo", srcond is the inc val.
+		[]interface{}{},
+		thread{pc: 1},
+	},
+	{"inc by string",
+		[]instr{instr{inc, 2}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{0, "1"}, // first is metric 0 "foo", srcond is the inc val.
+		[]interface{}{},
+		thread{pc: 1},
+	},
+	{"set int",
+		[]instr{instr{set, 2}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1, 1}, // set metric 1 "bar"
+		[]interface{}{},
+		thread{pc: 1},
+	},
+	{"set str",
+		[]instr{instr{set, 2}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1, "1"},
+		[]interface{}{},
+		thread{pc: 1},
+	},
+
 	// {"match",
 	// 	[]instr{instr{match, 0}},
 	// 	[]*regexp.Regexp{regexp.MustCompile("a*b")},

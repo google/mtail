@@ -24,6 +24,7 @@ const (
 	push
 	capref
 	load
+	set
 )
 
 var opNames = map[opcode]string{
@@ -36,10 +37,12 @@ var opNames = map[opcode]string{
 	push:     "push",
 	capref:   "capref",
 	load:     "load",
+	set:      "set",
 }
 
 var builtin = map[string]opcode{
 	"inc":      inc,
+	"set":      set,
 	"strptime": strptime,
 	"tag":      tag,
 }
@@ -81,6 +84,12 @@ func (v *vm) push(opnd interface{}) {
 	v.stack = append(v.stack, opnd)
 }
 
+func (v *vm) errorf(format string, args ...interface{}) bool {
+	log.Printf("Runtime error: "+format+"\n", args...)
+	v.t.reg = 0
+	return true
+}
+
 // Execute acts on the current instruction, and returns a boolean indicating
 // if the current thread should terminate.
 func (v *vm) execute(t *thread, i instr, input string) bool {
@@ -101,8 +110,50 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		}
 	case inc:
 		// increment a counter
+		delta := 1
+		// If there's more than one arg, increment by delta.
+		if i.opnd > 1 {
+			val := v.pop()
+			// Don't know what type it is on the stack though.
+			switch val.(type) {
+			case int:
+				delta = val.(int)
+			case string:
+				var err error
+				delta, err = strconv.Atoi(val.(string))
+				if err != nil {
+					return v.errorf("conversion to numeric failed: %s", err)
+				}
+			}
+		}
 		m := v.pop().(int)
-		metrics[m].Value++
+		metric_lock.Lock()
+		defer metric_lock.Unlock()
+		metrics[m].Value += int64(delta)
+		if t.time.IsZero() {
+			metrics[m].Time = time.Now()
+		} else {
+			metrics[m].Time = t.time
+		}
+	case set:
+		// Set a gauge
+		var value int
+		val := v.pop()
+		// Don't know what type it is on the stack though.
+		switch val.(type) {
+		case int:
+			value = val.(int)
+		case string:
+			var err error
+			value, err = strconv.Atoi(val.(string))
+			if err != nil {
+				return v.errorf("conversion to numeric failed: %s", err)
+			}
+		}
+		m := v.pop().(int)
+		metric_lock.Lock()
+		defer metric_lock.Unlock()
+		metrics[m].Value = int64(value)
 		if t.time.IsZero() {
 			metrics[m].Time = time.Now()
 		} else {
@@ -113,8 +164,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		layout := v.pop().(string)
 		tm, err := time.Parse(layout, s)
 		if err != nil {
-			log.Println("time parse:", err)
-			return true
+			return v.errorf("time parse failed: %s", err)
 		}
 		t.time = tm
 	case tag:
@@ -130,8 +180,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 	case push:
 		v.push(i.opnd)
 	default:
-		log.Println("illegal instruction", i.op)
-		return true
+		return v.errorf("illegal instruction: %q", i.op)
 	}
 	t.pc++
 	return false
@@ -149,6 +198,7 @@ func (v *vm) Run(input string) bool {
 
 		terminate := v.execute(&t, i, input)
 		if terminate {
+			// t.reg contains the result of the last match.
 			return t.reg == 1
 		}
 	}
@@ -156,12 +206,16 @@ func (v *vm) Run(input string) bool {
 }
 
 type compiler struct {
-	prog []instr
-	str  []string
-	re   []*regexp.Regexp
+	name   string   // Name of the program.
+	errors []string // Compile errors.
 
-	metrics map[string]int
-	refs    []int
+	prog []instr          // The emitted program.
+	str  []string         // Static strings.
+	re   []*regexp.Regexp // Static regular expressions.
+
+	metrics map[string]int // Cache of indexes for metric names already created.
+	refs    []int          // Capture group references.
+	builtin string         // Name of a builtin being visited.
 }
 
 func Compile(name string, input io.Reader) (*vm, []string) {
@@ -170,13 +224,24 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 	if p == nil || len(p.errors) > 0 {
 		return nil, p.errors
 	}
-	c := &compiler{}
+	u := &unparser{}
+	p.root.acceptVisitor(u)
+	log.Println(u.output)
+	c := &compiler{name: name}
 	p.root.acceptVisitor(c)
+	if len(c.errors) > 0 {
+		return nil, c.errors
+	}
 	vm := &vm{
 		re:   c.re,
 		str:  c.str,
 		prog: c.prog}
 	return vm, nil
+}
+
+func (c *compiler) errorf(format string, args ...interface{}) {
+	e := fmt.Sprintf(c.name+": "+format, args...)
+	c.errors = append(c.errors, e)
 }
 
 func (c *compiler) emit(i instr) {
@@ -214,7 +279,8 @@ func (c *compiler) visitCond(n condNode) {
 func (c *compiler) visitRegex(n regexNode) {
 	re, err := regexp.Compile(n.pattern)
 	if err != nil {
-		log.Fatal("regex:", err)
+		c.errorf("%s", err)
+		return
 	} else {
 		c.re = append(c.re, re)
 		c.emit(instr{match, len(c.re) - 1})
@@ -226,30 +292,45 @@ func (c *compiler) visitString(n stringNode) {
 	c.emit(instr{load, len(c.str) - 1})
 }
 
+var typ = map[string]mtype{
+	"inc": Counter,
+	"set": Gauge,
+}
+
 func (c *compiler) visitId(n idNode) {
-	i, ok := c.metrics[n.name]
-	if !ok {
-		m := &Metric{Name: n.name, Type: Counter}
-		metrics = append(metrics, m)
-		c.emit(instr{push, len(metrics) - 1})
-	} else {
-		c.emit(instr{push, i})
+	switch c.builtin {
+	case "":
+	case "inc", "set":
+		i, ok := c.metrics[n.name]
+		if !ok {
+			m := &Metric{Name: n.name, Type: typ[c.builtin]}
+			metrics = append(metrics, m)
+			c.emit(instr{push, len(metrics) - 1})
+		} else {
+			// Check that the metric has the correct type.
+			if metrics[i].Type != typ[c.builtin] {
+				c.errorf("invalid metric type for %s: %s is a %s, expected %s", c.builtin, metrics[i].Name, metrics[i].Type, typ[c.builtin])
+				return
+			}
+			c.emit(instr{push, i})
+		}
 	}
 }
 
 func (c *compiler) visitCapref(n caprefNode) {
 	i, err := strconv.Atoi(n.name)
 	if err != nil {
-		log.Printf("capref: %s", err)
+		c.errorf("%s", err)
+		//log.Printf("capref: %s", err)
+		return
 	}
 	c.emit(instr{capref, i})
 }
 
 func (c *compiler) visitBuiltin(n builtinNode) {
-	for _, child := range n.children {
-		child.acceptVisitor(c)
-	}
-	c.emit(instr{op: builtin[n.name]})
+	c.builtin = n.name
+	n.args.acceptVisitor(c)
+	c.emit(instr{builtin[n.name], len(n.args.children)})
 }
 
 func (v *vm) Start(lines chan string) {
