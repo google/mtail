@@ -19,7 +19,7 @@ import (
 
 var port *string = flag.String("port", "3903", "HTTP port to listen on.")
 var logs *string = flag.String("logs", "", "List of files to monitor.")
-var progs *string = flag.String("progs", "", "Dicrectory containing programs")
+var progs *string = flag.String("progs", "", "Directory containing programs")
 
 // Global metrics storage.
 var metrics []*Metric
