@@ -22,18 +22,18 @@ var logs *string = flag.String("logs", "", "List of files to monitor.")
 var progs *string = flag.String("progs", "", "Dicrectory containing programs")
 
 // Global metrics storage.
-var metrics []*metric
+var metrics []*Metric
 
 // CSV export
 func handleCsv(w http.ResponseWriter, r *http.Request) {
 	c := csv.NewWriter(w)
 	for _, m := range metrics {
-		record := []string{m.name,
-			fmt.Sprintf("%f", m.value),
-			fmt.Sprintf("%s", m.time),
-			fmt.Sprintf("%d", m.typ),
-			m.unit}
-		for k, v := range m.tag {
+		record := []string{m.Name,
+			fmt.Sprintf("%f", m.Value),
+			fmt.Sprintf("%s", m.Time),
+			fmt.Sprintf("%d", m.Type),
+			m.Unit}
+		for k, v := range m.Tags {
 			record = append(record, fmt.Sprintf("%s=%s", k, v))
 		}
 		c.Write(record)
@@ -41,20 +41,39 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	c.Flush()
 }
 
+type Foo struct {
+	Name string
+}
+
 // JSON export
 func handleJson(w http.ResponseWriter, r *http.Request) {
-	b, err := json.MarshalForHTML(metrics)
+	b, err := json.Marshal(metrics)
 	if err != nil {
-		log.Println("json:", err.Error())
+		log.Println("error marshalling metrics into json:", err.Error())
 	}
 	w.Write(b)
+}
+
+// vms contains a list of virtual machines to execute when each new line is received
+var vms []*vm
+
+// RunVms receives a line from a channel and sends it to all VMs.
+func RunVms(lines chan string) {
+	for {
+		select {
+		case line := <-lines:
+			for _, v := range vms {
+				v.Run(line)
+			}
+		}
+	}
+
 }
 
 func main() {
 	flag.Parse()
 	w := NewWatcher()
 	t := NewTailer(w)
-	go t.start()
 
 	fis, err := ioutil.ReadDir(*progs)
 	if err != nil {
@@ -74,10 +93,11 @@ func main() {
 			}
 			continue
 		}
-
-		go vm.Start(t.Line)
+		vms = append(vms, vm)
 	}
 
+	go RunVms(t.Line)
+	go t.start()
 	go w.start()
 
 	for _, pathname := range strings.Split(*logs, ",") {

@@ -66,7 +66,7 @@ var kMtailPrograms = []validProgram{
 
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range kMtailPrograms {
-		metrics = make([]*metric, 0)
+		metrics = make([]*Metric, 0)
 		p := NewParser(tc.name, strings.NewReader(tc.program))
 		//EmtailDebug = 1 //999 // All the debugging.
 		EmtailParse(p)

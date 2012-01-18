@@ -5,8 +5,10 @@ package main
 
 import (
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 type in_out struct {
@@ -60,7 +62,7 @@ var programs = []testProgram{
 
 func TestCompile(t *testing.T) {
 	for _, tc := range programs {
-		metrics = make([]*metric, 0)
+		metrics = make([]*Metric, 0)
 		v, err := Compile(tc.name, strings.NewReader(tc.source))
 		if err != nil {
 			t.Errorf("Compile errors: %q", err)
@@ -86,5 +88,71 @@ func TestRun(t *testing.T) {
 				t.Errorf("%s: Unexpected result after running on test input %q\n\texpected %v\n\treceived: %v", tc.name, i.input, i.ok, r)
 			}
 		}
+	}
+}
+
+type instrTest struct {
+	name  string
+	prog  []instr
+	re    []*regexp.Regexp
+	str   []string
+	stack []interface{}
+
+	expected_stack  []interface{}
+	expected_thread thread
+}
+
+var instructions = []instrTest{
+	{"inc",
+		[]instr{instr{inc, 0}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{0},
+		[]interface{}{},
+		thread{pc: 1},
+	},
+	// {"match",
+	// 	[]instr{instr{match, 0}},
+	// 	[]*regexp.Regexp{regexp.MustCompile("a*b")},
+	// 	[]string{},
+	// 	[]interface{}{},
+	// 	[]interface{}{},
+	// 	thread{reg: 1, pc: 1, matches: []string{"aaaab"}},
+	// },
+	{"jnm",
+		[]instr{instr{jnm, 37}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{},
+		[]interface{}{},
+		thread{pc: 37}},
+	{"strptime",
+		[]instr{instr{strptime, 0}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"2006/01/02 15:04:05", "2012/01/18 06:25:00"},
+		[]interface{}{},
+		thread{pc: 1, time: time.Date(2012, 1, 18, 6, 25, 0, 0, time.UTC)}},
+}
+
+// TestInstrs tests that each instruction behaves as expected through one execution cycle.
+func TestInstrs(t *testing.T) {
+	for _, tc := range instructions {
+		metrics = []*Metric{
+			&Metric{Name: "foo", Type: Counter},
+			&Metric{Name: "bar", Type: Gauge},
+		}
+		v := &vm{prog: tc.prog,
+			re:    tc.re,
+			str:   tc.str,
+			stack: tc.stack}
+		v.execute(&v.t, v.prog[0], "aaaab")
+		if !reflect.DeepEqual(tc.expected_stack, v.stack) {
+			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %q\n\treceived: %q", tc.name, tc.stack, v.stack)
+		}
+		if !reflect.DeepEqual(tc.expected_thread, v.t) {
+			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_thread, v.t)
+		}
+
 	}
 }

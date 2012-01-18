@@ -7,15 +7,15 @@ import (
 type mtype int
 
 const (
-	counter mtype = iota
-	gauge
+	Counter mtype = iota
+	Gauge
 )
 
-type metric struct {
-	name  string
-	value float64
-	time  time.Time
-	typ   mtype
-	unit  string
-	tag   map[string]string
+type Metric struct {
+	Name  string
+	Value uint64
+	Time  time.Time
+	Type  mtype
+	Unit  string
+	Tags  map[string]string
 }

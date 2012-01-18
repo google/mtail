@@ -68,6 +68,7 @@ type vm struct {
 	str []string
 
 	stack []interface{}
+	t     thread
 }
 
 func (v *vm) pop() interface{} {
@@ -80,64 +81,76 @@ func (v *vm) push(opnd interface{}) {
 	v.stack = append(v.stack, opnd)
 }
 
+// Execute acts on the current instruction, and returns a boolean indicating
+// if the current thread should terminate.
+func (v *vm) execute(t *thread, i instr, input string) bool {
+	switch i.op {
+	case match:
+		t.tags = map[string]string{}
+		// match regex and stre success
+		t.matches = v.re[i.opnd].FindStringSubmatch(input)
+		if t.matches != nil {
+			t.reg = 1
+		} else {
+			t.reg = 0
+		}
+	case jnm:
+		if t.reg == 0 {
+			t.pc = i.opnd
+			return false
+		}
+	case inc:
+		// increment a counter
+		m := v.pop().(int)
+		metrics[m].Value++
+		if t.time.IsZero() {
+			metrics[m].Time = time.Now()
+		} else {
+			metrics[m].Time = t.time
+		}
+	case strptime:
+		s := v.pop().(string)
+		layout := v.pop().(string)
+		tm, err := time.Parse(layout, s)
+		if err != nil {
+			log.Println("time parse:", err)
+			return true
+		}
+		t.time = tm
+	case tag:
+		val := v.pop().(string)
+		key := v.pop().(string)
+		t.tags[key] = val
+	case capref:
+		v.push(t.matches[i.opnd])
+	case load:
+		v.push(v.str[i.opnd])
+	case ret:
+		return true
+	case push:
+		v.push(i.opnd)
+	default:
+		log.Println("illegal instruction", i.op)
+		return true
+	}
+	t.pc++
+	return false
+}
+
+// Run fetches and executes each instruction in the program on the input string
+// until termination. It returns a boolean indicating a successful match.
 func (v *vm) Run(input string) bool {
-	// Create a first thread to execute.
-	t := new(thread)
+	t := v.t
 	for {
-		// fetch
 		if t.pc >= len(v.prog) {
 			return false
 		}
 		i := v.prog[t.pc]
 
-		// execute
-		switch i.op {
-		case match:
-			t.tags = map[string]string{}
-			// match regex and stre success
-			t.matches = v.re[i.opnd].FindStringSubmatch(input)
-			if t.matches != nil {
-				t.reg = 1
-			} else {
-				t.reg = 0
-			}
-		case jnm:
-			if t.reg == 0 {
-				t.pc = i.opnd
-				continue
-			}
-		case inc:
-			// increment a counter
-			m := v.pop().(int)
-			metrics[m].value++
-			metrics[m].time = t.time
-		case strptime:
-			layout := v.pop().(string)
-			s := v.pop().(string)
-			tm, err := time.Parse(layout, s)
-			if err != nil {
-				log.Println("time parse:", err)
-				break
-			}
-			t.time = tm
-		case tag:
-			val := v.pop().(string)
-			key := v.pop().(string)
-			t.tags[key] = val
-		case capref:
-			v.push(t.matches[i.opnd])
-		case load:
-			v.push(v.str[i.opnd])
-		case ret:
-			// reg is an int 1 or 0 for true/false
-			return i.opnd == 1
-		case push:
-			v.push(i.opnd)
-		default:
-			log.Println("illegal instruction", i.op)
-			return false
+		terminate := v.execute(&t, i, input)
+		if terminate {
+			return t.reg == 1
 		}
-		t.pc++
 	}
 	panic("not reached")
 }
@@ -216,7 +229,7 @@ func (c *compiler) visitString(n stringNode) {
 func (c *compiler) visitId(n idNode) {
 	i, ok := c.metrics[n.name]
 	if !ok {
-		m := &metric{name: n.name, typ: counter}
+		m := &Metric{Name: n.name, Type: Counter}
 		metrics = append(metrics, m)
 		c.emit(instr{push, len(metrics) - 1})
 	} else {
