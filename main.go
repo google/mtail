@@ -80,6 +80,9 @@ func main() {
 		log.Fatalf("Failure reading progs from %q: %s", *progs, err)
 	}
 	for _, fi := range fis {
+		if fi.IsDir() {
+			continue
+		}
 		f, err := os.Open(fmt.Sprintf("%s/%s", *progs, fi.Name()))
 		if err != nil {
 			log.Printf("Failed to open %s: %s\n", fi.Name(), err)
