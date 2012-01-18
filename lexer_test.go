@@ -48,6 +48,9 @@ var lexerTests = []lexerTest{
 	{"regex", "/asdf/", []Token{
 		Token{REGEX, "asdf", Position{0, 0, 5}},
 		Token{EOF, "", Position{0, 6, 6}}}},
+	{"regex with escape", "/asdf\\//", []Token{
+		Token{REGEX, "asdf\\/", Position{0, 0, 7}},
+		Token{EOF, "", Position{0, 8, 8}}}},
 	{"capref", "$foo", []Token{
 		Token{CAPREF, "foo", Position{0, 0, 3}},
 		Token{EOF, "", Position{0, 4, 4}}}},

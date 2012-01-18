@@ -1,11 +1,6 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-/*
-emtail is a metric exporting, modular tail.
-
-This file contains a lexical scanner for the emtail language.
-*/
 package main
 
 import (
@@ -228,7 +223,7 @@ func lexProg(l *lexer) stateFn {
 		return nil
 	default:
 		l.accept()
-		l.errorf("Unexpected input: %q", r)
+		return l.errorf("Unexpected input: %q", r)
 		return nil
 	}
 	return lexProg

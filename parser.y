@@ -121,7 +121,6 @@ expr
           Emtaillex.Error(fmt.Sprintf("Capture group $%s not defined by prior regular expression in " +
                                       "this or outer scopes",  $1))
           // TODO(jaq) force a parse error
-    	  $$ = nil
       }
   }
   | STRING
@@ -142,7 +141,6 @@ cond
       if re, err := regexp.Compile($1); err != nil {
           Emtaillex.(*parser).Error(fmt.Sprintf(err.Error()))
           // TODO(jaq): force a parse error
-          $$ = nil
       } else {
           // We can reserve storage for these capturing groups, storing them in
           // the current scope, so that future CAPTUREGROUPs can retrieve their
