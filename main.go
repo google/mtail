@@ -21,7 +21,7 @@ import (
 var port *string = flag.String("port", "3903", "HTTP port to listen on.")
 var logs *string = flag.String("logs", "", "List of files to monitor.")
 var progs *string = flag.String("progs", "", "Directory containing programs")
-var compile *bool = flag.Bool("compile", false, "Compile only.")
+var compile_only *bool = flag.Bool("compile_only", false, "Compile programs only.")
 
 // Global metrics storage.
 var (
@@ -80,7 +80,6 @@ func RunVms(lines chan string) {
 }
 
 func main() {
-	EmtailDebug = 1
 	flag.Parse()
 	w := NewWatcher()
 	t := NewTailer(w)
@@ -112,7 +111,7 @@ func main() {
 		vms = append(vms, vm)
 	}
 
-	if *compile {
+	if *compile_only {
 		os.Exit(errors)
 	}
 

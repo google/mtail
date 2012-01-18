@@ -224,9 +224,11 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 	if p == nil || len(p.errors) > 0 {
 		return nil, p.errors
 	}
-	u := &unparser{}
-	p.root.acceptVisitor(u)
-	log.Println(u.output)
+	if *compile_only {
+		u := &unparser{}
+		p.root.acceptVisitor(u)
+		log.Printf("Unparsing %s:\n%s", name, u.output)
+	}
 	c := &compiler{name: name}
 	p.root.acceptVisitor(c)
 	if len(c.errors) > 0 {
@@ -331,6 +333,7 @@ func (c *compiler) visitBuiltin(n builtinNode) {
 	c.builtin = n.name
 	n.args.acceptVisitor(c)
 	c.emit(instr{builtin[n.name], len(n.args.children)})
+	c.builtin = ""
 }
 
 func (v *vm) Start(lines chan string) {
