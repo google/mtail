@@ -67,9 +67,9 @@ var kMtailPrograms = []validProgram{
 	{"comment then code",
 		"# %d [%p]\n" +
 			"/^(?P<date>\\d+\\/\\d+\\/\\d+ \\d+:\\d+:\\d+) \\[(?P<pid>\\d+)\\] / {\n" +
-			"  strptime($1, \"%Y/%m/%d %H:%M:%S\")\n" +
-			" tag(\"pid\", $2)\n" +
-			" inc(transfers_total)\n" +
+			"  strptime($1, \"2006/01/02 15:04:05\")\n" +
+			"  tag(\"pid\", $2)\n" +
+			"  inc(transfers_total)\n" +
 			"}\n"},
 }
 

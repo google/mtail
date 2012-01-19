@@ -160,11 +160,11 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			metrics[m].Time = t.time
 		}
 	case strptime:
-		s := v.pop().(string)
 		layout := v.pop().(string)
+		s := v.pop().(string)
 		tm, err := time.Parse(layout, s)
 		if err != nil {
-			return v.errorf("time parse failed: %s", err)
+			return v.errorf("time.Parse(%s, %s) failed: %s", layout, s, err)
 		}
 		t.time = tm
 	case tag:

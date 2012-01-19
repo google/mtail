@@ -180,7 +180,7 @@ var instructions = []instrTest{
 		[]instr{instr{strptime, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
-		[]interface{}{"2006/01/02 15:04:05", "2012/01/18 06:25:00"},
+		[]interface{}{"2012/01/18 06:25:00", "2006/01/02 15:04:05"},
 		[]interface{}{},
 		thread{pc: 1, time: time.Date(2012, 1, 18, 6, 25, 0, 0, time.UTC)}},
 }

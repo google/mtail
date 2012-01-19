@@ -3,7 +3,7 @@
 
 # %d [%p]
 /^(?P<date>\d+\/\d+\/\d+ \d+:\d+:\d+) \[(?P<pid>\d+)\] / {
-  strptime($1, "%Y/%m/%d %H:%M:%S")
+  strptime($1, "2006/01/02 15:04:05")
 
   # Transfer log
   # %o %h [%a] %m (%u) %f %l
