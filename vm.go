@@ -168,9 +168,23 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		}
 		t.time = tm
 	case tag:
-		val := v.pop().(string)
-		key := v.pop().(string)
-		t.tags[key] = val
+		k := v.pop()
+		var key string
+		switch k.(type) {
+		case int:
+			key = strconv.Itoa(k.(int))
+		case string:
+			key = k.(string)
+		}
+		val := v.pop()
+		var value string
+		switch val.(type) {
+		case int:
+			value = strconv.Itoa(val.(int))
+		case string:
+			value = val.(string)
+		}
+		t.tags[key] = value
 	case capref:
 		v.push(t.matches[i.opnd])
 	case load:
@@ -316,6 +330,10 @@ func (c *compiler) visitId(n idNode) {
 			}
 			c.emit(instr{push, i})
 		}
+	case "tag", "strptime":
+		// Turn IDs into strings.
+		c.str = append(c.str, n.name)
+		c.emit(instr{push, len(c.str) - 1})
 	}
 }
 

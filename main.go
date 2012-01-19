@@ -32,8 +32,6 @@ var (
 // CSV export
 func handleCsv(w http.ResponseWriter, r *http.Request) {
 	c := csv.NewWriter(w)
-	metric_lock.RLock()
-	defer metric_lock.Unlock()
 	for _, m := range metrics {
 		record := []string{m.Name,
 			fmt.Sprintf("%f", m.Value),
@@ -54,9 +52,7 @@ type Foo struct {
 
 // JSON export
 func handleJson(w http.ResponseWriter, r *http.Request) {
-	metric_lock.RLock()
-	defer metric_lock.Unlock()
-	b, err := json.Marshal(metrics)
+	b, err := json.MarshalForHTML(metrics)
 	if err != nil {
 		log.Println("error marshalling metrics into json:", err.Error())
 	}
@@ -76,7 +72,6 @@ func RunVms(lines chan string) {
 			}
 		}
 	}
-
 }
 
 func main() {
