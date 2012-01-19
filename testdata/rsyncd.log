@@ -1,0 +1,235 @@
+2011/02/22 21:50:30 [8203] rsyncd version 2.6.9 starting, listening on port 873
+2011/02/22 21:50:31 [8227] connect from hostname.example.com (192.168.0.126)
+2011/02/22 21:50:32 [8227] rsync on module/ from hostname.example.com (192.168.0.126)
+2011/02/23 05:50:32 [8227] building file list
+2011/02/23 05:50:32 [8227] send hostname.example.com [192.168.0.126] module () foo.pub 883
+2011/02/23 05:50:32 [8227] send hostname.example.com [192.168.0.126] module () bar.pub 594
+2011/02/23 05:50:33 [8227] sent 253 bytes  received 162 bytes  total size 1477
+2011/02/22 21:50:46 [8376] connect from hostname.example.com (192.168.0.36)
+2011/02/22 21:50:46 [8376] module-list request from hostname.example.com (192.168.0.36)
+2011/02/22 21:51:02 [8677] connect from hostname.example.com (192.168.0.106)
+2011/02/22 21:51:02 [8678] connect from hostname.example.com (192.168.0.106)
+2011/02/22 21:51:02 [8679] connect from hostname.example.com (192.168.0.45)
+2011/02/22 21:51:02 [8680] connect from hostname.example.com (192.168.0.45)
+2011/02/22 21:51:02 [8679] rsync on module/ from hostname.example.com (192.168.0.45)
+2011/02/22 21:51:02 [8680] rsync on repo/ from hostname.example.com (192.168.0.45)
+2011/02/22 21:51:02 [8681] connect from hostname.example.com (192.168.0.47)
+2011/02/22 21:51:02 [8682] connect from hostname.example.com (192.168.0.47)
+2011/02/23 05:51:02 [8679] building file list
+2011/02/23 05:51:02 [8680] building file list
+2011/02/23 05:51:02 [8679] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/22 21:51:03 [8681] rsync on module/ from hostname.example.com (192.168.0.47)
+2011/02/22 21:51:03 [8682] rsync on repo/ from hostname.example.com (192.168.0.47)
+2011/02/22 21:51:03 [8686] connect from hostname.example.com (192.168.0.58)
+2011/02/22 21:51:03 [8685] connect from hostname.example.com (192.168.0.58)
+2011/02/22 21:51:03 [8687] connect from hostname.example.com (192.168.0.175)
+2011/02/22 21:51:03 [8688] connect from hostname.example.com (192.168.0.175)
+2011/02/22 21:51:03 [8685] rsync on repo/ from hostname.example.com (192.168.0.58)
+2011/02/22 21:51:03 [8686] rsync on module/ from hostname.example.com (192.168.0.58)
+2011/02/23 05:51:03 [8685] building file list
+2011/02/23 05:51:03 [8681] building file list
+2011/02/23 05:51:03 [8682] building file list
+2011/02/22 21:51:03 [8677] rsync on repo/ from hostname.example.com (192.168.0.106)
+2011/02/22 21:51:03 [8678] rsync on module/ from hostname.example.com (192.168.0.106)
+2011/02/23 05:51:03 [8686] building file list
+2011/02/23 05:51:03 [8686] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/22 21:51:03 [8687] rsync on module/ from hostname.example.com (192.168.0.175)
+2011/02/22 21:51:03 [8688] rsync on repo/ from hostname.example.com (192.168.0.175)
+2011/02/23 05:51:03 [8681] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:51:03 [8687] building file list
+2011/02/23 05:51:03 [8688] building file list
+2011/02/23 05:51:04 [8677] building file list
+2011/02/23 05:51:04 [8678] building file list
+2011/02/23 05:51:04 [8687] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:51:05 [8678] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:51:08 [8682] send hostname.example.com [192.168.0.47] repo () db/contents.cache.db 117239808
+2011/02/23 05:51:08 [8680] send hostname.example.com [192.168.0.45] repo () db/contents.cache.db 117239808
+2011/02/23 05:51:08 [8682] send hostname.example.com [192.168.0.47] repo () db/files.db 2281472
+2011/02/23 05:51:08 [8688] send hostname.example.com [192.168.0.175] repo () db/contents.cache.db 117239808
+2011/02/23 05:51:08 [8680] send hostname.example.com [192.168.0.45] repo () db/files.db 2281472
+2011/02/23 05:51:08 [8688] send hostname.example.com [192.168.0.175] repo () db/files.db 2281472
+2011/02/23 05:51:08 [8685] send hostname.example.com [192.168.0.58] repo () db/contents.cache.db 117239808
+2011/02/23 05:51:09 [8685] send hostname.example.com [192.168.0.58] repo () db/files.db 2281472
+2011/02/23 05:51:10 [8677] send hostname.example.com [192.168.0.106] repo () db/contents.cache.db 117239808
+2011/02/23 05:51:10 [8677] send hostname.example.com [192.168.0.106] repo () db/files.db 2281472
+2011/02/23 05:51:11 [8677] send hostname.example.com [192.168.0.106] repo () db/packages.db 104927232
+2011/02/23 05:51:11 [8677] send hostname.example.com [192.168.0.106] repo () db/references.db 9895936
+2011/02/23 05:51:11 [8677] send hostname.example.com [192.168.0.106] repo () db/release.cache.db 8613888
+2011/02/23 05:51:13 [8688] send hostname.example.com [192.168.0.175] repo () db/packages.db 104927232
+2011/02/23 05:51:14 [8688] send hostname.example.com [192.168.0.175] repo () db/references.db 9895936
+2011/02/23 05:51:14 [8688] send hostname.example.com [192.168.0.175] repo () db/release.cache.db 8613888
+2011/02/23 05:51:14 [8682] send hostname.example.com [192.168.0.47] repo () db/packages.db 104927232
+2011/02/23 05:51:14 [8680] send hostname.example.com [192.168.0.45] repo () db/packages.db 104927232
+2011/02/23 05:51:14 [8682] send hostname.example.com [192.168.0.47] repo () db/references.db 9895936
+2011/02/23 05:51:14 [8680] send hostname.example.com [192.168.0.45] repo () db/references.db 9895936
+2011/02/23 05:51:14 [8685] send hostname.example.com [192.168.0.58] repo () db/packages.db 104927232
+2011/02/23 05:51:14 [8685] send hostname.example.com [192.168.0.58] repo () db/references.db 9895936
+2011/02/23 05:51:14 [8682] send hostname.example.com [192.168.0.47] repo () db/release.cache.db 8613888
+2011/02/23 05:51:14 [8680] send hostname.example.com [192.168.0.45] repo () db/release.cache.db 8613888
+2011/02/23 05:51:14 [8685] send hostname.example.com [192.168.0.58] repo () db/release.cache.db 8613888
+2011/02/22 21:51:18 [8695] connect from hostname.example.com (192.168.0.141)
+2011/02/22 21:51:18 [8695] module-list request from hostname.example.com (192.168.0.141)
+2011/02/22 21:51:23 [8696] connect from hostname.example.com (192.168.0.143)
+2011/02/22 21:51:23 [8696] module-list request from hostname.example.com (192.168.0.143)
+2011/02/23 05:51:26 [8680] sent 10220059 bytes  received 194156 bytes  total size 78611526425
+2011/02/23 05:51:30 [8685] sent 10220059 bytes  received 194156 bytes  total size 78611526425
+2011/02/23 05:51:30 [8682] sent 10220059 bytes  received 194156 bytes  total size 78611526425
+2011/02/23 05:51:31 [8688] sent 10220059 bytes  received 194156 bytes  total size 78611526425
+2011/02/23 05:51:34 [8677] sent 10220059 bytes  received 194156 bytes  total size 78611526425
+2011/02/22 21:51:47 [8721] connect from hostname.example.com (192.168.0.36)
+2011/02/22 21:51:47 [8721] module-list request from hostname.example.com (192.168.0.36)
+2011/02/22 21:52:02 [8911] connect from hostname.example.com (192.168.0.45)
+2011/02/22 21:52:02 [8912] connect from hostname.example.com (192.168.0.45)
+2011/02/22 21:52:02 [8911] rsync on module/ from hostname.example.com (192.168.0.45)
+2011/02/22 21:52:02 [8912] rsync on repo/ from hostname.example.com (192.168.0.45)
+2011/02/23 05:52:02 [8911] building file list
+2011/02/23 05:52:02 [8912] building file list
+2011/02/23 05:52:02 [8911] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/22 21:52:03 [8913] connect from hostname.example.com (192.168.0.106)
+2011/02/22 21:52:03 [8914] connect from hostname.example.com (192.168.0.106)
+2011/02/22 21:52:03 [8915] connect from hostname.example.com (192.168.0.47)
+2011/02/22 21:52:03 [8916] connect from hostname.example.com (192.168.0.47)
+2011/02/22 21:52:03 [8917] connect from hostname.example.com (192.168.0.175)
+2011/02/22 21:52:03 [8918] connect from hostname.example.com (192.168.0.175)
+2011/02/22 21:52:03 [8915] rsync on repo/ from hostname.example.com (192.168.0.47)
+2011/02/22 21:52:03 [8916] rsync on module/ from hostname.example.com (192.168.0.47)
+2011/02/22 21:52:04 [8913] rsync on repo/ from hostname.example.com (192.168.0.106)
+2011/02/22 21:52:04 [8914] rsync on module/ from hostname.example.com (192.168.0.106)
+2011/02/23 05:52:04 [8912] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/22 21:52:04 [8917] rsync on repo/ from hostname.example.com (192.168.0.175)
+2011/02/22 21:52:04 [8918] rsync on module/ from hostname.example.com (192.168.0.175)
+2011/02/23 05:52:04 [8915] building file list
+2011/02/23 05:52:04 [8916] building file list
+2011/02/22 21:52:04 [8919] connect from hostname.example.com (192.168.0.58)
+2011/02/22 21:52:04 [8920] connect from hostname.example.com (192.168.0.58)
+2011/02/22 21:52:04 [8919] rsync on module/ from hostname.example.com (192.168.0.58)
+2011/02/22 21:52:04 [8920] rsync on repo/ from hostname.example.com (192.168.0.58)
+2011/02/23 05:52:04 [8919] building file list
+2011/02/23 05:52:04 [8920] building file list
+2011/02/23 05:52:04 [8919] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:52:04 [8917] building file list
+2011/02/23 05:52:04 [8918] building file list
+2011/02/23 05:52:04 [8913] building file list
+2011/02/23 05:52:04 [8914] building file list
+2011/02/23 05:52:04 [8916] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:52:05 [8918] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:52:05 [8920] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/23 05:52:06 [8914] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:52:06 [8915] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/23 05:52:07 [8917] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/23 05:52:09 [8913] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/22 21:52:16 [8938] connect from hostname.example.com (192.168.0.141)
+2011/02/22 21:52:16 [8938] module-list request from hostname.example.com (192.168.0.141)
+2011/02/22 21:52:24 [8940] connect from hostname.example.com (192.168.0.143)
+2011/02/22 21:52:25 [8940] module-list request from hostname.example.com (192.168.0.143)
+2011/02/22 21:52:50 [8997] connect from hostname.example.com (192.168.0.36)
+2011/02/22 21:52:50 [8997] module-list request from hostname.example.com (192.168.0.36)
+2011/02/22 21:53:02 [9015] connect from hostname.example.com (192.168.0.45)
+2011/02/22 21:53:02 [9016] connect from hostname.example.com (192.168.0.45)
+2011/02/22 21:53:02 [9015] rsync on repo/ from hostname.example.com (192.168.0.45)
+2011/02/22 21:53:02 [9016] rsync on module/ from hostname.example.com (192.168.0.45)
+2011/02/23 05:53:02 [9015] building file list
+2011/02/23 05:53:02 [9016] building file list
+2011/02/23 05:53:02 [9016] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/22 21:53:03 [9017] connect from hostname.example.com (192.168.0.106)
+2011/02/22 21:53:03 [9018] connect from hostname.example.com (192.168.0.106)
+2011/02/22 21:53:03 [9019] connect from hostname.example.com (192.168.0.58)
+2011/02/22 21:53:03 [9020] connect from hostname.example.com (192.168.0.58)
+2011/02/22 21:53:03 [9019] rsync on repo/ from hostname.example.com (192.168.0.58)
+2011/02/22 21:53:03 [9020] rsync on module/ from hostname.example.com (192.168.0.58)
+2011/02/23 05:53:03 [9019] building file list
+2011/02/22 21:53:03 [9021] connect from hostname.example.com (192.168.0.47)
+2011/02/23 05:53:03 [9020] building file list
+2011/02/22 21:53:03 [9022] connect from hostname.example.com (192.168.0.47)
+2011/02/23 05:53:03 [9020] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/22 21:53:03 [9021] rsync on repo/ from hostname.example.com (192.168.0.47)
+2011/02/22 21:53:04 [9022] rsync on module/ from hostname.example.com (192.168.0.47)
+2011/02/22 21:53:04 [9017] rsync on module/ from hostname.example.com (192.168.0.106)
+2011/02/22 21:53:04 [9023] connect from hostname.example.com (192.168.0.175)
+2011/02/22 21:53:04 [9024] connect from hostname.example.com (192.168.0.175)
+2011/02/23 05:53:04 [9015] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/22 21:53:04 [9018] rsync on repo/ from hostname.example.com (192.168.0.106)
+2011/02/23 05:53:04 [9021] building file list
+2011/02/23 05:53:04 [9022] building file list
+2011/02/22 21:53:04 [9023] rsync on module/ from hostname.example.com (192.168.0.175)
+2011/02/22 21:53:04 [9024] rsync on repo/ from hostname.example.com (192.168.0.175)
+2011/02/23 05:53:04 [9017] building file list
+2011/02/23 05:53:04 [9018] building file list
+2011/02/23 05:53:04 [9019] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/23 05:53:04 [9023] building file list
+2011/02/23 05:53:04 [9022] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:53:04 [9024] building file list
+2011/02/23 05:53:05 [9023] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:53:06 [9017] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:53:06 [9021] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/23 05:53:08 [9024] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/23 05:53:10 [9018] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/22 21:53:16 [9027] connect from hostname.example.com (192.168.0.141)
+2011/02/22 21:53:16 [9027] module-list request from hostname.example.com (192.168.0.141)
+2011/02/22 21:53:22 [9029] connect from hostname.example.com (192.168.0.143)
+2011/02/22 21:53:22 [9029] module-list request from hostname.example.com (192.168.0.143)
+2011/02/22 21:53:38 [9219] rsyncd version 2.6.9 starting, listening on port 873
+2011/02/22 21:53:38 [9219] bind() failed: Address already in use (address-family 10)
+2011/02/22 21:53:38 [9219] bind() failed: Address already in use (address-family 2)
+2011/02/22 21:53:38 [9219] unable to bind any inbound sockets on port 873
+2011/02/22 21:53:38 [9219] rsync error: error in socket IO (code 10) at socket.c(477) [receiver=2.6.9]
+2011/02/22 21:53:53 [9244] connect from hostname.example.com (192.168.0.36)
+2011/02/22 21:53:53 [9244] module-list request from hostname.example.com (192.168.0.36)
+2011/02/22 21:54:02 [9259] connect from hostname.example.com (192.168.0.45)
+2011/02/22 21:54:02 [9260] connect from hostname.example.com (192.168.0.45)
+2011/02/22 21:54:02 [9261] connect from hostname.example.com (192.168.0.58)
+2011/02/22 21:54:02 [9262] connect from hostname.example.com (192.168.0.58)
+2011/02/22 21:54:02 [9261] rsync on module/ from hostname.example.com (192.168.0.58)
+2011/02/22 21:54:02 [9262] rsync on repo/ from hostname.example.com (192.168.0.58)
+2011/02/22 21:54:02 [9259] rsync on repo/ from hostname.example.com (192.168.0.45)
+2011/02/22 21:54:02 [9260] rsync on module/ from hostname.example.com (192.168.0.45)
+2011/02/23 05:54:02 [9261] building file list
+2011/02/23 05:54:02 [9262] building file list
+2011/02/23 05:54:02 [9259] building file list
+2011/02/23 05:54:02 [9260] building file list
+2011/02/23 05:54:02 [9261] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:54:02 [9260] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/22 21:54:03 [9263] connect from hostname.example.com (192.168.0.175)
+2011/02/22 21:54:03 [9264] connect from hostname.example.com (192.168.0.175)
+2011/02/22 21:54:03 [9265] connect from hostname.example.com (192.168.0.106)
+2011/02/22 21:54:03 [9266] connect from hostname.example.com (192.168.0.106)
+2011/02/22 21:54:03 [9267] connect from hostname.example.com (192.168.0.47)
+2011/02/22 21:54:03 [9263] rsync on repo/ from hostname.example.com (192.168.0.175)
+2011/02/22 21:54:03 [9264] rsync on module/ from hostname.example.com (192.168.0.175)
+2011/02/22 21:54:03 [9267] rsync on repo/ from hostname.example.com (192.168.0.47)
+2011/02/23 05:54:03 [9263] building file list
+2011/02/23 05:54:03 [9259] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/23 05:54:03 [9267] building file list
+2011/02/23 05:54:04 [9264] building file list
+2011/02/22 21:54:04 [9265] rsync on module/ from hostname.example.com (192.168.0.106)
+2011/02/22 21:54:04 [9268] connect from hostname.example.com (192.168.0.47)
+2011/02/23 05:54:04 [9262] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/22 21:54:04 [9266] rsync on repo/ from hostname.example.com (192.168.0.106)
+2011/02/22 21:54:04 [9268] rsync on module/ from hostname.example.com (192.168.0.47)
+2011/02/23 05:54:04 [9264] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:54:04 [9268] building file list
+2011/02/23 05:54:04 [9265] building file list
+2011/02/23 05:54:04 [9266] building file list
+2011/02/23 05:54:05 [9268] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:54:06 [9265] sent 143 bytes  received 119 bytes  total size 1477
+2011/02/23 05:54:06 [9267] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/23 05:54:06 [9263] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/23 05:54:10 [9266] sent 779351 bytes  received 113 bytes  total size 78611526425
+2011/02/22 21:54:11 [9277] rsyncd version 2.6.9 starting, listening on port 873
+2011/02/22 21:54:11 [9277] bind() failed: Address already in use (address-family 10)
+2011/02/22 21:54:11 [9277] bind() failed: Address already in use (address-family 2)
+2011/02/22 21:54:11 [9277] unable to bind any inbound sockets on port 873
+2011/02/22 21:54:11 [9277] rsync error: error in socket IO (code 10) at socket.c(477) [receiver=2.6.9]
+2011/02/22 21:54:13 [9279] connect from hostname.example.com (192.168.0.141)
+2011/02/22 21:54:13 [9279] module-list request from hostname.example.com (192.168.0.141)
+2011/02/22 21:54:18 [8203] rsync error: received SIGINT, SIGTERM, or SIGHUP (code 20) at rsync.c(244) [receiver=2.6.9]
+2011/03/01 00:27:45 [6514] rsync: writefd_unbuffered failed to write 4 bytes to socket [sender]: Connection reset by peer (104)
+2011/03/01 00:27:45 [6514] rsync error: error in rsync protocol data stream (code 12) at io.c(1530) [sender=3.0.7]
+2011/03/02 02:19:07 [13951] file has vanished: "foofile" (in repo)
+2011/03/02 02:20:08 [14728] rsync: opendir "/pool/blah" (in repo) failed: Permission denied (13)
+2011/03/02 02:20:08 [14728] rsync: opendir "/pool/main" (in repo) failed: Permission denied (13)
+2011/06/08 17:30:43 [3561] rsync: connection unexpectedly closed (5018 bytes received so far) [sender]
+2011/06/08 18:36:29 [22058] rsync: read error: Connection reset by peer (104)
+2011/06/08 19:50:06 [5859] rsync: link_stat "/dirname" (in module1) failed: No such file or directory (2)
+2011/06/08 19:52:23 [4066] rsync error: timeout in data send/receive (code 30) at io.c(137) [sender=3.0.7]
+2011/08/05 10:50:02 [11362] rsync: send_files failed to open "buh" (in module1): Permission denied (13)

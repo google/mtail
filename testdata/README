@@ -1,0 +1,5 @@
+This directory contains test input (.log) and expected output (.json) files for
+the ex_test.go test program.  It ensures that the example programs provided
+compile and run and generate the expected output.
+
+All files in this directory are licensed under the Apache License 2.0.
