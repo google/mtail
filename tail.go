@@ -74,7 +74,7 @@ func (t *tailer) start() {
 	for {
 		select {
 		case path := <-t.changes:
-			t.handleLogChange(path)
+			go t.handleLogChange(path)
 		}
 	}
 }
