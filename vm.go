@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"time"
@@ -243,7 +244,8 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		p.root.acceptVisitor(u)
 		log.Printf("Unparsing %s:\n%s", name, u.output)
 	}
-	c := &compiler{name: name}
+	file := filepath.Base(name)
+	c := &compiler{name: file}
 	p.root.acceptVisitor(c)
 	if len(c.errors) > 0 {
 		return nil, c.errors
@@ -319,7 +321,7 @@ func (c *compiler) visitId(n idNode) {
 	case "inc", "set":
 		i, ok := c.metrics[n.name]
 		if !ok {
-			m := &Metric{Name: n.name, Type: typ[c.builtin]}
+			m := &Metric{Name: n.name, Type: typ[c.builtin], Tags: map[string]string{"prog": c.name}}
 			metrics = append(metrics, m)
 			c.emit(instr{push, len(metrics) - 1})
 		} else {

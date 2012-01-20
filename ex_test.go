@@ -6,6 +6,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"reflect"
@@ -25,6 +26,10 @@ var exampleProgramTests = []exampleProgramTest{
 		"testdata/rsyncd.log",
 		"testdata/rsyncd.json",
 	},
+}
+
+func (m *Metric) String() string {
+	return fmt.Sprintf("%s", *m)
 }
 
 func TestExamplePrograms(t *testing.T) {

@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -34,7 +35,7 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	c := csv.NewWriter(w)
 	for _, m := range metrics {
 		record := []string{m.Name,
-			fmt.Sprintf("%f", m.Value),
+			fmt.Sprintf("%s", m.Value),
 			fmt.Sprintf("%s", m.Time),
 			fmt.Sprintf("%d", m.Type),
 			m.Unit}
@@ -85,7 +86,7 @@ func main() {
 		if fi.IsDir() {
 			continue
 		}
-		if !strings.HasSuffix(fi.Name(), ".em") {
+		if filepath.Ext(fi.Name()) != "em" {
 			continue
 		}
 		f, err := os.Open(fmt.Sprintf("%s/%s", *progs, fi.Name()))
