@@ -46,10 +46,6 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	c.Flush()
 }
 
-type Foo struct {
-	Name string
-}
-
 // JSON export
 func handleJson(w http.ResponseWriter, r *http.Request) {
 	b, err := json.MarshalForHTML(metrics)
@@ -68,7 +64,7 @@ func RunVms(lines chan string) {
 		select {
 		case line := <-lines:
 			for _, v := range vms {
-				v.Run(line)
+				go v.Run(line)
 			}
 		}
 	}

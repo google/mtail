@@ -277,7 +277,7 @@ func (c *compiler) visitExprList(n exprlistNode) {
 }
 
 func (c *compiler) visitCond(n condNode) {
-	// TODO(jaq): split
+	// TODO(jaq): split off a new goroutine thread instead of doing conds serially.
 	if n.cond != nil {
 		n.cond.acceptVisitor(c)
 	}
@@ -341,7 +341,6 @@ func (c *compiler) visitCapref(n caprefNode) {
 	i, err := strconv.Atoi(n.name)
 	if err != nil {
 		c.errorf("%s", err)
-		//log.Printf("capref: %s", err)
 		return
 	}
 	c.emit(instr{capref, i})
@@ -352,13 +351,4 @@ func (c *compiler) visitBuiltin(n builtinNode) {
 	n.args.acceptVisitor(c)
 	c.emit(instr{builtin[n.name], len(n.args.children)})
 	c.builtin = ""
-}
-
-func (v *vm) Start(lines chan string) {
-	for {
-		select {
-		case line := <-lines:
-			v.Run(line)
-		}
-	}
 }
