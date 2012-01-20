@@ -6,6 +6,7 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
+	"expvar"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -29,6 +30,8 @@ var (
 	metric_lock sync.RWMutex
 	metrics     []*Metric
 )
+
+var line_count = expvar.NewInt("line_count")
 
 // CSV export
 func handleCsv(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +67,7 @@ func RunVms(lines chan string) {
 	for {
 		select {
 		case line := <-lines:
+			line_count.Add(1)
 			for _, v := range vms {
 				go v.Run(line)
 			}
