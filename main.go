@@ -59,11 +59,8 @@ func handleJson(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-// vms contains a list of virtual machines to execute when each new line is received
-var vms []*vm
-
 // RunVms receives a line from a channel and sends it to all VMs.
-func RunVms(lines chan string) {
+func RunVms(vms []*vm, lines chan string) {
 	for {
 		select {
 		case line := <-lines:
@@ -84,6 +81,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failure reading progs from %q: %s", *progs, err)
 	}
+
+	// vms contains a list of virtual machines to execute when each new line is received
+	var vms []*vm
 
 	errors := 0
 	for _, fi := range fis {
@@ -114,7 +114,7 @@ func main() {
 		os.Exit(errors)
 	}
 
-	go RunVms(t.Line)
+	go RunVms(vms, t.Line)
 	go t.start()
 	go w.start()
 
