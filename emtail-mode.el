@@ -5,30 +5,56 @@
   "Indent offset for `emtail-mode'.")
 
 (defvar emtail-mode-syntax-table
-  (let ((table (make-syntax-table)))
-    (modify-syntax-entry ?# "< b" table)
-    (modify-syntax-entry ?\n "> b" table)
-    (modify-syntax-entry ?/ "|" table)
-    table)
+  (let ((st (make-syntax-table)))
+    ; Add _ to :word: class
+    (modify-syntax-entry ?_ "." st)
+
+    ; Comments
+    (modify-syntax-entry ?# "< b" st)
+    (modify-syntax-entry ?\n "> b" st)
+
+    ; Regex
+    (modify-syntax-entry ?/ "|" st)
+
+    ; String
+    (modify-syntax-entry ?\" "\"" st)
+
+    ; Operators
+    ;(modify-syntax-table ?
+    st)
   "Syntax table used while in `emtail-mode'.")
+
+(defvar emtail-mode-keywords
+  '("inc", "set", "tag", "strptime")
+  "All keywords in the emtail language.  Used for font locking.")
 
 (defvar emtail-font-lock-defaults
       `(("\\<\\(FIXME\\|TODO\\)" 1 font-lock-warning-face prepend)
-        ("\\<\\(label\\|inc\\|push\\|pop\\|strptime\\)\\>" .
-         font-lock-keyword-face)
+        (,(regexp-opt emtail-mode-keywords 'words) . font-lock-keyword-face)
         ("\\<\\$[a-zA-Z0-9]+\\>" . font-lock-variable-name-face)))
 
 (define-derived-mode emtail-mode nil "emtail"
   "Major mode for editing emtail programs."
-  (setq font-lock-defaults emtail-font-lock-defaults)
-  (modify-syntax-entry ?# "< b" emtail-mode-syntax-table)
-  (modify-syntax-entry ?\n "> b" emtail-mode-syntax-table)
-  (modify-syntax-entry ?/ "|" emtail-mode-syntax-table)
-  (setq paragraph-separate "^[ \t]*$")
-  (setq paragraph-start "^[ \t]*$")
-  (setq comment-start "# ")
-  (setq comment-end "")
-  (setq comment-start-skip "# *"))
+  ;; Font lock
+  (set (make-local-variable 'font-lock-defaults)
+       '(emtail-mode-font-lock-defaults nil nil nil nil))
 
+  (set (make-local-variable 'paragraph-separate) "^[ \t]*$")
+  (set (make-local-variable 'paragraph-start) "^[ \t]*$")
+  (set (make-local-variable 'comment-start) "# ")
+  (set (make-local-variable 'comment-end) "")
+  (set (make-local-variable 'comment-start-skip) "# *")
+
+  (setq indent-tabs-mode nil))
+
+
+(add-to-list 'auto-mode-alist (cons "\\.em$" #'emtail-mode))
+
+(defun emtail-mode-reload ()
+  "Reload emtail-mode.el and put the current buffer into emtail-mode.  Useful for debugging."
+  (interactive)
+  (unload-feature 'emtail-mode)
+  (require 'emtail-mode)
+  (emtail-mode))
 
 (provide 'emtail-mode)
