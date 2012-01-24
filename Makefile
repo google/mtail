@@ -1,21 +1,42 @@
-GOROOT=/usr/lib/go
+GOROOT?=/usr/lib/go
 
 include $(GOROOT)/src/Make.inc
 
 TARG=emtail
 
-GOTESTFILES=parser_test.go lexer_test.go watch_test.go tail_test.go vm_test.go ex_test.go
-GOFILES=lexer.go parser.go ast.go unparser.go scope.go watch.go tail.go vm.go main.go metric.go
+GOFILES=\
+	ast.go\
+	lexer.go\
+	main.go\
+	metric.go\
+	parser.go\
+	scope.go\
+	tail.go\
+	unparser.go\
+	vm.go\
+	watch.go\
 
-CLEANFILES += parser.go y.output 
+GOTESTFILES=\
+	ex_test.go\
+	lexer_test.go\
+	parser_test.go\
+	tail_test.go\
+	vm_test.go\
+	watch_test.go\
+
+CLEANFILES+=\
+	parser.go\
+	y.output\
 
 include $(GOROOT)/src/Make.cmd
 
 parser.go: parser.y
 	goyacc -o $@ -p Emtail $<
 
+.PHONY: test
 test:
 	gotest
 
+.PHONY: testshort
 testshort:
 	gotest -test.short
