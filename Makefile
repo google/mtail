@@ -1,3 +1,6 @@
+# Copyright 2011 Google Inc. All Rights Reserved.
+# This file is available under the Apache license.
+
 GOROOT?=/usr/lib/go
 
 include $(GOROOT)/src/Make.inc
