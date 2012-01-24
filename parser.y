@@ -115,8 +115,8 @@ expr
   }
   | CAPREF
   {
-      if Emtaillex.(*parser).s.lookupSym($1) {
-          $$ = &caprefNode{$1}
+      if index, ok := Emtaillex.(*parser).s.lookupSym($1); ok {
+          $$ = &caprefNode{$1, index}
       } else {
           Emtaillex.Error(fmt.Sprintf("Capture group $%s not defined by prior regular expression in " +
                                       "this or an outer scope",  $1))
@@ -146,10 +146,12 @@ cond
           // the current scope, so that future CAPTUREGROUPs can retrieve their
           // value.  At parse time, we can warn about nonexistent names.
           for i := 1; i < re.NumSubexp() + 1; i++ {
-              Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i))
+              Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i), i)
           }
-          for _, capref := range re.SubexpNames() {
-              Emtaillex.(*parser).s.addSym(capref)
+          for i, capref := range re.SubexpNames() {
+                if capref != "" {
+                  Emtaillex.(*parser).s.addSym(capref, i)
+              }
           }
           // TODO(jaq): when supported add named capturing groups
           $$ = &regexNode{$1}

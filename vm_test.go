@@ -58,6 +58,20 @@ var programs = []testProgram{
 			instr{ret, 1}},
 		[]in_out{
 			in_out{"2006-01-02T15:04:05", true}}},
+	{"strptime and named capref",
+		"/(?P<date>.*)/ { strptime($date, \"2006-01-02T15:04:05\")" +
+			"inc(foo) }",
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 8},
+			instr{capref, 1},
+			instr{load, 0},
+			instr{strptime, 2},
+			instr{push, 0},
+			instr{inc, 1},
+			instr{ret, 1}},
+		[]in_out{
+			in_out{"2006-01-02T15:04:05", true}}},
 	{"inc by and set",
 		"/(.*)/ {\n" +
 			"inc(foo, $1)\n" +

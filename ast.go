@@ -69,7 +69,8 @@ func (i idNode) acceptVisitor(visit visitor) {
 }
 
 type caprefNode struct {
-	name string
+	name  string
+	index int
 }
 
 func (c caprefNode) acceptVisitor(visit visitor) {

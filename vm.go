@@ -340,12 +340,7 @@ func (c *compiler) visitId(n idNode) {
 }
 
 func (c *compiler) visitCapref(n caprefNode) {
-	i, err := strconv.Atoi(n.name)
-	if err != nil {
-		c.errorf("%s", err)
-		return
-	}
-	c.emit(instr{capref, i})
+	c.emit(instr{capref, n.index})
 }
 
 func (c *compiler) visitBuiltin(n builtinNode) {

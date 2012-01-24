@@ -81,7 +81,7 @@ func TestParserRoundTrip(t *testing.T) {
 		EmtailParse(p)
 
 		if p.root == nil || len(p.errors) > 0 {
-			t.Errorf("%s parse errors:\n", tc.name)
+			t.Errorf("parse errors:\n")
 			for _, e := range p.errors {
 				t.Errorf("\t%s\n", e)
 			}

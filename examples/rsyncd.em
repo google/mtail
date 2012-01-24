@@ -3,13 +3,13 @@
 
 # %d [%p]
 /^(?P<date>\d+\/\d+\/\d+ \d+:\d+:\d+) \[(?P<pid>\d+)\] / {
-  strptime($1, "2006/01/02 15:04:05")
+  strptime($date, "2006/01/02 15:04:05")
 
   # Transfer log
   # %o %h [%a] %m (%u) %f %l
   /(?P<operation>\S+) (\S+) \[\S+\] (?P<module>\S+) \(\S*\) \S+ (?P<bytes>\d+)/ {
-    tag(operation, $1)
-    tag(module, $3)
+    tag(operation, $operation)
+    tag(module, $module)
     inc(transfers_total)
   }
 
@@ -22,10 +22,10 @@
   # Connection summary
   /sent (?P<sent>\d+) bytes  received (?P<received>\d+) bytes  total size \d+/ {
     tag(operation, sent)
-    inc(bytes_total, $1)
+    inc(bytes_total, $sent)
 
     tag(operation, received)
-    inc(bytes_total, $2)
+    inc(bytes_total, $received)
 
     # FIXME
     # TODO(jaq): blurgh

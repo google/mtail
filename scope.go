@@ -8,14 +8,14 @@ type scope struct {
 	symtab map[string]int
 }
 
-func (s *scope) lookupSym(name string) bool {
-	_, ok := s.symtab[name]
+func (s *scope) lookupSym(name string) (int, bool) {
+	r, ok := s.symtab[name]
 	if !ok && s.parent != nil {
 		return s.parent.lookupSym(name)
 	}
-	return ok
+	return r, ok
 }
 
-func (s *scope) addSym(name string) {
-	s.symtab[name] = 1
+func (s *scope) addSym(name string, index int) {
+	s.symtab[name] = index
 }
