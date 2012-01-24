@@ -40,11 +40,11 @@ var kMtailPrograms = []validProgram{
 			"inc(foo)\n" +
 			" }"},
 
-	// {"named capture group reference",
-	// 	"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
-	// 		"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
-	// 		"  inc(foo)\n" +
-	// 		"}"},
+	{"named capture group reference",
+		"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
+			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
+			"  inc(foo)\n" +
+			"}"},
 
 	{"nested match conditions",
 		"/match(\\d+)/ {\n" +
@@ -142,18 +142,14 @@ var InvalidPrograms = []InvalidProgram{
 		[]string{"unterminated string:1:6-12: Unterminated quoted string: \"\\\"foo) }\"",
 			"unterminated string:1:6-12: syntax error"}},
 
-	// {"undefined capture group reference, need to store nested symbol tables",
-	// 	"/blurgh/  inc($undef) }\n",
-	// 	[]string{"Capture group undefined by prior regular expression " +
-	// 		"in this or outer scopes: $undef\n" +
-	// 		"/blurgh/  inc($undef) }\n" +
-	// 		"               ^----^"},
-	// },
+	{"undefined named capture group",
+		"/blurgh/ { inc($undef) }\n",
+		[]string{"undefined named capture group:1:16-21: Capture group $undef not defined by prior regular expression in this or an outer scope"}},
 
 	{"out of bounds capref",
 		"/(blyurg)/ { inc($2) }\n",
 		[]string{"out of bounds capref:1:18-19: Capture group $2 not defined by prior regular expression " +
-			"in this or outer scopes"},
+			"in this or an outer scope"},
 	},
 }
 

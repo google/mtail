@@ -119,7 +119,7 @@ expr
           $$ = &caprefNode{$1}
       } else {
           Emtaillex.Error(fmt.Sprintf("Capture group $%s not defined by prior regular expression in " +
-                                      "this or outer scopes",  $1))
+                                      "this or an outer scope",  $1))
           // TODO(jaq) force a parse error
       }
   }
@@ -147,6 +147,9 @@ cond
           // value.  At parse time, we can warn about nonexistent names.
           for i := 1; i < re.NumSubexp() + 1; i++ {
               Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i))
+          }
+          for _, capref := range re.SubexpNames() {
+              Emtaillex.(*parser).s.addSym(capref)
           }
           // TODO(jaq): when supported add named capturing groups
           $$ = &regexNode{$1}
