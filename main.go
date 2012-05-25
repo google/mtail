@@ -52,7 +52,7 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 
 // JSON export
 func handleJson(w http.ResponseWriter, r *http.Request) {
-	b, err := json.MarshalForHTML(metrics)
+	b, err := json.Marshal(metrics)
 	if err != nil {
 		log.Println("error marshalling metrics into json:", err.Error())
 	}
