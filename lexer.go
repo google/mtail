@@ -21,7 +21,11 @@ var lexemeName = map[Lexeme]string{
 	RCURLY:  "RCURLY",
 	LPAREN:  "LPAREN",
 	RPAREN:  "RPAREN",
+	LSQUARE: "LSQUARE",
+	RSQUARE: "RSQUARE",
 	COMMA:   "COMMA",
+	MINUS:   "MINUS",
+	PLUS:    "PLUS",
 	REGEX:   "REGEX",
 	ID:      "ID",
 	CAPREF:  "CAPREF",
@@ -118,6 +122,7 @@ func (l *lexer) NextToken() Token {
 // emit passes a token to the client.
 func (l *lexer) emit(kind Lexeme) {
 	pos := Position{l.line, l.startcol, l.col - 1}
+	//fmt.Printf("hello %s %s %s\n", kind, l.text, pos)
 	l.tokens <- Token{kind, l.text, pos}
 	// Reset the current token
 	l.text = ""
@@ -135,6 +140,7 @@ func (l *lexer) next() rune {
 		l.width = 1
 		return eof
 	}
+	//fmt.Printf("rune is %c\n", l.rune)
 	return l.rune
 }
 
@@ -153,6 +159,7 @@ func (l *lexer) stepCursor() {
 	} else {
 		l.col += l.width
 	}
+	//fmt.Printf("moved to %d:%d\n", l.line, l.col)
 }
 
 // accept accepts the current rune and its position into the current token.
@@ -168,8 +175,8 @@ func (l *lexer) skip() {
 	l.stepCursor()
 }
 
-// ignore skips over the current rune, removing it from the text of the
-// token, and resetting the start position of the current token. Use only between
+// ignore skips over the current rune, removing it from the text of the token,
+// and resetting the start position of the current token. Use only between
 // tokens.
 func (l *lexer) ignore() {
 	l.stepCursor()
@@ -205,9 +212,21 @@ func lexProg(l *lexer) stateFn {
 	case r == ')':
 		l.accept()
 		l.emit(RPAREN)
+	case r == '[':
+		l.accept()
+		l.emit(LSQUARE)
+	case r == ']':
+		l.accept()
+		l.emit(RSQUARE)
 	case r == ',':
 		l.accept()
 		l.emit(COMMA)
+	case r == '-':
+		l.accept()
+		l.emit(MINUS)
+	case r == '+':
+		l.accept()
+		l.emit(PLUS)
 	case r == '/':
 		return lexRegex
 	case r == '"':
@@ -235,7 +254,10 @@ func lexComment(l *lexer) stateFn {
 Loop:
 	for {
 		switch l.next() {
-		case eof, '\n':
+		case '\n':
+			l.skip()
+			fallthrough
+		case eof:
 			break Loop
 		default:
 			l.ignore()

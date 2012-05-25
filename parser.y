@@ -25,7 +25,8 @@ import (
 }
 
 
-%type <n> stmt_list stmt cond expr_list expr opt_expr_list
+%type <n> stmt_list stmt cond expr_list opt_expr_list
+%type <n> expr primary_expr additive_expr postfix_expr
 
 // Tokens and types are defined here.
 // Invalid input
@@ -39,8 +40,9 @@ import (
 %token <text> CAPREF
 %token <text> ID
 // Punctuation
-%token LCURLY RCURLY LPAREN RPAREN
+%token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
 %token COMMA
+%token MINUS PLUS
 
 
 %start start
@@ -108,7 +110,7 @@ expr_list
   }
   ;
 
-expr
+primary_expr
   : ID
   {
       $$ = idNode{$1}
@@ -126,6 +128,35 @@ expr
   | STRING
   {
       $$ = &stringNode{$1}
+  }
+  ;
+
+additive_expr
+  : additive_expr PLUS primary_expr
+  {
+    $$ = nil
+  }
+  | additive_expr MINUS primary_expr
+  {
+    $$ = nil
+  }
+  ;
+
+postfix_expr
+  : primary_expr
+  {
+    $$ = $1
+  }
+  | postfix_expr LSQUARE expr RSQUARE
+  {
+    $$ = nil
+  }
+  ; 
+
+expr
+  : additive_expr
+  {
+     $$ = $1
   }
   ;
 

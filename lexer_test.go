@@ -24,13 +24,19 @@ var lexerTests = []lexerTest{
 		Token{EOF, "", Position{0, 9, 9}}}},
 	{"comment not at col 1", "  # comment", []Token{
 		Token{EOF, "", Position{0, 11, 11}}}},
-	{"punctuation", "{}(),", []Token{
+	{"punctuation", "{}()[],", []Token{
 		Token{LCURLY, "{", Position{0, 0, 0}},
 		Token{RCURLY, "}", Position{0, 1, 1}},
 		Token{LPAREN, "(", Position{0, 2, 2}},
 		Token{RPAREN, ")", Position{0, 3, 3}},
-		Token{COMMA, ",", Position{0, 4, 4}},
-		Token{EOF, "", Position{0, 5, 5}}}},
+		Token{LSQUARE, "[", Position{0, 4, 4}},
+		Token{RSQUARE, "]", Position{0, 5, 5}},
+		Token{COMMA, ",", Position{0, 6, 6}},
+		Token{EOF, "", Position{0, 7, 7}}}},
+	{"operators", "-+", []Token{
+		Token{MINUS, "-", Position{0, 0, 0}},
+		Token{PLUS, "+", Position{0, 1, 1}},
+		Token{EOF, "", Position{0, 2, 2}}}},
 	{"keywords",
 		"inc\nset\ntag\nstrptime\n", []Token{
 			Token{BUILTIN, "inc", Position{0, 0, 2}},
@@ -89,6 +95,13 @@ var lexerTests = []lexerTest{
 			Token{RPAREN, ")", Position{2, 9, 9}},
 			Token{RCURLY, "}", Position{3, 0, 0}},
 			Token{EOF, "", Position{3, 1, 1}}}},
+	{"linecount",
+		"# comment\n" +
+			"# blank line\n" +
+			"\n" +
+			"foo", []Token{
+			Token{ID, "foo", Position{3, 0, 2}},
+			Token{EOF, "", Position{3, 3, 3}}}},
 	// errors
 	{"unexpected char", "?", []Token{
 		Token{INVALID, "Unexpected input: '?'", Position{0, 0, 0}}}},
