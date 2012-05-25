@@ -1,10 +1,6 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
-GOROOT?=/usr/lib/go
-
-include $(GOROOT)/src/Make.inc
-
 TARG=emtail
 
 GOFILES=\
@@ -31,15 +27,16 @@ CLEANFILES+=\
 	parser.go\
 	y.output\
 
-include $(GOROOT)/src/Make.cmd
+all: parser.go $(GOFILES)
+	go build
 
 parser.go: parser.y
-	goyacc -o $@ -p Emtail $<
+	go tool yacc -v y.output -o $@ -p Emtail $<
 
 .PHONY: test
 test:
-	gotest
+	go test
 
 .PHONY: testshort
 testshort:
-	gotest -test.short
+	go test -test.short
