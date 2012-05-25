@@ -110,6 +110,39 @@ expr_list
   }
   ;
 
+expr
+  : additive_expr
+  {
+     $$ = $1
+  }
+  ;
+
+additive_expr
+  : postfix_expr
+  {
+    $$ = $1
+  }
+  | additive_expr PLUS postfix_expr
+  {
+    $$ = $1
+  }
+  | additive_expr MINUS postfix_expr
+  {
+    $$ = $1
+  }
+  ;
+
+postfix_expr
+  : primary_expr
+  {
+    $$ = $1
+  }
+  | postfix_expr LSQUARE expr RSQUARE
+  {
+    $$ = $1
+  }
+  ; 
+
 primary_expr
   : ID
   {
@@ -129,36 +162,12 @@ primary_expr
   {
       $$ = &stringNode{$1}
   }
-  ;
-
-additive_expr
-  : additive_expr PLUS primary_expr
+  | LPAREN expr RPAREN
   {
-    $$ = nil
-  }
-  | additive_expr MINUS primary_expr
-  {
-    $$ = nil
+      $$ = $2
   }
   ;
 
-postfix_expr
-  : primary_expr
-  {
-    $$ = $1
-  }
-  | postfix_expr LSQUARE expr RSQUARE
-  {
-    $$ = nil
-  }
-  ; 
-
-expr
-  : additive_expr
-  {
-     $$ = $1
-  }
-  ;
 
 cond
   : /* empty */
