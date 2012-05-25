@@ -34,7 +34,7 @@ parser.go: parser.y
 	go tool yacc -v y.output -o $@ -p Emtail $<
 
 .PHONY: test
-test:
+test: parser.go $(GOFILES) $(GOTESTFILES)
 	go test
 
 .PHONY: testshort
