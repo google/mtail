@@ -33,10 +33,11 @@ var lexerTests = []lexerTest{
 		Token{RSQUARE, "]", Position{0, 5, 5}},
 		Token{COMMA, ",", Position{0, 6, 6}},
 		Token{EOF, "", Position{0, 7, 7}}}},
-	{"operators", "-+", []Token{
+	{"operators", "-+=", []Token{
 		Token{MINUS, "-", Position{0, 0, 0}},
 		Token{PLUS, "+", Position{0, 1, 1}},
-		Token{EOF, "", Position{0, 2, 2}}}},
+		Token{ASSIGN, "=", Position{0, 2, 2}},
+		Token{EOF, "", Position{0, 3, 3}}}},
 	{"keywords",
 		"inc\nset\ntag\nstrptime\n", []Token{
 			Token{BUILTIN, "inc", Position{0, 0, 2}},

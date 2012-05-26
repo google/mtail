@@ -122,7 +122,6 @@ func (l *lexer) NextToken() Token {
 // emit passes a token to the client.
 func (l *lexer) emit(kind Lexeme) {
 	pos := Position{l.line, l.startcol, l.col - 1}
-	//fmt.Printf("hello %s %s %s\n", kind, l.text, pos)
 	l.tokens <- Token{kind, l.text, pos}
 	// Reset the current token
 	l.text = ""
@@ -140,7 +139,6 @@ func (l *lexer) next() rune {
 		l.width = 1
 		return eof
 	}
-	//fmt.Printf("rune is %c\n", l.rune)
 	return l.rune
 }
 
@@ -159,7 +157,6 @@ func (l *lexer) stepCursor() {
 	} else {
 		l.col += l.width
 	}
-	//fmt.Printf("moved to %d:%d\n", l.line, l.col)
 }
 
 // accept accepts the current rune and its position into the current token.
@@ -227,6 +224,9 @@ func lexProg(l *lexer) stateFn {
 	case r == '+':
 		l.accept()
 		l.emit(PLUS)
+	case r == '=':
+		l.accept()
+		l.emit(ASSIGN)
 	case r == '/':
 		return lexRegex
 	case r == '"':

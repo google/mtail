@@ -25,8 +25,8 @@ import (
 }
 
 
-%type <n> stmt_list stmt cond expr_list opt_expr_list
-%type <n> expr primary_expr additive_expr postfix_expr
+%type <n> stmt_list stmt cond arg_expr_list
+%type <n> expr primary_expr additive_expr postfix_expr unary_expr assign_expr
 
 // Tokens and types are defined here.
 // Invalid input
@@ -42,7 +42,7 @@ import (
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
 %token COMMA
-%token MINUS PLUS
+%token MINUS PLUS ASSIGN
 
 
 %start start
@@ -81,54 +81,66 @@ stmt
           $$ = $3
       }
   }
-  | BUILTIN LPAREN opt_expr_list RPAREN
+  | expr
+  ;
+
+
+expr
+  : assign_expr
+  {
+     $$ = $1
+  }
+  | expr COMMA assign_expr
+  {
+      $$ = $1
+      $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
+  }  
+  ;
+
+assign_expr
+  : additive_expr 
+  {
+     $$ = $1
+  }
+  | unary_expr ASSIGN assign_expr
+  {
+    $$ = nil
+  }
+
+additive_expr
+  : unary_expr
+  {
+    $$ = $1
+  }
+  | additive_expr PLUS unary_expr
+  {
+    $$ = $1
+  }
+  | additive_expr MINUS unary_expr
+  {
+    $$ = $1
+  }
+  ;
+
+unary_expr
+  : postfix_expr
+  {
+    $$ = $1
+  }
+  | BUILTIN LPAREN arg_expr_list RPAREN
   {
     $$ = &builtinNode{$1, *$3.(*exprlistNode)}
   }
   ;
 
-opt_expr_list
-  : /* empty */
-  {
-      $$ = &exprlistNode{}
-  }
-  | expr_list
-  {
-      $$ = $1
-  }
-  ;
-
-expr_list
-  : expr_list COMMA expr
-  {
-      $$ = $1
-      $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
-  }
-  | expr
-  {
-      $$ = &exprlistNode{[]node{$1}}
-  }
-  ;
-
-expr
-  : additive_expr
+arg_expr_list
+  : assign_expr
   {
      $$ = $1
   }
-  ;
-
-additive_expr
-  : postfix_expr
+  | arg_expr_list COMMA assign_expr
   {
-    $$ = $1
-  }
-  | additive_expr PLUS postfix_expr
-  {
-    $$ = $1
-  }
-  | additive_expr MINUS postfix_expr
-  {
-    $$ = $1
+     $$ = $1
   }
   ;
 
@@ -153,7 +165,8 @@ primary_expr
       if index, ok := Emtaillex.(*parser).s.lookupSym($1); ok {
           $$ = &caprefNode{$1, index}
       } else {
-          Emtaillex.Error(fmt.Sprintf("Capture group $%s not defined by prior regular expression in " +
+          Emtaillex.Error(fmt.Sprintf("Capture group $%s not defined " +
+                                      "by prior regular expression in " +
                                       "this or an outer scope",  $1))
           // TODO(jaq) force a parse error
       }
@@ -193,7 +206,6 @@ cond
                   Emtaillex.(*parser).s.addSym(capref, i)
               }
           }
-          // TODO(jaq): when supported add named capturing groups
           $$ = &regexNode{$1}
       }
   }
