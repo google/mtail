@@ -61,7 +61,7 @@ func (p *unparser) visitBuiltin(b builtinNode) {
 
 func (p *unparser) visitAdditiveExpr(a additiveExprNode) {
 	a.lhs.acceptVisitor(p)
-	p.output += fmt.Sprintf(" %s ", a.op)
+	p.output += fmt.Sprintf(" %c ", a.op)
 	a.rhs.acceptVisitor(p)
 }
 

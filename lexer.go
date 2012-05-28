@@ -185,7 +185,9 @@ func (l *lexer) ignore() {
 // nil state function to the state machine.
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 	pos := Position{l.line, l.startcol, l.col - 1}
-	l.tokens <- Token{kind: INVALID, text: fmt.Sprintf(format, args...), pos: pos}
+	l.tokens <- Token{kind: INVALID,
+		text: fmt.Sprintf(format, args...),
+		pos:  pos}
 	return nil
 }
 
@@ -244,7 +246,6 @@ func lexProg(l *lexer) stateFn {
 	default:
 		l.accept()
 		return l.errorf("Unexpected input: %q", r)
-		return nil
 	}
 	return lexProg
 }

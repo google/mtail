@@ -24,7 +24,9 @@ CLEANFILES+=\
 	parser.go\
 	y.output\
 
-all: parser.go $(GOFILES)
+all: emtail
+
+emtail: parser.go $(GOFILES)
 	go build
 
 parser.go: parser.y
