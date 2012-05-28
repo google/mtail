@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	_ "net/http/pprof"
 )
@@ -23,18 +22,13 @@ import (
 var port *string = flag.String("port", "3903", "HTTP port to listen on.")
 var logs *string = flag.String("logs", "", "List of files to monitor.")
 var progs *string = flag.String("progs", "", "Directory containing programs")
-var compile_only *bool = flag.Bool("compile_only", false, "Compile programs only.")
-
-// Global metrics storage.
-var (
-	metric_lock sync.RWMutex
-	metrics     []*Metric
-)
 
 var line_count = expvar.NewInt("line_count")
 
 // CSV export
 func handleCsv(w http.ResponseWriter, r *http.Request) {
+	metric_lock.RLock()
+	defer metric_lock.Unlock()
 	c := csv.NewWriter(w)
 	for _, m := range metrics {
 		record := []string{m.Name,
@@ -52,6 +46,8 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 
 // JSON export
 func handleJson(w http.ResponseWriter, r *http.Request) {
+	metric_lock.RLock()
+	defer metric_lock.Unlock()
 	b, err := json.Marshal(metrics)
 	if err != nil {
 		log.Println("error marshalling metrics into json:", err.Error())

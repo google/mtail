@@ -31,6 +31,7 @@ import (
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
+%token EOF
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -94,18 +95,6 @@ expr
     $$ = $1
   }
   ;
-/* 
- * /\* empty *\/
- *   {
- *     $$ = &exprlistNode{}
- *   }
- *   | expr COMMA assign_expr
- *   {
- *       $$ = $1
- *       $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
- *   }  
- */
-   /* ; */
 
 assign_expr
   : additive_expr 
@@ -219,8 +208,6 @@ cond
 
 %%
 
-const EOF = 0
-
 type parser struct {
     root   node
     errors []string
@@ -243,9 +230,9 @@ func (p *parser) Lex(lval *EmtailSymType) int {
     p.pos = token.pos
     if token.kind == INVALID {
     	p.Error(token.text)
-        return EOF
+    } else {
+        lval.text = token.text
     }
-    lval.text = token.text
     return int(token.kind)
 }
 

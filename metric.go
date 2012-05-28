@@ -4,6 +4,7 @@
 package main
 
 import (
+	"sync"
 	"time"
 )
 
@@ -32,3 +33,9 @@ type Metric struct {
 	Unit  string
 	Tags  map[string]string
 }
+
+// Global metrics storage.
+var (
+	metric_lock sync.RWMutex
+	metrics     []*Metric
+)

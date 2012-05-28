@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -23,7 +24,7 @@ var kMtailPrograms = []validProgram{
 
 	{"more complex action, calling builtin",
 		"/foo/ {\n" +
-			"  inc(\"line-count\")\n" +
+			"  inc(line-count)\n" +
 			"}"},
 
 	{"regex match includes escaped slashes",
@@ -77,7 +78,7 @@ var kMtailPrograms = []validProgram{
 			"variable = $foo\n" +
 			"}\n"},
 
-	{"additive",
+	{"additive and mem storage",
 		"/(?P<foo>.*)/ {\n" +
 			"inc(\"time_total\", timestamp - variable[$foo])\n" +
 			"}\n"},
@@ -87,10 +88,12 @@ func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range kMtailPrograms {
 		metrics = make([]*Metric, 0)
 		p := NewParser(tc.name, strings.NewReader(tc.program))
-		EmtailDebug = 1 //999 // All the debugging.
-		EmtailParse(p)
+		fmt.Printf("New %s\n", tc.name)
+		EmtailDebug = 999 // All the debugging.
+		r := EmtailParse(p)
+		fmt.Printf("End %s, %d\n", tc.name, r)
 
-		if p.root == nil || len(p.errors) > 0 {
+		if r != 0 || p.root == nil || len(p.errors) > 0 {
 			t.Errorf("parse errors:\n")
 			for _, e := range p.errors {
 				t.Errorf("\t%s\n", e)

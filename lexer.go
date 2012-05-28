@@ -111,6 +111,7 @@ func (l *lexer) NextToken() Token {
 	for {
 		select {
 		case token := <-l.tokens:
+			fmt.Printf("token: %s\n", token)
 			return token
 		default:
 			l.state = l.state(l)

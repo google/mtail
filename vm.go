@@ -4,6 +4,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,8 @@ import (
 	"strconv"
 	"time"
 )
+
+var compile_only *bool = flag.Bool("compile_only", false, "Compile programs only.")
 
 type opcode int
 
@@ -243,8 +246,8 @@ type compiler struct {
 
 func Compile(name string, input io.Reader) (*vm, []string) {
 	p := NewParser(name, input)
-	EmtailParse(p)
-	if p == nil || len(p.errors) > 0 {
+	r := EmtailParse(p)
+	if r != 0 || p == nil || len(p.errors) > 0 {
 		return nil, p.errors
 	}
 	if *compile_only {

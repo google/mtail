@@ -1,12 +1,9 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
-TARG=emtail
-
 GOFILES=\
 	ast.go\
 	lexer.go\
-	main.go\
 	metric.go\
 	parser.go\
 	scope.go\
