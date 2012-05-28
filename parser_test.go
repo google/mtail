@@ -16,72 +16,72 @@ type validProgram struct {
 }
 
 var kMtailPrograms = []validProgram{
-	{"empty",
-		""},
+	// {"empty",
+	// 	""},
 
-	{"simple pattern action",
-		"/foo/ {}"},
+	// {"simple pattern action",
+	// 	"/foo/ {}"},
 
 	{"more complex action, calling builtin",
 		"/foo/ {\n" +
 			"  inc(line-count)\n" +
 			"}"},
 
-	{"regex match includes escaped slashes",
-		"/foo\\// { inc(foo) }"},
+	// {"regex match includes escaped slashes",
+	// 	"/foo\\// { inc(foo) }"},
 
-	{"numeric capture group reference",
-		"/(foo)/ {\n" +
-			"  inc($1)\n" +
-			"}"},
+	// {"numeric capture group reference",
+	// 	"/(foo)/ {\n" +
+	// 		"  inc($1)\n" +
+	// 		"}"},
 
-	{"strptime and capref",
-		"/(.*)/ {\n" +
-			"strptime($1, \"2006-01-02T15:04:05Z07:00\")\n" +
-			"inc(foo)\n" +
-			" }"},
+	// {"strptime and capref",
+	// 	"/(.*)/ {\n" +
+	// 		"strptime($1, \"2006-01-02T15:04:05Z07:00\")\n" +
+	// 		"inc(foo)\n" +
+	// 		" }"},
 
-	{"named capture group reference",
-		"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
-			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
-			"  inc(foo)\n" +
-			"}"},
+	// {"named capture group reference",
+	// 	"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
+	// 		"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
+	// 		"  inc(foo)\n" +
+	// 		"}"},
 
-	{"nested match conditions",
-		"/match(\\d+)/ {\n" +
-			"  inc(foo, $1)\n" +
-			"  /^bleh (\\S+)/ {\n" +
-			"    inc(bar)\n" +
-			"    inc($1)\n" +
-			"  }\n" +
-			"}\n"},
+	// {"nested match conditions",
+	// 	"/match(\\d+)/ {\n" +
+	// 		"  inc(foo, $1)\n" +
+	// 		"  /^bleh (\\S+)/ {\n" +
+	// 		"    inc(bar)\n" +
+	// 		"    inc($1)\n" +
+	// 		"  }\n" +
+	// 		"}\n"},
 
-	{"nested scope",
-		"/fo(o)/ {\n" +
-			"  inc($1)\n" +
-			"  /bar(xxx)/ {\n" +
-			"    inc($1, $1)\n" +
-			"    set(foo, $1)\n" +
-			"  }\n" +
-			"}\n"},
+	// {"nested scope",
+	// 	"/fo(o)/ {\n" +
+	// 		"  inc($1)\n" +
+	// 		"  /bar(xxx)/ {\n" +
+	// 		"    inc($1, $1)\n" +
+	// 		"    set(foo, $1)\n" +
+	// 		"  }\n" +
+	// 		"}\n"},
 
-	{"comment then code",
-		"# %d [%p]\n" +
-			"/^(?P<date>\\d+\\/\\d+\\/\\d+ \\d+:\\d+:\\d+) \\[(?P<pid>\\d+)\\] / {\n" +
-			"  strptime($1, \"2006/01/02 15:04:05\")\n" +
-			"  tag(\"pid\", $2)\n" +
-			"  inc(transfers_total)\n" +
-			"}\n"},
+	// {"comment then code",
+	// 	"# %d [%p]\n" +
+	// 		"/^(?P<date>\\d+\\/\\d+\\/\\d+ \\d+:\\d+:\\d+) \\[(?P<pid>\\d+)\\] / {\n" +
+	// 		"  strptime($1, \"2006/01/02 15:04:05\")\n" +
+	// 		"  tag(\"pid\", $2)\n" +
+	// 		"  inc(transfers_total)\n" +
+	// 		"}\n"},
 
-	{"assignment",
-		"/(?P<foo>.*)/ {\n" +
-			"variable = $foo\n" +
-			"}\n"},
+	// {"assignment",
+	// 	"/(?P<foo>.*)/ {\n" +
+	// 		"variable = $foo\n" +
+	// 		"}\n"},
 
-	{"additive and mem storage",
-		"/(?P<foo>.*)/ {\n" +
-			"inc(\"time_total\", timestamp - variable[$foo])\n" +
-			"}\n"},
+	// {"additive and mem storage",
+	// 	"/(?P<foo>.*)/ {\n" +
+	// 		"inc(\"time_total\", timestamp - variable[$foo])\n" +
+	//			"}\n"},
 }
 
 func TestParserRoundTrip(t *testing.T) {
