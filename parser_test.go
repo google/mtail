@@ -23,7 +23,7 @@ var kMtailPrograms = []validProgram{
 
 	{"more complex action, calling builtin",
 		"/foo/ {\n" +
-			"  inc(line-count)\n" +
+			"  inc(\"line-count\")\n" +
 			"}"},
 
 	{"regex match includes escaped slashes",
@@ -71,13 +71,23 @@ var kMtailPrograms = []validProgram{
 			"  tag(\"pid\", $2)\n" +
 			"  inc(transfers_total)\n" +
 			"}\n"},
+
+	{"assignment",
+		"/(?P<foo>.*)/ {\n" +
+			"variable = $foo\n" +
+			"}\n"},
+
+	{"additive",
+		"/(?P<foo>.*)/ {\n" +
+			"inc(\"time_total\", timestamp - variable[$foo])\n" +
+			"}\n"},
 }
 
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range kMtailPrograms {
 		metrics = make([]*Metric, 0)
 		p := NewParser(tc.name, strings.NewReader(tc.program))
-		//EmtailDebug = 1 //999 // All the debugging.
+		EmtailDebug = 1 //999 // All the debugging.
 		EmtailParse(p)
 
 		if p.root == nil || len(p.errors) > 0 {

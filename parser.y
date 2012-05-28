@@ -82,20 +82,30 @@ stmt
       }
   }
   | expr
+  {
+    $$ = $1
+  }
   ;
 
 
 expr
   : assign_expr
   {
-     $$ = $1
+    $$ = $1
   }
-  | expr COMMA assign_expr
-  {
-      $$ = $1
-      $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
-  }  
   ;
+/* 
+ * /\* empty *\/
+ *   {
+ *     $$ = &exprlistNode{}
+ *   }
+ *   | expr COMMA assign_expr
+ *   {
+ *       $$ = $1
+ *       $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
+ *   }  
+ */
+   /* ; */
 
 assign_expr
   : additive_expr 
@@ -104,7 +114,7 @@ assign_expr
   }
   | unary_expr ASSIGN assign_expr
   {
-    $$ = nil
+    $$ = &assignExprNode{$1, $3}
   }
 
 additive_expr
@@ -114,11 +124,11 @@ additive_expr
   }
   | additive_expr PLUS unary_expr
   {
-    $$ = $1
+    $$ = &additiveExprNode{$1, $3, '+'}
   }
   | additive_expr MINUS unary_expr
   {
-    $$ = $1
+    $$ = &additiveExprNode{$1, $3, '-'}
   }
   ;
 
@@ -134,13 +144,14 @@ unary_expr
   ;
 
 arg_expr_list
-  : assign_expr
+  : /* empty */
   {
-     $$ = $1
+    $$ = &exprlistNode{}
   }
   | arg_expr_list COMMA assign_expr
   {
      $$ = $1
+     $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
   }
   ;
 
@@ -151,7 +162,7 @@ postfix_expr
   }
   | postfix_expr LSQUARE expr RSQUARE
   {
-    $$ = $1
+    $$ = &indexedExprNode{$1, $3}
   }
   ; 
 
@@ -183,12 +194,7 @@ primary_expr
 
 
 cond
-  : /* empty */
-  {
-      /* Emtaillex.(*parser).startScope() */
-      $$ = nil
-  }
-  | REGEX
+  : REGEX
   {
       /* Emtaillex.(*parser).startScope() */
       if re, err := regexp.Compile($1); err != nil {

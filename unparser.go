@@ -3,6 +3,8 @@
 
 package main
 
+import "fmt"
+
 type unparser struct {
 	output string
 }
@@ -55,4 +57,23 @@ func (p *unparser) visitBuiltin(b builtinNode) {
 	p.output += b.name + "("
 	b.args.acceptVisitor(p)
 	p.output += ")"
+}
+
+func (p *unparser) visitAdditiveExpr(a additiveExprNode) {
+	a.lhs.acceptVisitor(p)
+	p.output += fmt.Sprintf(" %s ", a.op)
+	a.rhs.acceptVisitor(p)
+}
+
+func (p *unparser) visitAssignExpr(a assignExprNode) {
+	a.lhs.acceptVisitor(p)
+	p.output += " = "
+	a.rhs.acceptVisitor(p)
+}
+
+func (p *unparser) visitIndexedExpr(i indexedExprNode) {
+	i.lhs.acceptVisitor(p)
+	p.output += "["
+	i.index.acceptVisitor(p)
+	p.output += "]"
 }

@@ -24,21 +24,29 @@ const (
 	ret
 	push
 	capref
-	load
+	str
 	set
+	add
+	sub
+	stor
+	load
 )
 
 var opNames = map[opcode]string{
-	match:    "match",
-	jnm:      "jnm",
-	inc:      "inc",
-	strptime: "strptime",
-	tag:      "tag",
-	ret:      "ret",
-	push:     "push",
-	capref:   "capref",
-	load:     "load",
-	set:      "set",
+	match:    "match",    // Match a regular expression against input
+	jnm:      "jnm",      // Jump if no match
+	inc:      "inc",      // Increment an exported variable value
+	strptime: "strptime", // Parse into the timestamp register
+	tag:      "tag",      // Set a variable tag
+	ret:      "ret",      // Return, end program successfully
+	push:     "push",     // Push operand on to stack
+	capref:   "capref",   // Push capref at operand onto stack
+	str:      "str",      // Push string at operand onto stack
+	set:      "set",      // Set an exported variable value
+	add:      "add",      // Add top values on stack and push to stack
+	sub:      "sub",      // Subtract tpo value from second top value on stack,  and push to stack.
+	stor:     "stor",     // Store top of stack at location operand
+	load:     "load",     // Load location at operand onto top of stack
 }
 
 var builtin = map[string]opcode{
@@ -188,7 +196,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		t.tags[key] = value
 	case capref:
 		v.push(t.matches[i.opnd])
-	case load:
+	case str:
 		v.push(v.str[i.opnd])
 	case ret:
 		return true
@@ -307,7 +315,7 @@ func (c *compiler) visitRegex(n regexNode) {
 
 func (c *compiler) visitString(n stringNode) {
 	c.str = append(c.str, n.text)
-	c.emit(instr{load, len(c.str) - 1})
+	c.emit(instr{str, len(c.str) - 1})
 }
 
 var typ = map[string]mtype{
@@ -348,4 +356,27 @@ func (c *compiler) visitBuiltin(n builtinNode) {
 	n.args.acceptVisitor(c)
 	c.emit(instr{builtin[n.name], len(n.args.children)})
 	c.builtin = ""
+}
+
+func (c *compiler) visitAdditiveExpr(a additiveExprNode) {
+	a.lhs.acceptVisitor(c)
+	a.rhs.acceptVisitor(c)
+	switch a.op {
+	case '+':
+		c.emit(instr{op: add})
+	case '-':
+		c.emit(instr{op: sub})
+	}
+}
+
+func (c *compiler) visitAssignExpr(a assignExprNode) {
+	a.lhs.acceptVisitor(c)
+	a.rhs.acceptVisitor(c)
+	c.emit(instr{op: stor})
+}
+
+func (c *compiler) visitIndexedExpr(i indexedExprNode) {
+	i.lhs.acceptVisitor(c)
+	i.index.acceptVisitor(c)
+	c.emit(instr{op: load})
 }

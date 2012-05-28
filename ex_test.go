@@ -44,6 +44,8 @@ TestLoop:
 		}
 		defer p.Close()
 
+		// EmtailDebug = 999 // All the debugging.
+
 		vm, errs := Compile(tc.programfile, p)
 		if errs != nil {
 			t.Errorf("%s: compile failed: %s", tc.programfile, strings.Join(errs, "\n"))

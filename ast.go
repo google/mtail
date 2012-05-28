@@ -12,6 +12,9 @@ type visitor interface {
 	visitCapref(caprefNode)
 	visitString(stringNode)
 	visitBuiltin(builtinNode)
+	visitAdditiveExpr(additiveExprNode)
+	visitAssignExpr(assignExprNode)
+	visitIndexedExpr(indexedExprNode)
 }
 
 type node interface {
@@ -84,4 +87,32 @@ type builtinNode struct {
 
 func (b builtinNode) acceptVisitor(visit visitor) {
 	visit.visitBuiltin(b)
+}
+
+type additiveExprNode struct {
+	lhs node
+	rhs node
+	op  int
+}
+
+func (a additiveExprNode) acceptVisitor(visit visitor) {
+	visit.visitAdditiveExpr(a)
+}
+
+type assignExprNode struct {
+	lhs node
+	rhs node
+}
+
+func (a assignExprNode) acceptVisitor(visit visitor) {
+	visit.visitAssignExpr(a)
+}
+
+type indexedExprNode struct {
+	lhs   node
+	index node
+}
+
+func (i indexedExprNode) acceptVisitor(visit visitor) {
+	visit.visitIndexedExpr(i)
 }
