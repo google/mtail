@@ -23,7 +23,7 @@ const (
 	jnm
 	inc
 	strptime
-	tag
+	//tag
 	ret
 	push
 	capref
@@ -40,23 +40,23 @@ var opNames = map[opcode]string{
 	jnm:      "jnm",      // Jump if no match
 	inc:      "inc",      // Increment an exported variable value
 	strptime: "strptime", // Parse into the timestamp register
-	tag:      "tag",      // Set a variable tag
-	ret:      "ret",      // Return, end program successfully
-	push:     "push",     // Push operand on to stack
-	capref:   "capref",   // Push capref at operand onto stack
-	str:      "str",      // Push string at operand onto stack
-	set:      "set",      // Set an exported variable value
-	add:      "add",      // Add top values on stack and push to stack
-	sub:      "sub",      // Subtract tpo value from second top value on stack,  and push to stack.
-	stor:     "stor",     // Store top of stack at location operand
-	load:     "load",     // Load location at operand onto top of stack
+	//tag:      "tag",      // Set a variable tag
+	ret:    "ret",    // Return, end program successfully
+	push:   "push",   // Push operand on to stack
+	capref: "capref", // Push capref at operand onto stack
+	str:    "str",    // Push string at operand onto stack
+	set:    "set",    // Set an exported variable value
+	add:    "add",    // Add top values on stack and push to stack
+	sub:    "sub",    // Subtract tpo value from second top value on stack,  and push to stack.
+	stor:   "stor",   // Store top of stack at location operand
+	load:   "load",   // Load location at operand onto top of stack
 }
 
 var builtin = map[string]opcode{
 	"inc":      inc,
 	"set":      set,
 	"strptime": strptime,
-	"tag":      tag,
+	//"tag":      tag,
 }
 
 type instr struct {
@@ -184,24 +184,24 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			return v.errorf("time.Parse(%s, %s) failed: %s", layout, s, err)
 		}
 		t.time = tm
-	case tag:
-		k := v.pop()
-		var key string
-		switch k.(type) {
-		case int:
-			key = strconv.Itoa(k.(int))
-		case string:
-			key = k.(string)
-		}
-		val := v.pop()
-		var value string
-		switch val.(type) {
-		case int:
-			value = strconv.Itoa(val.(int))
-		case string:
-			value = val.(string)
-		}
-		//XXX t.tags[key] = value
+	// case tag:
+	// 	k := v.pop()
+	// 	//var key string
+	// 	switch k.(type) {
+	// 	case int:
+	// 		key = strconv.Itoa(k.(int))
+	// 	case string:
+	// 		key = k.(string)
+	// 	}
+	// 	val := v.pop()
+	// 	var value string
+	// 	switch val.(type) {
+	// 	case int:
+	// 		value = strconv.Itoa(val.(int))
+	// 	case string:
+	// 		value = val.(string)
+	// 	}
+	// 	//XXX t.tags[key] = value
 	case capref:
 		v.push(t.matches[i.opnd])
 	case str:
