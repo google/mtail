@@ -360,7 +360,7 @@ func (c *compiler) visitId(n idNode) {
 			}
 			c.emit(instr{push, i})
 		}
-	case "tag", "strptime":
+	case "strptime": // "tag"
 		// Turn IDs into strings.
 		c.str = append(c.str, n.name)
 		c.emit(instr{push, len(c.str) - 1})
