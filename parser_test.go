@@ -4,7 +4,6 @@
 package main
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -93,11 +92,8 @@ func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range kMtailPrograms {
 		metrics = make([]*Metric, 0)
 		p := NewParser(tc.name, strings.NewReader(tc.program))
-		fmt.Printf("New %s\n", tc.name)
-		fmt.Printf("Program: %s\n", tc.program)
-		EmtailDebug = 999 // All the debugging.
+		//EmtailDebug = 999 // All the debugging.
 		r := EmtailParse(p)
-		fmt.Printf("End %s, %d\n", tc.name, r)
 
 		if r != 0 || p.root == nil || len(p.errors) > 0 {
 			t.Errorf("1st pass parse errors:\n")

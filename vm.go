@@ -138,7 +138,8 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 				}
 			}
 		}
-		m := v.pop().(int)
+		val := v.pop()
+		m := val.(int)
 		metric_lock.Lock()
 		defer metric_lock.Unlock()
 		metrics[m].Value += int64(delta)
@@ -205,6 +206,18 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		return true
 	case push:
 		v.push(i.opnd)
+	case load:
+		v.push(0)
+	case stor:
+		v.pop()
+	case add:
+		a := v.pop().(int)
+		b := v.pop().(int)
+		v.push(a + b)
+	case sub:
+		a := v.pop().(int)
+		b := v.pop().(int)
+		v.push(b - a)
 	default:
 		return v.errorf("illegal instruction: %q", i.op)
 	}
