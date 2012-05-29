@@ -36,9 +36,9 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("%s", m.Time),
 			fmt.Sprintf("%d", m.Type),
 			m.Unit}
-		for k, v := range m.Tags {
-			record = append(record, fmt.Sprintf("%s=%s", k, v))
-		}
+		// for k, v := range m.Tags {
+		// 	record = append(record, fmt.Sprintf("%s=%s", k, v))
+		// }
 		c.Write(record)
 	}
 	c.Flush()

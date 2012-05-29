@@ -73,14 +73,18 @@ type thread struct {
 	reg     int
 	matches []string
 	time    time.Time
-	tags    map[string]string
+	//XXXtags    map[string]string
 }
 
 type vm struct {
 	prog []instr
 	re   []*regexp.Regexp
 
+	// constant strings
 	str []string
+
+	// data segment
+	data map[string]interface{}
 
 	stack []interface{}
 	t     thread
@@ -107,7 +111,7 @@ func (v *vm) errorf(format string, args ...interface{}) bool {
 func (v *vm) execute(t *thread, i instr, input string) bool {
 	switch i.op {
 	case match:
-		t.tags = map[string]string{}
+		//XXX t.tags = map[string]string{}
 		// match regex and stre success
 		t.matches = v.re[i.opnd].FindStringSubmatch(input)
 		if t.matches != nil {
@@ -197,7 +201,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		case string:
 			value = val.(string)
 		}
-		t.tags[key] = value
+		//XXX t.tags[key] = value
 	case capref:
 		v.push(t.matches[i.opnd])
 	case str:
@@ -345,7 +349,7 @@ func (c *compiler) visitId(n idNode) {
 	case "inc", "set":
 		i, ok := c.metrics[n.name]
 		if !ok {
-			m := &Metric{Name: n.name, Type: typ[c.builtin], Tags: map[string]string{"prog": c.name}}
+			m := &Metric{Name: n.name, Type: typ[c.builtin]} //XXX, Tags: map[string]string{"prog": c.name}}
 			metrics = append(metrics, m)
 			c.emit(instr{push, len(metrics) - 1})
 		} else {

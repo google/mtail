@@ -31,7 +31,7 @@ type Metric struct {
 	Time  time.Time
 	Type  mtype
 	Unit  string
-	Tags  map[string]string
+	//Tags  map[string]string
 }
 
 // Global metrics storage.
