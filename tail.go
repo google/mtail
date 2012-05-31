@@ -33,7 +33,7 @@ func (t *tailer) Tail(pathname string) {
 	var err error
 	t.files[pathname], err = os.Open(pathname)
 	if err != nil {
-		log.Printf("Failed to open %s for reading: %s\n", pathname, err)
+		log.Printf("Failed to open %q for reading: %s\n", pathname, err)
 	}
 	t.files[pathname].Seek(0, os.SEEK_END)
 	if t.watcher != nil {
