@@ -5,75 +5,63 @@ package main
 
 import "fmt"
 
-type unparser struct {
-	output string
-}
+func unparse(n node) string {
+	output := ""
 
-func (p *unparser) visitStmtList(s stmtlistNode) {
-	for _, child := range s.children {
-		child.acceptVisitor(p)
-		p.output += "\n"
-	}
-}
-
-func (p *unparser) visitExprList(e exprlistNode) {
-	if len(e.children) > 0 {
-		e.children[0].acceptVisitor(p)
-		for _, child := range e.children[1:] {
-			p.output += ", "
-			child.acceptVisitor(p)
+	switch v := n.(type) {
+	case stmtlistNode:
+		for _, child := range v.children {
+			output += unparse(child) + "\n"
 		}
+
+	case exprlistNode:
+		if len(v.children) > 0 {
+			output += unparse(v.children[0])
+			for _, child := range v.children[1:] {
+				output += ", " + unparse(child)
+			}
+		}
+
+	case condNode:
+		if v.cond != nil {
+			output += unparse(v.cond)
+		}
+		output += " {\n"
+		for _, child := range v.children {
+			output += unparse(child)
+		}
+		output += "}\n"
+
+	case regexNode:
+		output += "/" + v.pattern + "/"
+
+	case stringNode:
+		output += "\"" + v.text + "\""
+
+	case idNode:
+		output += v.name
+
+	case caprefNode:
+		output += "$" + v.name
+
+	case builtinNode:
+		output += v.name + "(" + unparse(v.args) + ")"
+
+	case additiveExprNode:
+		output += unparse(v.lhs)
+		output += fmt.Sprintf(" %c ", v.op)
+		output += unparse(v.rhs)
+
+	case assignExprNode:
+		output += unparse(v.lhs)
+		output += " = "
+		output += unparse(v.rhs)
+
+	case indexedExprNode:
+		output += unparse(v.lhs)
+		output += "["
+		output += unparse(v.index)
+		output += "]"
 	}
-}
-
-func (p *unparser) visitCond(c condNode) {
-	if c.cond != nil {
-		c.cond.acceptVisitor(p)
-	}
-	p.output += " {\n"
-	for _, child := range c.children {
-		child.acceptVisitor(p)
-	}
-	p.output += "}\n"
-}
-
-func (p *unparser) visitRegex(r regexNode) {
-	p.output += "/" + r.pattern + "/"
-}
-
-func (p *unparser) visitString(s stringNode) {
-	p.output += "\"" + s.text + "\""
-}
-
-func (p *unparser) visitId(i idNode) {
-	p.output += i.name
-}
-
-func (p *unparser) visitCapref(c caprefNode) {
-	p.output += "$" + c.name
-}
-
-func (p *unparser) visitBuiltin(b builtinNode) {
-	p.output += b.name + "("
-	b.args.acceptVisitor(p)
-	p.output += ")"
-}
-
-func (p *unparser) visitAdditiveExpr(a additiveExprNode) {
-	a.lhs.acceptVisitor(p)
-	p.output += fmt.Sprintf(" %c ", a.op)
-	a.rhs.acceptVisitor(p)
-}
-
-func (p *unparser) visitAssignExpr(a assignExprNode) {
-	a.lhs.acceptVisitor(p)
-	p.output += " = "
-	a.rhs.acceptVisitor(p)
-}
-
-func (p *unparser) visitIndexedExpr(i indexedExprNode) {
-	i.lhs.acceptVisitor(p)
-	p.output += "["
-	i.index.acceptVisitor(p)
-	p.output += "]"
+	return output
 }

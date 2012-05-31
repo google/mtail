@@ -18,7 +18,7 @@ type visitor interface {
 }
 
 type node interface {
-	acceptVisitor(visitor)
+	// acceptVisitor(visitor)
 }
 
 type stmtlistNode struct {

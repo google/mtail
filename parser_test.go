@@ -103,10 +103,9 @@ func TestParserRoundTrip(t *testing.T) {
 			continue
 		}
 
-		up := &unparser{}
-		p.root.acceptVisitor(up)
+		output := unparse(p.root)
 
-		p2 := NewParser(tc.name+" 2", strings.NewReader(up.output))
+		p2 := NewParser(tc.name+" 2", strings.NewReader(output))
 		r = EmtailParse(p2)
 		if r != 0 || p2.root == nil || len(p2.errors) > 0 {
 			t.Errorf("2nd pass parse errors:\n")
@@ -116,11 +115,10 @@ func TestParserRoundTrip(t *testing.T) {
 			continue
 		}
 
-		up2 := &unparser{}
-		p2.root.acceptVisitor(up2)
+		output2 := unparse(p2.root)
 
-		if !reflect.DeepEqual(up, up2) {
-			t.Errorf("Round trip failed to generate same output.\nup: %s\nup2: %s\n", up.output, up2.output)
+		if !reflect.DeepEqual(output, output2) {
+			t.Errorf("Round trip failed to generate same output.\n1: %s\n2: %s\n", output, output)
 		}
 	}
 }

@@ -85,20 +85,10 @@ type vm struct {
 	str []string
 
 	// data segment
-	data map[string]interface{}
+	data map[int]interface{}
 
-	stack []interface{}
+	stack Stack
 	t     thread
-}
-
-func (v *vm) pop() interface{} {
-	m := v.stack[len(v.stack)-1]
-	v.stack = v.stack[:len(v.stack)-1]
-	return m
-}
-
-func (v *vm) push(opnd interface{}) {
-	v.stack = append(v.stack, opnd)
 }
 
 func (v *vm) errorf(format string, args ...interface{}) bool {
@@ -128,52 +118,55 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 	case inc:
 		// increment a counter
 		delta := 1
+		fmt.Printf("opn %T %q\n", i.opnd, i.opnd)
 		// If there's more than one arg, increment by delta.
 		if i.opnd > 1 {
-			val := v.pop()
+			val := v.stack.Pop()
+			fmt.Printf("delta %T %q\n", val, val)
 			// Don't know what type it is on the stack though.
-			switch val.(type) {
+			switch n := val.(type) {
 			case int:
-				delta = val.(int)
+				delta = n
 			case string:
 				var err error
-				delta, err = strconv.Atoi(val.(string))
+				delta, err = strconv.Atoi(n)
 				if err != nil {
-					return v.errorf("conversion to numeric failed: %s", err)
+					return v.errorf("conversion of %q to numeric failed: %s", val, err)
 				}
 			}
 		}
-		val := v.pop()
+		val := v.stack.Pop()
+		fmt.Printf("index %T %q\n", val, val)
 		m := val.(int)
 		metrics[m].Inc(int64(delta), t.time)
 	case set:
 		// Set a gauge
 		var value int
-		val := v.pop()
+		val := v.stack.Pop()
 		// Don't know what type it is on the stack though.
-		switch val.(type) {
+		switch n := val.(type) {
 		case int:
-			value = val.(int)
+			value = n
 		case string:
 			var err error
-			value, err = strconv.Atoi(val.(string))
+			value, err = strconv.Atoi(n)
 			if err != nil {
-				return v.errorf("conversion to numeric failed: %s", err)
+				return v.errorf("conversion of %q to numeric failed: %s", val, err)
 			}
 		}
-		m := v.pop().(int)
+		m := v.stack.Pop().(int)
 		metrics[m].Set(int64(value), t.time)
 	case strptime:
-		layout := v.pop().(string)
-		s := v.pop().(string)
+		layout := v.stack.Pop().(string)
+		s := v.stack.Pop().(string)
 		tm, err := time.Parse(layout, s)
 		if err != nil {
 			return v.errorf("time.Parse(%s, %s) failed: %s", layout, s, err)
 		}
 		t.time = tm
 	case tag:
-		v.pop()
-		//k := v.pop()
+		v.stack.Pop()
+		//k := v.stack.Pop()
 		// //var key string
 		// switch k.(type) {
 		// case int:
@@ -181,7 +174,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		// case string:
 		// 	key = k.(string)
 		// }
-		// val := v.pop()
+		// val := v.stack.Pop()
 		// var value string
 		// switch val.(type) {
 		// case int:
@@ -191,25 +184,31 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		// }
 		// //t.tags[key] = value
 	case capref:
-		v.push(t.matches[i.opnd])
+		v.stack.Push(t.matches[i.opnd])
 	case str:
-		v.push(v.str[i.opnd])
+		v.stack.Push(v.str[i.opnd])
 	case ret:
 		return true
 	case push:
-		v.push(i.opnd)
+		v.stack.Push(i.opnd)
 	case load:
-		v.push(0)
+		addr := v.stack.Pop().(int)
+		v.stack.Push(v.data[addr])
 	case stor:
-		v.pop()
+		addr := v.stack.Pop().(int)
+		fmt.Printf("addr %T %q\n", addr, addr)
+		value := v.stack.Pop()
+		fmt.Printf("value %T %q\n", value, value)
+		v.data[addr] = value
+		fmt.Printf("new data %q\n", v.data)
 	case add:
-		a := v.pop().(int)
-		b := v.pop().(int)
-		v.push(a + b)
+		a := v.stack.Pop().(int)
+		b := v.stack.Pop().(int)
+		v.stack.Push(a + b)
 	case sub:
-		a := v.pop().(int)
-		b := v.pop().(int)
-		v.push(b - a)
+		a := v.stack.Pop().(int)
+		b := v.stack.Pop().(int)
+		v.stack.Push(b - a)
 	default:
 		return v.errorf("illegal instruction: %q", i.op)
 	}
@@ -256,13 +255,12 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		return nil, p.errors
 	}
 	if *compile_only {
-		u := &unparser{}
-		p.root.acceptVisitor(u)
-		log.Printf("Unparsing %s:\n%s", name, u.output)
+		output := unparse(p.root)
+		log.Printf("Unparsing %s:\n%s", name, output)
 	}
 	file := filepath.Base(name)
 	c := &compiler{name: file}
-	p.root.acceptVisitor(c)
+	c.compile(p.root)
 	if len(c.errors) > 0 {
 		return nil, c.errors
 	}
@@ -282,109 +280,108 @@ func (c *compiler) emit(i instr) {
 	c.prog = append(c.prog, i)
 }
 
-func (c *compiler) visitStmtList(n stmtlistNode) {
-	for _, child := range n.children {
-		child.acceptVisitor(c)
-	}
-}
-
-func (c *compiler) visitExprList(n exprlistNode) {
-	for _, child := range n.children {
-		child.acceptVisitor(c)
-	}
-}
-
-func (c *compiler) visitCond(n condNode) {
-	// TODO(jaq): split off a new goroutine thread instead of doing conds serially.
-	if n.cond != nil {
-		n.cond.acceptVisitor(c)
-	}
-	c.emit(instr{op: jnm})
-	// Save PC of jump instruction
-	pc := len(c.prog) - 1
-	for _, child := range n.children {
-		child.acceptVisitor(c)
-	}
-	c.emit(instr{ret, 1})
-	// rewrite jump target
-	c.prog[pc].opnd = len(c.prog)
-}
-
-func (c *compiler) visitRegex(n regexNode) {
-	re, err := regexp.Compile(n.pattern)
-	if err != nil {
-		c.errorf("%s", err)
-		return
-	} else {
-		c.re = append(c.re, re)
-		c.emit(instr{match, len(c.re) - 1})
-	}
-}
-
-func (c *compiler) visitString(n stringNode) {
-	c.str = append(c.str, n.text)
-	c.emit(instr{str, len(c.str) - 1})
-}
-
 var typ = map[string]mtype{
 	"inc": Counter,
 	"set": Gauge,
 }
 
-func (c *compiler) visitId(n idNode) {
-	switch c.builtin {
-	case "":
-	case "inc", "set":
-		i, ok := c.metrics[n.name]
-		if !ok {
-			m := &Metric{Name: n.name, Type: typ[c.builtin]} //, Tags: map[string]string{"prog": c.name}}
-			metrics = append(metrics, m)
-			c.emit(instr{push, len(metrics) - 1})
-		} else {
-			// Check that the metric has the correct type.
-			if metrics[i].Type != typ[c.builtin] {
-				c.errorf("invalid metric type for %s: %s is a %s, expected %s", c.builtin, metrics[i].Name, metrics[i].Type, typ[c.builtin])
-				return
-			}
-			c.emit(instr{push, i})
+func (c *compiler) compile(n node) {
+	switch v := n.(type) {
+	case *stmtlistNode:
+		for _, child := range v.children {
+			c.compile(child)
 		}
-	case "strptime", "tag":
-		// Turn IDs into strings.
-		c.str = append(c.str, n.name)
-		c.emit(instr{push, len(c.str) - 1})
+
+	case exprlistNode:
+	case *exprlistNode:
+		for _, child := range v.children {
+			c.compile(child)
+		}
+
+	case *condNode:
+		// TODO(jaq): split off a new goroutine thread instead of doing conds serially.
+		if v.cond != nil {
+			c.compile(v.cond)
+		}
+		c.emit(instr{op: jnm})
+		// Save PC of jump instruction
+		pc := len(c.prog) - 1
+		for _, child := range v.children {
+			c.compile(child)
+		}
+		c.emit(instr{ret, 1})
+		// rewrite jump target
+		c.prog[pc].opnd = len(c.prog)
+
+	case *regexNode:
+		re, err := regexp.Compile(v.pattern)
+		if err != nil {
+			c.errorf("%s", err)
+			return
+		} else {
+			c.re = append(c.re, re)
+			c.emit(instr{match, len(c.re) - 1})
+		}
+
+	case *stringNode:
+		c.str = append(c.str, v.text)
+		c.emit(instr{str, len(c.str) - 1})
+
+	case *idNode:
+		switch c.builtin {
+		case "": /* not a builtin */
+		case "inc", "set":
+			i, ok := c.metrics[v.name]
+			if !ok {
+				m := &Metric{Name: v.name, Type: typ[c.builtin]} //, Tags: map[string]string{"prog": c.name}}
+				metrics = append(metrics, m)
+				c.emit(instr{push, len(metrics) - 1})
+			} else {
+				// Check that the metric has the correct type.
+				if metrics[i].Type != typ[c.builtin] {
+					c.errorf("invalid metric type for %s: %s is a %s, expected %s", c.builtin, metrics[i].Name, metrics[i].Type, typ[c.builtin])
+					return
+				}
+				c.emit(instr{push, i})
+			}
+		case "strptime", "tag":
+			// Turn IDs into strings.
+			c.str = append(c.str, v.name)
+			c.emit(instr{push, len(c.str) - 1})
+		default:
+			c.errorf("illegal builtin: %s", c.builtin)
+		}
+
+	case *caprefNode:
+		c.emit(instr{capref, v.index})
+
+	case *builtinNode:
+		c.builtin = v.name
+		c.compile(v.args)
+		c.emit(instr{builtin[v.name], len(v.args.children)})
+		c.builtin = ""
+
+	case *additiveExprNode:
+		c.compile(v.lhs)
+		c.compile(v.rhs)
+		switch v.op {
+		case '+':
+			c.emit(instr{op: add})
+		case '-':
+			c.emit(instr{op: sub})
+		}
+
+	case *assignExprNode:
+		c.compile(v.lhs)
+		c.compile(v.rhs)
+		c.emit(instr{op: stor})
+
+	case *indexedExprNode:
+		c.compile(v.lhs)
+		c.compile(v.index)
+		c.emit(instr{op: load})
+
+	default:
+		c.errorf("undefined node type %T", n)
 	}
-}
-
-func (c *compiler) visitCapref(n caprefNode) {
-	c.emit(instr{capref, n.index})
-}
-
-func (c *compiler) visitBuiltin(n builtinNode) {
-	c.builtin = n.name
-	n.args.acceptVisitor(c)
-	c.emit(instr{builtin[n.name], len(n.args.children)})
-	c.builtin = ""
-}
-
-func (c *compiler) visitAdditiveExpr(a additiveExprNode) {
-	a.lhs.acceptVisitor(c)
-	a.rhs.acceptVisitor(c)
-	switch a.op {
-	case '+':
-		c.emit(instr{op: add})
-	case '-':
-		c.emit(instr{op: sub})
-	}
-}
-
-func (c *compiler) visitAssignExpr(a assignExprNode) {
-	a.lhs.acceptVisitor(c)
-	a.rhs.acceptVisitor(c)
-	c.emit(instr{op: stor})
-}
-
-func (c *compiler) visitIndexedExpr(i indexedExprNode) {
-	i.lhs.acceptVisitor(c)
-	i.index.acceptVisitor(c)
-	c.emit(instr{op: load})
 }

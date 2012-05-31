@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -123,13 +124,15 @@ func TestRun(t *testing.T) {
 }
 
 type instrTest struct {
-	name  string
-	prog  []instr
-	re    []*regexp.Regexp
-	str   []string
-	stack []interface{}
+	name           string
+	prog           []instr
+	re             []*regexp.Regexp
+	str            []string
+	data           map[int]interface{}
+	reversed_stack []interface{} // stack is inverted to be pushed onto vm stack
 
 	expected_stack  []interface{}
+	expected_data   map[int]interface{}
 	expected_thread thread
 }
 
@@ -138,112 +141,154 @@ var instructions = []instrTest{
 		[]instr{instr{inc, 1}},
 		[]*regexp.Regexp{},
 		[]string{},
+		map[int]interface{}{},
 		[]interface{}{0},
 		[]interface{}{},
+		map[int]interface{}{},
 		thread{pc: 1},
 	},
 	{"inc by int",
 		[]instr{instr{inc, 2}},
 		[]*regexp.Regexp{},
 		[]string{},
-		[]interface{}{0, 1}, // first is metric 0 "foo", srcond is the inc val.
+		map[int]interface{}{},
+		[]interface{}{0, 1}, // first is metric 0 "foo", second is the inc val.
 		[]interface{}{},
+		map[int]interface{}{},
 		thread{pc: 1},
 	},
 	{"inc by string",
 		[]instr{instr{inc, 2}},
 		[]*regexp.Regexp{},
 		[]string{},
-		[]interface{}{0, "1"}, // first is metric 0 "foo", srcond is the inc val.
+		map[int]interface{}{},
+		[]interface{}{0, "1"}, // first is metric 0 "foo", second is the inc val.
 		[]interface{}{},
+		map[int]interface{}{},
 		thread{pc: 1},
 	},
 	{"set int",
 		[]instr{instr{set, 2}},
 		[]*regexp.Regexp{},
 		[]string{},
-		[]interface{}{1, 1}, // set metric 1 "bar"
+		map[int]interface{}{},
+		[]interface{}{1, 2}, // set metric 1 "bar"
 		[]interface{}{},
+		map[int]interface{}{},
 		thread{pc: 1},
 	},
 	{"set str",
 		[]instr{instr{set, 2}},
 		[]*regexp.Regexp{},
 		[]string{},
-		[]interface{}{1, "1"},
+		map[int]interface{}{},
+		[]interface{}{1, "2"},
 		[]interface{}{},
+		map[int]interface{}{},
 		thread{pc: 1},
 	},
 	{"match",
 		[]instr{instr{match, 0}},
 		[]*regexp.Regexp{regexp.MustCompile("a*b")},
 		[]string{},
+		map[int]interface{}{},
 		[]interface{}{},
 		[]interface{}{},
+		map[int]interface{}{},
 		thread{reg: 1, pc: 1, matches: []string{"aaaab"}},
 	},
 	{"jnm",
 		[]instr{instr{jnm, 37}},
 		[]*regexp.Regexp{},
 		[]string{},
+		map[int]interface{}{},
 		[]interface{}{},
 		[]interface{}{},
+		map[int]interface{}{},
 		thread{pc: 37}},
 	{"strptime",
 		[]instr{instr{strptime, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
+		map[int]interface{}{},
 		[]interface{}{"2012/01/18 06:25:00", "2006/01/02 15:04:05"},
 		[]interface{}{},
+		map[int]interface{}{},
 		thread{pc: 1, time: time.Date(2012, 1, 18, 6, 25, 0, 0, time.UTC)}},
 	{"add",
 		[]instr{instr{add, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
-		[]interface{}{1, 2},
+		map[int]interface{}{},
+		[]interface{}{2, 1},
 		[]interface{}{3},
+		map[int]interface{}{},
 		thread{pc: 1}},
 	{"sub",
 		[]instr{instr{sub, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
+		map[int]interface{}{},
 		[]interface{}{2, 1},
 		[]interface{}{1},
+		map[int]interface{}{},
 		thread{pc: 1}},
 	{"load",
 		[]instr{instr{load, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
-		[]interface{}{},
+		map[int]interface{}{0: 64},
 		[]interface{}{0},
+		[]interface{}{64},
+		map[int]interface{}{0: 64},
 		thread{pc: 1}},
 	{"stor",
 		[]instr{instr{stor, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
-		[]interface{}{0},
+		map[int]interface{}{},
+		[]interface{}{64, 0},
 		[]interface{}{},
+		map[int]interface{}{0: 64},
 		thread{pc: 1}},
 }
 
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
+		fmt.Println(tc.name)
+
 		metrics = []*Metric{
 			&Metric{Name: "foo", Type: Counter},
 			&Metric{Name: "bar", Type: Gauge},
 		}
+
+		expected_stack := Stack{}
+		for _, item := range tc.expected_stack {
+			expected_stack.Push(item)
+		}
+
 		v := &vm{prog: tc.prog,
-			re:    tc.re,
-			str:   tc.str,
-			stack: tc.stack}
+			re:   tc.re,
+			str:  tc.str,
+			data: tc.data,
+		}
+		for _, item := range tc.reversed_stack {
+			v.stack.Push(item)
+		}
+
 		v.execute(&v.t, v.prog[0], "aaaab")
-		if !reflect.DeepEqual(tc.expected_stack, v.stack) {
-			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %q\n\treceived: %q", tc.name, tc.stack, v.stack)
+
+		if !reflect.DeepEqual(expected_stack, v.stack) {
+			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %q\n\treceived: %q", tc.name, expected_stack, v.stack)
 		}
 		if !reflect.DeepEqual(tc.expected_thread, v.t) {
 			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_thread, v.t)
 		}
+		if !reflect.DeepEqual(tc.expected_data, v.data) {
+			t.Errorf("%s: unexpected virtual machine memory state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_data, v.data)
+		}
 
 	}
+	fmt.Println("end")
 }
