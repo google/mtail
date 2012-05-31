@@ -19,44 +19,44 @@ var compile_only *bool = flag.Bool("compile_only", false, "Compile programs only
 type opcode int
 
 const (
-	match opcode = iota
-	jnm
-	inc
-	strptime
-	//tag
-	ret
-	push
-	capref
-	str
-	set
-	add
-	sub
-	stor
-	load
+	match    opcode = iota // Match a regular expression against input
+	jnm                    // Jump if no match
+	inc                    // Increment an exported variable value
+	strptime               // Parse into the timestamp register
+	tag                    // Set a variable tag
+	ret                    // Return, end program successfully
+	push                   // Push operand onto stack
+	capref                 // Push capture group reference at operand onto stack
+	str                    // Push string constant at operand onto stack
+	set                    // Set an exported variable value
+	add                    // Add top values on stack and push to stack
+	sub                    // Subtract tpo value from second top value on stack, and push to stack.
+	stor                   // Store top of stack at location operand
+	load                   // Load location at operand onto top of stack
 )
 
 var opNames = map[opcode]string{
-	match:    "match",    // Match a regular expression against input
-	jnm:      "jnm",      // Jump if no match
-	inc:      "inc",      // Increment an exported variable value
-	strptime: "strptime", // Parse into the timestamp register
-	//tag:      "tag",      // Set a variable tag
-	ret:    "ret",    // Return, end program successfully
-	push:   "push",   // Push operand on to stack
-	capref: "capref", // Push capref at operand onto stack
-	str:    "str",    // Push string at operand onto stack
-	set:    "set",    // Set an exported variable value
-	add:    "add",    // Add top values on stack and push to stack
-	sub:    "sub",    // Subtract tpo value from second top value on stack,  and push to stack.
-	stor:   "stor",   // Store top of stack at location operand
-	load:   "load",   // Load location at operand onto top of stack
+	match:    "match",
+	jnm:      "jnm",
+	inc:      "inc",
+	strptime: "strptime",
+	tag:      "tag",
+	ret:      "ret",
+	push:     "push",
+	capref:   "capref",
+	str:      "str",
+	set:      "set",
+	add:      "add",
+	sub:      "sub",
+	stor:     "stor",
+	load:     "load",
 }
 
 var builtin = map[string]opcode{
 	"inc":      inc,
 	"set":      set,
 	"strptime": strptime,
-	//"tag":      tag,
+	"tag":      tag,
 }
 
 type instr struct {
@@ -73,14 +73,15 @@ type thread struct {
 	reg     int
 	matches []string
 	time    time.Time
-	//XXXtags    map[string]string
+	//tags    map[string]string
 }
 
 type vm struct {
 	prog []instr
-	re   []*regexp.Regexp
 
-	// constant strings
+	// const regexps
+	re []*regexp.Regexp
+	// const strings
 	str []string
 
 	// data segment
@@ -111,7 +112,7 @@ func (v *vm) errorf(format string, args ...interface{}) bool {
 func (v *vm) execute(t *thread, i instr, input string) bool {
 	switch i.op {
 	case match:
-		//XXX t.tags = map[string]string{}
+		//t.tags = map[string]string{}
 		// match regex and stre success
 		t.matches = v.re[i.opnd].FindStringSubmatch(input)
 		if t.matches != nil {
@@ -144,14 +145,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		}
 		val := v.pop()
 		m := val.(int)
-		metric_lock.Lock()
-		defer metric_lock.Unlock()
-		metrics[m].Value += int64(delta)
-		if t.time.IsZero() {
-			metrics[m].Time = time.Now()
-		} else {
-			metrics[m].Time = t.time
-		}
+		metrics[m].Inc(int64(delta), t.time)
 	case set:
 		// Set a gauge
 		var value int
@@ -168,14 +162,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			}
 		}
 		m := v.pop().(int)
-		metric_lock.Lock()
-		defer metric_lock.Unlock()
-		metrics[m].Value = int64(value)
-		if t.time.IsZero() {
-			metrics[m].Time = time.Now()
-		} else {
-			metrics[m].Time = t.time
-		}
+		metrics[m].Set(int64(value), t.time)
 	case strptime:
 		layout := v.pop().(string)
 		s := v.pop().(string)
@@ -184,24 +171,25 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			return v.errorf("time.Parse(%s, %s) failed: %s", layout, s, err)
 		}
 		t.time = tm
-	// case tag:
-	// 	k := v.pop()
-	// 	//var key string
-	// 	switch k.(type) {
-	// 	case int:
-	// 		key = strconv.Itoa(k.(int))
-	// 	case string:
-	// 		key = k.(string)
-	// 	}
-	// 	val := v.pop()
-	// 	var value string
-	// 	switch val.(type) {
-	// 	case int:
-	// 		value = strconv.Itoa(val.(int))
-	// 	case string:
-	// 		value = val.(string)
-	// 	}
-	// 	//XXX t.tags[key] = value
+	case tag:
+		v.pop()
+		//k := v.pop()
+		// //var key string
+		// switch k.(type) {
+		// case int:
+		// 	key = strconv.Itoa(k.(int))
+		// case string:
+		// 	key = k.(string)
+		// }
+		// val := v.pop()
+		// var value string
+		// switch val.(type) {
+		// case int:
+		// 	value = strconv.Itoa(val.(int))
+		// case string:
+		// 	value = val.(string)
+		// }
+		// //t.tags[key] = value
 	case capref:
 		v.push(t.matches[i.opnd])
 	case str:
@@ -349,7 +337,7 @@ func (c *compiler) visitId(n idNode) {
 	case "inc", "set":
 		i, ok := c.metrics[n.name]
 		if !ok {
-			m := &Metric{Name: n.name, Type: typ[c.builtin]} //XXX, Tags: map[string]string{"prog": c.name}}
+			m := &Metric{Name: n.name, Type: typ[c.builtin]} //, Tags: map[string]string{"prog": c.name}}
 			metrics = append(metrics, m)
 			c.emit(instr{push, len(metrics) - 1})
 		} else {
@@ -360,7 +348,7 @@ func (c *compiler) visitId(n idNode) {
 			}
 			c.emit(instr{push, i})
 		}
-	case "strptime": // "tag"
+	case "strptime", "tag":
 		// Turn IDs into strings.
 		c.str = append(c.str, n.name)
 		c.emit(instr{push, len(c.str) - 1})
