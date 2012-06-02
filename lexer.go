@@ -31,6 +31,9 @@ var lexemeName = map[Lexeme]string{
 	CAPREF:  "CAPREF",
 	STRING:  "STRING",
 	BUILTIN: "BUILTIN",
+	EXPORT:  "EXPORT",
+	COUNTER: "COUNTER",
+	GAUGE:   "GAUGE",
 }
 
 func (t Lexeme) String() string {
@@ -38,6 +41,13 @@ func (t Lexeme) String() string {
 		return s
 	}
 	return fmt.Sprintf("token%d", int(t))
+}
+
+// List of keywords.  Keep this list sorted!
+var keywords = map[string]Lexeme{
+	"counter": COUNTER,
+	"export":  EXPORT,
+	"gauge":   GAUGE,
 }
 
 // List of builtin functions.  Keep this list sorted!
@@ -324,7 +334,9 @@ Loop:
 			break Loop
 		}
 	}
-	if r := sort.SearchStrings(builtins, l.text); r >= 0 && r < len(builtins) && builtins[r] == l.text {
+	if r, ok := keywords[l.text]; ok {
+		l.emit(r)
+	} else if r := sort.SearchStrings(builtins, l.text); r >= 0 && r < len(builtins) && builtins[r] == l.text {
 		l.emit(BUILTIN)
 	} else {
 		l.emit(ID)

@@ -22,15 +22,19 @@ import (
 {
     text string
     n node
+    mtype metric_type
 }
 
 
 %type <n> stmt_list stmt cond arg_expr_list
 %type <n> expr primary_expr additive_expr postfix_expr unary_expr assign_expr
-
+%type <n> decl declarator
+%type <mtype> type_spec
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
+// Reserved words
+%token EXPORT COUNTER GAUGE
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -85,6 +89,10 @@ stmt
   {
     $$ = $1
   }
+  | decl
+  {
+    $$ = $1
+  }
   ;
 
 
@@ -131,7 +139,7 @@ unary_expr
   }
   | BUILTIN LPAREN arg_expr_list RPAREN
   {
-    $$ = &builtinNode{$1, *$3.(*exprlistNode)}
+    $$ = &builtinNode{$1, $3}
   }
   ;
 
@@ -162,7 +170,7 @@ postfix_expr
 primary_expr
   : ID
   {
-      $$ = idNode{$1}
+      $$ = &idNode{$1}
   }
   | CAPREF
   {
@@ -207,6 +215,37 @@ cond
           }
           $$ = &regexNode{$1}
       }
+  }
+  ;
+
+decl
+  : type_spec declarator
+  {
+    $$ = $2
+    $$.(*declNode).kind = $1
+  }
+  ;
+
+declarator
+  : ID
+  {
+    $$ = &declNode{name: $1, exported: true}
+
+  }
+  | STRING
+  {
+    $$ = &declNode{name: $1, exported: true}
+  }
+  ;
+
+type_spec
+  : COUNTER
+  {
+    $$ = Counter
+  }
+  | GAUGE
+  {
+    $$ = Gauge
   }
   ;
 

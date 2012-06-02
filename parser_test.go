@@ -18,6 +18,12 @@ var kMtailPrograms = []validProgram{
 	{"empty",
 		""},
 
+	{"declare counter",
+		"counter line_count"},
+
+	{"declare counter string name",
+		"counter \"line-count\""},
+
 	{"simple pattern action",
 		"/foo/ {}"},
 

@@ -118,11 +118,9 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 	case inc:
 		// increment a counter
 		delta := 1
-		fmt.Printf("opn %T %q\n", i.opnd, i.opnd)
 		// If there's more than one arg, increment by delta.
 		if i.opnd > 1 {
 			val := v.stack.Pop()
-			fmt.Printf("delta %T %q\n", val, val)
 			// Don't know what type it is on the stack though.
 			switch n := val.(type) {
 			case int:
@@ -135,10 +133,18 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 				}
 			}
 		}
-		val := v.stack.Pop()
-		fmt.Printf("index %T %q\n", val, val)
-		m := val.(int)
-		metrics[m].Inc(int64(delta), t.time)
+		switch val := v.stack.Pop().(type) {
+		case int:
+			metrics[val].Inc(int64(delta), t.time)
+		case string:
+			/* look up the metric name */
+			for _, metric := range metrics {
+				if metric.Name == val {
+					metric.Inc(int64(delta), t.time)
+				}
+			}
+		}
+
 	case set:
 		// Set a gauge
 		var value int
@@ -158,10 +164,20 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		metrics[m].Set(int64(value), t.time)
 	case strptime:
 		layout := v.stack.Pop().(string)
-		s := v.stack.Pop().(string)
-		tm, err := time.Parse(layout, s)
+
+		var ts string
+		switch s := v.stack.Pop().(type) {
+		case string:
+			ts = s
+
+		case int:
+			/* capref */
+			ts = t.matches[s]
+		}
+
+		tm, err := time.Parse(layout, ts)
 		if err != nil {
-			return v.errorf("time.Parse(%s, %s) failed: %s", layout, s, err)
+			return v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
 		}
 		t.time = tm
 	case tag:
@@ -196,11 +212,8 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		v.stack.Push(v.data[addr])
 	case stor:
 		addr := v.stack.Pop().(int)
-		fmt.Printf("addr %T %q\n", addr, addr)
 		value := v.stack.Pop()
-		fmt.Printf("value %T %q\n", value, value)
 		v.data[addr] = value
-		fmt.Printf("new data %q\n", v.data)
 	case add:
 		a := v.stack.Pop().(int)
 		b := v.stack.Pop().(int)
@@ -243,9 +256,8 @@ type compiler struct {
 	str  []string         // Static strings.
 	re   []*regexp.Regexp // Static regular expressions.
 
-	metrics map[string]int // Cache of indexes for metric names already created.
-	refs    []int          // Capture group references.
-	builtin string         // Name of a builtin being visited.
+	// Symbol table
+	metric_indexes map[string]int // Cache of indexes for metric names already created.
 }
 
 func Compile(name string, input io.Reader) (*vm, []string) {
@@ -260,6 +272,7 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 	}
 	file := filepath.Base(name)
 	c := &compiler{name: file}
+	c.metric_indexes = make(map[string]int, 0)
 	c.compile(p.root)
 	if len(c.errors) > 0 {
 		return nil, c.errors
@@ -280,11 +293,6 @@ func (c *compiler) emit(i instr) {
 	c.prog = append(c.prog, i)
 }
 
-var typ = map[string]mtype{
-	"inc": Counter,
-	"set": Gauge,
-}
-
 func (c *compiler) compile(n node) {
 	switch v := n.(type) {
 	case *stmtlistNode:
@@ -292,11 +300,15 @@ func (c *compiler) compile(n node) {
 			c.compile(child)
 		}
 
-	case exprlistNode:
 	case *exprlistNode:
 		for _, child := range v.children {
 			c.compile(child)
 		}
+
+	case *declNode:
+		m := &Metric{Name: v.name, Type: v.kind}
+		metrics = append(metrics, m)
+		c.metric_indexes[v.name] = len(metrics) - 1
 
 	case *condNode:
 		// TODO(jaq): split off a new goroutine thread instead of doing conds serially.
@@ -328,38 +340,18 @@ func (c *compiler) compile(n node) {
 		c.emit(instr{str, len(c.str) - 1})
 
 	case *idNode:
-		switch c.builtin {
-		case "": /* not a builtin */
-		case "inc", "set":
-			i, ok := c.metrics[v.name]
-			if !ok {
-				m := &Metric{Name: v.name, Type: typ[c.builtin]} //, Tags: map[string]string{"prog": c.name}}
-				metrics = append(metrics, m)
-				c.emit(instr{push, len(metrics) - 1})
-			} else {
-				// Check that the metric has the correct type.
-				if metrics[i].Type != typ[c.builtin] {
-					c.errorf("invalid metric type for %s: %s is a %s, expected %s", c.builtin, metrics[i].Name, metrics[i].Type, typ[c.builtin])
-					return
-				}
-				c.emit(instr{push, i})
-			}
-		case "strptime", "tag":
-			// Turn IDs into strings.
-			c.str = append(c.str, v.name)
-			c.emit(instr{push, len(c.str) - 1})
-		default:
-			c.errorf("illegal builtin: %s", c.builtin)
+		i, ok := c.metric_indexes[v.name]
+		if !ok {
+			c.errorf("undefined metric %s", v.name)
 		}
+		c.emit(instr{push, i})
 
 	case *caprefNode:
 		c.emit(instr{capref, v.index})
 
 	case *builtinNode:
-		c.builtin = v.name
 		c.compile(v.args)
-		c.emit(instr{builtin[v.name], len(v.args.children)})
-		c.builtin = ""
+		c.emit(instr{builtin[v.name], len(v.args.(*exprlistNode).children)})
 
 	case *additiveExprNode:
 		c.compile(v.lhs)

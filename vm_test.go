@@ -4,7 +4,6 @@
 package main
 
 import (
-	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -26,7 +25,7 @@ type testProgram struct {
 
 var programs = []testProgram{
 	{"simple line counter",
-		"/$/ { inc(line-count) }",
+		"counter line_count\n/$/ { inc(line_count) }",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 5},
@@ -35,7 +34,7 @@ var programs = []testProgram{
 			instr{ret, 1}},
 		[]in_out{in_out{"", true}}},
 	{"count a",
-		"/a$/ { inc(a-count) }",
+		"counter a_count\n/a$/ { inc(a_count) }",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 5},
@@ -46,7 +45,8 @@ var programs = []testProgram{
 			in_out{"", false},
 			in_out{"a", true}}},
 	{"strptime and capref",
-		"/(.*)/ { strptime($1, \"2006-01-02T15:04:05\")" +
+		"counter foo\n" +
+			"/(.*)/ { strptime($1, \"2006-01-02T15:04:05\")" +
 			"inc(foo) }",
 		[]instr{
 			instr{match, 0},
@@ -60,7 +60,8 @@ var programs = []testProgram{
 		[]in_out{
 			in_out{"2006-01-02T15:04:05", true}}},
 	{"strptime and named capref",
-		"/(?P<date>.*)/ { strptime($date, \"2006-01-02T15:04:05\")" +
+		"counter foo\n" +
+			"/(?P<date>.*)/ { strptime($date, \"2006-01-02T15:04:05\")" +
 			"inc(foo) }",
 		[]instr{
 			instr{match, 0},
@@ -74,7 +75,8 @@ var programs = []testProgram{
 		[]in_out{
 			in_out{"2006-01-02T15:04:05", true}}},
 	{"inc by and set",
-		"/(.*)/ {\n" +
+		"counter foo\ncounter bar\n" +
+			"/(.*)/ {\n" +
 			"inc(foo, $1)\n" +
 			"set(bar, $1)\n" +
 			"}",
@@ -256,8 +258,6 @@ var instructions = []instrTest{
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		fmt.Println(tc.name)
-
 		metrics = []*Metric{
 			&Metric{Name: "foo", Type: Counter},
 			&Metric{Name: "bar", Type: Gauge},
@@ -290,5 +290,4 @@ func TestInstrs(t *testing.T) {
 		}
 
 	}
-	fmt.Println("end")
 }

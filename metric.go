@@ -8,14 +8,14 @@ import (
 	"time"
 )
 
-type mtype int
+type metric_type int
 
 const (
-	Counter mtype = iota
+	Counter metric_type = iota
 	Gauge
 )
 
-func (m mtype) String() string {
+func (m metric_type) String() string {
 	switch m {
 	case Counter:
 		return "Counter"
@@ -29,7 +29,7 @@ type Metric struct {
 	Name  string
 	Value int64
 	Time  time.Time
-	Type  mtype
+	Type  metric_type
 	Unit  string
 	Tags  map[string]string
 }

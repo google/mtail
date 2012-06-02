@@ -9,12 +9,12 @@ func unparse(n node) string {
 	output := ""
 
 	switch v := n.(type) {
-	case stmtlistNode:
+	case *stmtlistNode:
 		for _, child := range v.children {
 			output += unparse(child) + "\n"
 		}
 
-	case exprlistNode:
+	case *exprlistNode:
 		if len(v.children) > 0 {
 			output += unparse(v.children[0])
 			for _, child := range v.children[1:] {
@@ -22,7 +22,7 @@ func unparse(n node) string {
 			}
 		}
 
-	case condNode:
+	case *condNode:
 		if v.cond != nil {
 			output += unparse(v.cond)
 		}
@@ -32,36 +32,48 @@ func unparse(n node) string {
 		}
 		output += "}\n"
 
-	case regexNode:
+	case *regexNode:
 		output += "/" + v.pattern + "/"
 
-	case stringNode:
+	case *stringNode:
 		output += "\"" + v.text + "\""
 
-	case idNode:
+	case *idNode:
 		output += v.name
 
-	case caprefNode:
+	case *caprefNode:
 		output += "$" + v.name
 
-	case builtinNode:
+	case *builtinNode:
 		output += v.name + "(" + unparse(v.args) + ")"
 
-	case additiveExprNode:
+	case *additiveExprNode:
 		output += unparse(v.lhs)
 		output += fmt.Sprintf(" %c ", v.op)
 		output += unparse(v.rhs)
 
-	case assignExprNode:
+	case *assignExprNode:
 		output += unparse(v.lhs)
 		output += " = "
 		output += unparse(v.rhs)
 
-	case indexedExprNode:
+	case *indexedExprNode:
 		output += unparse(v.lhs)
 		output += "["
 		output += unparse(v.index)
 		output += "]"
+
+	case *declNode:
+		switch v.kind {
+		case Counter:
+			output += "counter "
+		case Gauge:
+			output += "gauge "
+		}
+		output += v.name
+
+	default:
+		panic(fmt.Sprintf("undefined type %T", n))
 	}
 	return output
 }
