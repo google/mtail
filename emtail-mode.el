@@ -25,13 +25,20 @@
   "Syntax table used while in `emtail-mode'.")
 
 (defvar emtail-mode-keywords
-  '("inc", "set", "tag", "strptime")
+  '("counter" "gauge" "as")
   "All keywords in the emtail language.  Used for font locking.")
 
-(defvar emtail-font-lock-defaults
-      `(("\\<\\(FIXME\\|TODO\\)" 1 font-lock-warning-face prepend)
-        (,(regexp-opt emtail-mode-keywords 'words) . font-lock-keyword-face)
-        ("\\<\\$[a-zA-Z0-9]+\\>" . font-lock-variable-name-face)))
+(defvar emtail-mode-builtins
+  '("inc" "set" "tag" "strptime")
+  "All keywords in the emtail language.  Used for font locking.")
+
+(defvar emtail-mode-font-lock-defaults
+      `((
+         ("\\<\\(FIXME\\|TODO\\)" 1 font-lock-warning-face prepend)
+         (,(regexp-opt emtail-mode-keywords 'words) . font-lock-keyword-face)
+         (,(regexp-opt emtail-mode-builtins 'words) . font-lock-builtin-face)
+         ("\\<\\$[a-zA-Z0-9]+\\>" . font-lock-variable-name-face)
+         )))
 
 (define-derived-mode emtail-mode nil "emtail"
   "Major mode for editing emtail programs."
