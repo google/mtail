@@ -306,7 +306,12 @@ func (c *compiler) compile(n node) {
 		}
 
 	case *declNode:
-		m := &Metric{Name: v.name, Type: v.kind}
+		var m *Metric
+		if v.exported_name != "" {
+			m = &Metric{Name: v.exported_name, Type: v.kind}
+		} else {
+			m = &Metric{Name: v.name, Type: v.kind}
+		}
 		metrics = append(metrics, m)
 		c.metric_indexes[v.name] = len(metrics) - 1
 

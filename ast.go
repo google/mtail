@@ -59,7 +59,8 @@ type indexedExprNode struct {
 }
 
 type declNode struct {
-	name     string
-	kind     metric_type
-	exported bool
+	name          string
+	kind          metric_type
+	exported      bool
+	exported_name string
 }

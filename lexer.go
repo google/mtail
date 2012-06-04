@@ -34,6 +34,7 @@ var lexemeName = map[Lexeme]string{
 	EXPORT:  "EXPORT",
 	COUNTER: "COUNTER",
 	GAUGE:   "GAUGE",
+	AS:      "AS",
 }
 
 func (t Lexeme) String() string {
@@ -45,6 +46,7 @@ func (t Lexeme) String() string {
 
 // List of keywords.  Keep this list sorted!
 var keywords = map[string]Lexeme{
+	"as":      AS,
 	"counter": COUNTER,
 	"export":  EXPORT,
 	"gauge":   GAUGE,

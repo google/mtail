@@ -30,11 +30,12 @@ import (
 %type <n> expr primary_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> decl declarator
 %type <mtype> type_spec
+%type <text> as_spec
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
 // Reserved words
-%token EXPORT COUNTER GAUGE
+%token EXPORT COUNTER GAUGE AS
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -227,7 +228,12 @@ decl
   ;
 
 declarator
-  : ID
+  : declarator as_spec
+  {
+    $$ = $1
+    $$.(*declNode).exported_name = $2
+  }
+  | ID
   {
     $$ = &declNode{name: $1, exported: true}
 
@@ -246,6 +252,13 @@ type_spec
   | GAUGE
   {
     $$ = Gauge
+  }
+  ;
+
+as_spec
+  : AS STRING
+  {
+    $$ = $2
   }
   ;
 
