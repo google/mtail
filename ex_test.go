@@ -33,6 +33,9 @@ func (m *Metric) String() string {
 }
 
 func TestExamplePrograms(t *testing.T) {
+	if testing.Short() {
+		return
+	}
 TestLoop:
 	for _, tc := range exampleProgramTests {
 		metrics = make([]*Metric, 0)
