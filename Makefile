@@ -34,7 +34,7 @@ parser.go: parser.y
 
 .PHONY: test
 test: parser.go $(GOFILES) $(GOTESTFILES)
-	go test
+	go test -test.v=true
 
 .PHONY: testshort
 testshort:
