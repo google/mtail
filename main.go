@@ -32,13 +32,23 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	c := csv.NewWriter(w)
 	for _, m := range metrics {
 		record := []string{m.Name,
-			fmt.Sprintf("%s", m.Value),
-			fmt.Sprintf("%s", m.Time),
-			fmt.Sprintf("%d", m.Type),
+			fmt.Sprintf("%d", m.Kind),
 			m.Unit}
-		// for k, v := range m.Tags {
-		// 	record = append(record, fmt.Sprintf("%s=%s", k, v))
-		// }
+		if len(m.Keys) == 0 {
+			d := m.Values["  "]
+			record = append(record, fmt.Sprintf("%s", d.Value))
+			record = append(record, fmt.Sprintf("%s", d.Time))
+		} else {
+			for k, d := range m.Values {
+				keyvals := key_unhash(k)
+				for i, key := range m.Keys {
+					record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
+				}
+				record = append(record, fmt.Sprintf("%s", d.Value))
+				record = append(record, fmt.Sprintf("%s", d.Time))
+
+			}
+		}
 		c.Write(record)
 	}
 	c.Flush()
@@ -48,11 +58,13 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 func handleJson(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.Unlock()
-	b, err := json.Marshal(metrics)
-	if err != nil {
-		log.Println("error marshalling metrics into json:", err.Error())
+	for _, v := range vms {
+		b, err := json.Marshal(v.metrics)
+		if err != nil {
+			log.Println("error marshalling %s metrics into json:", v.name, err.Error())
+		}
+		w.Write(b)
 	}
-	w.Write(b)
 }
 
 // RunVms receives a line from a channel and sends it to all VMs.
@@ -99,7 +111,7 @@ func main() {
 		if errs != nil {
 			errors = 1
 			for _, e := range errs {
-				log.Printf(e)
+				log.Print(e)
 			}
 			continue
 		}
