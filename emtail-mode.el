@@ -25,11 +25,11 @@
   "Syntax table used while in `emtail-mode'.")
 
 (defvar emtail-mode-keywords
-  '("counter" "gauge" "as")
+  '("counter" "gauge" "as" "by" "exported" "internal")
   "All keywords in the emtail language.  Used for font locking.")
 
 (defvar emtail-mode-builtins
-  '("inc" "set" "tag" "strptime")
+  '("strptime")
   "All keywords in the emtail language.  Used for font locking.")
 
 (defvar emtail-mode-font-lock-defaults
@@ -37,7 +37,7 @@
          ("\\<\\(FIXME\\|TODO\\)" 1 font-lock-warning-face prepend)
          (,(regexp-opt emtail-mode-keywords 'words) . font-lock-keyword-face)
          (,(regexp-opt emtail-mode-builtins 'words) . font-lock-builtin-face)
-         ("\\<\\$[a-zA-Z0-9]+\\>" . font-lock-variable-name-face)
+         ("\\<\\$?[a-zA-Z0-9_]+\\>" . font-lock-variable-name-face)
          )))
 
 (define-derived-mode emtail-mode nil "emtail"
