@@ -5,7 +5,7 @@ package main
 
 import (
 	"encoding/csv"
-	//"encoding/json"
+	"encoding/json"
 	"expvar"
 	"flag"
 	"fmt"
@@ -30,30 +30,31 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.Unlock()
 	c := csv.NewWriter(w)
-	// for _, v := range vms {
-	// 	// for _, m := range v.metrics {
-	// 	// 	// record := []string{m.Name,
-	// 	// 	// 	fmt.Sprintf("%d", m.Kind),
-	// 	// 	// 	m.Unit}
-	// 	// 	// switch v := m.(type) {
-	// 	// 	// case ScalarMetric:
-	// 	// 	// 	d := v.Values["  "]
-	// 	// 	// 	record = append(record, fmt.Sprintf("%s", d.Value))
-	// 	// 	// 	record = append(record, fmt.Sprintf("%s", d.Time))
-	// 	// 	// case DimensionedMetric:
-	// 	// 	// 	for k, d := range m.Values {
-	// 	// 	// 		keyvals := key_unhash(k)
-	// 	// 	// 		for i, key := range m.Keys {
-	// 	// 	// 			record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
-	// 	// 	// 		}
-	// 	// 	// 		record = append(record, fmt.Sprintf("%s", d.Value))
-	// 	// 	// 		record = append(record, fmt.Sprintf("%s", d.Time))
+	for _, v := range vms {
+		for _, m := range v.metrics {
+			var record []string
+			switch v := (*m).(type) {
+			case ScalarMetric:
+				record = []string{v.Name,
+					fmt.Sprintf("%d", v.Kind)}
+				record = append(record, fmt.Sprintf("%s", v.d.Value))
+				record = append(record, fmt.Sprintf("%s", v.d.Time))
+			case DimensionedMetric:
+				record := []string{v.Name,
+					fmt.Sprintf("%d", v.Kind)}
+				for k, d := range v.Values {
+					keyvals := key_unhash(k)
+					for i, key := range v.Keys {
+						record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
+					}
+					record = append(record, fmt.Sprintf("%s", d.Value))
+					record = append(record, fmt.Sprintf("%s", d.Time))
 
-	// 	// 	// 	}
-	// 	// 	// }
-	// 	// 	//c.Write(record)
-	// 	// }
-	// }
+				}
+			}
+			c.Write(record)
+		}
+	}
 	c.Flush()
 }
 
@@ -61,13 +62,13 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 func handleJson(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.Unlock()
-	// for _, v := range vms {
-	// 	// b, err := json.Marshal(v.metrics)
-	// 	// if err != nil {
-	// 	// 	log.Println("error marshalling %s metrics into json:", v.name, err.Error())
-	// 	// }
-	// 	// w.Write(b)
-	// }
+	for _, v := range vms {
+		b, err := json.Marshal(v.metrics)
+		if err != nil {
+			log.Println("error marshalling %s metrics into json:", v.name, err.Error())
+		}
+		w.Write(b)
+	}
 }
 
 // RunVms receives a line from a channel and sends it to all VMs.

@@ -40,7 +40,6 @@ type Metric interface{}
 type MetricBase struct {
 	Name string
 	Kind metric_type
-	//Unit string
 }
 
 type ScalarMetric struct {
