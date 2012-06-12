@@ -20,7 +20,7 @@ type testProgram struct {
 	name   string
 	source string
 	prog   []instr
-	io     []in_out
+	io     []in_out // multiple test data per program
 }
 
 var programs = []testProgram{

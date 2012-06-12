@@ -192,15 +192,15 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		v.stack.Push(b - a)
 
 	case mload:
-		//v.stack.Push(v.metrics[i.opnd])
+		v.stack.Push(v.metrics[i.opnd])
 
 	case dload:
 		var keys []string
 		for a := 0; a < i.opnd; a++ {
 			keys = append(keys, v.stack.Pop().(string))
 		}
-		//m := v.stack.Pop().(*Metric)
-		//v.stack.Push(m.Values[key_hash(keys)])
+		m := v.stack.Pop().(*DimensionedMetric)
+		v.stack.Push(m.Values[key_hash(keys)])
 
 	default:
 		return v.errorf("illegal instruction: %q", i.op)
@@ -325,11 +325,10 @@ func (c *compiler) compile(n node) {
 		c.emit(instr{str, len(c.str) - 1})
 
 	case *idNode:
-		switch v.sym.binding.(type) {
-		case (*ScalarMetric):
-			c.emit(instr{mload, v.sym.addr})
+		c.emit(instr{mload, v.sym.addr})
+		switch m := v.sym.binding.(type) {
 		case (*DimensionedMetric):
-			c.emit(instr{mload, v.sym.addr})
+			c.emit(instr{dload, len(m.Keys)})
 		}
 
 	case *caprefNode:
