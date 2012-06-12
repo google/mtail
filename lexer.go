@@ -35,6 +35,7 @@ var lexemeName = map[Lexeme]string{
 	COUNTER: "COUNTER",
 	GAUGE:   "GAUGE",
 	AS:      "AS",
+	BY:      "BY",
 }
 
 func (t Lexeme) String() string {
@@ -47,6 +48,7 @@ func (t Lexeme) String() string {
 // List of keywords.  Keep this list sorted!
 var keywords = map[string]Lexeme{
 	"as":      AS,
+	"by":      BY,
 	"counter": COUNTER,
 	"export":  EXPORT,
 	"gauge":   GAUGE,
@@ -57,7 +59,6 @@ var builtins = []string{
 	"inc",
 	"set",
 	"strptime",
-	"tag",
 }
 
 // A Position is the location in the source program that a token appears.

@@ -22,18 +22,26 @@ var kMtailPrograms = []validProgram{
 		"counter line_count"},
 
 	{"declare counter string name",
-		"counter \"line-count\""},
+		"counter line_count as \"line-count\""},
+
+	{"declare dimensioned counter",
+		"counter foo by bar"},
+
+	{"declare multi-dimensioned counter",
+		"counter foo by bar, baz, quux"},
 
 	{"simple pattern action",
 		"/foo/ {}"},
 
 	{"more complex action, calling builtin",
-		"/foo/ {\n" +
-			"  inc(line-count)\n" +
+		"counter line_count\n" +
+			"/foo/ {\n" +
+			"  inc(line_count)\n" +
 			"}"},
 
 	{"regex match includes escaped slashes",
-		"/foo\\// { inc(foo) }"},
+		"counter foo\n" +
+			"/foo\\// { inc(foo) }"},
 
 	{"numeric capture group reference",
 		"/(foo)/ {\n" +
@@ -43,17 +51,17 @@ var kMtailPrograms = []validProgram{
 	{"strptime and capref",
 		"/(.*)/ {\n" +
 			"strptime($1, \"2006-01-02T15:04:05Z07:00\")\n" +
-			"inc(foo)\n" +
 			" }"},
 
 	{"named capture group reference",
 		"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
 			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
-			"  inc(foo)\n" +
 			"}"},
 
 	{"nested match conditions",
-		"/match(\\d+)/ {\n" +
+		"counter foo\n" +
+			"counter bar\n" +
+			"/match(\\d+)/ {\n" +
 			"  inc(foo, $1)\n" +
 			"  /^bleh (\\S+)/ {\n" +
 			"    inc(bar)\n" +
@@ -62,7 +70,8 @@ var kMtailPrograms = []validProgram{
 			"}\n"},
 
 	{"nested scope",
-		"/fo(o)/ {\n" +
+		"counter foo\n" +
+			"/fo(o)/ {\n" +
 			"  inc($1)\n" +
 			"  /bar(xxx)/ {\n" +
 			"    inc($1, $1)\n" +
@@ -74,29 +83,33 @@ var kMtailPrograms = []validProgram{
 		"# %d [%p]\n" +
 			"/^(?P<date>\\d+\\/\\d+\\/\\d+ \\d+:\\d+:\\d+) \\[(?P<pid>\\d+)\\] / {\n" +
 			"  strptime($1, \"2006/01/02 15:04:05\")\n" +
-			"  tag(\"pid\", $2)\n" +
-			"  inc(transfers_total)\n" +
 			"}\n"},
 
 	{"assignment",
-		"/(?P<foo>.*)/ {\n" +
+		"counter variable\n" +
+			"/(?P<foo>.*)/ {\n" +
 			"variable = $foo\n" +
 			"}\n"},
 
 	{"additive",
-		"/(?P<foo>.*)/ {\n" +
+		"counter time_total\n" +
+			"gauge timestamp\n" +
+			"/(?P<foo>.*)/ {\n" +
 			"  timestamp - time_total\n" +
 			"}\n"},
 
 	{"additive and mem storage",
-		"/(?P<foo>.*)/ {\n" +
+		"counter time_total\n" +
+			"gauge timestamp\n" +
+			"counter variable by foo\n" +
+			"/(?P<foo>.*)/ {\n" +
 			"  inc(time_total, timestamp - variable[$foo])\n" +
 			"}\n"},
 }
 
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range kMtailPrograms {
-		metrics = make([]*Metric, 0)
+		metrics = make(map[string]*Metric, 0)
 		p := NewParser(tc.name, strings.NewReader(tc.program))
 		//EmtailDebug = 999 // All the debugging.
 		r := EmtailParse(p)

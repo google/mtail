@@ -29,7 +29,7 @@ var programs = []testProgram{
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 5},
-			instr{push, 0},
+			instr{mload, 0},
 			instr{inc, 1},
 			instr{ret, 1}},
 		[]in_out{in_out{"", true}}},
@@ -38,7 +38,7 @@ var programs = []testProgram{
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 5},
-			instr{push, 0},
+			instr{mload, 0},
 			instr{inc, 1},
 			instr{ret, 1}},
 		[]in_out{
@@ -54,7 +54,7 @@ var programs = []testProgram{
 			instr{capref, 1},
 			instr{str, 0},
 			instr{strptime, 2},
-			instr{push, 0},
+			instr{mload, 0},
 			instr{inc, 1},
 			instr{ret, 1}},
 		[]in_out{
@@ -69,7 +69,7 @@ var programs = []testProgram{
 			instr{capref, 1},
 			instr{str, 0},
 			instr{strptime, 2},
-			instr{push, 0},
+			instr{mload, 0},
 			instr{inc, 1},
 			instr{ret, 1}},
 		[]in_out{
@@ -83,10 +83,10 @@ var programs = []testProgram{
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 9},
-			instr{push, 0},
+			instr{mload, 0},
 			instr{capref, 1},
 			instr{inc, 2},
-			instr{push, 1},
+			instr{mload, 1},
 			instr{capref, 1},
 			instr{set, 2},
 			instr{ret, 1}},
@@ -96,7 +96,7 @@ var programs = []testProgram{
 
 func TestCompile(t *testing.T) {
 	for _, tc := range programs {
-		metrics = make([]*Metric, 0)
+		metrics = make(map[string]*Metric, 0)
 		v, err := Compile(tc.name, strings.NewReader(tc.source))
 		if err != nil {
 			t.Errorf("Compile errors: %q", err)
@@ -235,33 +235,15 @@ var instructions = []instrTest{
 		[]interface{}{1},
 		map[int]interface{}{},
 		thread{pc: 1}},
-	{"load",
-		[]instr{instr{load, 0}},
-		[]*regexp.Regexp{},
-		[]string{},
-		map[int]interface{}{0: 64},
-		[]interface{}{0},
-		[]interface{}{64},
-		map[int]interface{}{0: 64},
-		thread{pc: 1}},
-	{"stor",
-		[]instr{instr{stor, 0}},
-		[]*regexp.Regexp{},
-		[]string{},
-		map[int]interface{}{},
-		[]interface{}{64, 0},
-		[]interface{}{},
-		map[int]interface{}{0: 64},
-		thread{pc: 1}},
 }
 
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		metrics = []*Metric{
-			&Metric{Name: "foo", Type: Counter},
-			&Metric{Name: "bar", Type: Gauge},
-		}
+		// metrics = map[string]*Metric{
+		// 	"foo": &Metric{Name: "foo", Kind: Counter},
+		// 	"bar": &Metric{Name: "bar", Kind: Gauge},
+		// }
 
 		expected_stack := Stack{}
 		for _, item := range tc.expected_stack {
@@ -269,9 +251,8 @@ func TestInstrs(t *testing.T) {
 		}
 
 		v := &vm{prog: tc.prog,
-			re:   tc.re,
-			str:  tc.str,
-			data: tc.data,
+			re:  tc.re,
+			str: tc.str,
 		}
 		for _, item := range tc.reversed_stack {
 			v.stack.Push(item)
@@ -285,9 +266,9 @@ func TestInstrs(t *testing.T) {
 		if !reflect.DeepEqual(tc.expected_thread, v.t) {
 			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_thread, v.t)
 		}
-		if !reflect.DeepEqual(tc.expected_data, v.data) {
-			t.Errorf("%s: unexpected virtual machine memory state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_data, v.data)
-		}
+		// if !reflect.DeepEqual(tc.expected_data, v.data) {
+		// 	t.Errorf("%s: unexpected virtual machine memory state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_data, v.data)
+		// }
 
 	}
 }

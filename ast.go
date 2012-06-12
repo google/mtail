@@ -30,11 +30,12 @@ type stringNode struct {
 
 type idNode struct {
 	name string
+	sym  *symbol
 }
 
 type caprefNode struct {
-	name  string
-	index int
+	name string
+	sym  *symbol
 }
 
 type builtinNode struct {
@@ -60,7 +61,10 @@ type indexedExprNode struct {
 
 type declNode struct {
 	name          string
+	keys          []string
 	kind          metric_type
 	exported      bool
 	exported_name string
+	m             interface{}
+	sym           *symbol
 }

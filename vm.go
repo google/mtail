@@ -23,7 +23,6 @@ const (
 	jnm                    // Jump if no match
 	inc                    // Increment an exported variable value
 	strptime               // Parse into the timestamp register
-	tag                    // Set a variable tag
 	ret                    // Return, end program successfully
 	push                   // Push operand onto stack
 	capref                 // Push capture group reference at operand onto stack
@@ -31,8 +30,8 @@ const (
 	set                    // Set an exported variable value
 	add                    // Add top values on stack and push to stack
 	sub                    // Subtract tpo value from second top value on stack, and push to stack.
-	stor                   // Store top of stack at location operand
-	load                   // Load location at operand onto top of stack
+	mload                  // Load metric at operand onto top of stack.
+	dload                  // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
 )
 
 var opNames = map[opcode]string{
@@ -40,7 +39,6 @@ var opNames = map[opcode]string{
 	jnm:      "jnm",
 	inc:      "inc",
 	strptime: "strptime",
-	tag:      "tag",
 	ret:      "ret",
 	push:     "push",
 	capref:   "capref",
@@ -48,15 +46,14 @@ var opNames = map[opcode]string{
 	set:      "set",
 	add:      "add",
 	sub:      "sub",
-	stor:     "stor",
-	load:     "load",
+	mload:    "mload",
+	dload:    "dload",
 }
 
 var builtin = map[string]opcode{
 	"inc":      inc,
 	"set":      set,
 	"strptime": strptime,
-	"tag":      tag,
 }
 
 type instr struct {
@@ -73,10 +70,10 @@ type thread struct {
 	reg     int
 	matches []string
 	time    time.Time
-	//tags    map[string]string
 }
 
 type vm struct {
+	name string
 	prog []instr
 
 	// const regexps
@@ -85,7 +82,10 @@ type vm struct {
 	str []string
 
 	// data segment
-	data map[int]interface{}
+	symtab *scope
+
+	// exported metrics
+	metrics []*interface{}
 
 	stack Stack
 	t     thread
@@ -102,7 +102,6 @@ func (v *vm) errorf(format string, args ...interface{}) bool {
 func (v *vm) execute(t *thread, i instr, input string) bool {
 	switch i.op {
 	case match:
-		//t.tags = map[string]string{}
 		// match regex and stre success
 		t.matches = v.re[i.opnd].FindStringSubmatch(input)
 		if t.matches != nil {
@@ -133,17 +132,8 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 				}
 			}
 		}
-		switch val := v.stack.Pop().(type) {
-		case int:
-			metrics[val].Inc(int64(delta), t.time)
-		case string:
-			/* look up the metric name */
-			for _, metric := range metrics {
-				if metric.Name == val {
-					metric.Inc(int64(delta), t.time)
-				}
-			}
-		}
+		d := v.stack.Pop().(Incrementable)
+		d.IncBy(int64(delta), t.time)
 
 	case set:
 		// Set a gauge
@@ -160,8 +150,9 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 				return v.errorf("conversion of %q to numeric failed: %s", val, err)
 			}
 		}
-		m := v.stack.Pop().(int)
-		metrics[m].Set(int64(value), t.time)
+		d := v.stack.Pop().(Settable)
+		d.Set(int64(value), t.time)
+
 	case strptime:
 		layout := v.stack.Pop().(string)
 
@@ -180,40 +171,17 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			return v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
 		}
 		t.time = tm
-	case tag:
-		v.stack.Pop()
-		//k := v.stack.Pop()
-		// //var key string
-		// switch k.(type) {
-		// case int:
-		// 	key = strconv.Itoa(k.(int))
-		// case string:
-		// 	key = k.(string)
-		// }
-		// val := v.stack.Pop()
-		// var value string
-		// switch val.(type) {
-		// case int:
-		// 	value = strconv.Itoa(val.(int))
-		// case string:
-		// 	value = val.(string)
-		// }
-		// //t.tags[key] = value
+
 	case capref:
 		v.stack.Push(t.matches[i.opnd])
+
 	case str:
 		v.stack.Push(v.str[i.opnd])
+
 	case ret:
 		return true
 	case push:
 		v.stack.Push(i.opnd)
-	case load:
-		addr := v.stack.Pop().(int)
-		v.stack.Push(v.data[addr])
-	case stor:
-		addr := v.stack.Pop().(int)
-		value := v.stack.Pop()
-		v.data[addr] = value
 	case add:
 		a := v.stack.Pop().(int)
 		b := v.stack.Pop().(int)
@@ -222,6 +190,18 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		a := v.stack.Pop().(int)
 		b := v.stack.Pop().(int)
 		v.stack.Push(b - a)
+
+	case mload:
+		//v.stack.Push(v.metrics[i.opnd])
+
+	case dload:
+		var keys []string
+		for a := 0; a < i.opnd; a++ {
+			keys = append(keys, v.stack.Pop().(string))
+		}
+		//m := v.stack.Pop().(*Metric)
+		//v.stack.Push(m.Values[key_hash(keys)])
+
 	default:
 		return v.errorf("illegal instruction: %q", i.op)
 	}
@@ -256,8 +236,9 @@ type compiler struct {
 	str  []string         // Static strings.
 	re   []*regexp.Regexp // Static regular expressions.
 
-	// Symbol table
-	metric_indexes map[string]int // Cache of indexes for metric names already created.
+	symtab *scope
+
+	metrics []*interface{}
 }
 
 func Compile(name string, input io.Reader) (*vm, []string) {
@@ -271,16 +252,18 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		log.Printf("Unparsing %s:\n%s", name, output)
 	}
 	file := filepath.Base(name)
-	c := &compiler{name: file}
-	c.metric_indexes = make(map[string]int, 0)
+	c := &compiler{name: file, symtab: p.s}
+	c.metrics = make([]*interface{}, 0)
 	c.compile(p.root)
 	if len(c.errors) > 0 {
 		return nil, c.errors
 	}
 	vm := &vm{
-		re:   c.re,
-		str:  c.str,
-		prog: c.prog}
+		name:   file,
+		re:     c.re,
+		str:    c.str,
+		symtab: c.symtab,
+		prog:   c.prog}
 	return vm, nil
 }
 
@@ -306,14 +289,11 @@ func (c *compiler) compile(n node) {
 		}
 
 	case *declNode:
-		var m *Metric
-		if v.exported_name != "" {
-			m = &Metric{Name: v.exported_name, Type: v.kind}
-		} else {
-			m = &Metric{Name: v.name, Type: v.kind}
+		// Export the metric 
+		if v.exported {
+			v.sym.addr = len(c.metrics)
+			c.metrics = append(c.metrics, &v.m)
 		}
-		metrics = append(metrics, m)
-		c.metric_indexes[v.name] = len(metrics) - 1
 
 	case *condNode:
 		// TODO(jaq): split off a new goroutine thread instead of doing conds serially.
@@ -345,14 +325,15 @@ func (c *compiler) compile(n node) {
 		c.emit(instr{str, len(c.str) - 1})
 
 	case *idNode:
-		i, ok := c.metric_indexes[v.name]
-		if !ok {
-			c.errorf("undefined metric %s", v.name)
+		switch v.sym.binding.(type) {
+		case (*ScalarMetric):
+			c.emit(instr{mload, v.sym.addr})
+		case (*DimensionedMetric):
+			c.emit(instr{mload, v.sym.addr})
 		}
-		c.emit(instr{push, i})
 
 	case *caprefNode:
-		c.emit(instr{capref, v.index})
+		c.emit(instr{capref, v.sym.binding.(int)})
 
 	case *builtinNode:
 		c.compile(v.args)
@@ -371,12 +352,11 @@ func (c *compiler) compile(n node) {
 	case *assignExprNode:
 		c.compile(v.lhs)
 		c.compile(v.rhs)
-		c.emit(instr{op: stor})
+		//c.emit(instr{op: stor})
 
 	case *indexedExprNode:
 		c.compile(v.lhs)
 		c.compile(v.index)
-		c.emit(instr{op: load})
 
 	default:
 		c.errorf("undefined node type %T", n)

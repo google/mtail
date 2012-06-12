@@ -21,6 +21,7 @@ import (
 %union
 {
     text string
+    texts []string
     n node
     mtype metric_type
 }
@@ -31,11 +32,12 @@ import (
 %type <n> decl declarator
 %type <mtype> type_spec
 %type <text> as_spec
+%type <texts> by_spec by_expr_list
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
 // Reserved words
-%token EXPORT COUNTER GAUGE AS
+%token EXPORT COUNTER GAUGE AS BY
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -163,7 +165,7 @@ postfix_expr
     $$ = $1
   }
   | postfix_expr LSQUARE expr RSQUARE
-  {
+  {  
     $$ = &indexedExprNode{$1, $3}
   }
   ; 
@@ -171,12 +173,16 @@ postfix_expr
 primary_expr
   : ID
   {
-      $$ = &idNode{$1}
+    if sym, ok := Emtaillex.(*parser).s.lookupSym($1); ok {
+      $$ = &idNode{$1, sym}
+    } else {
+      Emtaillex.Error(fmt.Sprintf("Identifier %s not declared.", $1))
+    }      
   }
   | CAPREF
   {
-      if index, ok := Emtaillex.(*parser).s.lookupSym($1); ok {
-          $$ = &caprefNode{$1, index}
+      if sym, ok := Emtaillex.(*parser).s.lookupSym($1); ok {
+        $$ = &caprefNode{$1, sym}
       } else {
           Emtaillex.Error(fmt.Sprintf("Capture group $%s not defined " +
                                       "by prior regular expression in " +
@@ -207,11 +213,13 @@ cond
           // the current scope, so that future CAPTUREGROUPs can retrieve their
           // value.  At parse time, we can warn about nonexistent names.
           for i := 1; i < re.NumSubexp() + 1; i++ {
-              Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i), i)
+            Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i), CaprefSymbol, i, 
+                                         Emtaillex.(*parser).pos)
           }
           for i, capref := range re.SubexpNames() {
                 if capref != "" {
-                  Emtaillex.(*parser).s.addSym(capref, i)
+                  Emtaillex.(*parser).s.addSym(capref, CaprefSymbol, i, 
+                                         Emtaillex.(*parser).pos)
               }
           }
           $$ = &regexNode{$1}
@@ -223,12 +231,37 @@ decl
   : type_spec declarator
   {
     $$ = $2
-    $$.(*declNode).kind = $1
+    d := $$.(*declNode)
+    d.kind = $1
+      
+    var n string
+    if d.exported_name != "" {
+        n = d.exported_name
+	} else {
+      n = d.name
+   	}
+    if len(d.keys) > 0 {
+      d.m = &DimensionedMetric{MetricBase: MetricBase{Name: n, Kind: d.kind},
+                               Keys:   d.keys,
+                               Values: make(map[string]*Datum, 0)}
+      d.sym = Emtaillex.(*parser).s.addSym(d.name, DimensionedMetricSymbol, d.m,
+                                   Emtaillex.(*parser).pos)
+    } else {
+      d.m = &ScalarMetric{MetricBase: MetricBase{Name: n, Kind: d.kind}}
+      d.sym = Emtaillex.(*parser).s.addSym(d.name, ScalarMetricSymbol, d.m,
+                                   Emtaillex.(*parser).pos)
+      
+    }
   }
   ;
 
 declarator
-  : declarator as_spec
+  : declarator by_spec
+  {
+    $$ = $1
+    $$.(*declNode).keys = $2
+  }
+  | declarator as_spec
   {
     $$ = $1
     $$.(*declNode).exported_name = $2
@@ -252,6 +285,36 @@ type_spec
   | GAUGE
   {
     $$ = Gauge
+  }
+  ;
+
+by_spec
+  : BY by_expr_list
+  {
+    $$ = $2
+  }
+  ;
+
+by_expr_list
+  : ID
+  {
+    $$ = make([]string, 0)
+    $$ = append($$, $1)
+  }
+  | STRING
+  {
+    $$ = make([]string, 0)
+    $$ = append($$, $1)
+  }
+  | by_expr_list COMMA ID
+  {
+    $$ = $1
+    $$ = append($$, $3)
+  }
+  | by_expr_list COMMA STRING
+  {
+    $$ = $1
+    $$ = append($$, $3)
   }
   ;
 
@@ -295,7 +358,7 @@ func (p *parser) Lex(lval *EmtailSymType) int {
 }
 
 func (p *parser) startScope() {
-    s := &scope{p.s, map[string]int{}}
+    s := &scope{p.s, map[string]*symbol{}}
     p.s = s
 }
 

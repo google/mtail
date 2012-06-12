@@ -6,7 +6,7 @@ GOFILES=\
 	lexer.go\
 	metric.go\
 	parser.go\
-	scope.go\
+	symtab.go\
 	tail.go\
 	unparser.go\
 	vm.go\
@@ -37,5 +37,5 @@ test: parser.go $(GOFILES) $(GOTESTFILES)
 	go test -test.v=true
 
 .PHONY: testshort
-testshort:
+testshort: parser.go $(GOFILES) $(GOTESTFILES)
 	go test -test.short

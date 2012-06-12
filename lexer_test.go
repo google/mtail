@@ -39,19 +39,19 @@ var lexerTests = []lexerTest{
 		Token{ASSIGN, "=", Position{0, 2, 2}},
 		Token{EOF, "", Position{0, 3, 3}}}},
 	{"keywords",
-		"export\ncounter\ngauge\nas\n", []Token{
+		"export\ncounter\ngauge\nas\nby\n", []Token{
 			Token{EXPORT, "export", Position{0, 0, 5}},
 			Token{COUNTER, "counter", Position{1, 0, 6}},
 			Token{GAUGE, "gauge", Position{2, 0, 4}},
 			Token{AS, "as", Position{3, 0, 1}},
-			Token{EOF, "", Position{4, 0, 0}}}},
+			Token{BY, "by", Position{4, 0, 1}},
+			Token{EOF, "", Position{5, 0, 0}}}},
 	{"builtins",
-		"inc\nset\ntag\nstrptime\n", []Token{
+		"inc\nset\nstrptime\n", []Token{
 			Token{BUILTIN, "inc", Position{0, 0, 2}},
 			Token{BUILTIN, "set", Position{1, 0, 2}},
-			Token{BUILTIN, "tag", Position{2, 0, 2}},
-			Token{BUILTIN, "strptime", Position{3, 0, 7}},
-			Token{EOF, "", Position{4, 0, 0}}}},
+			Token{BUILTIN, "strptime", Position{2, 0, 7}},
+			Token{EOF, "", Position{3, 0, 0}}}},
 	{"identifer", "a be foo\nquux line-count", []Token{
 		Token{ID, "a", Position{0, 0, 0}},
 		Token{ID, "be", Position{0, 2, 3}},

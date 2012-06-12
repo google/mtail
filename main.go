@@ -5,7 +5,7 @@ package main
 
 import (
 	"encoding/csv"
-	"encoding/json"
+	//"encoding/json"
 	"expvar"
 	"flag"
 	"fmt"
@@ -30,27 +30,30 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.Unlock()
 	c := csv.NewWriter(w)
-	for _, m := range metrics {
-		record := []string{m.Name,
-			fmt.Sprintf("%d", m.Kind),
-			m.Unit}
-		if len(m.Keys) == 0 {
-			d := m.Values["  "]
-			record = append(record, fmt.Sprintf("%s", d.Value))
-			record = append(record, fmt.Sprintf("%s", d.Time))
-		} else {
-			for k, d := range m.Values {
-				keyvals := key_unhash(k)
-				for i, key := range m.Keys {
-					record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
-				}
-				record = append(record, fmt.Sprintf("%s", d.Value))
-				record = append(record, fmt.Sprintf("%s", d.Time))
+	// for _, v := range vms {
+	// 	// for _, m := range v.metrics {
+	// 	// 	// record := []string{m.Name,
+	// 	// 	// 	fmt.Sprintf("%d", m.Kind),
+	// 	// 	// 	m.Unit}
+	// 	// 	// switch v := m.(type) {
+	// 	// 	// case ScalarMetric:
+	// 	// 	// 	d := v.Values["  "]
+	// 	// 	// 	record = append(record, fmt.Sprintf("%s", d.Value))
+	// 	// 	// 	record = append(record, fmt.Sprintf("%s", d.Time))
+	// 	// 	// case DimensionedMetric:
+	// 	// 	// 	for k, d := range m.Values {
+	// 	// 	// 		keyvals := key_unhash(k)
+	// 	// 	// 		for i, key := range m.Keys {
+	// 	// 	// 			record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
+	// 	// 	// 		}
+	// 	// 	// 		record = append(record, fmt.Sprintf("%s", d.Value))
+	// 	// 	// 		record = append(record, fmt.Sprintf("%s", d.Time))
 
-			}
-		}
-		c.Write(record)
-	}
+	// 	// 	// 	}
+	// 	// 	// }
+	// 	// 	//c.Write(record)
+	// 	// }
+	// }
 	c.Flush()
 }
 
@@ -58,13 +61,13 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 func handleJson(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.Unlock()
-	for _, v := range vms {
-		b, err := json.Marshal(v.metrics)
-		if err != nil {
-			log.Println("error marshalling %s metrics into json:", v.name, err.Error())
-		}
-		w.Write(b)
-	}
+	// for _, v := range vms {
+	// 	// b, err := json.Marshal(v.metrics)
+	// 	// if err != nil {
+	// 	// 	log.Println("error marshalling %s metrics into json:", v.name, err.Error())
+	// 	// }
+	// 	// w.Write(b)
+	// }
 }
 
 // RunVms receives a line from a channel and sends it to all VMs.
@@ -80,6 +83,11 @@ func RunVms(vms []*vm, lines chan string) {
 	}
 }
 
+// vms contains a list of virtual machines to execute when each new line is received
+var (
+	vms []*vm
+)
+
 func main() {
 	flag.Parse()
 	w := NewWatcher()
@@ -89,9 +97,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failure reading progs from %q: %s", *progs, err)
 	}
-
-	// vms contains a list of virtual machines to execute when each new line is received
-	var vms []*vm
 
 	errors := 0
 	for _, fi := range fis {
