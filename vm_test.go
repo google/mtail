@@ -19,8 +19,8 @@ type in_out struct {
 type testProgram struct {
 	name   string
 	source string
-	prog   []instr
-	io     []in_out // multiple test data per program
+	prog   []instr  // expected bytecode 
+	io     []in_out // multiple test data and expected outupt per program
 }
 
 var programs = []testProgram{
@@ -94,28 +94,19 @@ var programs = []testProgram{
 			in_out{"37", true}}},
 }
 
-func TestCompile(t *testing.T) {
-	for _, tc := range programs {
-		metrics = make(map[string]*Metric, 0)
-		v, err := Compile(tc.name, strings.NewReader(tc.source))
-		if err != nil {
-			t.Errorf("Compile errors: %q", err)
-			continue
-		}
-		if !reflect.DeepEqual(tc.prog, v.prog) {
-			t.Errorf("%s: VM prog doesn't match.\n\texpected: %q\n\treceived: %q\n",
-				tc.name, tc.prog, v.prog)
-		}
-	}
-}
-
-func TestRun(t *testing.T) {
+func TestCompileAndRun(t *testing.T) {
 	for _, tc := range programs {
 		for _, i := range tc.io {
+			metrics = make([]Metric, 0)
+
 			v, err := Compile(tc.name, strings.NewReader(tc.source))
 			if err != nil {
 				t.Errorf("Compile errors: %q", err)
 				continue
+			}
+			if !reflect.DeepEqual(tc.prog, v.prog) {
+				t.Errorf("%s: VM prog doesn't match.\n\texpected: %q\n\treceived: %q\n",
+					tc.name, tc.prog, v.prog)
 			}
 			r := v.Run(i.input)
 			if r != i.ok {
@@ -240,10 +231,10 @@ var instructions = []instrTest{
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		// metrics = map[string]*Metric{
-		// 	"foo": &Metric{Name: "foo", Kind: Counter},
-		// 	"bar": &Metric{Name: "bar", Kind: Gauge},
-		// }
+		metrics = []Metric{
+			&ScalarMetric{MetricBase: MetricBase{name: "foo", kind: Counter}},
+			&ScalarMetric{MetricBase: MetricBase{name: "bar", kind: Gauge}},
+		}
 
 		expected_stack := Stack{}
 		for _, item := range tc.expected_stack {

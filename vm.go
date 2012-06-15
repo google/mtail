@@ -85,7 +85,7 @@ type vm struct {
 	symtab *scope
 
 	// exported metrics
-	metrics []*interface{}
+	//metrics []*interface{}
 
 	stack Stack
 	t     thread
@@ -132,8 +132,12 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 				}
 			}
 		}
-		d := v.stack.Pop().(Incrementable)
-		d.IncBy(int64(delta), t.time)
+		switch d := v.stack.Pop().(type) {
+		case Incrementable:
+			d.IncBy(int64(delta), t.time)
+		default:
+			fmt.Printf("what is it? %T %q\n", d, d)
+		}
 
 	case set:
 		// Set a gauge
@@ -150,8 +154,12 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 				return v.errorf("conversion of %q to numeric failed: %s", val, err)
 			}
 		}
-		d := v.stack.Pop().(Settable)
-		d.Set(int64(value), t.time)
+		switch d := v.stack.Pop().(type) {
+		case Settable:
+			d.Set(int64(value), t.time)
+		default:
+			fmt.Printf("what is it? %T %q\n", d, d)
+		}
 
 	case strptime:
 		layout := v.stack.Pop().(string)
@@ -180,19 +188,23 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 
 	case ret:
 		return true
+
 	case push:
 		v.stack.Push(i.opnd)
+
 	case add:
 		a := v.stack.Pop().(int)
 		b := v.stack.Pop().(int)
 		v.stack.Push(a + b)
+
 	case sub:
 		a := v.stack.Pop().(int)
 		b := v.stack.Pop().(int)
 		v.stack.Push(b - a)
 
 	case mload:
-		v.stack.Push(v.metrics[i.opnd])
+		fmt.Printf("Pushing metric %T %q\n", metrics[i.opnd], metrics[i.opnd])
+		v.stack.Push(metrics[i.opnd])
 
 	case dload:
 		var keys []string
@@ -218,7 +230,7 @@ func (v *vm) Run(input string) bool {
 			return false
 		}
 		i := v.prog[t.pc]
-
+		fmt.Println("instr", i)
 		terminate := v.execute(&t, i, input)
 		if terminate {
 			// t.reg contains the result of the last match.
@@ -238,7 +250,7 @@ type compiler struct {
 
 	symtab *scope
 
-	metrics []*interface{}
+	//metrics []*interface{}
 }
 
 func Compile(name string, input io.Reader) (*vm, []string) {
@@ -253,7 +265,7 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 	}
 	file := filepath.Base(name)
 	c := &compiler{name: file, symtab: p.s}
-	c.metrics = make([]*interface{}, 0)
+	//c.metrics = make([]*interface{}, 0)
 	c.compile(p.root)
 	if len(c.errors) > 0 {
 		return nil, c.errors
@@ -263,7 +275,8 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		re:     c.re,
 		str:    c.str,
 		symtab: c.symtab,
-		prog:   c.prog}
+		//metrics: c.metrics,
+		prog: c.prog}
 	return vm, nil
 }
 
@@ -291,8 +304,8 @@ func (c *compiler) compile(n node) {
 	case *declNode:
 		// Export the metric 
 		if v.exported {
-			v.sym.addr = len(c.metrics)
-			c.metrics = append(c.metrics, &v.m)
+			v.sym.addr = len(metrics)
+			metrics = append(metrics, v.m)
 		}
 
 	case *condNode:

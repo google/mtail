@@ -38,6 +38,8 @@ func TestExamplePrograms(t *testing.T) {
 	}
 TestLoop:
 	for _, tc := range exampleProgramTests {
+		metrics = make([]Metric, 0)
+
 		p, err := os.Open(tc.programfile)
 		if err != nil {
 			t.Errorf("%s: could not open program file: %s", tc.programfile, err)

@@ -35,16 +35,27 @@ type Settable interface {
 	Set(value int64, ts time.Time)
 }
 
-type Metric interface{}
+type Metric interface {
+	Name() string
+	Kind() metric_type
+}
 
 type MetricBase struct {
-	Name string
-	Kind metric_type
+	name string
+	kind metric_type
 }
 
 type ScalarMetric struct {
 	MetricBase
 	d Datum
+}
+
+func (m *MetricBase) Name() string {
+	return m.name
+}
+
+func (m *MetricBase) Kind() metric_type {
+	return m.kind
 }
 
 func (m *ScalarMetric) Inc(ts time.Time) {
@@ -69,15 +80,22 @@ type DimensionedMetric struct {
 	Values map[string]*Datum
 }
 
+func (m *DimensionedMetric) Name() string {
+	return m.name
+}
+
+func (m *DimensionedMetric) Kind() metric_type {
+	return m.kind
+}
+
 type Datum struct {
 	Value int64
 	Time  time.Time
 }
 
-// Global metrics storage.
 var (
 	metric_lock sync.RWMutex
-	metrics     map[string]*Metric
+	metrics     []Metric
 )
 
 const KEY_HASH_SEP = " "
@@ -200,4 +218,8 @@ func (d *Datum) IncBy(delta int64, timestamp time.Time) {
 // 	}
 // 	key := key_hash(keys)
 // 	return m.Values[key]
+// }
+
+// func init() {
+// 	metrics := make([]Metric, 0)
 // }

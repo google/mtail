@@ -65,6 +65,6 @@ type declNode struct {
 	kind          metric_type
 	exported      bool
 	exported_name string
-	m             interface{}
+	m             Metric
 	sym           *symbol
 }
