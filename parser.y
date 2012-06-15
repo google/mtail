@@ -22,6 +22,7 @@ import (
 {
     text string
     texts []string
+    flag bool
     n node
     mtype metric_type
 }
@@ -33,6 +34,7 @@ import (
 %type <mtype> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
+%type <flag> export_class
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
@@ -228,15 +230,18 @@ cond
   ;
 
 decl
-  : type_spec declarator
+  : export_class type_spec declarator
   {
-    $$ = $2
+    $$ = $3
     d := $$.(*declNode)
-    d.kind = $1
+    d.kind = $2
+    d.exported = $1
       
     var n string
     if d.exported_name != "" {
         n = d.exported_name
+        // Implicitly exported if "AS" clause exists
+        d.exported = true
 	} else {
       n = d.name
    	}
@@ -255,6 +260,21 @@ decl
   }
   ;
 
+export_class
+  : /* empty */
+  {
+    $$ = false
+  }
+  | EXPORTED
+  {
+    $$ = true
+  }
+  | INTERNAL
+  {
+    $$ = false
+  }
+  ;
+  
 declarator
   : declarator by_spec
   {
@@ -268,12 +288,12 @@ declarator
   }
   | ID
   {
-    $$ = &declNode{name: $1, exported: true}
+    $$ = &declNode{name: $1}
 
   }
   | STRING
   {
-    $$ = &declNode{name: $1, exported: true}
+    $$ = &declNode{name: $1}
   }
   ;
 
