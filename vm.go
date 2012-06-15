@@ -302,11 +302,8 @@ func (c *compiler) compile(n node) {
 		}
 
 	case *declNode:
-		// Export the metric 
-		if v.exported {
-			v.sym.addr = len(metrics)
-			metrics = append(metrics, v.m)
-		}
+		v.sym.addr = len(metrics)
+		metrics = append(metrics, v.m)
 
 	case *condNode:
 		// TODO(jaq): split off a new goroutine thread instead of doing conds serially.

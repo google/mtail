@@ -32,6 +32,10 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 
 	c := csv.NewWriter(w)
 	for _, m := range metrics {
+		if !m.IsExported() {
+			continue
+		}
+
 		var record []string
 		switch v := m.(type) {
 		case *ScalarMetric:
@@ -62,13 +66,11 @@ func handleJson(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.Unlock()
 
-	for _, v := range vms {
-		b, err := json.Marshal(metrics)
-		if err != nil {
-			log.Println("error marshalling %s metrics into json:", v.name, err.Error())
-		}
-		w.Write(b)
+	b, err := json.Marshal(metrics)
+	if err != nil {
+		log.Println("error marshalling metrics into json:", err.Error())
 	}
+	w.Write(b)
 }
 
 // RunVms receives a line from a channel and sends it to all VMs.

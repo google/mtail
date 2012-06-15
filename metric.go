@@ -38,11 +38,13 @@ type Settable interface {
 type Metric interface {
 	Name() string
 	Kind() metric_type
+	IsExported() bool
 }
 
 type MetricBase struct {
-	name string
-	kind metric_type
+	name     string
+	kind     metric_type
+	exported bool
 }
 
 type ScalarMetric struct {
@@ -50,12 +52,16 @@ type ScalarMetric struct {
 	d Datum
 }
 
-func (m *MetricBase) Name() string {
+func (m *ScalarMetric) Name() string {
 	return m.name
 }
 
-func (m *MetricBase) Kind() metric_type {
+func (m *ScalarMetric) Kind() metric_type {
 	return m.kind
+}
+
+func (m *ScalarMetric) IsExported() bool {
+	return m.exported
 }
 
 func (m *ScalarMetric) Inc(ts time.Time) {
@@ -86,6 +92,10 @@ func (m *DimensionedMetric) Name() string {
 
 func (m *DimensionedMetric) Kind() metric_type {
 	return m.kind
+}
+
+func (m *DimensionedMetric) IsExported() bool {
+	return m.exported
 }
 
 type Datum struct {
