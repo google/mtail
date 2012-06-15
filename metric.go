@@ -108,24 +108,6 @@ func key_unhash(key string) []string {
 	return strings.Split(key, KEY_HASH_SEP)
 }
 
-// func Fetch(name string, keys []string) (datum *Datum) {
-// 	key := key_hash(keys)
-// 	m, ok := metrics[name]
-// 	if !ok {
-// 		m.Values[key] = &Datum{}
-// 		datum := n.Values[key]
-// 	} else {
-// 		return n.Values[key]
-// 	}
-// }
-
-// func Store(name string, keys []string, datum *Datum) {
-// 	if n, ok := metrics[name]; ok {
-// 		key := key_hash(keys)
-// 		n.Values[key] = datum
-// 	}
-// }
-
 func (d *Datum) stamp(timestamp time.Time) {
 	if timestamp.IsZero() {
 		d.Time = time.Now()
@@ -152,74 +134,6 @@ func (d *Datum) IncBy(delta int64, timestamp time.Time) {
 	d.stamp(timestamp)
 }
 
-// func (m *Metric) Inc(delta int64, timestamp time.Time) {
-// 	if len(m.Keys) > 0 {
-// 		panic("can't increment a dimensional metric")
-// 	}
-// 	key := " " // Dirty hack.
-// 	d, ok := m.Values[key]
-// 	if !ok {
-// 		d = &Datum{}
-// 		m.Values[key] = d
-// 	}
-// 	d.Inc(delta, timestamp)
-// }
-
-// func (m *Metric) Set(value int64, timestamp time.Time) {
-// 	if len(m.Keys) > 0 {
-// 		panic("can't set a dimensional metric")
-// 	}
-// 	key := " " // Dirty Hack
-// 	d, ok := m.Values[key]
-// 	if !ok {
-// 		d = &Datum{}
-// 		m.Values[key] = d
-// 	}
-// 	d.Set(value, timestamp)
-// }
-
-// func (m *Metric) IncD(keys []string, delta int64, timestamp time.Time) {
-// 	if len(m.Keys) == 0 {
-// 		panic("cannot set with keys a nondimensional metric")
-// 	}
-// 	key := key_hash(keys)
-// 	d, ok := m.Values[key]
-// 	if !ok {
-// 		d = &Datum{}
-// 		m.Values[key] = d
-// 	}
-// 	d.Inc(delta, timestamp)
-// }
-
-// func (m *Metric) SetD(keys []string, value int64, timestamp time.Time) {
-// 	if len(m.Keys) == 0 {
-// 		panic("can't set with keys a nondimensional metric")
-// 	}
-// 	key := key_hash(keys)
-// 	d, ok := m.Values[key]
-// 	if !ok {
-// 		d = &Datum{}
-// 		m.Values[key] = d
-// 	}
-// 	d.Set(value, timestamp)
-// }
-
-// func (m *Metric) Value() *Datum {
-// 	if len(m.Keys) > 0 {
-// 		panic("can't get a dimensional metric")
-// 	}
-// 	key := " " // Dirty Hack
-// 	return m.Values[key]
-// }
-
-// func (m *Metric) ValueD(keys []string) *Datum {
-// 	if len(m.Keys) > 0 {
-// 		panic("can't get with keys a nondimensional metric")
-// 	}
-// 	key := key_hash(keys)
-// 	return m.Values[key]
-// }
-
-// func init() {
-// 	metrics := make([]Metric, 0)
-// }
+func init() {
+	metrics = make([]Metric, 0)
+}

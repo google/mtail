@@ -37,7 +37,7 @@ import (
 // Invalid input
 %token <text> INVALID
 // Reserved words
-%token EXPORT COUNTER GAUGE AS BY
+%token EXPORTED INTERNAL COUNTER GAUGE AS BY
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group

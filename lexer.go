@@ -15,27 +15,28 @@ type Lexeme int
 
 // Printable names for lexemes.
 var lexemeName = map[Lexeme]string{
-	EOF:     "EOF",
-	INVALID: "INVALID",
-	LCURLY:  "LCURLY",
-	RCURLY:  "RCURLY",
-	LPAREN:  "LPAREN",
-	RPAREN:  "RPAREN",
-	LSQUARE: "LSQUARE",
-	RSQUARE: "RSQUARE",
-	COMMA:   "COMMA",
-	MINUS:   "MINUS",
-	PLUS:    "PLUS",
-	REGEX:   "REGEX",
-	ID:      "ID",
-	CAPREF:  "CAPREF",
-	STRING:  "STRING",
-	BUILTIN: "BUILTIN",
-	EXPORT:  "EXPORT",
-	COUNTER: "COUNTER",
-	GAUGE:   "GAUGE",
-	AS:      "AS",
-	BY:      "BY",
+	EOF:      "EOF",
+	INVALID:  "INVALID",
+	LCURLY:   "LCURLY",
+	RCURLY:   "RCURLY",
+	LPAREN:   "LPAREN",
+	RPAREN:   "RPAREN",
+	LSQUARE:  "LSQUARE",
+	RSQUARE:  "RSQUARE",
+	COMMA:    "COMMA",
+	MINUS:    "MINUS",
+	PLUS:     "PLUS",
+	REGEX:    "REGEX",
+	ID:       "ID",
+	CAPREF:   "CAPREF",
+	STRING:   "STRING",
+	BUILTIN:  "BUILTIN",
+	EXPORTED: "EXPORTED",
+	INTERNAL: "INTERNAL",
+	COUNTER:  "COUNTER",
+	GAUGE:    "GAUGE",
+	AS:       "AS",
+	BY:       "BY",
 }
 
 func (t Lexeme) String() string {
@@ -47,11 +48,12 @@ func (t Lexeme) String() string {
 
 // List of keywords.  Keep this list sorted!
 var keywords = map[string]Lexeme{
-	"as":      AS,
-	"by":      BY,
-	"counter": COUNTER,
-	"export":  EXPORT,
-	"gauge":   GAUGE,
+	"as":       AS,
+	"by":       BY,
+	"counter":  COUNTER,
+	"exported": EXPORTED,
+	"gauge":    GAUGE,
+	"internal": INTERNAL,
 }
 
 // List of builtin functions.  Keep this list sorted!

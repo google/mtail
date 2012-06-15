@@ -29,6 +29,7 @@ var line_count = expvar.NewInt("line_count")
 func handleCsv(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.Unlock()
+
 	c := csv.NewWriter(w)
 	for _, m := range metrics {
 		var record []string
@@ -60,6 +61,7 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 func handleJson(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.Unlock()
+
 	for _, v := range vms {
 		b, err := json.Marshal(metrics)
 		if err != nil {
@@ -131,7 +133,9 @@ func main() {
 	go w.start()
 
 	for _, pathname := range strings.Split(*logs, ",") {
-		t.Tail(pathname)
+		if pathname != "" {
+			t.Tail(pathname)
+		}
 	}
 
 	http.HandleFunc("/json", handleJson)
