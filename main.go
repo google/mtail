@@ -66,6 +66,7 @@ func handleJson(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.Unlock()
 
+	// TODO(jaq): excluded unexported metrics
 	b, err := json.Marshal(metrics)
 	if err != nil {
 		log.Println("error marshalling metrics into json:", err.Error())
