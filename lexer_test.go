@@ -33,11 +33,13 @@ var lexerTests = []lexerTest{
 		Token{RSQUARE, "]", Position{0, 5, 5}},
 		Token{COMMA, ",", Position{0, 6, 6}},
 		Token{EOF, "", Position{0, 7, 7}}}},
-	{"operators", "-+=", []Token{
+	{"operators", "- + = ++ +=", []Token{
 		Token{MINUS, "-", Position{0, 0, 0}},
-		Token{PLUS, "+", Position{0, 1, 1}},
-		Token{ASSIGN, "=", Position{0, 2, 2}},
-		Token{EOF, "", Position{0, 3, 3}}}},
+		Token{PLUS, "+", Position{0, 2, 2}},
+		Token{ASSIGN, "=", Position{0, 4, 4}},
+		Token{INC, "++", Position{0, 6, 7}},
+		Token{ADD_ASSIGN, "+=", Position{0, 9, 10}},
+		Token{EOF, "", Position{0, 11, 11}}}},
 	{"keywords",
 		"exported\ninternal\ncounter\ngauge\nas\nby\n", []Token{
 			Token{EXPORTED, "exported", Position{0, 0, 7}},
@@ -48,11 +50,14 @@ var lexerTests = []lexerTest{
 			Token{BY, "by", Position{5, 0, 1}},
 			Token{EOF, "", Position{6, 0, 0}}}},
 	{"builtins",
-		"inc\nset\nstrptime\n", []Token{
-			Token{BUILTIN, "inc", Position{0, 0, 2}},
-			Token{BUILTIN, "set", Position{1, 0, 2}},
-			Token{BUILTIN, "strptime", Position{2, 0, 7}},
-			Token{EOF, "", Position{3, 0, 0}}}},
+		"strptime\ntimestamp\n", []Token{
+			Token{BUILTIN, "strptime", Position{0, 0, 7}},
+			Token{BUILTIN, "timestamp", Position{1, 0, 8}},
+			Token{EOF, "", Position{2, 0, 0}}}},
+	{"const", "1 23", []Token{
+		Token{CONST, "1", Position{0, 0, 0}},
+		Token{CONST, "23", Position{0, 2, 3}},
+		Token{EOF, "", Position{0, 4, 4}}}},
 	{"identifer", "a be foo\nquux line-count", []Token{
 		Token{ID, "a", Position{0, 0, 0}},
 		Token{ID, "be", Position{0, 2, 3}},
@@ -88,7 +93,7 @@ var lexerTests = []lexerTest{
 	{"large program",
 		"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
 			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
-			"  inc(foo)\n" +
+			"  foo++\n" +
 			"}", []Token{
 			Token{REGEX, "(?P<date>[[:digit:]-\\/ ])", Position{0, 0, 26}},
 			Token{LCURLY, "{", Position{0, 28, 28}},
@@ -98,10 +103,8 @@ var lexerTests = []lexerTest{
 			Token{COMMA, ",", Position{1, 16, 16}},
 			Token{STRING, "%Y/%m/%d %H:%M:%S", Position{1, 18, 36}},
 			Token{RPAREN, ")", Position{1, 37, 37}},
-			Token{BUILTIN, "inc", Position{2, 2, 4}},
-			Token{LPAREN, "(", Position{2, 5, 5}},
-			Token{ID, "foo", Position{2, 6, 8}},
-			Token{RPAREN, ")", Position{2, 9, 9}},
+			Token{ID, "foo", Position{2, 2, 4}},
+			Token{INC, "++", Position{2, 5, 6}},
 			Token{RCURLY, "}", Position{3, 0, 0}},
 			Token{EOF, "", Position{3, 1, 1}}}},
 	{"linecount",

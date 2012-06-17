@@ -45,7 +45,11 @@ func unparse(n node) string {
 		output += "$" + v.name
 
 	case *builtinNode:
-		output += v.name + "(" + unparse(v.args) + ")"
+		output += v.name + "("
+		if v.args != nil {
+			output += unparse(v.args)
+		}
+		output += ")"
 
 	case *additiveExprNode:
 		output += unparse(v.lhs)
@@ -71,6 +75,18 @@ func unparse(n node) string {
 			output += "gauge "
 		}
 		output += v.name
+
+	case *incExprNode:
+		output += unparse(v.lhs)
+		output += "++"
+
+	case *incByExprNode:
+		output += unparse(v.lhs)
+		output += " += "
+		output += unparse(v.rhs)
+
+	case *constExprNode:
+		output += fmt.Sprintf("%d", v.value)
 
 	default:
 		panic(fmt.Sprintf("undefined type %T", n))

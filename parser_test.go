@@ -36,16 +36,16 @@ var kMtailPrograms = []validProgram{
 	{"more complex action, calling builtin",
 		"counter line_count\n" +
 			"/foo/ {\n" +
-			"  inc(line_count)\n" +
+			"  line_count++\n" +
 			"}"},
 
 	{"regex match includes escaped slashes",
 		"counter foo\n" +
-			"/foo\\// { inc(foo) }"},
+			"/foo\\// { foo++ }"},
 
 	{"numeric capture group reference",
 		"/(foo)/ {\n" +
-			"  inc($1)\n" +
+			"  $1++\n" +
 			"}"},
 
 	{"strptime and capref",
@@ -62,20 +62,20 @@ var kMtailPrograms = []validProgram{
 		"counter foo\n" +
 			"counter bar\n" +
 			"/match(\\d+)/ {\n" +
-			"  inc(foo, $1)\n" +
+			"  foo += $1\n" +
 			"  /^bleh (\\S+)/ {\n" +
-			"    inc(bar)\n" +
-			"    inc($1)\n" +
+			"    bar++\n" +
+			"    $1++\n" +
 			"  }\n" +
 			"}\n"},
 
 	{"nested scope",
 		"counter foo\n" +
 			"/fo(o)/ {\n" +
-			"  inc($1)\n" +
+			"  $1++\n" +
 			"  /bar(xxx)/ {\n" +
-			"    inc($1, $1)\n" +
-			"    set(foo, $1)\n" +
+			"    $1 += $1\n" +
+			"    foo = $1\n" +
 			"  }\n" +
 			"}\n"},
 
@@ -91,19 +91,27 @@ var kMtailPrograms = []validProgram{
 			"variable = $foo\n" +
 			"}\n"},
 
+	{"increment operator",
+		"counter var\n" +
+			"/foo/ {\n" +
+			"  var++\n" +
+			"}\n"},
+
+	{"incby operator",
+		"counter var\n" +
+			"/foo/ {\n  var += 2\n}\n"},
+
 	{"additive",
 		"counter time_total\n" +
-			"gauge timestamp\n" +
 			"/(?P<foo>.*)/ {\n" +
-			"  timestamp - time_total\n" +
+			"  timestamp() - time_total\n" +
 			"}\n"},
 
 	{"additive and mem storage",
 		"counter time_total\n" +
-			"gauge timestamp\n" +
 			"counter variable by foo\n" +
 			"/(?P<foo>.*)/ {\n" +
-			"  inc(time_total, timestamp - variable[$foo])\n" +
+			"  time_total += timestamp() - variable[$foo]\n" +
 			"}\n"},
 }
 
@@ -174,17 +182,16 @@ var InvalidPrograms = []InvalidProgram{
 			"invalid regex 3:2:1: syntax error"}},
 
 	{"unterminated string",
-		" inc(\"foo) }\n",
-		[]string{"unterminated string:1:6-12: Unterminated quoted string: \"\\\"foo) }\"",
-			"unterminated string:1:6-12: syntax error"}},
+		" \"foo }\n",
+		[]string{"unterminated string:1:2-7: Unterminated quoted string: \"\\\"foo }\""}},
 
 	{"undefined named capture group",
-		"/blurgh/ { inc($undef) }\n",
-		[]string{"undefined named capture group:1:16-21: Capture group $undef not defined by prior regular expression in this or an outer scope"}},
+		"/blurgh/ { $undef++ }\n",
+		[]string{"undefined named capture group:1:12-17: Capture group $undef not defined by prior regular expression in this or an outer scope"}},
 
 	{"out of bounds capref",
-		"/(blyurg)/ { inc($2) }\n",
-		[]string{"out of bounds capref:1:18-19: Capture group $2 not defined by prior regular expression " +
+		"/(blyurg)/ { $2++ }\n",
+		[]string{"out of bounds capref:1:14-15: Capture group $2 not defined by prior regular expression " +
 			"in this or an outer scope"},
 	},
 }
@@ -197,7 +204,7 @@ func TestInvalidPrograms(t *testing.T) {
 		EmtailParse(p)
 
 		if !reflect.DeepEqual(tc.errors, p.errors) {
-			t.Errorf("Incorrect error for %s\n\texpected: %q\n\treceived: %q\n", tc.name, tc.errors, p.errors)
+			t.Errorf("Incorrect error for '%s'\n\treceived: %q\n\texpected: %q\n", tc.name, p.errors, tc.errors)
 		}
 	}
 }

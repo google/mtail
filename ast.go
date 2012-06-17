@@ -68,3 +68,16 @@ type declNode struct {
 	m             Metric
 	sym           *symbol
 }
+
+type incByExprNode struct {
+	lhs node
+	rhs node
+}
+
+type incExprNode struct {
+	lhs node
+}
+
+type constExprNode struct {
+	value int
+}

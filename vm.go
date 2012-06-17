@@ -19,41 +19,42 @@ var compile_only *bool = flag.Bool("compile_only", false, "Compile programs only
 type opcode int
 
 const (
-	match    opcode = iota // Match a regular expression against input
-	jnm                    // Jump if no match
-	inc                    // Increment an exported variable value
-	strptime               // Parse into the timestamp register
-	ret                    // Return, end program successfully
-	push                   // Push operand onto stack
-	capref                 // Push capture group reference at operand onto stack
-	str                    // Push string constant at operand onto stack
-	set                    // Set an exported variable value
-	add                    // Add top values on stack and push to stack
-	sub                    // Subtract tpo value from second top value on stack, and push to stack.
-	mload                  // Load metric at operand onto top of stack.
-	dload                  // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
+	match     opcode = iota // Match a regular expression against input
+	jnm                     // Jump if no match
+	inc                     // Increment an exported variable value
+	strptime                // Parse into the timestamp register
+	timestamp               // Return value of timestamp register
+	ret                     // Return, end program successfully
+	push                    // Push operand onto stack
+	capref                  // Push capture group reference at operand onto stack
+	str                     // Push string constant at operand onto stack
+	set                     // Set an exported variable value
+	add                     // Add top values on stack and push to stack
+	sub                     // Subtract tpo value from second top value on stack, and push to stack.
+	mload                   // Load metric at operand onto top of stack.
+	dload                   // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
 )
 
 var opNames = map[opcode]string{
-	match:    "match",
-	jnm:      "jnm",
-	inc:      "inc",
-	strptime: "strptime",
-	ret:      "ret",
-	push:     "push",
-	capref:   "capref",
-	str:      "str",
-	set:      "set",
-	add:      "add",
-	sub:      "sub",
-	mload:    "mload",
-	dload:    "dload",
+	match:     "match",
+	jnm:       "jnm",
+	inc:       "inc",
+	strptime:  "strptime",
+	timestamp: "timestamp",
+	ret:       "ret",
+	push:      "push",
+	capref:    "capref",
+	str:       "str",
+	set:       "set",
+	add:       "add",
+	sub:       "sub",
+	mload:     "mload",
+	dload:     "dload",
 }
 
 var builtin = map[string]opcode{
-	"inc":      inc,
-	"set":      set,
-	"strptime": strptime,
+	"strptime":  strptime,
+	"timestamp": timestamp,
 }
 
 type instr struct {
@@ -117,8 +118,8 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 	case inc:
 		// increment a counter
 		delta := 1
-		// If there's more than one arg, increment by delta.
-		if i.opnd > 1 {
+		// If opnd is nonzero, the delta is on the stack.
+		if i.opnd > 0 {
 			val := v.stack.Pop()
 			// Don't know what type it is on the stack though.
 			switch n := val.(type) {
@@ -179,6 +180,13 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			return v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
 		}
 		t.time = tm
+
+	case timestamp:
+		// if t.time == nil {
+		// 	v.stack.Push(time.Now())
+		// } else {
+		v.stack.Push(t.time)
+		//		}
 
 	case capref:
 		v.stack.Push(t.matches[i.opnd])
@@ -361,11 +369,23 @@ func (c *compiler) compile(n node) {
 	case *assignExprNode:
 		c.compile(v.lhs)
 		c.compile(v.rhs)
-		//c.emit(instr{op: stor})
+		c.emit(instr{op: set})
 
 	case *indexedExprNode:
 		c.compile(v.lhs)
 		c.compile(v.index)
+
+	case *incExprNode:
+		c.compile(v.lhs)
+		c.emit(instr{op: inc})
+
+	case *incByExprNode:
+		c.compile(v.lhs)
+		c.compile(v.rhs)
+		c.emit(instr{inc, 1})
+
+	case *constExprNode:
+		c.emit(instr{push, v.value})
 
 	default:
 		c.errorf("undefined node type %T", n)

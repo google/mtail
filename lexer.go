@@ -15,28 +15,31 @@ type Lexeme int
 
 // Printable names for lexemes.
 var lexemeName = map[Lexeme]string{
-	EOF:      "EOF",
-	INVALID:  "INVALID",
-	LCURLY:   "LCURLY",
-	RCURLY:   "RCURLY",
-	LPAREN:   "LPAREN",
-	RPAREN:   "RPAREN",
-	LSQUARE:  "LSQUARE",
-	RSQUARE:  "RSQUARE",
-	COMMA:    "COMMA",
-	MINUS:    "MINUS",
-	PLUS:     "PLUS",
-	REGEX:    "REGEX",
-	ID:       "ID",
-	CAPREF:   "CAPREF",
-	STRING:   "STRING",
-	BUILTIN:  "BUILTIN",
-	EXPORTED: "EXPORTED",
-	INTERNAL: "INTERNAL",
-	COUNTER:  "COUNTER",
-	GAUGE:    "GAUGE",
-	AS:       "AS",
-	BY:       "BY",
+	EOF:        "EOF",
+	INVALID:    "INVALID",
+	LCURLY:     "LCURLY",
+	RCURLY:     "RCURLY",
+	LPAREN:     "LPAREN",
+	RPAREN:     "RPAREN",
+	LSQUARE:    "LSQUARE",
+	RSQUARE:    "RSQUARE",
+	COMMA:      "COMMA",
+	INC:        "INC",
+	MINUS:      "MINUS",
+	PLUS:       "PLUS",
+	ADD_ASSIGN: "ADD_ASSIGN",
+	ASSIGN:     "ASSIGN",
+	REGEX:      "REGEX",
+	ID:         "ID",
+	CAPREF:     "CAPREF",
+	STRING:     "STRING",
+	BUILTIN:    "BUILTIN",
+	EXPORTED:   "EXPORTED",
+	INTERNAL:   "INTERNAL",
+	COUNTER:    "COUNTER",
+	GAUGE:      "GAUGE",
+	AS:         "AS",
+	BY:         "BY",
 }
 
 func (t Lexeme) String() string {
@@ -58,9 +61,8 @@ var keywords = map[string]Lexeme{
 
 // List of builtin functions.  Keep this list sorted!
 var builtins = []string{
-	"inc",
-	"set",
 	"strptime",
+	"timestamp",
 }
 
 // A Position is the location in the source program that a token appears.
@@ -240,7 +242,17 @@ func lexProg(l *lexer) stateFn {
 		l.emit(MINUS)
 	case r == '+':
 		l.accept()
-		l.emit(PLUS)
+		switch l.next() {
+		case '+':
+			l.accept()
+			l.emit(INC)
+		case '=':
+			l.accept()
+			l.emit(ADD_ASSIGN)
+		default:
+			l.backup()
+			l.emit(PLUS)
+		}
 	case r == '=':
 		l.accept()
 		l.emit(ASSIGN)
@@ -250,6 +262,8 @@ func lexProg(l *lexer) stateFn {
 		return lexQuotedString
 	case r == '$':
 		return lexCapref
+	case isDigit(r):
+		return lexConst
 	case isAlpha(r):
 		return lexIdentifier
 	case r == eof:
@@ -279,6 +293,23 @@ Loop:
 			l.ignore()
 		}
 	}
+	return lexProg
+}
+
+// Lex a numerical constant.
+func lexConst(l *lexer) stateFn {
+	l.accept()
+Loop:
+	for {
+		switch r := l.next(); {
+		case isDigit(r):
+			l.accept()
+		default:
+			l.backup()
+			break Loop
+		}
+	}
+	l.emit(CONST)
 	return lexProg
 }
 
@@ -386,7 +417,12 @@ func isAlpha(r rune) bool {
 
 // isAlnum reports whether r is an alphanumeric rune.
 func isAlnum(r rune) bool {
-	return isAlpha(r) || unicode.IsDigit(r)
+	return isAlpha(r) || isDigit(r)
+}
+
+// isDigit reports whether r is a numerical rune.
+func isDigit(r rune) bool {
+	return unicode.IsDigit(r)
 }
 
 // isSpace reports whether r is whitespace.

@@ -20,6 +20,7 @@ import (
 
 %union
 {
+    value int
     text string
     texts []string
     flag bool
@@ -43,15 +44,19 @@ import (
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
-// references, and identifiers
+// references, identifiers, and numerical constants
 %token <text> REGEX
 %token <text> STRING
 %token <text> CAPREF
 %token <text> ID
+%token <value> CONST
+// Operators
+%token INC MINUS PLUS
+%token ADD_ASSIGN ASSIGN
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
 %token COMMA
-%token MINUS PLUS ASSIGN
+
 
 
 %start start
@@ -117,6 +122,11 @@ assign_expr
   {
     $$ = &assignExprNode{$1, $3}
   }
+  | unary_expr ADD_ASSIGN assign_expr
+  {
+    $$ = &incByExprNode{$1, $3}
+  }
+  ;
 
 additive_expr
   : unary_expr
@@ -166,6 +176,10 @@ postfix_expr
   {
     $$ = $1
   }
+  | postfix_expr INC
+  {
+    $$ = &incExprNode{$1}
+  }
   | postfix_expr LSQUARE expr RSQUARE
   {  
     $$ = &indexedExprNode{$1, $3}
@@ -199,6 +213,10 @@ primary_expr
   | LPAREN expr RPAREN
   {
       $$ = $2
+  }
+  | CONST
+  {
+    $$ = &constExprNode{$1}
   }
   ;
 

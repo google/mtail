@@ -25,21 +25,21 @@ type testProgram struct {
 
 var programs = []testProgram{
 	{"simple line counter",
-		"counter line_count\n/$/ { inc(line_count) }",
+		"counter line_count\n/$/ { line_count++ }",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 5},
 			instr{mload, 0},
-			instr{inc, 1},
+			instr{inc, 0},
 			instr{ret, 1}},
 		[]in_out{in_out{"", true}}},
 	{"count a",
-		"counter a_count\n/a$/ { inc(a_count) }",
+		"counter a_count\n/a$/ { a_count++ }",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 5},
 			instr{mload, 0},
-			instr{inc, 1},
+			instr{inc, 0},
 			instr{ret, 1}},
 		[]in_out{
 			in_out{"", false},
@@ -47,7 +47,7 @@ var programs = []testProgram{
 	{"strptime and capref",
 		"counter foo\n" +
 			"/(.*)/ { strptime($1, \"2006-01-02T15:04:05\")" +
-			"inc(foo) }",
+			"foo++ }",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 8},
@@ -55,14 +55,14 @@ var programs = []testProgram{
 			instr{str, 0},
 			instr{strptime, 2},
 			instr{mload, 0},
-			instr{inc, 1},
+			instr{inc, 0},
 			instr{ret, 1}},
 		[]in_out{
 			in_out{"2006-01-02T15:04:05", true}}},
 	{"strptime and named capref",
 		"counter foo\n" +
 			"/(?P<date>.*)/ { strptime($date, \"2006-01-02T15:04:05\")" +
-			"inc(foo) }",
+			"foo++ }",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 8},
@@ -70,25 +70,25 @@ var programs = []testProgram{
 			instr{str, 0},
 			instr{strptime, 2},
 			instr{mload, 0},
-			instr{inc, 1},
+			instr{inc, 0},
 			instr{ret, 1}},
 		[]in_out{
 			in_out{"2006-01-02T15:04:05", true}}},
 	{"inc by and set",
 		"counter foo\ncounter bar\n" +
 			"/(.*)/ {\n" +
-			"inc(foo, $1)\n" +
-			"set(bar, $1)\n" +
+			"foo += $1\n" +
+			"bar = $1\n" +
 			"}",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 9},
 			instr{mload, 0},
 			instr{capref, 1},
-			instr{inc, 2},
+			instr{inc, 1},
 			instr{mload, 1},
 			instr{capref, 1},
-			instr{set, 2},
+			instr{set, 0},
 			instr{ret, 1}},
 		[]in_out{
 			in_out{"37", true}}},
@@ -105,12 +105,12 @@ func TestCompileAndRun(t *testing.T) {
 				continue
 			}
 			if !reflect.DeepEqual(tc.prog, v.prog) {
-				t.Errorf("%s: VM prog doesn't match.\n\texpected: %q\n\treceived: %q\n",
-					tc.name, tc.prog, v.prog)
+				t.Errorf("%s: VM prog doesn't match.\n\treceived: %q\n\texpected: %q\n",
+					tc.name, v.prog, tc.prog)
 			}
 			r := v.Run(i.input)
 			if r != i.ok {
-				t.Errorf("%s: Unexpected result after running on test input %q\n\texpected %v\n\treceived: %v", tc.name, i.input, i.ok, r)
+				t.Errorf("%s: Unexpected result after running on test input %q\n\treceived: %v\n\texpected %v\n", tc.name, i.input, r, i.ok)
 			}
 		}
 	}

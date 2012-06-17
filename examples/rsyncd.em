@@ -14,13 +14,13 @@ gauge connection_time by pid
   # Transfer log
   # %o %h [%a] %m (%u) %f %l
   /(?P<operation>\S+) (\S+) \[\S+\] (?P<module>\S+) \(\S*\) \S+ (?P<bytes>\d+)/ {
-    transfers_total[$operation][$module] += 1
+    transfers_total[$operation][$module]++
   }
 
   # Connection
   /connect from \S+ \(\d+\.\d+\.\d+\.\d+\)/ {
-    connections_total ++
-    connection_time[$pid] = timestamp
+    connections_total++
+    connection_time[$pid] = timestamp()
   }
 
   # Connection summary
@@ -29,7 +29,7 @@ gauge connection_time by pid
 
     bytes_total["received"] += $received
 
-    connection_time_total += timestamp - connection_time[$pid]
+    connection_time_total += timestamp() - connection_time[$pid]
     # unset connection_time[$pid]
   }
 }
