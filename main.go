@@ -31,21 +31,25 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	defer metric_lock.Unlock()
 
 	c := csv.NewWriter(w)
+Loop:
 	for _, m := range metrics {
-		if !m.IsExported() {
-			continue
-		}
 
 		var record []string
 		switch v := m.(type) {
 		case *ScalarMetric:
-			record = []string{v.Name(),
-				fmt.Sprintf("%d", v.Kind())}
-			record = append(record, fmt.Sprintf("%s", v.d.Value))
-			record = append(record, fmt.Sprintf("%s", v.d.Time))
+			if !v.Exported {
+				continue Loop
+			}
+			record = []string{v.Name,
+				fmt.Sprintf("%d", v.Kind)}
+			record = append(record, fmt.Sprintf("%s", v.D.Value))
+			record = append(record, fmt.Sprintf("%s", v.D.Time))
 		case *DimensionedMetric:
-			record := []string{v.Name(),
-				fmt.Sprintf("%d", v.Kind())}
+			if !v.Exported {
+				continue Loop
+			}
+			record := []string{v.Name,
+				fmt.Sprintf("%d", v.Kind)}
 			for k, d := range v.Values {
 				keyvals := key_unhash(k)
 				for i, key := range v.Keys {

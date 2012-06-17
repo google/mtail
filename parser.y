@@ -266,13 +266,13 @@ decl
       n = d.name
    	}
     if len(d.keys) > 0 {
-      d.m = &DimensionedMetric{MetricBase: MetricBase{name: n, kind: d.kind, exported: d.exported},
+      d.m = &DimensionedMetric{Name: n, Kind: d.kind, Exported: d.exported,
                                Keys:   d.keys,
                                Values: make(map[string]*Datum, 0)}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, DimensionedMetricSymbol, d.m,
                                    Emtaillex.(*parser).pos)
     } else {
-      d.m = &ScalarMetric{MetricBase: MetricBase{name: n, kind: d.kind, exported: d.exported}}
+      d.m = &ScalarMetric{Name: n, Kind: d.kind, Exported: d.exported}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, ScalarMetricSymbol, d.m,
                                    Emtaillex.(*parser).pos)
       

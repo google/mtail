@@ -27,10 +27,6 @@ var exampleProgramTests = []exampleProgramTest{
 	},
 }
 
-// func (m *Metric) String() string {
-// 	return fmt.Sprintf("%s", *m)
-// }
-
 func TestExamplePrograms(t *testing.T) {
 	if testing.Short() {
 		return
@@ -95,7 +91,7 @@ TestLoop:
 		}
 		defer j.Close()
 
-		var expected_metrics []*Metric
+		var expected_metrics []Metric
 
 		d := json.NewDecoder(j)
 		err = d.Decode(&expected_metrics)

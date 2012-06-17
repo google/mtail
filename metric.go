@@ -36,66 +36,37 @@ type Settable interface {
 }
 
 type Metric interface {
-	Name() string
-	Kind() metric_type
-	IsExported() bool
-}
-
-type MetricBase struct {
-	name     string
-	kind     metric_type
-	exported bool
 }
 
 type ScalarMetric struct {
-	MetricBase
-	d Datum
-}
-
-func (m *ScalarMetric) Name() string {
-	return m.name
-}
-
-func (m *ScalarMetric) Kind() metric_type {
-	return m.kind
-}
-
-func (m *ScalarMetric) IsExported() bool {
-	return m.exported
+	Name     string
+	Kind     metric_type
+	Exported bool
+	D        Datum
 }
 
 func (m *ScalarMetric) Inc(ts time.Time) {
-	m.d.Inc(ts)
+	m.D.Inc(ts)
 }
 
 func (m *ScalarMetric) stamp(ts time.Time) {
-	m.d.stamp(ts)
+	m.D.stamp(ts)
 }
 
 func (m *ScalarMetric) IncBy(delta int64, ts time.Time) {
-	m.d.IncBy(delta, ts)
+	m.D.IncBy(delta, ts)
 }
 
 func (m *ScalarMetric) Set(value int64, ts time.Time) {
-	m.d.Set(value, ts)
+	m.D.Set(value, ts)
 }
 
 type DimensionedMetric struct {
-	MetricBase
-	Keys   []string
-	Values map[string]*Datum
-}
-
-func (m *DimensionedMetric) Name() string {
-	return m.name
-}
-
-func (m *DimensionedMetric) Kind() metric_type {
-	return m.kind
-}
-
-func (m *DimensionedMetric) IsExported() bool {
-	return m.exported
+	Name     string
+	Kind     metric_type
+	Exported bool
+	Keys     []string
+	Values   map[string]*Datum
 }
 
 type Datum struct {

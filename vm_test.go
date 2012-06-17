@@ -237,8 +237,8 @@ var instructions = []instrTest{
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
 		metrics = []Metric{
-			&ScalarMetric{MetricBase: MetricBase{name: "foo", kind: Counter}},
-			&ScalarMetric{MetricBase: MetricBase{name: "bar", kind: Gauge}},
+			&ScalarMetric{Name: "foo", Kind: Counter},
+			&ScalarMetric{Name: "bar", Kind: Gauge},
 		}
 
 		expected_stack := Stack{}
