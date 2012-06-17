@@ -133,6 +133,8 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 				if err != nil {
 					return v.errorf("conversion of %q to numeric failed: %s", val, err)
 				}
+			default:
+				return v.errorf("Unexpected type %T %q", val, val)
 			}
 		}
 		switch d := v.stack.Pop().(type) {
@@ -144,22 +146,30 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 
 	case set:
 		// Set a gauge
-		var value int
+		fmt.Printf("set\n")
+		var value int64
 		val := v.stack.Pop()
 		// Don't know what type it is on the stack though.
 		switch n := val.(type) {
 		case int:
+			value = int64(n)
+		case int64:
 			value = n
 		case string:
 			var err error
-			value, err = strconv.Atoi(n)
+			value, err = strconv.ParseInt(n, 10, 64)
 			if err != nil {
 				return v.errorf("conversion of %q to numeric failed: %s", val, err)
 			}
+		case time.Time:
+			value = n.Unix()
+		default:
+			return v.errorf("Unexpected type %T %q\n", val, val)
 		}
+		fmt.Printf("pop settable\n")
 		switch d := v.stack.Pop().(type) {
 		case Settable:
-			d.Set(int64(value), t.time)
+			d.Set(value, t.time)
 		default:
 			fmt.Printf("what is it? %T %q\n", d, d)
 		}
@@ -200,13 +210,51 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		v.stack.Push(i.opnd)
 
 	case add:
-		a := v.stack.Pop().(int)
-		b := v.stack.Pop().(int)
+		var a, b int64
+		switch d := v.stack.Pop().(type) {
+		case *Datum:
+			a = d.Value
+		case int64:
+			a = d
+		case int:
+			a = int64(d)
+		default:
+			return v.errorf("Unexpected type for sub %T %q\n", d, d)
+		}
+		switch d := v.stack.Pop().(type) {
+		case *Datum:
+			b = d.Value
+		case int64:
+			b = d
+		case int:
+			b = int64(d)
+		default:
+			return v.errorf("Unexpected type for sub %T %q\n", d, d)
+		}
 		v.stack.Push(a + b)
 
 	case sub:
-		a := v.stack.Pop().(int)
-		b := v.stack.Pop().(int)
+		var a, b int64
+		switch d := v.stack.Pop().(type) {
+		case *Datum:
+			a = d.Value
+		case int64:
+			a = d
+		case int:
+			a = int64(d)
+		default:
+			return v.errorf("Unexpected type for sub %T %q\n", d, d)
+		}
+		switch d := v.stack.Pop().(type) {
+		case *Datum:
+			b = d.Value
+		case int64:
+			b = d
+		case int:
+			b = int64(d)
+		default:
+			return v.errorf("Unexpected type for sub %T %q\n", d, d)
+		}
 		v.stack.Push(b - a)
 
 	case mload:
@@ -221,7 +269,13 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			keys = append(keys, v.stack.Pop().(string))
 		}
 		fmt.Printf("keys is now %s\n", keys)
-		v.stack.Push(m.Values[key_hash(keys)])
+		h := key_hash(keys)
+		fmt.Printf("hash is %s\n", h)
+		if _, ok := m.Values[h]; !ok {
+			fmt.Printf("doesn't exist...\n")
+			m.Values[h] = &Datum{}
+		}
+		v.stack.Push(m.Values[h])
 
 	default:
 		return v.errorf("illegal instruction: %q", i.op)
@@ -378,6 +432,8 @@ func (c *compiler) compile(n node) {
 			c.emit(instr{op: add})
 		case '-':
 			c.emit(instr{op: sub})
+		default:
+			c.errorf("invalid op: %q\n", v.op)
 		}
 
 	case *assignExprNode:

@@ -6,10 +6,9 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	//"fmt"
 	"io"
 	"os"
-	//"reflect"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -79,7 +78,7 @@ TestLoop:
 			}
 		}
 
-		// Dirty hack to create json files :)
+		// // Dirty hack to create json files :)
 		// j, err := os.Create(tc.jsonfile)
 		// if err != nil {
 		// 	t.Errorf("%s: could not open json file: %s", tc.jsonfile, err)
@@ -105,8 +104,8 @@ TestLoop:
 			continue
 		}
 
-		// if !reflect.DeepEqual(expected_metrics, vm.metrics) {
-		// 	t.Errorf("%s: metrics don't match.\n\texpected: %s\n\treceived: %s", tc.programfile, expected_metrics, metrics)
-		// }
+		if !reflect.DeepEqual(expected_metrics, metrics) {
+			t.Errorf("%s: metrics don't match.\n\texpected: %s\n\treceived: %s", tc.programfile, expected_metrics, metrics)
+		}
 	}
 }

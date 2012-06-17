@@ -50,7 +50,8 @@ var programs = []testProgram{
 			"foo++ }",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 8},
+			instr{jnm, 9},
+			instr{push, 0},
 			instr{capref, 1},
 			instr{str, 0},
 			instr{strptime, 2},
@@ -65,7 +66,8 @@ var programs = []testProgram{
 			"foo++ }",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 8},
+			instr{jnm, 9},
+			instr{push, 0},
 			instr{capref, 1},
 			instr{str, 0},
 			instr{strptime, 2},
@@ -82,11 +84,13 @@ var programs = []testProgram{
 			"}",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 9},
+			instr{jnm, 11},
 			instr{mload, 0},
+			instr{push, 0},
 			instr{capref, 1},
 			instr{inc, 1},
 			instr{mload, 1},
+			instr{push, 0},
 			instr{capref, 1},
 			instr{set, 0},
 			instr{ret, 1}},
@@ -138,7 +142,7 @@ var instructions = []instrTest{
 		[]interface{}{0},
 		[]interface{}{},
 		map[int]interface{}{},
-		thread{pc: 1},
+		thread{pc: 1, matches: map[int][]string{}},
 	},
 	{"inc by int",
 		[]instr{instr{inc, 2}},
@@ -148,7 +152,7 @@ var instructions = []instrTest{
 		[]interface{}{0, 1}, // first is metric 0 "foo", second is the inc val.
 		[]interface{}{},
 		map[int]interface{}{},
-		thread{pc: 1},
+		thread{pc: 1, matches: map[int][]string{}},
 	},
 	{"inc by string",
 		[]instr{instr{inc, 2}},
@@ -158,7 +162,7 @@ var instructions = []instrTest{
 		[]interface{}{0, "1"}, // first is metric 0 "foo", second is the inc val.
 		[]interface{}{},
 		map[int]interface{}{},
-		thread{pc: 1},
+		thread{pc: 1, matches: map[int][]string{}},
 	},
 	{"set int",
 		[]instr{instr{set, 2}},
@@ -168,7 +172,7 @@ var instructions = []instrTest{
 		[]interface{}{1, 2}, // set metric 1 "bar"
 		[]interface{}{},
 		map[int]interface{}{},
-		thread{pc: 1},
+		thread{pc: 1, matches: map[int][]string{}},
 	},
 	{"set str",
 		[]instr{instr{set, 2}},
@@ -178,7 +182,7 @@ var instructions = []instrTest{
 		[]interface{}{1, "2"},
 		[]interface{}{},
 		map[int]interface{}{},
-		thread{pc: 1},
+		thread{pc: 1, matches: map[int][]string{}},
 	},
 	{"match",
 		[]instr{instr{match, 0}},
@@ -198,7 +202,7 @@ var instructions = []instrTest{
 		[]interface{}{},
 		[]interface{}{},
 		map[int]interface{}{},
-		thread{pc: 37}},
+		thread{pc: 37, matches: map[int][]string{}}},
 	{"strptime",
 		[]instr{instr{strptime, 0}},
 		[]*regexp.Regexp{},
@@ -207,25 +211,26 @@ var instructions = []instrTest{
 		[]interface{}{"2012/01/18 06:25:00", "2006/01/02 15:04:05"},
 		[]interface{}{},
 		map[int]interface{}{},
-		thread{pc: 1, time: time.Date(2012, 1, 18, 6, 25, 0, 0, time.UTC)}},
+		thread{pc: 1, time: time.Date(2012, 1, 18, 6, 25, 0, 0, time.UTC),
+			matches: map[int][]string{}}},
 	{"add",
 		[]instr{instr{add, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
 		map[int]interface{}{},
 		[]interface{}{2, 1},
-		[]interface{}{3},
+		[]interface{}{int64(3)},
 		map[int]interface{}{},
-		thread{pc: 1}},
+		thread{pc: 1, matches: map[int][]string{}}},
 	{"sub",
 		[]instr{instr{sub, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
 		map[int]interface{}{},
 		[]interface{}{2, 1},
-		[]interface{}{1},
+		[]interface{}{int64(1)},
 		map[int]interface{}{},
-		thread{pc: 1}},
+		thread{pc: 1, matches: map[int][]string{}}},
 }
 
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
@@ -249,6 +254,7 @@ func TestInstrs(t *testing.T) {
 			v.stack.Push(item)
 		}
 
+		v.t.matches = make(map[int][]string, 0)
 		v.execute(&v.t, v.prog[0], "aaaab")
 
 		if !reflect.DeepEqual(expected_stack, v.stack) {
