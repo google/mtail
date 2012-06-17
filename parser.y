@@ -229,20 +229,22 @@ cond
           Emtaillex.(*parser).Error(fmt.Sprintf(err.Error()))
           // TODO(jaq): force a parse error
       } else {
+        $$ = &regexNode{pattern: $1}
           // We can reserve storage for these capturing groups, storing them in
           // the current scope, so that future CAPTUREGROUPs can retrieve their
           // value.  At parse time, we can warn about nonexistent names.
           for i := 1; i < re.NumSubexp() + 1; i++ {
-            Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i), CaprefSymbol, i, 
-                                         Emtaillex.(*parser).pos)
+            sym := Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i), CaprefSymbol, $$, 
+                                                Emtaillex.(*parser).pos)
+            sym.addr = i
           }
           for i, capref := range re.SubexpNames() {
                 if capref != "" {
-                  Emtaillex.(*parser).s.addSym(capref, CaprefSymbol, i, 
-                                         Emtaillex.(*parser).pos)
+                  sym := Emtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$, 
+                                                      Emtaillex.(*parser).pos)
+                  sym.addr = i
               }
           }
-          $$ = &regexNode{$1}
       }
   }
   ;

@@ -69,7 +69,7 @@ func (i instr) String() string {
 type thread struct {
 	pc      int
 	reg     int
-	matches []string
+	matches map[int][]string
 	time    time.Time
 }
 
@@ -101,11 +101,13 @@ func (v *vm) errorf(format string, args ...interface{}) bool {
 // Execute acts on the current instruction, and returns a boolean indicating
 // if the current thread should terminate.
 func (v *vm) execute(t *thread, i instr, input string) bool {
+	fmt.Printf("execute %T %q\n", i, i)
 	switch i.op {
 	case match:
-		// match regex and stre success
-		t.matches = v.re[i.opnd].FindStringSubmatch(input)
-		if t.matches != nil {
+		// match regex and store success
+		t.matches[i.opnd] = v.re[i.opnd].FindStringSubmatch(input)
+		if t.matches[i.opnd] != nil {
+			fmt.Printf("matches: %q\n", t.matches)
 			t.reg = 1
 		} else {
 			t.reg = 0
@@ -171,7 +173,8 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			ts = s
 
 		case int: /* capref */
-			ts = t.matches[s]
+			re := v.stack.Pop().(int)
+			ts = t.matches[re][s]
 		}
 
 		tm, err := time.Parse(layout, ts)
@@ -184,7 +187,8 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		v.stack.Push(t.time)
 
 	case capref:
-		v.stack.Push(t.matches[i.opnd])
+		re := v.stack.Pop().(int)
+		v.stack.Push(t.matches[re][i.opnd])
 
 	case str:
 		v.stack.Push(v.str[i.opnd])
@@ -210,11 +214,13 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		v.stack.Push(metrics[i.opnd])
 
 	case dload:
+		fmt.Printf("Stack len %d %s\n", v.stack.size, v.stack)
+		m := v.stack.Pop().(*DimensionedMetric)
 		var keys []string
 		for a := 0; a < i.opnd; a++ {
 			keys = append(keys, v.stack.Pop().(string))
 		}
-		m := v.stack.Pop().(*DimensionedMetric)
+		fmt.Printf("keys is now %s\n", keys)
 		v.stack.Push(m.Values[key_hash(keys)])
 
 	default:
@@ -228,6 +234,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 // until termination. It returns a boolean indicating a successful match.
 func (v *vm) Run(input string) bool {
 	t := v.t
+	t.matches = make(map[int][]string, 0)
 	for {
 		if t.pc >= len(v.prog) {
 			return false
@@ -325,14 +332,18 @@ func (c *compiler) compile(n node) {
 		c.prog[pc].opnd = len(c.prog)
 
 	case *regexNode:
-		re, err := regexp.Compile(v.pattern)
-		if err != nil {
-			c.errorf("%s", err)
-			return
-		} else {
-			c.re = append(c.re, re)
-			c.emit(instr{match, len(c.re) - 1})
+		if v.re == nil {
+			re, err := regexp.Compile(v.pattern)
+			if err != nil {
+				c.errorf("%s", err)
+				return
+			} else {
+				c.re = append(c.re, re)
+				v.re = re
+				v.addr = len(c.re) - 1
+			}
 		}
+		c.emit(instr{match, v.addr})
 
 	case *stringNode:
 		c.str = append(c.str, v.text)
@@ -347,7 +358,9 @@ func (c *compiler) compile(n node) {
 		}
 
 	case *caprefNode:
-		c.emit(instr{capref, v.sym.binding.(int)})
+		rn := v.sym.binding.(*regexNode)
+		c.emit(instr{push, rn.addr})
+		c.emit(instr{capref, v.sym.addr})
 
 	case *builtinNode:
 		if v.args != nil {

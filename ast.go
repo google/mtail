@@ -3,6 +3,10 @@
 
 package main
 
+import (
+	"regexp"
+)
+
 type node interface {
 }
 
@@ -22,6 +26,8 @@ type condNode struct {
 
 type regexNode struct {
 	pattern string
+	addr    int
+	re      *regexp.Regexp
 }
 
 type stringNode struct {

@@ -188,7 +188,7 @@ var instructions = []instrTest{
 		[]interface{}{},
 		[]interface{}{},
 		map[int]interface{}{},
-		thread{reg: 1, pc: 1, matches: []string{"aaaab"}},
+		thread{reg: 1, pc: 1, matches: map[int][]string{0: {"aaaab"}}},
 	},
 	{"jnm",
 		[]instr{instr{jnm, 37}},
