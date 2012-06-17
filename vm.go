@@ -170,8 +170,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		case string:
 			ts = s
 
-		case int:
-			/* capref */
+		case int: /* capref */
 			ts = t.matches[s]
 		}
 
@@ -182,11 +181,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		t.time = tm
 
 	case timestamp:
-		// if t.time == nil {
-		// 	v.stack.Push(time.Now())
-		// } else {
 		v.stack.Push(t.time)
-		//		}
 
 	case capref:
 		v.stack.Push(t.matches[i.opnd])
@@ -298,6 +293,7 @@ func (c *compiler) emit(i instr) {
 }
 
 func (c *compiler) compile(n node) {
+	fmt.Printf("compiling node %T %q\n", n, n)
 	switch v := n.(type) {
 	case *stmtlistNode:
 		for _, child := range v.children {
@@ -346,6 +342,7 @@ func (c *compiler) compile(n node) {
 		c.emit(instr{mload, v.sym.addr})
 		switch m := v.sym.binding.(type) {
 		case (*DimensionedMetric):
+			fmt.Printf("emitting dload for keys: %q\n", m.Keys)
 			c.emit(instr{dload, len(m.Keys)})
 		}
 
@@ -353,8 +350,12 @@ func (c *compiler) compile(n node) {
 		c.emit(instr{capref, v.sym.binding.(int)})
 
 	case *builtinNode:
-		c.compile(v.args)
-		c.emit(instr{builtin[v.name], len(v.args.(*exprlistNode).children)})
+		if v.args != nil {
+			c.compile(v.args)
+			c.emit(instr{builtin[v.name], len(v.args.(*exprlistNode).children)})
+		} else {
+			c.emit(instr{op: builtin[v.name]})
+		}
 
 	case *additiveExprNode:
 		c.compile(v.lhs)
@@ -372,8 +373,8 @@ func (c *compiler) compile(n node) {
 		c.emit(instr{op: set})
 
 	case *indexedExprNode:
-		c.compile(v.lhs)
 		c.compile(v.index)
+		c.compile(v.lhs)
 
 	case *incExprNode:
 		c.compile(v.lhs)
