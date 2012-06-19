@@ -125,11 +125,9 @@ type instrTest struct {
 	prog           []instr
 	re             []*regexp.Regexp
 	str            []string
-	data           map[int]interface{}
 	reversed_stack []interface{} // stack is inverted to be pushed onto vm stack
 
 	expected_stack  []interface{}
-	expected_data   map[int]interface{}
 	expected_thread thread
 }
 
@@ -138,98 +136,78 @@ var instructions = []instrTest{
 		[]instr{instr{inc, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
-		map[int]interface{}{},
 		[]interface{}{0},
 		[]interface{}{},
-		map[int]interface{}{},
 		thread{pc: 1, matches: map[int][]string{}},
 	},
 	{"inc by int",
 		[]instr{instr{inc, 2}},
 		[]*regexp.Regexp{},
 		[]string{},
-		map[int]interface{}{},
 		[]interface{}{0, 1}, // first is metric 0 "foo", second is the inc val.
 		[]interface{}{},
-		map[int]interface{}{},
 		thread{pc: 1, matches: map[int][]string{}},
 	},
 	{"inc by string",
 		[]instr{instr{inc, 2}},
 		[]*regexp.Regexp{},
 		[]string{},
-		map[int]interface{}{},
 		[]interface{}{0, "1"}, // first is metric 0 "foo", second is the inc val.
 		[]interface{}{},
-		map[int]interface{}{},
 		thread{pc: 1, matches: map[int][]string{}},
 	},
 	{"set int",
 		[]instr{instr{set, 2}},
 		[]*regexp.Regexp{},
 		[]string{},
-		map[int]interface{}{},
 		[]interface{}{1, 2}, // set metric 1 "bar"
 		[]interface{}{},
-		map[int]interface{}{},
 		thread{pc: 1, matches: map[int][]string{}},
 	},
 	{"set str",
 		[]instr{instr{set, 2}},
 		[]*regexp.Regexp{},
 		[]string{},
-		map[int]interface{}{},
 		[]interface{}{1, "2"},
 		[]interface{}{},
-		map[int]interface{}{},
 		thread{pc: 1, matches: map[int][]string{}},
 	},
 	{"match",
 		[]instr{instr{match, 0}},
 		[]*regexp.Regexp{regexp.MustCompile("a*b")},
 		[]string{},
-		map[int]interface{}{},
 		[]interface{}{},
 		[]interface{}{},
-		map[int]interface{}{},
 		thread{reg: 1, pc: 1, matches: map[int][]string{0: {"aaaab"}}},
 	},
 	{"jnm",
 		[]instr{instr{jnm, 37}},
 		[]*regexp.Regexp{},
 		[]string{},
-		map[int]interface{}{},
 		[]interface{}{},
 		[]interface{}{},
-		map[int]interface{}{},
 		thread{pc: 37, matches: map[int][]string{}}},
 	{"strptime",
 		[]instr{instr{strptime, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
-		map[int]interface{}{},
 		[]interface{}{"2012/01/18 06:25:00", "2006/01/02 15:04:05"},
 		[]interface{}{},
-		map[int]interface{}{},
 		thread{pc: 1, time: time.Date(2012, 1, 18, 6, 25, 0, 0, time.UTC),
 			matches: map[int][]string{}}},
 	{"add",
 		[]instr{instr{add, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
-		map[int]interface{}{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(3)},
-		map[int]interface{}{},
 		thread{pc: 1, matches: map[int][]string{}}},
 	{"sub",
 		[]instr{instr{sub, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
-		map[int]interface{}{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(1)},
-		map[int]interface{}{},
 		thread{pc: 1, matches: map[int][]string{}}},
 }
 
@@ -263,9 +241,5 @@ func TestInstrs(t *testing.T) {
 		if !reflect.DeepEqual(tc.expected_thread, v.t) {
 			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_thread, v.t)
 		}
-		// if !reflect.DeepEqual(tc.expected_data, v.data) {
-		// 	t.Errorf("%s: unexpected virtual machine memory state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_data, v.data)
-		// }
-
 	}
 }

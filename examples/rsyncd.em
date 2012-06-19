@@ -29,7 +29,6 @@ gauge connection_time by pid
     bytes_total["received"] += $received
 
     connection_time_total += timestamp() - connection_time[$pid]
-    # unset connection_time[$pid]
   }
 }
 
