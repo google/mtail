@@ -4,6 +4,7 @@
 GOFILES=\
 	ast.go\
 	lexer.go\
+	main.go\
 	metric.go\
 	parser.go\
 	symtab.go\
