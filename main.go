@@ -33,25 +33,26 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	c := csv.NewWriter(w)
 Loop:
 	for _, m := range metrics {
-
-		var record []string
 		if !m.Exported {
 			continue Loop
 		}
+
+		var record []string
 		if m.D != nil {
 			record = []string{m.Name,
 				fmt.Sprintf("%d", m.Kind)}
-			record = append(record, fmt.Sprintf("%s", m.D.Value))
+			record = append(record, fmt.Sprintf("%d", m.D.Value))
 			record = append(record, fmt.Sprintf("%s", m.D.Time))
 		} else {
-			record := []string{m.Name,
-				fmt.Sprintf("%d", m.Kind)}
+			record = []string{m.Name,
+				fmt.Sprintf("%d", m.Kind),
+				"", ""} // Datum value, timestamp
 			for k, d := range m.Values {
-				keymals := key_unhash(k)
+				keyvals := key_unhash(k)
 				for i, key := range m.Keys {
-					record = append(record, fmt.Sprintf("%s=%s", key, keymals[i]))
+					record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
 				}
-				record = append(record, fmt.Sprintf("%s", d.Value))
+				record = append(record, fmt.Sprintf("%d", d.Value))
 				record = append(record, fmt.Sprintf("%s", d.Time))
 
 			}
@@ -107,7 +108,7 @@ func main() {
 		if fi.IsDir() {
 			continue
 		}
-		if filepath.Ext(fi.Name()) != "em" {
+		if filepath.Ext(fi.Name()) != ".em" {
 			continue
 		}
 		f, err := os.Open(fmt.Sprintf("%s/%s", *progs, fi.Name()))
