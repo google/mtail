@@ -35,25 +35,21 @@ Loop:
 	for _, m := range metrics {
 
 		var record []string
-		switch v := m.(type) {
-		case *ScalarMetric:
-			if !v.Exported {
-				continue Loop
-			}
-			record = []string{v.Name,
-				fmt.Sprintf("%d", v.Kind)}
-			record = append(record, fmt.Sprintf("%s", v.D.Value))
-			record = append(record, fmt.Sprintf("%s", v.D.Time))
-		case *DimensionedMetric:
-			if !v.Exported {
-				continue Loop
-			}
-			record := []string{v.Name,
-				fmt.Sprintf("%d", v.Kind)}
-			for k, d := range v.Values {
-				keyvals := key_unhash(k)
-				for i, key := range v.Keys {
-					record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
+		if !m.Exported {
+			continue Loop
+		}
+		if m.D != nil {
+			record = []string{m.Name,
+				fmt.Sprintf("%d", m.Kind)}
+			record = append(record, fmt.Sprintf("%s", m.D.Value))
+			record = append(record, fmt.Sprintf("%s", m.D.Time))
+		} else {
+			record := []string{m.Name,
+				fmt.Sprintf("%d", m.Kind)}
+			for k, d := range m.Values {
+				keymals := key_unhash(k)
+				for i, key := range m.Keys {
+					record = append(record, fmt.Sprintf("%s=%s", key, keymals[i]))
 				}
 				record = append(record, fmt.Sprintf("%s", d.Value))
 				record = append(record, fmt.Sprintf("%s", d.Time))

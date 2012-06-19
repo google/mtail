@@ -16,6 +16,11 @@ const (
 	Gauge
 )
 
+var (
+	metric_lock sync.RWMutex
+	metrics     []*Metric
+)
+
 func (m metric_type) String() string {
 	switch m {
 	case Counter:
@@ -34,45 +39,31 @@ type Settable interface {
 	Set(value int64, ts time.Time)
 }
 
-type Metric interface {
-}
-
-type ScalarMetric struct {
+type Metric struct {
 	Name     string
 	Kind     metric_type
 	Exported bool
-	D        Datum
+	D        *Datum
+	Keys     []string
+	Values   map[string]*Datum
 }
 
-func (m *ScalarMetric) stamp(ts time.Time) {
+func (m *Metric) stamp(ts time.Time) {
 	m.D.stamp(ts)
 }
 
-func (m *ScalarMetric) IncBy(delta int64, ts time.Time) {
+func (m *Metric) IncBy(delta int64, ts time.Time) {
 	m.D.IncBy(delta, ts)
 }
 
-func (m *ScalarMetric) Set(value int64, ts time.Time) {
+func (m *Metric) Set(value int64, ts time.Time) {
 	m.D.Set(value, ts)
-}
-
-type DimensionedMetric struct {
-	Name     string
-	Kind     metric_type
-	Exported bool
-	Keys     []string
-	Values   map[string]*Datum
 }
 
 type Datum struct {
 	Value int64
 	Time  time.Time
 }
-
-var (
-	metric_lock sync.RWMutex
-	metrics     []Metric
-)
 
 const KEY_HASH_SEP = " "
 
@@ -107,5 +98,5 @@ func (d *Datum) IncBy(delta int64, timestamp time.Time) {
 }
 
 func init() {
-	metrics = make([]Metric, 0)
+	metrics = make([]*Metric, 0)
 }

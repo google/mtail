@@ -38,7 +38,7 @@ func TestExamplePrograms(t *testing.T) {
 	}
 TestLoop:
 	for _, tc := range exampleProgramTests {
-		metrics = make([]Metric, 0)
+		metrics = make([]*Metric, 0)
 
 		p, err := os.Open(tc.programfile)
 		if err != nil {
@@ -80,14 +80,20 @@ TestLoop:
 		}
 
 		// // Dirty hack to create json files :)
-		// j, err := os.Create(tc.jsonfile)
-		// if err != nil {
-		// 	t.Errorf("%s: could not open json file: %s", tc.jsonfile, err)
-		// 	continue
+		// {
+		// 	j, err := os.Create(tc.jsonfile)
+		// 	if err != nil {
+		// 		t.Errorf("%s: could not open json file: %s", tc.jsonfile, err)
+		// 		continue
+		// 	}
+		// 	defer j.Close()
+		// 	b, err := json.MarshalIndent(metrics, "", "  ")
+		// 	if err != nil {
+		// 		t.Errorf("couldn't marshall metrics")
+		// 		continue
+		// 	}
+		// 	j.Write(b)
 		// }
-		// e := json.NewEncoder(j)
-		// e.Encode(metrics)
-		// j.Close()
 
 		j, err := os.Open(tc.jsonfile)
 		if err != nil {
@@ -96,50 +102,13 @@ TestLoop:
 		}
 		defer j.Close()
 
-		var decoded_metrics interface{}
+		var expected_metrics []*Metric
 
 		d := json.NewDecoder(j)
-		err = d.Decode(&decoded_metrics)
+		err = d.Decode(&expected_metrics)
 		if err != nil {
 			t.Errorf("%s: could not decode json: %s", tc.jsonfile, err)
 			continue
-		}
-
-		var expected_metrics []Metric
-
-		for _, blob := range decoded_metrics.([]interface{}) {
-			t.Logf("blob %s", blob)
-			if s, ok := blob.(map[string]interface{}); ok {
-				if _, ok := s["D"]; ok {
-					var m *ScalarMetric
-					b, err := json.Marshal(blob)
-					if err != nil {
-						t.Errorf("Bad mashal %s", err)
-					} else {
-						err := json.Unmarshal(b, &m)
-						if err != nil {
-							t.Errorf("Bad unmarshal %s", err)
-						} else {
-							expected_metrics = append(expected_metrics, m)
-						}
-					}
-				} else {
-					var m *DimensionedMetric
-					b, err := json.Marshal(blob)
-					t.Logf("jsonned: %s", b)
-					if err != nil {
-						t.Errorf("Bad mashal %s", err)
-					} else {
-						err := json.Unmarshal(b, m)
-						if err != nil {
-							t.Errorf("Bad unmashal %s", err)
-						} else {
-							expected_metrics = append(expected_metrics, m)
-						}
-
-					}
-				}
-			}
 		}
 
 		if !reflect.DeepEqual(expected_metrics, metrics) {

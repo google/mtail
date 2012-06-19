@@ -138,7 +138,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		case Incrementable:
 			d.IncBy(delta, t.time)
 		case int:
-			m := metrics[d].(Incrementable)
+			m := metrics[d]
 			m.IncBy(delta, t.time)
 		default:
 			return v.errorf("Unexpected type to increment: %T %q", d, d)
@@ -169,7 +169,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		case Settable:
 			d.Set(value, t.time)
 		case int:
-			m := metrics[d].(Settable)
+			m := metrics[d]
 			m.Set(value, t.time)
 		default:
 			return v.errorf("Unexpected type to set: %T %q", d, d)
@@ -270,7 +270,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		v.stack.Push(metrics[i.opnd])
 
 	case dload:
-		m := v.stack.Pop().(*DimensionedMetric)
+		m := v.stack.Pop().(*Metric)
 		var keys []string
 		for a := 0; a < i.opnd; a++ {
 			keys = append(keys, v.stack.Pop().(string))
@@ -403,8 +403,8 @@ func (c *compiler) compile(n node) {
 
 	case *idNode:
 		c.emit(instr{mload, v.sym.addr})
-		switch m := v.sym.binding.(type) {
-		case (*DimensionedMetric):
+		m := v.sym.binding.(*Metric)
+		if m.D == nil {
 			c.emit(instr{dload, len(m.Keys)})
 		}
 

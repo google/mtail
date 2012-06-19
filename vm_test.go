@@ -101,7 +101,7 @@ var programs = []testProgram{
 func TestCompileAndRun(t *testing.T) {
 	for _, tc := range programs {
 		for _, i := range tc.io {
-			metrics = make([]Metric, 0)
+			metrics = make([]*Metric, 0)
 
 			v, err := Compile(tc.name, strings.NewReader(tc.source))
 			if err != nil {
@@ -236,9 +236,9 @@ var instructions = []instrTest{
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		metrics = []Metric{
-			&ScalarMetric{Name: "foo", Kind: Counter},
-			&ScalarMetric{Name: "bar", Kind: Gauge},
+		metrics = []*Metric{
+			&Metric{Name: "foo", Kind: Counter, D: &Datum{}},
+			&Metric{Name: "bar", Kind: Gauge, D: &Datum{}},
 		}
 
 		expected_stack := Stack{}
