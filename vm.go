@@ -222,8 +222,10 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			a = d
 		case int:
 			a = int64(d)
+		case time.Time:
+			a = d.Unix()
 		default:
-			return v.errorf("Unexpected type for sub %T %q\n", d, d)
+			return v.errorf("Unexpected type for add %T %q\n", d, d)
 		}
 		switch d := v.stack.Pop().(type) {
 		case *Datum:
@@ -232,8 +234,10 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			b = d
 		case int:
 			b = int64(d)
+		case time.Time:
+			b = d.Unix()
 		default:
-			return v.errorf("Unexpected type for sub %T %q\n", d, d)
+			return v.errorf("Unexpected type for add %T %q\n", d, d)
 		}
 		v.stack.Push(a + b)
 
@@ -246,6 +250,8 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			a = d
 		case int:
 			a = int64(d)
+		case time.Time:
+			a = d.Unix()
 		default:
 			return v.errorf("Unexpected type for sub %T %q\n", d, d)
 		}
@@ -256,6 +262,8 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			b = d
 		case int:
 			b = int64(d)
+		case time.Time:
+			b = d.Unix()
 		default:
 			return v.errorf("Unexpected type for sub %T %q\n", d, d)
 		}
