@@ -27,7 +27,6 @@ func (m metric_type) String() string {
 }
 
 type Incrementable interface {
-	Inc(ts time.Time)
 	IncBy(delta int64, ts time.Time)
 }
 
@@ -43,10 +42,6 @@ type ScalarMetric struct {
 	Kind     metric_type
 	Exported bool
 	D        Datum
-}
-
-func (m *ScalarMetric) Inc(ts time.Time) {
-	m.D.Inc(ts)
 }
 
 func (m *ScalarMetric) stamp(ts time.Time) {
@@ -102,10 +97,6 @@ func (d *Datum) Set(value int64, timestamp time.Time) {
 	defer metric_lock.Unlock()
 	d.Value = value
 	d.stamp(timestamp)
-}
-
-func (d *Datum) Inc(timestamp time.Time) {
-	d.IncBy(1, timestamp)
 }
 
 func (d *Datum) IncBy(delta int64, timestamp time.Time) {

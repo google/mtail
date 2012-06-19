@@ -267,8 +267,8 @@ decl
    	}
     if len(d.keys) > 0 {
       d.m = &DimensionedMetric{Name: n, Kind: d.kind, Exported: d.exported,
-                               Keys:   d.keys,
-                               Values: make(map[string]*Datum, 0)}
+                              Keys:   d.keys,
+                              Values: make(map[string]*Datum, 0)}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, DimensionedMetricSymbol, d.m,
                                    Emtaillex.(*parser).pos)
     } else {

@@ -85,9 +85,6 @@ type vm struct {
 	// data segment
 	symtab *scope
 
-	// exported metrics
-	//metrics []*interface{}
-
 	stack Stack
 	t     thread
 }
@@ -319,8 +316,6 @@ type compiler struct {
 	re   []*regexp.Regexp // Static regular expressions.
 
 	symtab *scope
-
-	//metrics []*interface{}
 }
 
 func Compile(name string, input io.Reader) (*vm, []string) {
@@ -335,7 +330,6 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 	}
 	file := filepath.Base(name)
 	c := &compiler{name: file, symtab: p.s}
-	//c.metrics = make([]*interface{}, 0)
 	c.compile(p.root)
 	if len(c.errors) > 0 {
 		return nil, c.errors
@@ -345,8 +339,7 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		re:     c.re,
 		str:    c.str,
 		symtab: c.symtab,
-		//metrics: c.metrics,
-		prog: c.prog}
+		prog:   c.prog}
 	return vm, nil
 }
 

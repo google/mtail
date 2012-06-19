@@ -21,6 +21,11 @@ type exampleProgramTest struct {
 
 var exampleProgramTests = []exampleProgramTest{
 	{
+		"examples/linecount.em",
+		"testdata/linecount.log",
+		"testdata/linecount.json",
+	},
+	{
 		"examples/rsyncd.em",
 		"testdata/rsyncd.log",
 		"testdata/rsyncd.json",
@@ -91,13 +96,50 @@ TestLoop:
 		}
 		defer j.Close()
 
-		var expected_metrics []Metric
+		var decoded_metrics interface{}
 
 		d := json.NewDecoder(j)
-		err = d.Decode(&expected_metrics)
+		err = d.Decode(&decoded_metrics)
 		if err != nil {
 			t.Errorf("%s: could not decode json: %s", tc.jsonfile, err)
 			continue
+		}
+
+		var expected_metrics []Metric
+
+		for _, blob := range decoded_metrics.([]interface{}) {
+			t.Logf("blob %s", blob)
+			if s, ok := blob.(map[string]interface{}); ok {
+				if _, ok := s["D"]; ok {
+					var m *ScalarMetric
+					b, err := json.Marshal(blob)
+					if err != nil {
+						t.Errorf("Bad mashal %s", err)
+					} else {
+						err := json.Unmarshal(b, &m)
+						if err != nil {
+							t.Errorf("Bad unmarshal %s", err)
+						} else {
+							expected_metrics = append(expected_metrics, m)
+						}
+					}
+				} else {
+					var m *DimensionedMetric
+					b, err := json.Marshal(blob)
+					t.Logf("jsonned: %s", b)
+					if err != nil {
+						t.Errorf("Bad mashal %s", err)
+					} else {
+						err := json.Unmarshal(b, m)
+						if err != nil {
+							t.Errorf("Bad unmashal %s", err)
+						} else {
+							expected_metrics = append(expected_metrics, m)
+						}
+
+					}
+				}
+			}
 		}
 
 		if !reflect.DeepEqual(expected_metrics, metrics) {
