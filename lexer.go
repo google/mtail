@@ -34,8 +34,6 @@ var lexemeName = map[Lexeme]string{
 	CAPREF:     "CAPREF",
 	STRING:     "STRING",
 	BUILTIN:    "BUILTIN",
-	EXPORTED:   "EXPORTED",
-	INTERNAL:   "INTERNAL",
 	COUNTER:    "COUNTER",
 	GAUGE:      "GAUGE",
 	AS:         "AS",
@@ -51,12 +49,10 @@ func (t Lexeme) String() string {
 
 // List of keywords.  Keep this list sorted!
 var keywords = map[string]Lexeme{
-	"as":       AS,
-	"by":       BY,
-	"counter":  COUNTER,
-	"exported": EXPORTED,
-	"gauge":    GAUGE,
-	"internal": INTERNAL,
+	"as":      AS,
+	"by":      BY,
+	"counter": COUNTER,
+	"gauge":   GAUGE,
 }
 
 // List of builtin functions.  Keep this list sorted!

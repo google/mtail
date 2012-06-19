@@ -40,12 +40,11 @@ type Settable interface {
 }
 
 type Metric struct {
-	Name     string
-	Kind     metric_type
-	Exported bool
-	D        *Datum
-	Keys     []string
-	Values   map[string]*Datum
+	Name   string
+	Kind   metric_type
+	D      *Datum
+	Keys   []string
+	Values map[string]*Datum
 }
 
 func (m *Metric) stamp(ts time.Time) {

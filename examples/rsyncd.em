@@ -1,11 +1,10 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
-exported counter bytes_total by operation
-exported counter connections_total
-exported counter connection_time_total as "connection-time_total"
-exported counter transfers_total by operation, module
-
+counter bytes_total by operation
+counter connections_total
+counter connection_time_total as "connection-time_total"
+counter transfers_total by operation, module
 gauge connection_time by pid
 
 /^(?P<date>\d+\/\d+\/\d+ \d+:\d+:\d+) \[(?P<pid>\d+)\] / {

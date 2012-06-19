@@ -41,14 +41,12 @@ var lexerTests = []lexerTest{
 		Token{ADD_ASSIGN, "+=", Position{0, 9, 10}},
 		Token{EOF, "", Position{0, 11, 11}}}},
 	{"keywords",
-		"exported\ninternal\ncounter\ngauge\nas\nby\n", []Token{
-			Token{EXPORTED, "exported", Position{0, 0, 7}},
-			Token{INTERNAL, "internal", Position{1, 0, 7}},
-			Token{COUNTER, "counter", Position{2, 0, 6}},
-			Token{GAUGE, "gauge", Position{3, 0, 4}},
-			Token{AS, "as", Position{4, 0, 1}},
-			Token{BY, "by", Position{5, 0, 1}},
-			Token{EOF, "", Position{6, 0, 0}}}},
+		"counter\ngauge\nas\nby\n", []Token{
+			Token{COUNTER, "counter", Position{0, 0, 6}},
+			Token{GAUGE, "gauge", Position{1, 0, 4}},
+			Token{AS, "as", Position{2, 0, 1}},
+			Token{BY, "by", Position{3, 0, 1}},
+			Token{EOF, "", Position{4, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\n", []Token{
 			Token{BUILTIN, "strptime", Position{0, 0, 7}},

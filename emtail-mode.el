@@ -25,7 +25,7 @@
   "Syntax table used while in `emtail-mode'.")
 
 (defvar emtail-mode-keywords
-  '("counter" "gauge" "as" "by" "exported" "internal")
+  '("counter" "gauge" "as" "by")
   "All keywords in the emtail language.  Used for font locking.")
 
 (defvar emtail-mode-builtins

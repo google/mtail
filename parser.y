@@ -35,12 +35,11 @@ import (
 %type <mtype> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
-%type <flag> export_class
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
 // Reserved words
-%token EXPORTED INTERNAL COUNTER GAUGE AS BY
+%token COUNTER GAUGE AS BY
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -250,49 +249,31 @@ cond
   ;
 
 decl
-  : export_class type_spec declarator
+  : type_spec declarator
   {
-    $$ = $3
+    $$ = $2
     d := $$.(*declNode)
-    d.kind = $2
-    d.exported = $1
+    d.kind = $1
       
     var n string
     if d.exported_name != "" {
         n = d.exported_name
-        // Implicitly exported if "AS" clause exists
-        d.exported = true
 	} else {
       n = d.name
    	}
     if len(d.keys) > 0 {
-      d.m = &Metric{Name: n, Kind: d.kind, Exported: d.exported,
+      d.m = &Metric{Name: n, Kind: d.kind,
                     Keys:   d.keys,
                     Values: make(map[string]*Datum, 0)}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, DimensionedMetricSymbol, d.m,
                                    Emtaillex.(*parser).pos)
     } else {
-      d.m = &Metric{Name: n, Kind: d.kind, Exported: d.exported,
+      d.m = &Metric{Name: n, Kind: d.kind,
                     D: &Datum{}}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, ScalarMetricSymbol, d.m,
                                    Emtaillex.(*parser).pos)
       
     }
-  }
-  ;
-
-export_class
-  : /* empty */
-  {
-    $$ = false
-  }
-  | EXPORTED
-  {
-    $$ = true
-  }
-  | INTERNAL
-  {
-    $$ = false
   }
   ;
   

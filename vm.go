@@ -21,14 +21,14 @@ type opcode int
 const (
 	match     opcode = iota // Match a regular expression against input
 	jnm                     // Jump if no match
-	inc                     // Increment an exported variable value
+	inc                     // Increment a variable value
 	strptime                // Parse into the timestamp register
 	timestamp               // Return value of timestamp register
 	ret                     // Return, end program successfully
 	push                    // Push operand onto stack
 	capref                  // Push capture group reference at operand onto stack
 	str                     // Push string constant at operand onto stack
-	set                     // Set an exported variable value
+	set                     // Set a variable value
 	add                     // Add top values on stack and push to stack
 	sub                     // Subtract tpo value from second top value on stack, and push to stack.
 	mload                   // Load metric at operand onto top of stack.

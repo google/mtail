@@ -31,12 +31,8 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	defer metric_lock.RUnlock()
 
 	c := csv.NewWriter(w)
-Loop:
-	for _, m := range metrics {
-		if !m.Exported {
-			continue Loop
-		}
 
+	for _, m := range metrics {
 		var record []string
 		if m.D != nil {
 			record = []string{m.Name,
@@ -67,7 +63,6 @@ func handleJson(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.RUnlock()
 
-	// TODO(jaq): excluded unexported metrics
 	b, err := json.MarshalIndent(metrics, "", "  ")
 	if err != nil {
 		log.Println("error marshalling metrics into json:", err.Error())

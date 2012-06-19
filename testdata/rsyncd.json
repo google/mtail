@@ -2,7 +2,6 @@
   {
     "Name": "bytes_total",
     "Kind": 0,
-    "Exported": true,
     "D": null,
     "Keys": [
       "operation"
@@ -21,7 +20,6 @@
   {
     "Name": "connections_total",
     "Kind": 0,
-    "Exported": true,
     "D": {
       "Value": 52,
       "Time": "2011-02-22T21:54:13Z"
@@ -32,7 +30,6 @@
   {
     "Name": "connection-time_total",
     "Kind": 0,
-    "Exported": true,
     "D": {
       "Value": 1181011,
       "Time": "2011-02-23T05:54:10Z"
@@ -43,7 +40,6 @@
   {
     "Name": "transfers_total",
     "Kind": 0,
-    "Exported": true,
     "D": null,
     "Keys": [
       "operation",
@@ -63,7 +59,6 @@
   {
     "Name": "connection_time",
     "Kind": 1,
-    "Exported": false,
     "D": null,
     "Keys": [
       "pid"

@@ -69,7 +69,6 @@ type declNode struct {
 	name          string
 	keys          []string
 	kind          metric_type
-	exported      bool
 	exported_name string
 	m             *Metric
 	sym           *symbol
