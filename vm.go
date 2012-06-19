@@ -101,13 +101,11 @@ func (v *vm) errorf(format string, args ...interface{}) bool {
 // Execute acts on the current instruction, and returns a boolean indicating
 // if the current thread should terminate.
 func (v *vm) execute(t *thread, i instr, input string) bool {
-	fmt.Printf("execute %T %q\n", i, i)
 	switch i.op {
 	case match:
 		// match regex and store success
 		t.matches[i.opnd] = v.re[i.opnd].FindStringSubmatch(input)
 		if t.matches[i.opnd] != nil {
-			fmt.Printf("matches: %q\n", t.matches)
 			t.reg = 1
 		} else {
 			t.reg = 0
@@ -119,17 +117,19 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		}
 	case inc:
 		// increment a counter
-		delta := 1
+		var delta int64 = 1
 		// If opnd is nonzero, the delta is on the stack.
 		if i.opnd > 0 {
 			val := v.stack.Pop()
 			// Don't know what type it is on the stack though.
 			switch n := val.(type) {
 			case int:
+				delta = int64(n)
+			case int64:
 				delta = n
 			case string:
 				var err error
-				delta, err = strconv.Atoi(n)
+				delta, err = strconv.ParseInt(n, 10, 64)
 				if err != nil {
 					return v.errorf("conversion of %q to numeric failed: %s", val, err)
 				}
@@ -139,14 +139,16 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		}
 		switch d := v.stack.Pop().(type) {
 		case Incrementable:
-			d.IncBy(int64(delta), t.time)
+			d.IncBy(delta, t.time)
+		case int:
+			m := metrics[d].(Incrementable)
+			m.IncBy(delta, t.time)
 		default:
-			fmt.Printf("what is it? %T %q\n", d, d)
+			return v.errorf("Unexpected type to increment: %T %q", d, d)
 		}
 
 	case set:
 		// Set a gauge
-		fmt.Printf("set\n")
 		var value int64
 		val := v.stack.Pop()
 		// Don't know what type it is on the stack though.
@@ -166,12 +168,14 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		default:
 			return v.errorf("Unexpected type %T %q\n", val, val)
 		}
-		fmt.Printf("pop settable\n")
 		switch d := v.stack.Pop().(type) {
 		case Settable:
 			d.Set(value, t.time)
+		case int:
+			m := metrics[d].(Settable)
+			m.Set(value, t.time)
 		default:
-			fmt.Printf("what is it? %T %q\n", d, d)
+			return v.errorf("Unexpected type to set: %T %q", d, d)
 		}
 
 	case strptime:
@@ -258,21 +262,16 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		v.stack.Push(b - a)
 
 	case mload:
-		fmt.Printf("Pushing metric %T %q\n", metrics[i.opnd], metrics[i.opnd])
 		v.stack.Push(metrics[i.opnd])
 
 	case dload:
-		fmt.Printf("Stack len %d %s\n", v.stack.size, v.stack)
 		m := v.stack.Pop().(*DimensionedMetric)
 		var keys []string
 		for a := 0; a < i.opnd; a++ {
 			keys = append(keys, v.stack.Pop().(string))
 		}
-		fmt.Printf("keys is now %s\n", keys)
 		h := key_hash(keys)
-		fmt.Printf("hash is %s\n", h)
 		if _, ok := m.Values[h]; !ok {
-			fmt.Printf("doesn't exist...\n")
 			m.Values[h] = &Datum{}
 		}
 		v.stack.Push(m.Values[h])
@@ -294,7 +293,6 @@ func (v *vm) Run(input string) bool {
 			return false
 		}
 		i := v.prog[t.pc]
-		fmt.Println("instr", i)
 		terminate := v.execute(&t, i, input)
 		if terminate {
 			// t.reg contains the result of the last match.
@@ -354,7 +352,6 @@ func (c *compiler) emit(i instr) {
 }
 
 func (c *compiler) compile(n node) {
-	fmt.Printf("compiling node %T %q\n", n, n)
 	switch v := n.(type) {
 	case *stmtlistNode:
 		for _, child := range v.children {
@@ -407,7 +404,6 @@ func (c *compiler) compile(n node) {
 		c.emit(instr{mload, v.sym.addr})
 		switch m := v.sym.binding.(type) {
 		case (*DimensionedMetric):
-			fmt.Printf("emitting dload for keys: %q\n", m.Keys)
 			c.emit(instr{dload, len(m.Keys)})
 		}
 

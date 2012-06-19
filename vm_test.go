@@ -135,7 +135,7 @@ type instrTest struct {
 
 var instructions = []instrTest{
 	{"inc",
-		[]instr{instr{inc, 1}},
+		[]instr{instr{inc, 0}},
 		[]*regexp.Regexp{},
 		[]string{},
 		map[int]interface{}{},
