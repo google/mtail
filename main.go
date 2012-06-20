@@ -90,8 +90,13 @@ var (
 
 func main() {
 	flag.Parse()
-	w := NewWatcher()
-	t := NewTailer(w)
+
+	if *progs == "" {
+		log.Fatalf("No progs directory specified; use -progs")
+	}
+	if *logs == "" {
+		log.Fatalf("No logs specified to tail; use -logs")
+	}
 
 	fis, err := ioutil.ReadDir(*progs)
 	if err != nil {
@@ -127,18 +132,26 @@ func main() {
 		os.Exit(errors)
 	}
 
-	go RunVms(vms, t.Line)
-	go t.start()
-	go w.start()
+	w := NewWatcher()
+	t := NewTailer(w)
 
+	go RunVms(vms, t.Line)
+	go w.start()
+	go t.start()
+
+	var log_count int
 	for _, pathname := range strings.Split(*logs, ",") {
 		if pathname != "" {
-			t.Tail(pathname)
+			if t.Tail(pathname) {
+				log_count += 1
+			}
 		}
+	}
+	if log_count == 0 {
+		log.Fatal("No logs to tail.")
 	}
 
 	http.HandleFunc("/json", handleJson)
 	http.HandleFunc("/csv", handleCsv)
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
-
 }
