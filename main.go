@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	_ "net/http/pprof"
 )
@@ -23,27 +22,36 @@ import (
 var port *string = flag.String("port", "3903", "HTTP port to listen on.")
 var logs *string = flag.String("logs", "", "List of files to monitor.")
 var progs *string = flag.String("progs", "", "Directory containing programs")
-var compile_only *bool = flag.Bool("compile_only", false, "Compile programs only.")
-
-// Global metrics storage.
-var (
-	metric_lock sync.RWMutex
-	metrics     []*Metric
-)
 
 var line_count = expvar.NewInt("line_count")
 
 // CSV export
 func handleCsv(w http.ResponseWriter, r *http.Request) {
+	metric_lock.RLock()
+	defer metric_lock.RUnlock()
+
 	c := csv.NewWriter(w)
+
 	for _, m := range metrics {
-		record := []string{m.Name,
-			fmt.Sprintf("%s", m.Value),
-			fmt.Sprintf("%s", m.Time),
-			fmt.Sprintf("%d", m.Type),
-			m.Unit}
-		for k, v := range m.Tags {
-			record = append(record, fmt.Sprintf("%s=%s", k, v))
+		var record []string
+		if m.D != nil {
+			record = []string{m.Name,
+				fmt.Sprintf("%d", m.Kind)}
+			record = append(record, fmt.Sprintf("%d", m.D.Value))
+			record = append(record, fmt.Sprintf("%s", m.D.Time))
+		} else {
+			record = []string{m.Name,
+				fmt.Sprintf("%d", m.Kind),
+				"", ""} // Datum value, timestamp
+			for k, d := range m.Values {
+				keyvals := key_unhash(k)
+				for i, key := range m.Keys {
+					record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
+				}
+				record = append(record, fmt.Sprintf("%d", d.Value))
+				record = append(record, fmt.Sprintf("%s", d.Time))
+
+			}
 		}
 		c.Write(record)
 	}
@@ -52,7 +60,10 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 
 // JSON export
 func handleJson(w http.ResponseWriter, r *http.Request) {
-	b, err := json.MarshalForHTML(metrics)
+	metric_lock.RLock()
+	defer metric_lock.RUnlock()
+
+	b, err := json.MarshalIndent(metrics, "", "  ")
 	if err != nil {
 		log.Println("error marshalling metrics into json:", err.Error())
 	}
@@ -72,25 +83,32 @@ func RunVms(vms []*vm, lines chan string) {
 	}
 }
 
+// vms contains a list of virtual machines to execute when each new line is received
+var (
+	vms []*vm
+)
+
 func main() {
 	flag.Parse()
-	w := NewWatcher()
-	t := NewTailer(w)
+
+	if *progs == "" {
+		log.Fatalf("No progs directory specified; use -progs")
+	}
+	if *logs == "" {
+		log.Fatalf("No logs specified to tail; use -logs")
+	}
 
 	fis, err := ioutil.ReadDir(*progs)
 	if err != nil {
 		log.Fatalf("Failure reading progs from %q: %s", *progs, err)
 	}
 
-	// vms contains a list of virtual machines to execute when each new line is received
-	var vms []*vm
-
 	errors := 0
 	for _, fi := range fis {
 		if fi.IsDir() {
 			continue
 		}
-		if filepath.Ext(fi.Name()) != "em" {
+		if filepath.Ext(fi.Name()) != ".em" {
 			continue
 		}
 		f, err := os.Open(fmt.Sprintf("%s/%s", *progs, fi.Name()))
@@ -103,7 +121,7 @@ func main() {
 		if errs != nil {
 			errors = 1
 			for _, e := range errs {
-				log.Printf(e)
+				log.Print(e)
 			}
 			continue
 		}
@@ -114,16 +132,26 @@ func main() {
 		os.Exit(errors)
 	}
 
-	go RunVms(vms, t.Line)
-	go t.start()
-	go w.start()
+	w := NewWatcher()
+	t := NewTailer(w)
 
+	go RunVms(vms, t.Line)
+	go w.start()
+	go t.start()
+
+	var log_count int
 	for _, pathname := range strings.Split(*logs, ",") {
-		t.Tail(pathname)
+		if pathname != "" {
+			if t.Tail(pathname) {
+				log_count += 1
+			}
+		}
+	}
+	if log_count == 0 {
+		log.Fatal("No logs to tail.")
 	}
 
 	http.HandleFunc("/json", handleJson)
 	http.HandleFunc("/csv", handleCsv)
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
-
 }

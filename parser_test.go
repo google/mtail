@@ -18,49 +18,64 @@ var kMtailPrograms = []validProgram{
 	{"empty",
 		""},
 
+	{"declare counter",
+		"counter line_count"},
+
+	{"declare counter string name",
+		"counter line_count as \"line-count\""},
+
+	{"declare dimensioned counter",
+		"counter foo by bar"},
+
+	{"declare multi-dimensioned counter",
+		"counter foo by bar, baz, quux"},
+
 	{"simple pattern action",
 		"/foo/ {}"},
 
 	{"more complex action, calling builtin",
-		"/foo/ {\n" +
-			"  inc(line-count)\n" +
+		"counter line_count\n" +
+			"/foo/ {\n" +
+			"  line_count++\n" +
 			"}"},
 
 	{"regex match includes escaped slashes",
-		"/foo\\// { inc(foo) }"},
+		"counter foo\n" +
+			"/foo\\// { foo++ }"},
 
 	{"numeric capture group reference",
 		"/(foo)/ {\n" +
-			"  inc($1)\n" +
+			"  $1++\n" +
 			"}"},
 
 	{"strptime and capref",
 		"/(.*)/ {\n" +
 			"strptime($1, \"2006-01-02T15:04:05Z07:00\")\n" +
-			"inc(foo)\n" +
 			" }"},
 
 	{"named capture group reference",
 		"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
 			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
-			"  inc(foo)\n" +
 			"}"},
 
 	{"nested match conditions",
-		"/match(\\d+)/ {\n" +
-			"  inc(foo, $1)\n" +
+		"counter foo\n" +
+			"counter bar\n" +
+			"/match(\\d+)/ {\n" +
+			"  foo += $1\n" +
 			"  /^bleh (\\S+)/ {\n" +
-			"    inc(bar)\n" +
-			"    inc($1)\n" +
+			"    bar++\n" +
+			"    $1++\n" +
 			"  }\n" +
 			"}\n"},
 
 	{"nested scope",
-		"/fo(o)/ {\n" +
-			"  inc($1)\n" +
+		"counter foo\n" +
+			"/fo(o)/ {\n" +
+			"  $1++\n" +
 			"  /bar(xxx)/ {\n" +
-			"    inc($1, $1)\n" +
-			"    set(foo, $1)\n" +
+			"    $1 += $1\n" +
+			"    foo = $1\n" +
 			"  }\n" +
 			"}\n"},
 
@@ -68,41 +83,70 @@ var kMtailPrograms = []validProgram{
 		"# %d [%p]\n" +
 			"/^(?P<date>\\d+\\/\\d+\\/\\d+ \\d+:\\d+:\\d+) \\[(?P<pid>\\d+)\\] / {\n" +
 			"  strptime($1, \"2006/01/02 15:04:05\")\n" +
-			"  tag(\"pid\", $2)\n" +
-			"  inc(transfers_total)\n" +
+			"}\n"},
+
+	{"assignment",
+		"counter variable\n" +
+			"/(?P<foo>.*)/ {\n" +
+			"variable = $foo\n" +
+			"}\n"},
+
+	{"increment operator",
+		"counter var\n" +
+			"/foo/ {\n" +
+			"  var++\n" +
+			"}\n"},
+
+	{"incby operator",
+		"counter var\n" +
+			"/foo/ {\n  var += 2\n}\n"},
+
+	{"additive",
+		"counter time_total\n" +
+			"/(?P<foo>.*)/ {\n" +
+			"  timestamp() - time_total\n" +
+			"}\n"},
+
+	{"additive and mem storage",
+		"counter time_total\n" +
+			"counter variable by foo\n" +
+			"/(?P<foo>.*)/ {\n" +
+			"  time_total += timestamp() - variable[$foo]\n" +
 			"}\n"},
 }
 
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range kMtailPrograms {
 		metrics = make([]*Metric, 0)
-		p := NewParser(tc.name, strings.NewReader(tc.program))
-		//EmtailDebug = 1 //999 // All the debugging.
-		EmtailParse(p)
 
-		if p.root == nil || len(p.errors) > 0 {
-			t.Errorf("parse errors:\n")
+		p := NewParser(tc.name, strings.NewReader(tc.program))
+		//EmtailDebug = 999 // All the debugging.
+		r := EmtailParse(p)
+
+		if r != 0 || p.root == nil || len(p.errors) > 0 {
+			t.Errorf("1st pass parse errors:\n")
 			for _, e := range p.errors {
 				t.Errorf("\t%s\n", e)
 			}
 			continue
 		}
 
-		up := &unparser{}
-		p.root.acceptVisitor(up)
+		output := unparse(p.root)
 
-		p2 := NewParser(tc.name+" 2", strings.NewReader(up.output))
-		EmtailParse(p2)
-		if p2.root == nil || len(p2.errors) > 0 {
-			t.Errorf("Errors parsing %s 2:\n%q\n", tc.name, p2.errors)
+		p2 := NewParser(tc.name+" 2", strings.NewReader(output))
+		r = EmtailParse(p2)
+		if r != 0 || p2.root == nil || len(p2.errors) > 0 {
+			t.Errorf("2nd pass parse errors:\n")
+			for _, e := range p2.errors {
+				t.Errorf("\t%s\n", e)
+			}
 			continue
 		}
 
-		up2 := &unparser{}
-		p2.root.acceptVisitor(up2)
+		output2 := unparse(p2.root)
 
-		if !reflect.DeepEqual(up, up2) {
-			t.Errorf("Round trip failed to generate same output.\nup: %s\nup2: %s\n", up.output, up2.output)
+		if !reflect.DeepEqual(output, output2) {
+			t.Errorf("Round trip failed to generate same output.\n1: %s\n2: %s\n", output, output)
 		}
 	}
 }
@@ -138,28 +182,29 @@ var InvalidPrograms = []InvalidProgram{
 			"invalid regex 3:2:1: syntax error"}},
 
 	{"unterminated string",
-		" inc(\"foo) }\n",
-		[]string{"unterminated string:1:6-12: Unterminated quoted string: \"\\\"foo) }\"",
-			"unterminated string:1:6-12: syntax error"}},
+		" \"foo }\n",
+		[]string{"unterminated string:1:2-7: Unterminated quoted string: \"\\\"foo }\""}},
 
 	{"undefined named capture group",
-		"/blurgh/ { inc($undef) }\n",
-		[]string{"undefined named capture group:1:16-21: Capture group $undef not defined by prior regular expression in this or an outer scope"}},
+		"/blurgh/ { $undef++ }\n",
+		[]string{"undefined named capture group:1:12-17: Capture group $undef not defined by prior regular expression in this or an outer scope"}},
 
 	{"out of bounds capref",
-		"/(blyurg)/ { inc($2) }\n",
-		[]string{"out of bounds capref:1:18-19: Capture group $2 not defined by prior regular expression " +
+		"/(blyurg)/ { $2++ }\n",
+		[]string{"out of bounds capref:1:14-15: Capture group $2 not defined by prior regular expression " +
 			"in this or an outer scope"},
 	},
 }
 
 func TestInvalidPrograms(t *testing.T) {
 	for _, tc := range InvalidPrograms {
+		metrics = make([]*Metric, 0)
+
 		p := NewParser(tc.name, strings.NewReader(tc.program))
 		EmtailParse(p)
 
 		if !reflect.DeepEqual(tc.errors, p.errors) {
-			t.Errorf("Incorrect error for %s\n\texpected: %q\n\treceived: %q\n", tc.name, tc.errors, p.errors)
+			t.Errorf("Incorrect error for '%s'\n\treceived: %q\n\texpected: %q\n", tc.name, p.errors, tc.errors)
 		}
 	}
 }

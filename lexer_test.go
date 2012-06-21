@@ -24,20 +24,38 @@ var lexerTests = []lexerTest{
 		Token{EOF, "", Position{0, 9, 9}}}},
 	{"comment not at col 1", "  # comment", []Token{
 		Token{EOF, "", Position{0, 11, 11}}}},
-	{"punctuation", "{}(),", []Token{
+	{"punctuation", "{}()[],", []Token{
 		Token{LCURLY, "{", Position{0, 0, 0}},
 		Token{RCURLY, "}", Position{0, 1, 1}},
 		Token{LPAREN, "(", Position{0, 2, 2}},
 		Token{RPAREN, ")", Position{0, 3, 3}},
-		Token{COMMA, ",", Position{0, 4, 4}},
-		Token{EOF, "", Position{0, 5, 5}}}},
+		Token{LSQUARE, "[", Position{0, 4, 4}},
+		Token{RSQUARE, "]", Position{0, 5, 5}},
+		Token{COMMA, ",", Position{0, 6, 6}},
+		Token{EOF, "", Position{0, 7, 7}}}},
+	{"operators", "- + = ++ +=", []Token{
+		Token{MINUS, "-", Position{0, 0, 0}},
+		Token{PLUS, "+", Position{0, 2, 2}},
+		Token{ASSIGN, "=", Position{0, 4, 4}},
+		Token{INC, "++", Position{0, 6, 7}},
+		Token{ADD_ASSIGN, "+=", Position{0, 9, 10}},
+		Token{EOF, "", Position{0, 11, 11}}}},
 	{"keywords",
-		"inc\nset\ntag\nstrptime\n", []Token{
-			Token{BUILTIN, "inc", Position{0, 0, 2}},
-			Token{BUILTIN, "set", Position{1, 0, 2}},
-			Token{BUILTIN, "tag", Position{2, 0, 2}},
-			Token{BUILTIN, "strptime", Position{3, 0, 7}},
+		"counter\ngauge\nas\nby\n", []Token{
+			Token{COUNTER, "counter", Position{0, 0, 6}},
+			Token{GAUGE, "gauge", Position{1, 0, 4}},
+			Token{AS, "as", Position{2, 0, 1}},
+			Token{BY, "by", Position{3, 0, 1}},
 			Token{EOF, "", Position{4, 0, 0}}}},
+	{"builtins",
+		"strptime\ntimestamp\n", []Token{
+			Token{BUILTIN, "strptime", Position{0, 0, 7}},
+			Token{BUILTIN, "timestamp", Position{1, 0, 8}},
+			Token{EOF, "", Position{2, 0, 0}}}},
+	{"const", "1 23", []Token{
+		Token{CONST, "1", Position{0, 0, 0}},
+		Token{CONST, "23", Position{0, 2, 3}},
+		Token{EOF, "", Position{0, 4, 4}}}},
 	{"identifer", "a be foo\nquux line-count", []Token{
 		Token{ID, "a", Position{0, 0, 0}},
 		Token{ID, "be", Position{0, 2, 3}},
@@ -73,7 +91,7 @@ var lexerTests = []lexerTest{
 	{"large program",
 		"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
 			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
-			"  inc(foo)\n" +
+			"  foo++\n" +
 			"}", []Token{
 			Token{REGEX, "(?P<date>[[:digit:]-\\/ ])", Position{0, 0, 26}},
 			Token{LCURLY, "{", Position{0, 28, 28}},
@@ -83,12 +101,17 @@ var lexerTests = []lexerTest{
 			Token{COMMA, ",", Position{1, 16, 16}},
 			Token{STRING, "%Y/%m/%d %H:%M:%S", Position{1, 18, 36}},
 			Token{RPAREN, ")", Position{1, 37, 37}},
-			Token{BUILTIN, "inc", Position{2, 2, 4}},
-			Token{LPAREN, "(", Position{2, 5, 5}},
-			Token{ID, "foo", Position{2, 6, 8}},
-			Token{RPAREN, ")", Position{2, 9, 9}},
+			Token{ID, "foo", Position{2, 2, 4}},
+			Token{INC, "++", Position{2, 5, 6}},
 			Token{RCURLY, "}", Position{3, 0, 0}},
 			Token{EOF, "", Position{3, 1, 1}}}},
+	{"linecount",
+		"# comment\n" +
+			"# blank line\n" +
+			"\n" +
+			"foo", []Token{
+			Token{ID, "foo", Position{3, 0, 2}},
+			Token{EOF, "", Position{3, 3, 3}}}},
 	// errors
 	{"unexpected char", "?", []Token{
 		Token{INVALID, "Unexpected input: '?'", Position{0, 0, 0}}}},

@@ -15,18 +15,29 @@ type Lexeme int
 
 // Printable names for lexemes.
 var lexemeName = map[Lexeme]string{
-	EOF:     "EOF",
-	INVALID: "INVALID",
-	LCURLY:  "LCURLY",
-	RCURLY:  "RCURLY",
-	LPAREN:  "LPAREN",
-	RPAREN:  "RPAREN",
-	COMMA:   "COMMA",
-	REGEX:   "REGEX",
-	ID:      "ID",
-	CAPREF:  "CAPREF",
-	STRING:  "STRING",
-	BUILTIN: "BUILTIN",
+	EOF:        "EOF",
+	INVALID:    "INVALID",
+	LCURLY:     "LCURLY",
+	RCURLY:     "RCURLY",
+	LPAREN:     "LPAREN",
+	RPAREN:     "RPAREN",
+	LSQUARE:    "LSQUARE",
+	RSQUARE:    "RSQUARE",
+	COMMA:      "COMMA",
+	INC:        "INC",
+	MINUS:      "MINUS",
+	PLUS:       "PLUS",
+	ADD_ASSIGN: "ADD_ASSIGN",
+	ASSIGN:     "ASSIGN",
+	REGEX:      "REGEX",
+	ID:         "ID",
+	CAPREF:     "CAPREF",
+	STRING:     "STRING",
+	BUILTIN:    "BUILTIN",
+	COUNTER:    "COUNTER",
+	GAUGE:      "GAUGE",
+	AS:         "AS",
+	BY:         "BY",
 }
 
 func (t Lexeme) String() string {
@@ -36,12 +47,18 @@ func (t Lexeme) String() string {
 	return fmt.Sprintf("token%d", int(t))
 }
 
+// List of keywords.  Keep this list sorted!
+var keywords = map[string]Lexeme{
+	"as":      AS,
+	"by":      BY,
+	"counter": COUNTER,
+	"gauge":   GAUGE,
+}
+
 // List of builtin functions.  Keep this list sorted!
 var builtins = []string{
-	"inc",
-	"set",
 	"strptime",
-	"tag",
+	"timestamp",
 }
 
 // A Position is the location in the source program that a token appears.
@@ -168,8 +185,8 @@ func (l *lexer) skip() {
 	l.stepCursor()
 }
 
-// ignore skips over the current rune, removing it from the text of the
-// token, and resetting the start position of the current token. Use only between
+// ignore skips over the current rune, removing it from the text of the token,
+// and resetting the start position of the current token. Use only between
 // tokens.
 func (l *lexer) ignore() {
 	l.stepCursor()
@@ -180,7 +197,9 @@ func (l *lexer) ignore() {
 // nil state function to the state machine.
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 	pos := Position{l.line, l.startcol, l.col - 1}
-	l.tokens <- Token{kind: INVALID, text: fmt.Sprintf(format, args...), pos: pos}
+	l.tokens <- Token{kind: INVALID,
+		text: fmt.Sprintf(format, args...),
+		pos:  pos}
 	return nil
 }
 
@@ -205,15 +224,42 @@ func lexProg(l *lexer) stateFn {
 	case r == ')':
 		l.accept()
 		l.emit(RPAREN)
+	case r == '[':
+		l.accept()
+		l.emit(LSQUARE)
+	case r == ']':
+		l.accept()
+		l.emit(RSQUARE)
 	case r == ',':
 		l.accept()
 		l.emit(COMMA)
+	case r == '-':
+		l.accept()
+		l.emit(MINUS)
+	case r == '+':
+		l.accept()
+		switch l.next() {
+		case '+':
+			l.accept()
+			l.emit(INC)
+		case '=':
+			l.accept()
+			l.emit(ADD_ASSIGN)
+		default:
+			l.backup()
+			l.emit(PLUS)
+		}
+	case r == '=':
+		l.accept()
+		l.emit(ASSIGN)
 	case r == '/':
 		return lexRegex
 	case r == '"':
 		return lexQuotedString
 	case r == '$':
 		return lexCapref
+	case isDigit(r):
+		return lexConst
 	case isAlpha(r):
 		return lexIdentifier
 	case r == eof:
@@ -224,7 +270,6 @@ func lexProg(l *lexer) stateFn {
 	default:
 		l.accept()
 		return l.errorf("Unexpected input: %q", r)
-		return nil
 	}
 	return lexProg
 }
@@ -235,12 +280,32 @@ func lexComment(l *lexer) stateFn {
 Loop:
 	for {
 		switch l.next() {
-		case eof, '\n':
+		case '\n':
+			l.skip()
+			fallthrough
+		case eof:
 			break Loop
 		default:
 			l.ignore()
 		}
 	}
+	return lexProg
+}
+
+// Lex a numerical constant.
+func lexConst(l *lexer) stateFn {
+	l.accept()
+Loop:
+	for {
+		switch r := l.next(); {
+		case isDigit(r):
+			l.accept()
+		default:
+			l.backup()
+			break Loop
+		}
+	}
+	l.emit(CONST)
 	return lexProg
 }
 
@@ -301,7 +366,9 @@ Loop:
 			break Loop
 		}
 	}
-	if r := sort.SearchStrings(builtins, l.text); r >= 0 && r < len(builtins) && builtins[r] == l.text {
+	if r, ok := keywords[l.text]; ok {
+		l.emit(r)
+	} else if r := sort.SearchStrings(builtins, l.text); r >= 0 && r < len(builtins) && builtins[r] == l.text {
 		l.emit(BUILTIN)
 	} else {
 		l.emit(ID)
@@ -346,7 +413,12 @@ func isAlpha(r rune) bool {
 
 // isAlnum reports whether r is an alphanumeric rune.
 func isAlnum(r rune) bool {
-	return isAlpha(r) || unicode.IsDigit(r)
+	return isAlpha(r) || isDigit(r)
+}
+
+// isDigit reports whether r is a numerical rune.
+func isDigit(r rune) bool {
+	return unicode.IsDigit(r)
 }
 
 // isSpace reports whether r is whitespace.

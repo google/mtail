@@ -29,16 +29,18 @@ func NewTailer(w *watcher) *tailer {
 }
 
 // Tail adds a file to be tailed.
-func (t *tailer) Tail(pathname string) {
+func (t *tailer) Tail(pathname string) bool {
 	var err error
 	t.files[pathname], err = os.Open(pathname)
 	if err != nil {
-		log.Printf("Failed to open %s for reading: %s\n", pathname, err)
+		log.Printf("Failed to open %q for reading: %s\n", pathname, err)
+		return false
 	}
 	t.files[pathname].Seek(0, os.SEEK_END)
 	if t.watcher != nil {
 		t.watcher.WatchLogFile(pathname, t.changes, nil)
 	}
+	return true
 }
 
 // Handle notification of a log update from the watcher.

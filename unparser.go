@@ -3,56 +3,93 @@
 
 package main
 
-type unparser struct {
-	output string
-}
+import "fmt"
 
-func (p *unparser) visitStmtList(s stmtlistNode) {
-	for _, child := range s.children {
-		child.acceptVisitor(p)
-		p.output += "\n"
-	}
-}
+func unparse(n node) string {
+	output := ""
 
-func (p *unparser) visitExprList(e exprlistNode) {
-	if len(e.children) > 0 {
-		e.children[0].acceptVisitor(p)
-		for _, child := range e.children[1:] {
-			p.output += ", "
-			child.acceptVisitor(p)
+	switch v := n.(type) {
+	case *stmtlistNode:
+		for _, child := range v.children {
+			output += unparse(child) + "\n"
 		}
+
+	case *exprlistNode:
+		if len(v.children) > 0 {
+			output += unparse(v.children[0])
+			for _, child := range v.children[1:] {
+				output += ", " + unparse(child)
+			}
+		}
+
+	case *condNode:
+		if v.cond != nil {
+			output += unparse(v.cond)
+		}
+		output += " {\n"
+		for _, child := range v.children {
+			output += unparse(child)
+		}
+		output += "}\n"
+
+	case *regexNode:
+		output += "/" + v.pattern + "/"
+
+	case *stringNode:
+		output += "\"" + v.text + "\""
+
+	case *idNode:
+		output += v.name
+
+	case *caprefNode:
+		output += "$" + v.name
+
+	case *builtinNode:
+		output += v.name + "("
+		if v.args != nil {
+			output += unparse(v.args)
+		}
+		output += ")"
+
+	case *additiveExprNode:
+		output += unparse(v.lhs)
+		output += fmt.Sprintf(" %c ", v.op)
+		output += unparse(v.rhs)
+
+	case *assignExprNode:
+		output += unparse(v.lhs)
+		output += " = "
+		output += unparse(v.rhs)
+
+	case *indexedExprNode:
+		output += unparse(v.lhs)
+		output += "["
+		output += unparse(v.index)
+		output += "]"
+
+	case *declNode:
+		switch v.kind {
+		case Counter:
+			output += "counter "
+		case Gauge:
+			output += "gauge "
+		}
+		output += v.name
+
+	case *incExprNode:
+		output += unparse(v.lhs)
+		output += "++"
+
+	case *incByExprNode:
+		output += unparse(v.lhs)
+		output += " += "
+		output += unparse(v.rhs)
+
+	case *constExprNode:
+		output += fmt.Sprintf("%d", v.value)
+
+	default:
+		panic(fmt.Sprintf("undefined type %T", n))
 	}
-}
-
-func (p *unparser) visitCond(c condNode) {
-	if c.cond != nil {
-		c.cond.acceptVisitor(p)
-	}
-	p.output += " {\n"
-	for _, child := range c.children {
-		child.acceptVisitor(p)
-	}
-	p.output += "}\n"
-}
-
-func (p *unparser) visitRegex(r regexNode) {
-	p.output += "/" + r.pattern + "/"
-}
-
-func (p *unparser) visitString(s stringNode) {
-	p.output += "\"" + s.text + "\""
-}
-
-func (p *unparser) visitId(i idNode) {
-	p.output += i.name
-}
-
-func (p *unparser) visitCapref(c caprefNode) {
-	p.output += "$" + c.name
-}
-
-func (p *unparser) visitBuiltin(b builtinNode) {
-	p.output += b.name + "("
-	b.args.acceptVisitor(p)
-	p.output += ")"
+	return output
 }

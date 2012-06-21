@@ -3,19 +3,11 @@
 
 package main
 
-type visitor interface {
-	visitStmtList(stmtlistNode)
-	visitExprList(exprlistNode)
-	visitCond(condNode)
-	visitRegex(regexNode)
-	visitId(idNode)
-	visitCapref(caprefNode)
-	visitString(stringNode)
-	visitBuiltin(builtinNode)
-}
+import (
+	"regexp"
+)
 
 type node interface {
-	acceptVisitor(visitor)
 }
 
 type stmtlistNode struct {
@@ -23,16 +15,8 @@ type stmtlistNode struct {
 	children []node
 }
 
-func (s stmtlistNode) acceptVisitor(visit visitor) {
-	visit.visitStmtList(s)
-}
-
 type exprlistNode struct {
 	children []node
-}
-
-func (e exprlistNode) acceptVisitor(visit visitor) {
-	visit.visitExprList(e)
 }
 
 type condNode struct {
@@ -40,48 +24,65 @@ type condNode struct {
 	children []node
 }
 
-func (c condNode) acceptVisitor(visit visitor) {
-	visit.visitCond(c)
-}
-
 type regexNode struct {
 	pattern string
-}
-
-func (r regexNode) acceptVisitor(visit visitor) {
-	visit.visitRegex(r)
+	addr    int
+	re      *regexp.Regexp
 }
 
 type stringNode struct {
 	text string
 }
 
-func (s stringNode) acceptVisitor(visit visitor) {
-	visit.visitString(s)
-}
-
 type idNode struct {
 	name string
-}
-
-func (i idNode) acceptVisitor(visit visitor) {
-	visit.visitId(i)
+	sym  *symbol
 }
 
 type caprefNode struct {
-	name  string
-	index int
-}
-
-func (c caprefNode) acceptVisitor(visit visitor) {
-	visit.visitCapref(c)
+	name string
+	sym  *symbol
 }
 
 type builtinNode struct {
 	name string
-	args exprlistNode
+	args node
 }
 
-func (b builtinNode) acceptVisitor(visit visitor) {
-	visit.visitBuiltin(b)
+type additiveExprNode struct {
+	lhs node
+	rhs node
+	op  int
+}
+
+type assignExprNode struct {
+	lhs node
+	rhs node
+}
+
+type indexedExprNode struct {
+	lhs   node
+	index node
+}
+
+type declNode struct {
+	name          string
+	keys          []string
+	kind          metric_type
+	exported_name string
+	m             *Metric
+	sym           *symbol
+}
+
+type incByExprNode struct {
+	lhs node
+	rhs node
+}
+
+type incExprNode struct {
+	lhs node
+}
+
+type constExprNode struct {
+	value int
 }

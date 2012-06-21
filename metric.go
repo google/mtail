@@ -4,17 +4,24 @@
 package main
 
 import (
+	"strings"
+	"sync"
 	"time"
 )
 
-type mtype int
+type metric_type int
 
 const (
-	Counter mtype = iota
+	Counter metric_type = iota
 	Gauge
 )
 
-func (m mtype) String() string {
+var (
+	metric_lock sync.RWMutex
+	metrics     []*Metric
+)
+
+func (m metric_type) String() string {
 	switch m {
 	case Counter:
 		return "Counter"
@@ -24,11 +31,71 @@ func (m mtype) String() string {
 	return "Unknown"
 }
 
+type Incrementable interface {
+	IncBy(delta int64, ts time.Time)
+}
+
+type Settable interface {
+	Set(value int64, ts time.Time)
+}
+
 type Metric struct {
-	Name  string
+	Name   string
+	Kind   metric_type
+	D      *Datum
+	Keys   []string
+	Values map[string]*Datum
+}
+
+func (m *Metric) stamp(ts time.Time) {
+	m.D.stamp(ts)
+}
+
+func (m *Metric) IncBy(delta int64, ts time.Time) {
+	m.D.IncBy(delta, ts)
+}
+
+func (m *Metric) Set(value int64, ts time.Time) {
+	m.D.Set(value, ts)
+}
+
+type Datum struct {
 	Value int64
 	Time  time.Time
-	Type  mtype
-	Unit  string
-	Tags  map[string]string
+}
+
+const KEY_HASH_SEP = " "
+
+func key_hash(keys []string) string {
+	return strings.Join(keys, KEY_HASH_SEP)
+}
+
+func key_unhash(key string) []string {
+	return strings.Split(key, KEY_HASH_SEP)
+}
+
+func (d *Datum) stamp(timestamp time.Time) {
+	if timestamp.IsZero() {
+		d.Time = time.Now()
+	} else {
+		d.Time = timestamp
+	}
+}
+
+func (d *Datum) Set(value int64, timestamp time.Time) {
+	metric_lock.Lock()
+	defer metric_lock.Unlock()
+	d.Value = value
+	d.stamp(timestamp)
+}
+
+func (d *Datum) IncBy(delta int64, timestamp time.Time) {
+	metric_lock.Lock()
+	defer metric_lock.Unlock()
+	d.Value += delta
+	d.stamp(timestamp)
+}
+
+func init() {
+	metrics = make([]*Metric, 0)
 }

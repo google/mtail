@@ -6,7 +6,6 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"reflect"
@@ -22,17 +21,21 @@ type exampleProgramTest struct {
 
 var exampleProgramTests = []exampleProgramTest{
 	{
+		"examples/linecount.em",
+		"testdata/linecount.log",
+		"testdata/linecount.json",
+	},
+	{
 		"examples/rsyncd.em",
 		"testdata/rsyncd.log",
 		"testdata/rsyncd.json",
 	},
 }
 
-func (m *Metric) String() string {
-	return fmt.Sprintf("%s", *m)
-}
-
 func TestExamplePrograms(t *testing.T) {
+	if testing.Short() {
+		return
+	}
 TestLoop:
 	for _, tc := range exampleProgramTests {
 		metrics = make([]*Metric, 0)
@@ -43,6 +46,8 @@ TestLoop:
 			continue
 		}
 		defer p.Close()
+
+		// EmtailDebug = 999 // All the debugging.
 
 		vm, errs := Compile(tc.programfile, p)
 		if errs != nil {
@@ -74,15 +79,21 @@ TestLoop:
 			}
 		}
 
-		// Dirty hack to create json files :)
-		// j, err := os.Create(tc.jsonfile)
-		// if err != nil {
-		// 	t.Errorf("%s: could not open json file: %s", tc.jsonfile, err)
-		// 	continue
+		// // Dirty hack to create json files :)
+		// {
+		// 	j, err := os.Create(tc.jsonfile)
+		// 	if err != nil {
+		// 		t.Errorf("%s: could not open json file: %s", tc.jsonfile, err)
+		// 		continue
+		// 	}
+		// 	defer j.Close()
+		// 	b, err := json.MarshalIndent(metrics, "", "  ")
+		// 	if err != nil {
+		// 		t.Errorf("couldn't marshall metrics")
+		// 		continue
+		// 	}
+		// 	j.Write(b)
 		// }
-		// e := json.NewEncoder(j)
-		// e.Encode(metrics)
-		// j.Close()
 
 		j, err := os.Open(tc.jsonfile)
 		if err != nil {
