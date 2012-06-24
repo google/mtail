@@ -3,6 +3,7 @@
 
 GOFILES=\
 	ast.go\
+	compiler.go\
 	lexer.go\
 	main.go\
 	metric.go\
