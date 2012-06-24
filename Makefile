@@ -41,3 +41,7 @@ test: parser.go $(GOFILES) $(GOTESTFILES)
 .PHONY: testshort
 testshort: parser.go $(GOFILES) $(GOTESTFILES)
 	go test -test.short
+
+.PHONY: bench
+bench: parser.go $(GOFILES) $(GOTESTFILES)
+	go test -test.bench=.*
