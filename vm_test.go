@@ -117,15 +117,16 @@ func TestInstrs(t *testing.T) {
 			str: tc.str,
 		}
 		for _, item := range tc.reversed_stack {
-			v.stack.Push(item)
+			v.t.stack.Push(item)
 		}
 
 		v.t.matches = make(map[int][]string, 0)
 		v.execute(&v.t, v.prog[0], "aaaab")
 
-		if !reflect.DeepEqual(expected_stack, v.stack) {
-			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %q\n\treceived: %q", tc.name, expected_stack, v.stack)
+		if !reflect.DeepEqual(expected_stack, v.t.stack) {
+			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %q\n\treceived: %q", tc.name, expected_stack, v.t.stack)
 		}
+		tc.expected_thread.stack = expected_stack
 		if !reflect.DeepEqual(tc.expected_thread, v.t) {
 			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_thread, v.t)
 		}

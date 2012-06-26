@@ -66,6 +66,7 @@ type thread struct {
 	reg     int
 	matches map[int][]string
 	time    time.Time
+	stack   Stack
 }
 
 type vm struct {
@@ -80,8 +81,7 @@ type vm struct {
 	// data segment
 	symtab *scope
 
-	stack Stack
-	t     thread
+	t thread
 }
 
 func (v *vm) errorf(format string, args ...interface{}) bool {
@@ -112,7 +112,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		var delta int64 = 1
 		// If opnd is nonzero, the delta is on the stack.
 		if i.opnd > 0 {
-			val := v.stack.Pop()
+			val := t.stack.Pop()
 			// Don't know what type it is on the stack though.
 			switch n := val.(type) {
 			case int:
@@ -129,7 +129,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 				return v.errorf("Unexpected type %T %q", val, val)
 			}
 		}
-		switch d := v.stack.Pop().(type) {
+		switch d := t.stack.Pop().(type) {
 		case Incrementable:
 			d.IncBy(delta, t.time)
 		case int:
@@ -142,7 +142,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 	case set:
 		// Set a gauge
 		var value int64
-		val := v.stack.Pop()
+		val := t.stack.Pop()
 		// Don't know what type it is on the stack though.
 		switch n := val.(type) {
 		case int:
@@ -160,7 +160,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		default:
 			return v.errorf("Unexpected type %T %q\n", val, val)
 		}
-		switch d := v.stack.Pop().(type) {
+		switch d := t.stack.Pop().(type) {
 		case Settable:
 			d.Set(value, t.time)
 		case int:
@@ -171,15 +171,15 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		}
 
 	case strptime:
-		layout := v.stack.Pop().(string)
+		layout := t.stack.Pop().(string)
 
 		var ts string
-		switch s := v.stack.Pop().(type) {
+		switch s := t.stack.Pop().(type) {
 		case string:
 			ts = s
 
 		case int: /* capref */
-			re := v.stack.Pop().(int)
+			re := t.stack.Pop().(int)
 			ts = t.matches[re][s]
 		}
 
@@ -190,24 +190,24 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		t.time = tm
 
 	case timestamp:
-		v.stack.Push(t.time)
+		t.stack.Push(t.time)
 
 	case capref:
-		re := v.stack.Pop().(int)
-		v.stack.Push(t.matches[re][i.opnd])
+		re := t.stack.Pop().(int)
+		t.stack.Push(t.matches[re][i.opnd])
 
 	case str:
-		v.stack.Push(v.str[i.opnd])
+		t.stack.Push(v.str[i.opnd])
 
 	case ret:
 		return true
 
 	case push:
-		v.stack.Push(i.opnd)
+		t.stack.Push(i.opnd)
 
 	case add:
 		var a, b int64
-		switch d := v.stack.Pop().(type) {
+		switch d := t.stack.Pop().(type) {
 		case *Datum:
 			a = d.Value
 		case int64:
@@ -219,7 +219,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		default:
 			return v.errorf("Unexpected type for add %T %q\n", d, d)
 		}
-		switch d := v.stack.Pop().(type) {
+		switch d := t.stack.Pop().(type) {
 		case *Datum:
 			b = d.Value
 		case int64:
@@ -231,11 +231,11 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		default:
 			return v.errorf("Unexpected type for add %T %q\n", d, d)
 		}
-		v.stack.Push(a + b)
+		t.stack.Push(a + b)
 
 	case sub:
 		var a, b int64
-		switch d := v.stack.Pop().(type) {
+		switch d := t.stack.Pop().(type) {
 		case *Datum:
 			a = d.Value
 		case int64:
@@ -247,7 +247,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		default:
 			return v.errorf("Unexpected type for sub %T %q\n", d, d)
 		}
-		switch d := v.stack.Pop().(type) {
+		switch d := t.stack.Pop().(type) {
 		case *Datum:
 			b = d.Value
 		case int64:
@@ -259,22 +259,22 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		default:
 			return v.errorf("Unexpected type for sub %T %q\n", d, d)
 		}
-		v.stack.Push(b - a)
+		t.stack.Push(b - a)
 
 	case mload:
-		v.stack.Push(metrics[i.opnd])
+		t.stack.Push(metrics[i.opnd])
 
 	case dload:
-		m := v.stack.Pop().(*Metric)
+		m := t.stack.Pop().(*Metric)
 		var keys []string
 		for a := 0; a < i.opnd; a++ {
-			keys = append(keys, v.stack.Pop().(string))
+			keys = append(keys, t.stack.Pop().(string))
 		}
 		h := key_hash(keys)
 		if _, ok := m.Values[h]; !ok {
 			m.Values[h] = &Datum{}
 		}
-		v.stack.Push(m.Values[h])
+		t.stack.Push(m.Values[h])
 
 	default:
 		return v.errorf("illegal instruction: %q", i.op)
