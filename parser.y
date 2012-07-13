@@ -86,6 +86,7 @@ stmt_list
 stmt
   : cond LCURLY stmt_list RCURLY
   {
+      Emtaillex.(*parser).level++
       $3.(*stmtlistNode).s = Emtaillex.(*parser).s
       Emtaillex.(*parser).endScope()
       if $1 != nil {
@@ -93,6 +94,7 @@ stmt
       } else {
           $$ = $3
       }
+      Emtaillex.(*parser).level--
   }
   | expr
   {
@@ -113,7 +115,7 @@ expr
   ;
 
 assign_expr
-  : additive_expr 
+  : additive_expr
   {
      $$ = $1
   }
@@ -180,10 +182,10 @@ postfix_expr
     $$ = &incExprNode{$1}
   }
   | postfix_expr LSQUARE expr RSQUARE
-  {  
+  {
     $$ = &indexedExprNode{$1, $3}
   }
-  ; 
+  ;
 
 primary_expr
   : ID
@@ -192,7 +194,7 @@ primary_expr
       $$ = &idNode{$1, sym}
     } else {
       Emtaillex.Error(fmt.Sprintf("Identifier %s not declared.", $1))
-    }      
+    }
   }
   | CAPREF
   {
@@ -233,14 +235,16 @@ cond
           // the current scope, so that future CAPTUREGROUPs can retrieve their
           // value.  At parse time, we can warn about nonexistent names.
           for i := 1; i < re.NumSubexp() + 1; i++ {
-            sym := Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i), CaprefSymbol, $$, 
-                                                Emtaillex.(*parser).pos)
+            sym := Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i), CaprefSymbol, $$,
+                                                Emtaillex.(*parser).pos,
+                                                Emtaillex.(*parser).level)
             sym.addr = i
           }
           for i, capref := range re.SubexpNames() {
                 if capref != "" {
-                  sym := Emtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$, 
-                                                      Emtaillex.(*parser).pos)
+                  sym := Emtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$,
+                                                      Emtaillex.(*parser).pos,
+                                                      Emtaillex.(*parser).level)
                   sym.addr = i
               }
           }
@@ -254,7 +258,7 @@ decl
     $$ = $2
     d := $$.(*declNode)
     d.kind = $1
-      
+
     var n string
     if d.exported_name != "" {
         n = d.exported_name
@@ -266,17 +270,18 @@ decl
                     Keys:   d.keys,
                     Values: make(map[string]*Datum, 0)}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, DimensionedMetricSymbol, d.m,
-                                   Emtaillex.(*parser).pos)
+                                           Emtaillex.(*parser).pos,
+                                           Emtaillex.(*parser).level)
     } else {
       d.m = &Metric{Name: n, Kind: d.kind,
                     D: &Datum{}}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, ScalarMetricSymbol, d.m,
-                                   Emtaillex.(*parser).pos)
-      
+                                           Emtaillex.(*parser).pos,
+                                           Emtaillex.(*parser).level)
     }
   }
   ;
-  
+
 declarator
   : declarator by_spec
   {
@@ -357,6 +362,7 @@ type parser struct {
     l      *lexer
     pos    Position
     s      *scope
+    level  int
 }
 
 func NewParser(name string, input io.Reader) *parser {

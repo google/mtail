@@ -14,11 +14,12 @@ const (
 )
 
 type symbol struct {
-	key     string
+	name    string
 	kind    symtype
 	binding interface{}
 	loc     Position
 	addr    int
+	level   int // nesting level
 }
 
 type scope struct {
@@ -34,8 +35,8 @@ func (s *scope) lookupSym(name string) (*symbol, bool) {
 	return r, ok
 }
 
-func (s *scope) addSym(name string, kind symtype, binding interface{}, loc Position) *symbol {
-	sym := &symbol{name, kind, binding, loc, 0}
+func (s *scope) addSym(name string, kind symtype, binding interface{}, loc Position, level int) *symbol {
+	sym := &symbol{name, kind, binding, loc, 0, level}
 	s.symtab[name] = sym
 	return sym
 }
