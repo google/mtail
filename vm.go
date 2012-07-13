@@ -66,7 +66,7 @@ type thread struct {
 	reg     int
 	matches map[int][]string
 	time    time.Time
-	stack   Stack
+	stack   []interface{}
 }
 
 type vm struct {
@@ -82,6 +82,17 @@ type vm struct {
 	symtab *scope
 
 	t thread
+}
+
+func (t *thread) Push(value interface{}) {
+	t.stack = append(t.stack, value)
+}
+
+func (t *thread) Pop() (value interface{}) {
+	last := len(t.stack) - 1
+	value = t.stack[last]
+	t.stack = t.stack[:last]
+	return
 }
 
 func (v *vm) errorf(format string, args ...interface{}) bool {
@@ -112,7 +123,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		var delta int64 = 1
 		// If opnd is nonzero, the delta is on the stack.
 		if i.opnd > 0 {
-			val := t.stack.Pop()
+			val := t.Pop()
 			// Don't know what type it is on the stack though.
 			switch n := val.(type) {
 			case int:
@@ -129,7 +140,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 				return v.errorf("Unexpected type %T %q", val, val)
 			}
 		}
-		switch d := t.stack.Pop().(type) {
+		switch d := t.Pop().(type) {
 		case Incrementable:
 			d.IncBy(delta, t.time)
 		case int:
@@ -142,7 +153,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 	case set:
 		// Set a gauge
 		var value int64
-		val := t.stack.Pop()
+		val := t.Pop()
 		// Don't know what type it is on the stack though.
 		switch n := val.(type) {
 		case int:
@@ -160,7 +171,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		default:
 			return v.errorf("Unexpected type %T %q\n", val, val)
 		}
-		switch d := t.stack.Pop().(type) {
+		switch d := t.Pop().(type) {
 		case Settable:
 			d.Set(value, t.time)
 		case int:
@@ -171,15 +182,15 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		}
 
 	case strptime:
-		layout := t.stack.Pop().(string)
+		layout := t.Pop().(string)
 
 		var ts string
-		switch s := t.stack.Pop().(type) {
+		switch s := t.Pop().(type) {
 		case string:
 			ts = s
 
 		case int: /* capref */
-			re := t.stack.Pop().(int)
+			re := t.Pop().(int)
 			ts = t.matches[re][s]
 		}
 
@@ -190,24 +201,24 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		t.time = tm
 
 	case timestamp:
-		t.stack.Push(t.time)
+		t.Push(t.time)
 
 	case capref:
-		re := t.stack.Pop().(int)
-		t.stack.Push(t.matches[re][i.opnd])
+		re := t.Pop().(int)
+		t.Push(t.matches[re][i.opnd])
 
 	case str:
-		t.stack.Push(v.str[i.opnd])
+		t.Push(v.str[i.opnd])
 
 	case ret:
 		return true
 
 	case push:
-		t.stack.Push(i.opnd)
+		t.Push(i.opnd)
 
 	case add:
 		var a, b int64
-		switch d := t.stack.Pop().(type) {
+		switch d := t.Pop().(type) {
 		case *Datum:
 			a = d.Value
 		case int64:
@@ -219,7 +230,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		default:
 			return v.errorf("Unexpected type for add %T %q\n", d, d)
 		}
-		switch d := t.stack.Pop().(type) {
+		switch d := t.Pop().(type) {
 		case *Datum:
 			b = d.Value
 		case int64:
@@ -231,11 +242,11 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		default:
 			return v.errorf("Unexpected type for add %T %q\n", d, d)
 		}
-		t.stack.Push(a + b)
+		t.Push(a + b)
 
 	case sub:
 		var a, b int64
-		switch d := t.stack.Pop().(type) {
+		switch d := t.Pop().(type) {
 		case *Datum:
 			a = d.Value
 		case int64:
@@ -247,7 +258,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		default:
 			return v.errorf("Unexpected type for sub %T %q\n", d, d)
 		}
-		switch d := t.stack.Pop().(type) {
+		switch d := t.Pop().(type) {
 		case *Datum:
 			b = d.Value
 		case int64:
@@ -259,22 +270,22 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		default:
 			return v.errorf("Unexpected type for sub %T %q\n", d, d)
 		}
-		t.stack.Push(b - a)
+		t.Push(b - a)
 
 	case mload:
-		t.stack.Push(metrics[i.opnd])
+		t.Push(metrics[i.opnd])
 
 	case dload:
-		m := t.stack.Pop().(*Metric)
+		m := t.Pop().(*Metric)
 		var keys []string
 		for a := 0; a < i.opnd; a++ {
-			keys = append(keys, t.stack.Pop().(string))
+			keys = append(keys, t.Pop().(string))
 		}
 		h := key_hash(keys)
 		if _, ok := m.Values[h]; !ok {
 			m.Values[h] = &Datum{}
 		}
-		t.stack.Push(m.Values[h])
+		t.Push(m.Values[h])
 
 	default:
 		return v.errorf("illegal instruction: %q", i.op)
@@ -287,6 +298,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 // until termination. It returns a boolean indicating a successful match.
 func (v *vm) Run(input string) bool {
 	t := v.t
+	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, 0)
 	for {
 		if t.pc >= len(v.prog) {

@@ -107,26 +107,26 @@ func TestInstrs(t *testing.T) {
 			&Metric{Name: "bar", Kind: Gauge, D: &Datum{}},
 		}
 
-		expected_stack := Stack{}
-		for _, item := range tc.expected_stack {
-			expected_stack.Push(item)
-		}
+		// expected_stack := make([]interface{}, 0, 10)
+		// for _, item := range tc.expected_stack {
+		// 	expected_stack = append(expected_stack, item)
+		// }
 
 		v := &vm{prog: tc.prog,
 			re:  tc.re,
 			str: tc.str,
 		}
+		v.t.stack = make([]interface{}, 0)
 		for _, item := range tc.reversed_stack {
-			v.t.stack.Push(item)
+			v.t.Push(item)
 		}
-
 		v.t.matches = make(map[int][]string, 0)
 		v.execute(&v.t, v.prog[0], "aaaab")
 
-		if !reflect.DeepEqual(expected_stack, v.t.stack) {
-			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %q\n\treceived: %q", tc.name, expected_stack, v.t.stack)
+		if !reflect.DeepEqual(tc.expected_stack, v.t.stack) {
+			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_stack, v.t.stack)
 		}
-		tc.expected_thread.stack = expected_stack
+		tc.expected_thread.stack = tc.expected_stack
 		if !reflect.DeepEqual(tc.expected_thread, v.t) {
 			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_thread, v.t)
 		}
