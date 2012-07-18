@@ -204,6 +204,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		t.Push(t.time)
 
 	case capref:
+		// Get the regex number from the stack
 		re := t.Pop().(int)
 		t.Push(t.matches[re][i.opnd])
 

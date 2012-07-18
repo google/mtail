@@ -59,31 +59,31 @@ func (c *compiler) emit(i instr) {
 	c.prog = append(c.prog, i)
 }
 
-func (c *compiler) compile(n node) {
-	switch v := n.(type) {
+func (c *compiler) compile(untyped_node node) {
+	switch n := untyped_node.(type) {
 	case *stmtlistNode:
-		for _, child := range v.children {
+		for _, child := range n.children {
 			c.compile(child)
 		}
 
 	case *exprlistNode:
-		for _, child := range v.children {
+		for _, child := range n.children {
 			c.compile(child)
 		}
 
 	case *declNode:
-		v.sym.addr = len(metrics)
-		metrics = append(metrics, v.m)
+		n.sym.addr = len(metrics)
+		metrics = append(metrics, n.m)
 
 	case *condNode:
 		// TODO(jaq): split off a new goroutine thread instead of doing conds serially.
-		if v.cond != nil {
-			c.compile(v.cond)
+		if n.cond != nil {
+			c.compile(n.cond)
 		}
 		c.emit(instr{op: jnm})
 		// Save PC of jump instruction
 		pc := len(c.prog) - 1
-		for _, child := range v.children {
+		for _, child := range n.children {
 			c.compile(child)
 		}
 		c.emit(instr{ret, 1})
@@ -91,77 +91,80 @@ func (c *compiler) compile(n node) {
 		c.prog[pc].opnd = len(c.prog)
 
 	case *regexNode:
-		if v.re == nil {
-			re, err := regexp.Compile(v.pattern)
+		if n.re == nil {
+			re, err := regexp.Compile(n.pattern)
 			if err != nil {
 				c.errorf("%s", err)
 				return
 			} else {
 				c.re = append(c.re, re)
-				v.re = re
-				v.addr = len(c.re) - 1
+				n.re = re
+				// Store the location of this regular expression in the regexNode
+				n.addr = len(c.re) - 1
 			}
 		}
-		c.emit(instr{match, v.addr})
+		c.emit(instr{match, n.addr})
 
 	case *stringNode:
-		c.str = append(c.str, v.text)
+		c.str = append(c.str, n.text)
 		c.emit(instr{str, len(c.str) - 1})
 
 	case *idNode:
-		c.emit(instr{mload, v.sym.addr})
-		m := v.sym.binding.(*Metric)
+		c.emit(instr{mload, n.sym.addr})
+		m := n.sym.binding.(*Metric)
 		if m.D == nil {
 			c.emit(instr{dload, len(m.Keys)})
 		}
 
 	case *caprefNode:
-		rn := v.sym.binding.(*regexNode)
+		rn := n.sym.binding.(*regexNode)
+		// rn.addr contains the index of the regular expression object,
+		// which correlates to storage on the re heap
 		c.emit(instr{push, rn.addr})
-		c.emit(instr{capref, v.sym.addr})
+		c.emit(instr{capref, n.sym.addr})
 
 	case *builtinNode:
-		if v.args != nil {
-			c.compile(v.args)
-			c.emit(instr{builtin[v.name], len(v.args.(*exprlistNode).children)})
+		if n.args != nil {
+			c.compile(n.args)
+			c.emit(instr{builtin[n.name], len(n.args.(*exprlistNode).children)})
 		} else {
-			c.emit(instr{op: builtin[v.name]})
+			c.emit(instr{op: builtin[n.name]})
 		}
 
 	case *additiveExprNode:
-		c.compile(v.lhs)
-		c.compile(v.rhs)
-		switch v.op {
+		c.compile(n.lhs)
+		c.compile(n.rhs)
+		switch n.op {
 		case '+':
 			c.emit(instr{op: add})
 		case '-':
 			c.emit(instr{op: sub})
 		default:
-			c.errorf("invalid op: %q\n", v.op)
+			c.errorf("invalid op: %q\n", n.op)
 		}
 
 	case *assignExprNode:
-		c.compile(v.lhs)
-		c.compile(v.rhs)
+		c.compile(n.lhs)
+		c.compile(n.rhs)
 		c.emit(instr{op: set})
 
 	case *indexedExprNode:
-		c.compile(v.index)
-		c.compile(v.lhs)
+		c.compile(n.index)
+		c.compile(n.lhs)
 
 	case *incExprNode:
-		c.compile(v.lhs)
+		c.compile(n.lhs)
 		c.emit(instr{op: inc})
 
 	case *incByExprNode:
-		c.compile(v.lhs)
-		c.compile(v.rhs)
+		c.compile(n.lhs)
+		c.compile(n.rhs)
 		c.emit(instr{inc, 1})
 
 	case *constExprNode:
-		c.emit(instr{push, v.value})
+		c.emit(instr{push, n.value})
 
 	default:
-		c.errorf("undefined node type %T", n)
+		c.errorf("undefined node type %T (%q)6", untyped_node, untyped_node)
 	}
 }
