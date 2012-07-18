@@ -42,11 +42,10 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		return nil, c.errors
 	}
 	vm := &vm{
-		name:   file,
-		re:     c.re,
-		str:    c.str,
-		symtab: c.symtab,
-		prog:   c.prog}
+		name: file,
+		re:   c.re,
+		str:  c.str,
+		prog: c.prog}
 	return vm, nil
 }
 

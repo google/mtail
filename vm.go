@@ -78,9 +78,6 @@ type vm struct {
 	// const strings
 	str []string
 
-	// data segment
-	symtab *scope
-
 	t thread
 }
 
