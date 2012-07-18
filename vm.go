@@ -107,6 +107,8 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 	switch i.op {
 	case match:
 		// match regex and store success
+		// Store the results in the operandth element of the stack,
+		// where i.opnd == the matched re index
 		t.matches[i.opnd] = v.re[i.opnd].FindStringSubmatch(input)
 		if t.matches[i.opnd] != nil {
 			t.reg = 1
@@ -190,7 +192,9 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			ts = s
 
 		case int: /* capref */
+			// First find the match storage index on the stack
 			re := t.Pop().(int)
+			// Store the result from the re'th index at the s'th index
 			ts = t.matches[re][s]
 		}
 
@@ -204,8 +208,9 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		t.Push(t.time)
 
 	case capref:
-		// Get the regex number from the stack
+		// Find the match storage index on the stack,
 		re := t.Pop().(int)
+		// Push the result from the re'th match at operandth index
 		t.Push(t.matches[re][i.opnd])
 
 	case str:
