@@ -379,11 +379,7 @@ func (p *parser) Lex(lval *EmtailSymType) int {
 }
 
 func (p *parser) startScope() {
-    level := 0
-    if p.s != nil {
-        level = p.s.level + 1
-    }
-    s := &scope{p.s, level, map[string]*symbol{}}
+    s := &scope{p.s, map[string]*symbol{}}
     p.s = s
 }
 

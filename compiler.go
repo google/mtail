@@ -15,12 +15,12 @@ import (
 var compile_only *bool = flag.Bool("compile_only", false, "Compile programs only.")
 
 type compiler struct {
-	name   string   // Name of the program.
-	errors []string // Compile errors.
+	name string // Name of the program.
 
-	prog []instr          // The emitted program.
-	str  []string         // Static strings.
-	re   []*regexp.Regexp // Static regular expressions.
+	errors []string         // Compile errors.
+	prog   []instr          // The emitted program.
+	str    []string         // Static strings.
+	re     []*regexp.Regexp // Static regular expressions.
 
 	symtab *scope
 }
