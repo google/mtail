@@ -19,11 +19,18 @@ import (
 	_ "net/http/pprof"
 )
 
-var port *string = flag.String("port", "3903", "HTTP port to listen on.")
-var logs *string = flag.String("logs", "", "List of files to monitor.")
-var progs *string = flag.String("progs", "", "Directory containing programs")
+var (
+	port  *string = flag.String("port", "3903", "HTTP port to listen on.")
+	logs  *string = flag.String("logs", "", "List of files to monitor.")
+	progs *string = flag.String("progs", "", "Directory containing programs")
 
-var line_count = expvar.NewInt("line_count")
+	one_shot *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
+)
+
+var (
+	line_count = expvar.NewInt("line_count")
+	log_count  = expvar.NewInt("log_count")
+)
 
 // CSV export
 func handleCsv(w http.ResponseWriter, r *http.Request) {
@@ -139,15 +146,14 @@ func main() {
 	go w.start()
 	go t.start()
 
-	var log_count int
 	for _, pathname := range strings.Split(*logs, ",") {
 		if pathname != "" {
 			if t.Tail(pathname) {
-				log_count += 1
+				log_count.Add(1)
 			}
 		}
 	}
-	if log_count == 0 {
+	if log_count.String() == "0" {
 		log.Fatal("No logs to tail.")
 	}
 
