@@ -4,9 +4,7 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
-	"io"
 	"os"
 	"reflect"
 	"strings"
@@ -49,34 +47,22 @@ TestLoop:
 
 		// EmtailDebug = 999 // All the debugging.
 
-		vm, errs := Compile(tc.programfile, p)
+		v, errs := Compile(tc.programfile, p)
 		if errs != nil {
 			t.Errorf("%s: compile failed: %s", tc.programfile, strings.Join(errs, "\n"))
 			continue
 		}
 
-		l, err := os.Open(tc.logfile)
+		vms = make([]*vm, 0)
+		vms = append(vms, v)
+
+		lines := make(chan string)
+		go RunVms(vms, lines)
+
+		err = OneShot(tc.logfile, lines)
 		if err != nil {
-			t.Errorf("%s: could not open log file: %s", tc.logfile, err)
-			continue
-		}
-		defer l.Close()
-
-		r := bufio.NewReader(l)
-
-	ReadLoop:
-		for {
-			line, err := r.ReadString('\n')
-
-			switch {
-			case err == io.EOF:
-				break ReadLoop
-			case err != nil:
-				t.Errorf("%s: read error: %s", tc.programfile, err)
-				continue TestLoop
-			default:
-				vm.Run(line)
-			}
+			t.Errorf("Oneshot failed: %s", err)
+			continue TestLoop
 		}
 
 		// // Dirty hack to create json files :)

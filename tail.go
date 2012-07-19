@@ -11,7 +11,7 @@ import (
 )
 
 type tailer struct {
-	Line     chan string         // Logfile lines being emitted.
+	lines    chan string         // Logfile lines being emitted.
 	changes  chan string         // Notification of changes arriving.
 	files    map[string]*os.File // File handles for each pathname.
 	partials map[string]string   // Cache of the currently read line before newline from each pathname.
@@ -19,9 +19,9 @@ type tailer struct {
 }
 
 // NewTailer returns a new tailer.
-func NewTailer(w *watcher) *tailer {
+func NewTailer(w *watcher, lines chan string) *tailer {
 	return &tailer{
-		Line:     make(chan string),
+		lines:    lines,
 		changes:  make(chan string),
 		files:    make(map[string]*os.File),
 		partials: make(map[string]string),
@@ -64,7 +64,7 @@ Loop:
 					t.partials[pathname] += string(rune)
 				default:
 					// send off line
-					t.Line <- t.partials[pathname]
+					t.lines <- t.partials[pathname]
 					t.partials[pathname] = ""
 				}
 			}

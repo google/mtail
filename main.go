@@ -4,11 +4,13 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
 	"encoding/json"
 	"expvar"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -95,6 +97,29 @@ var (
 	vms []*vm
 )
 
+func OneShot(logfile string, lines chan string) error {
+	l, err := os.Open(logfile)
+	if err != nil {
+		return fmt.Errorf("%s: could not open log file: %s", logfile, err)
+	}
+	defer l.Close()
+
+	r := bufio.NewReader(l)
+
+	for {
+		line, err := r.ReadString('\n')
+		switch {
+		case err == io.EOF:
+			return nil
+		case err != nil:
+			return fmt.Errorf("%s: read error: %s", logfile, err)
+		default:
+			lines <- line
+		}
+	}
+	return nil
+}
+
 func main() {
 	flag.Parse()
 
@@ -124,7 +149,7 @@ func main() {
 			continue
 		}
 		defer f.Close()
-		vm, errs := Compile(fi.Name(), f)
+		v, errs := Compile(fi.Name(), f)
 		if errs != nil {
 			errors = 1
 			for _, e := range errs {
@@ -132,32 +157,53 @@ func main() {
 			}
 			continue
 		}
-		vms = append(vms, vm)
+		vms = append(vms, v)
 	}
 
 	if *compile_only {
 		os.Exit(errors)
 	}
 
-	w := NewWatcher()
-	t := NewTailer(w)
-
-	go RunVms(vms, t.Line)
-	go w.start()
-	go t.start()
-
+	var pathnames []string
 	for _, pathname := range strings.Split(*logs, ",") {
 		if pathname != "" {
+			pathnames = append(pathnames, pathname)
+		}
+	}
+	if len(pathnames) == 0 {
+		log.Fatal("No logs to tail.")
+	}
+
+	lines := make(chan string)
+	go RunVms(vms, lines)
+
+	if *one_shot {
+		for _, pathname := range pathnames {
+			err := OneShot(pathname, lines)
+			if err != nil {
+				log.Fatalf("Error in one shot mode: %s\n", err)
+			}
+		}
+		b, err := json.MarshalIndent(metrics, "", "  ")
+		if err != nil {
+			log.Fatalf("Error marshalling metrics into json: ", err.Error())
+		}
+		os.Stdout.Write(b)
+	} else {
+		w := NewWatcher()
+		t := NewTailer(w, lines)
+
+		go t.start()
+		go w.start()
+
+		for _, pathname := range pathnames {
 			if t.Tail(pathname) {
 				log_count.Add(1)
 			}
 		}
-	}
-	if log_count.String() == "0" {
-		log.Fatal("No logs to tail.")
-	}
 
-	http.HandleFunc("/json", handleJson)
-	http.HandleFunc("/csv", handleCsv)
-	log.Fatal(http.ListenAndServe(":"+*port, nil))
+		http.HandleFunc("/json", handleJson)
+		http.HandleFunc("/csv", handleCsv)
+		log.Fatal(http.ListenAndServe(":"+*port, nil))
+	}
 }

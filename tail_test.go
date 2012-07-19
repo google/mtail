@@ -27,7 +27,8 @@ func TestTail(t *testing.T) {
 
 	go w.start()
 
-	ta := NewTailer(w)
+	lines := make(chan string)
+	ta := NewTailer(w, lines)
 	ta.Tail(logfile)
 
 	if _, ok := w.change[logfile]; !ok {
@@ -50,7 +51,8 @@ func TestHandleLogChange(t *testing.T) {
 	}
 	defer f.Close()
 
-	ta := NewTailer(nil)
+	lines := make(chan string)
+	ta := NewTailer(nil, lines)
 	ta.Tail(logfile)
 
 	_, err = f.WriteString("a\nb\nc\nd\n")
@@ -61,7 +63,7 @@ func TestHandleLogChange(t *testing.T) {
 
 	for _, expected := range []string{"a", "b", "c", "d"} {
 		// Run as a goroutine because it's going to emit lines via output channel
-		line := <-ta.Line
+		line := <-ta.lines
 		if line != expected {
 			t.Errorf("line doesn't match:\n\texpected: %s\n\tgot: %s", expected, line)
 			continue
@@ -83,7 +85,8 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	}
 	defer f.Close()
 
-	ta := NewTailer(nil)
+	lines := make(chan string)
+	ta := NewTailer(nil, lines)
 	ta.Tail(logfile)
 
 	_, err = f.WriteString("a")
@@ -92,7 +95,7 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	}
 	go ta.handleLogChange(logfile)
 	select {
-	case line := <-ta.Line:
+	case line := <-ta.lines:
 		t.Errorf("unexpected line found: %s", line)
 	default:
 	}
@@ -104,7 +107,7 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	go ta.handleLogChange(logfile)
 
 	select {
-	case line := <-ta.Line:
+	case line := <-ta.lines:
 		t.Errorf("unexpected line found: %s", line)
 	default:
 	}
@@ -114,7 +117,7 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 		t.Error(err)
 	}
 	go ta.handleLogChange(logfile)
-	line := <-ta.Line
+	line := <-ta.lines
 	if line != "ab" {
 		t.Error("line doesn't match: expected 'ab' vs %s", line)
 	}
