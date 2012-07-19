@@ -13,6 +13,7 @@ GOFILES=\
 	unparser.go\
 	vm.go\
 	watch.go\
+	collectd.go\
 
 GOTESTFILES=\
 	ex_test.go\

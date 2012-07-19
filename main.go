@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	_ "net/http/pprof"
 )
@@ -27,6 +28,10 @@ var (
 	progs *string = flag.String("progs", "", "Directory containing programs")
 
 	one_shot *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
+
+	collectd_socketpath *string = flag.String("collectd_socketpath", "",
+		"Path to collectd unixsock to write metrics to.")
+	push_interval *int = flag.Int("metric_push_interval", 60, "Interval between metric pushes, in seconds")
 )
 
 var (
@@ -120,6 +125,12 @@ func OneShot(logfile string, lines chan string) error {
 	return nil
 }
 
+func WriteMetrics() {
+	if *collectd_socketpath != "" {
+		CollectdWriteMetrics(*collectd_socketpath)
+	}
+}
+
 func main() {
 	flag.Parse()
 
@@ -189,6 +200,9 @@ func main() {
 			log.Fatalf("Error marshalling metrics into json: ", err.Error())
 		}
 		os.Stdout.Write(b)
+		if *collectd_socketpath != "" {
+			CollectdWriteMetrics(*collectd_socketpath)
+		}
 	} else {
 		w := NewWatcher()
 		t := NewTailer(w, lines)
@@ -204,6 +218,18 @@ func main() {
 
 		http.HandleFunc("/json", handleJson)
 		http.HandleFunc("/csv", handleCsv)
+		if *collectd_socketpath != "" {
+			ticker := time.NewTicker(time.Duration(*push_interval) * time.Second)
+			go func() {
+				for {
+					select {
+					case <-ticker.C:
+						WriteMetrics()
+					}
+				}
+			}()
+		}
+
 		log.Fatal(http.ListenAndServe(":"+*port, nil))
 	}
 }
