@@ -30,11 +30,11 @@ func CollectdWriteMetrics(socketpath string) {
 		if m.D != nil {
 			collectd_export_total.Add(1)
 			_, err := fmt.Fprintf(c, "PUTVAL \"%s/%s-%s/%s-%s\" interval=%d %d:%d\n",
-				"localhost",
-				"prog",
+				"localhost", // TODO(jaq): These are hacks; do this better.
+				"prog",      // We don't store the name of the program that created the metric.
 				m.Name,
 				strings.ToLower(m.Kind.String()),
-				"foo",
+				"foo", // This is an even bigger hack; I forget why I put this here.
 				push_interval,
 				m.D.Time.Unix(),
 				m.D.Value)
