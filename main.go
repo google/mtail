@@ -33,7 +33,8 @@ var (
 		"Path to collectd unixsock to write metrics to.")
 	graphite_hostport *string = flag.String("graphite_hostport", "",
 		"Host:port to graphite carbon server to write metrics to.")
-	push_interval *int = flag.Int("metric_push_interval", 60, "Interval between metric pushes, in seconds")
+	push_interval *int = flag.Int("metric_push_interval_seconds", 60,
+		"Interval between metric pushes, in seconds")
 )
 
 var (
