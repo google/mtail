@@ -31,6 +31,8 @@ var (
 
 	collectd_socketpath *string = flag.String("collectd_socketpath", "",
 		"Path to collectd unixsock to write metrics to.")
+	graphite_hostport *string = flag.String("graphite_hostport", "",
+		"Host:port to graphite carbon server to write metrics to.")
 	push_interval *int = flag.Int("metric_push_interval", 60, "Interval between metric pushes, in seconds")
 )
 
@@ -129,6 +131,9 @@ func WriteMetrics() {
 	if *collectd_socketpath != "" {
 		CollectdWriteMetrics(*collectd_socketpath)
 	}
+	if *graphite_hostport != "" {
+		GraphiteWriteMetrics(*graphite_hostport)
+	}
 }
 
 func main() {
@@ -200,9 +205,7 @@ func main() {
 			log.Fatalf("Error marshalling metrics into json: ", err.Error())
 		}
 		os.Stdout.Write(b)
-		if *collectd_socketpath != "" {
-			CollectdWriteMetrics(*collectd_socketpath)
-		}
+		WriteMetrics()
 	} else {
 		w := NewWatcher()
 		t := NewTailer(w, lines)

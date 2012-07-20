@@ -14,6 +14,7 @@ GOFILES=\
 	vm.go\
 	watch.go\
 	collectd.go\
+	graphite.go\
 
 GOTESTFILES=\
 	ex_test.go\

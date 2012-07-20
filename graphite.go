@@ -9,16 +9,17 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 )
 
 var (
-	collectd_export_total   = expvar.NewInt("collectd_export_total")
-	collectd_export_success = expvar.NewInt("collectd_export_success")
+	graphite_export_total   = expvar.NewInt("graphite_export_total")
+	graphite_export_success = expvar.NewInt("graphite_export_success")
 )
 
-func CollectdWriteMetrics(socketpath string) {
-	c, err := net.Dial("unix", socketpath)
+func GraphiteWriteMetrics(hostport string) {
+	c, err := net.Dial("tcp", hostport)
 	if err != nil {
 		log.Fatalf("Dial error: %s\n", err)
 	}
@@ -28,44 +29,35 @@ func CollectdWriteMetrics(socketpath string) {
 	defer metric_lock.RUnlock()
 	for _, m := range metrics {
 		if m.D != nil {
-			collectd_export_total.Add(1)
-			_, err := fmt.Fprintf(c, "PUTVAL \"%s/%s-%s/%s-%s\" interval=%d %d:%d\n",
-				"localhost",
-				"prog",
+			graphite_export_total.Add(1)
+			_, err := fmt.Fprintf(c, "%s %v %v\n",
 				m.Name,
-				strings.ToLower(m.Kind.String()),
-				"foo",
-				push_interval,
-				m.D.Time.Unix(),
-				m.D.Value)
+				m.D.Value,
+				m.D.Time.Unix())
 			if err == nil {
 				_, err = bufio.NewReader(c).ReadString('\n')
 				if err != nil {
 					log.Printf("Read error: %s\n", err)
 				} else {
-					collectd_export_success.Add(1)
+					graphite_export_success.Add(1)
 				}
 			} else {
 				log.Printf("Write error: %s\n", err)
 			}
 		} else {
 			for k, d := range m.Values {
-				collectd_export_total.Add(1)
-				_, err := fmt.Fprintf(c, "PUTVAL \"%s/%s-%s/%s-%s\" interval=%d %d:%d\n",
-					"localhost",
-					"prog",
+				graphite_export_total.Add(1)
+				_, err := fmt.Fprintf(c, "%s.%s %v %v\n",
 					m.Name,
-					strings.ToLower(m.Kind.String()),
-					strings.Join(key_unhash(k), "-"),
-					push_interval,
-					d.Time.Unix(),
-					d.Value)
+					strings.Join(key_unhash(k), "."),
+					d.Value,
+					d.Time.Unix())
 				if err == nil {
 					_, err = bufio.NewReader(c).ReadString('\n')
 					if err != nil {
 						log.Fatalf("Read error: %s\n", err)
 					} else {
-						collectd_export_success.Add(1)
+						graphite_export_success.Add(1)
 					}
 				} else {
 					log.Printf("Write error: %s\n", err)
