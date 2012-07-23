@@ -9,12 +9,17 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 )
 
 var (
 	collectd_export_total   = expvar.NewInt("collectd_export_total")
 	collectd_export_success = expvar.NewInt("collectd_export_success")
+)
+
+var (
+	hostname string
 )
 
 func CollectdWriteMetrics(socketpath string) {
@@ -29,12 +34,11 @@ func CollectdWriteMetrics(socketpath string) {
 	for _, m := range metrics {
 		if m.D != nil {
 			collectd_export_total.Add(1)
-			_, err := fmt.Fprintf(c, "PUTVAL \"%s/%s-%s/%s-%s\" interval=%d %d:%d\n",
-				"localhost", // TODO(jaq): These are hacks; do this better.
-				"prog",      // We don't store the name of the program that created the metric.
-				m.Name,
+			_, err := fmt.Fprintf(c, "PUTVAL \"%s/emtail-%s/%s-%s\" interval=%d %d:%d\n",
+				hostname,
+				"prog", // We don't store the name of the program that created the metric.
 				strings.ToLower(m.Kind.String()),
-				"foo", // This is an even bigger hack; I forget why I put this here.
+				m.Name,
 				push_interval,
 				m.D.Time.Unix(),
 				m.D.Value)
@@ -51,12 +55,12 @@ func CollectdWriteMetrics(socketpath string) {
 		} else {
 			for k, d := range m.Values {
 				collectd_export_total.Add(1)
-				_, err := fmt.Fprintf(c, "PUTVAL \"%s/%s-%s/%s-%s\" interval=%d %d:%d\n",
-					"localhost",
+				_, err := fmt.Fprintf(c, "PUTVAL \"%s/emtail-%s/%s-%s\" interval=%d %d:%d\n",
+					hostname,
 					"prog",
 					m.Name,
 					strings.ToLower(m.Kind.String()),
-					strings.Join(key_unhash(k), "-"),
+					strings.Join(key_unhash(k), "."),
 					push_interval,
 					d.Time.Unix(),
 					d.Value)
@@ -73,5 +77,13 @@ func CollectdWriteMetrics(socketpath string) {
 			}
 		}
 
+	}
+}
+
+func init() {
+	var err error
+	hostname, err = os.Hostname()
+	if err != nil {
+		log.Fatalf("Error getting hostname: %s\n", err)
 	}
 }
