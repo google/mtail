@@ -17,8 +17,9 @@ const (
 )
 
 var (
-	metric_lock sync.RWMutex
-	metrics     []*Metric
+	metric_lock        sync.RWMutex
+	metrics            []*Metric
+	metric_update_time time.Time
 )
 
 func (m metric_type) String() string {
@@ -80,6 +81,7 @@ func (d *Datum) stamp(timestamp time.Time) {
 	} else {
 		d.Time = timestamp
 	}
+	metric_update_time = time.Now()
 }
 
 func (d *Datum) Set(value int64, timestamp time.Time) {

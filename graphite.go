@@ -4,7 +4,6 @@
 package main
 
 import (
-	"bufio"
 	"expvar"
 	"fmt"
 	"log"
@@ -17,52 +16,34 @@ var (
 	graphite_export_success = expvar.NewInt("graphite_export_success")
 )
 
-func GraphiteWriteMetrics(hostport string) {
+func GraphiteWriteMetrics(hostport string) error {
 	c, err := net.Dial("tcp", hostport)
 	if err != nil {
-		log.Fatalf("Dial error: %s\n", err)
+		log.Printf("Dial error: %s\n", err)
+		return err
 	}
 	defer c.Close()
 
-	metric_lock.RLock()
-	defer metric_lock.RUnlock()
-	for _, m := range metrics {
-		if m.D != nil {
-			graphite_export_total.Add(1)
-			_, err := fmt.Fprintf(c, "%s %v %v\n",
-				m.Name,
-				m.D.Value,
-				m.D.Time.Unix())
-			if err == nil {
-				_, err = bufio.NewReader(c).ReadString('\n')
-				if err != nil {
-					log.Printf("Read error: %s\n", err)
-				} else {
-					graphite_export_success.Add(1)
-				}
-			} else {
-				log.Printf("Write error: %s\n", err)
-			}
-		} else {
-			for k, d := range m.Values {
-				graphite_export_total.Add(1)
-				_, err := fmt.Fprintf(c, "%s.%s %v %v\n",
-					m.Name,
-					strings.Join(key_unhash(k), "."),
-					d.Value,
-					d.Time.Unix())
-				if err == nil {
-					_, err = bufio.NewReader(c).ReadString('\n')
-					if err != nil {
-						log.Fatalf("Read error: %s\n", err)
-					} else {
-						graphite_export_success.Add(1)
-					}
-				} else {
-					log.Printf("Write error: %s\n", err)
-				}
-			}
-		}
+	return WriteSocketMetrics(c, MetricToGraphite, graphite_export_total, graphite_export_success)
+}
 
+func MetricToGraphite(m *Metric) []string {
+	var ret []string
+	if m.D != nil {
+		s := fmt.Sprintf("%s %v %v\n",
+			m.Name,
+			m.D.Value,
+			m.D.Time.Unix())
+		ret = append(ret, s)
+	} else {
+		for k, d := range m.Values {
+			s := fmt.Sprintf("%s.%s %v %v\n",
+				m.Name,
+				strings.Join(key_unhash(k), "."),
+				d.Value,
+				d.Time.Unix())
+			ret = append(ret, s)
+		}
 	}
+	return ret
 }

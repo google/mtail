@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"expvar"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -22,62 +23,74 @@ var (
 	hostname string
 )
 
-func CollectdWriteMetrics(socketpath string) {
+func CollectdWriteMetrics(socketpath string) error {
 	c, err := net.Dial("unix", socketpath)
 	if err != nil {
-		log.Fatalf("Dial error: %s\n", err)
+		return err
 	}
 	defer c.Close()
 
+	return WriteSocketMetrics(c, MetricToCollectd, collectd_export_total, collectd_export_success)
+}
+
+const (
+	COLLECTD_FORMAT = "PUTVAL \"%s/emtail-%s/%s-%s\" interval=%d %d:%d\n"
+)
+
+func MetricToCollectd(m *Metric) []string {
+	var ret []string
+	if m.D != nil {
+		s := fmt.Sprintf(COLLECTD_FORMAT,
+			hostname,
+			"prog", // We don't store the name of the program that created the metric.
+			strings.ToLower(m.Kind.String()),
+			m.Name,
+			*push_interval,
+			m.D.Time.Unix(),
+			m.D.Value)
+		ret = append(ret, s)
+	} else {
+		for k, d := range m.Values {
+			s := fmt.Sprintf(COLLECTD_FORMAT,
+				hostname,
+				"prog",
+				strings.ToLower(m.Kind.String()),
+				m.Name+"-"+strings.Join(key_unhash(k), "-"),
+				*push_interval,
+				d.Time.Unix(),
+				d.Value)
+			ret = append(ret, s)
+		}
+	}
+	return ret
+}
+
+type formatter func(*Metric) []string
+
+func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, export_success *expvar.Int) error {
 	metric_lock.RLock()
 	defer metric_lock.RUnlock()
+
 	for _, m := range metrics {
-		if m.D != nil {
-			collectd_export_total.Add(1)
-			_, err := fmt.Fprintf(c, "PUTVAL \"%s/emtail-%s/%s-%s\" interval=%d %d:%d\n",
-				hostname,
-				"prog", // We don't store the name of the program that created the metric.
-				strings.ToLower(m.Kind.String()),
-				m.Name,
-				push_interval,
-				m.D.Time.Unix(),
-				m.D.Value)
+		export_total.Add(1)
+		for _, line := range f(m) {
+			log.Printf("%s", line)
+			_, err := fmt.Fprintf(c, "%s", line)
 			if err == nil {
 				_, err = bufio.NewReader(c).ReadString('\n')
 				if err != nil {
 					log.Printf("Read error: %s\n", err)
+					return err
 				} else {
-					collectd_export_success.Add(1)
+					export_success.Add(1)
 				}
 			} else {
 				log.Printf("Write error: %s\n", err)
-			}
-		} else {
-			for k, d := range m.Values {
-				collectd_export_total.Add(1)
-				_, err := fmt.Fprintf(c, "PUTVAL \"%s/emtail-%s/%s-%s\" interval=%d %d:%d\n",
-					hostname,
-					"prog",
-					m.Name,
-					strings.ToLower(m.Kind.String()),
-					strings.Join(key_unhash(k), "."),
-					push_interval,
-					d.Time.Unix(),
-					d.Value)
-				if err == nil {
-					_, err = bufio.NewReader(c).ReadString('\n')
-					if err != nil {
-						log.Fatalf("Read error: %s\n", err)
-					} else {
-						collectd_export_success.Add(1)
-					}
-				} else {
-					log.Printf("Write error: %s\n", err)
-				}
+				return err
 			}
 		}
-
 	}
+	return nil
 }
 
 func init() {

@@ -42,6 +42,10 @@ var (
 	log_count  = expvar.NewInt("log_count")
 )
 
+var (
+	last_metric_push_time time.Time
+)
+
 // CSV export
 func handleCsv(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
@@ -129,12 +133,22 @@ func OneShot(logfile string, lines chan string) error {
 }
 
 func WriteMetrics() {
+	if metric_update_time.Sub(last_metric_push_time) <= 0 {
+		return
+	}
 	if *collectd_socketpath != "" {
-		CollectdWriteMetrics(*collectd_socketpath)
+		err := CollectdWriteMetrics(*collectd_socketpath)
+		if err != nil {
+			log.Printf("Collectd write error: %s\n", err)
+		}
 	}
 	if *graphite_hostport != "" {
-		GraphiteWriteMetrics(*graphite_hostport)
+		err := GraphiteWriteMetrics(*graphite_hostport)
+		if err != nil {
+			log.Printf("Collectd write error: %s\n", err)
+		}
 	}
+	last_metric_push_time = time.Now()
 }
 
 func main() {
