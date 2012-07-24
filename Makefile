@@ -13,8 +13,7 @@ GOFILES=\
 	unparser.go\
 	vm.go\
 	watch.go\
-	collectd.go\
-	graphite.go\
+	export.go\
 
 GOTESTFILES=\
 	ex_test.go\
@@ -24,6 +23,7 @@ GOTESTFILES=\
 	vm_test.go\
 	watch_test.go\
 	bench_test.go\
+	export_test.go\
 
 CLEANFILES+=\
 	parser.go\
