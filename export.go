@@ -22,6 +22,9 @@ var (
 	graphite_export_total   = expvar.NewInt("graphite_export_total")
 	graphite_export_success = expvar.NewInt("graphite_export_success")
 
+	statsd_export_total   = expvar.NewInt("statsd_export_total")
+	statsd_export_success = expvar.NewInt("statsd_export_success")
+
 	// Internal state
 	hostname string
 )
@@ -123,6 +126,35 @@ func MetricToGraphite(m *Metric) []string {
 				strings.Join(key_unhash(k), "."),
 				d.Value,
 				d.Time.Unix())
+			ret = append(ret, s)
+		}
+	}
+	return ret
+}
+
+func StatsdWriteMetrics(hostport string) error {
+	c, err := net.Dial("udp", hostport)
+	if err != nil {
+		log.Printf("Dial error: %s\n", err)
+		return err
+	}
+	defer c.Close()
+	return WriteSocketMetrics(c, MetricToStatsd, statsd_export_total, statsd_export_success)
+}
+
+func MetricToStatsd(m *Metric) []string {
+	var ret []string
+	// TODO(jaq): handle units better, send timing as |ms
+	if m.D != nil {
+		s := fmt.Sprintf("%s:%d|c",
+			m.Name,
+			m.D.Value)
+		ret = append(ret, s)
+	} else {
+		for k, d := range m.Values {
+			s := fmt.Sprintf("%s:%d|c",
+				m.Name+"."+strings.Join(key_unhash(k), "."),
+				d.Value)
 			ret = append(ret, s)
 		}
 	}

@@ -33,6 +33,8 @@ var (
 		"Path to collectd unixsock to write metrics to.")
 	graphite_hostport *string = flag.String("graphite_hostport", "",
 		"Host:port to graphite carbon server to write metrics to.")
+	statsd_hostport *string = flag.String("statsd_hostport", "",
+		"Host:port to statsd server to write metrics to.")
 	push_interval *int = flag.Int("metric_push_interval_seconds", 60,
 		"Interval between metric pushes, in seconds")
 )
@@ -146,6 +148,12 @@ func WriteMetrics() {
 		err := GraphiteWriteMetrics(*graphite_hostport)
 		if err != nil {
 			log.Printf("Collectd write error: %s\n", err)
+		}
+	}
+	if *statsd_hostport != "" {
+		err := StatsdWriteMetrics(*statsd_hostport)
+		if err != nil {
+			log.Printf("Statsd error: %s\n", err)
 		}
 	}
 	last_metric_push_time = time.Now()
