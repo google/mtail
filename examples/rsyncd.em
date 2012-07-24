@@ -5,7 +5,7 @@ counter bytes_total by operation
 counter connections_total
 counter connection_time_total as "connection-time_total"
 counter transfers_total by operation, module
-gauge connection_time by pid
+hidden gauge connection_time by pid
 
 /^(?P<date>\d+\/\d+\/\d+ \d+:\d+:\d+) \[(?P<pid>\d+)\] / {
   strptime($date, "2006/01/02 15:04:05")

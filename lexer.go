@@ -53,6 +53,7 @@ var keywords = map[string]Lexeme{
 	"by":      BY,
 	"counter": COUNTER,
 	"gauge":   GAUGE,
+	"hidden":  HIDDEN,
 }
 
 // List of builtin functions.  Keep this list sorted!

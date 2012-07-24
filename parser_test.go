@@ -30,6 +30,9 @@ var kMtailPrograms = []validProgram{
 	{"declare multi-dimensioned counter",
 		"counter foo by bar, baz, quux"},
 
+	{"declare hidden counter",
+		"hidden counter foo"},
+
 	{"simple pattern action",
 		"/foo/ {}"},
 

@@ -43,6 +43,7 @@ type Settable interface {
 type Metric struct {
 	Name   string
 	Kind   metric_type
+	hidden bool
 	D      *Datum
 	Keys   []string
 	Values map[string]*Datum

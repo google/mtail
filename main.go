@@ -56,6 +56,9 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	c := csv.NewWriter(w)
 
 	for _, m := range metrics {
+		if m.hidden {
+			continue
+		}
 		var record []string
 		if m.D != nil {
 			record = []string{m.Name,
@@ -73,7 +76,6 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 				}
 				record = append(record, fmt.Sprintf("%d", d.Value))
 				record = append(record, fmt.Sprintf("%s", d.Time))
-
 			}
 		}
 		c.Write(record)
@@ -86,7 +88,14 @@ func handleJson(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.RUnlock()
 
-	b, err := json.MarshalIndent(metrics, "", "  ")
+	exported_metrics := make([]*Metric, 0)
+	for _, m := range metrics {
+		if !m.hidden {
+			exported_metrics = append(exported_metrics, m)
+		}
+	}
+
+	b, err := json.MarshalIndent(exported_metrics, "", "  ")
 	if err != nil {
 		log.Println("error marshalling metrics into json:", err.Error())
 	}

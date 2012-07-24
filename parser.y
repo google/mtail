@@ -35,11 +35,12 @@ import (
 %type <mtype> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
+%type <flag> hide_spec
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
 // Reserved words
-%token COUNTER GAUGE AS BY
+%token COUNTER GAUGE AS BY HIDDEN
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -249,11 +250,11 @@ cond
   ;
 
 decl
-  : type_spec declarator
+  : hide_spec type_spec declarator
   {
-    $$ = $2
+    $$ = $3
     d := $$.(*declNode)
-    d.kind = $1
+    d.kind = $2
 
     var n string
     if d.exported_name != "" {
@@ -264,15 +265,28 @@ decl
     if len(d.keys) > 0 {
       d.m = &Metric{Name: n, Kind: d.kind,
                     Keys:   d.keys,
+                    hidden: $1,
                     Values: make(map[string]*Datum, 0)}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, DimensionedMetricSymbol, d.m,
                                            Emtaillex.(*parser).pos)
     } else {
       d.m = &Metric{Name: n, Kind: d.kind,
+                    hidden: $1,
                     D: &Datum{}}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, ScalarMetricSymbol, d.m,
                                            Emtaillex.(*parser).pos)
     }
+  }
+  ;
+
+hide_spec
+  : /* empty */
+  {
+    $$ = false
+  }
+  | HIDDEN
+  {
+    $$ = true
   }
   ;
 

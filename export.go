@@ -79,6 +79,9 @@ func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, 
 	defer metric_lock.RUnlock()
 
 	for _, m := range metrics {
+		if m.hidden {
+			continue
+		}
 		export_total.Add(1)
 		for _, line := range f(m) {
 			log.Printf("%s", line)

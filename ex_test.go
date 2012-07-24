@@ -97,8 +97,15 @@ TestLoop:
 			continue
 		}
 
-		if !reflect.DeepEqual(expected_metrics, metrics) {
-			t.Errorf("%s: metrics don't match.\n\texpected: %s\n\treceived: %s", tc.programfile, expected_metrics, metrics)
+		exported_metrics := make([]*Metric, 0)
+		for _, m := range metrics {
+			if !m.hidden {
+				exported_metrics = append(exported_metrics, m)
+			}
+		}
+
+		if !reflect.DeepEqual(expected_metrics, exported_metrics) {
+			t.Errorf("%s: metrics don't match.\n\texpected: %s\n\treceived: %s", tc.programfile, expected_metrics, exported_metrics)
 		}
 	}
 }
