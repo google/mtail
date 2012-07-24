@@ -84,19 +84,16 @@ func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, 
 		}
 		export_total.Add(1)
 		for _, line := range f(m) {
-			log.Printf("%s", line)
-			_, err := fmt.Fprintf(c, "%s", line)
+			_, err := fmt.Fprint(c, line)
 			if err == nil {
 				_, err = bufio.NewReader(c).ReadString('\n')
 				if err != nil {
-					log.Printf("Read error: %s\n", err)
-					return err
+					return fmt.Errorf("Read error: %s\n", err)
 				} else {
 					export_success.Add(1)
 				}
 			} else {
-				log.Printf("Write error: %s\n", err)
-				return err
+				return fmt.Errorf("Write error: %s\n", err)
 			}
 		}
 	}
@@ -106,8 +103,7 @@ func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, 
 func GraphiteWriteMetrics(hostport string) error {
 	c, err := net.Dial("tcp", hostport)
 	if err != nil {
-		log.Printf("Dial error: %s\n", err)
-		return err
+		return fmt.Errorf("Dial error: %s\n", err)
 	}
 	defer c.Close()
 
@@ -138,8 +134,7 @@ func MetricToGraphite(m *Metric) []string {
 func StatsdWriteMetrics(hostport string) error {
 	c, err := net.Dial("udp", hostport)
 	if err != nil {
-		log.Printf("Dial error: %s\n", err)
-		return err
+		return fmt.Errorf("Dial error: %s\n", err)
 	}
 	defer c.Close()
 	return WriteSocketMetrics(c, MetricToStatsd, statsd_export_total, statsd_export_success)
