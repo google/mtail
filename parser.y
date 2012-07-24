@@ -223,7 +223,6 @@ primary_expr
 cond
   : REGEX
   {
-      /* Emtaillex.(*parser).startScope() */
       if re, err := regexp.Compile($1); err != nil {
           Emtaillex.(*parser).Error(fmt.Sprintf(err.Error()))
           // TODO(jaq): force a parse error
@@ -233,7 +232,8 @@ cond
           // the current scope, so that future CAPTUREGROUPs can retrieve their
           // value.  At parse time, we can warn about nonexistent names.
           for i := 1; i < re.NumSubexp() + 1; i++ {
-            sym := Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i), CaprefSymbol, $$,
+            sym := Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
+                                                CaprefSymbol, $$,
                                                 Emtaillex.(*parser).pos)
             sym.addr = i
           }

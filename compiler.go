@@ -75,7 +75,6 @@ func (c *compiler) compile(untyped_node node) {
 		metrics = append(metrics, n.m)
 
 	case *condNode:
-		// TODO(jaq): split off a new goroutine thread instead of doing conds serially.
 		if n.cond != nil {
 			c.compile(n.cond)
 		}
