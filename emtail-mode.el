@@ -25,11 +25,11 @@
   "Syntax table used while in `emtail-mode'.")
 
 (defvar emtail-mode-keywords
-  '("counter" "gauge" "as" "by")
+  '("counter" "gauge" "as" "by" "hidden")
   "All keywords in the emtail language.  Used for font locking.")
 
 (defvar emtail-mode-builtins
-  '("strptime")
+  '("strptime" "timestamp")
   "All keywords in the emtail language.  Used for font locking.")
 
 (defvar emtail-mode-font-lock-defaults

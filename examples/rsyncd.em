@@ -5,6 +5,8 @@ counter bytes_total by operation
 counter connections_total
 counter connection_time_total as "connection-time_total"
 counter transfers_total by operation, module
+# Use this gauge to measure duration between start and end time
+# per connection.
 hidden gauge connection_time by pid
 
 /^(?P<date>\d+\/\d+\/\d+ \d+:\d+:\d+) \[(?P<pid>\d+)\] / {
