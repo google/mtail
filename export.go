@@ -43,7 +43,7 @@ func CollectdWriteMetrics(socketpath string) error {
 	return WriteSocketMetrics(c, MetricToCollectd, collectd_export_total, collectd_export_success)
 }
 
-func MetricToCollectd(m *Metric) []string {
+func MetricToCollectd(prog string, m *Metric) []string {
 	var ret []string
 	if m.D != nil {
 		s := fmt.Sprintf(COLLECTD_FORMAT,
@@ -59,7 +59,7 @@ func MetricToCollectd(m *Metric) []string {
 		for k, d := range m.Values {
 			s := fmt.Sprintf(COLLECTD_FORMAT,
 				hostname,
-				"prog",
+				prog,
 				strings.ToLower(m.Kind.String()),
 				m.Name+"-"+strings.Join(key_unhash(k), "-"),
 				*push_interval,
@@ -72,28 +72,30 @@ func MetricToCollectd(m *Metric) []string {
 }
 
 // Format a metric into a string to be written to one of the timeseries sockets
-type formatter func(*Metric) []string
+type formatter func(string, *Metric) []string
 
 func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, export_success *expvar.Int) error {
 	metric_lock.RLock()
 	defer metric_lock.RUnlock()
 
-	for _, m := range metrics {
-		if m.hidden {
-			continue
-		}
-		export_total.Add(1)
-		for _, line := range f(m) {
-			_, err := fmt.Fprint(c, line)
-			if err == nil {
-				_, err = bufio.NewReader(c).ReadString('\n')
-				if err != nil {
-					return fmt.Errorf("Read error: %s\n", err)
+	for p, _ := range metrics {
+		for _, m := range metrics[p] {
+			if m.hidden {
+				continue
+			}
+			export_total.Add(1)
+			for _, line := range f(p, m) {
+				_, err := fmt.Fprint(c, line)
+				if err == nil {
+					_, err = bufio.NewReader(c).ReadString('\n')
+					if err != nil {
+						return fmt.Errorf("Read error: %s\n", err)
+					} else {
+						export_success.Add(1)
+					}
 				} else {
-					export_success.Add(1)
+					return fmt.Errorf("Write error: %s\n", err)
 				}
-			} else {
-				return fmt.Errorf("Write error: %s\n", err)
 			}
 		}
 	}
@@ -110,17 +112,19 @@ func GraphiteWriteMetrics(hostport string) error {
 	return WriteSocketMetrics(c, MetricToGraphite, graphite_export_total, graphite_export_success)
 }
 
-func MetricToGraphite(m *Metric) []string {
+func MetricToGraphite(prog string, m *Metric) []string {
 	var ret []string
 	if m.D != nil {
-		s := fmt.Sprintf("%s %v %v\n",
+		s := fmt.Sprintf("%s.%s %v %v\n",
+			prog,
 			m.Name,
 			m.D.Value,
 			m.D.Time.Unix())
 		ret = append(ret, s)
 	} else {
 		for k, d := range m.Values {
-			s := fmt.Sprintf("%s.%s %v %v\n",
+			s := fmt.Sprintf("%s.%s.%s %v %v\n",
+				prog,
 				m.Name,
 				strings.Join(key_unhash(k), "."),
 				d.Value,
@@ -140,18 +144,21 @@ func StatsdWriteMetrics(hostport string) error {
 	return WriteSocketMetrics(c, MetricToStatsd, statsd_export_total, statsd_export_success)
 }
 
-func MetricToStatsd(m *Metric) []string {
+func MetricToStatsd(prog string, m *Metric) []string {
 	var ret []string
 	// TODO(jaq): handle units better, send timing as |ms
 	if m.D != nil {
-		s := fmt.Sprintf("%s:%d|c",
+		s := fmt.Sprintf("%s.%s:%d|c",
+			prog,
 			m.Name,
 			m.D.Value)
 		ret = append(ret, s)
 	} else {
 		for k, d := range m.Values {
-			s := fmt.Sprintf("%s:%d|c",
-				m.Name+"."+strings.Join(key_unhash(k), "."),
+			s := fmt.Sprintf("%s.%s.%s:%d|c",
+				prog,
+				m.Name,
+				strings.Join(key_unhash(k), "."),
 				d.Value)
 			ret = append(ret, s)
 		}

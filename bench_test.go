@@ -29,7 +29,7 @@ func BenchmarkLogProcessing(b *testing.B) {
 TestLoop:
 	for _, bc := range logProcessingBenchmarks {
 		b.StopTimer()
-		metrics = make([]*Metric, 0)
+		metrics = make(map[string][]*Metric, 0)
 
 		p, err := os.Open(bc.progfile)
 		if err != nil {

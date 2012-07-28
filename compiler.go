@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 var compile_only *bool = flag.Bool("compile_only", false, "Compile programs only.")
@@ -35,14 +35,18 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		output := unparse(p.root)
 		log.Printf("Unparsing %s:\n%s", name, output)
 	}
-	file := filepath.Base(name)
-	c := &compiler{name: file, symtab: p.s}
+	if strings.HasSuffix(name, ".em") {
+		name = name[:len(name)-3]
+	}
+	metrics[name] = make([]*Metric, 0)
+	c := &compiler{name: name, symtab: p.s}
 	c.compile(p.root)
 	if len(c.errors) > 0 {
 		return nil, c.errors
 	}
+
 	vm := &vm{
-		name: file,
+		name: name,
 		re:   c.re,
 		str:  c.str,
 		prog: c.prog}
@@ -71,8 +75,8 @@ func (c *compiler) compile(untyped_node node) {
 		}
 
 	case *declNode:
-		n.sym.addr = len(metrics)
-		metrics = append(metrics, n.m)
+		n.sym.addr = len(metrics[c.name])
+		metrics[c.name] = append(metrics[c.name], n.m)
 
 	case *condNode:
 		if n.cond != nil {

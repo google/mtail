@@ -18,7 +18,7 @@ const (
 
 var (
 	metric_lock        sync.RWMutex
-	metrics            []*Metric
+	metrics            map[string][]*Metric // Metrics indexed by prog
 	metric_update_time time.Time
 )
 
@@ -100,5 +100,5 @@ func (d *Datum) IncBy(delta int64, timestamp time.Time) {
 }
 
 func init() {
-	metrics = make([]*Metric, 0)
+	metrics = make(map[string][]*Metric, 0)
 }

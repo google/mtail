@@ -143,7 +143,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		case Incrementable:
 			d.IncBy(delta, t.time)
 		case int:
-			m := metrics[d]
+			m := metrics[v.name][d]
 			m.IncBy(delta, t.time)
 		default:
 			return v.errorf("Unexpected type to increment: %T %q", d, d)
@@ -174,7 +174,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		case Settable:
 			d.Set(value, t.time)
 		case int:
-			m := metrics[d]
+			m := metrics[v.name][d]
 			m.Set(value, t.time)
 		default:
 			return v.errorf("Unexpected type to set: %T %q", d, d)
@@ -276,7 +276,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		t.Push(b - a)
 
 	case mload:
-		t.Push(metrics[i.opnd])
+		t.Push(metrics[v.name][i.opnd])
 
 	case dload:
 		m := t.Pop().(*Metric)

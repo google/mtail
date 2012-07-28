@@ -100,8 +100,6 @@ var programs = []testProgram{
 func TestCompileAndRun(t *testing.T) {
 	for _, tc := range programs {
 		for _, i := range tc.io {
-			metrics = make([]*Metric, 0)
-
 			v, err := Compile(tc.name, strings.NewReader(tc.source))
 			if err != nil {
 				t.Errorf("Compile errors: %q", err)

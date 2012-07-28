@@ -55,31 +55,35 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 
 	c := csv.NewWriter(w)
 
-	for _, m := range metrics {
-		if m.hidden {
-			continue
-		}
-		var record []string
-		if m.D != nil {
-			record = []string{m.Name,
-				fmt.Sprintf("%d", m.Kind)}
-			record = append(record, fmt.Sprintf("%d", m.D.Value))
-			record = append(record, fmt.Sprintf("%s", m.D.Time))
-		} else {
-			record = []string{m.Name,
-				fmt.Sprintf("%d", m.Kind),
-				"", ""} // Datum value, timestamp
-			for k, d := range m.Values {
-				keyvals := key_unhash(k)
-				for i, key := range m.Keys {
-					record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
-				}
-				record = append(record, fmt.Sprintf("%d", d.Value))
-				record = append(record, fmt.Sprintf("%s", d.Time))
+	for prog, p := range metrics {
+		for _, m := range p {
+			if m.hidden {
+				continue
 			}
+			var record []string
+			record = append(record, prog)
+			if m.D != nil {
+				record = []string{m.Name,
+					fmt.Sprintf("%d", m.Kind)}
+				record = append(record, fmt.Sprintf("%d", m.D.Value))
+				record = append(record, fmt.Sprintf("%s", m.D.Time))
+			} else {
+				record = []string{m.Name,
+					fmt.Sprintf("%d", m.Kind),
+					"", ""} // Datum value, timestamp
+				for k, d := range m.Values {
+					keyvals := key_unhash(k)
+					for i, key := range m.Keys {
+						record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
+					}
+					record = append(record, fmt.Sprintf("%d", d.Value))
+					record = append(record, fmt.Sprintf("%s", d.Time))
+				}
+			}
+			c.Write(record)
 		}
-		c.Write(record)
 	}
+
 	c.Flush()
 }
 
@@ -88,10 +92,13 @@ func handleJson(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.RUnlock()
 
-	exported_metrics := make([]*Metric, 0)
-	for _, m := range metrics {
-		if !m.hidden {
-			exported_metrics = append(exported_metrics, m)
+	exported_metrics := make(map[string][]*Metric, 0)
+	for prog, _ := range metrics {
+		exported_metrics[prog] = make([]*Metric, 0)
+		for _, m := range metrics[prog] {
+			if !m.hidden {
+				exported_metrics[prog] = append(exported_metrics[prog], m)
+			}
 		}
 	}
 
@@ -197,7 +204,8 @@ func main() {
 			continue
 		}
 		defer f.Close()
-		v, errs := Compile(fi.Name(), f)
+		filename := filepath.Base(fi.Name())
+		v, errs := Compile(filename, f)
 		if errs != nil {
 			errors = 1
 			for _, e := range errs {

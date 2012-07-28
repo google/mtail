@@ -25,7 +25,7 @@ func TestMetricToCollectd(t *testing.T) {
 		Name: "foo",
 		Kind: Counter,
 		D:    &Datum{Value: 37, Time: ts}}
-	r := MetricToCollectd(scalar_metric)
+	r := MetricToCollectd("prog", scalar_metric)
 	expected := []string{"PUTVAL \"" + hostname + "/emtail-prog/counter-foo\" interval=60 1343124840:37\n"}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
@@ -38,7 +38,7 @@ func TestMetricToCollectd(t *testing.T) {
 		Values: map[string]*Datum{
 			"snuh": &Datum{37, ts},
 			"quux": &Datum{37, ts}}}
-	r = MetricToCollectd(dimensioned_metric)
+	r = MetricToCollectd("prog", dimensioned_metric)
 	sort.Strings(r)
 	expected = []string{
 		"PUTVAL \"" + hostname + "/emtail-prog/gauge-bar-quux\" interval=60 1343124840:37\n",
@@ -59,9 +59,9 @@ func TestMetricToGraphite(t *testing.T) {
 		Name: "foo",
 		Kind: Counter,
 		D:    &Datum{Value: 37, Time: ts}}
-	r := MetricToGraphite(scalar_metric)
+	r := MetricToGraphite("prog", scalar_metric)
 	sort.Strings(r)
-	expected := []string{"foo 37 1343124840\n"}
+	expected := []string{"prog.foo 37 1343124840\n"}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
@@ -73,11 +73,11 @@ func TestMetricToGraphite(t *testing.T) {
 		Values: map[string]*Datum{
 			"quux": &Datum{37, ts},
 			"snuh": &Datum{37, ts}}}
-	r = MetricToGraphite(dimensioned_metric)
+	r = MetricToGraphite("prog", dimensioned_metric)
 	sort.Strings(r)
 	expected = []string{
-		"bar.quux 37 1343124840\n",
-		"bar.snuh 37 1343124840\n"}
+		"prog.bar.quux 37 1343124840\n",
+		"prog.bar.snuh 37 1343124840\n"}
 	sort.Strings(expected)
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
@@ -94,9 +94,9 @@ func TestMetricToStatsd(t *testing.T) {
 		Name: "foo",
 		Kind: Counter,
 		D:    &Datum{Value: 37, Time: ts}}
-	r := MetricToStatsd(scalar_metric)
+	r := MetricToStatsd("prog", scalar_metric)
 	sort.Strings(r)
-	expected := []string{"foo:37|c"}
+	expected := []string{"prog.foo:37|c"}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
@@ -108,11 +108,11 @@ func TestMetricToStatsd(t *testing.T) {
 		Values: map[string]*Datum{
 			"quux": &Datum{37, ts},
 			"snuh": &Datum{42, ts}}}
-	r = MetricToStatsd(dimensioned_metric)
+	r = MetricToStatsd("prog", dimensioned_metric)
 	sort.Strings(r)
 	expected = []string{
-		"bar.quux:37|c",
-		"bar.snuh:42|c"}
+		"prog.bar.quux:37|c",
+		"prog.bar.snuh:42|c"}
 	sort.Strings(expected)
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)

@@ -36,7 +36,7 @@ func TestExamplePrograms(t *testing.T) {
 	}
 TestLoop:
 	for _, tc := range exampleProgramTests {
-		metrics = make([]*Metric, 0)
+		metrics = make(map[string][]*Metric, 0)
 
 		p, err := os.Open(tc.programfile)
 		if err != nil {
@@ -96,16 +96,22 @@ TestLoop:
 			t.Errorf("%s: could not decode json: %s", tc.jsonfile, err)
 			continue
 		}
+		name := tc.programfile
+		if strings.HasSuffix(name, ".em") {
+			name = name[:len(name)-3]
+		}
 
-		exported_metrics := make([]*Metric, 0)
-		for _, m := range metrics {
-			if !m.hidden {
-				exported_metrics = append(exported_metrics, m)
+		exported_metrics := make(map[string][]*Metric, 0)
+		for prog, p := range metrics {
+			for _, m := range p {
+				if !m.hidden {
+					exported_metrics[prog] = append(exported_metrics[prog], m)
+				}
 			}
 		}
 
-		if !reflect.DeepEqual(expected_metrics, exported_metrics) {
-			t.Errorf("%s: metrics don't match.\n\texpected: %s\n\treceived: %s", tc.programfile, expected_metrics, exported_metrics)
+		if !reflect.DeepEqual(expected_metrics, exported_metrics[name]) {
+			t.Errorf("%s: metrics don't match.\n\texpected: %s\n\treceived: %s", tc.programfile, expected_metrics, exported_metrics[name])
 		}
 	}
 }

@@ -102,19 +102,21 @@ var instructions = []struct {
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		metrics = []*Metric{
+		metrics[tc.name] = make([]*Metric, 0)
+		metrics[tc.name] = append(metrics[tc.name],
 			&Metric{Name: "foo", Kind: Counter, D: &Datum{}},
-			&Metric{Name: "bar", Kind: Gauge, D: &Datum{}},
-		}
+			&Metric{Name: "bar", Kind: Gauge, D: &Datum{}})
 
 		// expected_stack := make([]interface{}, 0, 10)
 		// for _, item := range tc.expected_stack {
 		// 	expected_stack = append(expected_stack, item)
 		// }
 
-		v := &vm{prog: tc.prog,
-			re:  tc.re,
-			str: tc.str,
+		v := &vm{
+			name: tc.name,
+			re:   tc.re,
+			str:  tc.str,
+			prog: tc.prog,
 		}
 		v.t.stack = make([]interface{}, 0)
 		for _, item := range tc.reversed_stack {
