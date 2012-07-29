@@ -157,19 +157,19 @@ func WriteMetrics() {
 	if *collectd_socketpath != "" {
 		err := CollectdWriteMetrics(*collectd_socketpath)
 		if err != nil {
-			log.Printf("Collectd write error: %s\n", err)
+			log.Printf("collectd write error: %s\n", err)
 		}
 	}
 	if *graphite_hostport != "" {
 		err := GraphiteWriteMetrics(*graphite_hostport)
 		if err != nil {
-			log.Printf("Collectd write error: %s\n", err)
+			log.Printf("graphite write error: %s\n", err)
 		}
 	}
 	if *statsd_hostport != "" {
 		err := StatsdWriteMetrics(*statsd_hostport)
 		if err != nil {
-			log.Printf("Statsd error: %s\n", err)
+			log.Printf("statsd error: %s\n", err)
 		}
 	}
 	last_metric_push_time = time.Now()
