@@ -119,6 +119,6 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	go ta.handleLogChange(logfile)
 	line := <-ta.lines
 	if line != "ab" {
-		t.Error("line doesn't match: expected 'ab' vs %s", line)
+		t.Errorf("line doesn't match: expected 'ab' vs %s", line)
 	}
 }
