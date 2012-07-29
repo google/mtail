@@ -204,8 +204,7 @@ func main() {
 			continue
 		}
 		defer f.Close()
-		filename := filepath.Base(fi.Name())
-		v, errs := Compile(filename, f)
+		v, errs := Compile(fi.Name(), f)
 		if errs != nil {
 			errors = 1
 			for _, e := range errs {

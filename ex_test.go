@@ -6,6 +6,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -96,22 +97,20 @@ TestLoop:
 			t.Errorf("%s: could not decode json: %s", tc.jsonfile, err)
 			continue
 		}
-		name := tc.programfile
+		name := filepath.Base(tc.programfile)
 		if strings.HasSuffix(name, ".em") {
 			name = name[:len(name)-3]
 		}
 
-		exported_metrics := make(map[string][]*Metric, 0)
-		for prog, p := range metrics {
-			for _, m := range p {
-				if !m.hidden {
-					exported_metrics[prog] = append(exported_metrics[prog], m)
-				}
+		exported_metrics := make([]*Metric, 0)
+		for _, m := range metrics[name] {
+			if !m.hidden {
+				exported_metrics = append(exported_metrics, m)
 			}
 		}
 
-		if !reflect.DeepEqual(expected_metrics, exported_metrics[name]) {
-			t.Errorf("%s: metrics don't match.\n\texpected: %s\n\treceived: %s", tc.programfile, expected_metrics, exported_metrics[name])
+		if !reflect.DeepEqual(expected_metrics, exported_metrics) {
+			t.Errorf("%s: metrics don't match.\n\texpected: %s\n\treceived: %s", tc.programfile, expected_metrics, exported_metrics)
 		}
 	}
 }

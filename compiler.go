@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -35,6 +36,7 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		output := unparse(p.root)
 		log.Printf("Unparsing %s:\n%s", name, output)
 	}
+	name = filepath.Base(name)
 	if strings.HasSuffix(name, ".em") {
 		name = name[:len(name)-3]
 	}
