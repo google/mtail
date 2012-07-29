@@ -4,7 +4,7 @@
 package main
 
 import (
-	"fmt"
+	//"fmt"
 	"log"
 	"regexp"
 	"strconv"
@@ -57,34 +57,34 @@ type instr struct {
 	opnd int
 }
 
-func (i instr) String() string {
-	return fmt.Sprintf("%s %d", opNames[i.op], i.opnd)
-}
+// func (i instr) String() string {
+// 	return fmt.Sprintf("%s %d", opNames[i.op], i.opnd)
+// }
 
 type thread struct {
-	pc      int
-	reg     int
-	matches map[int][]string
-	time    time.Time
-	stack   []interface{}
+	pc      int              // Program counter
+	reg     int              // Misc register
+	matches map[int][]string // Match result variables
+	time    time.Time        // Time register
+	stack   []interface{}    // Data stack
 }
 
 type vm struct {
 	name string
 	prog []instr
 
-	// const regexps
-	re []*regexp.Regexp
-	// const strings
-	str []string
+	re  []*regexp.Regexp // Regular expression constants
+	str []string         // String constants
 
-	t thread
+	t thread // Current thread of execution
 }
 
+// Push a value onto the stack
 func (t *thread) Push(value interface{}) {
 	t.stack = append(t.stack, value)
 }
 
+// Pop a value off the stack
 func (t *thread) Pop() (value interface{}) {
 	last := len(t.stack) - 1
 	value = t.stack[last]
@@ -92,6 +92,7 @@ func (t *thread) Pop() (value interface{}) {
 	return
 }
 
+// Log a runtime error and terminate the program
 func (v *vm) errorf(format string, args ...interface{}) bool {
 	log.Printf("Runtime error: "+format+"\n", args...)
 	v.t.reg = 0
@@ -181,6 +182,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		}
 
 	case strptime:
+		// Parse a time string into the time register
 		layout := t.Pop().(string)
 
 		var ts string
@@ -202,24 +204,30 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		t.time = tm
 
 	case timestamp:
+		// Put the time register onto the stack
 		t.Push(t.time)
 
 	case capref:
-		// Find the match storage index on the stack,
+		// Put a capture group reference onto the stack.
+		// First find the match storage index on the stack,
 		re := t.Pop().(int)
 		// Push the result from the re'th match at operandth index
 		t.Push(t.matches[re][i.opnd])
 
 	case str:
+		// Put a string constant onto the stack
 		t.Push(v.str[i.opnd])
 
 	case ret:
+		// Exit the virtual machine
 		return true
 
 	case push:
+		// Push a value onto the stack
 		t.Push(i.opnd)
 
 	case add:
+		// Add two values at TOS, and push result onto stack
 		var a, b int64
 		switch d := t.Pop().(type) {
 		case *Datum:
@@ -248,6 +256,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		t.Push(a + b)
 
 	case sub:
+		// Subtract two values at TOS, push result onto stack
 		var a, b int64
 		switch d := t.Pop().(type) {
 		case *Datum:
@@ -276,9 +285,11 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		t.Push(b - a)
 
 	case mload:
+		// Load a metric at operand onto stack
 		t.Push(metrics[v.name][i.opnd])
 
 	case dload:
+		// Load a datum from metric at TOS onto stack
 		m := t.Pop().(*Metric)
 		var keys []string
 		for a := 0; a < i.opnd; a++ {
