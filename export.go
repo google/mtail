@@ -8,6 +8,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"expvar"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +16,19 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
+)
+
+// Commandline Flags.
+var (
+	collectd_socketpath *string = flag.String("collectd_socketpath", "",
+		"Path to collectd unixsock to write metrics to.")
+	graphite_hostport *string = flag.String("graphite_hostport", "",
+		"Host:port to graphite carbon server to write metrics to.")
+	statsd_hostport *string = flag.String("statsd_hostport", "",
+		"Host:port to statsd server to write metrics to.")
+	push_interval *int = flag.Int("metric_push_interval_seconds", 60,
+		"Interval between metric pushes, in seconds")
 )
 
 var (
@@ -29,7 +43,8 @@ var (
 	statsd_export_success = expvar.NewInt("statsd_export_success")
 
 	// Internal state
-	hostname string
+	hostname              string
+	last_metric_push_time time.Time
 )
 
 const (
@@ -228,6 +243,45 @@ func MetricToStatsd(prog string, m *Metric) []string {
 		}
 	}
 	return ret
+}
+
+func WriteMetrics() {
+	if metric_update_time.Sub(last_metric_push_time) <= 0 {
+		return
+	}
+	if *collectd_socketpath != "" {
+		err := CollectdWriteMetrics(*collectd_socketpath)
+		if err != nil {
+			log.Printf("collectd write error: %s\n", err)
+		}
+	}
+	if *graphite_hostport != "" {
+		err := GraphiteWriteMetrics(*graphite_hostport)
+		if err != nil {
+			log.Printf("graphite write error: %s\n", err)
+		}
+	}
+	if *statsd_hostport != "" {
+		err := StatsdWriteMetrics(*statsd_hostport)
+		if err != nil {
+			log.Printf("statsd error: %s\n", err)
+		}
+	}
+	last_metric_push_time = time.Now()
+}
+
+func StartMetricPush() {
+	if *collectd_socketpath != "" || *graphite_hostport != "" || *statsd_hostport != "" {
+		ticker := time.NewTicker(time.Duration(*push_interval) * time.Second)
+		go func() {
+			for {
+				select {
+				case <-ticker.C:
+					WriteMetrics()
+				}
+			}
+		}()
+	}
 }
 
 func init() {

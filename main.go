@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	_ "net/http/pprof"
 )
@@ -27,24 +26,11 @@ var (
 	progs *string = flag.String("progs", "", "Directory containing programs")
 
 	one_shot *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
-
-	collectd_socketpath *string = flag.String("collectd_socketpath", "",
-		"Path to collectd unixsock to write metrics to.")
-	graphite_hostport *string = flag.String("graphite_hostport", "",
-		"Host:port to graphite carbon server to write metrics to.")
-	statsd_hostport *string = flag.String("statsd_hostport", "",
-		"Host:port to statsd server to write metrics to.")
-	push_interval *int = flag.Int("metric_push_interval_seconds", 60,
-		"Interval between metric pushes, in seconds")
 )
 
 var (
 	line_count = expvar.NewInt("line_count")
 	log_count  = expvar.NewInt("log_count")
-)
-
-var (
-	last_metric_push_time time.Time
 )
 
 // RunVms receives a line from a channel and sends it to all VMs.
@@ -86,31 +72,6 @@ func OneShot(logfile string, lines chan string) error {
 		}
 	}
 	return nil
-}
-
-func WriteMetrics() {
-	if metric_update_time.Sub(last_metric_push_time) <= 0 {
-		return
-	}
-	if *collectd_socketpath != "" {
-		err := CollectdWriteMetrics(*collectd_socketpath)
-		if err != nil {
-			log.Printf("collectd write error: %s\n", err)
-		}
-	}
-	if *graphite_hostport != "" {
-		err := GraphiteWriteMetrics(*graphite_hostport)
-		if err != nil {
-			log.Printf("graphite write error: %s\n", err)
-		}
-	}
-	if *statsd_hostport != "" {
-		err := StatsdWriteMetrics(*statsd_hostport)
-		if err != nil {
-			log.Printf("statsd error: %s\n", err)
-		}
-	}
-	last_metric_push_time = time.Now()
 }
 
 func main() {
@@ -195,17 +156,7 @@ func main() {
 
 		http.HandleFunc("/json", handleJson)
 		http.HandleFunc("/csv", handleCsv)
-		if *collectd_socketpath != "" || *graphite_hostport != "" || *statsd_hostport != "" {
-			ticker := time.NewTicker(time.Duration(*push_interval) * time.Second)
-			go func() {
-				for {
-					select {
-					case <-ticker.C:
-						WriteMetrics()
-					}
-				}
-			}()
-		}
+		StartMetricPush()
 
 		log.Fatal(http.ListenAndServe(":"+*port, nil))
 	}
