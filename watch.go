@@ -18,6 +18,7 @@ package main
 
 import (
 	"exp/inotify"
+	"expvar"
 	"log"
 )
 
@@ -27,6 +28,10 @@ const (
 	// Writable files get both CLOSE and ATTRIB, nonwritable only get ATTRIB, when touched.
 	wProgFileMask = inotify.IN_CLOSE_WRITE | inotify.IN_ATTRIB | inotify.IN_DELETE_SELF
 	wProgDirMask  = inotify.IN_CREATE | inotify.IN_MOVED_TO | inotify.IN_ISDIR
+)
+
+var (
+	event_count = expvar.NewMap("inotify_event_count")
 )
 
 // watcher keeps filesystem watching state.
@@ -96,6 +101,7 @@ func (w *watcher) start() {
 	for {
 		select {
 		case ev := <-w.w.Event:
+			event_count.Add(ev.String(), 1)
 			switch {
 			case ev.Mask&(inotify.IN_DELETE|inotify.IN_DELETE_SELF) != 0:
 				if c, ok := w.delete[ev.Name]; ok {
