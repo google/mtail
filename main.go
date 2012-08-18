@@ -5,7 +5,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/csv"
 	"encoding/json"
 	"expvar"
 	"flag"
@@ -47,67 +46,6 @@ var (
 var (
 	last_metric_push_time time.Time
 )
-
-// CSV export
-func handleCsv(w http.ResponseWriter, r *http.Request) {
-	metric_lock.RLock()
-	defer metric_lock.RUnlock()
-
-	c := csv.NewWriter(w)
-
-	for prog, p := range metrics {
-		for _, m := range p {
-			if m.hidden {
-				continue
-			}
-			var record []string
-			record = append(record, prog)
-			if m.D != nil {
-				record = []string{m.Name,
-					fmt.Sprintf("%d", m.Kind)}
-				record = append(record, fmt.Sprintf("%d", m.D.Value))
-				record = append(record, fmt.Sprintf("%s", m.D.Time))
-			} else {
-				record = []string{m.Name,
-					fmt.Sprintf("%d", m.Kind),
-					"", ""} // Datum value, timestamp
-				for k, d := range m.Values {
-					keyvals := key_unhash(k)
-					for i, key := range m.Keys {
-						record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
-					}
-					record = append(record, fmt.Sprintf("%d", d.Value))
-					record = append(record, fmt.Sprintf("%s", d.Time))
-				}
-			}
-			c.Write(record)
-		}
-	}
-
-	c.Flush()
-}
-
-// JSON export
-func handleJson(w http.ResponseWriter, r *http.Request) {
-	metric_lock.RLock()
-	defer metric_lock.RUnlock()
-
-	exported_metrics := make(map[string][]*Metric, 0)
-	for prog, _ := range metrics {
-		exported_metrics[prog] = make([]*Metric, 0)
-		for _, m := range metrics[prog] {
-			if !m.hidden {
-				exported_metrics[prog] = append(exported_metrics[prog], m)
-			}
-		}
-	}
-
-	b, err := json.MarshalIndent(exported_metrics, "", "  ")
-	if err != nil {
-		log.Println("error marshalling metrics into json:", err.Error())
-	}
-	w.Write(b)
-}
 
 // RunVms receives a line from a channel and sends it to all VMs.
 func RunVms(vms []*vm, lines chan string) {
