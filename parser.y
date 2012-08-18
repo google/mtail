@@ -17,7 +17,6 @@ import (
 
 %}
 
-
 %union
 {
     value int
@@ -27,7 +26,6 @@ import (
     n node
     mtype metric_type
 }
-
 
 %type <n> stmt_list stmt cond arg_expr_list
 %type <n> expr primary_expr additive_expr postfix_expr unary_expr assign_expr
@@ -56,8 +54,6 @@ import (
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
 %token COMMA
-
-
 
 %start start
 %%
@@ -104,7 +100,6 @@ stmt
     $$ = $1
   }
   ;
-
 
 expr
   : assign_expr
@@ -228,7 +223,7 @@ cond
           Emtaillex.(*parser).Error(fmt.Sprintf(err.Error()))
           // TODO(jaq): force a parse error
       } else {
-        $$ = &regexNode{pattern: $1}
+          $$ = &regexNode{pattern: $1}
           // We can reserve storage for these capturing groups, storing them in
           // the current scope, so that future CAPTUREGROUPs can retrieve their
           // value.  At parse time, we can warn about nonexistent names.
