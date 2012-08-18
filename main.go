@@ -249,8 +249,6 @@ func main() {
 		w := NewWatcher()
 		t := NewTailer(w, lines)
 
-		go t.start()
-
 		for _, pathname := range pathnames {
 			if t.Tail(pathname) {
 				log_count.Add(1)

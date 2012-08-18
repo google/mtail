@@ -25,8 +25,6 @@ func TestTail(t *testing.T) {
 	}
 	defer f.Close()
 
-	go w.start()
-
 	lines := make(chan string)
 	ta := NewTailer(w, lines)
 	ta.Tail(logfile)
