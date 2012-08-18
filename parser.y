@@ -365,40 +365,40 @@ as_spec
 const EOF = 0
 
 type parser struct {
-    root   node
-    errors []string
-    l      *lexer
-    pos    Position
-    s      *scope
+	root   node
+	errors []string
+	l      *lexer
+	pos    Position
+	s      *scope
 }
 
 func NewParser(name string, input io.Reader) *parser {
-    return &parser{l: NewLexer(name, input)}
+	return &parser{l: NewLexer(name, input)}
 }
 
 func (p *parser) Error(s string) {
-    e := fmt.Sprintf("%s:%s: %s", p.l.name, p.pos, s)
-    p.errors = append(p.errors, e)
+	e := fmt.Sprintf("%s:%s: %s", p.l.name, p.pos, s)
+	p.errors = append(p.errors, e)
 }
 
 func (p *parser) Lex(lval *EmtailSymType) int {
-    token := p.l.NextToken()
-    p.pos = token.pos
-    if token.kind == INVALID {
-    	p.Error(token.text)
-        return EOF
-    }
-    lval.text = token.text
-    return int(token.kind)
+	token := p.l.NextToken()
+	p.pos = token.pos
+	if token.kind == INVALID {
+		p.Error(token.text)
+		return EOF
+	}
+	lval.text = token.text
+	return int(token.kind)
 }
 
 func (p *parser) startScope() {
-    s := &scope{p.s, map[string]*symbol{}}
-    p.s = s
+	s := &scope{p.s, map[string]*symbol{}}
+	p.s = s
 }
 
 func (p *parser) endScope() {
-    if p.s != nil && p.s.parent != nil {
-        p.s = p.s.parent
-    }
+	if p.s != nil && p.s.parent != nil {
+		p.s = p.s.parent
+	}
 }
