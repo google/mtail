@@ -250,7 +250,6 @@ func main() {
 		t := NewTailer(w, lines)
 
 		go t.start()
-		go w.start()
 
 		for _, pathname := range pathnames {
 			if t.Tail(pathname) {

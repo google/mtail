@@ -27,8 +27,6 @@ func TestWatchFile(t *testing.T) {
 	change := make(chan string)
 	w.WatchLogFile(logfile, change, nil)
 
-	go w.start()
-
 	f.WriteString("hi1\n")
 	f.Sync()
 
@@ -39,5 +37,4 @@ func TestWatchFile(t *testing.T) {
 	default:
 		t.Error("no change seen")
 	}
-	w.stop = true
 }

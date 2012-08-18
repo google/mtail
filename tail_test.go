@@ -34,7 +34,6 @@ func TestTail(t *testing.T) {
 	if _, ok := w.change[logfile]; !ok {
 		t.Error("path not found in watcher change channel map")
 	}
-	w.stop = true
 }
 
 func TestHandleLogChange(t *testing.T) {
