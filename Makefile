@@ -4,8 +4,9 @@
 GOFILES=\
 	ast.go\
 	compiler.go\
+	emtail.go\
+	export.go\
 	lexer.go\
-	main.go\
 	metric.go\
 	parser.go\
 	symtab.go\
@@ -13,17 +14,17 @@ GOFILES=\
 	unparser.go\
 	vm.go\
 	watch.go\
-	export.go\
 
 GOTESTFILES=\
+	bench_test.go\
+	emtail_test.go\
 	ex_test.go\
+	export_test.go\
 	lexer_test.go\
 	parser_test.go\
 	tail_test.go\
 	vm_test.go\
 	watch_test.go\
-	bench_test.go\
-	export_test.go\
 
 CLEANFILES+=\
 	parser.go\
@@ -31,22 +32,22 @@ CLEANFILES+=\
 
 all: emtail
 
-emtail: parser.go $(GOFILES)
+emtail: $(GOFILES)
 	go build
 
 parser.go: parser.y
 	go tool yacc -v y.output -o $@ -p Emtail $<
 
 .PHONY: test
-test: parser.go $(GOFILES) $(GOTESTFILES)
+test: $(GOFILES) $(GOTESTFILES)
 	go test -test.v=true
 
 .PHONY: testshort
-testshort: parser.go $(GOFILES) $(GOTESTFILES)
+testshort: $(GOFILES) $(GOTESTFILES)
 	go test -test.short
 
 .PHONY: bench
-bench: parser.go $(GOFILES) $(GOTESTFILES)
+bench: $(GOFILES) $(GOTESTFILES)
 	go test -test.bench=.*
 
 .PHONY: testall
