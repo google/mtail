@@ -195,7 +195,7 @@ func main() {
 
 		http.HandleFunc("/json", handleJson)
 		http.HandleFunc("/csv", handleCsv)
-		if *collectd_socketpath != "" {
+		if *collectd_socketpath != "" || *graphite_hostport != "" || *statsd_hostport != "" {
 			ticker := time.NewTicker(time.Duration(*push_interval) * time.Second)
 			go func() {
 				for {
