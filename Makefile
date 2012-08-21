@@ -16,7 +16,6 @@ GOFILES=\
 	watch.go\
 
 GOTESTFILES=\
-	bench_test.go\
 	emtail_test.go\
 	ex_test.go\
 	export_test.go\

@@ -5,20 +5,20 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
 
-type exampleProgramTest struct {
+var exampleProgramTests = []struct {
 	programfile string // Example program file.
 	logfile     string // Test log data.
 	jsonfile    string // Expected metrics after processing.
-}
-
-var exampleProgramTests = []exampleProgramTest{
+}{
 	{
 		"examples/linecount.em",
 		"testdata/linecount.log",
@@ -31,36 +31,44 @@ var exampleProgramTests = []exampleProgramTest{
 	},
 }
 
+func CompileAndLoad(programfile string) (chan string, string) {
+	metrics = make(map[string][]*Metric, 0)
+	lines := make(chan string)
+
+	p, err := os.Open(programfile)
+	if err != nil {
+		return lines, fmt.Sprintf("%s: could not open program file: %s", programfile, err)
+	}
+	defer p.Close()
+
+	// EmtailDebug = 999 // All the debugging.
+
+	v, errs := Compile(programfile, p)
+	if errs != nil {
+		return lines, fmt.Sprintf("%s: compile failed: %s", programfile, strings.Join(errs, "\n"))
+	}
+
+	vms = make([]*vm, 0)
+	vms = append(vms, v)
+
+	go RunVms(vms, lines)
+
+	return lines, ""
+}
+
 func TestExamplePrograms(t *testing.T) {
 	if testing.Short() {
 		return
 	}
 TestLoop:
 	for _, tc := range exampleProgramTests {
-		metrics = make(map[string][]*Metric, 0)
-
-		p, err := os.Open(tc.programfile)
-		if err != nil {
-			t.Errorf("%s: could not open program file: %s", tc.programfile, err)
-			continue
-		}
-		defer p.Close()
-
-		// EmtailDebug = 999 // All the debugging.
-
-		v, errs := Compile(tc.programfile, p)
-		if errs != nil {
-			t.Errorf("%s: compile failed: %s", tc.programfile, strings.Join(errs, "\n"))
-			continue
+		lines, errs := CompileAndLoad(tc.programfile)
+		if errs != "" {
+			t.Errorf(errs)
+			continue TestLoop
 		}
 
-		vms = make([]*vm, 0)
-		vms = append(vms, v)
-
-		lines := make(chan string)
-		go RunVms(vms, lines)
-
-		err = OneShot(tc.logfile, lines)
+		err := OneShot(tc.logfile, lines)
 		if err != nil {
 			t.Errorf("Oneshot failed: %s", err)
 			continue TestLoop
@@ -111,6 +119,37 @@ TestLoop:
 
 		if !reflect.DeepEqual(expected_metrics, exported_metrics) {
 			t.Errorf("%s: metrics don't match.\n\texpected: %s\n\treceived: %s", tc.programfile, expected_metrics, exported_metrics)
+		}
+	}
+}
+
+// BenchmarkExamplePrograms benchmarks emtail by running the testdata logs through the example programs.
+// Caveat emptor:
+// The ns/op measure returned is the time spent on the whole file for a single program.
+// The MB/s measure is actually the number of lines processed per second rate.
+func BenchmarkExamplePrograms(b *testing.B) {
+TestLoop:
+	for _, bc := range exampleProgramTests {
+		fmt.Println(bc.programfile)
+		for run := 0; run < b.N; run++ {
+			b.StopTimer()
+			lines, errs := CompileAndLoad(bc.programfile)
+			if errs != "" {
+				b.Errorf(errs)
+				continue TestLoop
+			}
+			b.StartTimer()
+			err := OneShot(bc.logfile, lines)
+			if err != nil {
+				b.Errorf("Oneshot failed: %s", err)
+				continue TestLoop
+			}
+			b.StopTimer()
+			i, err := strconv.ParseInt(line_count.String(), 10, 64)
+			if err != nil {
+				b.Errorf("strconv failed: %s", err)
+			}
+			b.SetBytes(i)
 		}
 	}
 }
