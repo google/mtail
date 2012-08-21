@@ -22,7 +22,6 @@ GOTESTFILES=\
 	tail_test.go\
 	vm_test.go\
 	watch_test.go\
-	bench_test.go\
 	export_test.go\
 
 CLEANFILES+=\
