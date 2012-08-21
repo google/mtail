@@ -47,11 +47,7 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		return nil, c.errors
 	}
 
-	vm := &vm{
-		name: name,
-		re:   c.re,
-		str:  c.str,
-		prog: c.prog}
+	vm := newVm(name, c.re, c.str, c.prog)
 	return vm, nil
 }
 

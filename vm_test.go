@@ -112,12 +112,7 @@ func TestInstrs(t *testing.T) {
 		// 	expected_stack = append(expected_stack, item)
 		// }
 
-		v := &vm{
-			name: tc.name,
-			re:   tc.re,
-			str:  tc.str,
-			prog: tc.prog,
-		}
+		v := newVm(tc.name, tc.re, tc.str, tc.prog)
 		v.t.stack = make([]interface{}, 0)
 		for _, item := range tc.reversed_stack {
 			v.t.Push(item)

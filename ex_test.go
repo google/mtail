@@ -16,7 +16,7 @@ import (
 
 var exampleProgramTests = []struct {
 	programfile string // Example program file.
-	logfile     string // Test log data.
+	logfile     string // Sample log input.
 	jsonfile    string // Expected metrics after processing.
 }{
 	{

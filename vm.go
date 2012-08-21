@@ -76,6 +76,8 @@ type vm struct {
 	re  []*regexp.Regexp // Regular expression constants
 	str []string         // String constants
 
+	ts_mem map[string]time.Time // memo of time string parse results
+
 	t thread // Current thread of execution
 }
 
@@ -196,12 +198,16 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 			// Store the result from the re'th index at the s'th index
 			ts = t.matches[re][s]
 		}
-
-		tm, err := time.Parse(layout, ts)
-		if err != nil {
-			return v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
+		if tm, ok := v.ts_mem[ts]; !ok {
+			tm, err := time.Parse(layout, ts)
+			if err != nil {
+				return v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
+			}
+			v.ts_mem[ts] = tm
+			t.time = tm
+		} else {
+			t.time = tm
 		}
-		t.time = tm
 
 	case timestamp:
 		// Put the time register onto the stack
@@ -326,4 +332,14 @@ func (v *vm) Run(input string) bool {
 		}
 	}
 	panic("not reached")
+}
+
+func newVm(name string, re []*regexp.Regexp, str []string, prog []instr) *vm {
+	return &vm{
+		name:   name,
+		re:     re,
+		str:    str,
+		prog:   prog,
+		ts_mem: make(map[string]time.Time, 0),
+	}
 }
