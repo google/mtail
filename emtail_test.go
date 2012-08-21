@@ -4,10 +4,10 @@
 package main
 
 import (
-	"reflect"
-	"regexp"
+	// "reflect"
+	// "regexp"
 	"testing"
-	"time"
+	// "time"
 )
 
 func TestHandleLogRotation(t *testing.T) {

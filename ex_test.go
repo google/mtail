@@ -123,33 +123,38 @@ TestLoop:
 	}
 }
 
-// BenchmarkExamplePrograms benchmarks emtail by running the testdata logs through the example programs.
-// Caveat emptor:
-// The ns/op measure returned is the time spent on the whole file for a single program.
-// The MB/s measure is actually the number of lines processed per second rate.
-func BenchmarkExamplePrograms(b *testing.B) {
-TestLoop:
-	for _, bc := range exampleProgramTests {
-		fmt.Println(bc.programfile)
-		for run := 0; run < b.N; run++ {
-			b.StopTimer()
-			lines, errs := CompileAndLoad(bc.programfile)
-			if errs != "" {
-				b.Errorf(errs)
-				continue TestLoop
-			}
-			b.StartTimer()
-			err := OneShot(bc.logfile, lines)
-			if err != nil {
-				b.Errorf("Oneshot failed: %s", err)
-				continue TestLoop
-			}
-			b.StopTimer()
-			i, err := strconv.ParseInt(line_count.String(), 10, 64)
-			if err != nil {
-				b.Errorf("strconv failed: %s", err)
-			}
-			b.SetBytes(i)
-		}
+func runProgramBenchmark(programfile string, logfile string, b *testing.B) {
+	b.StopTimer()
+	lines, errs := CompileAndLoad(programfile)
+	if errs != "" {
+		b.Errorf(errs)
+		return
 	}
+	for run := 0; run < b.N; run++ {
+		b.StartTimer()
+		err := OneShot(logfile, lines)
+		if err != nil {
+			b.Errorf("Oneshot failed: %s", err)
+			return
+		}
+		b.StopTimer()
+		i, err := strconv.ParseInt(line_count.String(), 10, 64)
+		if err != nil {
+			b.Errorf("strconv failed: %s", err)
+		}
+		b.SetBytes(i)
+	}
+}
+
+// These benchmarks run the testdata logs through the example programs.
+// Caveat emptor:
+// The ns/op measure returned is the time spent on a OneShot for a single program.
+// The MB/s measure should be interpreted as megalines processed per second.
+
+func BenchmarkExampleLineCount(b *testing.B) {
+	runProgramBenchmark("examples/linecount.em", "testdata/linecount.log", b)
+}
+
+func BenchmarkExampleRsyncd(b *testing.B) {
+	runProgramBenchmark("examples/rsyncd.em", "testdata/rsyncd.log", b)
 }
