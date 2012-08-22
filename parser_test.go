@@ -116,6 +116,29 @@ var kMtailPrograms = []validProgram{
 			"/(?P<foo>.*)/ {\n" +
 			"  time_total += timestamp() - variable[$foo]\n" +
 			"}\n"},
+
+	{"conditional expressions",
+		"counter foo\n" +
+			"/(?P<foo>.*)/ {\n" +
+			"  $foo > 0 {\n" +
+			"    foo += $foo\n" +
+			"  }\n" +
+			"  $foo >= 0 {\n" +
+			"    foo += $foo\n" +
+			"  }\n" +
+			"  $foo < 0 {\n" +
+			"    foo += $foo\n" +
+			"  }\n" +
+			"  $foo <= 0 {\n" +
+			"    foo += $foo\n" +
+			"  }\n" +
+			"  $foo == 0 {\n" +
+			"    foo += $foo\n" +
+			"  }\n" +
+			"  $foo != 0 {\n" +
+			"    foo += $foo\n" +
+			"  }\n" +
+			"}\n"},
 }
 
 func TestParserRoundTrip(t *testing.T) {

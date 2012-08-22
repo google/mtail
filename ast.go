@@ -30,6 +30,11 @@ type regexNode struct {
 	re      *regexp.Regexp
 }
 
+type relNode struct {
+	lhs, rhs node
+	op       int
+}
+
 type stringNode struct {
 	text string
 }
@@ -50,19 +55,16 @@ type builtinNode struct {
 }
 
 type additiveExprNode struct {
-	lhs node
-	rhs node
-	op  int
+	lhs, rhs node
+	op       int
 }
 
 type assignExprNode struct {
-	lhs node
-	rhs node
+	lhs, rhs node
 }
 
 type indexedExprNode struct {
-	lhs   node
-	index node
+	lhs,    index node
 }
 
 type declNode struct {
@@ -75,8 +77,7 @@ type declNode struct {
 }
 
 type incByExprNode struct {
-	lhs node
-	rhs node
+	lhs, rhs node
 }
 
 type incExprNode struct {
