@@ -31,7 +31,7 @@
   "All types in the emtail language.  Used for font locking.")
 
 (defvar emtail-mode-keywords
-  '("as" "by" "hidden" "if")
+  '("as" "by" "hidden")
   "All keywords in the emtail language.  Used for font locking.")
 
 (defvar emtail-mode-builtins
