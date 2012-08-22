@@ -14,6 +14,24 @@ import (
 	"testing"
 )
 
+func (m *Metric) String() string {
+	s := fmt.Sprintf("<Metric %s %v %v", m.Name, m.Kind, m.hidden)
+	if m.D == nil {
+		for k, d := range m.Values {
+			s += " ["
+			keyvals := key_unhash(k)
+			for i, key := range m.Keys {
+				s += fmt.Sprintf("%s=%s ", key, keyvals[i])
+			}
+			s += fmt.Sprintf(" %v '%v']", d.Value, d.Time)
+		}
+		s += ">"
+	} else {
+		s += fmt.Sprintf(" %v '%v'>", m.D.Value, m.D.Time)
+	}
+	return s
+}
+
 var exampleProgramTests = []struct {
 	programfile string // Example program file.
 	logfile     string // Test log data.
@@ -28,6 +46,11 @@ var exampleProgramTests = []struct {
 		"examples/rsyncd.em",
 		"testdata/rsyncd.log",
 		"testdata/rsyncd.json",
+	},
+	{
+		"examples/sftp.em",
+		"testdata/sftp_chroot.log",
+		"testdata/sftp_chroot.json",
 	},
 }
 
@@ -60,18 +83,22 @@ func TestExamplePrograms(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-TestLoop:
 	for _, tc := range exampleProgramTests {
+		name := filepath.Base(tc.programfile)
+		if strings.HasSuffix(name, ".em") {
+			name = name[:len(name)-3]
+		}
+
 		lines, errs := CompileAndLoad(tc.programfile)
 		if errs != "" {
 			t.Errorf(errs)
-			continue TestLoop
+			continue
 		}
 
 		err := OneShot(tc.logfile, lines)
 		if err != nil {
 			t.Errorf("Oneshot failed: %s", err)
-			continue TestLoop
+			continue
 		}
 
 		// // Dirty hack to create json files :)
@@ -82,7 +109,8 @@ TestLoop:
 		// 		continue
 		// 	}
 		// 	defer j.Close()
-		// 	b, err := json.MarshalIndent(metrics, "", "  ")
+		// 	fmt.Println(metrics)
+		// 	b, err := json.MarshalIndent(metrics[name], "", "  ")
 		// 	if err != nil {
 		// 		t.Errorf("couldn't marshall metrics")
 		// 		continue
@@ -104,10 +132,6 @@ TestLoop:
 		if err != nil {
 			t.Errorf("%s: could not decode json: %s", tc.jsonfile, err)
 			continue
-		}
-		name := filepath.Base(tc.programfile)
-		if strings.HasSuffix(name, ".em") {
-			name = name[:len(name)-3]
 		}
 
 		exported_metrics := make([]*Metric, 0)
