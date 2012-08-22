@@ -24,16 +24,24 @@ counter user_files_written by username
   }
 
   /close "[^"]+" bytes read (?P<read>\d+) written (?P<written>\d+)/ {
-    bytes_read += $read
-    files_read++
-    bytes_written += $written
-    files_written++
+    $read > 0 {
+      bytes_read += $read
+      files_read++ 
+    }
+    if $written > 0 {
+      bytes_written += $written
+      files_written++
+    }
 
     /close "\/home\/(?P<username>[^\/]+)\/[^"]+"/ {
-      user_bytes_read[$username] += $read
-      user_files_read[$username] ++
-      user_bytes_written[$username] += $written
-      user_files_written[$username] ++
+      if $read > 0 {
+        user_bytes_read[$username] += $read
+        user_files_read[$username] ++
+      }
+      if $written > 0 {
+        user_bytes_written[$username] += $written
+        user_files_written[$username] ++
+      }
     }
   }
 }
