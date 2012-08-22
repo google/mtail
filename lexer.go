@@ -29,6 +29,8 @@ var lexemeName = map[Lexeme]string{
 	PLUS:       "PLUS",
 	ADD_ASSIGN: "ADD_ASSIGN",
 	ASSIGN:     "ASSIGN",
+	LT:         "LT",
+	GT:         "GT",
 	REGEX:      "REGEX",
 	ID:         "ID",
 	CAPREF:     "CAPREF",
@@ -253,6 +255,12 @@ func lexProg(l *lexer) stateFn {
 	case r == '=':
 		l.accept()
 		l.emit(ASSIGN)
+	case r == '<':
+		l.accept()
+		l.emit(LT)
+	case r == '>':
+		l.accept()
+		l.emit(GT)
 	case r == '/':
 		return lexRegex
 	case r == '"':

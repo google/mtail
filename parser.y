@@ -51,6 +51,7 @@ import (
 // Operators
 %token INC MINUS PLUS
 %token ADD_ASSIGN ASSIGN
+%token LT GT
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
 %token COMMA
