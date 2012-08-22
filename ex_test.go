@@ -182,3 +182,7 @@ func BenchmarkExampleLineCount(b *testing.B) {
 func BenchmarkExampleRsyncd(b *testing.B) {
 	runProgramBenchmark("examples/rsyncd.em", "testdata/rsyncd.log", b)
 }
+
+func BenchmarkExampleSftp(b *testing.B) {
+	runProgramBenchmark("examples/sftp.em", "testdata/sftp_chroot.log", b)
+}
