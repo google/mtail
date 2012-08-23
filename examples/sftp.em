@@ -36,11 +36,11 @@ counter user_files_written by username
     /close "\/home\/(?P<username>[^\/]+)\/[^"]+"/ {
       $read > 0 {
         user_bytes_read[$username] += $read
-        user_files_read[$username] ++
+        user_files_read[$username]++
       }
       $written > 0 {
         user_bytes_written[$username] += $written
-        user_files_written[$username] ++
+        user_files_written[$username]++
       }
     }
   }
