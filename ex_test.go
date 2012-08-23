@@ -109,7 +109,6 @@ func TestExamplePrograms(t *testing.T) {
 		// 		continue
 		// 	}
 		// 	defer j.Close()
-		// 	fmt.Println(metrics)
 		// 	b, err := json.MarshalIndent(metrics[name], "", "  ")
 		// 	if err != nil {
 		// 		t.Errorf("couldn't marshall metrics")
