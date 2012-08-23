@@ -4,7 +4,7 @@
 package main
 
 import (
-	//"fmt"
+	"fmt"
 	"log"
 	"regexp"
 	"strconv"
@@ -14,8 +14,10 @@ import (
 type opcode int
 
 const (
-	match     opcode = iota // Match a regular expression against input
-	jnm                     // Jump if no match
+	match     opcode = iota // Match a regular expression against input, and set the match register.
+	cmp                     // Compare two values on the stack and set the match register.
+	jnm                     // Jump if no match.
+	jm                      // Jump if match.
 	inc                     // Increment a variable value
 	strptime                // Parse into the timestamp register
 	timestamp               // Return value of timestamp register
@@ -32,7 +34,9 @@ const (
 
 var opNames = map[opcode]string{
 	match:     "match",
+	cmp:       "cmp",
 	jnm:       "jnm",
+	jm:        "jm",
 	inc:       "inc",
 	strptime:  "strptime",
 	timestamp: "timestamp",
@@ -62,11 +66,11 @@ type instr struct {
 // }
 
 type thread struct {
-	pc      int              // Program counter
-	reg     int              // Misc register
-	matches map[int][]string // Match result variables
-	time    time.Time        // Time register
-	stack   []interface{}    // Data stack
+	pc      int              // Program counter.
+	match   bool             // Match register.
+	matches map[int][]string // Match result variables.
+	time    time.Time        // Time register.
+	stack   []interface{}    // Data stack.
 }
 
 type vm struct {
@@ -97,8 +101,29 @@ func (t *thread) Pop() (value interface{}) {
 // Log a runtime error and terminate the program
 func (v *vm) errorf(format string, args ...interface{}) bool {
 	log.Printf("Runtime error: "+format+"\n", args...)
-	v.t.reg = 0
+	v.t.match = false
 	return true
+}
+
+func (t *thread) PopInt() (int64, error) {
+	val := t.Pop()
+	switch n := val.(type) {
+	case int64:
+		return n, nil
+	case int:
+		return int64(n), nil
+	case string:
+		r, err := strconv.ParseInt(n, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("conversion of %q to numeric failed: %s", val, err)
+		}
+		return r, nil
+	case time.Time:
+		return n.Unix(), nil
+	case *Datum:
+		return n.Value, nil
+	}
+	return 0, fmt.Errorf("Unexpected numeric type %T %q", val, val)
 }
 
 // Execute acts on the current instruction, and returns a boolean indicating
@@ -110,14 +135,38 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		// Store the results in the operandth element of the stack,
 		// where i.opnd == the matched re index
 		t.matches[i.opnd] = v.re[i.opnd].FindStringSubmatch(input)
-		if t.matches[i.opnd] != nil {
-			t.reg = 1
-		} else {
-			t.reg = 0
+		t.match = t.matches[i.opnd] != nil
+	case cmp:
+		// Compare two elements on the stack.
+		// Set the match register based on the truthiness of the comparison.
+		// Operand contains the expected result.
+		b, err := t.PopInt()
+		if err != nil {
+			return v.errorf("%s", err)
+		}
+		a, err := t.PopInt()
+		if err != nil {
+			return v.errorf("%s", err)
+		}
+
+		switch i.opnd {
+		case -1:
+			t.match = a < b
+		case 0:
+			t.match = a == b
+		case 1:
+			t.match = a > b
 		}
 	case jnm:
-		if t.reg == 0 {
+		if !t.match {
 			t.pc = i.opnd
+			// Don't fall to end of loop or pc gets incremented.
+			return false
+		}
+	case jm:
+		if t.match {
+			t.pc = i.opnd
+			// Don't fall to end of loop or pc gets incremented.
 			return false
 		}
 	case inc:
@@ -125,21 +174,10 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		var delta int64 = 1
 		// If opnd is nonzero, the delta is on the stack.
 		if i.opnd > 0 {
-			val := t.Pop()
-			// Don't know what type it is on the stack though.
-			switch n := val.(type) {
-			case int:
-				delta = int64(n)
-			case int64:
-				delta = n
-			case string:
-				var err error
-				delta, err = strconv.ParseInt(n, 10, 64)
-				if err != nil {
-					return v.errorf("conversion of %q to numeric failed: %s", val, err)
-				}
-			default:
-				return v.errorf("Unexpected type %T %q", val, val)
+			var err error
+			delta, err = t.PopInt()
+			if err != nil {
+				return v.errorf("%s", err)
 			}
 		}
 		switch d := t.Pop().(type) {
@@ -154,25 +192,11 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 
 	case set:
 		// Set a gauge
-		var value int64
-		val := t.Pop()
-		// Don't know what type it is on the stack though.
-		switch n := val.(type) {
-		case int:
-			value = int64(n)
-		case int64:
-			value = n
-		case string:
-			var err error
-			value, err = strconv.ParseInt(n, 10, 64)
-			if err != nil {
-				return v.errorf("conversion of %q to numeric failed: %s", val, err)
-			}
-		case time.Time:
-			value = n.Unix()
-		default:
-			return v.errorf("Unexpected type %T %q\n", val, val)
+		value, err := t.PopInt()
+		if err != nil {
+			return v.errorf("%s", err)
 		}
+
 		switch d := t.Pop().(type) {
 		case Settable:
 			d.Set(value, t.time)
@@ -234,61 +258,27 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 
 	case add:
 		// Add two values at TOS, and push result onto stack
-		var a, b int64
-		switch d := t.Pop().(type) {
-		case *Datum:
-			a = d.Value
-		case int64:
-			a = d
-		case int:
-			a = int64(d)
-		case time.Time:
-			a = d.Unix()
-		default:
-			return v.errorf("Unexpected type for add %T %q\n", d, d)
+		b, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
 		}
-		switch d := t.Pop().(type) {
-		case *Datum:
-			b = d.Value
-		case int64:
-			b = d
-		case int:
-			b = int64(d)
-		case time.Time:
-			b = d.Unix()
-		default:
-			return v.errorf("Unexpected type for add %T %q\n", d, d)
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
 		}
 		t.Push(a + b)
 
 	case sub:
 		// Subtract two values at TOS, push result onto stack
-		var a, b int64
-		switch d := t.Pop().(type) {
-		case *Datum:
-			a = d.Value
-		case int64:
-			a = d
-		case int:
-			a = int64(d)
-		case time.Time:
-			a = d.Unix()
-		default:
-			return v.errorf("Unexpected type for sub %T %q\n", d, d)
+		b, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
 		}
-		switch d := t.Pop().(type) {
-		case *Datum:
-			b = d.Value
-		case int64:
-			b = d
-		case int:
-			b = int64(d)
-		case time.Time:
-			b = d.Unix()
-		default:
-			return v.errorf("Unexpected type for sub %T %q\n", d, d)
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
 		}
-		t.Push(b - a)
+		t.Push(a - b)
 
 	case mload:
 		// Load a metric at operand onto stack
@@ -327,8 +317,8 @@ func (v *vm) Run(input string) bool {
 		i := v.prog[t.pc]
 		terminate := v.execute(&t, i, input)
 		if terminate {
-			// t.reg contains the result of the last match.
-			return t.reg == 1
+			// t.match contains the result of the last match.
+			return t.match
 		}
 	}
 	panic("not reached")
