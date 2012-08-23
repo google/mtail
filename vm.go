@@ -249,7 +249,8 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		t.Push(v.str[i.opnd])
 
 	case ret:
-		// Exit the virtual machine
+		// Exit the virtual machine.
+		t.match = true
 		return true
 
 	case push:
@@ -305,7 +306,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 }
 
 // Run fetches and executes each instruction in the program on the input string
-// until termination. It returns a boolean indicating a successful match.
+// until termination. It returns a boolean indicating a successful action was taken.
 func (v *vm) Run(input string) bool {
 	t := v.t
 	t.stack = make([]interface{}, 0)
@@ -317,7 +318,7 @@ func (v *vm) Run(input string) bool {
 		i := v.prog[t.pc]
 		terminate := v.execute(&t, i, input)
 		if terminate {
-			// t.match contains the result of the last match.
+			// t.match indicates that an action was taken after a match.
 			return t.match
 		}
 	}

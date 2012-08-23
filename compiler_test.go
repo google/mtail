@@ -30,7 +30,7 @@ var programs = []testProgram{
 			instr{jnm, 5},
 			instr{mload, 0},
 			instr{inc, 0},
-			instr{ret, 1}},
+			instr{ret, 0}},
 		[]in_out{in_out{"", true}}},
 	{"count a",
 		"counter a_count\n/a$/ { a_count++ }",
@@ -39,7 +39,7 @@ var programs = []testProgram{
 			instr{jnm, 5},
 			instr{mload, 0},
 			instr{inc, 0},
-			instr{ret, 1}},
+			instr{ret, 0}},
 		[]in_out{
 			in_out{"", false},
 			in_out{"a", true}}},
@@ -56,7 +56,7 @@ var programs = []testProgram{
 			instr{strptime, 2},
 			instr{mload, 0},
 			instr{inc, 0},
-			instr{ret, 1}},
+			instr{ret, 0}},
 		[]in_out{
 			in_out{"2006-01-02T15:04:05", true}}},
 	{"strptime and named capref",
@@ -72,7 +72,7 @@ var programs = []testProgram{
 			instr{strptime, 2},
 			instr{mload, 0},
 			instr{inc, 0},
-			instr{ret, 1}},
+			instr{ret, 0}},
 		[]in_out{
 			in_out{"2006-01-02T15:04:05", true}}},
 	{"inc by and set",
@@ -92,7 +92,7 @@ var programs = []testProgram{
 			instr{push, 0},
 			instr{capref, 1},
 			instr{set, 0},
-			instr{ret, 1}},
+			instr{ret, 0}},
 		[]in_out{
 			in_out{"37", true}}},
 	{"cond expr gt",
@@ -107,7 +107,7 @@ var programs = []testProgram{
 			instr{jnm, 7},
 			instr{mload, 0},
 			instr{inc, 0},
-			instr{ret, 1}},
+			instr{ret, 0}},
 		[]in_out{
 			in_out{"", true}}},
 	{"cond expr lt",
@@ -122,7 +122,7 @@ var programs = []testProgram{
 			instr{jnm, 7},
 			instr{mload, 0},
 			instr{inc, 0},
-			instr{ret, 1}},
+			instr{ret, 0}},
 		[]in_out{
 			in_out{"", false}}},
 	{"cond expr eq",
@@ -137,7 +137,7 @@ var programs = []testProgram{
 			instr{jnm, 7},
 			instr{mload, 0},
 			instr{inc, 0},
-			instr{ret, 1}},
+			instr{ret, 0}},
 		[]in_out{
 			in_out{"", false}}},
 	{"cond expr le",
@@ -152,7 +152,7 @@ var programs = []testProgram{
 			instr{jm, 7},
 			instr{mload, 0},
 			instr{inc, 0},
-			instr{ret, 1}},
+			instr{ret, 0}},
 		[]in_out{
 			in_out{"", false}}},
 	{"cond expr ge",
@@ -167,9 +167,9 @@ var programs = []testProgram{
 			instr{jm, 7},
 			instr{mload, 0},
 			instr{inc, 0},
-			instr{ret, 1}},
+			instr{ret, 0}},
 		[]in_out{
-			in_out{"", false}}},
+			in_out{"", true}}},
 	{"cond expr ne",
 		"counter foo\n" +
 			"1 != 0 {\n" +
@@ -182,26 +182,50 @@ var programs = []testProgram{
 			instr{jm, 7},
 			instr{mload, 0},
 			instr{inc, 0},
-			instr{ret, 1}},
+			instr{ret, 0}},
 		[]in_out{
-			in_out{"", false}}},
+			in_out{"", true}}},
+	{"nested cond",
+		"counter foo\n" +
+			"/(.*)/ {\n" +
+			"  $1 <= 1 {\n" +
+			"    foo++\n" +
+			"  }\n" +
+			"}",
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 10},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{push, 1},
+			instr{cmp, 1},
+			instr{jm, 10},
+			instr{mload, 0},
+			instr{inc, 0},
+			instr{ret, 0},
+		},
+		[]in_out{
+			in_out{"0", true},
+			in_out{"1", true},
+			in_out{"2", false}}},
 }
 
 func TestCompileAndRun(t *testing.T) {
 	for _, tc := range programs {
+		v, err := Compile(tc.name, strings.NewReader(tc.source))
+		if err != nil {
+			t.Errorf("Compile errors: %q", err)
+			continue
+		}
+		if !reflect.DeepEqual(tc.prog, v.prog) {
+			t.Errorf("%s: VM prog doesn't match.\n\texpected: %v\n\treceived: %v",
+				tc.name, tc.prog, v.prog)
+		}
 		for _, i := range tc.io {
-			v, err := Compile(tc.name, strings.NewReader(tc.source))
-			if err != nil {
-				t.Errorf("Compile errors: %q", err)
-				continue
-			}
-			if !reflect.DeepEqual(tc.prog, v.prog) {
-				t.Errorf("%s: VM prog doesn't match.\n\treceived: %q\n\texpected: %q\n",
-					tc.name, v.prog, tc.prog)
-			}
 			r := v.Run(i.input)
 			if r != i.ok {
-				t.Errorf("%s: Unexpected result after running on test input %q\n\treceived: %v\n\texpected %v\n", tc.name, i.input, r, i.ok)
+				t.Errorf("%s: Unexpected result after running on test input %q\n\tprog: %v\n\texpected: %v\n\treceived: %v",
+					tc.name, i.input, v.prog, i.ok, r)
 			}
 		}
 	}
