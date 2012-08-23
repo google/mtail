@@ -95,6 +95,96 @@ var programs = []testProgram{
 			instr{ret, 1}},
 		[]in_out{
 			in_out{"37", true}}},
+	{"cond expr gt",
+		"counter foo\n" +
+			"1 > 0 {\n" +
+			"  foo++\n" +
+			"}\n",
+		[]instr{
+			instr{push, 1},
+			instr{push, 0},
+			instr{cmp, 1},
+			instr{jnm, 7},
+			instr{mload, 0},
+			instr{inc, 0},
+			instr{ret, 1}},
+		[]in_out{
+			in_out{"", true}}},
+	{"cond expr lt",
+		"counter foo\n" +
+			"1 < 0 {\n" +
+			"  foo++\n" +
+			"}\n",
+		[]instr{
+			instr{push, 1},
+			instr{push, 0},
+			instr{cmp, -1},
+			instr{jnm, 7},
+			instr{mload, 0},
+			instr{inc, 0},
+			instr{ret, 1}},
+		[]in_out{
+			in_out{"", false}}},
+	{"cond expr eq",
+		"counter foo\n" +
+			"1 == 0 {\n" +
+			"  foo++\n" +
+			"}\n",
+		[]instr{
+			instr{push, 1},
+			instr{push, 0},
+			instr{cmp, 0},
+			instr{jnm, 7},
+			instr{mload, 0},
+			instr{inc, 0},
+			instr{ret, 1}},
+		[]in_out{
+			in_out{"", false}}},
+	{"cond expr le",
+		"counter foo\n" +
+			"1 <= 0 {\n" +
+			"  foo++\n" +
+			"}\n",
+		[]instr{
+			instr{push, 1},
+			instr{push, 0},
+			instr{cmp, 1},
+			instr{jm, 7},
+			instr{mload, 0},
+			instr{inc, 0},
+			instr{ret, 1}},
+		[]in_out{
+			in_out{"", false}}},
+	{"cond expr ge",
+		"counter foo\n" +
+			"1 >= 0 {\n" +
+			"  foo++\n" +
+			"}\n",
+		[]instr{
+			instr{push, 1},
+			instr{push, 0},
+			instr{cmp, -1},
+			instr{jm, 7},
+			instr{mload, 0},
+			instr{inc, 0},
+			instr{ret, 1}},
+		[]in_out{
+			in_out{"", false}}},
+	{"cond expr ne",
+		"counter foo\n" +
+			"1 != 0 {\n" +
+			"  foo++\n" +
+			"}\n",
+		[]instr{
+			instr{push, 1},
+			instr{push, 0},
+			instr{cmp, 0},
+			instr{jm, 7},
+			instr{mload, 0},
+			instr{inc, 0},
+			instr{ret, 1}},
+		[]in_out{
+			in_out{"", false}}},
 }
 
 func TestCompileAndRun(t *testing.T) {
