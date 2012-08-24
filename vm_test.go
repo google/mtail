@@ -20,6 +20,7 @@ var instructions = []struct {
 	expected_stack  []interface{}
 	expected_thread thread
 }{
+	// Composite literals require too many explicit conversions.
 	{"inc",
 		[]instr{instr{inc, 0}},
 		[]*regexp.Regexp{},

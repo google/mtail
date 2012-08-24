@@ -313,7 +313,7 @@ func (v *vm) Run(input string) bool {
 	t.matches = make(map[int][]string, 0)
 	for {
 		if t.pc >= len(v.prog) {
-			return false
+			return t.match
 		}
 		i := v.prog[t.pc]
 		terminate := v.execute(&t, i, input)
