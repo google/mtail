@@ -307,19 +307,18 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 
 // Run fetches and executes each instruction in the program on the input string
 // until termination. It returns a boolean indicating a successful action was taken.
-func (v *vm) Run(input string) bool {
+func (v *vm) Run(input string) {
 	t := v.t
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, 0)
 	for {
 		if t.pc >= len(v.prog) {
-			return t.match
+			return
 		}
 		i := v.prog[t.pc]
 		terminate := v.execute(&t, i, input)
 		if terminate {
-			// t.match indicates that an action was taken after a match.
-			return t.match
+			return
 		}
 	}
 	panic("not reached")
