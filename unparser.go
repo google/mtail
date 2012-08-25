@@ -3,7 +3,10 @@
 
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func unparse(n node) string {
 	output := ""
@@ -33,7 +36,7 @@ func unparse(n node) string {
 		output += "}\n"
 
 	case *regexNode:
-		output += "/" + v.pattern + "/"
+		output += "/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/"
 
 	case *stringNode:
 		output += "\"" + v.text + "\""

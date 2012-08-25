@@ -317,8 +317,11 @@ Loop:
 	for {
 		switch l.next() {
 		case '\\':
-			l.accept()
+			l.skip()
 			if r := l.next(); r != eof && r != '\n' {
+				if r != '"' {
+					l.text += `\`
+				}
 				l.accept()
 				break
 			}
@@ -386,8 +389,11 @@ Loop:
 	for {
 		switch l.next() {
 		case '\\':
-			l.accept()
+			l.skip()
 			if r := l.next(); r != eof && r != '\n' {
+				if r != '/' {
+					l.text += `\`
+				}
 				l.accept()
 				break
 			}
