@@ -98,7 +98,6 @@ func (c *compiler) compile(untyped_node node) {
 
 	case *regexNode:
 		if n.re == nil {
-			fmt.Printf("pattern: '%s'\n", n.pattern)
 			re, err := regexp.Compile(n.pattern)
 			if err != nil {
 				c.errorf("%s", err)
