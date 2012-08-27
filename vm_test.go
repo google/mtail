@@ -157,11 +157,6 @@ func TestInstrs(t *testing.T) {
 			&Metric{Name: "foo", Kind: Counter, D: &Datum{}},
 			&Metric{Name: "bar", Kind: Gauge, D: &Datum{}})
 
-		// expected_stack := make([]interface{}, 0, 10)
-		// for _, item := range tc.expected_stack {
-		// 	expected_stack = append(expected_stack, item)
-		// }
-
 		v := newVm(tc.name, tc.re, tc.str, tc.prog)
 		v.t.stack = make([]interface{}, 0)
 		for _, item := range tc.reversed_stack {
