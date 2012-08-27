@@ -73,9 +73,12 @@ var lexerTests = []lexerTest{
 	{"regex", "/asdf/", []Token{
 		Token{REGEX, "asdf", Position{0, 0, 5}},
 		Token{EOF, "", Position{0, 6, 6}}}},
-	{"regex with escape", "/asdf\\//", []Token{
-		Token{REGEX, "asdf\\/", Position{0, 0, 7}},
+	{"regex with escape", `/asdf\//`, []Token{
+		Token{REGEX, `asdf/`, Position{0, 0, 7}},
 		Token{EOF, "", Position{0, 8, 8}}}},
+	{"regex with escape and special char", `/foo\d\//`, []Token{
+		Token{REGEX, `foo\d/`, Position{0, 0, 8}},
+		Token{EOF, "", Position{0, 9, 9}}}},
 	{"capref", "$foo", []Token{
 		Token{CAPREF, "foo", Position{0, 0, 3}},
 		Token{EOF, "", Position{0, 4, 4}}}},
@@ -86,21 +89,18 @@ var lexerTests = []lexerTest{
 		Token{CAPREF, "foo", Position{0, 0, 3}},
 		Token{COMMA, ",", Position{0, 4, 4}},
 		Token{EOF, "", Position{0, 5, 5}}}},
-	{"quoted string", "\"asdf\"", []Token{
-		Token{STRING, "asdf", Position{0, 0, 5}},
+	{"quoted string", `"asdf"`, []Token{
+		Token{STRING, `asdf`, Position{0, 0, 5}},
 		Token{EOF, "", Position{0, 6, 6}}}},
-	{"escaped slashes in regex", "/foo\\//", []Token{
-		Token{REGEX, "foo\\/", Position{0, 0, 6}},
-		Token{EOF, "", Position{0, 7, 7}}}},
-	{"escaped quote in quoted string", "\"\\\"\"", []Token{
-		Token{STRING, "\\\"", Position{0, 0, 3}},
+	{"escaped quote in quoted string", `"\""`, []Token{
+		Token{STRING, `"`, Position{0, 0, 3}},
 		Token{EOF, "", Position{0, 4, 4}}}},
 	{"large program",
 		"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
 			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
 			"  foo++\n" +
 			"}", []Token{
-			Token{REGEX, "(?P<date>[[:digit:]-\\/ ])", Position{0, 0, 26}},
+			Token{REGEX, "(?P<date>[[:digit:]-/ ])", Position{0, 0, 26}},
 			Token{LCURLY, "{", Position{0, 28, 28}},
 			Token{BUILTIN, "strptime", Position{1, 2, 9}},
 			Token{LPAREN, "(", Position{1, 10, 10}},
