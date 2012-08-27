@@ -63,16 +63,16 @@ func (c *compiler) emit(i instr) {
 func (c *compiler) compile(untyped_node node) {
 	switch n := untyped_node.(type) {
 	case *stmtlistNode:
-		l := len(c.prog)
+		// l := len(c.prog)
 		for _, child := range n.children {
 			c.compile(child)
 		}
-		if len(c.prog) > l && c.prog[len(c.prog)-1].op != ret {
-			// Some instructions emitted, so an action was taken; return from the program.
-			// ... but only if the we're not emitting a second ret in a row; if there is one,
-			// then the previous nested block just ended and we have taken no new actions.
-			c.emit(instr{op: ret})
-		}
+		// if len(c.prog) > l && c.prog[len(c.prog)-1].op != ret {
+		// 	// Some instructions emitted, so an action was taken; return from the program.
+		// 	// ... but only if the we're not emitting a second ret in a row; if there is one,
+		// 	// then the previous nested block just ended and we have taken no new actions.
+		// 	c.emit(instr{op: ret})
+		// }
 
 	case *exprlistNode:
 		for _, child := range n.children {
@@ -93,11 +93,12 @@ func (c *compiler) compile(untyped_node node) {
 		for _, child := range n.children {
 			c.compile(child)
 		}
-		// rewrite jump target to jump to instruction after ret
+		// rewrite jump target to jump to instruction after block.
 		c.prog[pc].opnd = len(c.prog)
 
 	case *regexNode:
 		if n.re == nil {
+			fmt.Printf("pattern: '%s'\n", n.pattern)
 			re, err := regexp.Compile(n.pattern)
 			if err != nil {
 				c.errorf("%s", err)

@@ -21,15 +21,15 @@ const (
 	inc                     // Increment a variable value
 	strptime                // Parse into the timestamp register
 	timestamp               // Return value of timestamp register
-	ret                     // Return, end program successfully
-	push                    // Push operand onto stack
-	capref                  // Push capture group reference at operand onto stack
-	str                     // Push string constant at operand onto stack
-	set                     // Set a variable value
-	add                     // Add top values on stack and push to stack
-	sub                     // Subtract tpo value from second top value on stack, and push to stack.
-	mload                   // Load metric at operand onto top of stack.
-	dload                   // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
+	//ret                     // Return, end program successfully
+	push   // Push operand onto stack
+	capref // Push capture group reference at operand onto stack
+	str    // Push string constant at operand onto stack
+	set    // Set a variable value
+	add    // Add top values on stack and push to stack
+	sub    // Subtract tpo value from second top value on stack, and push to stack.
+	mload  // Load metric at operand onto top of stack.
+	dload  // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
 )
 
 var opNames = map[opcode]string{
@@ -40,15 +40,15 @@ var opNames = map[opcode]string{
 	inc:       "inc",
 	strptime:  "strptime",
 	timestamp: "timestamp",
-	ret:       "ret",
-	push:      "push",
-	capref:    "capref",
-	str:       "str",
-	set:       "set",
-	add:       "add",
-	sub:       "sub",
-	mload:     "mload",
-	dload:     "dload",
+	//ret:       "ret",
+	push:   "push",
+	capref: "capref",
+	str:    "str",
+	set:    "set",
+	add:    "add",
+	sub:    "sub",
+	mload:  "mload",
+	dload:  "dload",
 }
 
 var builtin = map[string]opcode{
@@ -248,10 +248,10 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 		// Put a string constant onto the stack
 		t.Push(v.str[i.opnd])
 
-	case ret:
-		// Exit the virtual machine.
-		t.match = true
-		return true
+	// case ret:
+	// 	// Exit the virtual machine.
+	// 	t.match = true
+	// 	return true
 
 	case push:
 		// Push a value onto the stack
