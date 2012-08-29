@@ -150,11 +150,23 @@ func runProgramBenchmark(programfile string, logfile string, b *testing.B) {
 // Caveat emptor:
 // The ns/op measure returned is the time spent on a OneShot for a single program.
 // The MB/s measure should be interpreted as megalines processed per second.
-
-func BenchmarkExampleLineCount(b *testing.B) {
-	runProgramBenchmark("examples/linecount.em", "testdata/linecount.log", b)
+func BenchmarkExamplePrograms(b *testing.B) {
+	b.StopTimer()
+	for _, tc := range exampleProgramTests {
+		result := testing.Benchmark(func(b *testing.B) {
+			// for i := 0; i < b.N; i++ {
+			runProgramBenchmark(tc.programfile, tc.logfile, b)
+			// }
+		})
+		fmt.Printf("%s took %d %s (%d ns/run, %f lines/s)\n", tc.programfile, result.N, result.T, result.NsPerOp(), (float64(result.Bytes)*float64(result.N))/float64(result.T.Seconds()))
+	}
 }
 
-func BenchmarkExampleRsyncd(b *testing.B) {
-	runProgramBenchmark("examples/rsyncd.em", "testdata/rsyncd.log", b)
-}
+// func BenchmarkExampleLineCount(b *testing.B) {
+// 	runProgramBenchmark("examples/linecount.em", "testdata/linecount.log", b)
+// }
+
+// func BenchmarkExampleRsyncd(b *testing.B) {
+// 	runProgramBenchmark("examples/rsyncd.em", "testdata/rsyncd.log", b)
+// }
+// 	for
