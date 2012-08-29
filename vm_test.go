@@ -20,6 +20,7 @@ var instructions = []struct {
 	expected_stack  []interface{}
 	expected_thread thread
 }{
+	// Composite literals require too many explicit conversions.
 	{"inc",
 		[]instr{instr{inc, 0}},
 		[]*regexp.Regexp{},
@@ -66,8 +67,50 @@ var instructions = []struct {
 		[]string{},
 		[]interface{}{},
 		[]interface{}{},
-		thread{reg: 1, pc: 1, matches: map[int][]string{0: {"aaaab"}}},
+		thread{match: true, pc: 1, matches: map[int][]string{0: {"aaaab"}}},
 	},
+	{"cmp lt",
+		[]instr{instr{cmp, -1}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1, "2"},
+		[]interface{}{},
+		thread{pc: 1, match: true, matches: map[int][]string{}}},
+	{"cmp eq",
+		[]instr{instr{cmp, 0}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"2", "2"},
+		[]interface{}{},
+		thread{pc: 1, match: true, matches: map[int][]string{}}},
+	{"cmp gt",
+		[]instr{instr{cmp, 1}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{2, 1},
+		[]interface{}{},
+		thread{pc: 1, match: true, matches: map[int][]string{}}},
+	{"cmp le",
+		[]instr{instr{cmp, 1}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{2, "2"},
+		[]interface{}{},
+		thread{pc: 1, match: false, matches: map[int][]string{}}},
+	{"cmp ne",
+		[]instr{instr{cmp, 0}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"1", "2"},
+		[]interface{}{},
+		thread{pc: 1, match: false, matches: map[int][]string{}}},
+	{"cmp ge",
+		[]instr{instr{cmp, -1}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{2, 2},
+		[]interface{}{},
+		thread{pc: 1, match: false, matches: map[int][]string{}}},
 	{"jnm",
 		[]instr{instr{jnm, 37}},
 		[]*regexp.Regexp{},
@@ -75,6 +118,13 @@ var instructions = []struct {
 		[]interface{}{},
 		[]interface{}{},
 		thread{pc: 37, matches: map[int][]string{}}},
+	{"jm",
+		[]instr{instr{jm, 37}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{},
+		[]interface{}{},
+		thread{pc: 1, matches: map[int][]string{}}},
 	{"strptime",
 		[]instr{instr{strptime, 0}},
 		[]*regexp.Regexp{},
@@ -106,11 +156,6 @@ func TestInstrs(t *testing.T) {
 		metrics[tc.name] = append(metrics[tc.name],
 			&Metric{Name: "foo", Kind: Counter, D: &Datum{}},
 			&Metric{Name: "bar", Kind: Gauge, D: &Datum{}})
-
-		// expected_stack := make([]interface{}, 0, 10)
-		// for _, item := range tc.expected_stack {
-		// 	expected_stack = append(expected_stack, item)
-		// }
 
 		v := newVm(tc.name, tc.re, tc.str, tc.prog)
 		v.t.stack = make([]interface{}, 0)

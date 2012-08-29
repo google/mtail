@@ -33,13 +33,19 @@ var lexerTests = []lexerTest{
 		Token{RSQUARE, "]", Position{0, 5, 5}},
 		Token{COMMA, ",", Position{0, 6, 6}},
 		Token{EOF, "", Position{0, 7, 7}}}},
-	{"operators", "- + = ++ +=", []Token{
+	{"operators", "- + = ++ += < > <= >= == !=", []Token{
 		Token{MINUS, "-", Position{0, 0, 0}},
 		Token{PLUS, "+", Position{0, 2, 2}},
 		Token{ASSIGN, "=", Position{0, 4, 4}},
 		Token{INC, "++", Position{0, 6, 7}},
 		Token{ADD_ASSIGN, "+=", Position{0, 9, 10}},
-		Token{EOF, "", Position{0, 11, 11}}}},
+		Token{LT, "<", Position{0, 12, 12}},
+		Token{GT, ">", Position{0, 14, 14}},
+		Token{LE, "<=", Position{0, 16, 17}},
+		Token{GE, ">=", Position{0, 19, 20}},
+		Token{EQ, "==", Position{0, 22, 23}},
+		Token{NE, "!=", Position{0, 25, 26}},
+		Token{EOF, "", Position{0, 27, 27}}}},
 	{"keywords",
 		"counter\ngauge\nas\nby\nhidden\n", []Token{
 			Token{COUNTER, "counter", Position{0, 0, 6}},

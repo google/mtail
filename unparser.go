@@ -38,6 +38,24 @@ func unparse(n node) string {
 	case *regexNode:
 		output += "/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/"
 
+	case *relNode:
+		output += unparse(v.lhs)
+		switch v.op {
+		case LT:
+			output += " < "
+		case GT:
+			output += " > "
+		case LE:
+			output += " <= "
+		case GE:
+			output += " >= "
+		case EQ:
+			output += " == "
+		case NE:
+			output += " != "
+		}
+		output += unparse(v.rhs)
+
 	case *stringNode:
 		output += "\"" + v.text + "\""
 

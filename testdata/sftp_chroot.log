@@ -1,0 +1,236 @@
+Aug 19 02:14:38 upload sshd[22442]: Connection from 192.168.0.1 port 32846
+Aug 19 02:14:38 upload sshd[22442]: Did not receive identification string from 192.168.0.1
+Aug 19 02:15:41 upload sshd[22459]: Connection from 192.168.0.1 port 34963
+Aug 19 02:15:41 upload sshd[22459]: Did not receive identification string from 192.168.0.1
+Aug 19 02:16:37 upload sshd[22479]: Connection from 192.168.0.2 port 1195
+Aug 19 02:16:39 upload sshd[22479]: PAM unable to dlopen(/lib/security/pam_krb5.so)
+Aug 19 02:16:39 upload sshd[22479]: PAM [dlerror: /lib/security/pam_krb5.so: cannot open shared object file: No such file or directory]
+Aug 19 02:16:39 upload sshd[22479]: PAM adding faulty module: /lib/security/pam_krb5.so
+Aug 19 02:16:39 upload sshd[22479]: Failed none for user1 from 192.168.0.2 port 1195 ssh2
+Aug 19 02:16:39 upload sshd[22479]: Accepted password for user1 from 192.168.0.2 port 1195 ssh2
+Aug 19 02:16:40 upload sshd[22479]: subsystem request for sftp
+Aug 19 02:16:40 upload sshd[22480]: (pam_unix) session opened for user user1 by (uid=0)
+Aug 19 02:16:40 upload scponly[22480]: running: /usr/lib/sftp-server -l INFO (username: user1(10189), IP/port: 192.168.0.2 1195 2200)
+Aug 19 02:16:40 upload sftp-server[22480]: session opened for local user user1 from [UNKNOWN]
+Aug 19 02:16:40 upload sshd[22481]: Connection from 192.168.0.1 port 37090
+Aug 19 02:16:40 upload sshd[22481]: Did not receive identification string from 192.168.0.1
+Aug 19 02:16:40 upload sftp-server[22480]: opendir "/home/user1"
+Aug 19 02:16:41 upload sftp-server[22480]: closedir "/home/user1"
+Aug 19 02:16:44 upload sftp-server[22480]: opendir "/home/user1/outgoing"
+Aug 19 02:16:44 upload sftp-server[22480]: closedir "/home/user1/outgoing"
+Aug 19 02:16:53 upload sftp-server[22480]: open "/home/user1/outgoing/a" flags READ mode 0666
+Aug 19 02:17:24 upload sftp-server[22480]: close "/home/user1/outgoing/a" bytes read 3002263 written 0
+Aug 19 02:17:24 upload sftp-server[22480]: open "/home/user1/outgoing/b" flags READ mode 0666
+Aug 19 02:17:39 upload sshd[22495]: Connection from 192.168.0.1 port 39036
+Aug 19 02:17:39 upload sshd[22495]: Did not receive identification string from 192.168.0.1
+Aug 19 02:18:10 upload sshd[22508]: Connection from 192.168.0.3 port 4224
+Aug 19 02:18:13 upload sshd[22508]: PAM unable to dlopen(/lib/security/pam_krb5.so)
+Aug 19 02:18:13 upload sshd[22508]: PAM [dlerror: /lib/security/pam_krb5.so: cannot open shared object file: No such file or directory]
+Aug 19 02:18:13 upload sshd[22508]: PAM adding faulty module: /lib/security/pam_krb5.so
+Aug 19 02:18:13 upload sshd[22508]: Failed none for user7 from 192.168.0.3 port 4224 ssh2
+Aug 19 02:18:13 upload sshd[22508]: Accepted password for user7 from 192.168.0.3 port 4224 ssh2
+Aug 19 02:18:14 upload sshd[22508]: subsystem request for sftp
+Aug 19 02:18:14 upload sshd[22509]: (pam_unix) session opened for user user7 by (uid=0)
+Aug 19 02:18:14 upload scponly[22509]: running: /usr/lib/sftp-server -l INFO (username: user3(10027), IP/port: 192.168.0.3 4224 2200)
+Aug 19 02:18:14 upload sftp-server[22509]: session opened for local user user3 from [UNKNOWN]
+Aug 19 02:18:14 upload sftp-server[22509]: opendir "/home/user6"
+Aug 19 02:18:15 upload sftp-server[22509]: closedir "/home/user6"
+Aug 19 02:18:30 upload sftp-server[22440]: opendir "/home/user6/incoming"
+Aug 19 02:18:32 upload sftp-server[22440]: closedir "/home/user6/incoming"
+Aug 19 02:18:38 upload sshd[22513]: Connection from 192.168.0.1 port 41000
+Aug 19 02:18:38 upload sshd[22513]: Did not receive identification string from 192.168.0.1
+Aug 19 02:19:08 upload sftp-server[22509]: opendir "/"
+Aug 19 02:19:09 upload sftp-server[22509]: closedir "/"
+Aug 19 02:19:10 upload sftp-server[22509]: opendir "/home/user4/incoming/audit"
+Aug 19 02:19:11 upload sftp-server[22509]: closedir "/home/user4/incoming/audit"
+Aug 19 02:19:13 upload sftp-server[22509]: opendir "/home/user4/incoming/a/b"
+Aug 19 02:19:14 upload sftp-server[22509]: closedir "/home/user4/incoming/a/b"
+Aug 19 02:19:17 upload sftp-server[22509]: opendir "/home/user4/incoming/a/b/c"
+Aug 19 02:19:17 upload sftp-server[22509]: closedir "/home/user4/incoming/a/b/c"
+Aug 19 02:19:26 upload sftp-server[22509]: opendir "/home/user4/incoming/a/b/c/d"
+Aug 19 02:19:26 upload sftp-server[22509]: closedir "/home/user4/incoming/a/b/c/d"
+Aug 19 02:19:29 upload sftp-server[22509]: sent status No such file
+Aug 19 02:19:31 upload sftp-server[22509]: remove name "/home/user4/incoming/a/b/c/d/e"
+Aug 19 02:19:31 upload sftp-server[22509]: open "/home/user4/incoming/a/b/c/d/e.filepart" flags WRITE,CREATE mode 0666
+Aug 19 02:19:37 upload sshd[22524]: Connection from 192.168.0.1 port 43023
+Aug 19 02:19:37 upload sshd[22524]: Did not receive identification string from 192.168.0.1
+Aug 19 02:19:48 upload sftp-server[22509]: close "/home/user4/incoming/a/b/c/d/e.filepart" bytes read 0 written 363520
+Aug 19 02:19:48 upload sftp-server[22509]: rename old "/home/user4/incoming/a/b/c/d/e"
+Aug 19 02:19:48 upload sftp-server[22509]: set "/home/user4/incoming/a/b/c/d/e" mode 0644
+Aug 19 02:19:48 upload sftp-server[22509]: set "/home/user4/incoming/a/b/c/d/e" modtime 20080819-02:18:34
+Aug 19 02:19:49 upload sftp-server[22509]: opendir "/home/user4/incoming/a/b/c/d"
+Aug 19 02:19:49 upload sftp-server[22509]: closedir "/home/user4/incoming/a/b/c/d"
+Aug 19 02:19:54 upload sshd[22529]: Connection from 192.168.0.5 port 11228
+Aug 19 02:19:57 upload sshd[22529]: PAM unable to dlopen(/lib/security/pam_krb5.so)
+Aug 19 02:19:57 upload sshd[22529]: PAM [dlerror: /lib/security/pam_krb5.so: cannot open shared object file: No such file or directory]
+Aug 19 02:19:57 upload sshd[22529]: PAM adding faulty module: /lib/security/pam_krb5.so
+Aug 19 02:19:57 upload sshd[22529]: Failed none for user2 from 192.168.0.5 port 11228 ssh2
+Aug 19 02:19:57 upload sshd[22529]: Accepted password for user2 from 192.168.0.5 port 11228 ssh2
+Aug 19 02:19:58 upload sshd[22529]: subsystem request for sftp
+Aug 19 02:19:58 upload sshd[22530]: (pam_unix) session opened for user user2 by (uid=0)
+Aug 19 02:19:58 upload scponly[22530]: running: /usr/lib/sftp-server -l INFO (username: user2(10059), IP/port: 192.168.0.5 11228 2200)
+Aug 19 02:19:58 upload sftp-server[22530]: session opened for local user user2 from [UNKNOWN]
+Aug 19 02:20:00 upload sftp-server[22530]: opendir "/home/user2"
+Aug 19 02:20:02 upload sftp-server[22530]: closedir "/home/user2"
+Aug 19 02:20:07 upload sftp-server[22530]: opendir "/home/user2/incoming"
+Aug 19 02:20:08 upload sftp-server[22530]: closedir "/home/user2/incoming"
+Aug 19 02:20:09 upload sftp-server[22530]: opendir "/home/user2/incoming"
+Aug 19 02:20:11 upload sftp-server[22530]: closedir "/home/user2/incoming"
+Aug 19 02:20:14 upload sftp-server[22530]: opendir "/home"
+Aug 19 02:20:14 upload sftp-server[22530]: sent status Permission denied
+Aug 19 02:20:16 upload sftp-server[22530]: opendir "/home/user2"
+Aug 19 02:20:17 upload sftp-server[22530]: closedir "/home/user2"
+Aug 19 02:20:18 upload sftp-server[22530]: opendir "/home/user2/outgoing"
+Aug 19 02:20:18 upload sftp-server[22530]: closedir "/home/user2/outgoing"
+Aug 19 02:20:19 upload sftp-server[22530]: opendir "/home/user2/outgoing"
+Aug 19 02:20:21 upload sftp-server[22530]: closedir "/home/user2/outgoing"
+Aug 19 02:20:24 upload sftp-server[22530]: opendir "/home/user2/outgoing/a"
+Aug 19 02:20:25 upload sftp-server[22530]: closedir "/home/user2/outgoing/a"
+Aug 19 02:20:26 upload sftp-server[22530]: opendir "/home/user2/outgoing/a"
+Aug 19 02:20:28 upload sftp-server[22530]: closedir "/home/user2/outgoing/a"
+Aug 19 02:20:30 upload sftp-server[22530]: opendir "/home/user2/outgoing/a/b"
+Aug 19 02:20:30 upload sftp-server[22530]: closedir "/home/user2/outgoing/a/b"
+Aug 19 02:20:31 upload sftp-server[22530]: opendir "/home/user2/outgoing/a/b"
+Aug 19 02:20:33 upload sftp-server[22530]: closedir "/home/user2/outgoing/a/b"
+Aug 19 02:20:37 upload sshd[22557]: Connection from 192.168.0.1 port 45118
+Aug 19 02:20:37 upload sshd[22557]: Did not receive identification string from 192.168.0.1
+Aug 19 02:20:41 upload sftp-server[22530]: opendir "/home/user2/outgoing/a/b/c"
+Aug 19 02:20:42 upload sftp-server[22530]: closedir "/home/user2/outgoing/a/b/c"
+Aug 19 02:20:43 upload sftp-server[22530]: opendir "/home/user2/outgoing/a/b/c"
+Aug 19 02:20:44 upload sftp-server[22530]: closedir "/home/user2/outgoing/a/b/c"
+Aug 19 02:20:54 upload sftp-server[22530]: opendir "/home/user2/outgoing/a/b"
+Aug 19 02:20:55 upload sftp-server[22530]: closedir "/home/user2/outgoing/a/b"
+Aug 19 02:21:35 upload sshd[22572]: Connection from 192.168.0.1 port 47049
+Aug 19 02:21:35 upload sshd[22572]: Did not receive identification string from 192.168.0.1
+Aug 19 02:22:35 upload sshd[22584]: Connection from 192.168.0.1 port 49052
+Aug 19 02:22:35 upload sshd[22584]: Did not receive identification string from 192.168.0.1
+Aug 19 02:23:34 upload sshd[22600]: Connection from 192.168.0.1 port 51062
+Aug 19 02:23:34 upload sshd[22600]: Did not receive identification string from 192.168.0.1
+Aug 19 02:24:34 upload sshd[22615]: Connection from 192.168.0.1 port 53137
+Aug 19 02:24:34 upload sshd[22615]: Did not receive identification string from 192.168.0.1
+Aug 19 02:24:44 upload sshd[22529]: Connection closed by 192.168.0.5
+Aug 19 02:24:44 upload sftp-server[22530]: session closed for local user user2 from [UNKNOWN]
+Aug 19 02:24:44 upload sshd[22529]: Closing connection to 192.168.0.5
+Aug 19 02:24:50 upload sftp-server[22440]: opendir "/home/user6/incoming/a"
+Aug 19 02:24:51 upload sftp-server[22440]: closedir "/home/user6/incoming/a"
+Aug 19 02:25:02 upload sftp-server[22440]: opendir "/home/user6/incoming/b"
+Aug 19 02:25:03 upload sftp-server[22440]: closedir "/home/user6/incoming/b"
+Aug 19 02:25:10 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c"
+Aug 19 02:25:11 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c"
+Aug 19 02:25:13 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d"
+Aug 19 02:25:14 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d"
+Aug 19 02:25:29 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/e"
+Aug 19 02:25:30 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/e"
+Aug 19 02:25:31 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/f"
+Aug 19 02:25:32 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/f"
+Aug 19 02:25:32 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/g"
+Aug 19 02:25:33 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/g"
+Aug 19 02:25:33 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/h"
+Aug 19 02:25:34 upload sshd[22637]: Connection from 192.168.0.1 port 55137
+Aug 19 02:25:34 upload sshd[22637]: Did not receive identification string from 192.168.0.1
+Aug 19 02:25:34 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/h"
+Aug 19 02:25:34 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/i"
+Aug 19 02:25:35 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/i"
+Aug 19 02:25:35 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/j"
+Aug 19 02:25:36 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/j"
+Aug 19 02:25:36 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/k"
+Aug 19 02:25:37 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/k"
+Aug 19 02:25:37 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/d"
+Aug 19 02:25:40 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/d"
+Aug 19 02:25:40 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/e"
+Aug 19 02:25:40 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/e"
+Aug 19 02:25:41 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/f"
+Aug 19 02:25:42 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/f"
+Aug 19 02:25:42 upload sftp-server[22440]: open "/home/user6/incoming/b/c/d/f/z" flags READ mode 0666
+Aug 19 02:25:54 upload sftp-server[22440]: close "/home/user6/incoming/b/c/d/f/z" bytes read 120306 written 0
+Aug 19 02:25:54 upload sftp-server[22440]: open "/home/user6/incoming/b/c/d/f/y" flags READ mode 0666
+Aug 19 02:27:27 upload sftp-server[22440]: close "/home/user6/incoming/b/c/d/f/y" bytes read 904613 written 0
+Aug 19 02:27:27 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/g"
+Aug 19 02:27:29 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/g"
+Aug 19 02:27:29 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/h"
+Aug 19 02:27:30 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/h"
+Aug 19 02:27:30 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/i"
+Aug 19 02:27:31 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/i"
+Aug 19 02:27:31 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/j"
+Aug 19 02:27:32 upload sshd[22678]: Connection from 192.168.0.1 port 59130
+Aug 19 02:27:32 upload sshd[22678]: Did not receive identification string from 192.168.0.1
+Aug 19 02:27:33 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/j"
+Aug 19 02:27:33 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/k"
+Aug 19 02:27:34 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/k"
+Aug 19 02:27:34 upload sftp-server[22440]: open "/home/user6/incoming/b/c/d/k/x" flags READ mode 0666
+Aug 19 02:28:30 upload sshd[22706]: Connection from 192.168.0.1 port 32892
+Aug 19 02:28:30 upload sshd[22706]: Did not receive identification string from 192.168.0.1
+Aug 19 02:28:30 upload sshd[22707]: Connection from 192.168.0.4 port 404
+Aug 19 02:28:36 upload sshd[22707]: PAM unable to dlopen(/lib/security/pam_krb5.so)
+Aug 19 02:28:36 upload sshd[22707]: PAM [dlerror: /lib/security/pam_krb5.so: cannot open shared object file: No such file or directory]
+Aug 19 02:28:36 upload sshd[22707]: PAM adding faulty module: /lib/security/pam_krb5.so
+Aug 19 02:28:36 upload sshd[22707]: Failed none for user7 from 192.168.0.4 port 404 ssh2
+Aug 19 02:28:36 upload sshd[22707]: Accepted password for user7 from 192.168.0.4 port 404 ssh2
+Aug 19 02:28:36 upload sshd[22707]: subsystem request for sftp
+Aug 19 02:28:36 upload sshd[22709]: (pam_unix) session opened for user user7 by (uid=0)
+Aug 19 02:28:36 upload scponly[22709]: running: /usr/lib/sftp-server -l INFO (username: user3(10027), IP/port: 192.168.0.4 404 2200)
+Aug 19 02:28:36 upload sftp-server[22709]: session opened for local user user3 from [UNKNOWN]
+Aug 19 02:28:37 upload sftp-server[22709]: sent status Operation unsupported
+Aug 19 02:28:38 upload sftp-server[22709]: opendir "/home/user6"
+Aug 19 02:28:39 upload sftp-server[22709]: closedir "/home/user6"
+Aug 19 02:29:00 upload sftp-server[22440]: close "/home/user6/incoming/b/c/d/k/x" bytes read 835584 written 0
+Aug 19 02:29:01 upload sftp-server[22440]: open "/home/user6/incoming/b/c/d/k/w" flags READ mode 0666
+Aug 19 02:29:07 upload sftp-server[22709]: opendir "/home/user5/incoming"
+Aug 19 02:29:08 upload sftp-server[22709]: closedir "/home/user5/incoming"
+Aug 19 02:29:09 upload sftp-server[22440]: close "/home/user6/incoming/b/c/d/k/x" bytes read 110066 written 0
+Aug 19 02:29:09 upload sftp-server[22440]: open "/home/user6/incoming/b/c/d/k/w" flags READ mode 0666
+Aug 19 02:29:11 upload sftp-server[22709]: opendir "/home/user5/incoming/b"
+Aug 19 02:29:12 upload sftp-server[22709]: closedir "/home/user5/incoming/b"
+Aug 19 02:29:13 upload sftp-server[22480]: close "/home/user1/outgoing/b" bytes read 71806978 written 0
+Aug 19 02:29:16 upload sftp-server[22709]: opendir "/home/user5/incoming/b/Glossary"
+Aug 19 02:29:17 upload sftp-server[22709]: closedir "/home/user5/incoming/b/Glossary"
+Aug 19 02:29:32 upload sshd[22768]: Connection from 192.168.0.1 port 34983
+Aug 19 02:29:32 upload sshd[22768]: Did not receive identification string from 192.168.0.1
+Aug 19 02:30:26 upload sftp-server[22440]: close "/home/user6/incoming/b/c/d/k/w" bytes read 702175 written 0
+Aug 19 02:30:28 upload sftp-server[22440]: opendir "/home/user6/incoming/b/c/d/d"
+Aug 19 02:30:35 upload sshd[22804]: Connection from 192.168.0.1 port 37066
+Aug 19 02:30:35 upload sshd[22804]: Did not receive identification string from 192.168.0.1
+Aug 19 02:30:36 upload sftp-server[22440]: closedir "/home/user6/incoming/b/c/d/d"
+Aug 19 02:30:36 upload sftp-server[22440]: open "/home/user6/incoming/b/c/d/d/g" flags READ mode 0666
+Aug 19 02:31:17 upload sftp-server[22440]: close "/home/user6/incoming/b/c/d/d/g" bytes read 529607 written 0
+Aug 19 02:31:17 upload sftp-server[22440]: open "/home/user6/incoming/b/c/d/d/h" flags READ mode 0666
+Aug 19 02:31:25 upload sftp-server[22440]: close "/home/user6/incoming/b/c/d/d/h" bytes read 105157 written 0
+Aug 19 02:31:36 upload sshd[22823]: Connection from 192.168.0.1 port 39141
+Aug 19 02:31:36 upload sshd[22823]: Did not receive identification string from 192.168.0.1
+Aug 19 02:32:36 upload sshd[22841]: Connection from 192.168.0.1 port 41201
+Aug 19 02:32:36 upload sshd[22841]: Did not receive identification string from 192.168.0.1
+Aug 19 02:33:35 upload sshd[22852]: Connection from 192.168.0.1 port 43172
+Aug 19 02:33:35 upload sshd[22852]: Did not receive identification string from 192.168.0.1
+Aug 19 02:33:43 upload sftp-server[22709]: opendir "/home/user5/incoming/b/c/d"
+Aug 19 02:33:45 upload sftp-server[22709]: closedir "/home/user5/incoming/b/c/d"
+Aug 19 02:33:46 upload sftp-server[22709]: opendir "/home/user5/incoming/b/c/d/e"
+Aug 19 02:33:47 upload sftp-server[22709]: closedir "/home/user5/incoming/b/c/d/e"
+Aug 19 02:33:49 upload sftp-server[22709]: opendir "/home/user5/incoming/b/c/d/e/f"
+Aug 19 02:33:49 upload sftp-server[22709]: closedir "/home/user5/incoming/b/c/d/e/f"
+Aug 19 02:34:02 upload sftp-server[22709]: open "/home/user5/incoming/b/c/d/e/f/g" flags READ mode 0666
+Aug 19 02:34:05 upload sftp-server[22709]: close "/home/user5/incoming/b/c/d/e/f/g" bytes read 54272 written 0
+Aug 19 02:34:37 upload sshd[22868]: Connection from 192.168.0.1 port 45241
+Aug 19 02:34:37 upload sshd[22868]: Did not receive identification string from 192.168.0.1
+Aug 19 02:35:39 upload sshd[22889]: Connection from 192.168.0.1 port 47354
+Aug 19 02:35:39 upload sshd[22889]: Did not receive identification string from 192.168.0.1
+Aug 19 02:35:40 upload sftp-server[22440]: opendir "/home/user6/incoming/c"
+Aug 19 02:35:44 upload sftp-server[22440]: closedir "/home/user6/incoming/c"
+Aug 19 02:36:37 upload sshd[22902]: Connection from 192.168.0.1 port 49309
+Aug 19 02:36:37 upload sshd[22902]: Did not receive identification string from 192.168.0.1
+Aug 19 02:37:34 upload sftp-server[22509]: opendir "/home/user4/incoming/a/b/User6"
+Aug 19 02:37:35 upload sftp-server[22509]: closedir "/home/user4/incoming/a/b/User6"
+Aug 19 02:37:37 upload sshd[22918]: Connection from 192.168.0.1 port 51303
+Aug 19 02:37:37 upload sshd[22918]: Did not receive identification string from 192.168.0.1
+Aug 19 02:37:38 upload sftp-server[22509]: opendir "/home/user4/incoming/a/b/User6/d"
+Aug 19 02:37:38 upload sftp-server[22509]: closedir "/home/user4/incoming/a/b/User6/d"
+Aug 19 02:37:40 upload sftp-server[22509]: sent status No such file
+Aug 19 02:37:40 upload sftp-server[22509]: sent status No such file
+Aug 19 02:37:41 upload sftp-server[22509]: open "/home/user4/incoming/a/b/User6/d/q.filepart" flags WRITE,CREATE mode 0666
+Aug 19 02:37:58 upload sftp-server[22509]: close "/home/user4/incoming/a/b/User6/d/q.filepart" bytes read 0 written 376320
+Aug 19 02:37:59 upload sftp-server[22509]: rename old "/home/user4/incoming/a/b/User6/d/q.filepart" new "/home/user4/incoming/a/b/User6/d/q"
+Aug 19 02:37:59 upload sftp-server[22509]: set "/home/user4/incoming/a/b/User6/d/q" modtime 20080819-02:37:34
+Aug 19 02:37:59 upload sftp-server[22509]: opendir "/home/user4/incoming/a/b/User6/d"
+Aug 19 02:38:00 upload sftp-server[22509]: closedir "/home/user4/incoming/a/b/User6/d"
+Aug 19 02:38:27 upload sshd[22508]: Connection closed by 192.168.0.3
+Aug 19 02:38:27 upload sftp-server[22509]: session closed for local user user3 from [UNKNOWN]
+Aug 19 02:38:27 upload sshd[22508]: Closing connection to 192.168.0.3

@@ -13,6 +13,7 @@ import (
     "io"
     "fmt"
     "regexp"
+    "strconv"
 )
 
 %}
@@ -28,12 +29,13 @@ import (
 }
 
 %type <n> stmt_list stmt cond arg_expr_list
-%type <n> expr primary_expr additive_expr postfix_expr unary_expr assign_expr
+%type <n> expr primary_expr additive_expr postfix_expr unary_expr assign_expr rel_expr
 %type <n> decl declarator
 %type <mtype> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
+%type <value> relop
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
@@ -48,8 +50,9 @@ import (
 %token <text> CAPREF
 %token <text> ID
 %token <value> CONST
-// Operators
+// Operators, in order of precedence
 %token INC MINUS PLUS
+%token <value> LT GT LE GE EQ NE
 %token ADD_ASSIGN ASSIGN
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
@@ -109,20 +112,46 @@ expr
   ;
 
 assign_expr
-  : additive_expr
+  : rel_expr
   {
      $$ = $1
   }
-  | unary_expr ASSIGN assign_expr
+  | unary_expr ASSIGN rel_expr
   {
     $$ = &assignExprNode{$1, $3}
   }
-  | unary_expr ADD_ASSIGN assign_expr
+  | unary_expr ADD_ASSIGN rel_expr
   {
     $$ = &incByExprNode{$1, $3}
   }
   ;
 
+rel_expr
+  : additive_expr
+  {
+    $$ = $1
+  }
+  | additive_expr relop additive_expr
+  {
+    $$ = &relNode{$1, $3, $2}
+  }
+  ;
+
+relop
+  : LT
+  { $$ = $1 }
+  | GT
+  { $$ = $1 }
+  | LE
+  { $$ = $1 }
+  | GE
+  { $$ = $1 }
+  | EQ
+  { $$ = $1 }
+  | NE
+  { $$ = $1 }
+  ;
+  
 additive_expr
   : unary_expr
   {
@@ -187,7 +216,7 @@ primary_expr
     if sym, ok := Emtaillex.(*parser).s.lookupSym($1); ok {
       $$ = &idNode{$1, sym}
     } else {
-      Emtaillex.Error(fmt.Sprintf("Identifier %s not declared.", $1))
+      Emtaillex.Error(fmt.Sprintf("Identifier '%s' not declared.", $1))
     }
   }
   | CAPREF
@@ -241,6 +270,10 @@ cond
               }
           }
       }
+  }
+  | rel_expr
+  {
+    $$ = $1
   }
   ;
 
@@ -360,40 +393,51 @@ as_spec
 const EOF = 0
 
 type parser struct {
-	root   node
-	errors []string
-	l      *lexer
-	pos    Position
-	s      *scope
+    root   node
+    errors []string
+    l      *lexer
+    pos    Position
+    s      *scope
 }
 
 func NewParser(name string, input io.Reader) *parser {
-	return &parser{l: NewLexer(name, input)}
+    return &parser{l: NewLexer(name, input)}
 }
 
 func (p *parser) Error(s string) {
-	e := fmt.Sprintf("%s:%s: %s", p.l.name, p.pos, s)
-	p.errors = append(p.errors, e)
+    e := fmt.Sprintf("%s:%s: %s", p.l.name, p.pos, s)
+    p.errors = append(p.errors, e)
 }
 
 func (p *parser) Lex(lval *EmtailSymType) int {
-	token := p.l.NextToken()
-	p.pos = token.pos
-	if token.kind == INVALID {
-		p.Error(token.text)
-		return EOF
-	}
-	lval.text = token.text
-	return int(token.kind)
+    token := p.l.NextToken()
+    p.pos = token.pos
+    switch token.kind {
+    case INVALID:
+        p.Error(token.text)
+        return EOF
+    case CONST:
+        var err error
+        lval.value, err = strconv.Atoi(token.text)
+        if err != nil {
+            p.Error(fmt.Sprintf("bad number '%s': %s", token.text, err))
+            return EOF
+        }
+    case LT, GT, LE, GE, NE, EQ:
+        lval.value = int(token.kind)
+    default:
+        lval.text = token.text
+    }
+    return int(token.kind)
 }
 
 func (p *parser) startScope() {
-	s := &scope{p.s, map[string]*symbol{}}
-	p.s = s
+    s := &scope{p.s, map[string]*symbol{}}
+    p.s = s
 }
 
 func (p *parser) endScope() {
-	if p.s != nil && p.s.parent != nil {
-		p.s = p.s.parent
-	}
+    if p.s != nil && p.s.parent != nil {
+        p.s = p.s.parent
+    }
 }

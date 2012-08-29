@@ -29,6 +29,12 @@ var lexemeName = map[Lexeme]string{
 	PLUS:       "PLUS",
 	ADD_ASSIGN: "ADD_ASSIGN",
 	ASSIGN:     "ASSIGN",
+	LT:         "LT",
+	GT:         "GT",
+	LE:         "LE",
+	GE:         "GE",
+	EQ:         "EQ",
+	NE:         "NE",
 	REGEX:      "REGEX",
 	ID:         "ID",
 	CAPREF:     "CAPREF",
@@ -252,7 +258,44 @@ func lexProg(l *lexer) stateFn {
 		}
 	case r == '=':
 		l.accept()
-		l.emit(ASSIGN)
+		switch l.next() {
+		case '=':
+			l.accept()
+			l.emit(EQ)
+		default:
+			l.backup()
+			l.emit(ASSIGN)
+		}
+	case r == '<':
+		l.accept()
+		switch l.next() {
+		case '=':
+			l.accept()
+			l.emit(LE)
+		default:
+			l.backup()
+			l.emit(LT)
+		}
+	case r == '>':
+		l.accept()
+		switch l.next() {
+		case '=':
+			l.accept()
+			l.emit(GE)
+		default:
+			l.backup()
+			l.emit(GT)
+		}
+	case r == '!':
+		l.accept()
+		switch l.next() {
+		case '=':
+			l.accept()
+			l.emit(NE)
+		default:
+			l.backup()
+			return l.errorf("Unexpected input: %q", r)
+		}
 	case r == '/':
 		return lexRegex
 	case r == '"':
