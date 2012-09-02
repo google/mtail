@@ -146,41 +146,35 @@ func TestExamplePrograms(t *testing.T) {
 	}
 }
 
-func runProgramBenchmark(programfile string, logfile string, b *testing.B) {
-	b.StopTimer()
-	lines, errs := CompileAndLoad(programfile)
-	if errs != "" {
-		b.Errorf(errs)
-		return
-	}
-	for run := 0; run < b.N; run++ {
-		b.StartTimer()
-		err := OneShot(logfile, lines)
-		if err != nil {
-			b.Errorf("Oneshot failed: %s", err)
-			return
-		}
-		b.StopTimer()
-		i, err := strconv.ParseInt(line_count.String(), 10, 64)
-		if err != nil {
-			b.Errorf("strconv failed: %s", err)
-		}
-		b.SetBytes(i)
-	}
-}
-
 // These benchmarks run the testdata logs through the example programs.
 // Caveat emptor:
 // The ns/op measure returned is the time spent on a OneShot for a single program.
 // The MB/s measure should be interpreted as megalines processed per second.
 func BenchmarkExamplePrograms(b *testing.B) {
 	b.StopTimer()
+	fmt.Println()
 	for _, tc := range exampleProgramTests {
-		result := testing.Benchmark(func(b *testing.B) {
-			// for i := 0; i < b.N; i++ {
-			runProgramBenchmark(tc.programfile, tc.logfile, b)
-			// }
+		lines, errs := CompileAndLoad(tc.programfile)
+		if errs != "" {
+			b.Errorf(errs)
+		}
+		r := testing.Benchmark(func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				b.StartTimer()
+				err := OneShot(tc.logfile, lines)
+				if err != nil {
+					b.Errorf("Oneshot failed: %s", err)
+					return
+				}
+				b.StopTimer()
+				i, err := strconv.ParseInt(line_count.String(), 10, 64)
+				if err != nil {
+					b.Errorf("strconv failed: %s", err)
+				}
+				b.SetBytes(i)
+			}
 		})
-		fmt.Printf("%s took %d %s (%d ns/run, %f lines/s)\n", tc.programfile, result.N, result.T, result.NsPerOp(), (float64(result.Bytes)*float64(result.N))/float64(result.T.Seconds()))
+		l_s := (float64(r.Bytes) * float64(r.N)) / 1e6 / r.T.Seconds()
+		fmt.Printf("%s: %d runs in %s (%d ns/run, %d lines, %f Mlines/s) %s\n", tc.programfile, r.N, r.T, r.NsPerOp(), r.Bytes, l_s, r)
 	}
 }
