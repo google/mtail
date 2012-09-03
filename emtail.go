@@ -37,9 +37,11 @@ var (
 func RunVms(vms []*vm, lines chan string) {
 	for {
 		select {
+		// TODO(jaq): stop?
 		case line := <-lines:
 			line_count.Add(1)
 			for _, v := range vms {
+				// TODO(jaq): experiment with serialising
 				go v.Run(line)
 			}
 		}
@@ -72,6 +74,17 @@ func OneShot(logfile string, lines chan string) error {
 		}
 	}
 	return nil
+}
+
+func StartEmtail(lines chan string, pathnames []string) {
+	w := NewWatcher()
+	t := NewTailer(w, lines)
+
+	for _, pathname := range pathnames {
+		if t.Tail(pathname) {
+			log_count.Add(1)
+		}
+	}
 }
 
 func main() {
@@ -145,14 +158,7 @@ func main() {
 		os.Stdout.Write(b)
 		WriteMetrics()
 	} else {
-		w := NewWatcher()
-		t := NewTailer(w, lines)
-
-		for _, pathname := range pathnames {
-			if t.Tail(pathname) {
-				log_count.Add(1)
-			}
-		}
+		StartEmtail(lines, pathnames)
 
 		http.HandleFunc("/json", handleJson)
 		http.HandleFunc("/csv", handleCsv)
