@@ -185,11 +185,6 @@ func (t *tailer) start() {
 	for {
 		select {
 		case ev := <-t.w.Event:
-			if ev.Name == "" {
-				log.Printf("No filename given: %q\n", ev.Name)
-				continue
-			}
-
 			event_count.Add(ev.String(), 1)
 			switch {
 			case ev.Mask&tLogUpdateMask != 0:
