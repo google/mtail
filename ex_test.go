@@ -167,14 +167,15 @@ func BenchmarkExamplePrograms(b *testing.B) {
 					return
 				}
 				b.StopTimer()
-				i, err := strconv.ParseInt(line_count.String(), 10, 64)
+				l, err := strconv.ParseInt(line_count.String(), 10, 64)
 				if err != nil {
 					b.Errorf("strconv failed: %s", err)
 				}
-				b.SetBytes(i)
+				b.SetBytes(l)
 			}
 		})
 		l_s := (float64(r.Bytes) * float64(r.N)) / 1e6 / r.T.Seconds()
-		fmt.Printf("%s: %d runs in %s (%d ns/run, %d lines, %f Mlines/s) %s\n", tc.programfile, r.N, r.T, r.NsPerOp(), r.Bytes, l_s, r)
+		ms_run := float64(r.NsPerOp()) / 1e6
+		fmt.Printf("%s: %d runs in %s (%f ms/run, %d lines, %f Mlines/s)\n", tc.programfile, r.N, r.T, ms_run, r.Bytes, l_s)
 	}
 }
