@@ -16,8 +16,6 @@ func TestTail(t *testing.T) {
 	}
 	defer os.RemoveAll(d)
 
-	w := NewWatcher()
-
 	logfile := d + "/log"
 	f, err := os.Create(logfile)
 	if err != nil {
@@ -26,11 +24,11 @@ func TestTail(t *testing.T) {
 	defer f.Close()
 
 	lines := make(chan string)
-	ta := NewTailer(w, lines)
+	ta := NewTailer(lines)
 	ta.Tail(logfile)
 
-	if _, ok := w.change[logfile]; !ok {
-		t.Error("path not found in watcher change channel map")
+	if _, ok := ta.files[logfile]; !ok {
+		t.Error("path not found in files map")
 	}
 }
 
@@ -49,14 +47,14 @@ func TestHandleLogChange(t *testing.T) {
 	defer f.Close()
 
 	lines := make(chan string)
-	ta := NewTailer(nil, lines)
+	ta := NewTailer(lines)
 	ta.Tail(logfile)
 
 	_, err = f.WriteString("a\nb\nc\nd\n")
 	if err != nil {
 		t.Error(err)
 	}
-	go ta.handleLogChange(logfile)
+	go ta.handleLogUpdate(logfile)
 
 	for _, expected := range []string{"a", "b", "c", "d"} {
 		// Run as a goroutine because it's going to emit lines via output channel
@@ -83,14 +81,14 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	defer f.Close()
 
 	lines := make(chan string)
-	ta := NewTailer(nil, lines)
+	ta := NewTailer(lines)
 	ta.Tail(logfile)
 
 	_, err = f.WriteString("a")
 	if err != nil {
 		t.Error(err)
 	}
-	go ta.handleLogChange(logfile)
+	go ta.handleLogUpdate(logfile)
 	select {
 	case line := <-ta.lines:
 		t.Errorf("unexpected line found: %s", line)
@@ -101,7 +99,7 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	go ta.handleLogChange(logfile)
+	go ta.handleLogUpdate(logfile)
 
 	select {
 	case line := <-ta.lines:
@@ -113,7 +111,7 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	go ta.handleLogChange(logfile)
+	go ta.handleLogUpdate(logfile)
 	line := <-ta.lines
 	if line != "ab" {
 		t.Errorf("line doesn't match: expected 'ab' vs %s", line)

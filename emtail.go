@@ -77,8 +77,7 @@ func OneShot(logfile string, lines chan string) error {
 }
 
 func StartEmtail(lines chan string, pathnames []string) {
-	w := NewWatcher()
-	t := NewTailer(w, lines)
+	t := NewTailer(lines)
 
 	for _, pathname := range pathnames {
 		if t.Tail(pathname) {

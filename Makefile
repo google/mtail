@@ -13,7 +13,6 @@ GOFILES=\
 	tail.go\
 	unparser.go\
 	vm.go\
-	watch.go\
 
 GOTESTFILES=\
 	emtail_test.go\
@@ -23,7 +22,7 @@ GOTESTFILES=\
 	parser_test.go\
 	tail_test.go\
 	vm_test.go\
-	watch_test.go\
+
 
 CLEANFILES+=\
 	parser.go\
