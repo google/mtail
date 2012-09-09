@@ -151,7 +151,9 @@ func TestExamplePrograms(t *testing.T) {
 // The ns/op measure returned is the time spent on a OneShot for a single program.
 // The MB/s measure should be interpreted as megalines processed per second.
 func BenchmarkExamplePrograms(b *testing.B) {
-	b.StopTimer()
+	if testing.Short() {
+		return
+	}
 	fmt.Println()
 	for _, tc := range exampleProgramTests {
 		lines, errs := CompileAndLoad(tc.programfile)
@@ -176,10 +178,11 @@ func BenchmarkExamplePrograms(b *testing.B) {
 			}
 		})
 
-		kl_s := float64(r.Bytes) * float64(r.N) / 1e3 / r.T.Seconds()
+		kl_s := float64(r.Bytes) * float64(r.N) / (r.T.Seconds() * 1000)
 		ms_run := float64(r.NsPerOp()) / 1e6
 		lr := r.Bytes * int64(r.N)
-		fmt.Printf("%s: %d runs, %d lines in %s (%f ms/run, %d lines/run, %f Klines/s)\n",
-			tc.programfile, r.N, lr, r.T, ms_run, r.Bytes, kl_s)
+		µs_l := float64(r.T.Nanoseconds()) / (float64(r.Bytes) * float64(r.N) * 1000)
+		fmt.Printf("%s: %d runs, %d lines in %s (%f ms/run, %d lines/run, %f Klines/s, %f µs/line)\n",
+			tc.programfile, r.N, lr, r.T, ms_run, r.Bytes, kl_s, µs_l)
 	}
 }
