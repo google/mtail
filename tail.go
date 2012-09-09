@@ -23,10 +23,11 @@ import (
 )
 
 var (
-	event_count                 = expvar.NewMap("inotify_event_count")
-	log_errors_total            = expvar.NewMap("log_errors_total")
-	log_permission_denied_total = expvar.NewMap("log_permission_denied_total")
-	log_rotations_total         = expvar.NewMap("log_rotations_total")
+	event_count           = expvar.NewMap("inotify_event_count")
+	log_count             = expvar.NewInt("log_count_total")
+	log_errors            = expvar.NewMap("log_errors_total")
+	log_permission_denied = expvar.NewMap("log_permission_denied_total")
+	log_rotations         = expvar.NewMap("log_rotations_total")
 )
 
 // Set of masks to use to determine different events
@@ -66,15 +67,18 @@ func NewTailer(lines chan string) *tailer {
 }
 
 // Tail adds a file to be tailed.
-func (t *tailer) Tail(pathname string) bool {
-	// Mark this file as watchable.
+func (t *tailer) Tail(pathname string) {
 	fullpath, err := filepath.Abs(pathname)
 	if err != nil {
 		log.Printf("Failed to find absolute path for %q: %s\n", pathname, err)
-		return false
+		return
 	}
-	t.watched[fullpath] = struct{}{}
-	return t.openLogFile(fullpath, false)
+	if _, ok := t.watched[fullpath]; !ok {
+		// Mark this file as watchable.
+		t.watched[fullpath] = struct{}{}
+		log_count.Add(1)
+		t.openLogFile(fullpath, false)
+	}
 }
 
 // handleLogUpdate reads all available bytes from an already opened *File
@@ -132,7 +136,7 @@ func (t *tailer) handleLogCreate(pathname string) {
 			return
 		}
 		if Inode(s1) != Inode(s2) {
-			log_rotations_total.Add(pathname, 1)
+			log_rotations.Add(pathname, 1)
 			// flush the old log, pathname is still an index into t.files with the old inode.
 			t.handleLogUpdate(pathname)
 			fd.Close()
@@ -141,29 +145,24 @@ func (t *tailer) handleLogCreate(pathname string) {
 				log.Println("Failed removing watches on", pathname)
 			}
 			// Always seek to start on log rotation.
-			if !t.openLogFile(pathname, true) {
-				log.Println("Failed to open %q", pathname)
-			}
+			t.openLogFile(pathname, true)
 		} else {
 			log.Printf("Path %s already being watched, and inode not changed.\n",
 				pathname)
 		}
 	} else {
 		// Freshly opened log file, never seen before, so do not seek to start.
-		if !t.openLogFile(pathname, true) {
-			log.Println("failed opening", pathname)
-			return
-		}
+		t.openLogFile(pathname, true)
 	}
 }
 
 // openLogFile opens a new log file at pathname, and optionally seeks to the
 // start or end of the file. Rotated logs should start at the start, but logs
 // opened for the first time start at the end.
-func (t *tailer) openLogFile(pathname string, seek_to_start bool) bool {
+func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 	if _, ok := t.watched[pathname]; !ok {
 		log.Printf("Not watching %q, ignoring.\n", pathname)
-		return false
+		return
 	}
 
 	d := path.Dir(pathname)
@@ -178,17 +177,18 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) bool {
 	var err error
 	t.files[pathname], err = os.Open(pathname)
 	if err != nil {
-		// Doesn't exist yet.  We're watching the directory, so clear this invalid file pointer and return successfully.
+		// Doesn't exist yet. We're watching the directory, so clear this
+		// invalid file pointer and return successfully.
 		if os.IsNotExist(err) {
 			delete(t.files, pathname)
-			return true
+			return
 		}
 		log.Printf("Failed to open %q for reading: %s\n", pathname, err)
-		log_errors_total.Add(pathname, 1)
+		log_errors.Add(pathname, 1)
 		if os.IsPermission(err) {
-			log_permission_denied_total.Add(pathname, 1)
+			log_permission_denied.Add(pathname, 1)
 		}
-		return false
+		return
 	}
 
 	if seek_to_start {
@@ -202,8 +202,6 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) bool {
 
 	// In case the new log has been written to already, attempt to read the first lines.
 	t.handleLogUpdate(pathname)
-
-	return true
 }
 
 // start is the main event loop for the tailer.

@@ -30,7 +30,6 @@ var (
 
 var (
 	line_count = expvar.NewInt("line_count")
-	log_count  = expvar.NewInt("log_count")
 )
 
 // RunVms receives a line from a channel and sends it to all VMs.
@@ -80,9 +79,7 @@ func StartEmtail(lines chan string, pathnames []string) {
 	t := NewTailer(lines)
 
 	for _, pathname := range pathnames {
-		if t.Tail(pathname) {
-			log_count.Add(1)
-		}
+		t.Tail(pathname)
 	}
 }
 
