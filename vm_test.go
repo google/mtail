@@ -163,7 +163,8 @@ func TestInstrs(t *testing.T) {
 			v.t.Push(item)
 		}
 		v.t.matches = make(map[int][]string, 0)
-		v.execute(&v.t, v.prog[0], "aaaab")
+		v.input = "aaaab"
+		v.execute(&v.t, v.prog[0])
 
 		if !reflect.DeepEqual(tc.expected_stack, v.t.stack) {
 			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_stack, v.t.stack)

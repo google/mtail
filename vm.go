@@ -81,6 +81,8 @@ type vm struct {
 	ts_mem map[string]time.Time // memo of time string parse results
 
 	t thread // Current thread of execution
+
+	input string // Log line input to this round of execution.
 }
 
 // Push a value onto the stack
@@ -125,13 +127,13 @@ func (t *thread) PopInt() (int64, error) {
 
 // Execute acts on the current instruction, and returns a boolean indicating
 // if the current thread should terminate.
-func (v *vm) execute(t *thread, i instr, input string) bool {
+func (v *vm) execute(t *thread, i instr) bool {
 	switch i.op {
 	case match:
 		// match regex and store success
 		// Store the results in the operandth element of the stack,
 		// where i.opnd == the matched re index
-		t.matches[i.opnd] = v.re[i.opnd].FindStringSubmatch(input)
+		t.matches[i.opnd] = v.re[i.opnd].FindStringSubmatch(v.input)
 		t.match = t.matches[i.opnd] != nil
 	case cmp:
 		// Compare two elements on the stack.
@@ -301,6 +303,7 @@ func (v *vm) execute(t *thread, i instr, input string) bool {
 // until termination. It returns a boolean indicating a successful action was taken.
 func (v *vm) Run(input string) {
 	t := v.t
+	v.input = input
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, 0)
 	for {
@@ -308,7 +311,7 @@ func (v *vm) Run(input string) {
 			return
 		}
 		i := v.prog[t.pc]
-		terminate := v.execute(&t, i, input)
+		terminate := v.execute(&t, i)
 		if terminate {
 			return
 		}
