@@ -41,7 +41,7 @@ func RunVms(vms []*vm, lines chan string) {
 			line_count.Add(1)
 			for _, v := range vms {
 				// TODO(jaq): Instead of forking a goroutine each time, set up a line channel to each VM.
-				go v.Run(line)
+				v.Run(line)
 			}
 		}
 	}
