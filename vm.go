@@ -83,6 +83,8 @@ type vm struct {
 	t thread // Current thread of execution
 
 	input string // Log line input to this round of execution.
+
+	terminate bool // Flag to stop the VM program.
 }
 
 // Push a value onto the stack
@@ -99,9 +101,9 @@ func (t *thread) Pop() (value interface{}) {
 }
 
 // Log a runtime error and terminate the program
-func (v *vm) errorf(format string, args ...interface{}) bool {
+func (v *vm) errorf(format string, args ...interface{}) {
 	log.Printf("Runtime error: "+format+"\n", args...)
-	return true
+	v.terminate = true
 }
 
 func (t *thread) PopInt() (int64, error) {
@@ -127,7 +129,7 @@ func (t *thread) PopInt() (int64, error) {
 
 // Execute acts on the current instruction, and returns a boolean indicating
 // if the current thread should terminate.
-func (v *vm) execute(t *thread, i instr) bool {
+func (v *vm) execute(t *thread, i instr) {
 	switch i.op {
 	case match:
 		// match regex and store success
@@ -141,11 +143,11 @@ func (v *vm) execute(t *thread, i instr) bool {
 		// Operand contains the expected result.
 		b, err := t.PopInt()
 		if err != nil {
-			return v.errorf("%s", err)
+			v.errorf("%s", err)
 		}
 		a, err := t.PopInt()
 		if err != nil {
-			return v.errorf("%s", err)
+			v.errorf("%s", err)
 		}
 
 		switch i.opnd {
@@ -159,14 +161,10 @@ func (v *vm) execute(t *thread, i instr) bool {
 	case jnm:
 		if !t.match {
 			t.pc = i.opnd
-			// Don't fall to end of loop or pc gets incremented.
-			return false
 		}
 	case jm:
 		if t.match {
 			t.pc = i.opnd
-			// Don't fall to end of loop or pc gets incremented.
-			return false
 		}
 	case inc:
 		// increment a counter
@@ -176,7 +174,7 @@ func (v *vm) execute(t *thread, i instr) bool {
 			var err error
 			delta, err = t.PopInt()
 			if err != nil {
-				return v.errorf("%s", err)
+				v.errorf("%s", err)
 			}
 		}
 		switch d := t.Pop().(type) {
@@ -186,14 +184,14 @@ func (v *vm) execute(t *thread, i instr) bool {
 			m := metrics[v.name][d]
 			m.IncBy(delta, t.time)
 		default:
-			return v.errorf("Unexpected type to increment: %T %q", d, d)
+			v.errorf("Unexpected type to increment: %T %q", d, d)
 		}
 
 	case set:
 		// Set a gauge
 		value, err := t.PopInt()
 		if err != nil {
-			return v.errorf("%s", err)
+			v.errorf("%s", err)
 		}
 
 		switch d := t.Pop().(type) {
@@ -203,7 +201,7 @@ func (v *vm) execute(t *thread, i instr) bool {
 			m := metrics[v.name][d]
 			m.Set(value, t.time)
 		default:
-			return v.errorf("Unexpected type to set: %T %q", d, d)
+			v.errorf("Unexpected type to set: %T %q", d, d)
 		}
 
 	case strptime:
@@ -224,7 +222,7 @@ func (v *vm) execute(t *thread, i instr) bool {
 		if tm, ok := v.ts_mem[ts]; !ok {
 			tm, err := time.Parse(layout, ts)
 			if err != nil {
-				return v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
+				v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
 			}
 			v.ts_mem[ts] = tm
 			t.time = tm
@@ -293,14 +291,13 @@ func (v *vm) execute(t *thread, i instr) bool {
 		t.Push(m.Values[h])
 
 	default:
-		return v.errorf("illegal instruction: %q", i.op)
+		v.errorf("illegal instruction: %q", i.op)
 	}
-	t.pc++
-	return false
 }
 
 // Run fetches and executes each instruction in the program on the input string
-// until termination. It returns a boolean indicating a successful action was taken.
+// until termination. It returns a boolean indicating a successful action was
+// taken.
 func (v *vm) Run(input string) {
 	t := v.t
 	v.input = input
@@ -311,8 +308,9 @@ func (v *vm) Run(input string) {
 			return
 		}
 		i := v.prog[t.pc]
-		terminate := v.execute(&t, i)
-		if terminate {
+		t.pc++
+		v.execute(&t, i)
+		if v.terminate {
 			return
 		}
 	}
