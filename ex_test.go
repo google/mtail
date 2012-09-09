@@ -160,6 +160,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 		}
 		r := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
+				line_count.Set(0)
 				b.StartTimer()
 				err := OneShot(tc.logfile, lines)
 				if err != nil {
@@ -174,8 +175,11 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				b.SetBytes(l)
 			}
 		})
-		l_s := (float64(r.Bytes) * float64(r.N)) / 1e6 / r.T.Seconds()
+
+		kl_s := float64(r.Bytes) * float64(r.N) / 1e3 / r.T.Seconds()
 		ms_run := float64(r.NsPerOp()) / 1e6
-		fmt.Printf("%s: %d runs in %s (%f ms/run, %d lines, %f Mlines/s)\n", tc.programfile, r.N, r.T, ms_run, r.Bytes, l_s)
+		lr := r.Bytes * int64(r.N)
+		fmt.Printf("%s: %d runs, %d lines in %s (%f ms/run, %d lines/run, %f Klines/s)\n",
+			tc.programfile, r.N, lr, r.T, ms_run, r.Bytes, kl_s)
 	}
 }
