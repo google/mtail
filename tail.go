@@ -24,7 +24,7 @@ import (
 
 var (
 	event_count           = expvar.NewMap("inotify_event_count")
-	log_count             = expvar.NewInt("log_count_total")
+	log_count             = expvar.NewInt("log_count")
 	log_errors            = expvar.NewMap("log_errors_total")
 	log_permission_denied = expvar.NewMap("log_permission_denied_total")
 	log_rotations         = expvar.NewMap("log_rotations_total")
