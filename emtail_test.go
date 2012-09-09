@@ -24,6 +24,7 @@ func startEmtail(t *testing.T, pathnames []string) {
 	}
 	vms = append(vms, prog)
 	lines := make(chan string)
+	line_count.Set(0)
 	go RunVms(vms, lines)
 	StartEmtail(lines, pathnames)
 }
@@ -93,7 +94,7 @@ func TestHandleLogRotation(t *testing.T) {
 	hup := make(chan bool, 1)
 	pathnames := []string{log_filepath}
 	startEmtail(t, pathnames)
-	line_count.Set(0)
+
 	go func() {
 		log_file := log_file
 		var err error
@@ -134,6 +135,80 @@ func TestHandleLogRotation(t *testing.T) {
 	}()
 	<-stop
 	expected := "10"
+	if line_count.String() != expected {
+		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, line_count.String())
+	}
+}
+
+func TestHandleNewLogAfterStart(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	// make temp dir
+	workdir, err := ioutil.TempDir("", "emtail_test")
+	if err != nil {
+		t.Errorf("could not create temporary directory: %s", err)
+	}
+	defer func() {
+		err := os.RemoveAll(workdir)
+		if err != nil {
+			t.Errorf("Could not remove temp dir: %s", err)
+		}
+	}()
+	// Start up emtail
+	log_filepath := path.Join(workdir, "log")
+	pathnames := []string{log_filepath}
+	startEmtail(t, pathnames)
+
+	// touch log file
+	log_file, err := os.Create(log_filepath)
+	if err != nil {
+		t.Errorf("could not touch log file: %s", err)
+	}
+	defer log_file.Close()
+	ex_lines := []string{"hi", "hi2", "hi3"}
+	for _, x := range ex_lines {
+		// write to log file
+		log_file.WriteString(x + "\n")
+	}
+	// TODO(jaq): remove slow sleep
+	time.Sleep(100 * time.Millisecond)
+	// check log line count increase
+	expected := fmt.Sprintf("%d", len(ex_lines))
+	if line_count.String() != expected {
+		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, line_count.String())
+	}
+}
+
+func TestHandleNewLogIgnored(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	// make temp dir
+	workdir, err := ioutil.TempDir("", "emtail_test")
+	if err != nil {
+		t.Errorf("could not create temporary directory: %s", err)
+	}
+	defer func() {
+		err := os.RemoveAll(workdir)
+		if err != nil {
+			t.Errorf("Could not remove temp dir: %s", err)
+		}
+	}()
+	// Start emtail
+	log_filepath := path.Join(workdir, "log")
+	pathnames := []string{log_filepath}
+	startEmtail(t, pathnames)
+
+	// touch log file
+	new_log_filepath := path.Join(workdir, "log1")
+
+	log_file, err := os.Create(new_log_filepath)
+	if err != nil {
+		t.Errorf("could not touch log file: %s", err)
+	}
+	defer log_file.Close()
+	expected := "0"
 	if line_count.String() != expected {
 		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, line_count.String())
 	}

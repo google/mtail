@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"syscall"
 	"unicode/utf8"
 )
@@ -34,11 +35,13 @@ const (
 	tLogUpdateMask = inotify.IN_MODIFY
 )
 
-// tailer receives notification of changes from the filesystem watcher and
-// extracts new log lines from files.
+// tailer receives notification of changes from inotify and extracts new log
+// lines from files. It also handles new log file creation events and log
+// rotations.
 type tailer struct {
 	w *inotify.Watcher
 
+	watched  map[string]struct{} // Names of logs being watched.
 	lines    chan string         // Logfile lines being emitted.
 	files    map[string]*os.File // File handles for each pathname.
 	partials map[string]string   // Accumulator for the currently read line for each pathname.
@@ -53,6 +56,7 @@ func NewTailer(lines chan string) *tailer {
 	}
 	t := &tailer{
 		w:        w,
+		watched:  make(map[string]struct{}),
 		lines:    lines,
 		files:    make(map[string]*os.File),
 		partials: make(map[string]string),
@@ -63,7 +67,14 @@ func NewTailer(lines chan string) *tailer {
 
 // Tail adds a file to be tailed.
 func (t *tailer) Tail(pathname string) bool {
-	return t.openLogFile(pathname, false)
+	// Mark this file as watchable.
+	fullpath, err := filepath.Abs(pathname)
+	if err != nil {
+		log.Printf("Failed to find absolute path for %q: %s\n", pathname, err)
+		return false
+	}
+	t.watched[fullpath] = struct{}{}
+	return t.openLogFile(fullpath, false)
 }
 
 // handleLogUpdate reads all available bytes from an already opened *File
@@ -78,7 +89,7 @@ Loop:
 				// end of file for now, return
 				break Loop
 			}
-			log.Printf("error reading %q: %q\n", pathname, err)
+			log.Printf("Failed to read updates from %q: %s\n", pathname, err)
 			return
 		} else {
 			for i, width := 0, 0; i < len(b) && i < n; i += width {
@@ -104,15 +115,20 @@ func Inode(f os.FileInfo) uint64 {
 
 // handleLogCreate handles both new and rotated log files.
 func (t *tailer) handleLogCreate(pathname string) {
+	if _, ok := t.watched[pathname]; !ok {
+		log.Printf("Not watching path %q, ignoring.\n", pathname)
+		return
+	}
+
 	if fd, ok := t.files[pathname]; ok {
 		s1, err := fd.Stat()
 		if err != nil {
-			log.Printf("stat failed on %s: %s\n", t.files[pathname].Name(), err)
+			log.Printf("Stat failed on %q: %s\n", t.files[pathname].Name(), err)
 			return
 		}
 		s2, err := os.Stat(pathname)
 		if err != nil {
-			log.Printf("stat failed on %s: %s\n", pathname, err)
+			log.Printf("Stat failed on %q: %s\n", pathname, err)
 			return
 		}
 		if Inode(s1) != Inode(s2) {
@@ -126,7 +142,7 @@ func (t *tailer) handleLogCreate(pathname string) {
 			}
 			// Always seek to start on log rotation.
 			if !t.openLogFile(pathname, true) {
-				log.Println("failed opening", pathname)
+				log.Println("Failed to open %q", pathname)
 			}
 		} else {
 			log.Printf("Path %s already being watched, and inode not changed.\n",
@@ -134,8 +150,9 @@ func (t *tailer) handleLogCreate(pathname string) {
 		}
 	} else {
 		// Freshly opened log file, never seen before, so do not seek to start.
-		if !t.openLogFile(pathname, false) {
+		if !t.openLogFile(pathname, true) {
 			log.Println("failed opening", pathname)
+			return
 		}
 	}
 }
@@ -144,9 +161,28 @@ func (t *tailer) handleLogCreate(pathname string) {
 // start or end of the file. Rotated logs should start at the start, but logs
 // opened for the first time start at the end.
 func (t *tailer) openLogFile(pathname string, seek_to_start bool) bool {
+	if _, ok := t.watched[pathname]; !ok {
+		log.Printf("Not watching %q, ignoring.\n", pathname)
+		return false
+	}
+
+	d := path.Dir(pathname)
+	if _, ok := t.watched[d]; !ok {
+		err := t.w.AddWatch(d, tLogCreateMask)
+		if err != nil {
+			log.Printf("Adding a create watch failed on %q: %s\n", d, err)
+		}
+		t.watched[d] = struct{}{}
+	}
+
 	var err error
 	t.files[pathname], err = os.Open(pathname)
 	if err != nil {
+		// Doesn't exist yet.  We're watching the directory, so clear this invalid file pointer and return successfully.
+		if os.IsNotExist(err) {
+			delete(t.files, pathname)
+			return true
+		}
 		log.Printf("Failed to open %q for reading: %s\n", pathname, err)
 		log_errors_total.Add(pathname, 1)
 		if os.IsPermission(err) {
@@ -157,22 +193,14 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) bool {
 
 	if seek_to_start {
 		t.files[pathname].Seek(0, os.SEEK_SET)
-	} else {
-		t.files[pathname].Seek(0, os.SEEK_END)
 	}
 
-	if t.w != nil {
-		err := t.w.AddWatch(pathname, tLogUpdateMask)
-		if err != nil {
-			log.Printf("Adding a change watch failed on %q: %s\n", pathname, err)
-		}
-		err = t.w.AddWatch(path.Dir(pathname), tLogCreateMask)
-		if err != nil {
-			log.Printf("Adding a create watch failed on %q: %s\n", path.Dir(pathname), err)
-		}
+	err = t.w.AddWatch(pathname, tLogUpdateMask)
+	if err != nil {
+		log.Printf("Adding a change watch failed on %q: %s\n", pathname, err)
 	}
 
-	// In case the log is being written to already, attempt to read the first lines now.
+	// In case the new log has been written to already, attempt to read the first lines.
 	t.handleLogUpdate(pathname)
 
 	return true
@@ -189,15 +217,18 @@ func (t *tailer) start() {
 			switch {
 			case ev.Mask&tLogUpdateMask != 0:
 				t.handleLogUpdate(ev.Name)
+
 			case ev.Mask&tLogCreateMask != 0:
 				t.handleLogCreate(ev.Name)
+
 			case ev.Mask&inotify.IN_IGNORED != 0:
 				// Ignore!
+
 			default:
 				log.Printf("Unexpected event %q\n", ev)
 			}
 		case err := <-t.w.Error:
-			log.Println("watch error:", err)
+			log.Println("inotify watch error:", err)
 		}
 	}
 }
