@@ -56,7 +56,7 @@ var (
 func OneShot(logfile string, lines chan string) error {
 	l, err := os.Open(logfile)
 	if err != nil {
-		return fmt.Errorf("%s: could not open log file: %s", logfile, err)
+		return fmt.Errorf("Failed to open log file %q: %s", logfile, err)
 	}
 	defer l.Close()
 
@@ -68,7 +68,7 @@ func OneShot(logfile string, lines chan string) error {
 		case err == io.EOF:
 			return nil
 		case err != nil:
-			return fmt.Errorf("%s: read error: %s", logfile, err)
+			return fmt.Errorf("Failed to read from %q: %s", logfile, err)
 		default:
 			lines <- line
 		}
@@ -90,7 +90,7 @@ func main() {
 	flag.Parse()
 
 	if *progs == "" {
-		log.Fatalf("No progs directory specified; use -progs")
+		log.Fatalf("No emtail program directory specified; use -progs")
 	}
 	if *logs == "" {
 		log.Fatalf("No logs specified to tail; use -logs")
@@ -98,7 +98,7 @@ func main() {
 
 	fis, err := ioutil.ReadDir(*progs)
 	if err != nil {
-		log.Fatalf("Failure reading progs from %q: %s", *progs, err)
+		log.Fatalf("Failed to list programs in %q: %s", *progs, err)
 	}
 
 	errors := 0
@@ -111,7 +111,7 @@ func main() {
 		}
 		f, err := os.Open(fmt.Sprintf("%s/%s", *progs, fi.Name()))
 		if err != nil {
-			log.Printf("Failed to open %s: %s\n", fi.Name(), err)
+			log.Printf("Failed to read program %q: %s\n", fi.Name(), err)
 			continue
 		}
 		defer f.Close()
@@ -147,12 +147,12 @@ func main() {
 		for _, pathname := range pathnames {
 			err := OneShot(pathname, lines)
 			if err != nil {
-				log.Fatalf("Error in one shot mode: %s\n", err)
+				log.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
 			}
 		}
 		b, err := json.MarshalIndent(metrics, "", "  ")
 		if err != nil {
-			log.Fatalf("Error marshalling metrics into json: ", err.Error())
+			log.Fatalf("Failed to marshal metrics into json: %s", err)
 		}
 		os.Stdout.Write(b)
 		WriteMetrics()
