@@ -16,16 +16,16 @@ import (
 var test_program = "/$/ { }"
 
 func startEmtail(t *testing.T, pathnames []string) {
+	e := &engine{}
 	// start server
-	vms := make([]*vm, 0)
 	prog, errors := Compile("test", strings.NewReader(test_program))
 	if len(errors) > 0 {
 		t.Errorf("Couldn't compile program: %s", errors)
 	}
-	vms = append(vms, prog)
+	e.addVm(prog)
 	lines := make(chan string)
 	line_count.Set(0)
-	go RunVms(vms, lines)
+	go e.run(lines)
 	StartEmtail(lines, pathnames)
 }
 

@@ -27,10 +27,6 @@ var (
 	one_shot *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
 )
 
-// vms contains a list of virtual machines to execute when each new line is received
-var (
-	vms []*vm
-)
 
 func OneShot(logfile string, lines chan string) error {
 	l, err := os.Open(logfile)
@@ -78,6 +74,7 @@ func main() {
 		log.Fatalf("Failed to list programs in %q: %s", *progs, err)
 	}
 
+	e := &engine{}
 	errors := 0
 	for _, fi := range fis {
 		if fi.IsDir() {
@@ -100,7 +97,7 @@ func main() {
 			}
 			continue
 		}
-		vms = append(vms, v)
+		e.addVm(v)
 	}
 
 	if *compile_only {
@@ -118,7 +115,7 @@ func main() {
 	}
 
 	lines := make(chan string)
-	go RunVms(vms, lines)
+	go e.run(lines)
 
 	if *one_shot {
 		for _, pathname := range pathnames {
