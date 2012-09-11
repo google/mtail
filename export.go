@@ -83,7 +83,10 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 					record = append(record, fmt.Sprintf("%s", d.Time))
 				}
 			}
-			c.Write(record)
+			err := c.Write(record)
+			if err != nil {
+				log.Printf("Failed to write csv record %q: %s\n", record, err)
+			}
 		}
 	}
 
