@@ -162,6 +162,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 		}
 		r := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
+				b.StopTimer()
 				line_count.Set(0)
 				b.StartTimer()
 				err := OneShot(tc.logfile, lines)
