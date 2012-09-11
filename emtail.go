@@ -6,7 +6,6 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"expvar"
 	"flag"
 	"fmt"
 	"io"
@@ -28,29 +27,6 @@ var (
 	one_shot *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
 )
 
-var (
-	line_count = expvar.NewInt("line_count")
-)
-
-// RunVms receives a line from a channel and sends it to all VMs.
-func RunVms(vms []*vm, lines chan string) {
-	for {
-		select {
-		// TODO(jaq): stop?
-		case line := <-lines:
-			line_count.Add(1)
-			for _, v := range vms {
-				// TODO(jaq): Instead of forking a goroutine each time, set up a line channel to each VM.
-				v.Run(line)
-			}
-		}
-	}
-}
-
-// vms contains a list of virtual machines to execute when each new line is received
-var (
-	vms []*vm
-)
 
 func OneShot(logfile string, lines chan string) error {
 	l, err := os.Open(logfile)
@@ -98,6 +74,7 @@ func main() {
 		log.Fatalf("Failed to list programs in %q: %s", *progs, err)
 	}
 
+	e := &engine{}
 	errors := 0
 	for _, fi := range fis {
 		if fi.IsDir() {
@@ -120,7 +97,7 @@ func main() {
 			}
 			continue
 		}
-		vms = append(vms, v)
+		e.addVm(v)
 	}
 
 	if *compile_only {
@@ -138,7 +115,7 @@ func main() {
 	}
 
 	lines := make(chan string)
-	go RunVms(vms, lines)
+	go e.run(lines)
 
 	if *one_shot {
 		for _, pathname := range pathnames {

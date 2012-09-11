@@ -71,11 +71,9 @@ func CompileAndLoad(programfile string) (chan string, string) {
 		return lines, fmt.Sprintf("%s: compile failed: %s", programfile, strings.Join(errs, "\n"))
 	}
 
-	vms = make([]*vm, 0)
-	vms = append(vms, v)
-
-	go RunVms(vms, lines)
-
+	e := &engine{}
+	e.addVm(v)
+	go e.run(lines)
 	return lines, ""
 }
 

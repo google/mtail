@@ -4,11 +4,16 @@
 package main
 
 import (
+	"expvar"
 	"fmt"
 	"log"
 	"regexp"
 	"strconv"
 	"time"
+)
+
+var (
+	line_count = expvar.NewInt("line_count")
 )
 
 type opcode int
@@ -324,5 +329,27 @@ func newVm(name string, re []*regexp.Regexp, str []string, prog []instr) *vm {
 		str:    str,
 		prog:   prog,
 		ts_mem: make(map[string]time.Time, 0),
+	}
+}
+
+// vms contains a list of virtual machines to execute when each new line is received
+type engine []*vm
+
+func (e *engine) addVm(v *vm) {
+	*e = append(*e, v)
+}
+
+// RunVms receives a line from a channel and sends it to all VMs.
+func (e *engine) run(lines chan string) {
+	for {
+		select {
+		// TODO(jaq): stop?
+		case line := <-lines:
+			line_count.Add(1)
+			for _, v := range *e {
+				// TODO(jaq): Instead of forking a goroutine each time, set up a line channel to each VM.
+				v.Run(line)
+			}
+		}
 	}
 }
