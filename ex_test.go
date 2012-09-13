@@ -4,14 +4,22 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
+)
+
+var (
+	record_benchmark = flag.Bool("record_benchmark", false, "Record the benchmark results to 'benchmark_results.csv'.")
 )
 
 func (m *Metric) String() string {
@@ -182,5 +190,32 @@ func BenchmarkExamplePrograms(b *testing.B) {
 		µs_l := float64(r.T.Nanoseconds()) / (float64(r.Bytes) * float64(r.N) * 1000)
 		fmt.Printf("%s: %d runs, %d lines in %s (%f ms/run, %d lines/run, %f Klines/s, %f µs/line)\n",
 			tc.programfile, r.N, lr, r.T, ms_run, r.Bytes, kl_s, µs_l)
+		if *record_benchmark {
+			fmt.Println("Writing benchmark.")
+			f, err := os.Open("benchmark_results.csv")
+			if err != nil {
+				fmt.Printf("benchmark write failed: %s\n", err)
+				continue
+			}
+			defer f.Close()
+			c := csv.NewWriter(f)
+			defer c.Flush()
+			record := func(v ...interface{}) []string {
+				r := make([]string, 0)
+				for _, x := range v {
+					r = append(r, fmt.Sprintf("%s", x))
+				}
+				return r
+			}(time.Now().Unix(),
+				runtime.GOMAXPROCS(-1),
+				runtime.NumCPU(),
+				tc.programfile,
+				r.N, lr, r.T, ms_run, r.Bytes, kl_s, µs_l)
+			err = c.Write(record)
+			if err != nil {
+				fmt.Printf("failed to write csv record %q: %s\n", err)
+			}
+	fmt.Println("wrote record")
+		}
 	}
 }
