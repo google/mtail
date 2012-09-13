@@ -57,6 +57,7 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	defer metric_lock.RUnlock()
 
 	c := csv.NewWriter(w)
+	defer c.Flush()
 
 	for prog, p := range metrics {
 		for _, m := range p {
@@ -89,8 +90,6 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-
-	c.Flush()
 }
 
 // JSON export
