@@ -129,7 +129,7 @@ func MetricToCollectd(prog string, m *Metric) []string {
 	if m.D != nil {
 		s := fmt.Sprintf(COLLECTD_FORMAT,
 			hostname,
-			"prog", // We don't store the name of the program that created the metric.
+			prog,
 			strings.ToLower(m.Kind.String()),
 			m.Name,
 			*push_interval,
