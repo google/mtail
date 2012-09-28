@@ -12,7 +12,7 @@
     (modify-syntax-entry ?_ "." st)
 
     ; Comments
-    (modify-syntax-entry ?# "< b" st)
+    (modify-syntax-entry ?\# "< b" st)
     (modify-syntax-entry ?\n "> b" st)
 
     ; Regex
@@ -21,47 +21,56 @@
     ; String
     (modify-syntax-entry ?\" "\"" st)
 
+    ; Square brackets like parens
+    (modify-syntax-entry ?\[ "(]" st)
+    (modify-syntax-entry ?] ")" st)
+
     ; Operators
-    ;(modify-syntax-table ?
+    (modify-syntax-entry ?+ "." st)
+    (modify-syntax-entry ?- "." st)
+    (modify-syntax-entry ?< "." st)
+    (modify-syntax-entry ?> "." st)
+    (modify-syntax-entry ?= "." st)
+    (modify-syntax-entry ?! "." st)
     st)
   "Syntax table used while in `emtail-mode'.")
 
-(defvar emtail-mode-types
+(defconst emtail-mode-types
   '("counter" "gauge")
   "All types in the emtail language.  Used for font locking.")
 
-(defvar emtail-mode-keywords
+(defconst emtail-mode-keywords
   '("as" "by" "hidden")
   "All keywords in the emtail language.  Used for font locking.")
 
-(defvar emtail-mode-builtins
+(defconst emtail-mode-builtins
   '("strptime" "timestamp")
   "All builtins in the emtail language.  Used for font locking.")
 
 (defvar emtail-mode-font-lock-defaults
-  `((
-     (,(regexp-opt emtail-mode-types 'words) . font-lock-type-face)
-     (,(regexp-opt emtail-mode-builtins 'words) . font-lock-builtin-face)
-     ("\\<\\$?[a-zA-Z0-9_]+\\>" . font-lock-variable-name-face)
-     (,(regexp-opt emtail-mode-keywords 'words) . font-lock-keyword-face)
+  (eval-when-compile
+    (list
+     (cons (concat "\\<"
+             (regexp-opt emtail-mode-types 'words) "\\>") 'font-lock-type-face)
+    (cons (concat "\\<"
+             (regexp-opt emtail-mode-builtins 'words) "\\>")  'font-lock-builtin-face)
+     (cons (concat "\\<"
+             (regexp-opt emtail-mode-keywords 'words) "\\>") 'font-lock-keyword-face)
+    (cons "\\<\\$?[a-zA-Z0-9_]+\\>"  'font-lock-variable-name-face)
      )))
 
 ;;;###autoload
-(define-derived-mode emtail-mode nil "emtail"
+(define-derived-mode emtail-mode awk-mode "emtail"
   "Major mode for editing emtail programs."
   :syntax-table emtail-mode-syntax-table
   (set (make-local-variable 'paragraph-separate) "^[ \t]*$")
   (set (make-local-variable 'paragraph-start) "^[ \t]*$")
   (set (make-local-variable 'comment-start) "# ")
-  (set (make-local-variable 'comment-end) "")
-  (set (make-local-variable 'comment-start-skip) "# *")
+  (set (make-local-variable 'comment-start-skip) "#+\\s-*")
   ;; Font lock
   (set (make-local-variable 'font-lock-defaults)
        '(emtail-mode-font-lock-defaults))
   (setq indent-tabs-mode nil))
-
-
-(add-to-list 'auto-mode-alist (cons "\\.em$" #'emtail-mode))
 
 (defun emtail-mode-reload ()
   "Reload emtail-mode.el and put the current buffer into emtail-mode.  Useful for debugging."
@@ -72,3 +81,5 @@
   (emtail-mode))
 
 (provide 'emtail-mode)
+
+(add-to-list 'auto-mode-alist (cons "\\.em$" #'emtail-mode))
