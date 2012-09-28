@@ -40,15 +40,16 @@ import (
 // Invalid input
 %token <text> INVALID
 // Reserved words
-%token COUNTER GAUGE AS BY HIDDEN
+%token COUNTER GAUGE AS BY HIDDEN DEF
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
-// references, identifiers, and numerical constants
+// references, identifiers, decorators, and numerical constants
 %token <text> REGEX
 %token <text> STRING
 %token <text> CAPREF
 %token <text> ID
+%token <text> DECO
 %token <value> CONST
 // Operators, in order of precedence
 %token INC MINUS PLUS

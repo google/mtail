@@ -13,5 +13,7 @@ def syslog {
 }
 
 
-syslog {
+@syslog 
+{
+    
 }

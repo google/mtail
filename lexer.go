@@ -58,6 +58,7 @@ var keywords = map[string]Lexeme{
 	"as":      AS,
 	"by":      BY,
 	"counter": COUNTER,
+	"def":     DEF,
 	"gauge":   GAUGE,
 	"hidden":  HIDDEN,
 }
@@ -302,6 +303,8 @@ func lexProg(l *lexer) stateFn {
 		return lexQuotedString
 	case r == '$':
 		return lexCapref
+	case r == '@':
+		return lexDecorator
 	case isDigit(r):
 		return lexConst
 	case isAlpha(r):
@@ -451,6 +454,24 @@ Loop:
 		}
 	}
 	l.emit(REGEX)
+	return lexProg
+}
+
+// Lex a decorator name. These are functiony templatey wrappers around blocks
+// of rules.
+func lexDecorator(l *lexer) stateFn {
+	l.skip() // Skip the leading @
+Loop:
+	for {
+		switch r := l.next(); {
+		case isAlnum(r):
+			l.accept()
+		default:
+			l.backup()
+			break Loop
+		}
+	}
+	l.emit(DECO)
 	return lexProg
 }
 
