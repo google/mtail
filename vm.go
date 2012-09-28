@@ -5,11 +5,16 @@ package main
 
 import (
 	"expvar"
+	"flag"
 	"fmt"
 	"log"
 	"regexp"
 	"strconv"
 	"time"
+)
+
+var (
+	syslog_use_current_year = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 )
 
 var (
@@ -228,6 +233,10 @@ func (v *vm) execute(t *thread, i instr) {
 			tm, err := time.Parse(layout, ts)
 			if err != nil {
 				v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
+			}
+			// Hack for yearless syslog.
+			if tm.Year() == 0 && *syslog_use_current_year {
+				tm = tm.AddDate(time.Now().Year(), 0, 0)
 			}
 			v.ts_mem[ts] = tm
 			t.time = tm

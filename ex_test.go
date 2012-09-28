@@ -89,6 +89,7 @@ func TestExamplePrograms(t *testing.T) {
 	if testing.Short() {
 		return
 	}
+	*syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
 		name := filepath.Base(tc.programfile)
 		if strings.HasSuffix(name, ".em") {
@@ -216,7 +217,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 			if err != nil {
 				fmt.Printf("failed to write csv record %q: %s\n", err)
 			}
-	fmt.Println("wrote record")
+			fmt.Println("wrote record")
 		}
 	}
 }
