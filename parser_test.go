@@ -139,6 +139,13 @@ var kMtailPrograms = []validProgram{
 			"    foo += $foo\n" +
 			"  }\n" +
 			"}\n"},
+
+	{"decorator definition",
+		"def foo {}\n",
+	},
+	{"decorator invocation",
+		"@foo {}\n",
+	},
 }
 
 func TestParserRoundTrip(t *testing.T) {

@@ -30,7 +30,7 @@ import (
 
 %type <n> stmt_list stmt cond arg_expr_list
 %type <n> expr primary_expr additive_expr postfix_expr unary_expr assign_expr rel_expr
-%type <n> decl declarator
+%type <n> decl declarator def deco
 %type <mtype> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
@@ -73,7 +73,7 @@ start
 
 stmt_list
   : /* empty */
-  {
+  {  
       $$ = &stmtlistNode{}
       Emtaillex.(*parser).startScope()
   }
@@ -100,6 +100,14 @@ stmt
     $$ = $1
   }
   | decl
+  {
+    $$ = $1
+  }
+  | def
+  {
+    $$ = $1
+  }
+  | deco
   {
     $$ = $1
   }
@@ -386,6 +394,24 @@ as_spec
   : AS STRING
   {
     $$ = $2
+  }
+  ;
+
+def
+  : DEF ID LCURLY stmt_list RCURLY
+  {
+      $4.(*stmtlistNode).s = Emtaillex.(*parser).s
+      Emtaillex.(*parser).endScope()
+      $$ = &defNode{$2, []node{$4}}
+  }
+  ;
+
+deco
+  : DECO LCURLY stmt_list RCURLY
+  {
+      $3.(*stmtlistNode).s = Emtaillex.(*parser).s
+      Emtaillex.(*parser).endScope()
+      $$ = &decoNode{$1, []node{$3}}
   }
   ;
 

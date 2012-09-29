@@ -109,8 +109,22 @@ func unparse(n node) string {
 	case *constExprNode:
 		output += fmt.Sprintf("%d", v.value)
 
+	case *defNode:
+		output += fmt.Sprintf("def %s {\n", v.name)
+		for _, child := range v.children {
+			output += unparse(child)
+		}
+		output += "}\n"
+
+	case *decoNode:
+		output += fmt.Sprintf("@%s {\n", v.name)
+		for _, child := range v.children {
+			output += unparse(child)
+		}
+		output += "}\n"
+
 	default:
-		panic(fmt.Sprintf("undefined type %T", n))
+		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}
 	return output
 }

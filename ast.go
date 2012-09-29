@@ -64,7 +64,7 @@ type assignExprNode struct {
 }
 
 type indexedExprNode struct {
-	lhs,    index node
+	lhs, index node
 }
 
 type declNode struct {
@@ -86,4 +86,14 @@ type incExprNode struct {
 
 type constExprNode struct {
 	value int
+}
+
+type defNode struct {
+	name     string
+	children []node
+}
+
+type decoNode struct {
+	name     string
+	children []node
 }
