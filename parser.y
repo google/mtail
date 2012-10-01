@@ -237,21 +237,21 @@ primary_expr
   | CAPREF
   {
     if sym, ok := Emtaillex.(*parser).s.lookupSym($1, CaprefSymbol); ok {
-        $$ = &caprefNode{$1, sym}
-      } else {
-          Emtaillex.Error(fmt.Sprintf("Capture group $%s not defined " +
-                                      "by prior regular expression in " +
-                                      "this or an outer scope",  $1))
-          // TODO(jaq) force a parse error
-      }
+      $$ = &caprefNode{$1, sym}
+    } else {
+      Emtaillex.Error(fmt.Sprintf("Capture group $%s not defined " +
+                                  "by prior regular expression in " +
+                                  "this or an outer scope",  $1))
+      // TODO(jaq) force a parse error
+    }
   }
   | STRING
   {
-      $$ = &stringNode{$1}
+    $$ = &stringNode{$1}
   }
   | LPAREN expr RPAREN
   {
-      $$ = $2
+    $$ = $2
   }
   | CONST
   {
@@ -263,28 +263,28 @@ primary_expr
 cond
   : REGEX
   {
-      if re, err := regexp.Compile($1); err != nil {
-          Emtaillex.(*parser).Error(fmt.Sprintf(err.Error()))
-          // TODO(jaq): force a parse error
-      } else {
-          $$ = &regexNode{pattern: $1}
-          // We can reserve storage for these capturing groups, storing them in
-          // the current scope, so that future CAPTUREGROUPs can retrieve their
-          // value.  At parse time, we can warn about nonexistent names.
-          for i := 1; i < re.NumSubexp() + 1; i++ {
-            sym := Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
-                                                CaprefSymbol, $$,
-                                                Emtaillex.(*parser).pos)
-            sym.addr = i
-          }
-          for i, capref := range re.SubexpNames() {
-                if capref != "" {
-                  sym := Emtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$,
-                                                      Emtaillex.(*parser).pos)
-                  sym.addr = i
-              }
-          }
+    if re, err := regexp.Compile($1); err != nil {
+      Emtaillex.(*parser).Error(fmt.Sprintf(err.Error()))
+      // TODO(jaq): force a parse error
+    } else {
+      $$ = &regexNode{pattern: $1}
+      // We can reserve storage for these capturing groups, storing them in
+      // the current scope, so that future CAPTUREGROUPs can retrieve their
+      // value.  At parse time, we can warn about nonexistent names.
+      for i := 1; i < re.NumSubexp() + 1; i++ {
+        sym := Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
+                                            CaprefSymbol, $$,
+                                            Emtaillex.(*parser).pos)
+        sym.addr = i
       }
+      for i, capref := range re.SubexpNames() {
+        if capref != "" {
+          sym := Emtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$,
+                                              Emtaillex.(*parser).pos)
+          sym.addr = i
+        }
+      }
+    }
   }
   | rel_expr
   {
@@ -417,14 +417,14 @@ def
 deco
   : DECO LCURLY stmt_list RCURLY
   {
-      $3.(*stmtlistNode).s = Emtaillex.(*parser).s
-      Emtaillex.(*parser).endScope()
-      if sym, ok := Emtaillex.(*parser).s.lookupSym($1, DefSymbol); ok {
-        $$ = &decoNode{$1, []node{$3}, sym.binding.(*defNode)}
-      } else {
-        Emtaillex.Error(fmt.Sprintf("Decorator %s not defined", $1))
-          // TODO(jaq): force a parse error.
-      }
+    $3.(*stmtlistNode).s = Emtaillex.(*parser).s
+    Emtaillex.(*parser).endScope()
+    if sym, ok := Emtaillex.(*parser).s.lookupSym($1, DefSymbol); ok {
+      $$ = &decoNode{$1, []node{$3}, sym.binding.(*defNode)}
+    } else {
+      Emtaillex.Error(fmt.Sprintf("Decorator %s not defined", $1))
+      // TODO(jaq): force a parse error.
+    }
   }
   ;
 
