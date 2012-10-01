@@ -47,14 +47,15 @@ var lexerTests = []lexerTest{
 		Token{NE, "!=", Position{0, 25, 26}},
 		Token{EOF, "", Position{0, 27, 27}}}},
 	{"keywords",
-		"counter\ngauge\nas\nby\nhidden\ndef\n", []Token{
+		"counter\ngauge\nas\nby\nhidden\ndef\nnext\n", []Token{
 			Token{COUNTER, "counter", Position{0, 0, 6}},
 			Token{GAUGE, "gauge", Position{1, 0, 4}},
 			Token{AS, "as", Position{2, 0, 1}},
 			Token{BY, "by", Position{3, 0, 1}},
 			Token{HIDDEN, "hidden", Position{4, 0, 5}},
 			Token{DEF, "def", Position{5, 0, 2}},
-			Token{EOF, "", Position{6, 0, 0}}}},
+			Token{NEXT, "next", Position{6, 0, 3}},
+			Token{EOF, "", Position{7, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\n", []Token{
 			Token{BUILTIN, "strptime", Position{0, 0, 7}},

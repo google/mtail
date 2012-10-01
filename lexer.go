@@ -44,6 +44,9 @@ var lexemeName = map[Lexeme]string{
 	GAUGE:      "GAUGE",
 	AS:         "AS",
 	BY:         "BY",
+	DEF:        "DEF",
+	DECO:       "DECO",
+	NEXT:       "NEXT",
 }
 
 func (t Lexeme) String() string {
@@ -61,6 +64,7 @@ var keywords = map[string]Lexeme{
 	"def":     DEF,
 	"gauge":   GAUGE,
 	"hidden":  HIDDEN,
+	"next":    NEXT,
 }
 
 // List of builtin functions.  Keep this list sorted!

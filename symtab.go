@@ -6,11 +6,11 @@ package main
 type symtype int
 
 const (
-	IntSymbol symtype = iota
-	StringSymbol
+	IdSymbol symtype = iota
 	CaprefSymbol
-	ScalarMetricSymbol
-	DimensionedMetricSymbol
+	DefSymbol
+
+	endSymbol
 )
 
 type symbol struct {
@@ -23,19 +23,24 @@ type symbol struct {
 
 type scope struct {
 	parent *scope
-	symtab map[string]*symbol
+	symtab map[string][]*symbol
 }
 
-func (s *scope) lookupSym(name string) (*symbol, bool) {
+func (s *scope) lookupSym(name string, kind symtype) (*symbol, bool) {
 	r, ok := s.symtab[name]
 	if !ok && s.parent != nil {
-		return s.parent.lookupSym(name)
+		return s.parent.lookupSym(name, kind)
+	} else if ok {
+		return r[kind], ok
 	}
-	return r, ok
+	return nil, ok
 }
 
 func (s *scope) addSym(name string, kind symtype, binding interface{}, loc Position) *symbol {
 	sym := &symbol{name, kind, binding, loc, 0}
-	s.symtab[name] = sym
+	if _, ok := s.symtab[name]; !ok {
+		s.symtab[name] = make([]*symbol, endSymbol)
+	}
+	s.symtab[name][kind] = sym
 	return sym
 }

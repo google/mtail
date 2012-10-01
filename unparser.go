@@ -123,6 +123,9 @@ func unparse(n node) string {
 		}
 		output += "}\n"
 
+	case *nextNode:
+		output += "next\n"
+
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}

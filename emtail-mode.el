@@ -40,7 +40,7 @@
   "All types in the emtail language.  Used for font locking.")
 
 (defconst emtail-mode-keywords
-  '("as" "by" "hidden")
+  '("as" "by" "hidden" "def" "next")
   "All keywords in the emtail language.  Used for font locking.")
 
 (defconst emtail-mode-builtins
@@ -56,7 +56,8 @@
              (regexp-opt emtail-mode-builtins 'words) "\\>")  'font-lock-builtin-face)
      (cons (concat "\\<"
              (regexp-opt emtail-mode-keywords 'words) "\\>") 'font-lock-keyword-face)
-    (cons "\\<\\$?[a-zA-Z0-9_]+\\>"  'font-lock-variable-name-face)
+     (cons "\\<@[a-zA-Z0-9_]+\\>" 'font-lock-function-name-face)
+     (cons "\\<\\$?[a-zA-Z0-9_]+\\>"  'font-lock-variable-name-face)
      )))
 
 ;;;###autoload

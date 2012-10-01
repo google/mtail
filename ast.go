@@ -91,9 +91,14 @@ type constExprNode struct {
 type defNode struct {
 	name     string
 	children []node
+	sym      *symbol
 }
 
 type decoNode struct {
 	name     string
 	children []node
+	def      *defNode
+}
+
+type nextNode struct {
 }

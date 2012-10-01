@@ -23,6 +23,8 @@ type compiler struct {
 	str    []string         // Static strings.
 	re     []*regexp.Regexp // Static regular expressions.
 
+	decos []*decoNode // Decorator stack
+
 	symtab *scope
 }
 
@@ -189,6 +191,22 @@ func (c *compiler) compile(untyped_node node) {
 
 	case *constExprNode:
 		c.emit(instr{push, n.value})
+
+	case *defNode:
+		/* do nothing, defs are inlined */
+
+	case *decoNode:
+		c.decos = append(c.decos, n)
+		for _, child := range n.def.children {
+			c.compile(child)
+		}
+		c.decos = c.decos[:len(c.decos)-1]
+
+	case *nextNode:
+		deco := c.decos[len(c.decos)-1]
+		for _, child := range deco.children {
+			c.compile(child)
+		}
 
 	default:
 		c.errorf("undefined node type %T (%q)6", untyped_node, untyped_node)

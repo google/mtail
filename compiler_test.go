@@ -166,6 +166,24 @@ var programs = []struct {
 			instr{jm, 9},
 			instr{mload, 0},
 			instr{inc, 0}}},
+	{"deco",
+		"counter foo\n" +
+			"counter bar\n" +
+			"def foo {\n" +
+			"  /.*/ {\n" +
+			"    foo++\n" +
+			"    next\n" +
+			"  }\n" +
+			"}\n" +
+			"" +
+			"@foo { bar++ }\n",
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 6},
+			instr{mload, 0},
+			instr{inc, 0},
+			instr{mload, 1},
+			instr{inc, 0}}},
 }
 
 func TestCompile(t *testing.T) {

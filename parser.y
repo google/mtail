@@ -39,8 +39,10 @@ import (
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
+// Types
+%token COUNTER GAUGE
 // Reserved words
-%token COUNTER GAUGE AS BY HIDDEN DEF
+%token AS BY HIDDEN DEF NEXT
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -110,6 +112,10 @@ stmt
   | deco
   {
     $$ = $1
+  }
+  | NEXT
+  {
+    $$ = &nextNode{}
   }
   ;
 
@@ -222,7 +228,7 @@ postfix_expr
 primary_expr
   : ID
   {
-    if sym, ok := Emtaillex.(*parser).s.lookupSym($1); ok {
+    if sym, ok := Emtaillex.(*parser).s.lookupSym($1, IdSymbol); ok {
       $$ = &idNode{$1, sym}
     } else {
       Emtaillex.Error(fmt.Sprintf("Identifier '%s' not declared.", $1))
@@ -230,7 +236,7 @@ primary_expr
   }
   | CAPREF
   {
-      if sym, ok := Emtaillex.(*parser).s.lookupSym($1); ok {
+    if sym, ok := Emtaillex.(*parser).s.lookupSym($1, CaprefSymbol); ok {
         $$ = &caprefNode{$1, sym}
       } else {
           Emtaillex.Error(fmt.Sprintf("Capture group $%s not defined " +
@@ -304,13 +310,13 @@ decl
                     Keys:   d.keys,
                     hidden: $1,
                     Values: make(map[string]*Datum, 0)}
-      d.sym = Emtaillex.(*parser).s.addSym(d.name, DimensionedMetricSymbol, d.m,
+      d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
                                            Emtaillex.(*parser).pos)
     } else {
       d.m = &Metric{Name: n, Kind: d.kind,
                     hidden: $1,
                     D: &Datum{}}
-      d.sym = Emtaillex.(*parser).s.addSym(d.name, ScalarMetricSymbol, d.m,
+      d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
                                            Emtaillex.(*parser).pos)
     }
   }
@@ -402,7 +408,9 @@ def
   {
       $4.(*stmtlistNode).s = Emtaillex.(*parser).s
       Emtaillex.(*parser).endScope()
-      $$ = &defNode{$2, []node{$4}}
+      $$ = &defNode{name: $2, children: []node{$4}}
+      d := $$.(*defNode)
+      d.sym = Emtaillex.(*parser).s.addSym(d.name, DefSymbol, d, Emtaillex.(*parser).pos)
   }
   ;
 
@@ -411,7 +419,12 @@ deco
   {
       $3.(*stmtlistNode).s = Emtaillex.(*parser).s
       Emtaillex.(*parser).endScope()
-      $$ = &decoNode{$1, []node{$3}}
+      if sym, ok := Emtaillex.(*parser).s.lookupSym($1, DefSymbol); ok {
+        $$ = &decoNode{$1, []node{$3}, sym.binding.(*defNode)}
+      } else {
+        Emtaillex.Error(fmt.Sprintf("Decorator %s not defined", $1))
+          // TODO(jaq): force a parse error.
+      }
   }
   ;
 
@@ -459,7 +472,7 @@ func (p *parser) Lex(lval *EmtailSymType) int {
 }
 
 func (p *parser) startScope() {
-    s := &scope{p.s, map[string]*symbol{}}
+    s := &scope{p.s, map[string][]*symbol{}}
     p.s = s
 }
 

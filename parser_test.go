@@ -140,11 +140,9 @@ var kMtailPrograms = []validProgram{
 			"  }\n" +
 			"}\n"},
 
-	{"decorator definition",
-		"def foo {}\n",
-	},
-	{"decorator invocation",
-		"@foo {}\n",
+	{"decorator definition and invocation",
+		"def foo { next }\n" +
+			"@foo { }\n",
 	},
 }
 
@@ -227,6 +225,10 @@ var InvalidPrograms = []InvalidProgram{
 		[]string{"out of bounds capref:1:14-15: Capture group $2 not defined by prior regular expression " +
 			"in this or an outer scope"},
 	},
+
+	{"undefined decorator",
+		"@foo {}\n",
+		[]string{"undefined decorator:1:7: Decorator foo not defined"}},
 }
 
 func TestInvalidPrograms(t *testing.T) {
