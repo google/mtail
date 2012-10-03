@@ -23,7 +23,7 @@ type compiler struct {
 	str    []string         // Static strings.
 	re     []*regexp.Regexp // Static regular expressions.
 
-	decos []*decoNode // Decorator stack
+	decos []*decoNode // Decorator stack to unwind
 
 	symtab *scope
 }
@@ -75,20 +75,19 @@ func (c *compiler) compile(untyped_node node) {
 		}
 
 	case *declNode:
-		n.sym.addr = len(metrics[c.name])
-		metrics[c.name] = append(metrics[c.name], n.m)
+		// Do nothing, declarations built into metric objects at parse time.
 
 	case *condNode:
 		if n.cond != nil {
 			c.compile(n.cond)
 		}
 		// Save PC of previous jump instruction
-		// (see regexNode and relNode cases)
+		// (see regexNode and relNode cases, which will emit a jump)
 		pc := len(c.prog) - 1
 		for _, child := range n.children {
 			c.compile(child)
 		}
-		// rewrite jump target to jump to instruction after block.
+		// Rewrite jump target to jump to instruction after block.
 		c.prog[pc].opnd = len(c.prog)
 
 	case *regexNode:
@@ -193,16 +192,20 @@ func (c *compiler) compile(untyped_node node) {
 		c.emit(instr{push, n.value})
 
 	case *defNode:
-		/* do nothing, defs are inlined */
+		// Do nothing, defs are inlined.
 
 	case *decoNode:
+		// Put the current block on the stack
 		c.decos = append(c.decos, n)
+		// then iterate over the decorator's nodes
 		for _, child := range n.def.children {
 			c.compile(child)
 		}
+		// Pop the block off
 		c.decos = c.decos[:len(c.decos)-1]
 
 	case *nextNode:
+		// Visit the 'next' block on the decorated block stack
 		deco := c.decos[len(c.decos)-1]
 		for _, child := range deco.children {
 			c.compile(child)
