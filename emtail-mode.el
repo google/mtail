@@ -51,11 +51,17 @@
   (eval-when-compile
     (list
      (cons (concat "\\<"
-             (regexp-opt emtail-mode-types 'words) "\\>") 'font-lock-type-face)
-    (cons (concat "\\<"
-             (regexp-opt emtail-mode-builtins 'words) "\\>")  'font-lock-builtin-face)
+                   (regexp-opt emtail-mode-types 'words)
+                   "\\>")
+           'font-lock-type-face)
      (cons (concat "\\<"
-             (regexp-opt emtail-mode-keywords 'words) "\\>") 'font-lock-keyword-face)
+                   (regexp-opt emtail-mode-builtins 'words)
+                   "\\>")
+           'font-lock-builtin-face)
+     (cons (concat "\\<"
+                   (regexp-opt emtail-mode-keywords 'words)
+                   "\\>")
+           'font-lock-keyword-face)
      (cons "\\<@[a-zA-Z0-9_]+\\>" 'font-lock-function-name-face)
      (cons "\\<\\$?[a-zA-Z0-9_]+\\>"  'font-lock-variable-name-face)
      )))
