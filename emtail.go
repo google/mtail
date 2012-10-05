@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	_ "net/http/pprof"
 )
@@ -56,6 +57,28 @@ func StartEmtail(lines chan string, pathnames []string) {
 
 	for _, pathname := range pathnames {
 		t.Tail(pathname)
+	}
+}
+
+type console struct {
+	lines []string
+}
+
+func (c *console) Write(p []byte) (n int, err error) {
+	s := ""
+	for i, width := 0, 0; i < len(p); i += width {
+		var r rune
+		r, width = utf8.DecodeRune(p[i:])
+		s += string(r)
+	}
+	c.lines = append(c.lines, s)
+	return len(s), nil
+}
+
+func (c *console) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	b := bufio.NewWriter(w)
+	for _, l := range c.lines {
+		b.WriteString(l)
 	}
 }
 
@@ -133,6 +156,10 @@ func main() {
 	} else {
 		StartEmtail(lines, pathnames)
 
+		c := &console{}
+		log.SetOutput(c)
+
+		http.Handle("/", c)
 		http.HandleFunc("/json", handleJson)
 		http.HandleFunc("/csv", handleCsv)
 		StartMetricPush()
