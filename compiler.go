@@ -29,6 +29,7 @@ type compiler struct {
 }
 
 func Compile(name string, input io.Reader) (*vm, []string) {
+	metrics[name] = make([]*Metric, 0)
 	p := NewParser(name, input)
 	r := EmtailParse(p)
 	if r != 0 || p == nil || len(p.errors) > 0 {
@@ -42,7 +43,6 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 	if strings.HasSuffix(name, ".em") {
 		name = name[:len(name)-3]
 	}
-	metrics[name] = make([]*Metric, 0)
 	c := &compiler{name: name, symtab: p.s}
 	c.compile(p.root)
 	if len(c.errors) > 0 {
