@@ -486,6 +486,8 @@ func (p *parser) endScope() {
 }
 
 func (p *parser) addMetric(m *Metric) (addr int) {
+    metric_lock.Lock()
+    defer metric_lock.Unlock()
     addr = len(metrics[p.name])
     metrics[p.name] = append(metrics[p.name], m)
     return

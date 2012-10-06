@@ -29,7 +29,13 @@ type compiler struct {
 }
 
 func Compile(name string, input io.Reader) (*vm, []string) {
+	name = filepath.Base(name)
+	if strings.HasSuffix(name, ".em") {
+		name = name[:len(name)-3]
+	}
+	metric_lock.Lock()
 	metrics[name] = make([]*Metric, 0)
+	metric_lock.Unlock()
 	p := NewParser(name, input)
 	r := EmtailParse(p)
 	if r != 0 || p == nil || len(p.errors) > 0 {
@@ -38,10 +44,6 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 	if *compile_only {
 		output := unparse(p.root)
 		log.Printf("Unparsing %s:\n%s", name, output)
-	}
-	name = filepath.Base(name)
-	if strings.HasSuffix(name, ".em") {
-		name = name[:len(name)-3]
 	}
 	c := &compiler{name: name, symtab: p.s}
 	c.compile(p.root)

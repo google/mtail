@@ -63,7 +63,9 @@ var exampleProgramTests = []struct {
 }
 
 func CompileAndLoad(programfile string) (chan string, string) {
+	metric_lock.Lock()
 	metrics = make(map[string][]*Metric, 0)
+	metric_lock.Unlock()
 	lines := make(chan string)
 
 	p, err := os.Open(programfile)
