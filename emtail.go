@@ -75,14 +75,13 @@ func (c *console) Write(p []byte) (n int, err error) {
 }
 
 func (c *console) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header()["Content-type"] = []string{"text/html"}
 	w.WriteHeader(200)
-	w.Write([]byte("<pre>\n"))
+	w.Write([]byte(`<a href="/csv">csv</a>, <a href="/json">json</a>`))
+	w.Write([]byte("<pre>"))
 	for _, l := range c.lines {
 		w.Write([]byte(l))
 	}
-	w.Write([]byte("</pre>\n"))
-
+	w.Write([]byte("</pre>"))
 }
 
 func main() {
