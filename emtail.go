@@ -28,7 +28,6 @@ var (
 	one_shot *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
 )
 
-
 func OneShot(logfile string, lines chan string) error {
 	l, err := os.Open(logfile)
 	if err != nil {
@@ -76,10 +75,14 @@ func (c *console) Write(p []byte) (n int, err error) {
 }
 
 func (c *console) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	b := bufio.NewWriter(w)
+	w.Header()["Content-type"] = []string{"text/html"}
+	w.WriteHeader(200)
+	w.Write([]byte("<pre>\n"))
 	for _, l := range c.lines {
-		b.WriteString(l)
+		w.Write([]byte(l))
 	}
+	w.Write([]byte("</pre>\n"))
+
 }
 
 func main() {
@@ -121,6 +124,7 @@ func main() {
 			continue
 		}
 		e.addVm(v)
+		log.Printf("loaded %s", fi.Name())
 	}
 
 	if *compile_only {
