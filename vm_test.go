@@ -147,6 +147,13 @@ var instructions = []struct {
 		[]interface{}{2, 1},
 		[]interface{}{int64(1)},
 		thread{pc: 0, matches: map[int][]string{}}},
+	{"tolower",
+		[]instr{instr{tolower, 0}},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"mIxeDCasE"},
+		[]interface{}{"mixedcase"},
+		thread{pc: 0, matches: map[int][]string{}}},
 }
 
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.

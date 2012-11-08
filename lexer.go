@@ -71,6 +71,7 @@ var keywords = map[string]Lexeme{
 var builtins = []string{
 	"strptime",
 	"timestamp",
+	"tolower",
 }
 
 // A Position is the location in the source program that a token appears.

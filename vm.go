@@ -10,6 +10,7 @@ import (
 	"log"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -39,6 +40,7 @@ const (
 	sub                     // Subtract tpo value from second top value on stack, and push to stack.
 	mload                   // Load metric at operand onto top of stack.
 	dload                   // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
+	tolower                 // Convert the string at the top of the stack to lowercase.
 )
 
 var opNames = map[opcode]string{
@@ -57,11 +59,13 @@ var opNames = map[opcode]string{
 	sub:       "sub",
 	mload:     "mload",
 	dload:     "dload",
+	tolower:   "tolower",
 }
 
 var builtin = map[string]opcode{
 	"strptime":  strptime,
 	"timestamp": timestamp,
+	"tolower":   tolower,
 }
 
 type instr struct {
@@ -303,6 +307,11 @@ func (v *vm) execute(t *thread, i instr) {
 			m.Values[h] = &Datum{}
 		}
 		t.Push(m.Values[h])
+
+	case tolower:
+		// Load a string from the top of the stack
+		s := t.Pop().(string)
+		t.Push(strings.ToLower(s))
 
 	default:
 		v.errorf("illegal instruction: %q", i.op)
