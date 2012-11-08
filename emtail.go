@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	_ "net/http/pprof"
 )
@@ -26,7 +27,6 @@ var (
 
 	one_shot *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
 )
-
 
 func OneShot(logfile string, lines chan string) error {
 	l, err := os.Open(logfile)
@@ -57,6 +57,31 @@ func StartEmtail(lines chan string, pathnames []string) {
 	for _, pathname := range pathnames {
 		t.Tail(pathname)
 	}
+}
+
+type console struct {
+	lines []string
+}
+
+func (c *console) Write(p []byte) (n int, err error) {
+	s := ""
+	for i, width := 0, 0; i < len(p); i += width {
+		var r rune
+		r, width = utf8.DecodeRune(p[i:])
+		s += string(r)
+	}
+	c.lines = append(c.lines, s)
+	return len(s), nil
+}
+
+func (c *console) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(200)
+	w.Write([]byte(`<a href="/csv">csv</a>, <a href="/json">json</a>`))
+	w.Write([]byte("<pre>"))
+	for _, l := range c.lines {
+		w.Write([]byte(l))
+	}
+	w.Write([]byte("</pre>"))
 }
 
 func main() {
@@ -98,6 +123,7 @@ func main() {
 			continue
 		}
 		e.addVm(v)
+		log.Printf("loaded %s", fi.Name())
 	}
 
 	if *compile_only {
@@ -133,6 +159,10 @@ func main() {
 	} else {
 		StartEmtail(lines, pathnames)
 
+		c := &console{}
+		log.SetOutput(c)
+
+		http.Handle("/", c)
 		http.HandleFunc("/json", handleJson)
 		http.HandleFunc("/csv", handleCsv)
 		StartMetricPush()

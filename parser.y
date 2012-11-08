@@ -312,12 +312,14 @@ decl
                     Values: make(map[string]*Datum, 0)}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
                                            Emtaillex.(*parser).pos)
+      d.sym.addr = Emtaillex.(*parser).addMetric(d.m)
     } else {
       d.m = &Metric{Name: n, Kind: d.kind,
                     hidden: $1,
                     D: &Datum{}}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
                                            Emtaillex.(*parser).pos)
+        d.sym.addr = Emtaillex.(*parser).addMetric(d.m)
     }
   }
   ;
@@ -433,6 +435,7 @@ deco
 const EOF = 0
 
 type parser struct {
+    name   string
     root   node
     errors []string
     l      *lexer
@@ -441,7 +444,7 @@ type parser struct {
 }
 
 func NewParser(name string, input io.Reader) *parser {
-    return &parser{l: NewLexer(name, input)}
+    return &parser{name: name, l: NewLexer(name, input)}
 }
 
 func (p *parser) Error(s string) {
@@ -480,4 +483,12 @@ func (p *parser) endScope() {
     if p.s != nil && p.s.parent != nil {
         p.s = p.s.parent
     }
+}
+
+func (p *parser) addMetric(m *Metric) (addr int) {
+    metric_lock.Lock()
+    defer metric_lock.Unlock()
+    addr = len(metrics[p.name])
+    metrics[p.name] = append(metrics[p.name], m)
+    return
 }

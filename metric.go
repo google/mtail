@@ -100,5 +100,7 @@ func (d *Datum) IncBy(delta int64, timestamp time.Time) {
 }
 
 func init() {
+	metric_lock.Lock()
+	defer metric_lock.Unlock()
 	metrics = make(map[string][]*Metric, 0)
 }

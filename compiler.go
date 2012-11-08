@@ -23,12 +23,19 @@ type compiler struct {
 	str    []string         // Static strings.
 	re     []*regexp.Regexp // Static regular expressions.
 
-	decos []*decoNode // Decorator stack
+	decos []*decoNode // Decorator stack to unwind
 
 	symtab *scope
 }
 
 func Compile(name string, input io.Reader) (*vm, []string) {
+	name = filepath.Base(name)
+	if strings.HasSuffix(name, ".em") {
+		name = name[:len(name)-3]
+	}
+	metric_lock.Lock()
+	metrics[name] = make([]*Metric, 0)
+	metric_lock.Unlock()
 	p := NewParser(name, input)
 	r := EmtailParse(p)
 	if r != 0 || p == nil || len(p.errors) > 0 {
@@ -38,11 +45,6 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		output := unparse(p.root)
 		log.Printf("Unparsing %s:\n%s", name, output)
 	}
-	name = filepath.Base(name)
-	if strings.HasSuffix(name, ".em") {
-		name = name[:len(name)-3]
-	}
-	metrics[name] = make([]*Metric, 0)
 	c := &compiler{name: name, symtab: p.s}
 	c.compile(p.root)
 	if len(c.errors) > 0 {
@@ -75,20 +77,19 @@ func (c *compiler) compile(untyped_node node) {
 		}
 
 	case *declNode:
-		n.sym.addr = len(metrics[c.name])
-		metrics[c.name] = append(metrics[c.name], n.m)
+		// Do nothing, declarations built into metric objects at parse time.
 
 	case *condNode:
 		if n.cond != nil {
 			c.compile(n.cond)
 		}
 		// Save PC of previous jump instruction
-		// (see regexNode and relNode cases)
+		// (see regexNode and relNode cases, which will emit a jump)
 		pc := len(c.prog) - 1
 		for _, child := range n.children {
 			c.compile(child)
 		}
-		// rewrite jump target to jump to instruction after block.
+		// Rewrite jump target to jump to instruction after block.
 		c.prog[pc].opnd = len(c.prog)
 
 	case *regexNode:
@@ -193,16 +194,20 @@ func (c *compiler) compile(untyped_node node) {
 		c.emit(instr{push, n.value})
 
 	case *defNode:
-		/* do nothing, defs are inlined */
+		// Do nothing, defs are inlined.
 
 	case *decoNode:
+		// Put the current block on the stack
 		c.decos = append(c.decos, n)
+		// then iterate over the decorator's nodes
 		for _, child := range n.def.children {
 			c.compile(child)
 		}
+		// Pop the block off
 		c.decos = c.decos[:len(c.decos)-1]
 
 	case *nextNode:
+		// Visit the 'next' block on the decorated block stack
 		deco := c.decos[len(c.decos)-1]
 		for _, child := range deco.children {
 			c.compile(child)

@@ -63,7 +63,9 @@ var exampleProgramTests = []struct {
 }
 
 func CompileAndLoad(programfile string) (chan string, string) {
+	metric_lock.Lock()
 	metrics = make(map[string][]*Metric, 0)
+	metric_lock.Unlock()
 	lines := make(chan string)
 
 	p, err := os.Open(programfile)
@@ -154,9 +156,6 @@ func TestExamplePrograms(t *testing.T) {
 }
 
 // These benchmarks run the testdata logs through the example programs.
-// Caveat emptor:
-// The ns/op measure returned is the time spent on a OneShot for a single program.
-// The MB/s measure should be interpreted as megalines processed per second.
 func BenchmarkExamplePrograms(b *testing.B) {
 	if testing.Short() {
 		return
@@ -174,13 +173,13 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				b.StartTimer()
 				err := OneShot(tc.logfile, lines)
 				if err != nil {
-					b.Errorf("Oneshot failed: %s", err)
+					b.Errorf("OneShot compile failed: %s", err)
 					return
 				}
 				b.StopTimer()
 				l, err := strconv.ParseInt(line_count.String(), 10, 64)
 				if err != nil {
-					b.Errorf("strconv failed: %s", err)
+					b.Errorf("strconv.ParseInt failed: %s", err)
 				}
 				b.SetBytes(l)
 			}
@@ -193,8 +192,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 		fmt.Printf("%s: %d runs, %d lines in %s (%f ms/run, %d lines/run, %f Klines/s, %f µs/line)\n",
 			tc.programfile, r.N, lr, r.T, ms_run, r.Bytes, kl_s, µs_l)
 		if *record_benchmark {
-			fmt.Println("Writing benchmark.")
-			f, err := os.Open("benchmark_results.csv")
+			f, err := os.OpenFile("benchmark_results.csv", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 			if err != nil {
 				fmt.Printf("benchmark write failed: %s\n", err)
 				continue
@@ -205,7 +203,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 			record := func(v ...interface{}) []string {
 				r := make([]string, 0)
 				for _, x := range v {
-					r = append(r, fmt.Sprintf("%s", x))
+					r = append(r, fmt.Sprintf("%v", x))
 				}
 				return r
 			}(time.Now().Unix(),
@@ -213,11 +211,12 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				runtime.NumCPU(),
 				tc.programfile,
 				r.N, lr, r.T, ms_run, r.Bytes, kl_s, µs_l)
+			// Format is time, concurrency, number of cores,
+			// name, data
 			err = c.Write(record)
 			if err != nil {
 				fmt.Printf("failed to write csv record %q: %s\n", err)
 			}
-			fmt.Println("wrote record")
 		}
 	}
 }
