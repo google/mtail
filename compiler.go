@@ -190,7 +190,7 @@ func (c *compiler) compile(untyped_node node) {
 		c.compile(n.rhs)
 		c.emit(instr{inc, 1})
 
-	case *constExprNode:
+	case *numericExprNode:
 		c.emit(instr{push, n.value})
 
 	case *defNode:

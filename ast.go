@@ -84,7 +84,7 @@ type incExprNode struct {
 	lhs node
 }
 
-type constExprNode struct {
+type numericExprNode struct {
 	value int
 }
 

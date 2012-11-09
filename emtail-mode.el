@@ -40,7 +40,7 @@
   "All types in the emtail language.  Used for font locking.")
 
 (defconst emtail-mode-keywords
-  '("as" "by" "hidden" "def" "next")
+  '("as" "by" "const" "hidden" "def" "next")
   "All keywords in the emtail language.  Used for font locking.")
 
 (defconst emtail-mode-builtins

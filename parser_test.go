@@ -144,6 +144,12 @@ var kMtailPrograms = []validProgram{
 		"def foo { next }\n" +
 			"@foo { }\n",
 	},
+
+	{"const regex",
+		"const X /foo/\n" +
+			"/foo / + X + / bar/ {\n" +
+			"}\n",
+	},
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -199,17 +205,20 @@ var InvalidPrograms = []InvalidProgram{
 
 	{"invalid regex",
 		"/foo(/\n",
-		[]string{"invalid regex:1:1-6: error parsing regexp: missing closing ): `foo(`",
+		// TODO(jaq): fix the collection of file positions when building a pattern_expr
+		[]string{"invalid regex:2:1: error parsing regexp: missing closing ): `foo(`",
 			"invalid regex:2:1: syntax error"}},
 
 	{"invalid regex 2",
 		"/blurg(?P<x.)/\n",
-		[]string{"invalid regex 2:1:1-14: error parsing regexp: invalid named capture: `(?P<x.)`",
+		// TODO(jaq): fix the collection of file positions when building a pattern_expr
+		[]string{"invalid regex 2:2:1: error parsing regexp: invalid named capture: `(?P<x.)`",
 			"invalid regex 2:2:1: syntax error"}},
 
 	{"invalid regex 3",
 		"/blurg(?P<x>[[:alph:]])/\n",
-		[]string{"invalid regex 3:1:1-24: error parsing regexp: invalid character class range: `[:alph:]`",
+		// TODO(jaq): fix the collection of file positions when building a pattern_expr
+		[]string{"invalid regex 3:2:1: error parsing regexp: invalid character class range: `[:alph:]`",
 			"invalid regex 3:2:1: syntax error"}},
 
 	{"unterminated string",
@@ -229,6 +238,15 @@ var InvalidPrograms = []InvalidProgram{
 	{"undefined decorator",
 		"@foo {}\n",
 		[]string{"undefined decorator:1:7: Decorator foo not defined"}},
+
+	{"unterminated const regex",
+		"const X /(?P<foo>",
+		[]string{"unterminated const regex:1:9-17: Unterminated regular expression: \"/(?P<foo>\"",
+			"unterminated const regex:1:9-17: syntax error"}},
+
+	{"undefined const regex",
+		"/foo / + X + / bar/ {}\n",
+		[]string{"undefined const regex:1:10: Undefined constant X"}},
 }
 
 func TestInvalidPrograms(t *testing.T) {

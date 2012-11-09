@@ -18,6 +18,10 @@ def syslog {
   }
 }
 
+const IP = /\d+(\.\d+){3}/
+const MATCH_IP = /(?P<ip>/ + IP + /)/
+const MATCH_NETWORK = /(?P<network>\d+(\.\d+){1,3}\/\d+)/
+const MATCH_MAC = /(?P<mac>([\da-f]{2}:){5}[\da-f]{2})/
 
 @syslog {
   # Request
@@ -47,7 +51,11 @@ def syslog {
   }
 
   # XID mismatches
-  /bind update on (?P<ip>\d+(\.\d+){3}) got ack from (?P<group>\w+): xid mismatch./ {
+  /bind update on / + IP + / got ack from (?P<group>\w+): xid mismatch./ {
       bind_xid_mismatch++
+  }
+  # Duplicate lease
+  /uid lease / + MATCH_IP + / for client / + MATCH_MAC + / is duplicate on / + MATCH_NETWORK {
+      duplicate_lease++
   }
 }

@@ -44,9 +44,11 @@ var lexemeName = map[Lexeme]string{
 	GAUGE:      "GAUGE",
 	AS:         "AS",
 	BY:         "BY",
+	HIDDEN:     "HIDDEN",
 	DEF:        "DEF",
 	DECO:       "DECO",
 	NEXT:       "NEXT",
+	CONST:      "CONST",
 }
 
 func (t Lexeme) String() string {
@@ -60,6 +62,7 @@ func (t Lexeme) String() string {
 var keywords = map[string]Lexeme{
 	"as":      AS,
 	"by":      BY,
+	"const":   CONST,
 	"counter": COUNTER,
 	"def":     DEF,
 	"gauge":   GAUGE,
@@ -311,7 +314,7 @@ func lexProg(l *lexer) stateFn {
 	case r == '@':
 		return lexDecorator
 	case isDigit(r):
-		return lexConst
+		return lexNumeric
 	case isAlpha(r):
 		return lexIdentifier
 	case r == eof:
@@ -345,7 +348,7 @@ Loop:
 }
 
 // Lex a numerical constant.
-func lexConst(l *lexer) stateFn {
+func lexNumeric(l *lexer) stateFn {
 	l.accept()
 Loop:
 	for {
@@ -357,7 +360,7 @@ Loop:
 			break Loop
 		}
 	}
-	l.emit(CONST)
+	l.emit(NUMERIC)
 	return lexProg
 }
 

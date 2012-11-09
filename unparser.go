@@ -106,7 +106,7 @@ func unparse(n node) string {
 		output += " += "
 		output += unparse(v.rhs)
 
-	case *constExprNode:
+	case *numericExprNode:
 		output += fmt.Sprintf("%d", v.value)
 
 	case *defNode:

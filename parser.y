@@ -36,23 +36,24 @@ import (
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
 %type <value> relop
+%type <text> pattern_expr
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
 // Types
 %token COUNTER GAUGE
 // Reserved words
-%token AS BY HIDDEN DEF NEXT
+%token AS BY CONST HIDDEN DEF NEXT
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
-// references, identifiers, decorators, and numerical constants
+// references, identifiers, decorators, numerical constants, and string constants.
 %token <text> REGEX
 %token <text> STRING
 %token <text> CAPREF
 %token <text> ID
 %token <text> DECO
-%token <value> CONST
+%token <value> NUMERIC
 // Operators, in order of precedence
 %token INC MINUS PLUS
 %token <value> LT GT LE GE EQ NE
@@ -82,7 +83,9 @@ stmt_list
   | stmt_list stmt
   {
       $$ = $1
-      $$.(*stmtlistNode).children = append($$.(*stmtlistNode).children, $2)
+      if ($2 != nil) {
+        $$.(*stmtlistNode).children = append($$.(*stmtlistNode).children, $2)
+      }
   }
   ;
 
@@ -116,6 +119,11 @@ stmt
   | NEXT
   {
     $$ = &nextNode{}
+  }
+  | CONST ID pattern_expr
+  {
+    // Store the regex for concatenation
+    Emtaillex.(*parser).res[$2] = $3
   }
   ;
 
@@ -253,16 +261,16 @@ primary_expr
   {
     $$ = $2
   }
-  | CONST
+  | NUMERIC
   {
-    $$ = &constExprNode{$1}
+    $$ = &numericExprNode{$1}
   }
   ;
 
 
 cond
-  : REGEX
-  {
+  : pattern_expr
+  { 
     if re, err := regexp.Compile($1); err != nil {
       Emtaillex.(*parser).Error(fmt.Sprintf(err.Error()))
       // TODO(jaq): force a parse error
@@ -274,13 +282,13 @@ cond
       for i := 1; i < re.NumSubexp() + 1; i++ {
         sym := Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
                                             CaprefSymbol, $$,
-                                            Emtaillex.(*parser).pos)
+                                            Emtaillex.(*parser).t.pos)
         sym.addr = i
       }
       for i, capref := range re.SubexpNames() {
         if capref != "" {
           sym := Emtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$,
-                                              Emtaillex.(*parser).pos)
+                                              Emtaillex.(*parser).t.pos)
           sym.addr = i
         }
       }
@@ -291,6 +299,26 @@ cond
     $$ = $1
   }
   ;
+
+pattern_expr
+  : REGEX
+  {
+    $$ = $1
+  }
+  | pattern_expr PLUS REGEX
+  {
+    $$ = $1 + $3
+  }
+  | pattern_expr PLUS ID
+  {
+    if s, ok := Emtaillex.(*parser).res[$3]; ok {
+      $$ = $1 + s
+    } else {
+      Emtaillex.Error(fmt.Sprintf("Undefined constant %s", $3))
+    }
+  }
+  ;
+
 
 decl
   : hide_spec type_spec declarator
@@ -311,15 +339,15 @@ decl
                     hidden: $1,
                     Values: make(map[string]*Datum, 0)}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
-                                           Emtaillex.(*parser).pos)
+                                           Emtaillex.(*parser).t.pos)
       d.sym.addr = Emtaillex.(*parser).addMetric(d.m)
     } else {
       d.m = &Metric{Name: n, Kind: d.kind,
                     hidden: $1,
                     D: &Datum{}}
       d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
-                                           Emtaillex.(*parser).pos)
-        d.sym.addr = Emtaillex.(*parser).addMetric(d.m)
+                                           Emtaillex.(*parser).t.pos)
+      d.sym.addr = Emtaillex.(*parser).addMetric(d.m)
     }
   }
   ;
@@ -412,7 +440,7 @@ def
       Emtaillex.(*parser).endScope()
       $$ = &defNode{name: $2, children: []node{$4}}
       d := $$.(*defNode)
-      d.sym = Emtaillex.(*parser).s.addSym(d.name, DefSymbol, d, Emtaillex.(*parser).pos)
+      d.sym = Emtaillex.(*parser).s.addSym(d.name, DefSymbol, d, Emtaillex.(*parser).t.pos)
   }
   ;
 
@@ -439,39 +467,39 @@ type parser struct {
     root   node
     errors []string
     l      *lexer
-    pos    Position
+    t      Token
     s      *scope
+    res    map[string]string // Mapping of regex constants to patterns
 }
 
 func NewParser(name string, input io.Reader) *parser {
-    return &parser{name: name, l: NewLexer(name, input)}
+    return &parser{name: name, l: NewLexer(name, input), res: make(map[string]string)}
 }
 
 func (p *parser) Error(s string) {
-    e := fmt.Sprintf("%s:%s: %s", p.l.name, p.pos, s)
+    e := fmt.Sprintf("%s:%s: %s", p.l.name, p.t.pos, s)
     p.errors = append(p.errors, e)
 }
 
 func (p *parser) Lex(lval *EmtailSymType) int {
-    token := p.l.NextToken()
-    p.pos = token.pos
-    switch token.kind {
+    p.t = p.l.NextToken()
+    switch p.t.kind {
     case INVALID:
-        p.Error(token.text)
+        p.Error(p.t.text)
         return EOF
-    case CONST:
+    case NUMERIC:
         var err error
-        lval.value, err = strconv.Atoi(token.text)
+        lval.value, err = strconv.Atoi(p.t.text)
         if err != nil {
-            p.Error(fmt.Sprintf("bad number '%s': %s", token.text, err))
-            return EOF
+            p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
+            return INVALID
         }
     case LT, GT, LE, GE, NE, EQ:
-        lval.value = int(token.kind)
+        lval.value = int(p.t.kind)
     default:
-        lval.text = token.text
+        lval.text = p.t.text
     }
-    return int(token.kind)
+    return int(p.t.kind)
 }
 
 func (p *parser) startScope() {

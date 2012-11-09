@@ -47,7 +47,7 @@ var lexerTests = []lexerTest{
 		Token{NE, "!=", Position{0, 25, 26}},
 		Token{EOF, "", Position{0, 27, 27}}}},
 	{"keywords",
-		"counter\ngauge\nas\nby\nhidden\ndef\nnext\n", []Token{
+		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\n", []Token{
 			Token{COUNTER, "counter", Position{0, 0, 6}},
 			Token{GAUGE, "gauge", Position{1, 0, 4}},
 			Token{AS, "as", Position{2, 0, 1}},
@@ -55,16 +55,17 @@ var lexerTests = []lexerTest{
 			Token{HIDDEN, "hidden", Position{4, 0, 5}},
 			Token{DEF, "def", Position{5, 0, 2}},
 			Token{NEXT, "next", Position{6, 0, 3}},
-			Token{EOF, "", Position{7, 0, 0}}}},
+			Token{CONST, "const", Position{7, 0, 4}},
+			Token{EOF, "", Position{8, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\ntolower\n", []Token{
 			Token{BUILTIN, "strptime", Position{0, 0, 7}},
 			Token{BUILTIN, "timestamp", Position{1, 0, 8}},
 			Token{BUILTIN, "tolower", Position{2, 0, 6}},
 			Token{EOF, "", Position{3, 0, 0}}}},
-	{"const", "1 23", []Token{
-		Token{CONST, "1", Position{0, 0, 0}},
-		Token{CONST, "23", Position{0, 2, 3}},
+	{"numeric", "1 23", []Token{
+		Token{NUMERIC, "1", Position{0, 0, 0}},
+		Token{NUMERIC, "23", Position{0, 2, 3}},
 		Token{EOF, "", Position{0, 4, 4}}}},
 	{"identifer", "a be foo\nquux line-count", []Token{
 		Token{ID, "a", Position{0, 0, 0}},
