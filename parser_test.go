@@ -205,20 +205,17 @@ var InvalidPrograms = []InvalidProgram{
 
 	{"invalid regex",
 		"/foo(/\n",
-		// TODO(jaq): fix the collection of file positions when building a pattern_expr
-		[]string{"invalid regex:2:1: error parsing regexp: missing closing ): `foo(`",
+		[]string{"invalid regex:1:1-6: error parsing regexp: missing closing ): `foo(`",
 			"invalid regex:2:1: syntax error"}},
 
 	{"invalid regex 2",
 		"/blurg(?P<x.)/\n",
-		// TODO(jaq): fix the collection of file positions when building a pattern_expr
-		[]string{"invalid regex 2:2:1: error parsing regexp: invalid named capture: `(?P<x.)`",
+		[]string{"invalid regex 2:1:1-14: error parsing regexp: invalid named capture: `(?P<x.)`",
 			"invalid regex 2:2:1: syntax error"}},
 
 	{"invalid regex 3",
 		"/blurg(?P<x>[[:alph:]])/\n",
-		// TODO(jaq): fix the collection of file positions when building a pattern_expr
-		[]string{"invalid regex 3:2:1: error parsing regexp: invalid character class range: `[:alph:]`",
+		[]string{"invalid regex 3:1:1-24: error parsing regexp: invalid character class range: `[:alph:]`",
 			"invalid regex 3:2:1: syntax error"}},
 
 	{"unterminated string",
@@ -246,7 +243,7 @@ var InvalidPrograms = []InvalidProgram{
 
 	{"undefined const regex",
 		"/foo / + X + / bar/ {}\n",
-		[]string{"undefined const regex:1:10: Undefined constant X"}},
+		[]string{"undefined const regex:1:10: Constant 'X' not defined."}},
 }
 
 func TestInvalidPrograms(t *testing.T) {
@@ -254,6 +251,7 @@ func TestInvalidPrograms(t *testing.T) {
 		metrics = make(map[string][]*Metric, 0)
 
 		p := NewParser(tc.name, strings.NewReader(tc.program))
+		//EmtailDebug = 999 // All the debugging.
 		EmtailParse(p)
 
 		if !reflect.DeepEqual(tc.errors, p.errors) {

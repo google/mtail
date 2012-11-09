@@ -47,7 +47,7 @@ import (
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
-// references, identifiers, decorators, numerical constants, and string constants.
+// references, identifiers, decorators, and numerical constants.
 %token <text> REGEX
 %token <text> STRING
 %token <text> CAPREF
@@ -270,9 +270,9 @@ primary_expr
 
 cond
   : pattern_expr
-  { 
+  {
     if re, err := regexp.Compile($1); err != nil {
-      Emtaillex.(*parser).Error(fmt.Sprintf(err.Error()))
+      Emtaillex.(*parser).ErrorP(fmt.Sprintf(err.Error()), Emtaillex.(*parser).pos)
       // TODO(jaq): force a parse error
     } else {
       $$ = &regexNode{pattern: $1}
@@ -282,13 +282,13 @@ cond
       for i := 1; i < re.NumSubexp() + 1; i++ {
         sym := Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
                                             CaprefSymbol, $$,
-                                            Emtaillex.(*parser).t.pos)
+                                            Emtaillex.(*parser).pos)
         sym.addr = i
       }
       for i, capref := range re.SubexpNames() {
         if capref != "" {
           sym := Emtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$,
-                                              Emtaillex.(*parser).t.pos)
+                                              Emtaillex.(*parser).pos)
           sym.addr = i
         }
       }
@@ -303,6 +303,9 @@ cond
 pattern_expr
   : REGEX
   {
+    // Stash the start of the pattern_expr in a state variable.
+    // We know it's the start because pattern_expr is left associative.
+    Emtaillex.(*parser).pos = Emtaillex.(*parser).t.pos
     $$ = $1
   }
   | pattern_expr PLUS REGEX
@@ -314,7 +317,7 @@ pattern_expr
     if s, ok := Emtaillex.(*parser).res[$3]; ok {
       $$ = $1 + s
     } else {
-      Emtaillex.Error(fmt.Sprintf("Undefined constant %s", $3))
+      Emtaillex.Error(fmt.Sprintf("Constant '%s' not defined.", $3))
     }
   }
   ;
@@ -467,7 +470,8 @@ type parser struct {
     root   node
     errors []string
     l      *lexer
-    t      Token
+    t      Token             // Most recently lexed token.
+    pos Position             // Maybe contains the position of the start of a node.
     s      *scope
     res    map[string]string // Mapping of regex constants to patterns
 }
@@ -476,9 +480,13 @@ func NewParser(name string, input io.Reader) *parser {
     return &parser{name: name, l: NewLexer(name, input), res: make(map[string]string)}
 }
 
-func (p *parser) Error(s string) {
-    e := fmt.Sprintf("%s:%s: %s", p.l.name, p.t.pos, s)
+func (p *parser) ErrorP(s string, pos Position) {
+    e := fmt.Sprintf("%s:%s: %s", p.l.name, pos, s)
     p.errors = append(p.errors, e)
+}
+
+func (p *parser) Error(s string) {
+    p.ErrorP(s, p.t.pos)
 }
 
 func (p *parser) Lex(lval *EmtailSymType) int {
