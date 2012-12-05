@@ -38,7 +38,7 @@ parser.go: parser.y
 
 .PHONY: test
 test: $(GOFILES) $(GOTESTFILES)
-	go test -test.v=true
+	go test -gcflags '-N' -test.v=true
 
 .PHONY: testshort
 testshort: $(GOFILES) $(GOTESTFILES)
