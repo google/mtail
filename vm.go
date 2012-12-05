@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -117,6 +118,26 @@ func (t *thread) Pop() (value interface{}) {
 // Log a runtime error and terminate the program
 func (v *vm) errorf(format string, args ...interface{}) {
 	log.Printf("Runtime error: "+format+"\n", args...)
+	log.Printf("VM stack:\n%s", debug.Stack())
+	log.Printf("Dumping vm state\n")
+	log.Printf("Regexes:\n")
+	for i, re := range v.re {
+		log.Printf("\t%4d %v\n", i, re)
+	}
+	log.Printf("Strings:\n")
+	for i, s := range v.str {
+		log.Printf("\t%4d %q\n", i, s)
+	}
+	log.Printf("Thread:\n")
+	log.Printf("\tPC %v\n", v.t.pc)
+	log.Printf("\tMatch %v\n", v.t.match)
+	log.Printf("\tMatches %v\n", v.t.matches)
+	log.Printf("\tTimestamp %v\n", v.t.time)
+	log.Printf("\tStack %v\n", v.t.stack)
+	log.Printf("Program:\n")
+	for i, instr := range v.prog {
+		log.Printf("\t%4d %8s %d\n", i, opNames[instr.op], instr.opnd)
+	}
 	v.terminate = true
 }
 
@@ -138,7 +159,7 @@ func (t *thread) PopInt() (int64, error) {
 	case *Datum:
 		return n.Value, nil
 	}
-	return 0, fmt.Errorf("Unexpected numeric type %T %q", val, val)
+	return 0, fmt.Errorf("unexpected numeric type %T %q", val, val)
 }
 
 // Execute acts on the current instruction, and returns a boolean indicating
@@ -322,7 +343,7 @@ func (v *vm) execute(t *thread, i instr) {
 // until termination. It returns a boolean indicating a successful action was
 // taken.
 func (v *vm) Run(input string) {
-	t := v.t
+	t := &v.t
 	v.input = input
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, 0)
@@ -332,7 +353,7 @@ func (v *vm) Run(input string) {
 		}
 		i := v.prog[t.pc]
 		t.pc++
-		v.execute(&t, i)
+		v.execute(t, i)
 		if v.terminate {
 			return
 		}
