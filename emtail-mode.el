@@ -23,7 +23,7 @@
 
     ; Square brackets like parens
     (modify-syntax-entry ?\[ "(]" st)
-    (modify-syntax-entry ?] ")" st)
+    (modify-syntax-entry ?\] ")[" st)
 
     ; Operators
     (modify-syntax-entry ?+ "." st)
