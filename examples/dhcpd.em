@@ -22,10 +22,10 @@ counter lease_conflicts
 # Syslog decorator
 def syslog {/(?P<date>(?P<legacy_date>\w+\s+\d+\s+\d+:\d+:\d+)|(?P<rfc3339_date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+[+-]\d{2}:\d{2}))/ +
     /\s+(?:\w+@)?(?P<hostname>[\w\.-]+)\s+(?P<application>[\w\.-]+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)/ {
-        $legacy_date != "" {
-            strptime($2, "Mon Jan _2 15:04:05")
+        len($legacy_date) > 0 {
+            strptime($2, "Jan _2 15:04:05")
         }
-        $rfc3339_date != "" {
+        len($rfc3339_date) > 0 {
             strptime($rfc3339_date, "2006-01-02T03:04:05-0700")
         }
         next
@@ -39,10 +39,8 @@ const MATCH_MAC /(?P<mac>([\da-f]{2}:){5}[\da-f]{2})/
     
 @syslog {
     # Request
-    /(\w+)/ {
-        tolower($1) != "dhcpdiscover" {
-            request_total[tolower($1)]++
-        }
+    /(balanced|balancing|bootreply|bootrequest|dhcpack|dhcpdecline|dhcpdiscover|dhcpinform|dhcpnak|dhcpoffer|dhcprelease|dhcprequest)/ {
+        request_total[tolower($1)]++
     }
 
     # Config file errors
