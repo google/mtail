@@ -359,7 +359,7 @@ func (v *vm) execute(t *thread, i instr) {
 // until termination. It returns a boolean indicating a successful action was
 // taken.
 func (v *vm) Run(input string) {
-	t := &v.t
+	t := v.t
 	v.input = input
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, 0)
@@ -369,7 +369,7 @@ func (v *vm) Run(input string) {
 		}
 		i := v.prog[t.pc]
 		t.pc++
-		v.execute(t, i)
+		v.execute(&t, i)
 		if v.terminate {
 			return
 		}
