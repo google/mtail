@@ -45,27 +45,26 @@ var exampleProgramTests = []struct {
 	logfile     string // Sample log input.
 	jsonfile    string // Expected metrics after processing.
 }{
-	// {
-	// 	"examples/linecount.em",
-	// 	"testdata/linecount.log",
-	// 	"testdata/linecount.json",
-	// },
+	{
+		"examples/linecount.em",
+		"testdata/linecount.log",
+		"testdata/linecount.json",
+	},
 	{
 		"examples/rsyncd.em",
 		"testdata/rsyncd.log",
 		"testdata/rsyncd.json",
 	},
-	// {
-	// 	"examples/sftp.em",
-	// 	"testdata/sftp_chroot.log",
-	// 	"testdata/sftp_chroot.json",
-	// },
-
-	// {
-	// 	"examples/dhcpd.em",
-	// 	"testdata/anonymised_dhcpd_log",
-	// 	"testdata/anonymised_dhcpd_log.json",
-	// },
+	{
+		"examples/sftp.em",
+		"testdata/sftp_chroot.log",
+		"testdata/sftp_chroot.json",
+	},
+	{
+		"examples/dhcpd.em",
+		"testdata/anonymised_dhcpd_log",
+		"testdata/anonymised_dhcpd_log.json",
+	},
 }
 
 func CompileAndLoad(programfile string) (chan string, string) {

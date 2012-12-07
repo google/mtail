@@ -6,7 +6,16 @@
     "Keys": [
       "command"
     ],
-    "Values": {}
+    "Values": {
+      "balanced": {
+        "Value": 9317,
+        "Time": "0000-11-16T07:45:14Z"
+      },
+      "balancing": {
+        "Value": 9317,
+        "Time": "0000-11-16T07:45:14Z"
+      }
+    }
   },
   {
     "Name": "config_file_errors",
@@ -41,8 +50,8 @@
     "Name": "bind_xid_mismatch",
     "Kind": 0,
     "D": {
-      "Value": 0,
-      "Time": "0001-01-01T00:00:00Z"
+      "Value": 4088,
+      "Time": "0000-11-16T07:46:05Z"
     },
     "Keys": null,
     "Values": null
@@ -51,8 +60,8 @@
     "Name": "duplicate_lease",
     "Kind": 0,
     "D": {
-      "Value": 0,
-      "Time": "0001-01-01T00:00:00Z"
+      "Value": 53,
+      "Time": "0000-11-16T07:44:51Z"
     },
     "Keys": null,
     "Values": null
@@ -132,7 +141,12 @@
     "Keys": [
       "reason"
     ],
-    "Values": {}
+    "Values": {
+      "pinged before offer": {
+        "Value": 2,
+        "Time": "0000-11-16T07:32:49Z"
+      }
+    }
   },
   {
     "Name": "invalid_state_transition",
