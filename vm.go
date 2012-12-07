@@ -221,10 +221,8 @@ func (v *vm) execute(t *thread, i instr) {
 		}
 		switch d := t.Pop().(type) {
 		case Incrementable:
-			fmt.Println("settable")
 			d.IncBy(delta, t.time)
 		case int:
-			fmt.Println("int")
 			m := metrics[v.name][d]
 			m.IncBy(delta, t.time)
 		default:
@@ -240,10 +238,8 @@ func (v *vm) execute(t *thread, i instr) {
 
 		switch d := t.Pop().(type) {
 		case Settable:
-			fmt.Println("settable")
 			d.Set(value, t.time)
 		case int:
-			fmt.Println("int")
 			m := metrics[v.name][d]
 			m.Set(value, t.time)
 		default:
