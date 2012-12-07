@@ -167,7 +167,7 @@ var kMtailPrograms = []validProgram{
 
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range kMtailPrograms {
-		metrics = make(map[string][]*Metric, 0)
+		// metrics = make(map[string][]*Metric, 0)
 
 		p := NewParser(tc.name, strings.NewReader(tc.program))
 		//EmtailDebug = 999 // All the debugging.
@@ -261,7 +261,7 @@ var InvalidPrograms = []InvalidProgram{
 
 func TestInvalidPrograms(t *testing.T) {
 	for _, tc := range InvalidPrograms {
-		metrics = make(map[string][]*Metric, 0)
+		// metrics = make(map[string][]*Metric, 0)
 
 		p := NewParser(tc.name, strings.NewReader(tc.program))
 		//EmtailDebug = 999 // All the debugging.

@@ -41,6 +41,16 @@ const MATCH_MAC /(?P<mac>([\da-f]{2}:){5}[\da-f]{2})/
     # Request
     /(balanced|balancing|bootreply|bootrequest|dhcpack|dhcpdecline|dhcpdiscover|dhcpinform|dhcpnak|dhcpoffer|dhcprelease|dhcprequest)/ {
         request_total[tolower($1)]++
+
+        # DHCP Discover
+        /DHCPDISCOVER from / + MATCH_MAC {
+            dhcpdiscovers[$mac]++
+
+            /network / + MATCH_NETWORK + /: no free leases/ {
+                dhcpdiscover_nofree[$network]++
+            }
+        }
+
     }
 
     # Config file errors
@@ -51,14 +61,6 @@ const MATCH_MAC /(?P<mac>([\da-f]{2}:){5}[\da-f]{2})/
     # Peer disconnects
     /peer ([^:]+): disconnected/ {
         peer_disconnects++
-    }
-
-    # DHCP Discover
-    /DHCPDISCOVER from (?P<mac>([\da-f]{2}:){5}[\da-f]{2})/ {
-        /network (?P<network>\d+(\.\d+){1,3}\/\d+): no free leases/ {
-            dhcpdiscover_nofree[$network]++
-        }
-        dhcpdiscovers[$mac]++
     }
 
     # XID mismatches

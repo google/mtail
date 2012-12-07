@@ -175,6 +175,7 @@ func (v *vm) execute(t *thread, i instr) {
 		// where i.opnd == the matched re index
 		t.matches[i.opnd] = v.re[i.opnd].FindStringSubmatch(v.input)
 		t.match = t.matches[i.opnd] != nil
+
 	case cmp:
 		// Compare two elements on the stack.
 		// Set the match register based on the truthiness of the comparison.
@@ -196,14 +197,17 @@ func (v *vm) execute(t *thread, i instr) {
 		case 1:
 			t.match = a > b
 		}
+
 	case jnm:
 		if !t.match {
 			t.pc = i.opnd
 		}
+
 	case jm:
 		if t.match {
 			t.pc = i.opnd
 		}
+
 	case inc:
 		// increment a counter
 		var delta int64 = 1
@@ -217,8 +221,10 @@ func (v *vm) execute(t *thread, i instr) {
 		}
 		switch d := t.Pop().(type) {
 		case Incrementable:
+			fmt.Println("settable")
 			d.IncBy(delta, t.time)
 		case int:
+			fmt.Println("int")
 			m := metrics[v.name][d]
 			m.IncBy(delta, t.time)
 		default:
@@ -234,8 +240,10 @@ func (v *vm) execute(t *thread, i instr) {
 
 		switch d := t.Pop().(type) {
 		case Settable:
+			fmt.Println("settable")
 			d.Set(value, t.time)
 		case int:
+			fmt.Println("int")
 			m := metrics[v.name][d]
 			m.Set(value, t.time)
 		default:
@@ -333,13 +341,12 @@ func (v *vm) execute(t *thread, i instr) {
 		t.Push(m.Values[h])
 
 	case tolower:
-		// Load a string from the top of the stack
+		// Lowercase a string from TOS, and push result back.
 		s := t.Pop().(string)
 		t.Push(strings.ToLower(s))
 
 	case length:
-		// Compute the length of a string from top of stack, and push result
-		// onto stack.
+		// Compute the length of a string from TOS, and push result back.
 		s := t.Pop().(string)
 		t.Push(len(s))
 
