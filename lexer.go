@@ -72,6 +72,7 @@ var keywords = map[string]Lexeme{
 
 // List of builtin functions.  Keep this list sorted!
 var builtins = []string{
+	"len",
 	"strptime",
 	"timestamp",
 	"tolower",

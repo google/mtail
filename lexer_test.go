@@ -58,11 +58,12 @@ var lexerTests = []lexerTest{
 			Token{CONST, "const", Position{7, 0, 4}},
 			Token{EOF, "", Position{8, 0, 0}}}},
 	{"builtins",
-		"strptime\ntimestamp\ntolower\n", []Token{
+		"strptime\ntimestamp\ntolower\nlen\n", []Token{
 			Token{BUILTIN, "strptime", Position{0, 0, 7}},
 			Token{BUILTIN, "timestamp", Position{1, 0, 8}},
 			Token{BUILTIN, "tolower", Position{2, 0, 6}},
-			Token{EOF, "", Position{3, 0, 0}}}},
+			Token{BUILTIN, "len", Position{3, 0, 2}},
+			Token{EOF, "", Position{4, 0, 0}}}},
 	{"numeric", "1 23", []Token{
 		Token{NUMERIC, "1", Position{0, 0, 0}},
 		Token{NUMERIC, "23", Position{0, 2, 3}},

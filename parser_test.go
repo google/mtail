@@ -150,6 +150,19 @@ var kMtailPrograms = []validProgram{
 			"/foo / + X + / bar/ {\n" +
 			"}\n",
 	},
+
+	{"multiline regex",
+		"/foo / +\n" +
+			"/barrr/ {\n" +
+			"}\n",
+	},
+
+	{"len",
+		"/(?P<foo>foo)/ {\n" +
+			"len($foo) > 0 {\n" +
+			"}\n" +
+			"}\n",
+	},
 }
 
 func TestParserRoundTrip(t *testing.T) {

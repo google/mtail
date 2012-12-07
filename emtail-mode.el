@@ -44,7 +44,7 @@
   "All keywords in the emtail language.  Used for font locking.")
 
 (defconst emtail-mode-builtins
-  '("strptime" "timestamp")
+  '("len" "strptime" "timestamp")
   "All builtins in the emtail language.  Used for font locking.")
 
 (defvar emtail-mode-font-lock-defaults

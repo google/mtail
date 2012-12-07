@@ -184,6 +184,15 @@ var programs = []struct {
 			instr{inc, 0},
 			instr{mload, 1},
 			instr{inc, 0}}},
+	{"length",
+		"len(\"foo\") > 0 {\n" +
+			"}\n",
+		[]instr{
+			instr{str, 0},
+			instr{length, 1},
+			instr{push, 0},
+			instr{cmp, 1},
+			instr{jnm, 5}}},
 }
 
 func TestCompile(t *testing.T) {
