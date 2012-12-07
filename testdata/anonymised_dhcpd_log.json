@@ -1,0 +1,166 @@
+[
+  {
+    "Name": "request_total",
+    "Kind": 0,
+    "D": null,
+    "Keys": [
+      "command"
+    ],
+    "Values": {}
+  },
+  {
+    "Name": "config_file_errors",
+    "Kind": 0,
+    "D": {
+      "Value": 0,
+      "Time": "0001-01-01T00:00:00Z"
+    },
+    "Keys": null,
+    "Values": null
+  },
+  {
+    "Name": "peer_disconnects",
+    "Kind": 0,
+    "D": {
+      "Value": 0,
+      "Time": "0001-01-01T00:00:00Z"
+    },
+    "Keys": null,
+    "Values": null
+  },
+  {
+    "Name": "dhcpdiscovers",
+    "Kind": 0,
+    "D": null,
+    "Keys": [
+      "mac"
+    ],
+    "Values": {}
+  },
+  {
+    "Name": "bind_xid_mismatch",
+    "Kind": 0,
+    "D": {
+      "Value": 0,
+      "Time": "0001-01-01T00:00:00Z"
+    },
+    "Keys": null,
+    "Values": null
+  },
+  {
+    "Name": "duplicate_lease",
+    "Kind": 0,
+    "D": {
+      "Value": 0,
+      "Time": "0001-01-01T00:00:00Z"
+    },
+    "Keys": null,
+    "Values": null
+  },
+  {
+    "Name": "bad_udp_checksum",
+    "Kind": 0,
+    "D": {
+      "Value": 0,
+      "Time": "0001-01-01T00:00:00Z"
+    },
+    "Keys": null,
+    "Values": null
+  },
+  {
+    "Name": "unknown_subnet",
+    "Kind": 0,
+    "D": {
+      "Value": 0,
+      "Time": "0001-01-01T00:00:00Z"
+    },
+    "Keys": null,
+    "Values": null
+  },
+  {
+    "Name": "dhcpdiscover_nofree",
+    "Kind": 0,
+    "D": null,
+    "Keys": [
+      "network"
+    ],
+    "Values": {}
+  },
+  {
+    "Name": "unknown_lease",
+    "Kind": 0,
+    "D": null,
+    "Keys": [
+      "ip"
+    ],
+    "Values": {}
+  },
+  {
+    "Name": "update_rejected",
+    "Kind": 0,
+    "D": {
+      "Value": 0,
+      "Time": "0001-01-01T00:00:00Z"
+    },
+    "Keys": null,
+    "Values": null
+  },
+  {
+    "Name": "failover_peer_timeout",
+    "Kind": 0,
+    "D": {
+      "Value": 0,
+      "Time": "0001-01-01T00:00:00Z"
+    },
+    "Keys": null,
+    "Values": null
+  },
+  {
+    "Name": "ip_already_in_use",
+    "Kind": 0,
+    "D": {
+      "Value": 0,
+      "Time": "0001-01-01T00:00:00Z"
+    },
+    "Keys": null,
+    "Values": null
+  },
+  {
+    "Name": "ip_abandoned",
+    "Kind": 0,
+    "D": null,
+    "Keys": [
+      "reason"
+    ],
+    "Values": {}
+  },
+  {
+    "Name": "invalid_state_transition",
+    "Kind": 0,
+    "D": {
+      "Value": 0,
+      "Time": "0001-01-01T00:00:00Z"
+    },
+    "Keys": null,
+    "Values": null
+  },
+  {
+    "Name": "negative_poolreq",
+    "Kind": 0,
+    "D": null,
+    "Keys": [
+      "pool"
+    ],
+    "Values": {}
+  },
+  {
+    "Name": "lease_conflicts",
+    "Kind": 0,
+    "D": {
+      "Value": 0,
+      "Time": "0001-01-01T00:00:00Z"
+    },
+    "Keys": null,
+    "Values": null
+  }
+]

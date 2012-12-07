@@ -60,6 +60,12 @@ var exampleProgramTests = []struct {
 		"testdata/sftp_chroot.log",
 		"testdata/sftp_chroot.json",
 	},
+
+	{
+		"examples/dhcpd.em",
+		"testdata/anonymised_dhcpd_log",
+		"testdata/anonymised_dhcpd_log.json",
+	},
 }
 
 func CompileAndLoad(programfile string) (chan string, string) {
