@@ -173,25 +173,25 @@ var instructions = []struct {
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		// metrics[tc.name] = make([]*Metric, 0)
 		metrics[tc.name] = append(metrics[tc.name],
 			&Metric{Name: "foo", Kind: Counter, D: &Datum{}},
 			&Metric{Name: "bar", Kind: Gauge, D: &Datum{}})
 
 		v := newVm(tc.name, tc.re, tc.str, []instr{tc.i})
+		v.t = new(thread)
 		v.t.stack = make([]interface{}, 0)
 		for _, item := range tc.reversed_stack {
 			v.t.Push(item)
 		}
 		v.t.matches = make(map[int][]string, 0)
 		v.input = "aaaab"
-		v.execute(&v.t, tc.i)
+		v.execute(v.t, tc.i)
 
 		if !reflect.DeepEqual(tc.expected_stack, v.t.stack) {
 			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_stack, v.t.stack)
 		}
 		tc.expected_thread.stack = tc.expected_stack
-		if !reflect.DeepEqual(tc.expected_thread, v.t) {
+		if !reflect.DeepEqual(&tc.expected_thread, v.t) {
 			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_thread, v.t)
 		}
 	}

@@ -61,12 +61,16 @@ func (m *Metric) Set(value int64, ts time.Time) {
 	m.D.Set(value, ts)
 }
 
+// func (m *Metric) UnmarshalJSON([]byte) error {
+
+//}
+
 type Datum struct {
 	Value int64
 	Time  time.Time
 }
 
-const KEY_HASH_SEP = " "
+const KEY_HASH_SEP = "\U0001f4a9"
 
 func key_hash(keys []string) string {
 	return strings.Join(keys, KEY_HASH_SEP)

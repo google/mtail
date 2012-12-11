@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -22,23 +23,35 @@ var (
 	record_benchmark = flag.Bool("record_benchmark", false, "Record the benchmark results to 'benchmark_results.csv'.")
 )
 
-func (m *Metric) String() string {
-	s := fmt.Sprintf("<Metric %s %v %v", m.Name, m.Kind, m.hidden)
-	if m.D == nil {
-		for k, d := range m.Values {
-			s += " ["
-			keyvals := key_unhash(k)
-			for i, key := range m.Keys {
-				s += fmt.Sprintf("%s=%s ", key, keyvals[i])
-			}
-			s += fmt.Sprintf(" %v '%v']", d.Value, d.Time)
-		}
-		s += ">"
-	} else {
-		s += fmt.Sprintf(" %v '%v'>", m.D.Value, m.D.Time)
-	}
-	return s
+// Debug printing.
+func (d *Datum) String() string {
+	return fmt.Sprintf("%v", *d)
 }
+
+func (m *Metric) String() string {
+	return fmt.Sprintf("%v", *m)
+}
+
+// Sort a slice of metrics.
+type Metrics []*Metric
+
+func (ms Metrics) Len() int           { return len(ms) }
+func (ms Metrics) Swap(i, j int)      { ms[i], ms[j] = ms[j], ms[i] }
+func (ms Metrics) Less(i, j int) bool { return ms[i].Name < ms[j].Name }
+
+// Sort the datum keys within a metric.
+func (m *Metric) Len() int { return len(m.Keys) }
+func (m *Metric) Swap(i, j int) {
+	m.Keys[i], m.Keys[j] = m.Keys[j], m.Keys[i]
+	v := make(map[string]*Datum)
+	for k, d := range m.Values {
+		t := key_unhash(k)
+		t[i], t[j] = t[j], t[i]
+		v[key_hash(t)] = d
+	}
+	m.Values = v
+}
+func (m *Metric) Less(i, j int) bool { return m.Keys[i] < m.Keys[j] }
 
 var exampleProgramTests = []struct {
 	programfile string // Example program file.
@@ -68,9 +81,6 @@ var exampleProgramTests = []struct {
 }
 
 func CompileAndLoad(programfile string) (chan string, string) {
-	// //metric_lock.Lock()
-	// metrics = make(map[string][]*Metric, 0)
-	// //metric_lock.Unlock()
 	lines := make(chan string)
 
 	p, err := os.Open(programfile)
@@ -103,6 +113,7 @@ func TestExamplePrograms(t *testing.T) {
 			name = name[:len(name)-3]
 		}
 
+		t.Log(name)
 		lines, errs := CompileAndLoad(tc.programfile)
 		if errs != "" {
 			t.Errorf(errs)
@@ -146,6 +157,16 @@ func TestExamplePrograms(t *testing.T) {
 			t.Errorf("%s: could not decode json: %s", tc.jsonfile, err)
 			continue
 		}
+		sort.Sort(Metrics(expected_metrics))
+		t.Log("expected")
+		for _, m := range expected_metrics {
+			if len(m.Keys) > 0 {
+				t.Log(m.Name)
+				t.Logf("keys, values: %v, %v", m.Keys, m.Values)
+				sort.Sort(m)
+				t.Logf("keys, values: %v, %v", m.Keys, m.Values)
+			}
+		}
 
 		exported_metrics := make([]*Metric, 0)
 		for _, m := range metrics[name] {
@@ -153,9 +174,19 @@ func TestExamplePrograms(t *testing.T) {
 				exported_metrics = append(exported_metrics, m)
 			}
 		}
+		sort.Sort(Metrics(exported_metrics))
+		t.Log("exported")
+		for _, m := range exported_metrics {
+			if len(m.Keys) > 0 {
+				t.Log(m.Name)
+				t.Logf("keys, values: %v, %v", m.Keys, m.Values)
+				sort.Sort(m)
+				t.Logf("keys, values: %v, %v", m.Keys, m.Values)
+			}
+		}
 
 		if !reflect.DeepEqual(expected_metrics, exported_metrics) {
-			t.Errorf("%s: metrics don't match.\n\texpected:\n%s\n\treceived:\n%s", tc.programfile, expected_metrics, exported_metrics)
+			t.Errorf("%s: metrics don't match.\n\texpected:\n%v\n\treceived:\n%v", tc.programfile, expected_metrics, exported_metrics)
 		}
 	}
 }
@@ -165,7 +196,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 	if testing.Short() {
 		return
 	}
-	fmt.Println()
+	b.Logf("\n")
 	for _, tc := range exampleProgramTests {
 		lines, errs := CompileAndLoad(tc.programfile)
 		if errs != "" {

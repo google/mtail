@@ -33,9 +33,6 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 	if strings.HasSuffix(name, ".em") {
 		name = name[:len(name)-3]
 	}
-	// metric_lock.Lock()
-	// metrics[name] = make([]*Metric, 0)
-	// metric_lock.Unlock()
 	p := NewParser(name, input)
 	r := EmtailParse(p)
 	if r != 0 || p == nil || len(p.errors) > 0 {

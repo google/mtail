@@ -10,6 +10,7 @@ import (
 	"log"
 	"regexp"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -98,7 +99,7 @@ type vm struct {
 
 	ts_mem map[string]time.Time // memo of time string parse results
 
-	t thread // Current thread of execution
+	t *thread // Current thread of execution
 
 	input string // Log line input to this round of execution.
 
@@ -330,6 +331,7 @@ func (v *vm) execute(t *thread, i instr) {
 		for a := 0; a < i.opnd; a++ {
 			keys = append(keys, t.Pop().(string))
 		}
+		sort.Sort(sort.StringSlice(keys))
 		h := key_hash(keys)
 		if _, ok := m.Values[h]; !ok {
 			m.Values[h] = &Datum{}
@@ -355,7 +357,8 @@ func (v *vm) execute(t *thread, i instr) {
 // until termination. It returns a boolean indicating a successful action was
 // taken.
 func (v *vm) Run(input string) {
-	t := v.t
+	t := new(thread)
+	v.t = t
 	v.input = input
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, 0)
@@ -365,7 +368,7 @@ func (v *vm) Run(input string) {
 		}
 		i := v.prog[t.pc]
 		t.pc++
-		v.execute(&t, i)
+		v.execute(t, i)
 		if v.terminate {
 			return
 		}

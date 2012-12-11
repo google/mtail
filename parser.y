@@ -13,6 +13,7 @@ import (
     "io"
     "fmt"
     "regexp"
+    "sort"
     "strconv"
 )
 
@@ -337,6 +338,7 @@ decl
       n = d.name
    	}
     if len(d.keys) > 0 {
+      sort.Sort(sort.StringSlice(d.keys))
       d.m = &Metric{Name: n, Kind: d.kind,
                     Keys:   d.keys,
                     hidden: $1,
