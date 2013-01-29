@@ -2,179 +2,195 @@
   {
     "Name": "request_total",
     "Kind": 0,
-    "D": null,
     "Keys": [
       "command"
     ],
     "Values": {
-      "balanced": {
-        "Value": 9317,
-        "Time": "0000-11-16T07:45:14Z"
-      },
-      "balancing": {
-        "Value": 9317,
-        "Time": "0000-11-16T07:45:14Z"
+      "D": null,
+      "Next": {
+        "balanced": {
+          "D": {
+            "Value": 9317,
+            "Time": "0000-11-16T07:45:14Z"
+          },
+          "Next": {}
+        },
+        "balancing": {
+          "D": {
+            "Value": 9317,
+            "Time": "0000-11-16T07:45:14Z"
+          },
+          "Next": {}
+        }
       }
     }
   },
   {
     "Name": "config_file_errors",
     "Kind": 0,
-    "D": {
-      "Value": 0,
-      "Time": "0001-01-01T00:00:00Z"
-    },
-    "Keys": null,
-    "Values": null
+    "Keys": [],
+    "Values": {
+      "D": null,
+      "Next": null
+    }
   },
   {
     "Name": "peer_disconnects",
     "Kind": 0,
-    "D": {
-      "Value": 0,
-      "Time": "0001-01-01T00:00:00Z"
-    },
-    "Keys": null,
-    "Values": null
+    "Keys": [],
+    "Values": {
+      "D": null,
+      "Next": null
+    }
   },
   {
     "Name": "dhcpdiscovers",
     "Kind": 0,
-    "D": null,
     "Keys": [
       "mac"
     ],
-    "Values": {}
+    "Values": {
+      "D": null,
+      "Next": {}
+    }
   },
   {
     "Name": "bind_xid_mismatch",
     "Kind": 0,
-    "D": {
-      "Value": 4088,
-      "Time": "0000-11-16T07:46:05Z"
-    },
-    "Keys": null,
-    "Values": null
+    "Keys": [],
+    "Values": {
+      "D": {
+        "Value": 4088,
+        "Time": "0000-11-16T07:46:05Z"
+      },
+      "Next": null
+    }
   },
   {
     "Name": "duplicate_lease",
     "Kind": 0,
-    "D": {
-      "Value": 53,
-      "Time": "0000-11-16T07:44:51Z"
-    },
-    "Keys": null,
-    "Values": null
+    "Keys": [],
+    "Values": {
+      "D": {
+        "Value": 53,
+        "Time": "0000-11-16T07:44:51Z"
+      },
+      "Next": null
+    }
   },
   {
     "Name": "bad_udp_checksum",
     "Kind": 0,
-    "D": {
-      "Value": 0,
-      "Time": "0001-01-01T00:00:00Z"
-    },
-    "Keys": null,
-    "Values": null
+    "Keys": [],
+    "Values": {
+      "D": null,
+      "Next": null
+    }
   },
   {
     "Name": "unknown_subnet",
     "Kind": 0,
-    "D": {
-      "Value": 0,
-      "Time": "0001-01-01T00:00:00Z"
-    },
-    "Keys": null,
-    "Values": null
+    "Keys": [],
+    "Values": {
+      "D": null,
+      "Next": null
+    }
   },
   {
     "Name": "dhcpdiscover_nofree",
     "Kind": 0,
-    "D": null,
     "Keys": [
       "network"
     ],
-    "Values": {}
+    "Values": {
+      "D": null,
+      "Next": {}
+    }
   },
   {
     "Name": "unknown_lease",
     "Kind": 0,
-    "D": null,
     "Keys": [
       "ip"
     ],
-    "Values": {}
+    "Values": {
+      "D": null,
+      "Next": {}
+    }
   },
   {
     "Name": "update_rejected",
     "Kind": 0,
-    "D": {
-      "Value": 0,
-      "Time": "0001-01-01T00:00:00Z"
-    },
-    "Keys": null,
-    "Values": null
+    "Keys": [],
+    "Values": {
+      "D": null,
+      "Next": null
+    }
   },
   {
     "Name": "failover_peer_timeout",
     "Kind": 0,
-    "D": {
-      "Value": 0,
-      "Time": "0001-01-01T00:00:00Z"
-    },
-    "Keys": null,
-    "Values": null
+    "Keys": [],
+    "Values": {
+      "D": null,
+      "Next": null
+    }
   },
   {
     "Name": "ip_already_in_use",
     "Kind": 0,
-    "D": {
-      "Value": 0,
-      "Time": "0001-01-01T00:00:00Z"
-    },
-    "Keys": null,
-    "Values": null
+    "Keys": [],
+    "Values": {
+      "D": null,
+      "Next": null
+    }
   },
   {
     "Name": "ip_abandoned",
     "Kind": 0,
-    "D": null,
     "Keys": [
       "reason"
     ],
     "Values": {
-      "pinged before offer": {
-        "Value": 2,
-        "Time": "0000-11-16T07:32:49Z"
+      "D": null,
+      "Next": {
+        "pinged before offer": {
+          "D": {
+            "Value": 2,
+            "Time": "0000-11-16T07:32:49Z"
+          },
+          "Next": {}
+        }
       }
     }
   },
   {
     "Name": "invalid_state_transition",
     "Kind": 0,
-    "D": {
-      "Value": 0,
-      "Time": "0001-01-01T00:00:00Z"
-    },
-    "Keys": null,
-    "Values": null
+    "Keys": [],
+    "Values": {
+      "D": null,
+      "Next": null
+    }
   },
   {
     "Name": "negative_poolreq",
     "Kind": 0,
-    "D": null,
     "Keys": [
       "pool"
     ],
-    "Values": {}
+    "Values": {
+      "D": null,
+      "Next": {}
+    }
   },
   {
     "Name": "lease_conflicts",
     "Kind": 0,
-    "D": {
-      "Value": 0,
-      "Time": "0001-01-01T00:00:00Z"
-    },
-    "Keys": null,
-    "Values": null
+    "Keys": [],
+    "Values": {
+      "D": null,
+      "Next": null
+    }
   }
 ]

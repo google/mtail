@@ -322,13 +322,22 @@ func (v *vm) execute(t *thread, i instr) {
 
 	case dload:
 		// Load a datum from metric at TOS onto stack
+		//fmt.Printf("Stack: %v\n", t.stack)
 		m := t.Pop().(*Metric)
-		var keys []string
+		//fmt.Printf("Metric: %v\n", m)
+		keys := make([]string, i.opnd)
+		//fmt.Printf("keys: %v\n", keys)
 		for a := 0; a < i.opnd; a++ {
-			keys = append(keys, t.Pop().(string))
+			s := t.Pop().(string)
+			//fmt.Printf("s: %v\n", s)
+			keys[a] = s
+			//fmt.Printf("Keys: %v\n", keys)
 		}
+		//fmt.Printf("Keys: %v\n", keys)
 		sort.Sort(sort.StringSlice(keys))
-		t.Push(m.GetDatum(keys...))
+		d := m.GetDatum(keys...)
+		//fmt.Printf("Found %v\n", d)
+		t.Push(d)
 
 	case tolower:
 		// Lowercase a string from TOS, and push result back.

@@ -4,7 +4,6 @@
 package main
 
 import (
-	//"strings"
 	"sync"
 	"time"
 )
@@ -59,54 +58,43 @@ func NewMetric(name string, kind metric_type, keys ...string) *Metric {
 	for i, k := range keys {
 		m.Keys[i] = k
 	}
+	if len(keys) > 0 {
+		m.Values.Next = make(map[string]*Node, 0)
+	}
 	return m
 }
 
 func (m *Metric) GetDatum(labelvalues ...string) *Datum {
-	if len(labelvalues) != len(m.Keys) {
+	if len(labelvalues) > len(m.Keys) {
 		return nil
 	}
 	n := m.Values
 	for _, l := range labelvalues {
 		if tmp, ok := n.Next[l]; !ok {
-			n.Next[l] = &Node{}
+			metric_lock.Lock()
+			n.Next[l] = &Node{Next: make(map[string]*Node, 0)}
+			metric_lock.Unlock()
 			n = n.Next[l]
 		} else {
 			n = tmp
 		}
 	}
 	if n.D == nil {
+		metric_lock.Lock()
 		n.D = &Datum{}
+		metric_lock.Unlock()
 	}
 	return n.D
 }
 
-// func (m *Metric) stamp(ts time.Time) {
-// 	m.D.stamp(ts)
-// }
-
-// func (m *Metric) IncBy(delta int64, ts time.Time) {
-// 	m.D.IncBy(delta, ts)
-// }
-
-// func (m *Metric) Set(value int64, ts time.Time) {
-// 	m.D.Set(value, ts)
-// }
+func (m *Metric) IterLabels() map[string]string {
+	return nil
+}
 
 type Datum struct {
 	Value int64
 	Time  time.Time
 }
-
-// const KEY_HASH_SEP = "\U0001f4a9"
-
-// func key_hash(keys []string) string {
-// 	return strings.Join(keys, KEY_HASH_SEP)
-// }
-
-// func key_unhash(key string) []string {
-// 	return strings.Split(key, KEY_HASH_SEP)
-// }
 
 func (d *Datum) stamp(timestamp time.Time) {
 	if timestamp.IsZero() {
@@ -137,7 +125,7 @@ func init() {
 	metrics = make([]*Metric, 0)
 }
 
-func (m *Metric) Export() (addr int) {
+func ExportMetric(m *Metric) (addr int) {
 	metric_lock.Lock()
 	defer metric_lock.Unlock()
 	addr = len(metrics)

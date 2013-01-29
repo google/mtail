@@ -121,16 +121,23 @@ func MetricToCollectd(m *Metric) []string {
 	// 		m.D.Value)
 	// 	ret = append(ret, s)
 	// } else {
-	// 	// for k, d := range m.Values {
-	// 	// 	s := fmt.Sprintf(COLLECTD_FORMAT,
-	// 	// 		hostname,
-	// 	// 		prog,
-	// 	// 		strings.ToLower(m.Kind.String()),
-	// 	// 		m.Name+"-"+strings.Join(key_unhash(k), "-"),
-	// 	// 		*push_interval,
-	// 	// 		d.Time.Unix(),
-	// 	// 		d.Value)
-	// 	// 	ret = append(ret, s)
+	// n := m.Values
+	// var keys []string
+	// //var depth int
+	// for {
+	// 	if n.D != nil {
+	// 		s := fmt.Sprintf(COLLECTD_FORMAT,
+	// 			hostname,
+	// 			m.Name,
+	// 			strings.ToLower(m.Kind.String()),
+	// 			strings.Join(keys, "-"),
+	// 			*push_interval,
+	// 			n.D.Time.Unix(),
+	// 			n.D.Value)
+	// 		ret = append(ret, s)
+	// 	}
+	// 	// for i, k := range n.Next {
+
 	// 	// }
 	// }
 	return ret

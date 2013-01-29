@@ -13,7 +13,7 @@ import (
     "io"
     "fmt"
     "regexp"
-    //"sort"
+    "sort"
     "strconv"
 )
 
@@ -337,24 +337,13 @@ decl
 	} else {
         n = d.name
    	}
-//    if len(d.keys) > 0 {
-        //sort.Sort(sort.StringSlice(d.keys))
-        d.m = NewMetric(n, d.kind, d.keys...)
+      sort.Sort(sort.StringSlice(d.keys))
+      d.m = NewMetric(n, d.kind, d.keys...)
       d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
                                            Emtaillex.(*parser).t.pos)
       if !$1 {
-        d.sym.addr = d.m.Export()
+        d.sym.addr = ExportMetric(d.m)
       }
-    /* 
-     * } else {
-     *   d.m = NewMetric(n, d.kind)
-     *   d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
-     *                                        Emtaillex.(*parser).t.pos)
-     *   if !$1 {
-     *     d.sym.addr = d.m.Export()
-     *   }
-     */
-    //}
   }
   ;
 

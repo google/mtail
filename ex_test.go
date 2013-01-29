@@ -94,13 +94,15 @@ func TestExamplePrograms(t *testing.T) {
 	}
 	*syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
+		metrics = make([]*Metric, 0)
 		name := filepath.Base(tc.programfile)
 		if strings.HasSuffix(name, ".em") {
 			name = name[:len(name)-3]
 		}
-
+		//fmt.Printf("\nName: %v\n", name)
 		t.Log(name)
 		lines, errs := CompileAndLoad(tc.programfile)
+		//fmt.Printf("metrics: %v", metrics)
 		if errs != "" {
 			t.Errorf(errs)
 			continue
@@ -120,7 +122,7 @@ func TestExamplePrograms(t *testing.T) {
 		// 		continue
 		// 	}
 		// 	defer j.Close()
-		// 	b, err := json.MarshalIndent(metrics[name], "", "  ")
+		// 	b, err := json.MarshalIndent(metrics, "", "  ")
 		// 	if err != nil {
 		// 		t.Errorf("couldn't marshall metrics")
 		// 		continue
