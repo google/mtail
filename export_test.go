@@ -21,24 +21,18 @@ func TestMetricToCollectd(t *testing.T) {
 		t.Errorf("hostname error: %s", herr)
 	}
 
-	scalar_metric := &Metric{
-		Name: "foo",
-		Kind: Counter,
-		D:    &Datum{Value: 37, Time: ts}}
-	r := MetricToCollectd("prog", scalar_metric)
+	scalar_metric := NewMetric("foo", Counter)
+	scalar_metric.GetDatum().Set(37, ts)
+	r := MetricToCollectd(scalar_metric)
 	expected := []string{"PUTVAL \"" + hostname + "/emtail-prog/counter-foo\" interval=60 1343124840:37\n"}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
 
-	dimensioned_metric := &Metric{
-		Name: "bar",
-		Kind: Gauge,
-		Keys: []string{"quux", "snuh"},
-		Values: map[string]*Datum{
-			"snuh": &Datum{37, ts},
-			"quux": &Datum{37, ts}}}
-	r = MetricToCollectd("prog", dimensioned_metric)
+	dimensioned_metric := NewMetric("bar", Gauge, "l")
+	dimensioned_metric.GetDatum("quux").Set(37, ts)
+	dimensioned_metric.GetDatum("snuh").Set(37, ts)
+	r = MetricToCollectd(dimensioned_metric)
 	sort.Strings(r)
 	expected = []string{
 		"PUTVAL \"" + hostname + "/emtail-prog/gauge-bar-quux\" interval=60 1343124840:37\n",
@@ -55,25 +49,19 @@ func TestMetricToGraphite(t *testing.T) {
 		t.Errorf("time parse error: %s", terr)
 	}
 
-	scalar_metric := &Metric{
-		Name: "foo",
-		Kind: Counter,
-		D:    &Datum{Value: 37, Time: ts}}
-	r := MetricToGraphite("prog", scalar_metric)
+	scalar_metric := NewMetric("foo", Counter)
+	scalar_metric.GetDatum().Set(37, ts)
+	r := MetricToGraphite(scalar_metric)
 	sort.Strings(r)
 	expected := []string{"prog.foo 37 1343124840\n"}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
 
-	dimensioned_metric := &Metric{
-		Name: "bar",
-		Kind: Gauge,
-		Keys: []string{"quux", "snuh"},
-		Values: map[string]*Datum{
-			"quux": &Datum{37, ts},
-			"snuh": &Datum{37, ts}}}
-	r = MetricToGraphite("prog", dimensioned_metric)
+	dimensioned_metric := NewMetric("bar", Gauge, "l")
+	dimensioned_metric.GetDatum("quux").Set(37, ts)
+	dimensioned_metric.GetDatum("snuh").Set(37, ts)
+	r = MetricToGraphite(dimensioned_metric)
 	sort.Strings(r)
 	expected = []string{
 		"prog.bar.quux 37 1343124840\n",
@@ -90,25 +78,19 @@ func TestMetricToStatsd(t *testing.T) {
 		t.Errorf("time parse error: %s", terr)
 	}
 
-	scalar_metric := &Metric{
-		Name: "foo",
-		Kind: Counter,
-		D:    &Datum{Value: 37, Time: ts}}
-	r := MetricToStatsd("prog", scalar_metric)
+	scalar_metric := NewMetric("foo", Counter)
+	scalar_metric.GetDatum().Set(37, ts)
+	r := MetricToStatsd(scalar_metric)
 	sort.Strings(r)
 	expected := []string{"prog.foo:37|c"}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
 
-	dimensioned_metric := &Metric{
-		Name: "bar",
-		Kind: Gauge,
-		Keys: []string{"quux", "snuh"},
-		Values: map[string]*Datum{
-			"quux": &Datum{37, ts},
-			"snuh": &Datum{42, ts}}}
-	r = MetricToStatsd("prog", dimensioned_metric)
+	dimensioned_metric := NewMetric("bar", Gauge, "l")
+	dimensioned_metric.GetDatum("quux").Set(37, ts)
+	dimensioned_metric.GetDatum("snuh").Set(37, ts)
+	r = MetricToStatsd(dimensioned_metric)
 	sort.Strings(r)
 	expected = []string{
 		"prog.bar.quux:37|c",

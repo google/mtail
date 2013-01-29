@@ -13,7 +13,7 @@ import (
     "io"
     "fmt"
     "regexp"
-    "sort"
+    //"sort"
     "strconv"
 )
 
@@ -335,25 +335,26 @@ decl
     if d.exported_name != "" {
         n = d.exported_name
 	} else {
-      n = d.name
+        n = d.name
    	}
-    if len(d.keys) > 0 {
-      sort.Sort(sort.StringSlice(d.keys))
-      d.m = &Metric{Name: n, Kind: d.kind,
-                    Keys:   d.keys,
-                    hidden: $1,
-                    Values: make(map[string]*Datum, 0)}
+//    if len(d.keys) > 0 {
+        //sort.Sort(sort.StringSlice(d.keys))
+        d.m = NewMetric(n, d.kind, d.keys...)
       d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
                                            Emtaillex.(*parser).t.pos)
-      d.sym.addr = Emtaillex.(*parser).addMetric(d.m)
-    } else {
-      d.m = &Metric{Name: n, Kind: d.kind,
-                    hidden: $1,
-                    D: &Datum{}}
-      d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
-                                           Emtaillex.(*parser).t.pos)
-      d.sym.addr = Emtaillex.(*parser).addMetric(d.m)
-    }
+      if !$1 {
+        d.sym.addr = d.m.Export()
+      }
+    /* 
+     * } else {
+     *   d.m = NewMetric(n, d.kind)
+     *   d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
+     *                                        Emtaillex.(*parser).t.pos)
+     *   if !$1 {
+     *     d.sym.addr = d.m.Export()
+     *   }
+     */
+    //}
   }
   ;
 
@@ -521,12 +522,4 @@ func (p *parser) endScope() {
     if p.s != nil && p.s.parent != nil {
         p.s = p.s.parent
     }
-}
-
-func (p *parser) addMetric(m *Metric) (addr int) {
-    metric_lock.Lock()
-    defer metric_lock.Unlock()
-    addr = len(metrics[p.name])
-    metrics[p.name] = append(metrics[p.name], m)
-    return
 }

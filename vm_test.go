@@ -173,9 +173,9 @@ var instructions = []struct {
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		metrics[tc.name] = append(metrics[tc.name],
-			&Metric{Name: "foo", Kind: Counter, D: &Datum{}},
-			&Metric{Name: "bar", Kind: Gauge, D: &Datum{}})
+		metrics = append(metrics,
+			NewMetric("foo", Counter),
+			NewMetric("bar", Counter))
 
 		v := newVm(tc.name, tc.re, tc.str, []instr{tc.i})
 		v.t = new(thread)

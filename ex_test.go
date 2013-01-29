@@ -39,20 +39,6 @@ func (ms Metrics) Len() int           { return len(ms) }
 func (ms Metrics) Swap(i, j int)      { ms[i], ms[j] = ms[j], ms[i] }
 func (ms Metrics) Less(i, j int) bool { return ms[i].Name < ms[j].Name }
 
-// Sort the datum keys within a metric.
-func (m *Metric) Len() int { return len(m.Keys) }
-func (m *Metric) Swap(i, j int) {
-	m.Keys[i], m.Keys[j] = m.Keys[j], m.Keys[i]
-	v := make(map[string]*Datum)
-	for k, d := range m.Values {
-		t := key_unhash(k)
-		t[i], t[j] = t[j], t[i]
-		v[key_hash(t)] = d
-	}
-	m.Values = v
-}
-func (m *Metric) Less(i, j int) bool { return m.Keys[i] < m.Keys[j] }
-
 var exampleProgramTests = []struct {
 	programfile string // Example program file.
 	logfile     string // Sample log input.
@@ -159,34 +145,28 @@ func TestExamplePrograms(t *testing.T) {
 		}
 		sort.Sort(Metrics(expected_metrics))
 		t.Log("expected")
-		for _, m := range expected_metrics {
-			if len(m.Keys) > 0 {
-				t.Log(m.Name)
-				t.Logf("keys, values: %v, %v", m.Keys, m.Values)
-				sort.Sort(m)
-				t.Logf("keys, values: %v, %v", m.Keys, m.Values)
-			}
-		}
+		// for _, m := range expected_metrics {
+		// 	if len(m.Keys) > 0 {
+		// 		t.Log(m.Name)
+		// 		t.Logf("keys, values: %v, %v", m.Keys, m.Values)
+		// 		sort.Sort(m)
+		// 		t.Logf("keys, values: %v, %v", m.Keys, m.Values)
+		// 	}
+		// }
 
-		exported_metrics := make([]*Metric, 0)
-		for _, m := range metrics[name] {
-			if !m.hidden {
-				exported_metrics = append(exported_metrics, m)
-			}
-		}
-		sort.Sort(Metrics(exported_metrics))
+		sort.Sort(Metrics(metrics))
 		t.Log("exported")
-		for _, m := range exported_metrics {
-			if len(m.Keys) > 0 {
-				t.Log(m.Name)
-				t.Logf("keys, values: %v, %v", m.Keys, m.Values)
-				sort.Sort(m)
-				t.Logf("keys, values: %v, %v", m.Keys, m.Values)
-			}
-		}
+		// for _, m := range metrics {
+		// 	if len(m.Keys) > 0 {
+		// 		t.Log(m.Name)
+		// 		t.Logf("keys, values: %v, %v", m.Keys, m.Values)
+		// 		sort.Sort(m)
+		// 		t.Logf("keys, values: %v, %v", m.Keys, m.Values)
+		// 	}
+		// }
 
-		if !reflect.DeepEqual(expected_metrics, exported_metrics) {
-			t.Errorf("%s: metrics don't match.\n\texpected:\n%v\n\treceived:\n%v", tc.programfile, expected_metrics, exported_metrics)
+		if !reflect.DeepEqual(expected_metrics, metrics) {
+			t.Errorf("%s: metrics don't match.\n\texpected:\n%v\n\treceived:\n%v", tc.programfile, expected_metrics, metrics)
 		}
 	}
 }

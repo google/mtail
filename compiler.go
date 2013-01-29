@@ -138,9 +138,7 @@ func (c *compiler) compile(untyped_node node) {
 	case *idNode:
 		c.emit(instr{mload, n.sym.addr})
 		m := n.sym.binding.(*Metric)
-		if m.D == nil {
-			c.emit(instr{dload, len(m.Keys)})
-		}
+		c.emit(instr{dload, len(m.Keys)})
 
 	case *caprefNode:
 		rn := n.sym.binding.(*regexNode)

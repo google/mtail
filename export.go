@@ -15,7 +15,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strings"
+	//"strings"
 	"time"
 )
 
@@ -59,37 +59,31 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 	c := csv.NewWriter(w)
 	defer c.Flush()
 
-	for prog, p := range metrics {
-		for _, m := range p {
-			if m.hidden {
-				continue
-			}
-			var record []string
-			record = append(record, prog)
-			if m.D != nil {
-				record = []string{m.Name,
-					fmt.Sprintf("%d", m.Kind)}
-				record = append(record, fmt.Sprintf("%d", m.D.Value))
-				record = append(record, fmt.Sprintf("%s", m.D.Time))
-			} else {
-				record = []string{m.Name,
-					fmt.Sprintf("%d", m.Kind),
-					"", ""} // Datum value, timestamp
-				for k, d := range m.Values {
-					keyvals := key_unhash(k)
-					for i, key := range m.Keys {
-						record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
-					}
-					record = append(record, fmt.Sprintf("%d", d.Value))
-					record = append(record, fmt.Sprintf("%s", d.Time))
-				}
-			}
-			err := c.Write(record)
-			if err != nil {
-				log.Printf("Failed to write csv record %q: %s\n", record, err)
-			}
-		}
-	}
+	// for _, m := range metrics {
+	// 	var record []string
+	// 	// // if m.D != nil {
+	// 	// // 	record = []string{m.Name,
+	// 	// // 		fmt.Sprintf("%d", m.Kind)}
+	// 	// // 	record = append(record, fmt.Sprintf("%d", m.D.Value))
+	// 	// // 	record = append(record, fmt.Sprintf("%s", m.D.Time))
+	// 	// // } else {
+	// 	// 	record = []string{m.Name,
+	// 	// 		fmt.Sprintf("%d", m.Kind),
+	// 	// 		"", ""} // Datum value, timestamp
+	// 	// 	// for k, d := range m.Values {
+	// 	// 	// 	keyvals := key_unhash(k)
+	// 	// 	// 	for i, key := range m.Keys {
+	// 	// 	// 		record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
+	// 	// 	// 	}
+	// 	// 	// 	record = append(record, fmt.Sprintf("%d", d.Value))
+	// 	// 	// 	record = append(record, fmt.Sprintf("%s", d.Time))
+	// 	// 	// }
+	// 	// }
+	// 	err := c.Write(record)
+	// 	if err != nil {
+	// 		log.Printf("Failed to write csv record %q: %s\n", record, err)
+	// 	}
+	// }
 }
 
 // JSON export
@@ -97,17 +91,7 @@ func handleJson(w http.ResponseWriter, r *http.Request) {
 	metric_lock.RLock()
 	defer metric_lock.RUnlock()
 
-	exported_metrics := make(map[string][]*Metric, 0)
-	for prog, _ := range metrics {
-		exported_metrics[prog] = make([]*Metric, 0)
-		for _, m := range metrics[prog] {
-			if !m.hidden {
-				exported_metrics[prog] = append(exported_metrics[prog], m)
-			}
-		}
-	}
-
-	b, err := json.MarshalIndent(exported_metrics, "", "  ")
+	b, err := json.MarshalIndent(metrics, "", "  ")
 	if err != nil {
 		log.Println("error marshalling metrics into json:", err.Error())
 	}
@@ -124,59 +108,54 @@ func CollectdWriteMetrics(socketpath string) error {
 	return WriteSocketMetrics(c, MetricToCollectd, collectd_export_total, collectd_export_success)
 }
 
-func MetricToCollectd(prog string, m *Metric) []string {
+func MetricToCollectd(m *Metric) []string {
 	var ret []string
-	if m.D != nil {
-		s := fmt.Sprintf(COLLECTD_FORMAT,
-			hostname,
-			prog,
-			strings.ToLower(m.Kind.String()),
-			m.Name,
-			*push_interval,
-			m.D.Time.Unix(),
-			m.D.Value)
-		ret = append(ret, s)
-	} else {
-		for k, d := range m.Values {
-			s := fmt.Sprintf(COLLECTD_FORMAT,
-				hostname,
-				prog,
-				strings.ToLower(m.Kind.String()),
-				m.Name+"-"+strings.Join(key_unhash(k), "-"),
-				*push_interval,
-				d.Time.Unix(),
-				d.Value)
-			ret = append(ret, s)
-		}
-	}
+	// if m.D != nil {
+	// 	s := fmt.Sprintf(COLLECTD_FORMAT,
+	// 		hostname,
+	// 		prog,
+	// 		strings.ToLower(m.Kind.String()),
+	// 		m.Name,
+	// 		*push_interval,
+	// 		m.D.Time.Unix(),
+	// 		m.D.Value)
+	// 	ret = append(ret, s)
+	// } else {
+	// 	// for k, d := range m.Values {
+	// 	// 	s := fmt.Sprintf(COLLECTD_FORMAT,
+	// 	// 		hostname,
+	// 	// 		prog,
+	// 	// 		strings.ToLower(m.Kind.String()),
+	// 	// 		m.Name+"-"+strings.Join(key_unhash(k), "-"),
+	// 	// 		*push_interval,
+	// 	// 		d.Time.Unix(),
+	// 	// 		d.Value)
+	// 	// 	ret = append(ret, s)
+	// 	// }
+	// }
 	return ret
 }
 
 // Format a metric into a string to be written to one of the timeseries sockets
-type formatter func(string, *Metric) []string
+type formatter func(*Metric) []string
 
 func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, export_success *expvar.Int) error {
 	metric_lock.RLock()
 	defer metric_lock.RUnlock()
 
-	for p, _ := range metrics {
-		for _, m := range metrics[p] {
-			if m.hidden {
-				continue
-			}
-			export_total.Add(1)
-			for _, line := range f(p, m) {
-				_, err := fmt.Fprint(c, line)
-				if err == nil {
-					_, err = bufio.NewReader(c).ReadString('\n')
-					if err != nil {
-						return fmt.Errorf("Read error: %s\n", err)
-					} else {
-						export_success.Add(1)
-					}
+	for _, m := range metrics {
+		export_total.Add(1)
+		for _, line := range f(m) {
+			_, err := fmt.Fprint(c, line)
+			if err == nil {
+				_, err = bufio.NewReader(c).ReadString('\n')
+				if err != nil {
+					return fmt.Errorf("Read error: %s\n", err)
 				} else {
-					return fmt.Errorf("Write error: %s\n", err)
+					export_success.Add(1)
 				}
+			} else {
+				return fmt.Errorf("Write error: %s\n", err)
 			}
 		}
 	}
@@ -193,26 +172,26 @@ func GraphiteWriteMetrics(hostport string) error {
 	return WriteSocketMetrics(c, MetricToGraphite, graphite_export_total, graphite_export_success)
 }
 
-func MetricToGraphite(prog string, m *Metric) []string {
+func MetricToGraphite(m *Metric) []string {
 	var ret []string
-	if m.D != nil {
-		s := fmt.Sprintf("%s.%s %v %v\n",
-			prog,
-			m.Name,
-			m.D.Value,
-			m.D.Time.Unix())
-		ret = append(ret, s)
-	} else {
-		for k, d := range m.Values {
-			s := fmt.Sprintf("%s.%s.%s %v %v\n",
-				prog,
-				m.Name,
-				strings.Join(key_unhash(k), "."),
-				d.Value,
-				d.Time.Unix())
-			ret = append(ret, s)
-		}
-	}
+	// if m.D != nil {
+	// 	s := fmt.Sprintf("%s.%s %v %v\n",
+	// 		prog,
+	// 		m.Name,
+	// 		m.D.Value,
+	// 		m.D.Time.Unix())
+	// 	ret = append(ret, s)
+	// } else {
+	// 	for k, d := range m.Values {
+	// 		s := fmt.Sprintf("%s.%s.%s %v %v\n",
+	// 			prog,
+	// 			m.Name,
+	// 			strings.Join(key_unhash(k), "."),
+	// 			d.Value,
+	// 			d.Time.Unix())
+	// 		ret = append(ret, s)
+	// 	}
+	// }
 	return ret
 }
 
@@ -225,25 +204,25 @@ func StatsdWriteMetrics(hostport string) error {
 	return WriteSocketMetrics(c, MetricToStatsd, statsd_export_total, statsd_export_success)
 }
 
-func MetricToStatsd(prog string, m *Metric) []string {
+func MetricToStatsd(m *Metric) []string {
 	var ret []string
-	// TODO(jaq): handle units better, send timing as |ms
-	if m.D != nil {
-		s := fmt.Sprintf("%s.%s:%d|c",
-			prog,
-			m.Name,
-			m.D.Value)
-		ret = append(ret, s)
-	} else {
-		for k, d := range m.Values {
-			s := fmt.Sprintf("%s.%s.%s:%d|c",
-				prog,
-				m.Name,
-				strings.Join(key_unhash(k), "."),
-				d.Value)
-			ret = append(ret, s)
-		}
-	}
+	// // TODO(jaq): handle units better, send timing as |ms
+	// if m.D != nil {
+	// 	s := fmt.Sprintf("%s.%s:%d|c",
+	// 		prog,
+	// 		m.Name,
+	// 		m.D.Value)
+	// 	ret = append(ret, s)
+	// } else {
+	// 	for k, d := range m.Values {
+	// 		s := fmt.Sprintf("%s.%s.%s:%d|c",
+	// 			prog,
+	// 			m.Name,
+	// 			strings.Join(key_unhash(k), "."),
+	// 			d.Value)
+	// 		ret = append(ret, s)
+	// 	}
+	// }
 	return ret
 }
 

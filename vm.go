@@ -78,10 +78,6 @@ type instr struct {
 	opnd int
 }
 
-// func (i instr) String() string {
-// 	return fmt.Sprintf("%s %d", opNames[i.op], i.opnd)
-// }
-
 type thread struct {
 	pc      int              // Program counter.
 	match   bool             // Match register.
@@ -224,8 +220,8 @@ func (v *vm) execute(t *thread, i instr) {
 		case Incrementable:
 			d.IncBy(delta, t.time)
 		case int:
-			m := metrics[v.name][d]
-			m.IncBy(delta, t.time)
+			m := metrics[d]
+			m.GetDatum().IncBy(delta, t.time)
 		default:
 			v.errorf("Unexpected type to increment: %T %q", d, d)
 		}
@@ -241,8 +237,8 @@ func (v *vm) execute(t *thread, i instr) {
 		case Settable:
 			d.Set(value, t.time)
 		case int:
-			m := metrics[v.name][d]
-			m.Set(value, t.time)
+			m := metrics[d]
+			m.GetDatum().Set(value, t.time)
 		default:
 			v.errorf("Unexpected type to set: %T %q", d, d)
 		}
@@ -322,7 +318,7 @@ func (v *vm) execute(t *thread, i instr) {
 
 	case mload:
 		// Load a metric at operand onto stack
-		t.Push(metrics[v.name][i.opnd])
+		t.Push(metrics[i.opnd])
 
 	case dload:
 		// Load a datum from metric at TOS onto stack
@@ -332,11 +328,7 @@ func (v *vm) execute(t *thread, i instr) {
 			keys = append(keys, t.Pop().(string))
 		}
 		sort.Sort(sort.StringSlice(keys))
-		h := key_hash(keys)
-		if _, ok := m.Values[h]; !ok {
-			m.Values[h] = &Datum{}
-		}
-		t.Push(m.Values[h])
+		t.Push(m.GetDatum(keys...))
 
 	case tolower:
 		// Lowercase a string from TOS, and push result back.
