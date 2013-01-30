@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/tabwriter"
 	"unicode/utf8"
 
 	_ "net/http/pprof"
@@ -26,7 +27,7 @@ var (
 	progs *string = flag.String("progs", "", "Directory containing programs")
 
 	one_shot      *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
-	assemble_only *bool = flag.Bool("assemble_only", false, "Dump bytecode of programs and exit.")
+	dump_bytecode *bool = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 )
 
 func OneShot(logfile string, lines chan string) error {
@@ -126,7 +127,7 @@ func main() {
 			}
 			continue
 		}
-		if *assemble_only {
+		if *dump_bytecode {
 			fmt.Printf("Prog %s\n", fi.Name())
 			fmt.Println("Metrics")
 			for i, m := range metrics {
@@ -138,16 +139,20 @@ func main() {
 			for i, re := range v.re {
 				fmt.Printf(" %8d /%s/\n", i, re)
 			}
-			fmt.Println("disasm")
+			w := new(tabwriter.Writer)
+			w.Init(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight)
+
+			fmt.Fprintln(w, "disasm\tl\top\topnd\t")
 			for n, i := range v.prog {
-				fmt.Printf(" %8d %8s %d\n", n, opNames[i.op], i.opnd)
+				fmt.Fprintf(w, "\t%d\t%s\t%d\t\n", n, opNames[i.op], i.opnd)
 			}
+			w.Flush()
 		}
 		e.addVm(v)
 		log.Printf("loaded %s", fi.Name())
 	}
 
-	if *compile_only || *assemble_only {
+	if *compile_only || *dump_bytecode {
 		os.Exit(errors)
 	}
 
