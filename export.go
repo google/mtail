@@ -58,32 +58,35 @@ func handleCsv(w http.ResponseWriter, r *http.Request) {
 
 	c := csv.NewWriter(w)
 	defer c.Flush()
+	csvExporter(c, metrics)
+}
 
-	// for _, m := range metrics {
-	// 	var record []string
-	// 	// // if m.D != nil {
-	// 	// // 	record = []string{m.Name,
-	// 	// // 		fmt.Sprintf("%d", m.Kind)}
-	// 	// // 	record = append(record, fmt.Sprintf("%d", m.D.Value))
-	// 	// // 	record = append(record, fmt.Sprintf("%s", m.D.Time))
-	// 	// // } else {
-	// 	// 	record = []string{m.Name,
-	// 	// 		fmt.Sprintf("%d", m.Kind),
-	// 	// 		"", ""} // Datum value, timestamp
-	// 	// 	// for k, d := range m.Values {
-	// 	// 	// 	keyvals := key_unhash(k)
-	// 	// 	// 	for i, key := range m.Keys {
-	// 	// 	// 		record = append(record, fmt.Sprintf("%s=%s", key, keyvals[i]))
-	// 	// 	// 	}
-	// 	// 	// 	record = append(record, fmt.Sprintf("%d", d.Value))
-	// 	// 	// 	record = append(record, fmt.Sprintf("%s", d.Time))
-	// 	// 	// }
-	// 	// }
-	// 	err := c.Write(record)
-	// 	if err != nil {
-	// 		log.Printf("Failed to write csv record %q: %s\n", record, err)
-	// 	}
-	// }
+func csvExporter(c *csv.Writer, ms []*Metric) {
+	lc := make(chan *LabelSet)
+	quit := make(chan bool)
+	for _, m := range ms {
+		go m.EmitLabelSets(lc, quit)
+		for {
+			select {
+			case l := <-lc:
+				record := []string{m.Program,
+					m.Name,
+					m.Kind.String()}
+				for k, v := range l.labels {
+					record = append(record, k, v)
+				}
+				record = append(record, fmt.Sprintf("%s", l.datum.Time))
+				record = append(record, fmt.Sprintf("%d", l.datum.Value))
+				err := c.Write(record)
+				if err != nil {
+					log.Printf("Failed to write csv record %q: %s\n", record, err)
+				}
+			case <-quit:
+				goto next
+			}
+		}
+	next:
+	}
 }
 
 // JSON export
