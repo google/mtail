@@ -42,7 +42,7 @@ test: $(GOFILES) $(GOTESTFILES)
 
 .PHONY: testshort
 testshort: $(GOFILES) $(GOTESTFILES)
-	go test -test.short
+	go test -test.short -v
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES)
