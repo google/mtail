@@ -96,6 +96,9 @@ func unparse(n node) string {
 			output += "gauge "
 		}
 		output += v.name
+		if len(v.keys) > 0 {
+			output += " by " + strings.Join(v.keys, ", ")
+		}
 
 	case *incExprNode:
 		output += unparse(v.lhs)
