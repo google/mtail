@@ -45,25 +45,43 @@ func TestDimensionedMetric(t *testing.T) {
 	}
 }
 
+var labelSetTests = []struct {
+	values          []string
+	expected_labels map[string]string
+}{
+	{
+		[]string{"a", "b", "c"},
+		map[string]string{"foo": "a", "bar": "b", "quux": "c"},
+	},
+	{
+		[]string{"a", "b", "d"},
+		map[string]string{"foo": "a", "bar": "b", "quux": "d"},
+	},
+}
+
 func TestEmitLabelSet(t *testing.T) {
 	v := NewMetric("test", Gauge, "foo", "bar", "quux")
-	ts := time.Now()
-	v.GetDatum("a", "b", "c").Set(37, ts)
 	c := make(chan LabelSet, 0)
 	quit := make(chan bool)
+	ts := time.Now()
+
+	for _, tc := range labelSetTests {
+		v.GetDatum(tc.values...).Set(37, ts)
+	}
 	go v.EmitLabelSets(c, quit)
 	expected_datum := &Datum{37, ts}
-	expected_labels := map[string]string{"foo": "a", "bar": "b", "quux": "c"}
-	select {
-	case l := <-c:
-		if !reflect.DeepEqual(expected_datum, l.datum) {
-			t.Errorf("Datum no match: expected %v, received %v\n", expected_datum, l.datum)
+	for _, tc := range labelSetTests {
+		select {
+		case l := <-c:
+			if !reflect.DeepEqual(expected_datum, l.datum) {
+				t.Errorf("Datum no match: expected %v, received %v\n", expected_datum, l.datum)
+			}
+			if !reflect.DeepEqual(tc.expected_labels, l.labels) {
+				t.Errorf("Labels don't match: expected %v, received %v\n", tc.expected_labels, l.labels)
+			}
+		case <-quit:
+			goto out
 		}
-		if !reflect.DeepEqual(expected_labels, l.labels) {
-			t.Errorf("Labels don't match: expected %v, received %v\n", expected_labels, l.labels)
-		}
-	case <-quit:
-		goto out
 	}
 out:
 }

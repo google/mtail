@@ -94,18 +94,18 @@ type LabelSet struct {
 
 func emitFromNode(n *Node, keys []string, values []string, c chan LabelSet) {
 	if n.D != nil {
-		c <- LabelSet{zip(keys[:len(values)], values), n.D}
+		c <- LabelSet{zip(keys, values), n.D}
 	}
 	for l, n1 := range n.Next {
-		values = append(values, l)
-		emitFromNode(n1, keys, values, c)
+		v := append(values, l)
+		emitFromNode(n1, keys, v, c)
 	}
 }
 
 func zip(keys []string, values []string) map[string]string {
 	r := make(map[string]string, 0)
-	for i, k := range keys {
-		r[k] = values[i]
+	for i, v := range values {
+		r[keys[i]] = v
 	}
 	return r
 }
