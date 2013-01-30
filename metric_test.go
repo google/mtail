@@ -23,6 +23,7 @@ func TestScalarMetric(t *testing.T) {
 	if v.Values.D.Value != 1 {
 		t.Errorf("fail")
 	}
+	// TODO: try setting datum with labels on scalar
 }
 
 func TestDimensionedMetric(t *testing.T) {
