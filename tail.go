@@ -230,3 +230,7 @@ func (t *tailer) start() {
 		}
 	}
 }
+
+func (t *tailer) Stop() {
+	t.w.Close()
+}
