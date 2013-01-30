@@ -144,27 +144,7 @@ func TestExamplePrograms(t *testing.T) {
 			continue
 		}
 		sort.Sort(Metrics(expected_metrics))
-		t.Log("expected")
-		// for _, m := range expected_metrics {
-		// 	if len(m.Keys) > 0 {
-		// 		t.Log(m.Name)
-		// 		t.Logf("keys, values: %v, %v", m.Keys, m.Values)
-		// 		sort.Sort(m)
-		// 		t.Logf("keys, values: %v, %v", m.Keys, m.Values)
-		// 	}
-		// }
-
 		sort.Sort(Metrics(metrics))
-		t.Log("exported")
-		// for _, m := range metrics {
-		// 	if len(m.Keys) > 0 {
-		// 		t.Log(m.Name)
-		// 		t.Logf("keys, values: %v, %v", m.Keys, m.Values)
-		// 		sort.Sort(m)
-		// 		t.Logf("keys, values: %v, %v", m.Keys, m.Values)
-		// 	}
-		// }
-
 		if !reflect.DeepEqual(expected_metrics, metrics) {
 			t.Errorf("%s: metrics don't match.\n\texpected:\n%v\n\treceived:\n%v", tc.programfile, expected_metrics, metrics)
 		}
