@@ -15,7 +15,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	//"strings"
+	"strings"
 	"time"
 )
 
@@ -108,38 +108,41 @@ func CollectdWriteMetrics(socketpath string) error {
 	return WriteSocketMetrics(c, MetricToCollectd, collectd_export_total, collectd_export_success)
 }
 
+func FormatLabels(name string, m map[string]string, ksep, sep string) string {
+	r := name
+	if len(m) > 0 {
+		var s []string
+		for k, v := range m {
+			s = append(s, fmt.Sprintf("%s%s%s", k, ksep, v))
+		}
+		return r + sep + strings.Join(s, sep)
+	}
+	return r
+}
+
 func MetricToCollectd(m *Metric) []string {
 	var ret []string
-	// if m.D != nil {
-	// 	s := fmt.Sprintf(COLLECTD_FORMAT,
-	// 		hostname,
-	// 		prog,
-	// 		strings.ToLower(m.Kind.String()),
-	// 		m.Name,
-	// 		*push_interval,
-	// 		m.D.Time.Unix(),
-	// 		m.D.Value)
-	// 	ret = append(ret, s)
-	// } else {
-	// n := m.Values
-	// var keys []string
-	// //var depth int
-	// for {
-	// 	if n.D != nil {
-	// 		s := fmt.Sprintf(COLLECTD_FORMAT,
-	// 			hostname,
-	// 			m.Name,
-	// 			strings.ToLower(m.Kind.String()),
-	// 			strings.Join(keys, "-"),
-	// 			*push_interval,
-	// 			n.D.Time.Unix(),
-	// 			n.D.Value)
-	// 		ret = append(ret, s)
-	// 	}
-	// 	// for i, k := range n.Next {
 
-	// 	// }
-	// }
+	c := make(chan LabelSet, 0)
+	quit := make(chan bool, 0)
+	go m.EmitLabelSets(c, quit)
+	for {
+		select {
+		case l := <-c:
+			s := fmt.Sprintf(COLLECTD_FORMAT,
+				hostname,
+				m.Program,
+				strings.ToLower(m.Kind.String()),
+				FormatLabels(m.Name, l.labels, "-", "-"),
+				*push_interval,
+				l.datum.Time.Unix(),
+				l.datum.Value)
+			ret = append(ret, s)
+		case <-quit:
+			goto ret
+		}
+	}
+ret:
 	return ret
 }
 
@@ -181,24 +184,24 @@ func GraphiteWriteMetrics(hostport string) error {
 
 func MetricToGraphite(m *Metric) []string {
 	var ret []string
-	// if m.D != nil {
-	// 	s := fmt.Sprintf("%s.%s %v %v\n",
-	// 		prog,
-	// 		m.Name,
-	// 		m.D.Value,
-	// 		m.D.Time.Unix())
-	// 	ret = append(ret, s)
-	// } else {
-	// 	for k, d := range m.Values {
-	// 		s := fmt.Sprintf("%s.%s.%s %v %v\n",
-	// 			prog,
-	// 			m.Name,
-	// 			strings.Join(key_unhash(k), "."),
-	// 			d.Value,
-	// 			d.Time.Unix())
-	// 		ret = append(ret, s)
-	// 	}
-	// }
+
+	c := make(chan LabelSet)
+	quit := make(chan bool)
+	go m.EmitLabelSets(c, quit)
+	for {
+		select {
+		case l := <-c:
+			s := fmt.Sprintf("%s.%s %v %v\n",
+				m.Program,
+				FormatLabels(m.Name, l.labels, ".", "."),
+				l.datum.Value,
+				l.datum.Time.Unix())
+			ret = append(ret, s)
+		case <-quit:
+			goto ret
+		}
+	}
+ret:
 	return ret
 }
 
@@ -213,23 +216,24 @@ func StatsdWriteMetrics(hostport string) error {
 
 func MetricToStatsd(m *Metric) []string {
 	var ret []string
-	// // TODO(jaq): handle units better, send timing as |ms
-	// if m.D != nil {
-	// 	s := fmt.Sprintf("%s.%s:%d|c",
-	// 		prog,
-	// 		m.Name,
-	// 		m.D.Value)
-	// 	ret = append(ret, s)
-	// } else {
-	// 	for k, d := range m.Values {
-	// 		s := fmt.Sprintf("%s.%s.%s:%d|c",
-	// 			prog,
-	// 			m.Name,
-	// 			strings.Join(key_unhash(k), "."),
-	// 			d.Value)
-	// 		ret = append(ret, s)
-	// 	}
-	// }
+	// TODO(jaq): handle units better, send timing as |ms
+
+	c := make(chan LabelSet)
+	quit := make(chan bool)
+	go m.EmitLabelSets(c, quit)
+	for {
+		select {
+		case l := <-c:
+			s := fmt.Sprintf("%s.%s:%d|c",
+				m.Program,
+				FormatLabels(m.Name, l.labels, ".", "."),
+				l.datum.Value)
+			ret = append(ret, s)
+		case <-quit:
+			goto ret
+		}
+	}
+ret:
 	return ret
 }
 
