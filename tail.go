@@ -42,6 +42,8 @@ const (
 type tailer struct {
 	w *inotify.Watcher
 
+	quit chan bool
+
 	watched  map[string]struct{} // Names of logs being watched.
 	lines    chan string         // Logfile lines being emitted.
 	files    map[string]*os.File // File handles for each pathname.
@@ -57,6 +59,7 @@ func NewTailer(lines chan string) *tailer {
 	}
 	t := &tailer{
 		w:        w,
+		quit:     make(chan bool, 1),
 		watched:  make(map[string]struct{}),
 		lines:    lines,
 		files:    make(map[string]*os.File),
@@ -227,10 +230,14 @@ func (t *tailer) start() {
 			}
 		case err := <-t.w.Error:
 			log.Println("inotify watch error:", err)
+		case <-t.quit:
+			goto end
 		}
 	}
+end:
 }
 
 func (t *tailer) Stop() {
+	t.quit <- true
 	t.w.Close()
 }

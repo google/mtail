@@ -10,9 +10,6 @@ import (
 )
 
 func TestTail(t *testing.T) {
-	if testing.Short() {
-		return
-	}
 	d, err := ioutil.TempDir("", "tail_test")
 	if err != nil {
 		t.Error(err)
@@ -40,9 +37,6 @@ func TestTail(t *testing.T) {
 }
 
 func TestHandleLogChange(t *testing.T) {
-	if testing.Short() {
-		return
-	}
 	d, err := ioutil.TempDir("", "tail_test")
 	if err != nil {
 		t.Error(err)
@@ -81,9 +75,6 @@ func TestHandleLogChange(t *testing.T) {
 }
 
 func TestHandleLogChangePartialLine(t *testing.T) {
-	if testing.Short() {
-		return
-	}
 	d, err := ioutil.TempDir("", "tail_test")
 	if err != nil {
 		t.Error(err)
