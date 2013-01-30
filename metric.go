@@ -87,8 +87,32 @@ func (m *Metric) GetDatum(labelvalues ...string) *Datum {
 	return n.D
 }
 
-func (m *Metric) IterLabels() map[string]string {
-	return nil
+type LabelSet struct {
+	labels map[string]string
+	datum  *Datum
+}
+
+func emitFromNode(n *Node, keys []string, values []string, c chan LabelSet) {
+	if n.D != nil {
+		c <- LabelSet{zip(keys[:len(values)], values), n.D}
+	}
+	for l, n1 := range n.Next {
+		values = append(values, l)
+		emitFromNode(n1, keys, values, c)
+	}
+}
+
+func zip(keys []string, values []string) map[string]string {
+	r := make(map[string]string, 0)
+	for i, k := range keys {
+		r[k] = values[i]
+	}
+	return r
+}
+
+func (m *Metric) EmitLabelSets(c chan LabelSet, quit chan bool) {
+	emitFromNode(m.Values, m.Keys, []string{}, c)
+	quit <- true
 }
 
 type Datum struct {

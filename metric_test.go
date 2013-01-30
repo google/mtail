@@ -4,6 +4,7 @@
 package main
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
@@ -42,4 +43,27 @@ func TestDimensionedMetric(t *testing.T) {
 	if v.Values.Next["a"].Next["b"].Next["c"].D.Value != 1 {
 		t.Errorf("fail")
 	}
+}
+
+func TestEmitLabelSet(t *testing.T) {
+	v := NewMetric("test", Gauge, "foo", "bar", "quux")
+	ts := time.Now()
+	v.GetDatum("a", "b", "c").Set(37, ts)
+	c := make(chan LabelSet, 0)
+	quit := make(chan bool)
+	go v.EmitLabelSets(c, quit)
+	expected_datum := &Datum{37, ts}
+	expected_labels := map[string]string{"foo": "a", "bar": "b", "quux": "c"}
+	select {
+	case l := <-c:
+		if !reflect.DeepEqual(expected_datum, l.datum) {
+			t.Errorf("Datum no match: expected %v, received %v\n", expected_datum, l.datum)
+		}
+		if !reflect.DeepEqual(expected_labels, l.labels) {
+			t.Errorf("Labels don't match: expected %v, received %v\n", expected_labels, l.labels)
+		}
+	case <-quit:
+		goto out
+	}
+out:
 }
