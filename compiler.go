@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -40,7 +39,7 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 	}
 	if *compile_only {
 		output := unparse(p.root)
-		log.Printf("Unparsing %s:\n%s", name, output)
+		fmt.Printf("Unparsing %s:\n%s", name, output)
 	}
 	c := &compiler{name: name, symtab: p.s}
 	c.compile(p.root)

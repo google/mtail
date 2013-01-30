@@ -25,7 +25,8 @@ var (
 	logs  *string = flag.String("logs", "", "List of files to monitor.")
 	progs *string = flag.String("progs", "", "Directory containing programs")
 
-	one_shot *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
+	one_shot      *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
+	assemble_only *bool = flag.Bool("assemble_only", false, "Dump bytecode of programs and exit.")
 )
 
 func OneShot(logfile string, lines chan string) error {
@@ -125,11 +126,17 @@ func main() {
 			}
 			continue
 		}
+		if *assemble_only {
+			fmt.Printf("Prog %s\n", fi.Name())
+			for n, i := range v.prog {
+				fmt.Printf(" %8d %8s %d\n", n, opNames[i.op], i.opnd)
+			}
+		}
 		e.addVm(v)
 		log.Printf("loaded %s", fi.Name())
 	}
 
-	if *compile_only {
+	if *compile_only || *assemble_only {
 		os.Exit(errors)
 	}
 
