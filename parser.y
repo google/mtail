@@ -338,7 +338,7 @@ decl
         n = d.name
    	}
       sort.Sort(sort.StringSlice(d.keys))
-      d.m = NewMetric(n, d.kind, d.keys...)
+      d.m = NewMetric(n, Emtaillex.(*parser).name, d.kind, d.keys...)
       d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
                                            Emtaillex.(*parser).t.pos)
       if !$1 {

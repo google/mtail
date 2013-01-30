@@ -45,14 +45,15 @@ type Node struct {
 }
 
 type Metric struct {
-	Name   string
-	Kind   metric_type
-	Keys   []string
-	Values *Node
+	Name    string // Name
+	Program string // Instantiating program
+	Kind    metric_type
+	Keys    []string
+	Values  *Node
 }
 
-func NewMetric(name string, kind metric_type, keys ...string) *Metric {
-	m := &Metric{Name: name, Kind: kind,
+func NewMetric(name string, prog string, kind metric_type, keys ...string) *Metric {
+	m := &Metric{Name: name, Program: prog, Kind: kind,
 		Keys:   make([]string, len(keys), len(keys)),
 		Values: &Node{}}
 	for i, k := range keys {

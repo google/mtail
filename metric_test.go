@@ -18,7 +18,7 @@ func BenchmarkIncrementScalar(b *testing.B) {
 }
 
 func TestScalarMetric(t *testing.T) {
-	v := NewMetric("test", Counter)
+	v := NewMetric("test", "prog", Counter)
 	v.GetDatum().IncBy(1, time.Now())
 	if v.Values.D.Value != 1 {
 		t.Errorf("fail")
@@ -26,19 +26,19 @@ func TestScalarMetric(t *testing.T) {
 }
 
 func TestDimensionedMetric(t *testing.T) {
-	v := NewMetric("test", Counter, "foo")
+	v := NewMetric("test", "prog", Counter, "foo")
 	v.GetDatum("a").IncBy(1, time.Now())
 	if v.Values.Next["a"].D.Value != 1 {
 		t.Errorf("fail")
 	}
 
-	v = NewMetric("test", Counter, "foo", "bar")
+	v = NewMetric("test", "prog", Counter, "foo", "bar")
 	v.GetDatum("a", "b").IncBy(1, time.Now())
 	if v.Values.Next["a"].Next["b"].D.Value != 1 {
 		t.Errorf("fail")
 	}
 
-	v = NewMetric("test", Counter, "foo", "bar", "quux")
+	v = NewMetric("test", "prog", Counter, "foo", "bar", "quux")
 	v.GetDatum("a", "b", "c").IncBy(1, time.Now())
 	if v.Values.Next["a"].Next["b"].Next["c"].D.Value != 1 {
 		t.Errorf("fail")
@@ -60,7 +60,7 @@ var labelSetTests = []struct {
 }
 
 func TestEmitLabelSet(t *testing.T) {
-	v := NewMetric("test", Gauge, "foo", "bar", "quux")
+	v := NewMetric("test", "prog", Gauge, "foo", "bar", "quux")
 	c := make(chan LabelSet, 0)
 	quit := make(chan bool)
 	ts := time.Now()

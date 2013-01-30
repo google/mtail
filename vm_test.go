@@ -174,8 +174,8 @@ var instructions = []struct {
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
 		metrics = append(metrics,
-			NewMetric("foo", Counter),
-			NewMetric("bar", Counter))
+			NewMetric("foo", "test", Counter),
+			NewMetric("bar", "test", Counter))
 
 		v := newVm(tc.name, tc.re, tc.str, []instr{tc.i})
 		v.t = new(thread)
