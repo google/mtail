@@ -25,6 +25,9 @@ func TestTail(t *testing.T) {
 
 	lines := make(chan string)
 	ta := NewTailer(lines)
+	if ta == nil {
+		t.Fatalf("Couldn't make a tailer.")
+	}
 	ta.Tail(logfile)
 
 	if _, ok := ta.files[logfile]; !ok {
@@ -48,6 +51,9 @@ func TestHandleLogChange(t *testing.T) {
 
 	lines := make(chan string)
 	ta := NewTailer(lines)
+	if ta == nil {
+		t.Fatalf("Couldn't make a tailer.")
+	}
 	ta.Tail(logfile)
 
 	_, err = f.WriteString("a\nb\nc\nd\n")
@@ -82,6 +88,9 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 
 	lines := make(chan string)
 	ta := NewTailer(lines)
+	if ta == nil {
+		t.Fatalf("Couldn't make a tailer.")
+	}
 	ta.Tail(logfile)
 
 	_, err = f.WriteString("a")

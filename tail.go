@@ -52,7 +52,7 @@ type tailer struct {
 func NewTailer(lines chan string) *tailer {
 	w, err := inotify.NewWatcher()
 	if err != nil {
-		log.Fatal("Creating an inotify watcher failed:", err)
+		log.Print("Creating an inotify watcher failed: ", err)
 		return nil
 	}
 	t := &tailer{
