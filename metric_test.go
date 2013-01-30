@@ -61,7 +61,8 @@ var labelSetTests = []struct {
 
 func TestEmitLabelSet(t *testing.T) {
 	v := NewMetric("test", "prog", Gauge, "foo", "bar", "quux")
-	c := make(chan LabelSet, 0)
+	c := make(chan *LabelSet)
+
 	quit := make(chan bool)
 	ts := time.Now()
 

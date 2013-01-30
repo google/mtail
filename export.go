@@ -120,54 +120,49 @@ func FormatLabels(name string, m map[string]string, ksep, sep string) string {
 	return r
 }
 
-func MetricToCollectd(m *Metric) []string {
-	var ret []string
-
-	c := make(chan LabelSet, 0)
-	quit := make(chan bool, 0)
-	go m.EmitLabelSets(c, quit)
-	for {
-		select {
-		case l := <-c:
-			s := fmt.Sprintf(COLLECTD_FORMAT,
-				hostname,
-				m.Program,
-				strings.ToLower(m.Kind.String()),
-				FormatLabels(m.Name, l.labels, "-", "-"),
-				*push_interval,
-				l.datum.Time.Unix(),
-				l.datum.Value)
-			ret = append(ret, s)
-		case <-quit:
-			goto ret
-		}
-	}
-ret:
-	return ret
+func MetricToCollectd(m *Metric, l *LabelSet) string {
+	return fmt.Sprintf(COLLECTD_FORMAT,
+		hostname,
+		m.Program,
+		strings.ToLower(m.Kind.String()),
+		FormatLabels(m.Name, l.labels, "-", "-"),
+		*push_interval,
+		l.datum.Time.Unix(),
+		l.datum.Value)
 }
 
-// Format a metric into a string to be written to one of the timeseries sockets
-type formatter func(*Metric) []string
+// Format a LabelSet into a string to be written to one of the timeseries sockets
+type formatter func(*Metric, *LabelSet) string
 
 func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, export_success *expvar.Int) error {
 	metric_lock.RLock()
 	defer metric_lock.RUnlock()
 
+	lc := make(chan *LabelSet)
+	quit := make(chan bool, 1)
 	for _, m := range metrics {
 		export_total.Add(1)
-		for _, line := range f(m) {
-			_, err := fmt.Fprint(c, line)
-			if err == nil {
-				_, err = bufio.NewReader(c).ReadString('\n')
-				if err != nil {
-					return fmt.Errorf("Read error: %s\n", err)
+		go m.EmitLabelSets(lc, quit)
+		for {
+			select {
+			case l := <-lc:
+				line := f(m, l)
+				_, err := fmt.Fprint(c, line)
+				if err == nil {
+					_, err = bufio.NewReader(c).ReadString('\n')
+					if err != nil {
+						return fmt.Errorf("Read error: %s\n", err)
+					} else {
+						export_success.Add(1)
+					}
 				} else {
-					export_success.Add(1)
+					return fmt.Errorf("Write error: %s\n", err)
 				}
-			} else {
-				return fmt.Errorf("Write error: %s\n", err)
+			case <-quit:
+				goto ret
 			}
 		}
+	ret:
 	}
 	return nil
 }
@@ -182,27 +177,12 @@ func GraphiteWriteMetrics(hostport string) error {
 	return WriteSocketMetrics(c, MetricToGraphite, graphite_export_total, graphite_export_success)
 }
 
-func MetricToGraphite(m *Metric) []string {
-	var ret []string
-
-	c := make(chan LabelSet)
-	quit := make(chan bool)
-	go m.EmitLabelSets(c, quit)
-	for {
-		select {
-		case l := <-c:
-			s := fmt.Sprintf("%s.%s %v %v\n",
-				m.Program,
-				FormatLabels(m.Name, l.labels, ".", "."),
-				l.datum.Value,
-				l.datum.Time.Unix())
-			ret = append(ret, s)
-		case <-quit:
-			goto ret
-		}
-	}
-ret:
-	return ret
+func MetricToGraphite(m *Metric, l *LabelSet) string {
+	return fmt.Sprintf("%s.%s %v %v\n",
+		m.Program,
+		FormatLabels(m.Name, l.labels, ".", "."),
+		l.datum.Value,
+		l.datum.Time.Unix())
 }
 
 func StatsdWriteMetrics(hostport string) error {
@@ -214,27 +194,12 @@ func StatsdWriteMetrics(hostport string) error {
 	return WriteSocketMetrics(c, MetricToStatsd, statsd_export_total, statsd_export_success)
 }
 
-func MetricToStatsd(m *Metric) []string {
-	var ret []string
+func MetricToStatsd(m *Metric, l *LabelSet) string {
 	// TODO(jaq): handle units better, send timing as |ms
-
-	c := make(chan LabelSet)
-	quit := make(chan bool)
-	go m.EmitLabelSets(c, quit)
-	for {
-		select {
-		case l := <-c:
-			s := fmt.Sprintf("%s.%s:%d|c",
-				m.Program,
-				FormatLabels(m.Name, l.labels, ".", "."),
-				l.datum.Value)
-			ret = append(ret, s)
-		case <-quit:
-			goto ret
-		}
-	}
-ret:
-	return ret
+	return fmt.Sprintf("%s.%s:%d|c",
+		m.Program,
+		FormatLabels(m.Name, l.labels, ".", "."),
+		l.datum.Value)
 }
 
 func WriteMetrics() {

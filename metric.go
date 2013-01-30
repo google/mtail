@@ -93,9 +93,9 @@ type LabelSet struct {
 	datum  *Datum
 }
 
-func emitFromNode(n *Node, keys []string, values []string, c chan LabelSet) {
+func emitFromNode(n *Node, keys []string, values []string, c chan *LabelSet) {
 	if n.D != nil {
-		c <- LabelSet{zip(keys, values), n.D}
+		c <- &LabelSet{zip(keys, values), n.D}
 	}
 	for l, n1 := range n.Next {
 		v := append(values, l)
@@ -111,7 +111,7 @@ func zip(keys []string, values []string) map[string]string {
 	return r
 }
 
-func (m *Metric) EmitLabelSets(c chan LabelSet, quit chan bool) {
+func (m *Metric) EmitLabelSets(c chan *LabelSet, quit chan bool) {
 	emitFromNode(m.Values, m.Keys, []string{}, c)
 	quit <- true
 }
