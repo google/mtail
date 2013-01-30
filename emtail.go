@@ -128,6 +128,17 @@ func main() {
 		}
 		if *assemble_only {
 			fmt.Printf("Prog %s\n", fi.Name())
+			fmt.Println("Metrics")
+			for i, m := range metrics {
+				if m.Program == v.name {
+					fmt.Printf(" %8d %s\n", i, m)
+				}
+			}
+			fmt.Println("REs")
+			for i, re := range v.re {
+				fmt.Printf(" %8d /%s/\n", i, re)
+			}
+			fmt.Println("disasm")
 			for n, i := range v.prog {
 				fmt.Printf(" %8d %8s %d\n", n, opNames[i.op], i.opnd)
 			}

@@ -284,7 +284,7 @@ cond
         sym := Emtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
                                             CaprefSymbol, $$,
                                             Emtaillex.(*parser).pos)
-        sym.addr = i
+        sym.addr = i - 1
       }
       for i, capref := range re.SubexpNames() {
         if capref != "" {
