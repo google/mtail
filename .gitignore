@@ -9,3 +9,5 @@ parser.go
 y.output
 emtail.test
 fuzz/fuzz
+fuzzout
+emgen/emgen

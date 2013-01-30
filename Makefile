@@ -36,8 +36,8 @@ emtail: $(GOFILES)
 parser.go: parser.y
 	go tool yacc -v y.output -o $@ -p Emtail $<
 
-fuzz/fuzz: fuzz/fuzz.go
-	cd fuzz && go build
+emgen/emgen: emgen/emgen.go
+	cd emgen && go build
 
 .PHONY: test
 test: $(GOFILES) $(GOTESTFILES)
