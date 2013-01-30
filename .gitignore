@@ -8,3 +8,4 @@ emtail
 parser.go
 y.output
 emtail.test
+fuzz/fuzz

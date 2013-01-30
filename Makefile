@@ -36,6 +36,9 @@ emtail: $(GOFILES)
 parser.go: parser.y
 	go tool yacc -v y.output -o $@ -p Emtail $<
 
+fuzz/fuzz: fuzz/fuzz.go
+	cd fuzz && go build
+
 .PHONY: test
 test: $(GOFILES) $(GOTESTFILES)
 	go test -gcflags '-N' -test.v=true
