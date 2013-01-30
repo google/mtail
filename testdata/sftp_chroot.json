@@ -1,6 +1,7 @@
 [
   {
     "Name": "login_count",
+    "Program": "sftp",
     "Kind": 0,
     "Keys": [
       "username"
@@ -34,6 +35,7 @@
   },
   {
     "Name": "logout_count",
+    "Program": "sftp",
     "Kind": 0,
     "Keys": [
       "username"
@@ -60,6 +62,7 @@
   },
   {
     "Name": "bytes_read",
+    "Program": "sftp",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -72,6 +75,7 @@
   },
   {
     "Name": "files_read",
+    "Program": "sftp",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -84,6 +88,7 @@
   },
   {
     "Name": "bytes_written",
+    "Program": "sftp",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -96,6 +101,7 @@
   },
   {
     "Name": "files_written",
+    "Program": "sftp",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -108,6 +114,7 @@
   },
   {
     "Name": "user_bytes_read",
+    "Program": "sftp",
     "Kind": 0,
     "Keys": [
       "username"
@@ -141,6 +148,7 @@
   },
   {
     "Name": "user_files_read",
+    "Program": "sftp",
     "Kind": 0,
     "Keys": [
       "username"
@@ -174,6 +182,7 @@
   },
   {
     "Name": "user_bytes_written",
+    "Program": "sftp",
     "Kind": 0,
     "Keys": [
       "username"
@@ -193,6 +202,7 @@
   },
   {
     "Name": "user_files_written",
+    "Program": "sftp",
     "Kind": 0,
     "Keys": [
       "username"

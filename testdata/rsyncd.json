@@ -1,6 +1,7 @@
 [
   {
     "Name": "bytes_total",
+    "Program": "rsyncd",
     "Kind": 0,
     "Keys": [
       "operation"
@@ -391,6 +392,7 @@
   },
   {
     "Name": "connections_total",
+    "Program": "rsyncd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -403,6 +405,7 @@
   },
   {
     "Name": "connection-time_total",
+    "Program": "rsyncd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -415,6 +418,7 @@
   },
   {
     "Name": "transfers_total",
+    "Program": "rsyncd",
     "Kind": 0,
     "Keys": [
       "module",

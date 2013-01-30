@@ -1,6 +1,7 @@
 [
   {
     "Name": "request_total",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [
       "command"
@@ -27,6 +28,7 @@
   },
   {
     "Name": "config_file_errors",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -36,6 +38,7 @@
   },
   {
     "Name": "peer_disconnects",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -45,6 +48,7 @@
   },
   {
     "Name": "dhcpdiscovers",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [
       "mac"
@@ -56,6 +60,7 @@
   },
   {
     "Name": "bind_xid_mismatch",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -68,6 +73,7 @@
   },
   {
     "Name": "duplicate_lease",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -80,6 +86,7 @@
   },
   {
     "Name": "bad_udp_checksum",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -89,6 +96,7 @@
   },
   {
     "Name": "unknown_subnet",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -98,6 +106,7 @@
   },
   {
     "Name": "dhcpdiscover_nofree",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [
       "network"
@@ -109,6 +118,7 @@
   },
   {
     "Name": "unknown_lease",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [
       "ip"
@@ -120,6 +130,7 @@
   },
   {
     "Name": "update_rejected",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -129,6 +140,7 @@
   },
   {
     "Name": "failover_peer_timeout",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -138,6 +150,7 @@
   },
   {
     "Name": "ip_already_in_use",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -147,6 +160,7 @@
   },
   {
     "Name": "ip_abandoned",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [
       "reason"
@@ -166,6 +180,7 @@
   },
   {
     "Name": "invalid_state_transition",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [],
     "Values": {
@@ -175,6 +190,7 @@
   },
   {
     "Name": "negative_poolreq",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [
       "pool"
@@ -186,6 +202,7 @@
   },
   {
     "Name": "lease_conflicts",
+    "Program": "dhcpd",
     "Kind": 0,
     "Keys": [],
     "Values": {
