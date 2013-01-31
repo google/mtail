@@ -43,7 +43,8 @@ func TestMetricToCollectd(t *testing.T) {
 	}
 
 	scalar_metric := NewMetric("foo", "prog", Counter)
-	scalar_metric.GetDatum().Set(37, ts)
+	d, _ := scalar_metric.GetDatum()
+	d.Set(37, ts)
 	r := FakeSocketWrite(MetricToCollectd, scalar_metric)
 	expected := []string{"PUTVAL \"" + hostname + "/emtail-prog/counter-foo\" interval=60 1343124840:37\n"}
 	if !reflect.DeepEqual(expected, r) {
@@ -51,8 +52,10 @@ func TestMetricToCollectd(t *testing.T) {
 	}
 
 	dimensioned_metric := NewMetric("bar", "prog", Gauge, "label")
-	dimensioned_metric.GetDatum("quux").Set(37, ts)
-	dimensioned_metric.GetDatum("snuh").Set(37, ts)
+	d, _ = dimensioned_metric.GetDatum("quux")
+	d.Set(37, ts)
+	d, _ = dimensioned_metric.GetDatum("snuh")
+	d.Set(37, ts)
 	r = FakeSocketWrite(MetricToCollectd, dimensioned_metric)
 	expected = []string{
 		"PUTVAL \"" + hostname + "/emtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
@@ -69,7 +72,8 @@ func TestMetricToGraphite(t *testing.T) {
 	}
 
 	scalar_metric := NewMetric("foo", "prog", Counter)
-	scalar_metric.GetDatum().Set(37, ts)
+	d, _ := scalar_metric.GetDatum()
+	d.Set(37, ts)
 	r := FakeSocketWrite(MetricToGraphite, scalar_metric)
 	expected := []string{"prog.foo 37 1343124840\n"}
 	if !reflect.DeepEqual(expected, r) {
@@ -77,8 +81,10 @@ func TestMetricToGraphite(t *testing.T) {
 	}
 
 	dimensioned_metric := NewMetric("bar", "prog", Gauge, "l")
-	dimensioned_metric.GetDatum("quux").Set(37, ts)
-	dimensioned_metric.GetDatum("snuh").Set(37, ts)
+	d, _ = dimensioned_metric.GetDatum("quux")
+	d.Set(37, ts)
+	d, _ = dimensioned_metric.GetDatum("snuh")
+	d.Set(37, ts)
 	r = FakeSocketWrite(MetricToGraphite, dimensioned_metric)
 	expected = []string{
 		"prog.bar.l.quux 37 1343124840\n",
@@ -95,7 +101,8 @@ func TestMetricToStatsd(t *testing.T) {
 	}
 
 	scalar_metric := NewMetric("foo", "prog", Counter)
-	scalar_metric.GetDatum().Set(37, ts)
+	d, _ := scalar_metric.GetDatum()
+	d.Set(37, ts)
 	r := FakeSocketWrite(MetricToStatsd, scalar_metric)
 	expected := []string{"prog.foo:37|c"}
 	if !reflect.DeepEqual(expected, r) {
@@ -103,8 +110,10 @@ func TestMetricToStatsd(t *testing.T) {
 	}
 
 	dimensioned_metric := NewMetric("bar", "prog", Gauge, "l")
-	dimensioned_metric.GetDatum("quux").Set(37, ts)
-	dimensioned_metric.GetDatum("snuh").Set(42, ts)
+	d, _ = dimensioned_metric.GetDatum("quux")
+	d.Set(37, ts)
+	d, _ = dimensioned_metric.GetDatum("snuh")
+	d.Set(42, ts)
 	r = FakeSocketWrite(MetricToStatsd, dimensioned_metric)
 	expected = []string{
 		"prog.bar.l.quux:37|c",
@@ -117,10 +126,13 @@ func TestMetricToStatsd(t *testing.T) {
 func TestCsvExport(t *testing.T) {
 	ts := time.Now()
 	m1 := NewMetric("foo", "prog", Counter)
-	m1.GetDatum().Set(37, ts)
+	d, _ := m1.GetDatum()
+	d.Set(37, ts)
 	m2 := NewMetric("bar", "prog", Counter, "a", "b")
-	m2.GetDatum("1", "1").Set(37, ts)
-	m2.GetDatum("2", "2").Set(37, ts)
+	d, _ = m2.GetDatum("1", "1")
+	d.Set(37, ts)
+	d, _ = m2.GetDatum("2", "2")
+	d.Set(37, ts)
 	b := bytes.NewBufferString("")
 	c := csv.NewWriter(b)
 	csvExporter(c, []*Metric{m1, m2})

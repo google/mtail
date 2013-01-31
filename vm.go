@@ -216,14 +216,18 @@ func (v *vm) execute(t *thread, i instr) {
 				v.errorf("%s", err)
 			}
 		}
-		switch d := t.Pop().(type) {
+		switch n := t.Pop().(type) {
 		case Incrementable:
-			d.IncBy(delta, t.time)
+			n.IncBy(delta, t.time)
 		case int:
-			m := metrics[d]
-			m.GetDatum().IncBy(delta, t.time)
+			m := metrics[n]
+			d, err := m.GetDatum()
+			if err != nil {
+				v.errorf("GetDatum failed: %s", err)
+			}
+			d.IncBy(delta, t.time)
 		default:
-			v.errorf("Unexpected type to increment: %T %q", d, d)
+			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
 
 	case set:
@@ -233,14 +237,18 @@ func (v *vm) execute(t *thread, i instr) {
 			v.errorf("%s", err)
 		}
 
-		switch d := t.Pop().(type) {
+		switch n := t.Pop().(type) {
 		case Settable:
-			d.Set(value, t.time)
+			n.Set(value, t.time)
 		case int:
-			m := metrics[d]
-			m.GetDatum().Set(value, t.time)
+			m := metrics[n]
+			d, err := m.GetDatum()
+			if err != nil {
+				v.errorf("GetDatum failed: %s", err)
+			}
+			d.Set(value, t.time)
 		default:
-			v.errorf("Unexpected type to set: %T %q", d, d)
+			v.errorf("Unexpected type to set: %T %q", n, n)
 		}
 
 	case strptime:
@@ -335,7 +343,10 @@ func (v *vm) execute(t *thread, i instr) {
 		}
 		//fmt.Printf("Keys: %v\n", keys)
 		sort.Sort(sort.StringSlice(keys))
-		d := m.GetDatum(keys...)
+		d, err := m.GetDatum(keys...)
+		if err != nil {
+			v.errorf("GetDatum failed: %s", err)
+		}
 		//fmt.Printf("Found %v\n", d)
 		t.Push(d)
 

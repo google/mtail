@@ -4,6 +4,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -65,9 +67,9 @@ func NewMetric(name string, prog string, kind metric_type, keys ...string) *Metr
 	return m
 }
 
-func (m *Metric) GetDatum(labelvalues ...string) *Datum {
+func (m *Metric) GetDatum(labelvalues ...string) (*Datum, error) {
 	if len(labelvalues) > len(m.Keys) {
-		return nil
+		return nil, errors.New(fmt.Sprintf("Label values (%q) longer than keys (%q) ", labelvalues, m.Keys))
 	}
 	n := m.Values
 	for _, l := range labelvalues {
@@ -85,7 +87,7 @@ func (m *Metric) GetDatum(labelvalues ...string) *Datum {
 		n.D = &Datum{}
 		metric_lock.Unlock()
 	}
-	return n.D
+	return n.D, nil
 }
 
 type LabelSet struct {

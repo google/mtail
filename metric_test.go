@@ -19,7 +19,8 @@ func BenchmarkIncrementScalar(b *testing.B) {
 
 func TestScalarMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter)
-	v.GetDatum().IncBy(1, time.Now())
+	d, _ := v.GetDatum()
+	d.IncBy(1, time.Now())
 	if v.Values.D.Value != 1 {
 		t.Errorf("fail")
 	}
@@ -28,19 +29,22 @@ func TestScalarMetric(t *testing.T) {
 
 func TestDimensionedMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, "foo")
-	v.GetDatum("a").IncBy(1, time.Now())
+	d, _ := v.GetDatum("a")
+	d.IncBy(1, time.Now())
 	if v.Values.Next["a"].D.Value != 1 {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar")
-	v.GetDatum("a", "b").IncBy(1, time.Now())
+	d, _ = v.GetDatum("a", "b")
+	d.IncBy(1, time.Now())
 	if v.Values.Next["a"].Next["b"].D.Value != 1 {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar", "quux")
-	v.GetDatum("a", "b", "c").IncBy(1, time.Now())
+	d, _ = v.GetDatum("a", "b", "c")
+	d.IncBy(1, time.Now())
 	if v.Values.Next["a"].Next["b"].Next["c"].D.Value != 1 {
 		t.Errorf("fail")
 	}
@@ -68,7 +72,8 @@ func TestEmitLabelSet(t *testing.T) {
 	ts := time.Now()
 
 	for _, tc := range labelSetTests {
-		v.GetDatum(tc.values...).Set(37, ts)
+		d, _ := v.GetDatum(tc.values...)
+		d.Set(37, ts)
 	}
 	go v.EmitLabelSets(c, quit)
 	expected_datum := &Datum{37, ts}
