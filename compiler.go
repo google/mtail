@@ -21,6 +21,7 @@ type compiler struct {
 	prog   []instr          // The emitted program.
 	str    []string         // Static strings.
 	re     []*regexp.Regexp // Static regular expressions.
+	m      []*Metric        // Metrics accessible to this program.
 
 	decos []*decoNode // Decorator stack to unwind
 
@@ -48,7 +49,7 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		return nil, c.errors
 	}
 
-	vm := newVm(name, c.re, c.str, c.prog)
+	vm := newVm(name, c.re, c.str, c.m, c.prog)
 	return vm, nil
 }
 
@@ -74,7 +75,9 @@ func (c *compiler) compile(untyped_node node) {
 		}
 
 	case *declNode:
-		// Do nothing, declarations built into metric objects at parse time.
+		// Build the list of addressable metrics for this program, and set the symbol's address.
+		n.sym.addr = len(c.m)
+		c.m = append(c.m, n.sym.binding.(*Metric))
 
 	case *condNode:
 		if n.cond != nil {

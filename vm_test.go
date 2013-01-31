@@ -173,11 +173,11 @@ var instructions = []struct {
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		metrics = append(metrics,
+		m := append(metrics,
 			NewMetric("foo", "test", Counter),
 			NewMetric("bar", "test", Counter))
 
-		v := newVm(tc.name, tc.re, tc.str, []instr{tc.i})
+		v := newVm(tc.name, tc.re, tc.str, m, []instr{tc.i})
 		v.t = new(thread)
 		v.t.stack = make([]interface{}, 0)
 		for _, item := range tc.reversed_stack {

@@ -69,7 +69,7 @@ func NewMetric(name string, prog string, kind metric_type, keys ...string) *Metr
 
 func (m *Metric) GetDatum(labelvalues ...string) (*Datum, error) {
 	if len(labelvalues) > len(m.Keys) {
-		return nil, errors.New(fmt.Sprintf("Label values (%q) longer than keys (%q) ", labelvalues, m.Keys))
+		return nil, errors.New(fmt.Sprintf("Label values requested (%q) longer than keys for metric %q", labelvalues, m))
 	}
 	n := m.Values
 	for _, l := range labelvalues {
@@ -152,10 +152,8 @@ func init() {
 	metrics = make([]*Metric, 0)
 }
 
-func ExportMetric(m *Metric) (addr int) {
+func ExportMetric(m *Metric) {
 	metric_lock.Lock()
 	defer metric_lock.Unlock()
-	addr = len(metrics)
 	metrics = append(metrics, m)
-	return
 }

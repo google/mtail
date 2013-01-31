@@ -6,19 +6,19 @@ package main
 type symtype int
 
 const (
-	IdSymbol symtype = iota
-	CaprefSymbol
-	DefSymbol
+	IdSymbol     symtype = iota // Identifiers
+	CaprefSymbol                // Capture group references
+	DefSymbol                   // Definitions
 
 	endSymbol
 )
 
 type symbol struct {
-	name    string
-	kind    symtype
-	binding interface{}
-	loc     Position
-	addr    int
+	name    string      // Symbol name
+	kind    symtype     // Type
+	binding interface{} // Binding to storage allocated
+	loc     Position    // Source file position
+	addr    int         // Address offset in another structure
 }
 
 type scope struct {

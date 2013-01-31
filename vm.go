@@ -92,6 +92,7 @@ type vm struct {
 
 	re  []*regexp.Regexp // Regular expression constants
 	str []string         // String constants
+	m   []*Metric        // Metrics accessible to this program.
 
 	ts_mem map[string]time.Time // memo of time string parse results
 
@@ -220,7 +221,7 @@ func (v *vm) execute(t *thread, i instr) {
 		case Incrementable:
 			n.IncBy(delta, t.time)
 		case int:
-			m := metrics[n]
+			m := v.m[n]
 			d, err := m.GetDatum()
 			if err != nil {
 				v.errorf("GetDatum failed: %s", err)
@@ -241,7 +242,7 @@ func (v *vm) execute(t *thread, i instr) {
 		case Settable:
 			n.Set(value, t.time)
 		case int:
-			m := metrics[n]
+			m := v.m[n]
 			d, err := m.GetDatum()
 			if err != nil {
 				v.errorf("GetDatum failed: %s", err)
@@ -326,7 +327,7 @@ func (v *vm) execute(t *thread, i instr) {
 
 	case mload:
 		// Load a metric at operand onto stack
-		t.Push(metrics[i.opnd])
+		t.Push(v.m[i.opnd])
 
 	case dload:
 		// Load a datum from metric at TOS onto stack
@@ -388,11 +389,12 @@ func (v *vm) Run(input string) {
 	panic("not reached")
 }
 
-func newVm(name string, re []*regexp.Regexp, str []string, prog []instr) *vm {
+func newVm(name string, re []*regexp.Regexp, str []string, m []*Metric, prog []instr) *vm {
 	return &vm{
 		name:   name,
 		re:     re,
 		str:    str,
+		m:      m,
 		prog:   prog,
 		ts_mem: make(map[string]time.Time, 0),
 	}

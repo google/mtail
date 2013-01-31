@@ -342,8 +342,9 @@ decl
       d.sym = Emtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
                                            Emtaillex.(*parser).t.pos)
       if !$1 {
-        d.sym.addr = ExportMetric(d.m)
+        ExportMetric(d.m)
       }
+      fmt.Println("New metric", d.m, d, d.sym)
   }
   ;
 
