@@ -8,129 +8,172 @@ import (
 	"strings"
 )
 
-func unparse(n node) string {
-	output := ""
+type Unparser struct {
+	pos    int
+	output string
+	line   string
+}
 
+func (u *Unparser) indent() {
+	u.pos += 2
+}
+
+func (u *Unparser) outdent() {
+	u.pos -= 2
+}
+
+func (u *Unparser) prefix() (s string) {
+	for i := 0; i < u.pos; i++ {
+		s += " "
+	}
+	return
+}
+
+func (u *Unparser) emit(s string) {
+	u.line += s
+}
+
+func (u *Unparser) newline() {
+	u.output += u.prefix() + u.line + "\n"
+	u.line = ""
+}
+
+func (u *Unparser) unparse(n node) {
 	switch v := n.(type) {
 	case *stmtlistNode:
 		for _, child := range v.children {
-			output += unparse(child) + "\n"
+			u.unparse(child)
+			u.newline()
 		}
 
 	case *exprlistNode:
 		if len(v.children) > 0 {
-			output += unparse(v.children[0])
+			u.unparse(v.children[0])
 			for _, child := range v.children[1:] {
-				output += ", " + unparse(child)
+				u.emit(", ")
+				u.unparse(child)
 			}
 		}
 
 	case *condNode:
 		if v.cond != nil {
-			output += unparse(v.cond)
+			u.unparse(v.cond)
 		}
-		output += " {\n"
+		u.emit(" {")
+		u.newline()
+		u.indent()
 		for _, child := range v.children {
-			output += unparse(child)
+			u.unparse(child)
 		}
-		output += "}\n"
+		u.outdent()
+		u.emit("}")
 
 	case *regexNode:
-		output += "/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/"
+		u.emit("/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/")
 
 	case *relNode:
-		output += unparse(v.lhs)
+		u.unparse(v.lhs)
 		switch v.op {
 		case LT:
-			output += " < "
+			u.emit(" < ")
 		case GT:
-			output += " > "
+			u.emit(" > ")
 		case LE:
-			output += " <= "
+			u.emit(" <= ")
 		case GE:
-			output += " >= "
+			u.emit(" >= ")
 		case EQ:
-			output += " == "
+			u.emit(" == ")
 		case NE:
-			output += " != "
+			u.emit(" != ")
 		}
-		output += unparse(v.rhs)
+		u.unparse(v.rhs)
 
 	case *stringNode:
-		output += "\"" + v.text + "\""
+		u.emit("\"" + v.text + "\"")
 
 	case *idNode:
-		output += v.name
+		u.emit(v.name)
 
 	case *caprefNode:
-		output += "$" + v.name
+		u.emit("$" + v.name)
 
 	case *builtinNode:
-		output += v.name + "("
+		u.emit(v.name + "(")
 		if v.args != nil {
-			output += unparse(v.args)
+			u.unparse(v.args)
 		}
-		output += ")"
+		u.emit(")")
 
 	case *additiveExprNode:
-		output += unparse(v.lhs)
-		output += fmt.Sprintf(" %c ", v.op)
-		output += unparse(v.rhs)
+		u.unparse(v.lhs)
+		u.emit(fmt.Sprintf(" %c ", v.op))
+		u.unparse(v.rhs)
 
 	case *assignExprNode:
-		output += unparse(v.lhs)
-		output += " = "
-		output += unparse(v.rhs)
+		u.unparse(v.lhs)
+		u.emit(" = ")
+		u.unparse(v.rhs)
 
 	case *indexedExprNode:
-		output += unparse(v.lhs)
-		output += "["
-		output += unparse(v.index)
-		output += "]"
+		u.unparse(v.lhs)
+		u.emit("[")
+		u.unparse(v.index)
+		u.emit("]")
 
 	case *declNode:
 		switch v.kind {
 		case Counter:
-			output += "counter "
+			u.emit("counter ")
 		case Gauge:
-			output += "gauge "
+			u.emit("gauge ")
 		}
-		output += v.name
+		u.emit(v.name)
 		if len(v.keys) > 0 {
-			output += " by " + strings.Join(v.keys, ", ")
+			u.emit(" by " + strings.Join(v.keys, ", "))
 		}
 
 	case *incExprNode:
-		output += unparse(v.lhs)
-		output += "++"
+		u.unparse(v.lhs)
+		u.emit("++")
 
 	case *incByExprNode:
-		output += unparse(v.lhs)
-		output += " += "
-		output += unparse(v.rhs)
+		u.unparse(v.lhs)
+		u.emit(" += ")
+		u.unparse(v.rhs)
 
 	case *numericExprNode:
-		output += fmt.Sprintf("%d", v.value)
+		u.emit(fmt.Sprintf("%d", v.value))
 
 	case *defNode:
-		output += fmt.Sprintf("def %s {\n", v.name)
+		u.emit(fmt.Sprintf("def %s {", v.name))
+		u.newline()
+		u.indent()
 		for _, child := range v.children {
-			output += unparse(child)
+			u.unparse(child)
 		}
-		output += "}\n"
+		u.outdent()
+		u.emit("}")
 
 	case *decoNode:
-		output += fmt.Sprintf("@%s {\n", v.name)
+		u.emit(fmt.Sprintf("@%s {", v.name))
+		u.newline()
+		u.indent()
 		for _, child := range v.children {
-			output += unparse(child)
+			u.unparse(child)
 		}
-		output += "}\n"
+		u.outdent()
+		u.emit("}")
 
 	case *nextNode:
-		output += "next\n"
+		u.emit("next")
 
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}
-	return output
+}
+
+func (u *Unparser) Unparse(n node) string {
+	u.unparse(n)
+	return u.output
 }

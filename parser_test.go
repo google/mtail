@@ -179,7 +179,8 @@ func TestParserRoundTrip(t *testing.T) {
 			continue
 		}
 
-		output := unparse(p.root)
+		u := Unparser{}
+		output := u.Unparse(p.root)
 
 		p2 := NewParser(tc.name+" 2", strings.NewReader(output))
 		r = EmtailParse(p2)
@@ -191,7 +192,8 @@ func TestParserRoundTrip(t *testing.T) {
 			continue
 		}
 
-		output2 := unparse(p2.root)
+		u = Unparser{}
+		output2 := u.Unparse(p2.root)
 
 		if !reflect.DeepEqual(output, output2) {
 			t.Errorf("Round trip failed to generate same output.\n1: %s\n2: %s\n", output, output)

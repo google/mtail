@@ -38,7 +38,8 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		return nil, p.errors
 	}
 	if *compile_only {
-		output := unparse(p.root)
+		u := Unparser{}
+		output := u.Unparse(p.root)
 		fmt.Printf("Unparsing %s:\n%s", name, output)
 	}
 	c := &compiler{name: name, symtab: p.s}
