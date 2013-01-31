@@ -11,3 +11,4 @@ emtail.test
 fuzz/fuzz
 fuzzout
 emgen/emgen
+foo.log
