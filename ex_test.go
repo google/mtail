@@ -28,6 +28,10 @@ func (d *Datum) String() string {
 	return fmt.Sprintf("%v", *d)
 }
 
+func (n *Node) String() string {
+	return fmt.Sprintf("%v", *n)
+}
+
 func (m *Metric) String() string {
 	return fmt.Sprintf("%v", *m)
 }
@@ -112,21 +116,21 @@ func TestExamplePrograms(t *testing.T) {
 			continue
 		}
 
-		// // Dirty hack to create json files :)
-		// {
-		// 	j, err := os.Create(tc.jsonfile)
-		// 	if err != nil {
-		// 		t.Errorf("%s: could not open json file: %s", tc.jsonfile, err)
-		// 		continue
-		// 	}
-		// 	defer j.Close()
-		// 	b, err := json.MarshalIndent(metrics, "", "  ")
-		// 	if err != nil {
-		// 		t.Errorf("couldn't marshall metrics")
-		// 		continue
-		// 	}
-		// 	j.Write(b)
-		// }
+		// Dirty hack to create json files :)
+		if false {
+			j, err := os.Create(tc.jsonfile)
+			if err != nil {
+				t.Errorf("%s: could not open json file: %s", tc.jsonfile, err)
+				continue
+			}
+			defer j.Close()
+			b, err := json.MarshalIndent(metrics, "", "  ")
+			if err != nil {
+				t.Errorf("couldn't marshall metrics")
+				continue
+			}
+			j.Write(b)
+		}
 
 		j, err := os.Open(tc.jsonfile)
 		if err != nil {
@@ -146,7 +150,7 @@ func TestExamplePrograms(t *testing.T) {
 		sort.Sort(Metrics(expected_metrics))
 		sort.Sort(Metrics(metrics))
 		if !reflect.DeepEqual(expected_metrics, metrics) {
-			t.Errorf("%s: metrics don't match.\n\texpected:\n%v\n\treceived:\n%v", tc.programfile, expected_metrics, metrics)
+			t.Errorf("%s: metrics don't match.\n\texpected:\n%q\n\treceived:\n%q", tc.programfile, expected_metrics, metrics)
 		}
 	}
 }
