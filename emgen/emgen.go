@@ -103,11 +103,13 @@ func main() {
 	c := make(chan string, 1)
 	go emitter(c)
 
+	runs := 500
+
 	// Initial state
 	var states = []string{"start"}
 
 	// While the state stack is not empty
-	for len(states) > 0 {
+	for len(states) > 0 && runs > 0 {
 		// Pop the next state
 		state := states[len(states)-1]
 		states = states[:len(states)-1]
@@ -138,6 +140,7 @@ func main() {
 			//fmt.Println("(state)", state, state)
 			c <- state
 		}
+	runs--
 	}
 	c <- "\n"
 }
