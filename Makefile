@@ -51,5 +51,9 @@ testshort: $(GOFILES) $(GOTESTFILES)
 bench: $(GOFILES) $(GOTESTFILES)
 	go test -test.bench=.*
 
+.PHONY: recbench
+recbench: $(GOFILES) $(GOTESTFILES)
+	go test -test.bench=.* --record_benchmark
+
 .PHONY: testall
 testall: test bench

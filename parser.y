@@ -344,7 +344,6 @@ decl
       if !$1 {
         ExportMetric(d.m)
       }
-      fmt.Println("New metric", d.m, d, d.sym)
   }
   ;
 
