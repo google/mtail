@@ -103,7 +103,7 @@ func main() {
 	c := make(chan string, 1)
 	go emitter(c)
 
-	runs := 500
+	runs := 5000
 
 	// Initial state
 	var states = []string{"start"}
