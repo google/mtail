@@ -99,7 +99,7 @@ func TestExamplePrograms(t *testing.T) {
 		if strings.HasSuffix(name, ".em") {
 			name = name[:len(name)-3]
 		}
-		t.Log(name)
+
 		lines, errs := CompileAndLoad(tc.programfile)
 		if errs != "" {
 			t.Errorf(errs)
