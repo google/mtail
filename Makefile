@@ -45,8 +45,8 @@ test: $(GOFILES) $(GOTESTFILES)
 	go test -gcflags '-N' -test.v=true
 
 .PHONY: smoke
-testshort: $(GOFILES) $(GOTESTFILES)
-	go test -gcflags '-N' -test.v=true -test.short -v
+smoke: $(GOFILES) $(GOTESTFILES)
+	go test -gcflags '-N' -test.v=true -test.short
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES)
