@@ -44,9 +44,9 @@ emgen/emgen: emgen/emgen.go
 test: $(GOFILES) $(GOTESTFILES)
 	go test -gcflags '-N' -test.v=true
 
-.PHONY: testshort
+.PHONY: smoke
 testshort: $(GOFILES) $(GOTESTFILES)
-	go test -test.short -v
+	go test -gcflags '-N' -test.v=true -test.short -v
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES)
