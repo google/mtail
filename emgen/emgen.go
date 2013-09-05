@@ -140,7 +140,7 @@ func main() {
 			//fmt.Println("(state)", state, state)
 			c <- state
 		}
-	runs--
+		runs--
 	}
 	c <- "\n"
 }

@@ -69,7 +69,7 @@ func NewTailer(lines chan string) *tailer {
 	return t
 }
 
-// Tail adds a file to be tailed.
+// Tail registers a file to be tailed.
 func (t *tailer) Tail(pathname string) {
 	fullpath, err := filepath.Abs(pathname)
 	if err != nil {
@@ -116,7 +116,8 @@ Loop:
 	}
 }
 
-func Inode(f os.FileInfo) uint64 {
+// inode returns the inode number of a file.
+func inode(f os.FileInfo) uint64 {
 	return f.Sys().(*syscall.Stat_t).Ino
 }
 
@@ -138,7 +139,7 @@ func (t *tailer) handleLogCreate(pathname string) {
 			log.Printf("Stat failed on %q: %s\n", pathname, err)
 			return
 		}
-		if Inode(s1) != Inode(s2) {
+		if inode(s1) != inode(s2) {
 			log_rotations.Add(pathname, 1)
 			// flush the old log, pathname is still an index into t.files with the old inode.
 			t.handleLogUpdate(pathname)
