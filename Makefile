@@ -9,6 +9,7 @@ GOFILES=\
 	lexer.go\
 	metric.go\
 	parser.go\
+	progs.go\
 	symtab.go\
 	tail.go\
 	unparser.go\
