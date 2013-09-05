@@ -1,6 +1,7 @@
 package main
 
 import (
+	"exp/inotify"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -63,4 +64,43 @@ func LoadProgs(progs string) (*engine, int) {
 		log.Printf("loaded %s", fi.Name())
 	}
 	return e, errors
+}
+
+type watcher interface {
+	Events() chan *inotify.Event
+	Errors() chan error
+
+	AddWatch(string, uint32) error
+	Close() error
+	RemoveWatch(string) error
+}
+
+type progloader struct {
+	w         watcher
+	pathnames map[string]struct{}
+}
+
+var (
+	tProgCreateMask = inotify.IN_CREATE
+	tProgChangeMask = inotify.IN_MODIFY
+)
+
+func (p *progloader) start() {
+	for {
+		select {
+		case ev := <-p.w.Events():
+			switch {
+			case ev.Mask&tProgCreateMask != 0:
+				if filepath.Ext(ev.Name) != ".em" {
+					continue
+				}
+				p.pathnames[ev.Name] = struct{}{}
+			case ev.Mask&tProgChangeMask != 0:
+				// reload config
+			}
+		case err := <-p.w.Errors():
+			log.Println("watch error: ", err)
+
+		}
+	}
 }
