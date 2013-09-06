@@ -33,7 +33,7 @@ func startEmtail(t *testing.T, log_pathnames []string, prog_pathname string) {
 	lines := make(chan string)
 	line_count.Set(0)
 	go p.e.run(lines)
-	StartEmtail(w, lines, log_pathnames)
+	StartEmtail(lines, log_pathnames)
 }
 
 func TestHandleLogUpdates(t *testing.T) {

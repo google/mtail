@@ -19,6 +19,7 @@ var (
 
 func (p *progloader) LoadProgs(program_path string) (*engine, int) {
 	p.w.AddWatch(program_path, tProgCreateMask)
+	log.Println("Watch on ", program_path, " with ", tProgCreateMask)
 
 	fis, err := ioutil.ReadDir(program_path)
 	if err != nil {
@@ -113,6 +114,7 @@ func (p *progloader) start() {
 		case ev := <-p.w.Events():
 			switch {
 			case ev.Mask&tProgCreateMask|tProgChangeMask != 0:
+				log.Println("File: ", ev.Name)
 				if filepath.Ext(ev.Name) != ".em" {
 					continue
 				}

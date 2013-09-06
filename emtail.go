@@ -50,8 +50,12 @@ func OneShot(logfile string, lines chan string) error {
 	return nil
 }
 
-func StartEmtail(w Watcher, lines chan string, pathnames []string) {
-	t := NewTailer(lines, w)
+func StartEmtail(lines chan string, pathnames []string) {
+	tw, err := NewInotifyWatcher()
+	if err != nil {
+		log.Fatal("Couldn't create watcher:", err)
+	}
+	t := NewTailer(lines, tw)
 	if t == nil {
 		log.Fatal("Couldn't create a tailer.")
 	}
@@ -138,7 +142,7 @@ func main() {
 		os.Stdout.Write(b)
 		WriteMetrics()
 	} else {
-		StartEmtail(w, lines, pathnames)
+		StartEmtail(lines, pathnames)
 
 		c := &console{}
 		log.SetOutput(c)
