@@ -40,7 +40,7 @@ const (
 // lines from files. It also handles new log file creation events and log
 // rotations.
 type tailer struct {
-	w *inotify.Watcher
+	w Watcher
 
 	quit chan bool
 
@@ -51,11 +51,15 @@ type tailer struct {
 }
 
 // NewTailer returns a new tailer.
-func NewTailer(lines chan string) *tailer {
-	w, err := inotify.NewWatcher()
-	if err != nil {
-		log.Print("Creating an inotify watcher failed: ", err)
-		return nil
+// If w is nil, an InotifyWatcher is created.
+func NewTailer(lines chan string, w Watcher) *tailer {
+	if w == nil {
+		var err error
+		w, err = NewInotifyWatcher()
+		if err != nil {
+			log.Print("Creating an inotify watcher failed: ", err)
+			return nil
+		}
 	}
 	t := &tailer{
 		w:        w,
@@ -214,7 +218,7 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 func (t *tailer) start() {
 	for {
 		select {
-		case ev := <-t.w.Event:
+		case ev := <-t.w.Events():
 			event_count.Add(ev.String(), 1)
 			switch {
 			case ev.Mask&tLogUpdateMask != 0:
@@ -229,7 +233,7 @@ func (t *tailer) start() {
 			default:
 				log.Printf("Unexpected event %q\n", ev)
 			}
-		case err := <-t.w.Error:
+		case err := <-t.w.Errors():
 			log.Println("inotify watch error:", err)
 		case <-t.quit:
 			goto end

@@ -51,7 +51,7 @@ func OneShot(logfile string, lines chan string) error {
 }
 
 func StartEmtail(lines chan string, pathnames []string) {
-	t := NewTailer(lines)
+	t := NewTailer(lines, nil)
 	if t == nil {
 		log.Fatal("Couldn't create a tailer.")
 	}

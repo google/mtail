@@ -24,7 +24,7 @@ func TestTail(t *testing.T) {
 	defer f.Close()
 
 	lines := make(chan string)
-	ta := NewTailer(lines)
+	ta := NewTailer(lines, nil)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -51,7 +51,7 @@ func TestHandleLogChange(t *testing.T) {
 	defer f.Close()
 
 	lines := make(chan string)
-	ta := NewTailer(lines)
+	ta := NewTailer(lines, nil)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -89,7 +89,7 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	defer f.Close()
 
 	lines := make(chan string)
-	ta := NewTailer(lines)
+	ta := NewTailer(lines, nil)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
