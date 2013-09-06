@@ -15,22 +15,25 @@ import (
 
 var test_program = "/$/ { }"
 
-func startEmtail(t *testing.T, pathnames []string) {
+func startEmtail(t *testing.T, log_pathnames []string, prog_pathname string) {
 	w, err := NewInotifyWatcher()
 	if err != nil {
 		t.Errorf("Couldn't create watcher:", err)
 	}
-	e := &engine{}
+	p := NewProgLoader(w)
 	// start server
 	prog, errors := Compile("test", strings.NewReader(test_program))
 	if len(errors) > 0 {
 		t.Errorf("Couldn't compile program: %s", errors)
 	}
-	e.addVm(prog)
+	p.e.addVm("test", prog)
+	if prog_pathname != "" {
+		p.LoadProgs(prog_pathname)
+	}
 	lines := make(chan string)
 	line_count.Set(0)
-	go e.run(lines)
-	StartEmtail(w, lines, pathnames)
+	go p.e.run(lines)
+	StartEmtail(w, lines, log_pathnames)
 }
 
 func TestHandleLogUpdates(t *testing.T) {
@@ -56,7 +59,7 @@ func TestHandleLogUpdates(t *testing.T) {
 	}
 	defer log_file.Close()
 	pathnames := []string{log_filepath}
-	startEmtail(t, pathnames)
+	startEmtail(t, pathnames, "")
 	ex_lines := []string{"hi", "hi2", "hi3"}
 	for i, x := range ex_lines {
 		// write to log file
@@ -97,7 +100,7 @@ func TestHandleLogRotation(t *testing.T) {
 	stop := make(chan bool, 1)
 	hup := make(chan bool, 1)
 	pathnames := []string{log_filepath}
-	startEmtail(t, pathnames)
+	startEmtail(t, pathnames, "")
 
 	go func() {
 		log_file := log_file
@@ -162,7 +165,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	// Start up emtail
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
-	startEmtail(t, pathnames)
+	startEmtail(t, pathnames, "")
 
 	// touch log file
 	log_file, err := os.Create(log_filepath)
@@ -202,7 +205,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	// Start emtail
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
-	startEmtail(t, pathnames)
+	startEmtail(t, pathnames, "")
 
 	// touch log file
 	new_log_filepath := path.Join(workdir, "log1")
@@ -216,4 +219,97 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	if line_count.String() != expected {
 		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, line_count.String())
 	}
+}
+
+func makeTempDir(t *testing.T) (workdir string) {
+	var err error
+	if workdir, err = ioutil.TempDir("", "emtail_test"); err != nil {
+		t.Errorf("ioutil.TempDir failed: %s", err)
+	}
+	return
+}
+
+func removeTempDir(t *testing.T, workdir string) {
+	if err := os.RemoveAll(workdir); err != nil {
+		t.Errorf("os.RemoveAll failed: %s", err)
+	}
+}
+func TestHandleNewProgram(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
+
+	startEmtail(t, []string{}, workdir)
+
+	expected_prog_loads := "{}"
+	if prog_loads.String() != expected_prog_loads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\trecevied: %s", expected_prog_loads, prog_loads.String())
+	}
+
+	prog_path := path.Join(workdir, "prog.em")
+	prog_file, err := os.Create(prog_path)
+	if err != nil {
+		t.Errorf("prog create failed: %s", err)
+	}
+	prog_file.WriteString("/$/ {}\n")
+	prog_file.Close()
+
+	// Wait for inotify
+	time.Sleep(100 * time.Millisecond)
+	expected_prog_loads = `{"prog.em": 1}`
+	if prog_loads.String() != expected_prog_loads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\trecevied: %s", expected_prog_loads, prog_loads.String())
+	}
+
+	bad_prog_path := path.Join(workdir, "prog.em.dpkg-dist")
+	bad_prog_file, err := os.Create(bad_prog_path)
+	if err != nil {
+		t.Errorf("prog create failed: %s", err)
+	}
+	bad_prog_file.WriteString("/$/ {}\n")
+	bad_prog_file.Close()
+
+	time.Sleep(100 * time.Millisecond)
+	expected_prog_loads = `{"prog.em": 1}`
+	if prog_loads.String() != expected_prog_loads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\trecevied: %s", expected_prog_loads, prog_loads.String())
+	}
+	expected_prog_errs := `{}`
+	if prog_load_errors.String() != expected_prog_errs {
+		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expected_prog_errs, prog_load_errors.String())
+	}
+
+	os.Rename(bad_prog_path, prog_path)
+	time.Sleep(100 * time.Millisecond)
+	expected_prog_loads = `{"prog.em": 2}`
+	if prog_loads.String() != expected_prog_loads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\trecevied: %s", expected_prog_loads, prog_loads.String())
+	}
+	expected_prog_errs = `{}`
+	if prog_load_errors.String() != expected_prog_errs {
+		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expected_prog_errs, prog_load_errors.String())
+	}
+
+	broken_prog_path := path.Join(workdir, "broken.em")
+	broken_prog_file, err := os.Create(broken_prog_path)
+	if err != nil {
+		t.Errorf("prog create failed: %s", err)
+	}
+	broken_prog_file.WriteString("}\n")
+	broken_prog_file.Close()
+
+	time.Sleep(100 * time.Millisecond)
+
+	expected_prog_loads = `{"prog.em": 2}`
+	if prog_loads.String() != expected_prog_loads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\trecevied: %s", expected_prog_loads, prog_loads.String())
+	}
+	expected_prog_errs = `{"broken.em": 1}`
+	if prog_load_errors.String() != expected_prog_errs {
+		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expected_prog_errs, prog_load_errors.String())
+	}
+
 }

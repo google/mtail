@@ -401,10 +401,14 @@ func newVm(name string, re []*regexp.Regexp, str []string, m []*Metric, prog []i
 }
 
 // vms contains a list of virtual machines to execute when each new line is received
-type engine []*vm
+type engine map[string]*vm
 
-func (e *engine) addVm(v *vm) {
-	*e = append(*e, v)
+func (e engine) addVm(name string, v *vm) {
+	e[name] = v
+}
+
+func (e engine) removeVm(name string) {
+	delete(e, name)
 }
 
 // RunVms receives a line from a channel and sends it to all VMs.

@@ -87,7 +87,7 @@ func CompileAndLoad(programfile string) (chan string, string) {
 	}
 
 	e := &engine{}
-	e.addVm(v)
+	e.addVm(programfile, v)
 	go e.run(lines)
 	return lines, ""
 }
