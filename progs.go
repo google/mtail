@@ -66,18 +66,24 @@ func LoadProgs(progs string) (*engine, int) {
 	return e, errors
 }
 
-type watcher interface {
-	Events() chan *inotify.Event
-	Errors() chan error
-
-	AddWatch(string, uint32) error
-	Close() error
-	RemoveWatch(string) error
+type progloader struct {
+	w         Watcher
+	pathnames map[string]struct{}
 }
 
-type progloader struct {
-	w         watcher
-	pathnames map[string]struct{}
+func NewProgLoader(w Watcher) (p *progloader) {
+	p = &progloader{}
+	if w == nil {
+		var err error
+		p.w, err = NewInotifyWatcher()
+		if err != nil {
+			log.Println("Failed to create inotify watcher: ", err)
+		}
+	} else {
+		p.w = w
+	}
+	p.pathnames = make(map[string]struct{})
+	return
 }
 
 var (
@@ -96,7 +102,7 @@ func (p *progloader) start() {
 				}
 				p.pathnames[ev.Name] = struct{}{}
 			case ev.Mask&tProgChangeMask != 0:
-				// reload config
+				// reload program
 			}
 		case err := <-p.w.Errors():
 			log.Println("watch error: ", err)

@@ -61,8 +61,7 @@ func TestProgLoader(t *testing.T) {
 	var fake fakewatcher
 	fake.Error = make(chan error)
 	fake.Event = make(chan *inotify.Event)
-	l := &progloader{w: &fake}
-	l.pathnames = make(map[string]struct{})
+	l := NewProgLoader(fake)
 	go l.start()
 	for _, tt := range progloadertests {
 		fake.Event <- tt.Event

@@ -14,6 +14,7 @@ GOFILES=\
 	tail.go\
 	unparser.go\
 	vm.go\
+	watcher.go\
 
 GOTESTFILES=\
 	emtail_test.go\
