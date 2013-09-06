@@ -10,10 +10,10 @@ import (
 	"text/tabwriter"
 )
 
-func LoadProgs(progs string) (*engine, int) {
-	fis, err := ioutil.ReadDir(progs)
+func (p *progloader) LoadProgs(program_path string) (*engine, int) {
+	fis, err := ioutil.ReadDir(program_path)
 	if err != nil {
-		log.Fatalf("Failed to list programs in %q: %s", progs, err)
+		log.Fatalf("Failed to list programs in %q: %s", program_path, err)
 	}
 
 	e := &engine{}
@@ -25,7 +25,7 @@ func LoadProgs(progs string) (*engine, int) {
 		if filepath.Ext(fi.Name()) != ".em" {
 			continue
 		}
-		f, err := os.Open(fmt.Sprintf("%s/%s", progs, fi.Name()))
+		f, err := os.Open(fmt.Sprintf("%s/%s", program_path, fi.Name()))
 		if err != nil {
 			log.Printf("Failed to read program %q: %s\n", fi.Name(), err)
 			continue
@@ -72,17 +72,8 @@ type progloader struct {
 }
 
 func NewProgLoader(w Watcher) (p *progloader) {
-	p = &progloader{}
-	if w == nil {
-		var err error
-		p.w, err = NewInotifyWatcher()
-		if err != nil {
-			log.Println("Failed to create inotify watcher: ", err)
-		}
-	} else {
-		p.w = w
-	}
-	p.pathnames = make(map[string]struct{})
+	p = &progloader{w: w,
+		pathnames: make(map[string]struct{})}
 	return
 }
 

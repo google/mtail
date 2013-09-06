@@ -50,11 +50,7 @@ func OneShot(logfile string, lines chan string) error {
 	return nil
 }
 
-func StartEmtail(lines chan string, pathnames []string) {
-	w, err := NewInotifyWatcher()
-	if err != nil {
-		log.Fatal("Couldn't create an inotify watcher:", err)
-	}
+func StartEmtail(w Watcher, lines chan string, pathnames []string) {
 	t := NewTailer(lines, w)
 	if t == nil {
 		log.Fatal("Couldn't create a tailer.")
@@ -100,7 +96,16 @@ func main() {
 		log.Fatalf("No logs specified to tail; use -logs")
 	}
 
-	e, errors := LoadProgs(*progs)
+	w, err := NewInotifyWatcher()
+	if err != nil {
+		log.Fatal("Couldn't create an inotify watcher:", err)
+	}
+
+	p := NewProgLoader(w)
+	if p == nil {
+		log.Fatal("Couldn't create a program loader.")
+	}
+	e, errors := p.LoadProgs(*progs)
 
 	if *compile_only || *dump_bytecode {
 		os.Exit(errors)
@@ -133,7 +138,7 @@ func main() {
 		os.Stdout.Write(b)
 		WriteMetrics()
 	} else {
-		StartEmtail(lines, pathnames)
+		StartEmtail(w, lines, pathnames)
 
 		c := &console{}
 		log.SetOutput(c)

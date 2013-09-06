@@ -16,6 +16,10 @@ import (
 var test_program = "/$/ { }"
 
 func startEmtail(t *testing.T, pathnames []string) {
+	w, err := NewInotifyWatcher()
+	if err != nil {
+		t.Errorf("Couldn't create watcher:", err)
+	}
 	e := &engine{}
 	// start server
 	prog, errors := Compile("test", strings.NewReader(test_program))
@@ -26,7 +30,7 @@ func startEmtail(t *testing.T, pathnames []string) {
 	lines := make(chan string)
 	line_count.Set(0)
 	go e.run(lines)
-	StartEmtail(lines, pathnames)
+	StartEmtail(w, lines, pathnames)
 }
 
 func TestHandleLogUpdates(t *testing.T) {
