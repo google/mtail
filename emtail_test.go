@@ -298,7 +298,7 @@ func TestHandleNewProgram(t *testing.T) {
 	if err != nil {
 		t.Errorf("prog create failed: %s", err)
 	}
-	broken_prog_file.WriteString("}\n")
+	broken_prog_file.WriteString("?\n")
 	broken_prog_file.Close()
 
 	time.Sleep(100 * time.Millisecond)

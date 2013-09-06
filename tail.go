@@ -11,7 +11,7 @@
 package main
 
 import (
-	"exp/inotify"
+	"code.google.com/p/go.exp/inotify"
 	"expvar"
 	"io"
 	"log"
