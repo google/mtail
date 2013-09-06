@@ -51,7 +51,11 @@ func OneShot(logfile string, lines chan string) error {
 }
 
 func StartEmtail(lines chan string, pathnames []string) {
-	t := NewTailer(lines, nil)
+	w, err := NewInotifyWatcher()
+	if err != nil {
+		log.Fatal("Couldn't create an inotify watcher:", err)
+	}
+	t := NewTailer(lines, w)
 	if t == nil {
 		log.Fatal("Couldn't create a tailer.")
 	}

@@ -23,8 +23,12 @@ func TestTail(t *testing.T) {
 	}
 	defer f.Close()
 
+	w, err := NewInotifyWatcher()
+	if err != nil {
+		t.Fatalf("Couldn't make a watcher:", err)
+	}
 	lines := make(chan string)
-	ta := NewTailer(lines, nil)
+	ta := NewTailer(lines, w)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -50,8 +54,12 @@ func TestHandleLogChange(t *testing.T) {
 	}
 	defer f.Close()
 
+	w, err := NewInotifyWatcher()
+	if err != nil {
+		t.Fatalf("Couldn't make a watcher:", err)
+	}
 	lines := make(chan string)
-	ta := NewTailer(lines, nil)
+	ta := NewTailer(lines, w)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -88,8 +96,12 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	}
 	defer f.Close()
 
+	w, err := NewInotifyWatcher()
+	if err != nil {
+		t.Fatalf("Couldn't make a watcher:", err)
+	}
 	lines := make(chan string)
-	ta := NewTailer(lines, nil)
+	ta := NewTailer(lines, w)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -125,7 +137,8 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	}
 	go ta.handleLogUpdate(logfile)
 	line := <-ta.lines
-	if line != "ab" {
-		t.Errorf("line doesn't match: expected 'ab' vs %s", line)
+	expected := "ab"
+	if line != expected {
+		t.Errorf("line doesn't match: expected %q received %q", expected, line)
 	}
 }

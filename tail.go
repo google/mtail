@@ -51,16 +51,7 @@ type tailer struct {
 }
 
 // NewTailer returns a new tailer.
-// If w is nil, an InotifyWatcher is created.
 func NewTailer(lines chan string, w Watcher) *tailer {
-	if w == nil {
-		var err error
-		w, err = NewInotifyWatcher()
-		if err != nil {
-			log.Print("Creating an inotify watcher failed: ", err)
-			return nil
-		}
-	}
 	t := &tailer{
 		w:        w,
 		quit:     make(chan bool, 1),
