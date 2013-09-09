@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	prog_ev_count    = expvar.NewInt("prog_events_total")
 	prog_loads       = expvar.NewMap("prog_loads_total")
 	prog_load_errors = expvar.NewMap("prog_load_errors")
 )
@@ -114,6 +115,8 @@ func (p *progloader) start() {
 		select {
 		case ev := <-p.w.Events():
 			log.Println(ev.String())
+			prog_ev_count.Add(1)
+			log.Println("prog_ev_count:", prog_ev_count.String())
 			switch {
 			case ev.Mask&tProgDeleteMask != 0:
 				log.Println("removing", ev.Name)

@@ -123,7 +123,7 @@ func TestMetricToStatsd(t *testing.T) {
 	}
 }
 
-func TestCsvExport(t *testing.T) {
+func TestCSVExport(t *testing.T) {
 	ts := time.Now()
 	m1 := NewMetric("foo", "prog", Counter)
 	d, _ := m1.GetDatum()
@@ -144,6 +144,6 @@ func TestCsvExport(t *testing.T) {
 		ts, ts, ts)
 	out := b.String()
 	if !reflect.DeepEqual(expected, out) {
-		t.Errorf("CSV doesn't match: expected %v, received %v", expected, out)
+		t.Errorf("CSV doesn't match:\n\texpected\n%v\n\treceived %v", expected, out)
 	}
 }
