@@ -20,7 +20,6 @@ var (
 
 func (p *progloader) LoadProgs(program_path string) (*engine, int) {
 	p.w.AddWatch(program_path, tProgCreateMask)
-	log.Println("Watch on ", program_path, " with ", tProgCreateMask)
 
 	fis, err := ioutil.ReadDir(program_path)
 	if err != nil {
@@ -63,7 +62,6 @@ func (p *progloader) LoadProg(program_path string, name string) (errors int) {
 		p.DumpByteCode(name, v)
 	}
 	p.e.addVm(name, v)
-	log.Printf("loaded %s", name)
 	prog_loads.Add(name, 1)
 	return
 }
@@ -114,12 +112,9 @@ func (p *progloader) start() {
 	for {
 		select {
 		case ev := <-p.w.Events():
-			log.Println(ev.String())
 			prog_ev_count.Add(1)
-			log.Println("prog_ev_count:", prog_ev_count.String())
 			switch {
 			case ev.Mask&tProgDeleteMask != 0:
-				log.Println("removing", ev.Name)
 				_, f := filepath.Split(ev.Name)
 				p.e.removeVm(f)
 				delete(p.pathnames, f)
@@ -128,13 +123,11 @@ func (p *progloader) start() {
 				}
 
 			case ev.Mask&tProgCreateMask|tProgChangeMask != 0:
-				log.Println("File: ", ev.Name)
 				if filepath.Ext(ev.Name) != ".em" {
 					continue
 				}
 				d, f := filepath.Split(ev.Name)
 				if _, ok := p.pathnames[f]; !ok {
-					log.Printf("adding %q to pathnames, adding watch on %q", f, ev.Name)
 					p.pathnames[f] = struct{}{}
 					p.w.AddWatch(ev.Name, tProgChangeMask|tProgDeleteMask)
 				}
