@@ -84,7 +84,7 @@ func (t *tailer) Tail(pathname string) {
 func (t *tailer) handleLogUpdate(pathname string) {
 Loop:
 	for {
-		b := make([]byte, 32)
+		b := make([]byte, 4096)
 		n, err := t.files[pathname].Read(b)
 		if err != nil {
 			if err == io.EOF && n == 0 {
