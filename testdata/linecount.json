@@ -1,7 +1,7 @@
 [
   {
     "Name": "line_count",
-    "Program": "linecount",
+    "Program": "linecount.em",
     "Kind": 0,
     "Keys": [],
     "Values": {

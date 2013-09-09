@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"runtime"
 	"sort"
@@ -99,11 +98,6 @@ func TestExamplePrograms(t *testing.T) {
 	*syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
 		metrics = make([]*Metric, 0)
-		name := filepath.Base(tc.programfile)
-		if strings.HasSuffix(name, ".em") {
-			name = name[:len(name)-3]
-		}
-
 		lines, errs := CompileAndLoad(tc.programfile)
 		if errs != "" {
 			t.Errorf(errs)

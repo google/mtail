@@ -234,6 +234,8 @@ func removeTempDir(t *testing.T, workdir string) {
 		t.Errorf("os.RemoveAll failed: %s", err)
 	}
 }
+
+// TODO(jaq): The sleeps in here are racy.  What can we use to sync through inotify?
 func TestHandleNewProgram(t *testing.T) {
 	if testing.Short() {
 		return

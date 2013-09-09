@@ -9,7 +9,6 @@ import (
 	"io"
 	"path/filepath"
 	"regexp"
-	"strings"
 )
 
 var compile_only *bool = flag.Bool("compile_only", false, "Compile programs only.")
@@ -30,9 +29,6 @@ type compiler struct {
 
 func Compile(name string, input io.Reader) (*vm, []string) {
 	name = filepath.Base(name)
-	if strings.HasSuffix(name, ".em") {
-		name = name[:len(name)-3]
-	}
 	p := NewParser(name, input)
 	r := EmtailParse(p)
 	if r != 0 || p == nil || len(p.errors) > 0 {
