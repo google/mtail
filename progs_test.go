@@ -7,6 +7,7 @@ import (
 	"code.google.com/p/go.exp/inotify"
 	"reflect"
 	"testing"
+	"time"
 )
 
 type fakewatcher struct {
@@ -73,8 +74,10 @@ func TestProgLoader(t *testing.T) {
 		for _, p := range tt.pathnames {
 			pathnames[p] = struct{}{}
 		}
+		// TODO(jaq): synchronise, flush channels?
+		time.Sleep(100 * time.Millisecond)
 		if !reflect.DeepEqual(pathnames, l.pathnames) {
-			t.Errorf("Pathnames don't match.\n\texpected %q\n\treceived %q", pathnames, l.pathnames)
+			t.Errorf("Pathnames don't match for event %s.\n\texpected %q\n\treceived %q", tt.Event.String(), pathnames, l.pathnames)
 		}
 	}
 }

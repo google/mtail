@@ -40,9 +40,10 @@ func (p *progloader) LoadProgs(program_path string) (*engine, int) {
 }
 
 func (p *progloader) LoadProg(program_path string, name string) (errors int) {
-	f, err := os.Open(path.Join(program_path, name))
+	pth := path.Join(program_path, name)
+	f, err := os.Open(pth)
 	if err != nil {
-		log.Printf("Failed to read program %q: %s\n", name, err)
+		log.Printf("Failed to read program %q: %s\n", pth, err)
 		errors = 1
 		prog_load_errors.Add(name, 1)
 		return
@@ -112,7 +113,17 @@ func (p *progloader) start() {
 	for {
 		select {
 		case ev := <-p.w.Events():
+			log.Println(ev.String())
 			switch {
+			case ev.Mask&tProgDeleteMask != 0:
+				log.Println("removing", ev.Name)
+				_, f := filepath.Split(ev.Name)
+				p.e.removeVm(f)
+				delete(p.pathnames, f)
+				if err := p.w.RemoveWatch(ev.Name); err != nil {
+					log.Println("Remove watch failed:", err)
+				}
+
 			case ev.Mask&tProgCreateMask|tProgChangeMask != 0:
 				log.Println("File: ", ev.Name)
 				if filepath.Ext(ev.Name) != ".em" {
@@ -120,18 +131,14 @@ func (p *progloader) start() {
 				}
 				d, f := filepath.Split(ev.Name)
 				if _, ok := p.pathnames[f]; !ok {
+					log.Printf("adding %q to pathnames, adding watch on %q", f, ev.Name)
 					p.pathnames[f] = struct{}{}
 					p.w.AddWatch(ev.Name, tProgChangeMask|tProgDeleteMask)
 				}
 				p.LoadProg(d, f)
 
-			case ev.Mask&tProgDeleteMask != 0:
-				_, f := filepath.Split(ev.Name)
-				p.e.removeVm(f)
-				delete(p.pathnames, f)
-				if err := p.w.RemoveWatch(ev.Name); err != nil {
-					log.Println("Remove watch failed:", err)
-				}
+			default:
+				log.Printf("Unknown event: %q", ev)
 			}
 		case err := <-p.w.Errors():
 			log.Println("watch error: ", err)
