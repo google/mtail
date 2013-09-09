@@ -23,11 +23,10 @@ import (
 )
 
 var (
-	event_count           = expvar.NewMap("inotify_event_count")
-	log_count             = expvar.NewInt("log_count")
-	log_errors            = expvar.NewMap("log_errors_total")
-	log_permission_denied = expvar.NewMap("log_permission_denied_total")
-	log_rotations         = expvar.NewMap("log_rotations_total")
+	event_count   = expvar.NewMap("inotify_event_count")
+	log_count     = expvar.NewInt("log_count")
+	log_errors    = expvar.NewMap("log_errors_total")
+	log_rotations = expvar.NewMap("log_rotations_total")
 )
 
 // Set of masks to use to determine different events
@@ -184,9 +183,6 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 		}
 		log.Printf("Failed to open %q for reading: %s\n", pathname, err)
 		log_errors.Add(pathname, 1)
-		if os.IsPermission(err) {
-			log_permission_denied.Add(pathname, 1)
-		}
 		return
 	}
 
