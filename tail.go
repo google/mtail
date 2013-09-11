@@ -200,12 +200,16 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 }
 
 // start is the main event loop for the tailer.
-// It receives notification of log file changes from the watcher channel, and 
+// It receives notification of log file changes from the watcher channel, and
 // handles them.
 func (t *tailer) start() {
 	for {
 		select {
 		case ev := <-t.w.Events():
+			if ev == nil {
+				log.Println("event received, but was nil.")
+				continue
+			}
 			event_count.Add(ev.String(), 1)
 			switch {
 			case ev.Mask&tLogUpdateMask != 0:
@@ -221,7 +225,11 @@ func (t *tailer) start() {
 				log.Printf("Unexpected event %q\n", ev)
 			}
 		case err := <-t.w.Errors():
-			log.Println("inotify watch error:", err)
+			if err != nil {
+				log.Println("inotify watch error:", err)
+			} else {
+				log.Println("inotify watch error, but error was nil")
+			}
 		case <-t.quit:
 			goto end
 		}

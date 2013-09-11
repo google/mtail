@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"text/tabwriter"
 )
 
@@ -95,6 +96,7 @@ func (p *progloader) DumpByteCode(name string, v *vm) {
 }
 
 type progloader struct {
+	sync.RWMutex
 	w         Watcher
 	pathnames map[string]struct{}
 	e         engine
@@ -102,8 +104,11 @@ type progloader struct {
 
 func NewProgLoader(w Watcher) (p *progloader) {
 	p = &progloader{w: w,
-		pathnames: make(map[string]struct{}),
-		e:         make(map[string]*vm)}
+		e: make(map[string]*vm)}
+	p.Lock()
+	p.pathnames = make(map[string]struct{})
+	p.Unlock()
+
 	go p.start()
 	return
 }
@@ -123,7 +128,9 @@ func (p *progloader) start() {
 			case ev.Mask&tProgDeleteMask != 0:
 				_, f := filepath.Split(ev.Name)
 				p.e.removeVm(f)
+				p.Lock()
 				delete(p.pathnames, f)
+				p.Unlock()
 				if err := p.w.RemoveWatch(ev.Name); err != nil {
 					log.Println("Remove watch failed:", err)
 				}
@@ -133,10 +140,13 @@ func (p *progloader) start() {
 					continue
 				}
 				d, f := filepath.Split(ev.Name)
+
+				p.Lock()
 				if _, ok := p.pathnames[f]; !ok {
 					p.pathnames[f] = struct{}{}
 					p.w.AddWatch(ev.Name, tProgChangeMask|tProgDeleteMask)
 				}
+				p.Unlock()
 				p.LoadProg(d, f)
 
 			default:

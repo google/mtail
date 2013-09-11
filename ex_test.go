@@ -143,6 +143,8 @@ func TestExamplePrograms(t *testing.T) {
 		}
 		sort.Sort(Metrics(expected_metrics))
 		sort.Sort(Metrics(metrics))
+		metric_lock.Lock()
+		defer metric_lock.Unlock()
 		if !reflect.DeepEqual(expected_metrics, metrics) {
 			t.Errorf("%s: metrics don't match.\n\texpected:\n%q\n\treceived:\n%q", tc.programfile, expected_metrics, metrics)
 		}

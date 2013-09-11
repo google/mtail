@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -135,15 +136,19 @@ func (d *Datum) stamp(timestamp time.Time) {
 func (d *Datum) Set(value int64, timestamp time.Time) {
 	metric_lock.Lock()
 	defer metric_lock.Unlock()
-	d.Value = value
+	atomic.StoreInt64(&d.Value, value)
 	d.stamp(timestamp)
 }
 
 func (d *Datum) IncBy(delta int64, timestamp time.Time) {
 	metric_lock.Lock()
 	defer metric_lock.Unlock()
-	d.Value += delta
+	atomic.AddInt64(&d.Value, delta)
 	d.stamp(timestamp)
+}
+
+func (d *Datum) Get() int64 {
+	return atomic.LoadInt64(&d.Value)
 }
 
 func init() {
