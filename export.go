@@ -76,7 +76,7 @@ func csvExporter(c *csv.Writer, ms []*Metric) {
 					record = append(record, k, v)
 				}
 				record = append(record, fmt.Sprintf("%s", l.datum.Time))
-				record = append(record, fmt.Sprintf("%d", l.datum.Value))
+				record = append(record, fmt.Sprintf("%d", l.datum.Get()))
 				err := c.Write(record)
 				if err != nil {
 					log.Printf("Failed to write csv record %q: %s\n", record, err)
@@ -131,7 +131,7 @@ func MetricToCollectd(m *Metric, l *LabelSet) string {
 		FormatLabels(m.Name, l.labels, "-", "-"),
 		*push_interval,
 		l.datum.Time.Unix(),
-		l.datum.Value)
+		l.datum.Get())
 }
 
 // Format a LabelSet into a string to be written to one of the timeseries sockets
@@ -184,7 +184,7 @@ func MetricToGraphite(m *Metric, l *LabelSet) string {
 	return fmt.Sprintf("%s.%s %v %v\n",
 		m.Program,
 		FormatLabels(m.Name, l.labels, ".", "."),
-		l.datum.Value,
+		l.datum.Get(),
 		l.datum.Time.Unix())
 }
 
@@ -202,7 +202,7 @@ func MetricToStatsd(m *Metric, l *LabelSet) string {
 	return fmt.Sprintf("%s.%s:%d|c",
 		m.Program,
 		FormatLabels(m.Name, l.labels, ".", "."),
-		l.datum.Value)
+		l.datum.Get())
 }
 
 func WriteMetrics() {
