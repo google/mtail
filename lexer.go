@@ -375,7 +375,7 @@ Loop:
 			l.skip()
 			if r := l.next(); r != eof && r != '\n' {
 				if r != '"' {
-					l.text += `\`
+					l.text += "\\"
 				}
 				l.accept()
 				break
