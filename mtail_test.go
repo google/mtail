@@ -15,7 +15,7 @@ import (
 
 var test_program = "/$/ { }"
 
-func startEmtail(t *testing.T, log_pathnames []string, prog_pathname string) {
+func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) {
 	w, err := NewInotifyWatcher()
 	if err != nil {
 		t.Errorf("Couldn't create watcher:", err)
@@ -33,7 +33,7 @@ func startEmtail(t *testing.T, log_pathnames []string, prog_pathname string) {
 	lines := make(chan string)
 	line_count.Set(0)
 	go p.e.run(lines)
-	StartEmtail(lines, log_pathnames)
+	StartMtail(lines, log_pathnames)
 }
 
 func TestHandleLogUpdates(t *testing.T) {
@@ -59,7 +59,7 @@ func TestHandleLogUpdates(t *testing.T) {
 	}
 	defer log_file.Close()
 	pathnames := []string{log_filepath}
-	startEmtail(t, pathnames, "")
+	startMtail(t, pathnames, "")
 	ex_lines := []string{"hi", "hi2", "hi3"}
 	for i, x := range ex_lines {
 		// write to log file
@@ -100,7 +100,7 @@ func TestHandleLogRotation(t *testing.T) {
 	stop := make(chan bool, 1)
 	hup := make(chan bool, 1)
 	pathnames := []string{log_filepath}
-	startEmtail(t, pathnames, "")
+	startMtail(t, pathnames, "")
 
 	go func() {
 		log_file := log_file
@@ -165,7 +165,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	// Start up mtail
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
-	startEmtail(t, pathnames, "")
+	startMtail(t, pathnames, "")
 
 	// touch log file
 	log_file, err := os.Create(log_filepath)
@@ -205,7 +205,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	// Start mtail
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
-	startEmtail(t, pathnames, "")
+	startMtail(t, pathnames, "")
 
 	// touch log file
 	new_log_filepath := path.Join(workdir, "log1")
@@ -244,7 +244,7 @@ func TestHandleNewProgram(t *testing.T) {
 	workdir := makeTempDir(t)
 	defer removeTempDir(t, workdir)
 
-	startEmtail(t, []string{}, workdir)
+	startMtail(t, []string{}, workdir)
 
 	expected_prog_loads := "{}"
 	if prog_loads.String() != expected_prog_loads {

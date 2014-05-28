@@ -36,7 +36,7 @@ mtail: $(GOFILES)
 	go build
 
 parser.go: parser.y
-	go tool yacc -v y.output -o $@ -p Emtail $<
+	go tool yacc -v y.output -o $@ -p Mtail $<
 
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build

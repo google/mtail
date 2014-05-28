@@ -78,7 +78,7 @@ func CompileAndLoad(programfile string) (chan string, string) {
 	}
 	defer p.Close()
 
-	// EmtailDebug = 999 // All the debugging.
+	// MtailDebug = 999 // All the debugging.
 
 	v, errs := Compile(programfile, p)
 	if errs != nil {

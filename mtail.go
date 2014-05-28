@@ -50,7 +50,7 @@ func OneShot(logfile string, lines chan string) error {
 	return nil
 }
 
-func StartEmtail(lines chan string, pathnames []string) {
+func StartMtail(lines chan string, pathnames []string) {
 	tw, err := NewInotifyWatcher()
 	if err != nil {
 		log.Fatal("Couldn't create watcher:", err)
@@ -142,7 +142,7 @@ func main() {
 		os.Stdout.Write(b)
 		WriteMetrics()
 	} else {
-		StartEmtail(lines, pathnames)
+		StartMtail(lines, pathnames)
 
 		c := &console{}
 		log.SetOutput(c)

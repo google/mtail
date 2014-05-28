@@ -30,7 +30,7 @@ type compiler struct {
 func Compile(name string, input io.Reader) (*vm, []string) {
 	name = filepath.Base(name)
 	p := NewParser(name, input)
-	r := EmtailParse(p)
+	r := MtailParse(p)
 	if r != 0 || p == nil || len(p.errors) > 0 {
 		return nil, p.errors
 	}

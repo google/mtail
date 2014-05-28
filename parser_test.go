@@ -168,8 +168,8 @@ var kMtailPrograms = []validProgram{
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range kMtailPrograms {
 		p := NewParser(tc.name, strings.NewReader(tc.program))
-		//EmtailDebug = 999 // All the debugging.
-		r := EmtailParse(p)
+		//MtailDebug = 999 // All the debugging.
+		r := MtailParse(p)
 
 		if r != 0 || p.root == nil || len(p.errors) > 0 {
 			t.Errorf("1st pass parse errors:\n")
@@ -183,7 +183,7 @@ func TestParserRoundTrip(t *testing.T) {
 		output := u.Unparse(p.root)
 
 		p2 := NewParser(tc.name+" 2", strings.NewReader(output))
-		r = EmtailParse(p2)
+		r = MtailParse(p2)
 		if r != 0 || p2.root == nil || len(p2.errors) > 0 {
 			t.Errorf("2nd pass parse errors:\n")
 			for _, e := range p2.errors {
@@ -262,8 +262,8 @@ var InvalidPrograms = []InvalidProgram{
 func TestInvalidPrograms(t *testing.T) {
 	for _, tc := range InvalidPrograms {
 		p := NewParser(tc.name, strings.NewReader(tc.program))
-		//EmtailDebug = 999 // All the debugging.
-		EmtailParse(p)
+		//MtailDebug = 999 // All the debugging.
+		MtailParse(p)
 
 		if !reflect.DeepEqual(tc.errors, p.errors) {
 			t.Errorf("Incorrect error for '%s'\n\treceived: %q\n\texpected: %q\n", tc.name, p.errors, tc.errors)
