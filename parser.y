@@ -275,7 +275,7 @@ cond
   : pattern_expr
   {
     if re, err := regexp.Compile($1); err != nil {
-      Mtaillex.(*parser).ErrorP(fmt.Sprintf(err.Error()), Emtaillex.(*parser).pos)
+      Mtaillex.(*parser).ErrorP(fmt.Sprintf(err.Error()), Mtaillex.(*parser).pos)
       // TODO(jaq): force a parse error
     } else {
       $$ = &regexNode{pattern: $1}
@@ -308,7 +308,7 @@ pattern_expr
   {
     // Stash the start of the pattern_expr in a state variable.
     // We know it's the start because pattern_expr is left associative.
-    Mtaillex.(*parser).pos = Emtaillex.(*parser).t.pos
+    Mtaillex.(*parser).pos = Mtaillex.(*parser).t.pos
     $$ = $1
   }
   | pattern_expr PLUS REGEX
@@ -437,7 +437,7 @@ def
       Mtaillex.(*parser).endScope()
       $$ = &defNode{name: $2, children: []node{$4}}
       d := $$.(*defNode)
-      d.sym = Mtaillex.(*parser).s.addSym(d.name, DefSymbol, d, Emtaillex.(*parser).t.pos)
+      d.sym = Mtaillex.(*parser).s.addSym(d.name, DefSymbol, d, Mtaillex.(*parser).t.pos)
   }
   ;
 

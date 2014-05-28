@@ -4,10 +4,10 @@ _gotest_.6
 _test
 _testmain.6
 _testmain.go
-emtail
+mtail
 parser.go
 y.output
-emtail.test
+mtail.test
 fuzz/fuzz
 fuzzout
 emgen/emgen
