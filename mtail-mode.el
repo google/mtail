@@ -1,12 +1,12 @@
 ; Copyright 2011 Google Inc. All Rights Reserved.
 ; This file is available under the Apache license.
 
-(defvar emtail-mode-hook nil)
+(defvar mtail-mode-hook nil)
 
-(defcustom emtail-indent-offset 2
-  "Indent offset for `emtail-mode'.")
+(defcustom mtail-indent-offset 2
+  "Indent offset for `mtail-mode'.")
 
-(defvar emtail-mode-syntax-table
+(defvar mtail-mode-syntax-table
   (let ((st (make-syntax-table)))
     ; Add _ to :word: class
     (modify-syntax-entry ?_ "." st)
@@ -33,33 +33,33 @@
     (modify-syntax-entry ?= "." st)
     (modify-syntax-entry ?! "." st)
     st)
-  "Syntax table used while in `emtail-mode'.")
+  "Syntax table used while in `mtail-mode'.")
 
-(defconst emtail-mode-types
+(defconst mtail-mode-types
   '("counter" "gauge")
-  "All types in the emtail language.  Used for font locking.")
+  "All types in the mtail language.  Used for font locking.")
 
-(defconst emtail-mode-keywords
+(defconst mtail-mode-keywords
   '("as" "by" "const" "hidden" "def" "next")
-  "All keywords in the emtail language.  Used for font locking.")
+  "All keywords in the mtail language.  Used for font locking.")
 
-(defconst emtail-mode-builtins
+(defconst mtail-mode-builtins
   '("len" "strptime" "timestamp")
-  "All builtins in the emtail language.  Used for font locking.")
+  "All builtins in the mtail language.  Used for font locking.")
 
-(defvar emtail-mode-font-lock-defaults
+(defvar mtail-mode-font-lock-defaults
   (eval-when-compile
     (list
      (cons (concat "\\<"
-                   (regexp-opt emtail-mode-types 'words)
+                   (regexp-opt mtail-mode-types 'words)
                    "\\>")
            'font-lock-type-face)
      (cons (concat "\\<"
-                   (regexp-opt emtail-mode-builtins 'words)
+                   (regexp-opt mtail-mode-builtins 'words)
                    "\\>")
            'font-lock-builtin-face)
      (cons (concat "\\<"
-                   (regexp-opt emtail-mode-keywords 'words)
+                   (regexp-opt mtail-mode-keywords 'words)
                    "\\>")
            'font-lock-keyword-face)
      (cons "\\<@[a-zA-Z0-9_]+\\>" 'font-lock-function-name-face)
@@ -67,26 +67,26 @@
      )))
 
 ;;;###autoload
-(define-derived-mode emtail-mode awk-mode "emtail"
-  "Major mode for editing emtail programs."
-  :syntax-table emtail-mode-syntax-table
+(define-derived-mode mtail-mode awk-mode "emtail"
+  "Major mode for editing mtail programs."
+  :syntax-table mtail-mode-syntax-table
   (set (make-local-variable 'paragraph-separate) "^[ \t]*$")
   (set (make-local-variable 'paragraph-start) "^[ \t]*$")
   (set (make-local-variable 'comment-start) "# ")
   (set (make-local-variable 'comment-start-skip) "#+\\s-*")
   ;; Font lock
   (set (make-local-variable 'font-lock-defaults)
-       '(emtail-mode-font-lock-defaults))
+       '(mtail-mode-font-lock-defaults))
   (setq indent-tabs-mode nil))
 
-(defun emtail-mode-reload ()
-  "Reload emtail-mode.el and put the current buffer into emtail-mode.  Useful for debugging."
+(defun mtail-mode-reload ()
+  "Reload mtail-mode.el and put the current buffer into emtail-mode.  Useful for debugging."
   (interactive)
-  (unload-feature 'emtail-mode)
-  (add-to-list 'load-path "/home/jaq/src/emtail")
-  (require 'emtail-mode)
-  (emtail-mode))
+  (unload-feature 'mtail-mode)
+  (add-to-list 'load-path "/home/jaq/src/mtail")
+  (require 'mtail-mode)
+  (mtail-mode))
 
-(provide 'emtail-mode)
+(provide 'mtail-mode)
 
-(add-to-list 'auto-mode-alist (cons "\\.em$" #'emtail-mode))
+(add-to-list 'auto-mode-alist (cons "\\.em$" #'mtail-mode))

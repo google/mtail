@@ -41,7 +41,7 @@ func TestHandleLogUpdates(t *testing.T) {
 		return
 	}
 	// make temp dir
-	workdir, err := ioutil.TempDir("", "emtail_test")
+	workdir, err := ioutil.TempDir("", "mtail_test")
 	if err != nil {
 		t.Errorf("could not create temporary directory: %s", err)
 	}
@@ -79,7 +79,7 @@ func TestHandleLogRotation(t *testing.T) {
 		return
 	}
 	// make temp dir
-	workdir, err := ioutil.TempDir("", "emtail_test")
+	workdir, err := ioutil.TempDir("", "mtail_test")
 	if err != nil {
 		t.Errorf("could not create temporary directory: %s", err)
 	}
@@ -152,7 +152,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		return
 	}
 	// make temp dir
-	workdir, err := ioutil.TempDir("", "emtail_test")
+	workdir, err := ioutil.TempDir("", "mtail_test")
 	if err != nil {
 		t.Errorf("could not create temporary directory: %s", err)
 	}
@@ -162,7 +162,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 			t.Errorf("Could not remove temp dir: %s", err)
 		}
 	}()
-	// Start up emtail
+	// Start up mtail
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
 	startEmtail(t, pathnames, "")
@@ -192,7 +192,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 		return
 	}
 	// make temp dir
-	workdir, err := ioutil.TempDir("", "emtail_test")
+	workdir, err := ioutil.TempDir("", "mtail_test")
 	if err != nil {
 		t.Errorf("could not create temporary directory: %s", err)
 	}
@@ -202,7 +202,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 			t.Errorf("Could not remove temp dir: %s", err)
 		}
 	}()
-	// Start emtail
+	// Start mtail
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
 	startEmtail(t, pathnames, "")
@@ -223,7 +223,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 
 func makeTempDir(t *testing.T) (workdir string) {
 	var err error
-	if workdir, err = ioutil.TempDir("", "emtail_test"); err != nil {
+	if workdir, err = ioutil.TempDir("", "mtail_test"); err != nil {
 		t.Errorf("ioutil.TempDir failed: %s", err)
 	}
 	return

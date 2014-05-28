@@ -4,7 +4,7 @@
 GOFILES=\
 	ast.go\
 	compiler.go\
-	emtail.go\
+	mtail.go\
 	export.go\
 	lexer.go\
 	metric.go\
@@ -17,7 +17,7 @@ GOFILES=\
 	watcher.go\
 
 GOTESTFILES=\
-	emtail_test.go\
+	mtail_test.go\
 	ex_test.go\
 	export_test.go\
 	lexer_test.go\
@@ -30,9 +30,9 @@ CLEANFILES+=\
 	parser.go\
 	y.output\
 
-all: emtail
+all: mtail
 
-emtail: $(GOFILES)
+mtail: $(GOFILES)
 	go build
 
 parser.go: parser.y

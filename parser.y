@@ -5,9 +5,9 @@
 
 %{
 /*
-emtail is a metric exporting, modular tail.
+mtail is a metric exporting, modular tail.
 
-This file describes a parser for the emtail language.
+This file describes a parser for the mtail language.
 */
 package main
 

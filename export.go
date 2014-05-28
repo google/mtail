@@ -48,7 +48,7 @@ var (
 )
 
 const (
-	COLLECTD_FORMAT = "PUTVAL \"%s/emtail-%s/%s-%s\" interval=%d %d:%d\n"
+	COLLECTD_FORMAT = "PUTVAL \"%s/mtail-%s/%s-%s\" interval=%d %d:%d\n"
 )
 
 // CSV export

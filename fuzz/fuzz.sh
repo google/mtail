@@ -3,7 +3,7 @@
 set -x
 
 d=$(dirname $0)
-EMTAIL=$d/../emtail
+EMTAIL=$d/../mtail
 EMGEN=$d/../emgen/emgen
 OUT=$d/../fuzzout
 

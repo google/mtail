@@ -94,7 +94,7 @@ func main() {
 	flag.Parse()
 
 	if *progs == "" {
-		log.Fatalf("No emtail program directory specified; use -progs")
+		log.Fatalf("No mtail program directory specified; use -progs")
 	}
 	if *logs == "" {
 		log.Fatalf("No logs specified to tail; use -logs")

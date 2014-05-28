@@ -1,9 +1,9 @@
 package main
 
-// emtail programs may be updated while emtail is running, and they will be
-// reloaded without having to restart the emtail process. Programs can be
+// mtail programs may be updated while emtail is running, and they will be
+// reloaded without having to restart the mtail process. Programs can be
 // created and deleted as well, and some configuration systems do an atomic
-// rename of the program when it is installed, so emtail is also aware of file
+// rename of the program when it is installed, so mtail is also aware of file
 // moves.
 
 import (
