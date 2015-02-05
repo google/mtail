@@ -13,7 +13,7 @@ var (
 )
 
 const (
-	PROMETHEUS_FORMAT = "%s {%s} %d %d\n"
+	PROMETHEUS_FORMAT = "%s{%s} %d %d\n"
 )
 
 func NoHyphens(s string) string {
@@ -59,5 +59,5 @@ func MetricToPrometheus(m *Metric, l *LabelSet) string {
 		NoHyphens(m.Name),
 		strings.Join(s, ","),
 		l.datum.Get(),
-		l.datum.Time.Unix())
+		l.datum.Time.UnixNano()/1e6)
 }
