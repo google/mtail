@@ -211,7 +211,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 			// name, data
 			err = c.Write(record)
 			if err != nil {
-				fmt.Printf("failed to write csv record %q: %s\n", err)
+				fmt.Printf("failed to write csv record %q: %s\n", record, err)
 			}
 		}
 	}

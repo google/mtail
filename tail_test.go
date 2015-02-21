@@ -25,7 +25,7 @@ func TestTail(t *testing.T) {
 
 	w, err := NewInotifyWatcher()
 	if err != nil {
-		t.Fatalf("Couldn't make a watcher:", err)
+		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
 	lines := make(chan string)
 	ta := NewTailer(lines, w)
@@ -56,7 +56,7 @@ func TestHandleLogChange(t *testing.T) {
 
 	w, err := NewInotifyWatcher()
 	if err != nil {
-		t.Fatalf("Couldn't make a watcher:", err)
+		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
 	lines := make(chan string)
 	ta := NewTailer(lines, w)
@@ -98,7 +98,7 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 
 	w, err := NewInotifyWatcher()
 	if err != nil {
-		t.Fatalf("Couldn't make a watcher:", err)
+		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
 	lines := make(chan string)
 	ta := NewTailer(lines, w)

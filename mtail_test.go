@@ -18,7 +18,7 @@ var test_program = "/$/ { }"
 func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) {
 	w, err := NewInotifyWatcher()
 	if err != nil {
-		t.Errorf("Couldn't create watcher:", err)
+		t.Errorf("Couldn't create watcher: %s", err)
 	}
 	p := NewProgLoader(w)
 	// start server
@@ -117,7 +117,7 @@ func TestHandleLogRotation(t *testing.T) {
 				}
 				defer log_file.Close()
 			default:
-				log_file.WriteString(fmt.Sprintf("%s\n", i))
+				log_file.WriteString(fmt.Sprintf("%d\n", i))
 				time.Sleep(100 * time.Millisecond)
 				i++
 				if i >= 10 {

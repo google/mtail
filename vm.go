@@ -386,7 +386,6 @@ func (v *vm) Run(input string) {
 			return
 		}
 	}
-	panic("not reached")
 }
 
 func newVm(name string, re []*regexp.Regexp, str []string, m []*Metric, prog []instr) *vm {

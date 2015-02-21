@@ -50,7 +50,6 @@ func OneShot(logfile string, lines chan string) error {
 			lines <- line
 		}
 	}
-	return nil
 }
 
 func StartMtail(lines chan string, pathnames []string) {

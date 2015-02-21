@@ -146,7 +146,6 @@ func (l *lexer) NextToken() Token {
 			l.state = l.state(l)
 		}
 	}
-	panic("not reached")
 }
 
 // emit passes a token to the client.
