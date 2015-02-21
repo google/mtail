@@ -23,7 +23,7 @@ func (i instr) String() string {
 var programs = []struct {
 	name   string
 	source string
-	prog   []instr // expected bytecode 
+	prog   []instr // expected bytecode
 }{
 	// Composite literals require too many explicit conversions.
 	{"simple line counter",
