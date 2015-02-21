@@ -14,12 +14,12 @@ type fakewatcher struct {
 	inotify.Watcher
 }
 
-func (f fakewatcher) AddWatch(string, uint32) error { return nil }
-func (f fakewatcher) Close() error                  { return nil }
-func (f fakewatcher) RemoveWatch(string) error      { return nil }
-func (f fakewatcher) Watch(string) error            { return nil }
-func (f fakewatcher) Errors() chan error            { return f.Error }
-func (f fakewatcher) Events() chan *inotify.Event   { return f.Event }
+func (f *fakewatcher) AddWatch(string, uint32) error { return nil }
+func (f *fakewatcher) Close() error                  { return nil }
+func (f *fakewatcher) RemoveWatch(string) error      { return nil }
+func (f *fakewatcher) Watch(string) error            { return nil }
+func (f *fakewatcher) Errors() chan error            { return f.Error }
+func (f *fakewatcher) Events() chan *inotify.Event   { return f.Event }
 
 var progloadertests = []struct {
 	*inotify.Event
@@ -67,7 +67,7 @@ func TestProgLoader(t *testing.T) {
 	var fake fakewatcher
 	fake.Error = make(chan error)
 	fake.Event = make(chan *inotify.Event, len(progloadertests))
-	l := NewProgLoader(fake)
+	l := NewProgLoader(&fake)
 	for _, tt := range progloadertests {
 		l.Lock()
 		fake.Event <- tt.Event
