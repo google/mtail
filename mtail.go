@@ -1,6 +1,9 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
+// Build the parser:
+//go:generate go tool yacc -v y.output -o parser.go -p Mtail parser.y
+
 package main
 
 import (
