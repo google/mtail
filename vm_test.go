@@ -188,11 +188,11 @@ func TestInstrs(t *testing.T) {
 		v.execute(v.t, tc.i)
 
 		if !reflect.DeepEqual(tc.expected_stack, v.t.stack) {
-			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_stack, v.t.stack)
+			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %v\n\treceived: %v", tc.name, tc.expected_stack, v.t.stack)
 		}
 		tc.expected_thread.stack = tc.expected_stack
 		if !reflect.DeepEqual(&tc.expected_thread, v.t) {
-			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %q\n\treceived: %q", tc.name, tc.expected_thread, v.t)
+			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %v\n\treceived: %v", tc.name, tc.expected_thread, v.t)
 		}
 	}
 }
