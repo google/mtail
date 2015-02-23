@@ -12,4 +12,4 @@ The extraction is controlled by mtail programs which define patterns and actions
 
 Metrics are exported for scraping by a collector as JSON, CSV, or Prometheus format over HTTP, or can be periodically sent to a collectd, statsd, or Graphite collector socket.
 
-mtail recently migrated from <code.google.com/p/emtail> so see there for more docs.
+mtail recently migrated from http://code.google.com/p/emtail so see there for more docs.
