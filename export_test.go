@@ -144,6 +144,6 @@ func TestCSVExport(t *testing.T) {
 		ts, ts, ts)
 	out := b.String()
 	if !reflect.DeepEqual(expected, out) {
-		t.Errorf("CSV doesn't match:\n\texpected\n%v\n\treceived %v", expected, out)
+		t.Errorf("CSV doesn't match:\n\texpected\n%v\n\treceived\n%v", expected, out)
 	}
 }
