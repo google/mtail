@@ -48,11 +48,6 @@ var exampleProgramTests = []struct {
 	jsonfile    string // Expected metrics after processing.
 }{
 	{
-		"examples/linecount.em",
-		"testdata/linecount.log",
-		"testdata/linecount.json",
-	},
-	{
 		"examples/rsyncd.em",
 		"testdata/rsyncd.log",
 		"testdata/rsyncd.json",
