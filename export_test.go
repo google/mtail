@@ -4,9 +4,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/csv"
-	"fmt"
 	"os"
 	"reflect"
 	"sort"
@@ -120,30 +117,5 @@ func TestMetricToStatsd(t *testing.T) {
 		"prog.bar.l.snuh:42|c"}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
-	}
-}
-
-func TestCSVExport(t *testing.T) {
-	ts := time.Now()
-	m1 := NewMetric("foo", "prog", Counter)
-	d, _ := m1.GetDatum()
-	d.Set(37, ts)
-	m2 := NewMetric("bar", "prog", Counter, "a", "b")
-	d, _ = m2.GetDatum("1", "1")
-	d.Set(37, ts)
-	d, _ = m2.GetDatum("2", "2")
-	d.Set(37, ts)
-	b := bytes.NewBufferString("")
-	c := csv.NewWriter(b)
-	csvExporter(c, []*Metric{m1, m2})
-	c.Flush()
-	expected := fmt.Sprintf(
-		"prog,foo,Counter,%s,37\n"+
-			"prog,bar,Counter,a,1,b,1,%s,37\n"+
-			"prog,bar,Counter,a,2,b,2,%s,37\n",
-		ts, ts, ts)
-	out := b.String()
-	if !reflect.DeepEqual(expected, out) {
-		t.Errorf("CSV doesn't match:\n\texpected\n%v\n\treceived\n%v", expected, out)
 	}
 }

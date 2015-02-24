@@ -84,7 +84,7 @@ func (c *console) Write(p []byte) (n int, err error) {
 
 func (c *console) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
-	w.Write([]byte(`<a href="/csv">csv</a>, <a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>`))
+	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>`))
 	w.Write([]byte("<pre>"))
 	for _, l := range c.lines {
 		w.Write([]byte(l))
@@ -151,7 +151,6 @@ func main() {
 
 		http.Handle("/", c)
 		http.HandleFunc("/json", handleJson)
-		http.HandleFunc("/csv", handleCsv)
 		http.HandleFunc("/metrics", handlePrometheusMetrics)
 		StartMetricPush()
 

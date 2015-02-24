@@ -5,7 +5,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/csv"
 	"encoding/json"
 	"expvar"
 	"flag"
@@ -50,44 +49,6 @@ var (
 const (
 	COLLECTD_FORMAT = "PUTVAL \"%s/mtail-%s/%s-%s\" interval=%d %d:%d\n"
 )
-
-// CSV export
-func handleCsv(w http.ResponseWriter, r *http.Request) {
-	metric_lock.RLock()
-	defer metric_lock.RUnlock()
-
-	c := csv.NewWriter(w)
-	defer c.Flush()
-	csvExporter(c, metrics)
-}
-
-func csvExporter(c *csv.Writer, ms []*Metric) {
-	lc := make(chan *LabelSet)
-	quit := make(chan bool)
-	for _, m := range ms {
-		go m.EmitLabelSets(lc, quit)
-		for {
-			select {
-			case l := <-lc:
-				record := []string{m.Program,
-					m.Name,
-					m.Kind.String()}
-				for k, v := range l.labels {
-					record = append(record, k, v)
-				}
-				record = append(record, fmt.Sprintf("%s", l.datum.Time))
-				record = append(record, fmt.Sprintf("%d", l.datum.Get()))
-				err := c.Write(record)
-				if err != nil {
-					log.Printf("Failed to write csv record %q: %s\n", record, err)
-				}
-			case <-quit:
-				goto next
-			}
-		}
-	next:
-	}
-}
 
 // JSON export
 func handleJson(w http.ResponseWriter, r *http.Request) {
