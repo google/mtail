@@ -69,7 +69,7 @@ var exampleProgramTests = []struct {
 	},
 }
 
-func CompileAndLoad(programfile string) (chan string, string) {
+func CompileAndLoad(programfile string, stop chan bool) (chan string, string) {
 	lines := make(chan string)
 
 	p, err := os.Open(programfile)
@@ -87,7 +87,7 @@ func CompileAndLoad(programfile string) (chan string, string) {
 
 	e := &engine{}
 	e.addVm(programfile, v)
-	go e.run(lines)
+	go e.run(lines, stop)
 	return lines, ""
 }
 
@@ -97,14 +97,16 @@ func TestExamplePrograms(t *testing.T) {
 	}
 	*syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
-		metrics = make([]*Metric, 0)
-		lines, errs := CompileAndLoad(tc.programfile)
+		t.Logf("program: %s\n", tc.programfile)
+		ClearMetrics()
+		stop := make(chan bool, 1)
+		lines, errs := CompileAndLoad(tc.programfile, stop)
 		if errs != "" {
 			t.Errorf(errs)
 			continue
 		}
 
-		err := OneShot(tc.logfile, lines)
+		err := OneShot(tc.logfile, lines, stop)
 		if err != nil {
 			t.Errorf("Oneshot failed: %s", err)
 			continue
@@ -141,13 +143,14 @@ func TestExamplePrograms(t *testing.T) {
 			t.Errorf("%s: could not decode json: %s", tc.jsonfile, err)
 			continue
 		}
+		metric_lock.Lock()
 		sort.Sort(Metrics(expected_metrics))
 		sort.Sort(Metrics(metrics))
-		metric_lock.Lock()
-		defer metric_lock.Unlock()
 		if !reflect.DeepEqual(expected_metrics, metrics) {
 			t.Errorf("%s: metrics don't match.\n\texpected:\n%q\n\treceived:\n%q", tc.programfile, expected_metrics, metrics)
 		}
+		metric_lock.Unlock()
+
 	}
 }
 
@@ -158,7 +161,8 @@ func BenchmarkExamplePrograms(b *testing.B) {
 	}
 	b.Logf("\n")
 	for _, tc := range exampleProgramTests {
-		lines, errs := CompileAndLoad(tc.programfile)
+		stop := make(chan bool, 1)
+		lines, errs := CompileAndLoad(tc.programfile, stop)
 		if errs != "" {
 			b.Errorf(errs)
 		}
@@ -167,7 +171,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				b.StopTimer()
 				line_count.Set(0)
 				b.StartTimer()
-				err := OneShot(tc.logfile, lines)
+				err := OneShot(tc.logfile, lines, stop)
 				if err != nil {
 					b.Errorf("OneShot compile failed: %s", err)
 					return

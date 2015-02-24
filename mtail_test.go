@@ -31,8 +31,9 @@ func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) {
 		p.LoadProgs(prog_pathname)
 	}
 	lines := make(chan string)
+	stop := make(chan bool, 1)
 	line_count.Set(0)
-	go p.e.run(lines)
+	go p.e.run(lines, stop)
 	StartMtail(lines, log_pathnames)
 }
 

@@ -30,7 +30,8 @@ var (
 	dump_bytecode *bool = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 )
 
-func OneShot(logfile string, lines chan string) error {
+func OneShot(logfile string, lines chan string, stop chan bool) error {
+	defer func() { stop <- true }()
 	l, err := os.Open(logfile)
 	if err != nil {
 		return fmt.Errorf("Failed to open log file %q: %s", logfile, err)
@@ -128,11 +129,12 @@ func main() {
 	}
 
 	lines := make(chan string)
-	go e.run(lines)
+	stop := make(chan bool, 1)
+	go e.run(lines, stop)
 
 	if *one_shot {
 		for _, pathname := range pathnames {
-			err := OneShot(pathname, lines)
+			err := OneShot(pathname, lines, stop)
 			if err != nil {
 				log.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
 			}

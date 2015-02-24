@@ -147,10 +147,14 @@ func (d *Datum) Get() int64 {
 	return atomic.LoadInt64(&d.Value)
 }
 
-func init() {
+func ClearMetrics() {
 	metric_lock.Lock()
 	defer metric_lock.Unlock()
 	metrics = make([]*Metric, 0)
+}
+
+func init() {
+	ClearMetrics()
 }
 
 func ExportMetric(m *Metric) {
