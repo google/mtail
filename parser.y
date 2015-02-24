@@ -454,7 +454,6 @@ deco
   ;
 
 %%
-
 const EOF = 0
 
 type parser struct {
