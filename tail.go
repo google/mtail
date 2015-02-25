@@ -18,6 +18,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"unicode/utf8"
 )
@@ -43,10 +44,12 @@ type tailer struct {
 
 	quit chan bool
 
-	watched  map[string]struct{} // Names of logs being watched.
-	lines    chan string         // Logfile lines being emitted.
-	files    map[string]*os.File // File handles for each pathname.
-	partials map[string]string   // Accumulator for the currently read line for each pathname.
+	watched      map[string]struct{} // Names of logs being watched.
+	watched_lock sync.RWMutex        // protects `watched'
+	lines        chan string         // Logfile lines being emitted.
+	files        map[string]*os.File // File handles for each pathname.
+	files_lock   sync.Mutex          // protects `files'
+	partials     map[string]string   // Accumulator for the currently read line for each pathname.
 }
 
 // NewTailer returns a new tailer.
@@ -63,6 +66,19 @@ func NewTailer(lines chan string, w Watcher) *tailer {
 	return t
 }
 
+func (t *tailer) addWatched(path string) {
+	t.watched_lock.Lock()
+	defer t.watched_lock.Unlock()
+	t.watched[path] = struct{}{}
+}
+
+func (t *tailer) isWatching(path string) bool {
+	t.watched_lock.RLock()
+	defer t.watched_lock.RUnlock()
+	_, ok := t.watched[path]
+	return ok
+}
+
 // Tail registers a file to be tailed.
 func (t *tailer) Tail(pathname string) {
 	fullpath, err := filepath.Abs(pathname)
@@ -70,9 +86,8 @@ func (t *tailer) Tail(pathname string) {
 		log.Printf("Failed to find absolute path for %q: %s\n", pathname, err)
 		return
 	}
-	if _, ok := t.watched[fullpath]; !ok {
-		// Mark this file as watchable.
-		t.watched[fullpath] = struct{}{}
+	if !t.isWatching(fullpath) {
+		t.addWatched(fullpath)
 		log_count.Add(1)
 		t.openLogFile(fullpath, false)
 	}
@@ -117,11 +132,13 @@ func inode(f os.FileInfo) uint64 {
 
 // handleLogCreate handles both new and rotated log files.
 func (t *tailer) handleLogCreate(pathname string) {
-	if _, ok := t.watched[pathname]; !ok {
+	if !t.isWatching(pathname) {
 		log.Printf("Not watching path %q, ignoring.\n", pathname)
 		return
 	}
 
+	t.files_lock.Lock()
+	defer t.files_lock.Unlock()
 	if fd, ok := t.files[pathname]; ok {
 		s1, err := fd.Stat()
 		if err != nil {
@@ -158,37 +175,39 @@ func (t *tailer) handleLogCreate(pathname string) {
 // start or end of the file. Rotated logs should start at the start, but logs
 // opened for the first time start at the end.
 func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
-	if _, ok := t.watched[pathname]; !ok {
+	if !t.isWatching(pathname) {
 		log.Printf("Not watching %q, ignoring.\n", pathname)
 		return
 	}
 
 	d := path.Dir(pathname)
-	if _, ok := t.watched[d]; !ok {
+	if !t.isWatching(d) {
 		err := t.w.AddWatch(d, tLogCreateMask)
 		if err != nil {
 			log.Printf("Adding a create watch failed on %q: %s\n", d, err)
 		}
-		t.watched[d] = struct{}{}
+		t.addWatched(d)
 	}
 
-	var err error
-	t.files[pathname], err = os.Open(pathname)
+	fd, err := os.Open(pathname)
 	if err != nil {
-		// Doesn't exist yet. We're watching the directory, so clear this
-		// invalid file pointer and return successfully.
+		// Doesn't exist yet. We're watching the directory, so we'll pick it up
+		// again on create; return successfully.
 		if os.IsNotExist(err) {
-			delete(t.files, pathname)
 			return
 		}
 		log.Printf("Failed to open %q for reading: %s\n", pathname, err)
 		log_errors.Add(pathname, 1)
 		return
 	}
+	t.files_lock.Lock()
+	t.files[pathname] = fd
 
 	if seek_to_start {
 		t.files[pathname].Seek(0, os.SEEK_SET)
 	}
+
+	t.files_lock.Unlock()
 
 	err = t.w.AddWatch(pathname, tLogUpdateMask)
 	if err != nil {

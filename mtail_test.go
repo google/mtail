@@ -249,7 +249,7 @@ func TestHandleNewProgram(t *testing.T) {
 
 	expected_prog_loads := "{}"
 	if prog_loads.String() != expected_prog_loads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\trecevied: %s", expected_prog_loads, prog_loads.String())
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, prog_loads.String())
 	}
 
 	prog_path := path.Join(workdir, "prog.em")
@@ -264,7 +264,7 @@ func TestHandleNewProgram(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	expected_prog_loads = `{"prog.em": 1}`
 	if prog_loads.String() != expected_prog_loads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\trecevied: %s", expected_prog_loads, prog_loads.String())
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, prog_loads.String())
 	}
 
 	bad_prog_path := path.Join(workdir, "prog.em.dpkg-dist")
@@ -278,7 +278,7 @@ func TestHandleNewProgram(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	expected_prog_loads = `{"prog.em": 1}`
 	if prog_loads.String() != expected_prog_loads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\trecevied: %s", expected_prog_loads, prog_loads.String())
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, prog_loads.String())
 	}
 	expected_prog_errs := `{}`
 	if prog_load_errors.String() != expected_prog_errs {
@@ -289,7 +289,7 @@ func TestHandleNewProgram(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	expected_prog_loads = `{"prog.em": 2}`
 	if prog_loads.String() != expected_prog_loads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\trecevied: %s", expected_prog_loads, prog_loads.String())
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, prog_loads.String())
 	}
 	expected_prog_errs = `{}`
 	if prog_load_errors.String() != expected_prog_errs {
@@ -308,7 +308,7 @@ func TestHandleNewProgram(t *testing.T) {
 
 	expected_prog_loads = `{"prog.em": 2}`
 	if prog_loads.String() != expected_prog_loads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\trecevied: %s", expected_prog_loads, prog_loads.String())
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, prog_loads.String())
 	}
 	expected_prog_errs = `{"broken.em": 1}`
 	if prog_load_errors.String() != expected_prog_errs {

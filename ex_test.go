@@ -160,25 +160,29 @@ func BenchmarkExamplePrograms(b *testing.B) {
 		lines, errs := CompileAndLoad(tc.programfile, stop)
 		if errs != "" {
 			b.Errorf(errs)
+			continue
 		}
 		r := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
+				stop_fake := make(chan bool, 1)
 				line_count.Set(0)
 				b.StartTimer()
-				err := OneShot(tc.logfile, lines, stop)
+				err := OneShot(tc.logfile, lines, stop_fake)
 				if err != nil {
-					b.Errorf("OneShot compile failed: %s", err)
+					b.Errorf("OneShot log parse failed: %s", err)
 					return
 				}
 				b.StopTimer()
 				l, err := strconv.ParseInt(line_count.String(), 10, 64)
 				if err != nil {
 					b.Errorf("strconv.ParseInt failed: %s", err)
+					return
 				}
 				b.SetBytes(l)
 			}
 		})
+		stop <- true
 
 		kl_s := float64(r.Bytes) * float64(r.N) / (r.T.Seconds() * 1000)
 		ms_run := float64(r.NsPerOp()) / 1e6
