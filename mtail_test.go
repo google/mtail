@@ -156,6 +156,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		return
 	}
 	// make temp dir
+	t.Logf("making temp dir")
 	workdir, err := ioutil.TempDir("", "mtail_test")
 	if err != nil {
 		t.Errorf("could not create temporary directory: %s", err)
@@ -171,6 +172,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	pathnames := []string{log_filepath}
 	stop := startMtail(t, pathnames, "")
 	defer func() { stop <- true }()
+	t.Logf("starting mtail")
 
 	// touch log file
 	log_file, err := os.Create(log_filepath)
@@ -184,6 +186,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		log_file.WriteString(x + "\n")
 		log_file.Sync()
 	}
+	t.Logf("wrote log lines")
 	// TODO(jaq): remove slow sleep
 	time.Sleep(100 * time.Millisecond)
 	// check log line count increase

@@ -415,7 +415,6 @@ func (e *engine) run(lines chan string, stop chan bool) {
 Loop:
 	for {
 		select {
-		// TODO(jaq): stop?
 		case line := <-lines:
 			line_count.Add(1)
 			for _, v := range *e {
