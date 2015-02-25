@@ -53,17 +53,18 @@ func OneShot(logfile string, lines chan string, stop chan bool) error {
 	}
 }
 
-func StartMtail(lines chan string, pathnames []string) {
+func StartTailing(lines chan string, pathnames []string) {
 	tw, err := NewInotifyWatcher()
 	if err != nil {
-		log.Fatal("Couldn't create watcher:", err)
+		log.Fatal("Couldn't create log path watcher:", err)
 	}
 	t := NewTailer(lines, tw)
 	if t == nil {
-		log.Fatal("Couldn't create a tailer.")
+		log.Fatal("Couldn't create a log tailer.")
 	}
 
 	for _, pathname := range pathnames {
+		log.Printf("tailling %s\n", pathname)
 		t.Tail(pathname)
 	}
 }
@@ -146,7 +147,7 @@ func main() {
 		os.Stdout.Write(b)
 		WriteMetrics()
 	} else {
-		StartMtail(lines, pathnames)
+		StartTailing(lines, pathnames)
 
 		c := &console{}
 		log.SetOutput(c)

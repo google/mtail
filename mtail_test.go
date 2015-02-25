@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"strings"
@@ -34,7 +35,7 @@ func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) chan
 	stop := make(chan bool, 1)
 	line_count.Set(0)
 	go p.e.run(lines, stop)
-	StartMtail(lines, log_pathnames)
+	StartTailing(lines, log_pathnames)
 	return stop
 }
 
@@ -152,6 +153,7 @@ func TestHandleLogRotation(t *testing.T) {
 }
 
 func TestHandleNewLogAfterStart(t *testing.T) {
+	log.SetFlags(log.Lshortfile)
 	if testing.Short() {
 		return
 	}
@@ -171,7 +173,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
 	stop := startMtail(t, pathnames, "")
-	defer func() { stop <- true }()
+	defer func() { t.Logf("stoppin gmtail"); stop <- true }()
 	t.Logf("starting mtail")
 
 	// touch log file
@@ -180,6 +182,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		t.Errorf("could not touch log file: %s", err)
 	}
 	defer log_file.Close()
+	t.Logf("opened log %s", log_filepath)
 	ex_lines := []string{"hi", "hi2", "hi3"}
 	for _, x := range ex_lines {
 		// write to log file
