@@ -15,7 +15,7 @@ import (
 
 var test_program = "/$/ { }"
 
-func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) {
+func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) chan bool {
 	w, err := NewInotifyWatcher()
 	if err != nil {
 		t.Errorf("Couldn't create watcher: %s", err)
@@ -35,6 +35,7 @@ func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) {
 	line_count.Set(0)
 	go p.e.run(lines, stop)
 	StartMtail(lines, log_pathnames)
+	return stop
 }
 
 func TestHandleLogUpdates(t *testing.T) {
@@ -60,7 +61,8 @@ func TestHandleLogUpdates(t *testing.T) {
 	}
 	defer log_file.Close()
 	pathnames := []string{log_filepath}
-	startMtail(t, pathnames, "")
+	stop := startMtail(t, pathnames, "")
+	defer func() { stop <- true }()
 	ex_lines := []string{"hi", "hi2", "hi3"}
 	for i, x := range ex_lines {
 		// write to log file
@@ -101,7 +103,8 @@ func TestHandleLogRotation(t *testing.T) {
 	stop := make(chan bool, 1)
 	hup := make(chan bool, 1)
 	pathnames := []string{log_filepath}
-	startMtail(t, pathnames, "")
+	end := startMtail(t, pathnames, "")
+	defer func() { end <- true }()
 
 	go func() {
 		log_file := log_file
@@ -166,7 +169,8 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	// Start up mtail
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
-	startMtail(t, pathnames, "")
+	stop := startMtail(t, pathnames, "")
+	defer func() { stop <- true }()
 
 	// touch log file
 	log_file, err := os.Create(log_filepath)
@@ -178,6 +182,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	for _, x := range ex_lines {
 		// write to log file
 		log_file.WriteString(x + "\n")
+		log_file.Sync()
 	}
 	// TODO(jaq): remove slow sleep
 	time.Sleep(100 * time.Millisecond)
@@ -206,7 +211,8 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	// Start mtail
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
-	startMtail(t, pathnames, "")
+	stop := startMtail(t, pathnames, "")
+	defer func() { stop <- true }()
 
 	// touch log file
 	new_log_filepath := path.Join(workdir, "log1")
@@ -245,7 +251,8 @@ func TestHandleNewProgram(t *testing.T) {
 	workdir := makeTempDir(t)
 	defer removeTempDir(t, workdir)
 
-	startMtail(t, []string{}, workdir)
+	stop := startMtail(t, []string{}, workdir)
+	defer func() { stop <- true }()
 
 	expected_prog_loads := "{}"
 	if prog_loads.String() != expected_prog_loads {
