@@ -64,7 +64,6 @@ func StartTailing(lines chan string, pathnames []string) {
 	}
 
 	for _, pathname := range pathnames {
-		log.Printf("tailling %s\n", pathname)
 		t.Tail(pathname)
 	}
 }

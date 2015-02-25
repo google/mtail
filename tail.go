@@ -69,7 +69,6 @@ func NewTailer(lines chan string, w Watcher) *tailer {
 func (t *tailer) addWatched(path string) {
 	t.watched_lock.Lock()
 	defer t.watched_lock.Unlock()
-	log.Printf("added watched file: %s\n", path)
 	t.watched[path] = struct{}{}
 }
 
@@ -77,7 +76,6 @@ func (t *tailer) isWatching(path string) bool {
 	t.watched_lock.RLock()
 	defer t.watched_lock.RUnlock()
 	_, ok := t.watched[path]
-	log.Printf("is watching %s: %v\n", path, ok)
 	return ok
 }
 
