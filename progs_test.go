@@ -4,10 +4,11 @@
 package main
 
 import (
-	"code.google.com/p/go.exp/inotify"
 	"reflect"
 	"testing"
 	"time"
+
+	"code.google.com/p/go.exp/inotify"
 )
 
 type fakewatcher struct {
