@@ -103,30 +103,23 @@ func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, 
 	defer metric_lock.RUnlock()
 
 	lc := make(chan *LabelSet)
-	quit := make(chan bool, 1)
 	for _, m := range metrics {
 		export_total.Add(1)
-		go m.EmitLabelSets(lc, quit)
-		for {
-			select {
-			case l := <-lc:
-				line := f(m, l)
-				_, err := fmt.Fprint(c, line)
-				if err == nil {
-					_, err = bufio.NewReader(c).ReadString('\n')
-					if err != nil {
-						return fmt.Errorf("Read error: %s\n", err)
-					} else {
-						export_success.Add(1)
-					}
+		go m.EmitLabelSets(lc)
+		for l := range lc {
+			line := f(m, l)
+			_, err := fmt.Fprint(c, line)
+			if err == nil {
+				_, err = bufio.NewReader(c).ReadString('\n')
+				if err != nil {
+					return fmt.Errorf("Read error: %s\n", err)
 				} else {
-					return fmt.Errorf("Write error: %s\n", err)
+					export_success.Add(1)
 				}
-			case <-quit:
-				goto ret
+			} else {
+				return fmt.Errorf("Write error: %s\n", err)
 			}
 		}
-	ret:
 	}
 	return nil
 }

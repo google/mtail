@@ -27,10 +27,6 @@ func (d *Datum) String() string {
 	return fmt.Sprintf("%v", *d)
 }
 
-func (n *Node) String() string {
-	return fmt.Sprintf("%v", *n)
-}
-
 func (m *Metric) String() string {
 	return fmt.Sprintf("%v", *m)
 }

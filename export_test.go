@@ -14,17 +14,10 @@ import (
 func FakeSocketWrite(f formatter, m *Metric) []string {
 	var ret []string
 	lc := make(chan *LabelSet)
-	quit := make(chan bool)
-	go m.EmitLabelSets(lc, quit)
-	for {
-		select {
-		case l := <-lc:
-			ret = append(ret, f(m, l))
-		case <-quit:
-			goto ret
-		}
+	go m.EmitLabelSets(lc)
+	for l := range lc {
+		ret = append(ret, f(m, l))
 	}
-ret:
 	sort.Strings(ret)
 	return ret
 }
