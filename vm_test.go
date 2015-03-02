@@ -173,6 +173,7 @@ var instructions = []struct {
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
+		ClearMetrics()
 		m := append(metrics,
 			NewMetric("foo", "test", Counter),
 			NewMetric("bar", "test", Counter))
