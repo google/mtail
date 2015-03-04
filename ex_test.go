@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/kylelemons/godebug/pretty"
 	"os"
-	"reflect"
 	"runtime"
 	"sort"
 	"strconv"
@@ -24,15 +24,15 @@ var (
 
 // Debug printing.
 func (d *Datum) String() string {
-	return fmt.Sprintf("%v", *d)
+	return fmt.Sprintf("%+v", *d)
 }
 
 func (lv *LabelValue) String() string {
-	return fmt.Sprintf("%v", *lv)
+	return fmt.Sprintf("%+v", *lv)
 }
 
 func (m *Metric) String() string {
-	return fmt.Sprintf("%v", *m)
+	return fmt.Sprintf("%+v", *m)
 }
 
 // Sort a slice of metrics.
@@ -152,8 +152,9 @@ func TestExamplePrograms(t *testing.T) {
 		metric_lock.Lock()
 		sort.Sort(Metrics(expected_metrics))
 		sort.Sort(Metrics(metrics))
-		if !reflect.DeepEqual(expected_metrics, metrics) {
-			t.Errorf("%s: metrics don't match.\n\texpected: %v\n\treceived: %v", tc.programfile, expected_metrics, metrics)
+		diff := pretty.Compare(expected_metrics, metrics)
+		if len(diff) > 0 {
+			t.Errorf("%s: metrics don't match:\n%s\n", tc.programfile, diff)
 		}
 		metric_lock.Unlock()
 
