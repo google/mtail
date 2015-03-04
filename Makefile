@@ -43,11 +43,11 @@ emgen/emgen: emgen/emgen.go
 
 .PHONY: test
 test: $(GOFILES) $(GOTESTFILES)
-	go test -gcflags '-N' -v -race
+	go test -gcflags '-N -l' -v -race
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES)
-	go test -gcflags '-N' -v -test.short -race
+	go test -gcflags '-N -l' -v -test.short -race
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES)

@@ -57,9 +57,8 @@ type Metric struct {
 
 func NewMetric(name string, prog string, kind metric_type, keys ...string) *Metric {
 	m := &Metric{Name: name, Program: prog, Kind: kind,
-		Keys: make([]string, len(keys), len(keys)),
-		//LabelValues: make([]*LabelValue, 0)}
-	}
+		Keys:        make([]string, len(keys), len(keys)),
+		LabelValues: make([]*LabelValue, 0)}
 	for i, k := range keys {
 		m.Keys[i] = k
 	}
