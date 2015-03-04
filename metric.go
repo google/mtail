@@ -56,18 +56,14 @@ type Metric struct {
 }
 
 func NewMetric(name string, prog string, kind metric_type, keys ...string) *Metric {
-	m := &Metric{Name: name, Program: prog, Kind: kind}
-	if len(keys) > 0 {
-		m.Keys = make([]string, len(keys), len(keys))
-		copy(m.Keys, keys)
-	}
+	m := &Metric{Name: name, Program: prog, Kind: kind,
+		Keys:        make([]string, len(keys), len(keys)),
+		LabelValues: make([]*LabelValue, 0)}
+	copy(m.Keys, keys)
 	return m
 }
 
 func (m *Metric) FindLabelValueOrNil(labelvalues []string) *LabelValue {
-	if m.LabelValues == nil {
-		return nil
-	}
 Loop:
 	for i, lv := range m.LabelValues {
 		for j := 0; j < len(lv.Labels); j++ {
