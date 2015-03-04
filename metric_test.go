@@ -21,8 +21,16 @@ func TestScalarMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter)
 	d, _ := v.GetDatum()
 	d.IncBy(1, time.Now())
-	if v.Values[hashLabels()].Value != 1 {
-		t.Errorf("fail")
+	lv := v.FindLabelValueOrNil([]string{})
+	if lv == nil {
+		t.Errorf("couldn't find labelvalue")
+	}
+	new_d := lv.Value
+	if new_d == nil {
+		t.Errorf("new_d is nil")
+	}
+	if new_d.Value != 1 {
+		t.Errorf("value not 1")
 	}
 	// TODO: try setting datum with labels on scalar
 }
@@ -31,35 +39,22 @@ func TestDimensionedMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, "foo")
 	d, _ := v.GetDatum("a")
 	d.IncBy(1, time.Now())
-	if v.Values[hashLabels("a")].Value != 1 {
+	if v.FindLabelValueOrNil([]string{"a"}).Value.Value != 1 {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar")
 	d, _ = v.GetDatum("a", "b")
 	d.IncBy(1, time.Now())
-	if v.Values[hashLabels("a", "b")].Value != 1 {
+	if v.FindLabelValueOrNil([]string{"a", "b"}).Value.Value != 1 {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar", "quux")
 	d, _ = v.GetDatum("a", "b", "c")
 	d.IncBy(1, time.Now())
-	if v.Values[hashLabels("a", "b", "c")].Value != 1 {
+	if v.FindLabelValueOrNil([]string{"a", "b", "c"}).Value.Value != 1 {
 		t.Errorf("fail")
-	}
-}
-
-func TestHashLabels(t *testing.T) {
-	a := hashLabels()
-	if a != 1 {
-		t.Errorf("empty hash was %v\n", a)
-	}
-	b := hashLabels("a")
-	c := hashLabels("a", "b")
-	d := hashLabels("a", "c")
-	if a == b || a == c || a == d || b == c || b == d || c == d {
-		t.Errorf("hash values matched: a %v b %v c %v d %v\b", a, b, c, d)
 	}
 }
 
@@ -113,5 +108,19 @@ Loop:
 		}
 		t.Errorf("Labels don't match: couldn't find %v in labels\n\texpected %v\n\treceived %v\n", expected_labels[i], expected_labels, labels)
 
+	}
+}
+
+func TestFindLabelValueOrNil(t *testing.T) {
+	m0 := NewMetric("foo", "prog", Counter)
+	if r0 := m0.FindLabelValueOrNil([]string{}); r0 != nil {
+		t.Errorf("m0 should be nil: %v", r0)
+	}
+	d, err := m0.GetDatum()
+	if err != nil {
+		t.Errorf("Bad datum %v: %v\n", d, err)
+	}
+	if r1 := m0.FindLabelValueOrNil([]string{}); r1 == nil {
+		t.Errorf("m0 should not be nil: %v", r1)
 	}
 }

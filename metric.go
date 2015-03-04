@@ -6,8 +6,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"hash/fnv"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -44,51 +42,55 @@ type Settable interface {
 	Set(value int64, ts time.Time)
 }
 
+type LabelValue struct {
+	Labels []string
+	Value  *Datum
+}
+
 type Metric struct {
-	Name    string // Name
-	Program string // Instantiating program
-	Kind    metric_type
-	Keys    []string
-	Labels  map[uint64][]string
-	Values  map[uint64]*Datum
+	Name        string // Name
+	Program     string // Instantiating program
+	Kind        metric_type
+	Keys        []string
+	LabelValues []*LabelValue
 }
 
 func NewMetric(name string, prog string, kind metric_type, keys ...string) *Metric {
 	m := &Metric{Name: name, Program: prog, Kind: kind,
-		Keys:   make([]string, len(keys), len(keys)),
-		Labels: make(map[uint64][]string, 0),
-		Values: make(map[uint64]*Datum, 0)}
+		Keys: make([]string, len(keys), len(keys)),
+		//LabelValues: make([]*LabelValue, 0)}
+	}
 	for i, k := range keys {
 		m.Keys[i] = k
 	}
 	return m
 }
 
-func hashLabels(values ...string) (result uint64) {
-	var prime uint64 = 31
-	result = 1
-	for _, s := range values {
-		hash := fnv.New64a()
-		hash.Write([]byte(s))
-		result = result*prime + hash.Sum64()
+func (m *Metric) FindLabelValueOrNil(labelvalues []string) *LabelValue {
+Loop:
+	for i, lv := range m.LabelValues {
+		for j := 0; j < len(lv.Labels); j++ {
+			if lv.Labels[j] != labelvalues[j] {
+				break Loop
+			}
+		}
+		return m.LabelValues[i]
 	}
-	return result
+	return nil
 }
 
-func (m *Metric) GetDatum(labelvalues ...string) (*Datum, error) {
+func (m *Metric) GetDatum(labelvalues ...string) (d *Datum, err error) {
 	if len(labelvalues) != len(m.Keys) {
 		return nil, errors.New(fmt.Sprintf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m))
 	}
-	index := hashLabels(labelvalues...)
 	metric_lock.Lock()
 	defer metric_lock.Unlock()
-	d, ok := m.Values[index]
-	if !ok {
+	if lv := m.FindLabelValueOrNil(labelvalues); lv != nil {
+		d = lv.Value
+	} else {
 		d = &Datum{}
-		m.Labels[index] = labelvalues
-		m.Values[index] = d
+		m.LabelValues = append(m.LabelValues, &LabelValue{labelvalues, d})
 	}
-
 	return d, nil
 }
 
@@ -105,20 +107,9 @@ func zip(keys []string, values []string) map[string]string {
 	return r
 }
 
-type uint64slice []uint64
-
-func (s uint64slice) Len() int           { return len(s) }
-func (s uint64slice) Less(i, j int) bool { return s[i] < s[j] }
-func (s uint64slice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-
 func (m *Metric) EmitLabelSets(c chan *LabelSet) {
-	var keys []uint64
-	for k := range m.Values {
-		keys = append(keys, k)
-	}
-	sort.Sort(uint64slice(keys))
-	for _, k := range keys {
-		ls := &LabelSet{zip(m.Keys, m.Labels[k]), m.Values[k]}
+	for _, lv := range m.LabelValues {
+		ls := &LabelSet{zip(m.Keys, lv.Labels), lv.Value}
 		c <- ls
 	}
 	close(c)

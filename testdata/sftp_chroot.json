@@ -6,32 +6,44 @@
     "Keys": [
       "username"
     ],
-    "Values": {
-      "D": null,
-      "Next": {
-        "user1": {
-          "D": {
-            "Value": 1,
-            "Time": "0000-08-19T02:16:40Z"
-          },
-          "Next": {}
-        },
-        "user2": {
-          "D": {
-            "Value": 1,
-            "Time": "0000-08-19T02:19:58Z"
-          },
-          "Next": {}
-        },
-        "user3": {
-          "D": {
-            "Value": 2,
-            "Time": "0000-08-19T02:28:36Z"
-          },
-          "Next": {}
+    "LabelValues": [
+      {
+        "Labels": [
+          "user1"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:16:40Z"
+        }
+      },
+      {
+        "Labels": [
+          "user3"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:18:14Z"
+        }
+      },
+      {
+        "Labels": [
+          "user2"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:19:58Z"
+        }
+      },
+      {
+        "Labels": [
+          "user3"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:28:36Z"
         }
       }
-    }
+    ]
   },
   {
     "Name": "logout_count",
@@ -40,77 +52,86 @@
     "Keys": [
       "username"
     ],
-    "Values": {
-      "D": null,
-      "Next": {
-        "user2": {
-          "D": {
-            "Value": 1,
-            "Time": "0000-08-19T02:24:44Z"
-          },
-          "Next": {}
-        },
-        "user3": {
-          "D": {
-            "Value": 1,
-            "Time": "0000-08-19T02:38:27Z"
-          },
-          "Next": {}
+    "LabelValues": [
+      {
+        "Labels": [
+          "user2"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:24:44Z"
+        }
+      },
+      {
+        "Labels": [
+          "user3"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:38:27Z"
         }
       }
-    }
+    ]
   },
   {
     "Name": "bytes_read",
     "Program": "sftp.em",
     "Kind": 0,
     "Keys": [],
-    "Values": {
-      "D": {
-        "Value": 78171021,
-        "Time": "0000-08-19T02:34:05Z"
-      },
-      "Next": null
-    }
+    "LabelValues": [
+      {
+        "Labels": [],
+        "Value": {
+          "Value": 78171021,
+          "Time": "0000-08-19T02:34:05Z"
+        }
+      }
+    ]
   },
   {
     "Name": "files_read",
     "Program": "sftp.em",
     "Kind": 0,
     "Keys": [],
-    "Values": {
-      "D": {
-        "Value": 10,
-        "Time": "0000-08-19T02:34:05Z"
-      },
-      "Next": null
-    }
+    "LabelValues": [
+      {
+        "Labels": [],
+        "Value": {
+          "Value": 10,
+          "Time": "0000-08-19T02:34:05Z"
+        }
+      }
+    ]
   },
   {
     "Name": "bytes_written",
     "Program": "sftp.em",
     "Kind": 0,
     "Keys": [],
-    "Values": {
-      "D": {
-        "Value": 739840,
-        "Time": "0000-08-19T02:37:58Z"
-      },
-      "Next": null
-    }
+    "LabelValues": [
+      {
+        "Labels": [],
+        "Value": {
+          "Value": 739840,
+          "Time": "0000-08-19T02:37:58Z"
+        }
+      }
+    ]
   },
   {
     "Name": "files_written",
     "Program": "sftp.em",
     "Kind": 0,
     "Keys": [],
-    "Values": {
-      "D": {
-        "Value": 2,
-        "Time": "0000-08-19T02:37:58Z"
-      },
-      "Next": null
-    }
+    "LabelValues": [
+      {
+        "Labels": [],
+        "Value": {
+          "Value": 2,
+          "Time": "0000-08-19T02:37:58Z"
+        }
+      }
+    ]
   },
   {
     "Name": "user_bytes_read",
@@ -119,32 +140,89 @@
     "Keys": [
       "username"
     ],
-    "Values": {
-      "D": null,
-      "Next": {
-        "user1": {
-          "D": {
-            "Value": 74809241,
-            "Time": "0000-08-19T02:29:13Z"
-          },
-          "Next": {}
-        },
-        "user5": {
-          "D": {
-            "Value": 54272,
-            "Time": "0000-08-19T02:34:05Z"
-          },
-          "Next": {}
-        },
-        "user6": {
-          "D": {
-            "Value": 3307508,
-            "Time": "0000-08-19T02:31:25Z"
-          },
-          "Next": {}
+    "LabelValues": [
+      {
+        "Labels": [
+          "user1"
+        ],
+        "Value": {
+          "Value": 74809241,
+          "Time": "0000-08-19T02:29:13Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 120306,
+          "Time": "0000-08-19T02:25:54Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 904613,
+          "Time": "0000-08-19T02:27:27Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 835584,
+          "Time": "0000-08-19T02:29:00Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 110066,
+          "Time": "0000-08-19T02:29:09Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 702175,
+          "Time": "0000-08-19T02:30:26Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 529607,
+          "Time": "0000-08-19T02:31:17Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 105157,
+          "Time": "0000-08-19T02:31:25Z"
+        }
+      },
+      {
+        "Labels": [
+          "user5"
+        ],
+        "Value": {
+          "Value": 54272,
+          "Time": "0000-08-19T02:34:05Z"
         }
       }
-    }
+    ]
   },
   {
     "Name": "user_files_read",
@@ -153,32 +231,89 @@
     "Keys": [
       "username"
     ],
-    "Values": {
-      "D": null,
-      "Next": {
-        "user1": {
-          "D": {
-            "Value": 2,
-            "Time": "0000-08-19T02:29:13Z"
-          },
-          "Next": {}
-        },
-        "user5": {
-          "D": {
-            "Value": 1,
-            "Time": "0000-08-19T02:34:05Z"
-          },
-          "Next": {}
-        },
-        "user6": {
-          "D": {
-            "Value": 7,
-            "Time": "0000-08-19T02:31:25Z"
-          },
-          "Next": {}
+    "LabelValues": [
+      {
+        "Labels": [
+          "user1"
+        ],
+        "Value": {
+          "Value": 2,
+          "Time": "0000-08-19T02:29:13Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:25:54Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:27:27Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:29:00Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:29:09Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:30:26Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:31:17Z"
+        }
+      },
+      {
+        "Labels": [
+          "user6"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:31:25Z"
+        }
+      },
+      {
+        "Labels": [
+          "user5"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "0000-08-19T02:34:05Z"
         }
       }
-    }
+    ]
   },
   {
     "Name": "user_bytes_written",
@@ -187,18 +322,17 @@
     "Keys": [
       "username"
     ],
-    "Values": {
-      "D": null,
-      "Next": {
-        "user4": {
-          "D": {
-            "Value": 739840,
-            "Time": "0000-08-19T02:37:58Z"
-          },
-          "Next": {}
+    "LabelValues": [
+      {
+        "Labels": [
+          "user4"
+        ],
+        "Value": {
+          "Value": 739840,
+          "Time": "0000-08-19T02:37:58Z"
         }
       }
-    }
+    ]
   },
   {
     "Name": "user_files_written",
@@ -207,17 +341,16 @@
     "Keys": [
       "username"
     ],
-    "Values": {
-      "D": null,
-      "Next": {
-        "user4": {
-          "D": {
-            "Value": 2,
-            "Time": "0000-08-19T02:37:58Z"
-          },
-          "Next": {}
+    "LabelValues": [
+      {
+        "Labels": [
+          "user4"
+        ],
+        "Value": {
+          "Value": 2,
+          "Time": "0000-08-19T02:37:58Z"
         }
       }
-    }
+    ]
   }
 ]

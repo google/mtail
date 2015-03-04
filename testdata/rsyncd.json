@@ -6,51 +6,416 @@
     "Keys": [
       "operation"
     ],
-    "Values": {
-      "D": null,
-      "Next": {
-        "received": {
-          "D": {
-            "Value": 975017,
-            "Time": "2011-02-23T05:54:10Z"
-          },
-          "Next": {}
-        },
-        "sent": {
-          "D": {
-            "Value": 62793673,
-            "Time": "2011-02-23T05:54:10Z"
-          },
-          "Next": {}
+    "LabelValues": [
+      {
+        "Labels": [
+          "sent"
+        ],
+        "Value": {
+          "Value": 62793673,
+          "Time": "2011-02-23T05:54:10Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 162,
+          "Time": "2011-02-23T05:50:33Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:51:02Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:51:03Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:51:03Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:51:04Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:51:05Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 194156,
+          "Time": "2011-02-23T05:51:26Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 194156,
+          "Time": "2011-02-23T05:51:30Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 194156,
+          "Time": "2011-02-23T05:51:30Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 194156,
+          "Time": "2011-02-23T05:51:31Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 194156,
+          "Time": "2011-02-23T05:51:34Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:52:02Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:52:04Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:52:04Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:52:04Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:52:05Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:52:05Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:52:06Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:52:06Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:52:07Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:52:09Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:53:02Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:53:03Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:53:04Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:53:04Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:53:04Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:53:05Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:53:06Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:53:06Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:53:08Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:53:10Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:54:02Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:54:02Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:54:03Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:54:04Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:54:04Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:54:05Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 119,
+          "Time": "2011-02-23T05:54:06Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:54:06Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:54:06Z"
+        }
+      },
+      {
+        "Labels": [
+          "received"
+        ],
+        "Value": {
+          "Value": 113,
+          "Time": "2011-02-23T05:54:10Z"
         }
       }
-    }
+    ]
   },
   {
     "Name": "connections_total",
     "Program": "rsyncd.em",
     "Kind": 0,
     "Keys": [],
-    "Values": {
-      "D": {
-        "Value": 52,
-        "Time": "2011-02-22T21:54:13Z"
-      },
-      "Next": null
-    }
+    "LabelValues": [
+      {
+        "Labels": [],
+        "Value": {
+          "Value": 52,
+          "Time": "2011-02-22T21:54:13Z"
+        }
+      }
+    ]
   },
   {
     "Name": "connection-time_total",
     "Program": "rsyncd.em",
     "Kind": 0,
     "Keys": [],
-    "Values": {
-      "D": {
-        "Value": 1181011,
-        "Time": "2011-02-23T05:54:10Z"
-      },
-      "Next": null
-    }
+    "LabelValues": [
+      {
+        "Labels": [],
+        "Value": {
+          "Value": 51937643122,
+          "Time": "2011-02-23T05:54:10Z"
+        }
+      }
+    ]
   },
   {
     "Name": "transfers_total",
@@ -60,34 +425,267 @@
       "module",
       "operation"
     ],
-    "Values": {
-      "D": null,
-      "Next": {
-        "module": {
-          "D": null,
-          "Next": {
-            "send": {
-              "D": {
-                "Value": 2,
-                "Time": "2011-02-23T05:50:32Z"
-              },
-              "Next": {}
-            }
-          }
-        },
-        "repo": {
-          "D": null,
-          "Next": {
-            "send": {
-              "D": {
-                "Value": 25,
-                "Time": "2011-02-23T05:51:14Z"
-              },
-              "Next": {}
-            }
-          }
+    "LabelValues": [
+      {
+        "Labels": [
+          "module",
+          "send"
+        ],
+        "Value": {
+          "Value": 2,
+          "Time": "2011-02-23T05:50:32Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:08Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:08Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:08Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:08Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:08Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:08Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:08Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:09Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:10Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:10Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:11Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:11Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:11Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:13Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:14Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:14Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:14Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:14Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:14Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:14Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:14Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:14Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:14Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:14Z"
+        }
+      },
+      {
+        "Labels": [
+          "repo",
+          "send"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2011-02-23T05:51:14Z"
         }
       }
-    }
+    ]
   }
 ]
