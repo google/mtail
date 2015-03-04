@@ -155,7 +155,7 @@ func TestHandleLogRotation(t *testing.T) {
 func TestHandleNewLogAfterStart(t *testing.T) {
 	log.SetFlags(log.Lshortfile)
 	if testing.Short() {
-		t.Skip("Skipping test in short mode.")
+		t.Skip("skipping test in short mode")
 	}
 	// make temp dir
 	workdir, err := ioutil.TempDir("", "mtail_test")

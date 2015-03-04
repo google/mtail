@@ -99,7 +99,7 @@ func CompileAndLoad(programfile string, stop chan bool) (chan string, string) {
 
 func TestExamplePrograms(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping test ins short mode")
+		t.Skip("skipping test in short mode")
 	}
 	*syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
