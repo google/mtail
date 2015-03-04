@@ -70,7 +70,7 @@ Loop:
 	for i, lv := range m.LabelValues {
 		for j := 0; j < len(lv.Labels); j++ {
 			if lv.Labels[j] != labelvalues[j] {
-				break Loop
+				continue Loop
 			}
 		}
 		return m.LabelValues[i]

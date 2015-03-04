@@ -41,7 +41,7 @@ func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) chan
 
 func TestHandleLogUpdates(t *testing.T) {
 	if testing.Short() {
-		return
+		t.Skip("skipping test in short mode")
 	}
 	// make temp dir
 	workdir, err := ioutil.TempDir("", "mtail_test")
@@ -80,7 +80,7 @@ func TestHandleLogUpdates(t *testing.T) {
 
 func TestHandleLogRotation(t *testing.T) {
 	if testing.Short() {
-		return
+		t.Skip("skipping test in short mode")
 	}
 	// make temp dir
 	workdir, err := ioutil.TempDir("", "mtail_test")
@@ -155,7 +155,7 @@ func TestHandleLogRotation(t *testing.T) {
 func TestHandleNewLogAfterStart(t *testing.T) {
 	log.SetFlags(log.Lshortfile)
 	if testing.Short() {
-		return
+		t.Skip("Skipping test in short mode.")
 	}
 	// make temp dir
 	workdir, err := ioutil.TempDir("", "mtail_test")
@@ -197,7 +197,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 
 func TestHandleNewLogIgnored(t *testing.T) {
 	if testing.Short() {
-		return
+		t.Skip("skipping test in short mode")
 	}
 	// make temp dir
 	workdir, err := ioutil.TempDir("", "mtail_test")
@@ -247,7 +247,7 @@ func removeTempDir(t *testing.T, workdir string) {
 // TODO(jaq): The sleeps in here are racy.  What can we use to sync through inotify?
 func TestHandleNewProgram(t *testing.T) {
 	if testing.Short() {
-		return
+		t.Skip("skipping test in short mode")
 	}
 
 	workdir := makeTempDir(t)

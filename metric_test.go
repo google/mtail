@@ -4,6 +4,7 @@
 package main
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 	"time"
@@ -122,5 +123,37 @@ func TestFindLabelValueOrNil(t *testing.T) {
 	}
 	if r1 := m0.FindLabelValueOrNil([]string{}); r1 == nil {
 		t.Errorf("m0 should not be nil: %v", r1)
+	}
+	m1 := NewMetric("bar", "prog", Counter, "a")
+	d1, err1 := m1.GetDatum("1")
+	if err1 != nil {
+		t.Errorf("err1 %v: %v\n", d1, err1)
+	}
+	if r2 := m1.FindLabelValueOrNil([]string{"0"}); r2 != nil {
+		t.Errorf("r2 should be nil")
+	}
+	if r3 := m1.FindLabelValueOrNil([]string{"1"}); r3 == nil {
+		t.Errorf("r3 should be non nil")
+	}
+}
+
+func TestMetricJSONRoundTrip(t *testing.T) {
+	m := NewMetric("test", "prog", Gauge, "foo", "bar", "quux")
+	d, _ := m.GetDatum("a", "2", "d")
+	d.Set(1, time.Now())
+
+	j, e := json.Marshal(m)
+	if e != nil {
+		t.Errorf("json.Marshal failed: %s\n", e)
+	}
+
+	r := &Metric{}
+	e = json.Unmarshal(j, &r)
+	if e != nil {
+		t.Errorf("json.Unmarshal failed: %s\n", e)
+	}
+
+	if !reflect.DeepEqual(m, r) {
+		t.Errorf("Round trip wasn't stable.\n\texpected: %v\n\treceived: %v\n", m, r)
 	}
 }

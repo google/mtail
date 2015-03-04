@@ -27,6 +27,10 @@ func (d *Datum) String() string {
 	return fmt.Sprintf("%v", *d)
 }
 
+func (lv *LabelValue) String() string {
+	return fmt.Sprintf("%v", *lv)
+}
+
 func (m *Metric) String() string {
 	return fmt.Sprintf("%v", *m)
 }
@@ -34,9 +38,20 @@ func (m *Metric) String() string {
 // Sort a slice of metrics.
 type Metrics []*Metric
 
-func (ms Metrics) Len() int           { return len(ms) }
-func (ms Metrics) Swap(i, j int)      { ms[i], ms[j] = ms[j], ms[i] }
-func (ms Metrics) Less(i, j int) bool { return ms[i].Name < ms[j].Name }
+func (ms Metrics) Len() int      { return len(ms) }
+func (ms Metrics) Swap(i, j int) { ms[i], ms[j] = ms[j], ms[i] }
+func (ms Metrics) Less(i, j int) bool {
+	switch {
+	case ms[i].Program < ms[j].Program:
+		return true
+	case ms[i].Name < ms[j].Name:
+		return true
+	case len(ms[i].Keys) < len(ms[j].Keys):
+		return true
+	default:
+		return false
+	}
+}
 
 var exampleProgramTests = []struct {
 	programfile string // Example program file.
@@ -84,7 +99,7 @@ func CompileAndLoad(programfile string, stop chan bool) (chan string, string) {
 
 func TestExamplePrograms(t *testing.T) {
 	if testing.Short() {
-		return
+		t.Skip("skipping test ins short mode")
 	}
 	*syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
@@ -138,7 +153,7 @@ func TestExamplePrograms(t *testing.T) {
 		sort.Sort(Metrics(expected_metrics))
 		sort.Sort(Metrics(metrics))
 		if !reflect.DeepEqual(expected_metrics, metrics) {
-			t.Errorf("%s: metrics don't match.\n\texpected:\n%q\n\treceived:\n%q", tc.programfile, expected_metrics, metrics)
+			t.Errorf("%s: metrics don't match.\n\texpected: %v\n\treceived: %v", tc.programfile, expected_metrics, metrics)
 		}
 		metric_lock.Unlock()
 
@@ -148,7 +163,7 @@ func TestExamplePrograms(t *testing.T) {
 // These benchmarks run the testdata logs through the example programs.
 func BenchmarkExamplePrograms(b *testing.B) {
 	if testing.Short() {
-		return
+		b.Skip("skipping test in short mode")
 	}
 	b.Logf("\n")
 	for _, tc := range exampleProgramTests {

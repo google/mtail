@@ -21,8 +21,8 @@
           "user3"
         ],
         "Value": {
-          "Value": 1,
-          "Time": "0000-08-19T02:18:14Z"
+          "Value": 2,
+          "Time": "0000-08-19T02:28:36Z"
         }
       },
       {
@@ -32,15 +32,6 @@
         "Value": {
           "Value": 1,
           "Time": "0000-08-19T02:19:58Z"
-        }
-      },
-      {
-        "Labels": [
-          "user3"
-        ],
-        "Value": {
-          "Value": 1,
-          "Time": "0000-08-19T02:28:36Z"
         }
       }
     ]
@@ -77,10 +68,8 @@
     "Name": "bytes_read",
     "Program": "sftp.em",
     "Kind": 0,
-    "Keys": [],
     "LabelValues": [
       {
-        "Labels": [],
         "Value": {
           "Value": 78171021,
           "Time": "0000-08-19T02:34:05Z"
@@ -92,10 +81,8 @@
     "Name": "files_read",
     "Program": "sftp.em",
     "Kind": 0,
-    "Keys": [],
     "LabelValues": [
       {
-        "Labels": [],
         "Value": {
           "Value": 10,
           "Time": "0000-08-19T02:34:05Z"
@@ -107,10 +94,8 @@
     "Name": "bytes_written",
     "Program": "sftp.em",
     "Kind": 0,
-    "Keys": [],
     "LabelValues": [
       {
-        "Labels": [],
         "Value": {
           "Value": 739840,
           "Time": "0000-08-19T02:37:58Z"
@@ -122,10 +107,8 @@
     "Name": "files_written",
     "Program": "sftp.em",
     "Kind": 0,
-    "Keys": [],
     "LabelValues": [
       {
-        "Labels": [],
         "Value": {
           "Value": 2,
           "Time": "0000-08-19T02:37:58Z"
@@ -155,61 +138,7 @@
           "user6"
         ],
         "Value": {
-          "Value": 120306,
-          "Time": "0000-08-19T02:25:54Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 904613,
-          "Time": "0000-08-19T02:27:27Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 835584,
-          "Time": "0000-08-19T02:29:00Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 110066,
-          "Time": "0000-08-19T02:29:09Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 702175,
-          "Time": "0000-08-19T02:30:26Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 529607,
-          "Time": "0000-08-19T02:31:17Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 105157,
+          "Value": 3307508,
           "Time": "0000-08-19T02:31:25Z"
         }
       },
@@ -246,61 +175,7 @@
           "user6"
         ],
         "Value": {
-          "Value": 1,
-          "Time": "0000-08-19T02:25:54Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 1,
-          "Time": "0000-08-19T02:27:27Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 1,
-          "Time": "0000-08-19T02:29:00Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 1,
-          "Time": "0000-08-19T02:29:09Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 1,
-          "Time": "0000-08-19T02:30:26Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 1,
-          "Time": "0000-08-19T02:31:17Z"
-        }
-      },
-      {
-        "Labels": [
-          "user6"
-        ],
-        "Value": {
-          "Value": 1,
+          "Value": 7,
           "Time": "0000-08-19T02:31:25Z"
         }
       },
