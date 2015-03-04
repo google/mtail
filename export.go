@@ -102,9 +102,9 @@ func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, 
 	metric_lock.RLock()
 	defer metric_lock.RUnlock()
 
-	lc := make(chan *LabelSet)
 	for _, m := range metrics {
 		export_total.Add(1)
+		lc := make(chan *LabelSet)
 		go m.EmitLabelSets(lc)
 		for l := range lc {
 			line := f(m, l)

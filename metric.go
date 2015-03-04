@@ -43,7 +43,7 @@ type Settable interface {
 }
 
 type LabelValue struct {
-	Labels []string
+	Labels []string `json:",omitempty"`
 	Value  *Datum
 }
 
@@ -51,8 +51,8 @@ type Metric struct {
 	Name        string // Name
 	Program     string // Instantiating program
 	Kind        metric_type
-	Keys        []string
-	LabelValues []*LabelValue
+	Keys        []string      `json:",omitempty"`
+	LabelValues []*LabelValue `json:",omitempty"`
 }
 
 func NewMetric(name string, prog string, kind metric_type, keys ...string) *Metric {

@@ -26,13 +26,13 @@ func handlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-type", "text/plain; version=0.0.4")
 
-	lc := make(chan *LabelSet)
 	for _, m := range metrics {
 		metric_export_total.Add(1)
 		fmt.Fprintf(w,
 			"# TYPE %s %s\n",
 			NoHyphens(m.Name),
 			strings.ToLower(m.Kind.String()))
+		lc := make(chan *LabelSet)
 		go m.EmitLabelSets(lc)
 		for l := range lc {
 			line := MetricToPrometheus(m, l)
