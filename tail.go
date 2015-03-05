@@ -107,7 +107,7 @@ Loop:
 				// end of file for now, return
 				break Loop
 			}
-			glog.Infof("Failed to read updates from %q: %s\n", pathname, err)
+			glog.Infof("Failed to read updates from %q: %s", pathname, err)
 			return
 		} else {
 			for i, width := 0, 0; i < len(b) && i < n; i += width {
@@ -135,7 +135,7 @@ func inode(f os.FileInfo) uint64 {
 // handleLogCreate handles both new and rotated log files.
 func (t *tailer) handleLogCreate(pathname string) {
 	if !t.isWatching(pathname) {
-		glog.Infof("Not watching path %q, ignoring.\n", pathname)
+		glog.V(1).Info("Not watching path %q, ignoring.\n", pathname)
 		return
 	}
 
@@ -145,12 +145,12 @@ func (t *tailer) handleLogCreate(pathname string) {
 	if ok {
 		s1, err := fd.Stat()
 		if err != nil {
-			glog.Infof("Stat failed on %q: %s\n", t.files[pathname].Name(), err)
+			glog.Infof("Stat failed on %q: %s", t.files[pathname].Name(), err)
 			return
 		}
 		s2, err := os.Stat(pathname)
 		if err != nil {
-			glog.Infof("Stat failed on %q: %s\n", pathname, err)
+			glog.Infof("Stat failed on %q: %s", pathname, err)
 			return
 		}
 		if inode(s1) != inode(s2) {
@@ -160,12 +160,12 @@ func (t *tailer) handleLogCreate(pathname string) {
 			fd.Close()
 			err := t.w.RemoveWatch(pathname)
 			if err != nil {
-				glog.Infoln("Failed removing watches on", pathname)
+				glog.Info("Failed removing watches on", pathname)
 			}
 			// Always seek to start on log rotation.
 			t.openLogFile(pathname, true)
 		} else {
-			glog.Infof("Path %s already being watched, and inode not changed.\n",
+			glog.Infof("Path %s already being watched, and inode not changed.",
 				pathname)
 		}
 	} else {
@@ -179,7 +179,7 @@ func (t *tailer) handleLogCreate(pathname string) {
 // opened for the first time start at the end.
 func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 	if !t.isWatching(pathname) {
-		glog.Infof("Not watching %q, ignoring.\n", pathname)
+		glog.Infof("Not watching %q, ignoring.", pathname)
 		return
 	}
 
@@ -187,7 +187,7 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 	if !t.isWatching(d) {
 		err := t.w.AddWatch(d, tLogCreateMask)
 		if err != nil {
-			glog.Infof("Adding a create watch failed on %q: %s\n", d, err)
+			glog.Infof("Adding a create watch failed on %q: %s", d, err)
 		}
 		t.addWatched(d)
 	}
@@ -199,7 +199,7 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 		if os.IsNotExist(err) {
 			return
 		}
-		glog.Infof("Failed to open %q for reading: %s\n", pathname, err)
+		glog.Infof("Failed to open %q for reading: %s", pathname, err)
 		log_errors.Add(pathname, 1)
 		return
 	}
@@ -214,7 +214,7 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 
 	err = t.w.AddWatch(pathname, tLogUpdateMask)
 	if err != nil {
-		glog.Infof("Adding a change watch failed on %q: %s\n", pathname, err)
+		glog.Infof("Adding a change watch failed on %q: %s", pathname, err)
 	}
 
 	// In case the new log has been written to already, attempt to read the first lines.
@@ -229,7 +229,7 @@ func (t *tailer) start() {
 		select {
 		case ev := <-t.w.Events():
 			if ev == nil {
-				glog.Infoln("event received, but was nil.")
+				glog.Info("event received, but was nil.")
 				continue
 			}
 			event_count.Add(ev.String(), 1)
@@ -244,13 +244,13 @@ func (t *tailer) start() {
 				// Ignore!
 
 			default:
-				glog.Infof("Unexpected event %q\n", ev)
+				glog.Infof("Unexpected event %q", ev)
 			}
 		case err := <-t.w.Errors():
 			if err != nil {
-				glog.Infoln("inotify watch error:", err)
+				glog.Info("inotify watch error:", err)
 			} else {
-				glog.Infoln("inotify watch error, but error was nil")
+				glog.Info("inotify watch error, but error was nil")
 			}
 		case <-t.quit:
 			goto end

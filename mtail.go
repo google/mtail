@@ -19,7 +19,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"unicode/utf8"
 
 	"github.com/golang/glog"
 
@@ -36,9 +35,8 @@ var (
 )
 
 type mtail struct {
-	console []string
-	lines   chan string
-	stop    chan bool
+	lines chan string
+	stop  chan bool
 
 	closeOnce sync.Once
 }
@@ -81,25 +79,9 @@ func (m *mtail) StartTailing(pathnames []string) {
 	}
 }
 
-func (m *mtail) Write(p []byte) (n int, err error) {
-	s := ""
-	for i, width := 0, 0; i < len(p); i += width {
-		var r rune
-		r, width = utf8.DecodeRune(p[i:])
-		s += string(r)
-	}
-	m.console = append(m.console, s)
-	return len(s), nil
-}
-
 func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>`))
-	w.Write([]byte("<pre>"))
-	for _, l := range m.console {
-		w.Write([]byte(l))
-	}
-	w.Write([]byte("</pre>"))
 }
 
 func NewMtail() *mtail {
@@ -163,8 +145,6 @@ func (m *mtail) Serve() {
 		go m.interruptHandler()
 
 		m.StartTailing(pathnames)
-
-		log.SetOutput(m)
 
 		http.Handle("/", m)
 		http.HandleFunc("/json", handleJson)

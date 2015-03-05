@@ -56,7 +56,7 @@ func (p *progloader) LoadProg(program_path string, name string) (errors int) {
 	pth := path.Join(program_path, name)
 	f, err := os.Open(pth)
 	if err != nil {
-		glog.Infof("Failed to read program %q: %s\n", pth, err)
+		glog.Infof("Failed to read program %q: %s", pth, err)
 		errors = 1
 		prog_load_errors.Add(name, 1)
 		return
@@ -138,7 +138,7 @@ func (p *progloader) start() {
 				delete(p.pathnames, f)
 				p.Unlock()
 				if err := p.w.RemoveWatch(ev.Name); err != nil {
-					glog.Infoln("Remove watch failed:", err)
+					glog.Info("Remove watch failed:", err)
 				}
 
 			case ev.Mask&tProgCreateMask|tProgChangeMask != 0:
@@ -159,7 +159,7 @@ func (p *progloader) start() {
 				glog.Infof("Unknown event: %q", ev)
 			}
 		case err := <-p.w.Errors():
-			glog.Infoln("watch error: ", err)
+			glog.Info("watch error: ", err)
 
 		}
 	}

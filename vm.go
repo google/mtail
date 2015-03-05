@@ -121,24 +121,24 @@ func (t *thread) Pop() (value interface{}) {
 func (v *vm) errorf(format string, args ...interface{}) {
 	glog.Infof("Runtime error: "+format+"\n", args...)
 	glog.Infof("VM stack:\n%s", debug.Stack())
-	glog.Infof("Dumping vm state\n")
-	glog.Infof("Regexes:\n")
+	glog.Infof("Dumping vm state")
+	glog.Infof("Regexes:")
 	for i, re := range v.re {
-		glog.Infof("\t%4d %v\n", i, re)
+		glog.Infof("\t%4d %v", i, re)
 	}
-	glog.Infof("Strings:\n")
+	glog.Infof("Strings:")
 	for i, s := range v.str {
-		glog.Infof("\t%4d %q\n", i, s)
+		glog.Infof("\t%4d %q", i, s)
 	}
-	glog.Infof("Thread:\n")
-	glog.Infof("\tPC %v\n", v.t.pc)
-	glog.Infof("\tMatch %v\n", v.t.match)
-	glog.Infof("\tMatches %v\n", v.t.matches)
-	glog.Infof("\tTimestamp %v\n", v.t.time)
-	glog.Infof("\tStack %v\n", v.t.stack)
-	glog.Infof("Program:\n")
+	glog.Infof("Thread:")
+	glog.Infof("\tPC %v", v.t.pc)
+	glog.Infof("\tMatch %v", v.t.match)
+	glog.Infof("\tMatches %v", v.t.matches)
+	glog.Infof("\tTimestamp %v", v.t.time)
+	glog.Infof("\tStack %v", v.t.stack)
+	glog.Infof("Program:")
 	for i, instr := range v.prog {
-		glog.Infof("\t%4d %8s %d\n", i, opNames[instr.op], instr.opnd)
+		glog.Infof("\t%4d %8s %d", i, opNames[instr.op], instr.opnd)
 	}
 	v.terminate = true
 }

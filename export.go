@@ -58,7 +58,7 @@ func handleJson(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.MarshalIndent(metrics, "", "  ")
 	if err != nil {
-		glog.Infoln("error marshalling metrics into json:", err.Error())
+		glog.Info("error marshalling metrics into json:", err.Error())
 	}
 	w.Write(b)
 }
@@ -167,19 +167,19 @@ func WriteMetrics() {
 	if *collectd_socketpath != "" {
 		err := CollectdWriteMetrics(*collectd_socketpath)
 		if err != nil {
-			glog.Infof("collectd write error: %s\n", err)
+			glog.Infof("collectd write error: %s", err)
 		}
 	}
 	if *graphite_hostport != "" {
 		err := GraphiteWriteMetrics(*graphite_hostport)
 		if err != nil {
-			glog.Infof("graphite write error: %s\n", err)
+			glog.Infof("graphite write error: %s", err)
 		}
 	}
 	if *statsd_hostport != "" {
 		err := StatsdWriteMetrics(*statsd_hostport)
 		if err != nil {
-			glog.Infof("statsd error: %s\n", err)
+			glog.Infof("statsd error: %s", err)
 		}
 	}
 	last_metric_push_time = time.Now()
