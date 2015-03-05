@@ -93,8 +93,11 @@ func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("</pre>"))
 }
 
-func main() {
-	flag.Parse()
+func NewMtail() *mtail {
+	return &mtail{}
+}
+
+func (m *mtail) Serve() {
 
 	if *progs == "" {
 		log.Fatalf("No mtail program directory specified; use -progs")
@@ -132,8 +135,6 @@ func main() {
 	stop := make(chan bool, 1)
 	go e.run(lines, stop)
 
-	m := &mtail{}
-
 	if *one_shot {
 		for _, pathname := range pathnames {
 			err := m.OneShot(pathname, lines, stop)
@@ -159,4 +160,10 @@ func main() {
 
 		log.Fatal(http.ListenAndServe(":"+*port, nil))
 	}
+}
+
+func main() {
+	flag.Parse()
+	m := NewMtail()
+	m.Serve()
 }
