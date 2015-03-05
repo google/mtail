@@ -25,6 +25,10 @@ var (
 	prog_load_errors = expvar.NewMap("prog_load_errors")
 )
 
+const (
+	fileext = ".em"
+)
+
 func (p *progloader) LoadProgs(program_path string) (*engine, int) {
 	p.w.AddWatch(program_path, tProgCreateMask)
 
@@ -38,7 +42,7 @@ func (p *progloader) LoadProgs(program_path string) (*engine, int) {
 		if fi.IsDir() {
 			continue
 		}
-		if filepath.Ext(fi.Name()) != ".em" {
+		if filepath.Ext(fi.Name()) != fileext {
 			continue
 		}
 		errors += p.LoadProg(program_path, fi.Name())
@@ -136,7 +140,7 @@ func (p *progloader) start() {
 				}
 
 			case ev.Mask&tProgCreateMask|tProgChangeMask != 0:
-				if filepath.Ext(ev.Name) != ".em" {
+				if filepath.Ext(ev.Name) != fileext {
 					continue
 				}
 				d, f := filepath.Split(ev.Name)
