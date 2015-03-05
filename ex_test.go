@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/kylelemons/godebug/pretty"
 	"os"
 	"runtime"
 	"sort"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/kylelemons/godebug/pretty"
 )
 
 var (
@@ -103,7 +104,6 @@ func TestExamplePrograms(t *testing.T) {
 	}
 	*syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
-		t.Logf("program: %s\n", tc.programfile)
 		ClearMetrics()
 		stop := make(chan bool, 1)
 		lines, errs := CompileAndLoad(tc.programfile, stop)
@@ -116,7 +116,7 @@ func TestExamplePrograms(t *testing.T) {
 
 		err := m.OneShot(tc.logfile, lines, stop)
 		if err != nil {
-			t.Errorf("Oneshot failed: %s", err)
+			t.Errorf("Oneshot failed for %s: %s", tc.logfile, err)
 			continue
 		}
 

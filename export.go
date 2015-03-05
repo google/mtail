@@ -10,12 +10,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 // Commandline Flags.
@@ -57,7 +58,7 @@ func handleJson(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.MarshalIndent(metrics, "", "  ")
 	if err != nil {
-		log.Println("error marshalling metrics into json:", err.Error())
+		glog.Infoln("error marshalling metrics into json:", err.Error())
 	}
 	w.Write(b)
 }
@@ -166,19 +167,19 @@ func WriteMetrics() {
 	if *collectd_socketpath != "" {
 		err := CollectdWriteMetrics(*collectd_socketpath)
 		if err != nil {
-			log.Printf("collectd write error: %s\n", err)
+			glog.Infof("collectd write error: %s\n", err)
 		}
 	}
 	if *graphite_hostport != "" {
 		err := GraphiteWriteMetrics(*graphite_hostport)
 		if err != nil {
-			log.Printf("graphite write error: %s\n", err)
+			glog.Infof("graphite write error: %s\n", err)
 		}
 	}
 	if *statsd_hostport != "" {
 		err := StatsdWriteMetrics(*statsd_hostport)
 		if err != nil {
-			log.Printf("statsd error: %s\n", err)
+			glog.Infof("statsd error: %s\n", err)
 		}
 	}
 	last_metric_push_time = time.Now()
@@ -202,6 +203,6 @@ func init() {
 	var err error
 	hostname, err = os.Hostname()
 	if err != nil {
-		log.Fatalf("Error getting hostname: %s\n", err)
+		glog.Fatalf("Error getting hostname: %s\n", err)
 	}
 }

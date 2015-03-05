@@ -7,13 +7,14 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
-	"log"
 	"regexp"
 	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 var (
@@ -118,26 +119,26 @@ func (t *thread) Pop() (value interface{}) {
 
 // Log a runtime error and terminate the program
 func (v *vm) errorf(format string, args ...interface{}) {
-	log.Printf("Runtime error: "+format+"\n", args...)
-	log.Printf("VM stack:\n%s", debug.Stack())
-	log.Printf("Dumping vm state\n")
-	log.Printf("Regexes:\n")
+	glog.Infof("Runtime error: "+format+"\n", args...)
+	glog.Infof("VM stack:\n%s", debug.Stack())
+	glog.Infof("Dumping vm state\n")
+	glog.Infof("Regexes:\n")
 	for i, re := range v.re {
-		log.Printf("\t%4d %v\n", i, re)
+		glog.Infof("\t%4d %v\n", i, re)
 	}
-	log.Printf("Strings:\n")
+	glog.Infof("Strings:\n")
 	for i, s := range v.str {
-		log.Printf("\t%4d %q\n", i, s)
+		glog.Infof("\t%4d %q\n", i, s)
 	}
-	log.Printf("Thread:\n")
-	log.Printf("\tPC %v\n", v.t.pc)
-	log.Printf("\tMatch %v\n", v.t.match)
-	log.Printf("\tMatches %v\n", v.t.matches)
-	log.Printf("\tTimestamp %v\n", v.t.time)
-	log.Printf("\tStack %v\n", v.t.stack)
-	log.Printf("Program:\n")
+	glog.Infof("Thread:\n")
+	glog.Infof("\tPC %v\n", v.t.pc)
+	glog.Infof("\tMatch %v\n", v.t.match)
+	glog.Infof("\tMatches %v\n", v.t.matches)
+	glog.Infof("\tTimestamp %v\n", v.t.time)
+	glog.Infof("\tStack %v\n", v.t.stack)
+	glog.Infof("Program:\n")
 	for i, instr := range v.prog {
-		log.Printf("\t%4d %8s %d\n", i, opNames[instr.op], instr.opnd)
+		glog.Infof("\t%4d %8s %d\n", i, opNames[instr.op], instr.opnd)
 	}
 	v.terminate = true
 }

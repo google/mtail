@@ -7,16 +7,18 @@ package main
 // moves.
 
 import (
-	"code.google.com/p/go.exp/inotify"
 	"expvar"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"sync"
 	"text/tabwriter"
+
+	"github.com/golang/glog"
+
+	"code.google.com/p/go.exp/inotify"
 )
 
 var (
@@ -34,7 +36,7 @@ func (p *progloader) LoadProgs(program_path string) (*engine, int) {
 
 	fis, err := ioutil.ReadDir(program_path)
 	if err != nil {
-		log.Fatalf("Failed to list programs in %q: %s", program_path, err)
+		glog.Fatalf("Failed to list programs in %q: %s", program_path, err)
 	}
 
 	errors := 0
@@ -54,7 +56,7 @@ func (p *progloader) LoadProg(program_path string, name string) (errors int) {
 	pth := path.Join(program_path, name)
 	f, err := os.Open(pth)
 	if err != nil {
-		log.Printf("Failed to read program %q: %s\n", pth, err)
+		glog.Infof("Failed to read program %q: %s\n", pth, err)
 		errors = 1
 		prog_load_errors.Add(name, 1)
 		return
@@ -64,7 +66,7 @@ func (p *progloader) LoadProg(program_path string, name string) (errors int) {
 	if errs != nil {
 		errors = 1
 		for _, e := range errs {
-			log.Print(e)
+			glog.Info(e)
 		}
 		prog_load_errors.Add(name, 1)
 		return
@@ -136,7 +138,7 @@ func (p *progloader) start() {
 				delete(p.pathnames, f)
 				p.Unlock()
 				if err := p.w.RemoveWatch(ev.Name); err != nil {
-					log.Println("Remove watch failed:", err)
+					glog.Infoln("Remove watch failed:", err)
 				}
 
 			case ev.Mask&tProgCreateMask|tProgChangeMask != 0:
@@ -154,10 +156,10 @@ func (p *progloader) start() {
 				p.LoadProg(d, f)
 
 			default:
-				log.Printf("Unknown event: %q", ev)
+				glog.Infof("Unknown event: %q", ev)
 			}
 		case err := <-p.w.Errors():
-			log.Println("watch error: ", err)
+			glog.Infoln("watch error: ", err)
 
 		}
 	}

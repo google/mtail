@@ -21,6 +21,8 @@ import (
 	"syscall"
 	"unicode/utf8"
 
+	"github.com/golang/glog"
+
 	_ "net/http/pprof"
 )
 
@@ -67,11 +69,11 @@ func (m *mtail) OneShot(logfile string, lines chan string, stop chan bool) error
 func (m *mtail) StartTailing(pathnames []string) {
 	tw, err := NewInotifyWatcher()
 	if err != nil {
-		log.Fatal("Couldn't create log path watcher:", err)
+		glog.Fatal("Couldn't create log path watcher:", err)
 	}
 	t := NewTailer(m.lines, tw)
 	if t == nil {
-		log.Fatal("Couldn't create a log tailer.")
+		glog.Fatal("Couldn't create a log tailer.")
 	}
 
 	for _, pathname := range pathnames {
@@ -111,20 +113,20 @@ func NewMtail() *mtail {
 func (m *mtail) Serve() {
 
 	if *progs == "" {
-		log.Fatalf("No mtail program directory specified; use -progs")
+		glog.Fatalf("No mtail program directory specified; use -progs")
 	}
 	if *logs == "" {
-		log.Fatalf("No logs specified to tail; use -logs")
+		glog.Fatalf("No logs specified to tail; use -logs")
 	}
 
 	w, err := NewInotifyWatcher()
 	if err != nil {
-		log.Fatal("Couldn't create an inotify watcher:", err)
+		glog.Fatal("Couldn't create an inotify watcher:", err)
 	}
 
 	p := NewProgLoader(w)
 	if p == nil {
-		log.Fatal("Couldn't create a program loader.")
+		glog.Fatal("Couldn't create a program loader.")
 	}
 	e, errors := p.LoadProgs(*progs)
 
@@ -139,7 +141,7 @@ func (m *mtail) Serve() {
 		}
 	}
 	if len(pathnames) == 0 {
-		log.Fatal("No logs to tail.")
+		glog.Fatal("No logs to tail.")
 	}
 
 	go e.run(m.lines, m.stop)
@@ -148,12 +150,12 @@ func (m *mtail) Serve() {
 		for _, pathname := range pathnames {
 			err := m.OneShot(pathname, m.lines, m.stop)
 			if err != nil {
-				log.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
+				glog.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
 			}
 		}
 		b, err := json.MarshalIndent(metrics, "", "  ")
 		if err != nil {
-			log.Fatalf("Failed to marshal metrics into json: %s", err)
+			glog.Fatalf("Failed to marshal metrics into json: %s", err)
 		}
 		os.Stdout.Write(b)
 		WriteMetrics()
@@ -169,7 +171,7 @@ func (m *mtail) Serve() {
 		http.HandleFunc("/metrics", handlePrometheusMetrics)
 		StartMetricPush()
 
-		log.Fatal(http.ListenAndServe(":"+*port, nil))
+		glog.Fatal(http.ListenAndServe(":"+*port, nil))
 	}
 }
 

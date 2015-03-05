@@ -6,7 +6,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -152,7 +151,6 @@ func TestHandleLogRotation(t *testing.T) {
 }
 
 func TestHandleNewLogAfterStart(t *testing.T) {
-	log.SetFlags(log.Lshortfile)
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
