@@ -15,7 +15,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"sync"
+	"syscall"
 	"unicode/utf8"
 
 	_ "net/http/pprof"
@@ -32,6 +35,10 @@ var (
 
 type mtail struct {
 	console []string
+	lines   chan string
+	stop    chan bool
+
+	closeOnce sync.Once
 }
 
 func (m *mtail) OneShot(logfile string, lines chan string, stop chan bool) error {
@@ -57,12 +64,12 @@ func (m *mtail) OneShot(logfile string, lines chan string, stop chan bool) error
 	}
 }
 
-func (m *mtail) StartTailing(lines chan string, pathnames []string) {
+func (m *mtail) StartTailing(pathnames []string) {
 	tw, err := NewInotifyWatcher()
 	if err != nil {
 		log.Fatal("Couldn't create log path watcher:", err)
 	}
-	t := NewTailer(lines, tw)
+	t := NewTailer(m.lines, tw)
 	if t == nil {
 		log.Fatal("Couldn't create a log tailer.")
 	}
@@ -94,7 +101,11 @@ func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func NewMtail() *mtail {
-	return &mtail{}
+	return &mtail{
+		lines: make(chan string),
+		stop:  make(chan bool, 1),
+	}
+
 }
 
 func (m *mtail) Serve() {
@@ -131,13 +142,11 @@ func (m *mtail) Serve() {
 		log.Fatal("No logs to tail.")
 	}
 
-	lines := make(chan string)
-	stop := make(chan bool, 1)
-	go e.run(lines, stop)
+	go e.run(m.lines, m.stop)
 
 	if *one_shot {
 		for _, pathname := range pathnames {
-			err := m.OneShot(pathname, lines, stop)
+			err := m.OneShot(pathname, m.lines, m.stop)
 			if err != nil {
 				log.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
 			}
@@ -149,7 +158,9 @@ func (m *mtail) Serve() {
 		os.Stdout.Write(b)
 		WriteMetrics()
 	} else {
-		m.StartTailing(lines, pathnames)
+		go m.interruptHandler()
+
+		m.StartTailing(pathnames)
 
 		log.SetOutput(m)
 
@@ -160,6 +171,24 @@ func (m *mtail) Serve() {
 
 		log.Fatal(http.ListenAndServe(":"+*port, nil))
 	}
+}
+
+func (m *mtail) interruptHandler() {
+	n := make(chan os.Signal)
+	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
+	<-n
+	log.Print("Received SIGTERM, exiting...")
+	m.Close()
+}
+
+func (m *mtail) Close() {
+	m.closeOnce.Do(m.close)
+}
+
+func (m *mtail) close() {
+	log.Print("Shutdown requested.")
+	close(m.lines)
+
 }
 
 func main() {

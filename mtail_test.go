@@ -31,13 +31,11 @@ func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) chan
 	if prog_pathname != "" {
 		p.LoadProgs(prog_pathname)
 	}
-	lines := make(chan string)
-	stop := make(chan bool, 1)
-	line_count.Set(0)
-	go p.e.run(lines, stop)
 	m := NewMtail()
-	m.StartTailing(lines, log_pathnames)
-	return stop
+	line_count.Set(0)
+	go p.e.run(m.lines, m.stop)
+	m.StartTailing(log_pathnames)
+	return m.stop
 }
 
 func TestHandleLogUpdates(t *testing.T) {
