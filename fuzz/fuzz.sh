@@ -9,7 +9,7 @@ OUT=$d/../fuzzout
 
 run() {
     rm -rf $OUT/*
-    $EMGEN --rand_seed $1 > $OUT/fuzz$1.em
+    $EMGEN --rand_seed $1 > $OUT/fuzz$1.mtail
     $EMTAIL --compile_only --dump_bytecode --logs foo.log --progs $OUT
     echo $?
 }
