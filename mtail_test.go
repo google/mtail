@@ -35,7 +35,8 @@ func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) chan
 	stop := make(chan bool, 1)
 	line_count.Set(0)
 	go p.e.run(lines, stop)
-	StartTailing(lines, log_pathnames)
+	m := &mtail{}
+	m.StartTailing(lines, log_pathnames)
 	return stop
 }
 

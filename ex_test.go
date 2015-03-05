@@ -112,7 +112,9 @@ func TestExamplePrograms(t *testing.T) {
 			continue
 		}
 
-		err := OneShot(tc.logfile, lines, stop)
+		m := &mtail{}
+
+		err := m.OneShot(tc.logfile, lines, stop)
 		if err != nil {
 			t.Errorf("Oneshot failed: %s", err)
 			continue
@@ -179,8 +181,9 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				b.StopTimer()
 				stop_fake := make(chan bool, 1)
 				line_count.Set(0)
+				m := &mtail{}
 				b.StartTimer()
-				err := OneShot(tc.logfile, lines, stop_fake)
+				err := m.OneShot(tc.logfile, lines, stop_fake)
 				if err != nil {
 					b.Errorf("OneShot log parse failed: %s", err)
 					return

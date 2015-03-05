@@ -30,7 +30,11 @@ var (
 	dump_bytecode *bool = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 )
 
-func OneShot(logfile string, lines chan string, stop chan bool) error {
+type mtail struct {
+	console []string
+}
+
+func (m *mtail) OneShot(logfile string, lines chan string, stop chan bool) error {
 	defer func() { stop <- true }()
 	l, err := os.Open(logfile)
 	if err != nil {
@@ -53,7 +57,7 @@ func OneShot(logfile string, lines chan string, stop chan bool) error {
 	}
 }
 
-func StartTailing(lines chan string, pathnames []string) {
+func (m *mtail) StartTailing(lines chan string, pathnames []string) {
 	tw, err := NewInotifyWatcher()
 	if err != nil {
 		log.Fatal("Couldn't create log path watcher:", err)
@@ -68,26 +72,22 @@ func StartTailing(lines chan string, pathnames []string) {
 	}
 }
 
-type console struct {
-	lines []string
-}
-
-func (c *console) Write(p []byte) (n int, err error) {
+func (m *mtail) Write(p []byte) (n int, err error) {
 	s := ""
 	for i, width := 0, 0; i < len(p); i += width {
 		var r rune
 		r, width = utf8.DecodeRune(p[i:])
 		s += string(r)
 	}
-	c.lines = append(c.lines, s)
+	m.console = append(m.console, s)
 	return len(s), nil
 }
 
-func (c *console) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>`))
 	w.Write([]byte("<pre>"))
-	for _, l := range c.lines {
+	for _, l := range m.console {
 		w.Write([]byte(l))
 	}
 	w.Write([]byte("</pre>"))
@@ -132,9 +132,11 @@ func main() {
 	stop := make(chan bool, 1)
 	go e.run(lines, stop)
 
+	m := &mtail{}
+
 	if *one_shot {
 		for _, pathname := range pathnames {
-			err := OneShot(pathname, lines, stop)
+			err := m.OneShot(pathname, lines, stop)
 			if err != nil {
 				log.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
 			}
@@ -146,12 +148,11 @@ func main() {
 		os.Stdout.Write(b)
 		WriteMetrics()
 	} else {
-		StartTailing(lines, pathnames)
+		m.StartTailing(lines, pathnames)
 
-		c := &console{}
-		log.SetOutput(c)
+		log.SetOutput(m)
 
-		http.Handle("/", c)
+		http.Handle("/", m)
 		http.HandleFunc("/json", handleJson)
 		http.HandleFunc("/metrics", handlePrometheusMetrics)
 		StartMetricPush()
