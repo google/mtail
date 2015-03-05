@@ -26,7 +26,7 @@ var (
 )
 
 const (
-	fileext = ".em"
+	fileext = ".mtail"
 )
 
 func (p *progloader) LoadProgs(program_path string) (*engine, int) {

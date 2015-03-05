@@ -262,7 +262,7 @@ func TestHandleNewProgram(t *testing.T) {
 		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, prog_loads.String())
 	}
 
-	prog_path := path.Join(workdir, "prog.em")
+	prog_path := path.Join(workdir, "prog.mtail")
 	prog_file, err := os.Create(prog_path)
 	if err != nil {
 		t.Errorf("prog create failed: %s", err)
@@ -272,12 +272,12 @@ func TestHandleNewProgram(t *testing.T) {
 
 	// Wait for inotify
 	time.Sleep(100 * time.Millisecond)
-	expected_prog_loads = `{"prog.em": 1}`
+	expected_prog_loads = `{"prog.mtail": 1}`
 	if prog_loads.String() != expected_prog_loads {
 		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, prog_loads.String())
 	}
 
-	bad_prog_path := path.Join(workdir, "prog.em.dpkg-dist")
+	bad_prog_path := path.Join(workdir, "prog.mtail.dpkg-dist")
 	bad_prog_file, err := os.Create(bad_prog_path)
 	if err != nil {
 		t.Errorf("prog create failed: %s", err)
@@ -286,7 +286,7 @@ func TestHandleNewProgram(t *testing.T) {
 	bad_prog_file.Close()
 
 	time.Sleep(100 * time.Millisecond)
-	expected_prog_loads = `{"prog.em": 1}`
+	expected_prog_loads = `{"prog.mtail": 1}`
 	if prog_loads.String() != expected_prog_loads {
 		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, prog_loads.String())
 	}
@@ -297,7 +297,7 @@ func TestHandleNewProgram(t *testing.T) {
 
 	os.Rename(bad_prog_path, prog_path)
 	time.Sleep(100 * time.Millisecond)
-	expected_prog_loads = `{"prog.em": 2}`
+	expected_prog_loads = `{"prog.mtail": 2}`
 	if prog_loads.String() != expected_prog_loads {
 		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, prog_loads.String())
 	}
@@ -306,7 +306,7 @@ func TestHandleNewProgram(t *testing.T) {
 		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expected_prog_errs, prog_load_errors.String())
 	}
 
-	broken_prog_path := path.Join(workdir, "broken.em")
+	broken_prog_path := path.Join(workdir, "broken.mtail")
 	broken_prog_file, err := os.Create(broken_prog_path)
 	if err != nil {
 		t.Errorf("prog create failed: %s", err)
@@ -316,11 +316,11 @@ func TestHandleNewProgram(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	expected_prog_loads = `{"prog.em": 2}`
+	expected_prog_loads = `{"prog.mtail": 2}`
 	if prog_loads.String() != expected_prog_loads {
 		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, prog_loads.String())
 	}
-	expected_prog_errs = `{"broken.em": 1}`
+	expected_prog_errs = `{"broken.mtail": 1}`
 	if prog_load_errors.String() != expected_prog_errs {
 		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expected_prog_errs, prog_load_errors.String())
 	}

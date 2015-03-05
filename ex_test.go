@@ -59,17 +59,17 @@ var exampleProgramTests = []struct {
 	jsonfile    string // Expected metrics after processing.
 }{
 	{
-		"examples/rsyncd.em",
+		"examples/rsyncd.mtail",
 		"testdata/rsyncd.log",
 		"testdata/rsyncd.json",
 	},
 	{
-		"examples/sftp.em",
+		"examples/sftp.mtail",
 		"testdata/sftp_chroot.log",
 		"testdata/sftp_chroot.json",
 	},
 	{
-		"examples/dhcpd.em",
+		"examples/dhcpd.mtail",
 		"testdata/anonymised_dhcpd_log",
 		"testdata/anonymised_dhcpd_log.json",
 	},

@@ -1,7 +1,7 @@
 [
   {
     "Name": "request_total",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0,
     "Keys": [
       "command"
@@ -29,17 +29,17 @@
   },
   {
     "Name": "config_file_errors",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0
   },
   {
     "Name": "peer_disconnects",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0
   },
   {
     "Name": "dhcpdiscovers",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0,
     "Keys": [
       "mac"
@@ -47,7 +47,7 @@
   },
   {
     "Name": "bind_xid_mismatch",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0,
     "LabelValues": [
       {
@@ -60,7 +60,7 @@
   },
   {
     "Name": "duplicate_lease",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0,
     "LabelValues": [
       {
@@ -73,17 +73,17 @@
   },
   {
     "Name": "bad_udp_checksum",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0
   },
   {
     "Name": "unknown_subnet",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0
   },
   {
     "Name": "dhcpdiscover_nofree",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0,
     "Keys": [
       "network"
@@ -91,7 +91,7 @@
   },
   {
     "Name": "unknown_lease",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0,
     "Keys": [
       "ip"
@@ -99,22 +99,22 @@
   },
   {
     "Name": "update_rejected",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0
   },
   {
     "Name": "failover_peer_timeout",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0
   },
   {
     "Name": "ip_already_in_use",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0
   },
   {
     "Name": "ip_abandoned",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0,
     "Keys": [
       "reason"
@@ -133,12 +133,12 @@
   },
   {
     "Name": "invalid_state_transition",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0
   },
   {
     "Name": "negative_poolreq",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0,
     "Keys": [
       "pool"
@@ -146,7 +146,7 @@
   },
   {
     "Name": "lease_conflicts",
-    "Program": "dhcpd.em",
+    "Program": "dhcpd.mtail",
     "Kind": 0
   }
 ]

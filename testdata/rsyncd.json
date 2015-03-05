@@ -1,7 +1,7 @@
 [
   {
     "Name": "bytes_total",
-    "Program": "rsyncd.em",
+    "Program": "rsyncd.mtail",
     "Kind": 0,
     "Keys": [
       "operation"
@@ -29,7 +29,7 @@
   },
   {
     "Name": "connections_total",
-    "Program": "rsyncd.em",
+    "Program": "rsyncd.mtail",
     "Kind": 0,
     "LabelValues": [
       {
@@ -42,7 +42,7 @@
   },
   {
     "Name": "connection-time_total",
-    "Program": "rsyncd.em",
+    "Program": "rsyncd.mtail",
     "Kind": 0,
     "LabelValues": [
       {
@@ -55,7 +55,7 @@
   },
   {
     "Name": "transfers_total",
-    "Program": "rsyncd.em",
+    "Program": "rsyncd.mtail",
     "Kind": 0,
     "Keys": [
       "module",
