@@ -142,8 +142,6 @@ func (m *mtail) Serve() {
 		os.Stdout.Write(b)
 		WriteMetrics()
 	} else {
-		go m.interruptHandler()
-
 		m.StartTailing(pathnames)
 
 		http.Handle("/", m)
@@ -151,7 +149,13 @@ func (m *mtail) Serve() {
 		http.HandleFunc("/metrics", handlePrometheusMetrics)
 		StartMetricPush()
 
-		glog.Fatal(http.ListenAndServe(":"+*port, nil))
+		go func() {
+			err := http.ListenAndServe(":"+*port, nil)
+			if err != nil {
+				glog.Fatal(err)
+			}
+		}()
+		m.interruptHandler()
 	}
 }
 
