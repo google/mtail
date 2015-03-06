@@ -25,15 +25,15 @@ var (
 
 // Debug printing.
 func (d *Datum) String() string {
-	return fmt.Sprintf("%+v", *d)
+	return fmt.Sprintf("%+#v", *d)
 }
 
 func (lv *LabelValue) String() string {
-	return fmt.Sprintf("%+v", *lv)
+	return fmt.Sprintf("%+#v", *lv)
 }
 
 func (m *Metric) String() string {
-	return fmt.Sprintf("%+v", *m)
+	return fmt.Sprintf("%+#v", *m)
 }
 
 // Sort a slice of metrics.
