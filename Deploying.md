@@ -13,7 +13,7 @@ The `--help` flag will print a list of flags for configuring mtail.
 Basic flags necessary to start mtail:
 
   * `--logs` is a comma separated list of filenames to extract from.
-  * `--progs` is a directory path containing [mtail programs](MtailLanguage)
+  * `--progs` is a directory path containing [mtail programs](Language)
 
 mtail runs an HTTP server on port 3903, which can be changed with the `--port` flag.
 
