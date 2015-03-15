@@ -7,23 +7,25 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"code.google.com/p/go.exp/inotify"
 )
 
 func TestTail(t *testing.T) {
-	d, err := ioutil.TempDir("", "tail_test")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(d)
+	// d, err := ioutil.TempDir("", "tail_test")
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+	// defer os.RemoveAll(d)
 
-	logfile := d + "/log"
-	f, err := os.Create(logfile)
-	if err != nil {
-		t.Error(err)
-	}
-	defer f.Close()
+	logfile := "/tmp/log"
+	// f, err := os.Create(logfile)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+	// defer f.Close()
 
-	w, err := NewInotifyWatcher()
+	w, err := NewFakeWatcher()
 	if err != nil {
 		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
@@ -35,8 +37,15 @@ func TestTail(t *testing.T) {
 	defer ta.Stop()
 	ta.Tail(logfile)
 
+	if !w.IsWatching(logfile) {
+		t.Errorf("Not watching logfile %s: only %+#v\n", logfile, w.watches)
+	}
+
+	w.AddEvent(&inotify.Event{Mask: inotify.IN_CREATE | inotify.IN_ONLYDIR,
+		Name: logfile})
+
 	if _, ok := ta.files[logfile]; !ok {
-		t.Error("path not found in files map")
+		t.Errorf("path not found in files map: %+#v", ta.files)
 	}
 }
 

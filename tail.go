@@ -49,9 +49,11 @@ type tailer struct {
 	watched      map[string]struct{} // Names of logs being watched.
 	watched_lock sync.RWMutex        // protects `watched'
 	lines        chan string         // Logfile lines being emitted.
-	files        map[string]*os.File // File handles for each pathname.
+	files        map[string]*file    // File handles for each pathname.
 	files_lock   sync.Mutex          // protects `files'
 	partials     map[string]string   // Accumulator for the currently read line for each pathname.
+
+	fs fileSystem // mockable filesystem
 }
 
 // NewTailer returns a new tailer.
@@ -61,12 +63,17 @@ func NewTailer(lines chan string, w Watcher) *tailer {
 		quit:     make(chan bool, 1),
 		watched:  make(map[string]struct{}),
 		lines:    lines,
-		files:    make(map[string]*os.File),
+		files:    make(map[string]*file),
 		partials: make(map[string]string),
+		fs:       fs,
 	}
 	go t.start()
 	return t
 }
+
+// type fileSystem interface {
+// 	Open(name string) (file, error)
+// 	Stat(name string) (
 
 func (t *tailer) addWatched(path string) {
 	t.watched_lock.Lock()
@@ -192,7 +199,7 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 		t.addWatched(d)
 	}
 
-	fd, err := os.Open(pathname)
+	fd, err := t.fs.Open(pathname)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
