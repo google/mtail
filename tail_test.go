@@ -8,29 +8,31 @@ import (
 	"os"
 	"testing"
 
+	"github.com/spf13/afero"
+
 	"code.google.com/p/go.exp/inotify"
 )
 
 func TestTail(t *testing.T) {
-	// d, err := ioutil.TempDir("", "tail_test")
-	// if err != nil {
-	// 	t.Error(err)
-	// }
-	// defer os.RemoveAll(d)
+	d, err := ioutil.TempDir("", "tail_test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(d)
 
 	logfile := "/tmp/log"
-	// f, err := os.Create(logfile)
-	// if err != nil {
-	// 	t.Error(err)
-	// }
-	// defer f.Close()
+	f, err := os.Create(logfile)
+	if err != nil {
+		t.Error(err)
+	}
+	defer f.Close()
 
 	w, err := NewFakeWatcher()
 	if err != nil {
 		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
 	lines := make(chan string)
-	ta := NewTailer(lines, w)
+	ta := NewTailer(lines, w, &afero.OsFs{})
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -41,7 +43,7 @@ func TestTail(t *testing.T) {
 		t.Errorf("Not watching logfile %s: only %+#v\n", logfile, w.watches)
 	}
 
-	w.AddEvent(&inotify.Event{Mask: inotify.IN_CREATE | inotify.IN_ONLYDIR,
+	w.InjectEvent(&inotify.Event{Mask: inotify.IN_CREATE | inotify.IN_ONLYDIR,
 		Name: logfile})
 
 	if _, ok := ta.files[logfile]; !ok {
@@ -68,7 +70,7 @@ func TestHandleLogChange(t *testing.T) {
 		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
 	lines := make(chan string)
-	ta := NewTailer(lines, w)
+	ta := NewTailer(lines, w, &afero.OsFs{})
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -110,7 +112,7 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
 	lines := make(chan string)
-	ta := NewTailer(lines, w)
+	ta := NewTailer(lines, w, &afero.OsFs{})
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}

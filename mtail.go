@@ -22,6 +22,8 @@ import (
 
 	"github.com/golang/glog"
 
+	"github.com/spf13/afero"
+
 	_ "net/http/pprof"
 )
 
@@ -69,7 +71,7 @@ func (m *mtail) StartTailing(pathnames []string) {
 	if err != nil {
 		glog.Fatal("Couldn't create log path watcher:", err)
 	}
-	t := NewTailer(m.lines, tw)
+	t := NewTailer(m.lines, tw, &afero.OsFs{})
 	if t == nil {
 		glog.Fatal("Couldn't create a log tailer.")
 	}

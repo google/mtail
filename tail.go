@@ -21,6 +21,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/golang/glog"
+	"github.com/spf13/afero"
 
 	"code.google.com/p/go.exp/inotify"
 )
@@ -46,24 +47,24 @@ type tailer struct {
 
 	quit chan bool
 
-	watched      map[string]struct{} // Names of logs being watched.
-	watched_lock sync.RWMutex        // protects `watched'
-	lines        chan string         // Logfile lines being emitted.
-	files        map[string]*file    // File handles for each pathname.
-	files_lock   sync.Mutex          // protects `files'
-	partials     map[string]string   // Accumulator for the currently read line for each pathname.
+	watched      map[string]struct{}   // Names of logs being watched.
+	watched_lock sync.RWMutex          // protects `watched'
+	lines        chan string           // Logfile lines being emitted.
+	files        map[string]afero.File // File handles for each pathname.
+	files_lock   sync.Mutex            // protects `files'
+	partials     map[string]string     // Accumulator for the currently read line for each pathname.
 
-	fs fileSystem // mockable filesystem
+	fs afero.Fs // mockable filesystem interface
 }
 
 // NewTailer returns a new tailer.
-func NewTailer(lines chan string, w Watcher) *tailer {
+func NewTailer(lines chan string, w Watcher, fs afero.Fs) *tailer {
 	t := &tailer{
 		w:        w,
 		quit:     make(chan bool, 1),
 		watched:  make(map[string]struct{}),
 		lines:    lines,
-		files:    make(map[string]*file),
+		files:    make(map[string]afero.File),
 		partials: make(map[string]string),
 		fs:       fs,
 	}
@@ -155,7 +156,7 @@ func (t *tailer) handleLogCreate(pathname string) {
 			glog.Infof("Stat failed on %q: %s", t.files[pathname].Name(), err)
 			return
 		}
-		s2, err := os.Stat(pathname)
+		s2, err := t.fs.Stat(pathname)
 		if err != nil {
 			glog.Infof("Stat failed on %q: %s", pathname, err)
 			return
