@@ -14,7 +14,9 @@ GOFILES=\
 	tail.go\
 	unparser.go\
 	vm.go\
-	watcher.go\
+	watcher/watcher.go\
+	watcher/log_watcher.go\
+	watcher/fake_watcher.go\
 
 GOTESTFILES=\
 	mtail_test.go\
@@ -24,6 +26,8 @@ GOTESTFILES=\
 	parser_test.go\
 	tail_test.go\
 	vm_test.go\
+	watcher/fake_watcher_test.go\
+	watcher/log_watcher_test.go\
 
 
 CLEANFILES+=\
