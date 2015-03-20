@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
+	"time"
 )
 
 func TestLogWatcher(t *testing.T) {
@@ -27,45 +27,40 @@ func TestLogWatcher(t *testing.T) {
 
 	w, err := NewLogWatcher()
 	if err != nil {
-		t.Fatalf("coudln't create a watchre: %s\n", err)
+		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
 	defer w.Close()
 
-	var creates []string
-	var updates []string
-
-	done := make(chan bool)
-	go func() {
-		for {
-			select {
-			case name, more := <-w.Creates():
-				if !more {
-					done <- true
-					return
-				}
-				creates = append(creates, name)
-			case name, more := <-w.Updates():
-				if !more {
-					done <- true
-				}
-				updates = append(updates, name)
-			}
-		}
-	}()
-
 	w.Add(workdir)
-	f, err := os.Open(filepath.Join(workdir, "logfile"))
+	f, err := os.Create(filepath.Join(workdir, "logfile"))
+	if err != nil {
+		t.Fatalf("couldn't make a logfile in temp dir: %s\n", err)
+	}
+	select {
+	case n := <-w.Creates():
+		if n != filepath.Join(workdir, "logfile") {
+			t.Errorf("create doesn't match")
+		}
+	case <-time.After(10 * time.Millisecond):
+		t.Errorf("didn't receive create message")
+	}
 	f.WriteString("hi")
 	f.Close()
-	os.Remove(filepath.Join(workdir, "logfile"))
-	<-done
-
-	expected_creates := []string{workdir + "/logfile"}
-	expected_updates := []string{workdir + "/logfile"}
-	if !reflect.DeepEqual(expected_creates, creates) {
-		t.Errorf("create events not matching\n\texpected: %v\n\treceived: %v", expected_creates, creates)
+	select {
+	case n := <-w.Updates():
+		if n != filepath.Join(workdir, "logfile") {
+			t.Errorf("update doesn't match")
+		}
+	case <-time.After(10 * time.Millisecond):
+		t.Errorf("didn't receive update message")
 	}
-	if !reflect.DeepEqual(expected_updates, updates) {
-		t.Errorf("create events not matching\n\texpected: %v\n\treceived: %v", expected_updates, updates)
+	os.Remove(filepath.Join(workdir, "logfile"))
+	select {
+	case n := <-w.Deletes():
+		if n != filepath.Join(workdir, "logfile") {
+			t.Errorf("delete doesn't match")
+		}
+	case <-time.After(10 * time.Millisecond):
+		t.Errorf("didn't receive delete message")
 	}
 }

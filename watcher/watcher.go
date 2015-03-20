@@ -6,4 +6,5 @@ type Watcher interface {
 	Remove(name string) error
 	Creates() chan string
 	Updates() chan string
+	Deletes() chan string
 }

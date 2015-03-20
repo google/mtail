@@ -1,17 +1,23 @@
 package watcher
 
-import "github.com/golang/glog"
+import (
+	"path"
+
+	"github.com/golang/glog"
+)
 
 // FakeWatcher implements an in-memory Watcher.
 type FakeWatcher struct {
 	watches map[string]bool
 	creates chan string
 	updates chan string
+	deletes chan string
 }
 
 func NewFakeWatcher() *FakeWatcher {
 	return &FakeWatcher{
 		make(map[string]bool),
+		make(chan string, 1),
 		make(chan string, 1),
 		make(chan string, 1)}
 }
@@ -35,23 +41,34 @@ func (w *FakeWatcher) Remove(name string) error {
 	return nil
 }
 
-// Creates and Updates return the channel of log creation and update messages.
+// Creates, Updates, and Deletes return the channel of messages for their respective event.
 func (w *FakeWatcher) Creates() chan string { return w.creates }
 func (w *FakeWatcher) Updates() chan string { return w.updates }
+func (w *FakeWatcher) Deletes() chan string { return w.deletes }
 
-// InjectCreate lets a test inject a fake log creation event.
+// InjectCreate lets a test inject a fake creation event.
 func (w *FakeWatcher) InjectCreate(name string) {
-	if w.watches[name] {
+	dirname := path.Dir(name)
+	if w.watches[dirname] {
 		w.creates <- name
+	} else {
+		glog.Infof("not watching %s to see %s", dirname, name)
+	}
+}
+
+// InjectUpdate lets a test inject a fake update event.
+func (w *FakeWatcher) InjectUpdate(name string) {
+	if w.watches[name] {
+		w.updates <- name
 	} else {
 		glog.Infof("not watching %s", name)
 	}
 }
 
-// InjectUpdate lets a test inject a fake log update event.
-func (w *FakeWatcher) InjectUpdate(name string) {
+// InjectDelete lets a test inject a fake deletion event.
+func (w *FakeWatcher) InjectDelete(name string) {
 	if w.watches[name] {
-		w.updates <- name
+		w.deletes <- name
 	} else {
 		glog.Infof("not watching %s", name)
 	}
