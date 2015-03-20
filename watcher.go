@@ -1,8 +1,6 @@
 package main
 
-import (
-	"code.google.com/p/go.exp/inotify"
-)
+import "code.google.com/p/go.exp/inotify"
 
 // Watcher is an interface for watching filesystem events.
 type Watcher interface {
@@ -15,7 +13,7 @@ type Watcher interface {
 }
 
 // InotifyWatcher implements Watcher using the inotify library.
-type InotifyWatcher struct {
+type FsNotifyWatcher struct {
 	*inotify.Watcher
 }
 
