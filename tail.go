@@ -110,6 +110,7 @@ Loop:
 	for {
 		b := make([]byte, 4096)
 		n, err := t.files[pathname].Read(b)
+		glog.Infof("err: %v, n: %d", err, n)
 		if err != nil {
 			if err == io.EOF && n == 0 {
 				// end of file for now, return
