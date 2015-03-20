@@ -21,7 +21,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/golang/glog"
+
 	"github.com/google/mtail/watcher"
+
+	"github.com/spf13/afero"
 )
 
 var (
@@ -38,23 +41,26 @@ type tailer struct {
 
 	quit chan bool
 
-	watched      map[string]struct{} // Names of logs being watched.
-	watched_lock sync.RWMutex        // protects `watched'
-	lines        chan string         // Logfile lines being emitted.
-	files        map[string]*os.File // File handles for each pathname.
-	files_lock   sync.Mutex          // protects `files'
-	partials     map[string]string   // Accumulator for the currently read line for each pathname.
+	watched      map[string]struct{}   // Names of logs being watched.
+	watched_lock sync.RWMutex          // protects `watched'
+	lines        chan string           // Logfile lines being emitted.
+	files        map[string]afero.File // File handles for each pathname.
+	files_lock   sync.Mutex            // protects `files'
+	partials     map[string]string     // Accumulator for the currently read line for each pathname.
+
+	fs afero.Fs // mockable filesystem interface
 }
 
 // NewTailer returns a new tailer.
-func NewTailer(lines chan string, w watcher.Watcher) *tailer {
+func NewTailer(lines chan string, w watcher.Watcher, fs afero.Fs) *tailer {
 	t := &tailer{
 		w:        w,
 		quit:     make(chan bool, 1),
 		watched:  make(map[string]struct{}),
 		lines:    lines,
-		files:    make(map[string]*os.File),
+		files:    make(map[string]afero.File),
 		partials: make(map[string]string),
+		fs:       fs,
 	}
 	go t.start()
 	return t
@@ -94,6 +100,7 @@ Loop:
 	for {
 		b := make([]byte, 4096)
 		n, err := t.files[pathname].Read(b)
+		glog.Infof("err: %v, n: %d", err, n)
 		if err != nil {
 			if err == io.EOF && n == 0 {
 				// end of file for now, return
@@ -140,7 +147,7 @@ func (t *tailer) handleLogCreate(pathname string) {
 			glog.Infof("Stat failed on %q: %s", t.files[pathname].Name(), err)
 			return
 		}
-		s2, err := os.Stat(pathname)
+		s2, err := t.fs.Stat(pathname)
 		if err != nil {
 			glog.Infof("Stat failed on %q: %s", pathname, err)
 			return
@@ -184,7 +191,7 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 		t.addWatched(d)
 	}
 
-	fd, err := os.Open(pathname)
+	fd, err := t.fs.Open(pathname)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.

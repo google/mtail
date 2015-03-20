@@ -8,73 +8,90 @@ import (
 	"os"
 	"testing"
 
+	"code.google.com/p/go.exp/inotify"
+
 	"github.com/google/mtail/watcher"
+
+	"github.com/spf13/afero"
 )
 
 func TestTail(t *testing.T) {
-	d, err := ioutil.TempDir("", "tail_test")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(d)
-
-	logfile := d + "/log"
-	f, err := os.Create(logfile)
+	fs := &afero.MemMapFs{}
+	fs.Mkdir("tail_test", os.ModePerm)
+	logfile := "/tmp/log"
+	f, err := fs.Create(logfile)
 	if err != nil {
 		t.Error(err)
 	}
 	defer f.Close()
 
-	w, err := watcher.NewLogWatcher()
+	w, err := watcher.NewFakeWatcher()
 	if err != nil {
 		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
 	lines := make(chan string)
-	ta := NewTailer(lines, w)
+	ta := NewTailer(lines, w, fs)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
 	defer ta.Stop()
 	ta.Tail(logfile)
 
+	if !w.IsWatching(logfile) {
+		t.Errorf("Not watching logfile %s: only %+#v\n", logfile, w.watches)
+	}
+
+	w.InjectEvent(&inotify.Event{Mask: inotify.IN_CREATE | inotify.IN_ONLYDIR,
+		Name: logfile})
+
 	if _, ok := ta.files[logfile]; !ok {
-		t.Error("path not found in files map")
+		t.Errorf("path not found in files map: %+#v", ta.files)
 	}
 }
 
 func TestHandleLogChange(t *testing.T) {
-	d, err := ioutil.TempDir("", "tail_test")
+	fs := &afero.MemMapFs{}
+	err := fs.Mkdir("/tail_test", os.ModePerm)
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("err: %s", err)
 	}
-	defer os.RemoveAll(d)
-
-	logfile := d + "/log"
-	f, err := os.Create(logfile)
+	logfile := "/tail_test/log"
+	f, err := fs.Create(logfile)
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("err: %s", err)
 	}
 	defer f.Close()
 
-	w, err := watcher.NewLogWatcher()
+	w, err := watcher.NewFakeWatcher()
 	if err != nil {
 		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
-	lines := make(chan string)
-	ta := NewTailer(lines, w)
+	lines := make(chan string, 4)
+	ta := NewTailer(lines, w, fs)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
 	defer ta.Stop()
+	t.Logf("hi")
 	ta.Tail(logfile)
 
 	_, err = f.WriteString("a\nb\nc\nd\n")
 	if err != nil {
 		t.Error(err)
 	}
+	t.Logf("hi")
+	f.Seek(0, os.SEEK_SET)
+	f.Close()
 	go ta.handleLogUpdate(logfile)
+	// var result string[]
+	// for _, line := range(ta.lines) {
+	// 	result = append(result, line)
+	// }
+
+	t.Logf("hi again")
 
 	for _, expected := range []string{"a", "b", "c", "d"} {
+		t.Logf("hi")
 		// Run as a goroutine because it's going to emit lines via output channel
 		line := <-ta.lines
 		if line != expected {
@@ -103,7 +120,7 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
 	lines := make(chan string)
-	ta := NewTailer(lines, w)
+	ta := NewTailer(lines, w, &afero.OsFs{})
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
