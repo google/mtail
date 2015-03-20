@@ -55,18 +55,23 @@ type tailer struct {
 	partials     map[string]string     // Accumulator for the currently read line for each pathname.
 
 	fs afero.Fs // mockable filesystem interface
+
+	ChangedLogFile chan string // Feed of log filenames when change detected.
+	NewLogFile     chan string // Feed of new log filenames when added to watch dir.
 }
 
 // NewTailer returns a new tailer.
 func NewTailer(lines chan string, w Watcher, fs afero.Fs) *tailer {
 	t := &tailer{
-		w:        w,
-		quit:     make(chan bool, 1),
-		watched:  make(map[string]struct{}),
-		lines:    lines,
-		files:    make(map[string]afero.File),
-		partials: make(map[string]string),
-		fs:       fs,
+		w:              w,
+		quit:           make(chan bool, 1),
+		watched:        make(map[string]struct{}),
+		lines:          lines,
+		files:          make(map[string]afero.File),
+		partials:       make(map[string]string),
+		fs:             fs,
+		ChangedLogFile: w.ChangedLogFile,
+		NewLogFile:     w.NewLogFile,
 	}
 	go t.start()
 	return t
@@ -236,31 +241,10 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 func (t *tailer) start() {
 	for {
 		select {
-		case ev := <-t.w.Events():
-			if ev == nil {
-				glog.Info("event received, but was nil.")
-				continue
-			}
-			event_count.Add(ev.String(), 1)
-			switch {
-			case ev.Mask&tLogUpdateMask != 0:
-				t.handleLogUpdate(ev.Name)
-
-			case ev.Mask&tLogCreateMask != 0:
-				t.handleLogCreate(ev.Name)
-
-			case ev.Mask&inotify.IN_IGNORED != 0:
-				// Ignore!
-
-			default:
-				glog.Infof("Unexpected event %q", ev)
-			}
-		case err := <-t.w.Errors():
-			if err != nil {
-				glog.Info("inotify watch error:", err)
-			} else {
-				glog.Info("inotify watch error, but error was nil")
-			}
+		case logfilename := <-t.NewLogFile:
+			t.handleLogCreate(logfilename)
+		case logfilename := <-t.ChangedLogFile:
+			t.handleLogUpdate(logfilename)
 		case <-t.quit:
 			goto end
 		}

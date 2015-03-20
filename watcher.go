@@ -2,48 +2,75 @@ package main
 
 import (
 	"code.google.com/p/go.exp/inotify"
+	"github.com/golang/glog"
 )
 
 // Watcher is an interface for watching filesystem events.
 type Watcher interface {
-	Events() chan *inotify.Event
-	Errors() chan error
-
 	AddWatch(string, uint32) error
 	Close() error
 	RemoveWatch(string) error
+	Channels() (chan string, chan string)
 }
 
 // InotifyWatcher implements Watcher using the inotify library.
 type InotifyWatcher struct {
 	*inotify.Watcher
+	ChangedLogFile chan string
+	NewLogFile     chan string
 }
-
-func (w *InotifyWatcher) Events() chan *inotify.Event { return w.Event }
-func (w *InotifyWatcher) Errors() chan error          { return w.Error }
 
 func NewInotifyWatcher() (w *InotifyWatcher, err error) {
 	i, err := inotify.NewWatcher()
 	if err != nil {
 		return
 	}
-	w = &InotifyWatcher{i}
+	w = &InotifyWatcher{i, make(chan string), make(chan string)}
 	return
+}
+
+func (w *Watcher) Channels() (chan string, chan string) {
+	return w.ChangedLogFile, w.NewLogFile
+}
+
+func (w *Watcher) Start() {
+	for {
+		select {
+		case ev := <-w.Event:
+			if ev == nil {
+				glog.Info("event received, but was nil.")
+				continue
+			}
+			event_count.Add(ev.String(), 1)
+			switch {
+			case ev.Mask&tLogUpdateMask != 0:
+				w.ChangedLogFile <- ev.Name
+
+			case ev.Mask&tLogCreateMask != 0:
+				w.NewLogFile <- ev.Name
+
+			case ev.Mask&inotify.IN_IGNORED != 0:
+				// Ignore!
+
+			default:
+				glog.Infof("Unexpected event %q", ev)
+			}
+		case err := <-w.Errors:
+			if err != nil {
+				glog.Info("inotify watch error:", err)
+			} else {
+				glog.Info("inotify watch error, but error was nil")
+			}
+		case <-t.quit:
+			goto end
+		}
+	}
+end:
 }
 
 // FakeWatcher implements the Watcher interface with an in-memory watcher.
 type FakeWatcher struct {
 	watches map[string]uint32
-	events  chan *inotify.Event
-	errors  chan error
-}
-
-func (w *FakeWatcher) Events() chan *inotify.Event {
-	return w.events
-}
-
-func (w *FakeWatcher) Errors() chan error {
-	return w.errors
 }
 
 func (w *FakeWatcher) AddWatch(pathname string, flags uint32) error {
@@ -52,8 +79,6 @@ func (w *FakeWatcher) AddWatch(pathname string, flags uint32) error {
 }
 
 func (w *FakeWatcher) Close() error {
-	close(w.events)
-	close(w.errors)
 	return nil
 }
 
