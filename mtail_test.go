@@ -11,12 +11,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/mtail/watcher"
 )
 
 var test_program = "/$/ { }"
 
 func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) chan bool {
-	w, err := NewInotifyWatcher()
+	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		t.Errorf("Couldn't create watcher: %s", err)
 	}

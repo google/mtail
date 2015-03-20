@@ -21,6 +21,7 @@ import (
 	"syscall"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/watcher"
 
 	_ "net/http/pprof"
 )
@@ -65,7 +66,7 @@ func (m *mtail) OneShot(logfile string, lines chan string, stop chan bool) error
 }
 
 func (m *mtail) StartTailing(pathnames []string) {
-	tw, err := NewInotifyWatcher()
+	tw, err := watcher.NewLogWatcher()
 	if err != nil {
 		glog.Fatal("Couldn't create log path watcher:", err)
 	}
@@ -101,7 +102,7 @@ func (m *mtail) Serve() {
 		glog.Fatalf("No logs specified to tail; use -logs")
 	}
 
-	w, err := NewInotifyWatcher()
+	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		glog.Fatal("Couldn't create an inotify watcher:", err)
 	}

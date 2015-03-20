@@ -21,28 +21,20 @@ import (
 	"unicode/utf8"
 
 	"github.com/golang/glog"
-
-	"code.google.com/p/go.exp/inotify"
+	"github.com/google/mtail/watcher"
 )
 
 var (
-	event_count   = expvar.NewMap("inotify_event_count")
 	log_count     = expvar.NewInt("log_count")
 	log_errors    = expvar.NewMap("log_errors_total")
 	log_rotations = expvar.NewMap("log_rotations_total")
-)
-
-// Set of masks to use to determine different events
-const (
-	tLogCreateMask = inotify.IN_CREATE | inotify.IN_ONLYDIR
-	tLogUpdateMask = inotify.IN_MODIFY
 )
 
 // tailer receives notification of changes from inotify and extracts new log
 // lines from files. It also handles new log file creation events and log
 // rotations.
 type tailer struct {
-	w Watcher
+	w watcher.Watcher
 
 	quit chan bool
 
@@ -55,7 +47,7 @@ type tailer struct {
 }
 
 // NewTailer returns a new tailer.
-func NewTailer(lines chan string, w Watcher) *tailer {
+func NewTailer(lines chan string, w watcher.Watcher) *tailer {
 	t := &tailer{
 		w:        w,
 		quit:     make(chan bool, 1),
@@ -158,7 +150,7 @@ func (t *tailer) handleLogCreate(pathname string) {
 			// flush the old log, pathname is still an index into t.files with the old inode.
 			t.handleLogUpdate(pathname)
 			fd.Close()
-			err := t.w.RemoveWatch(pathname)
+			err := t.w.Remove(pathname)
 			if err != nil {
 				glog.Info("Failed removing watches on", pathname)
 			}
@@ -185,7 +177,7 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 
 	d := path.Dir(pathname)
 	if !t.isWatching(d) {
-		err := t.w.AddWatch(d, tLogCreateMask)
+		err := t.w.Add(d)
 		if err != nil {
 			glog.Infof("Adding a create watch failed on %q: %s", d, err)
 		}
@@ -212,7 +204,7 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 
 	t.files_lock.Unlock()
 
-	err = t.w.AddWatch(pathname, tLogUpdateMask)
+	err = t.w.Add(pathname)
 	if err != nil {
 		glog.Infof("Adding a change watch failed on %q: %s", pathname, err)
 	}
@@ -227,31 +219,10 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 func (t *tailer) start() {
 	for {
 		select {
-		case ev := <-t.w.Events():
-			if ev == nil {
-				glog.Info("event received, but was nil.")
-				continue
-			}
-			event_count.Add(ev.String(), 1)
-			switch {
-			case ev.Mask&tLogUpdateMask != 0:
-				t.handleLogUpdate(ev.Name)
-
-			case ev.Mask&tLogCreateMask != 0:
-				t.handleLogCreate(ev.Name)
-
-			case ev.Mask&inotify.IN_IGNORED != 0:
-				// Ignore!
-
-			default:
-				glog.Infof("Unexpected event %q", ev)
-			}
-		case err := <-t.w.Errors():
-			if err != nil {
-				glog.Info("inotify watch error:", err)
-			} else {
-				glog.Info("inotify watch error, but error was nil")
-			}
+		case name := <-t.w.Updates():
+			t.handleLogUpdate(name)
+		case name := <-t.w.Creates():
+			t.handleLogCreate(name)
 		case <-t.quit:
 			goto end
 		}

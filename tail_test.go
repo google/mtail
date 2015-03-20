@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/google/mtail/watcher"
 )
 
 func TestTail(t *testing.T) {
@@ -23,7 +25,7 @@ func TestTail(t *testing.T) {
 	}
 	defer f.Close()
 
-	w, err := NewInotifyWatcher()
+	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
@@ -54,7 +56,7 @@ func TestHandleLogChange(t *testing.T) {
 	}
 	defer f.Close()
 
-	w, err := NewInotifyWatcher()
+	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
@@ -96,7 +98,7 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	}
 	defer f.Close()
 
-	w, err := NewInotifyWatcher()
+	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		t.Fatalf("Couldn't make a watcher: %s", err)
 	}
