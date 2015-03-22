@@ -32,6 +32,7 @@ func (w *FakeWatcher) Add(name string) error {
 func (w *FakeWatcher) Close() error {
 	close(w.creates)
 	close(w.updates)
+	close(w.deletes)
 	return nil
 }
 
