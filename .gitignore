@@ -12,3 +12,4 @@ fuzz/fuzz
 fuzzout
 emgen/emgen
 foo.log
+/watcher/watcher.test
