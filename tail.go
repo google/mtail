@@ -126,9 +126,18 @@ Loop:
 	}
 }
 
-// inode returns the inode number of a file.
+// inode returns the inode number of a file, or 0 if the file has no underlying Sys implementation.
 func inode(f os.FileInfo) uint64 {
-	return f.Sys().(*syscall.Stat_t).Ino
+	s := f.Sys()
+	if s == nil {
+		return 0
+	}
+	switch s := s.(type) {
+	case *syscall.Stat_t:
+		return s.Ino
+	default:
+		return 0
+	}
 }
 
 // handleLogCreate handles both new and rotated log files.
