@@ -6,6 +6,7 @@ package main
 import (
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -55,10 +56,12 @@ func TestHandleLogUpdate(t *testing.T) {
 	lines := make(chan string)
 	result := []string{}
 	done := make(chan struct{})
+	wg := sync.WaitGroup{}
 	go func() {
 		for line := range lines {
 			glog.Infof("line: %q\n", line)
 			result = append(result, line)
+			wg.Done()
 		}
 		close(done)
 	}()
@@ -76,11 +79,11 @@ func TestHandleLogUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.Seek(0, 0) // In memory files share the same offset
-
+	wg.Add(4)
 	w.InjectUpdate(logfile)
 
 	// ugh
-	time.Sleep(1 * time.Millisecond)
+	wg.Wait()
 
 	ta.Stop()
 	t.Logf("waiting")
@@ -108,10 +111,13 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	lines := make(chan string)
 	result := []string{}
 	done := make(chan struct{})
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
 		for line := range lines {
 			glog.Infof("line: %q\n", line)
 			result = append(result, line)
+			wg.Done()
 		}
 		close(done)
 	}()
@@ -130,6 +136,10 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	}
 	f.Seek(0, 0)
 	w.InjectUpdate(logfile)
+	// These sleeps are due to afero using the same data structure for both
+	// this thread and the method under test, so the file offset is shared.  We
+	// have to wait for the handleLogUpdate method to run and as yet there's no
+	// signal that this occurred.
 	time.Sleep(1 * time.Millisecond)
 
 	_, err = f.WriteString("b")
@@ -146,8 +156,8 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	}
 	f.Seek(2, 0)
 	w.InjectUpdate(logfile)
-	time.Sleep(1 * time.Millisecond)
 
+	wg.Wait()
 	ta.Stop()
 	<-done
 
