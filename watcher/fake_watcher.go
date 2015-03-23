@@ -17,9 +17,9 @@ type FakeWatcher struct {
 func NewFakeWatcher() *FakeWatcher {
 	return &FakeWatcher{
 		make(map[string]bool),
-		make(chan string, 1),
-		make(chan string, 1),
-		make(chan string, 1)}
+		make(chan string),
+		make(chan string),
+		make(chan string)}
 }
 
 // Add adds a watch to the FakeWatcher

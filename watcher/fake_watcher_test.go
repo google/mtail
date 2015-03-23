@@ -1,8 +1,8 @@
 package watcher
 
 import (
+	"sync"
 	"testing"
-	"time"
 )
 
 func TestFakeWatcher(t *testing.T) {
@@ -20,24 +20,28 @@ func TestFakeWatcher(t *testing.T) {
 	}
 
 	w.Add("/tmp")
-	w.InjectCreate("/tmp/log")
-	select {
-	case name := <-w.Creates():
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		name := <-w.Creates()
 		if name != "/tmp/log" {
 			t.Errorf("event doesn't match: %s\n", name)
 		}
-	case <-time.After(1 * time.Millisecond):
-		t.Fatalf("No event found in watcher: %+#v\n", w)
-	}
+		wg.Done()
+	}()
+	w.InjectCreate("/tmp/log")
+	wg.Wait()
 
 	w.Add("/tmp/foo")
-	w.InjectUpdate("/tmp/foo")
-	select {
-	case name := <-w.Updates():
+	wg = sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		name := <-w.Updates()
 		if name != "/tmp/foo" {
 			t.Errorf("event doesn't match name: %s\n", name)
 		}
-	case <-time.After(1 * time.Millisecond):
-		t.Fatalf("no event found in watcher: %+#v\n", w)
-	}
+		wg.Done()
+	}()
+	w.InjectUpdate("/tmp/foo")
+	wg.Wait()
 }
