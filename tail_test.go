@@ -93,7 +93,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	}
 }
 
-func TestHandleLogChangePartialLine(t *testing.T) {
+func TestHandleLogUpdatePartialLine(t *testing.T) {
 	fs := &afero.MemMapFs{}
 	err := fs.Mkdir("/tail_test", os.ModePerm)
 	if err != nil {
@@ -105,50 +105,56 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	w := watcher.NewFakeWatcher()
 	lines := make(chan string)
+	result := []string{}
+	done := make(chan struct{})
+	go func() {
+		for line := range lines {
+			glog.Infof("line: %q\n", line)
+			result = append(result, line)
+		}
+		close(done)
+	}()
+
+	w := watcher.NewFakeWatcher()
 	ta := NewTailer(lines, w, fs)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
-	defer ta.Stop()
+
 	ta.Tail(logfile)
 
 	_, err = f.WriteString("a")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	f.Seek(0, 0)
 	w.InjectUpdate(logfile)
-	select {
-	case line := <-ta.lines:
-		t.Errorf("unexpected line found: %s", line)
-	case <-time.After(10 * time.Millisecond):
-	}
+	time.Sleep(1 * time.Millisecond)
 
 	_, err = f.WriteString("b")
 	if err != nil {
 		t.Error(err)
 	}
+	f.Seek(1, 0)
 	w.InjectUpdate(logfile)
-
-	select {
-	case line := <-ta.lines:
-		t.Errorf("unexpected line found: %s", line)
-	case <-time.After(10 * time.Millisecond):
-	}
+	time.Sleep(1 * time.Millisecond)
 
 	_, err = f.WriteString("\n")
 	if err != nil {
 		t.Error(err)
 	}
+	f.Seek(2, 0)
 	w.InjectUpdate(logfile)
-	select {
-	case line := <-ta.lines:
-		expected := "ab"
-		if line != expected {
-			t.Errorf("line doesn't match: expected %q received %q", expected, line)
-		}
-	case <-time.After(10 * time.Millisecond):
-		t.Errorf("no line read")
+	time.Sleep(1 * time.Millisecond)
+
+	ta.Stop()
+	<-done
+
+	expected := []string{"ab"}
+	t.Logf("result: %v", result)
+	if !reflect.DeepEqual(expected, result) {
+		t.Errorf("result didn't match:\n\texpected: %v\n\treceived: %v", expected, result)
 	}
+
 }
