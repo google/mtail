@@ -16,6 +16,7 @@ type LogWatcher struct {
 	creates chan string
 	updates chan string
 	deletes chan string
+	quit    chan bool
 }
 
 func NewLogWatcher() (w *LogWatcher, err error) {
@@ -23,7 +24,7 @@ func NewLogWatcher() (w *LogWatcher, err error) {
 	if err != nil {
 		return
 	}
-	w = &LogWatcher{f, make(chan string), make(chan string), make(chan string)}
+	w = &LogWatcher{f, make(chan string), make(chan string), make(chan string), make(chan bool)}
 	go w.run()
 	return
 }
@@ -36,10 +37,8 @@ func (w *LogWatcher) run() {
 	for {
 		select {
 		case e, more := <-w.Events:
-			if !more {
-				goto end
-			}
 			event_count.Add(e.Name, 1)
+			glog.Infof("Writing %v", e)
 			switch {
 			case e.Op&fsnotify.Create == fsnotify.Create:
 				w.creates <- e.Name
@@ -48,17 +47,23 @@ func (w *LogWatcher) run() {
 			case e.Op&fsnotify.Remove == fsnotify.Remove:
 				w.deletes <- e.Name
 			}
+			if !more {
+				goto end
+			}
 		case err := <-w.Errors:
 			glog.Infof("fsnotify error: %s\n", err)
+		case <-w.quit:
+			goto end
 		}
 	}
 end:
-}
-
-func (w *LogWatcher) Close() (err error) {
-	err = w.Watcher.Close()
 	close(w.creates)
 	close(w.updates)
 	close(w.deletes)
+}
+
+func (w *LogWatcher) Close() (err error) {
+	w.quit <- true
+	err = w.Watcher.Close()
 	return
 }
