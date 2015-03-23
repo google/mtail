@@ -21,6 +21,7 @@ import (
 	"syscall"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/watcher"
 
 	"github.com/spf13/afero"
@@ -72,7 +73,7 @@ func (m *mtail) StartTailing(pathnames []string) {
 	if err != nil {
 		glog.Fatal("Couldn't create log path watcher:", err)
 	}
-	t := NewTailer(m.lines, tw, &afero.OsFs{})
+	t := tailer.New(m.lines, tw, &afero.OsFs{})
 	if t == nil {
 		glog.Fatal("Couldn't create a log tailer.")
 	}

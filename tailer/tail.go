@@ -8,7 +8,7 @@
 // being watched, in order to read the new lines. Log files can also be
 // rotated, so mtail is also notified of creates in the log file directory.
 
-package main
+package tailer
 
 import (
 	"expvar"
@@ -51,8 +51,8 @@ type tailer struct {
 	fs afero.Fs // mockable filesystem interface
 }
 
-// NewTailer returns a new tailer.
-func NewTailer(lines chan string, w watcher.Watcher, fs afero.Fs) *tailer {
+// New returns a new tailer.
+func New(lines chan string, w watcher.Watcher, fs afero.Fs) *tailer {
 	t := &tailer{
 		w:        w,
 		quit:     make(chan bool, 1),

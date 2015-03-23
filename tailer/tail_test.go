@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package main
+package tailer
 
 import (
 	"os"
@@ -28,7 +28,7 @@ func TestTail(t *testing.T) {
 
 	w := watcher.NewFakeWatcher()
 	lines := make(chan string)
-	ta := NewTailer(lines, w, fs)
+	ta := New(lines, w, fs)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -67,7 +67,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	}()
 
 	w := watcher.NewFakeWatcher()
-	ta := NewTailer(lines, w, fs)
+	ta := New(lines, w, fs)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -123,7 +123,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	}()
 
 	w := watcher.NewFakeWatcher()
-	ta := NewTailer(lines, w, fs)
+	ta := New(lines, w, fs)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}

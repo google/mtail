@@ -11,7 +11,7 @@ GOFILES=\
 	parser.go\
 	progs.go\
 	symtab.go\
-	tail.go\
+	tailer/tail.go\
 	unparser.go\
 	vm.go\
 	watcher/watcher.go\
@@ -24,7 +24,7 @@ GOTESTFILES=\
 	export_test.go\
 	lexer_test.go\
 	parser_test.go\
-	tail_test.go\
+	tailer/tail_test.go\
 	vm_test.go\
 	watcher/fake_watcher_test.go\
 	watcher/log_watcher_test.go\
