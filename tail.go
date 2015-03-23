@@ -93,18 +93,22 @@ func (t *tailer) Tail(pathname string) {
 	}
 }
 
-// handleLogUpdate reads all available bytes from an already opened *File
-// identified by pathname, and sends them to be processed.
+// handleLogUpdate reads all available bytes from an already opened file
+// identified by pathname, and sends them to be processed on the lines channel.
 func (t *tailer) handleLogUpdate(pathname string) {
-Loop:
 	for {
 		b := make([]byte, 4096)
-		n, err := t.files[pathname].Read(b)
+		f, ok := t.files[pathname]
+		if !ok {
+			glog.Infof("No file found for %q", pathname)
+			return
+		}
+		n, err := f.Read(b)
 		glog.Infof("err: %v, n: %d", err, n)
 		if err != nil {
 			if err == io.EOF && n == 0 {
 				// end of file for now, return
-				break Loop
+				return
 			}
 			glog.Infof("Failed to read updates from %q: %s", pathname, err)
 			return
@@ -235,15 +239,26 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 func (t *tailer) start() {
 	for {
 		select {
-		case name := <-t.w.Updates():
-			t.handleLogUpdate(name)
-		case name := <-t.w.Creates():
-			t.handleLogCreate(name)
+		case name, more := <-t.w.Updates():
+			if more {
+				glog.Infof("name: %q", name)
+				t.handleLogUpdate(name)
+			} else {
+				goto end
+			}
+		case name, more := <-t.w.Creates():
+			if more {
+				glog.Infof("name: %q", name)
+				t.handleLogCreate(name)
+			} else {
+				goto end
+			}
 		case <-t.quit:
 			goto end
 		}
 	}
 end:
+	close(t.lines)
 }
 
 func (t *tailer) Stop() {

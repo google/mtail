@@ -4,12 +4,12 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
+	"time"
 
-	"code.google.com/p/go.exp/inotify"
-
+	"github.com/golang/glog"
 	"github.com/google/mtail/watcher"
 
 	"github.com/spf13/afero"
@@ -25,10 +25,7 @@ func TestTail(t *testing.T) {
 	}
 	defer f.Close()
 
-	w, err := watcher.NewFakeWatcher()
-	if err != nil {
-		t.Fatalf("Couldn't make a watcher: %s", err)
-	}
+	w := watcher.NewFakeWatcher()
 	lines := make(chan string)
 	ta := NewTailer(lines, w, fs)
 	if ta == nil {
@@ -36,20 +33,14 @@ func TestTail(t *testing.T) {
 	}
 	defer ta.Stop()
 	ta.Tail(logfile)
-
-	if !w.IsWatching(logfile) {
-		t.Errorf("Not watching logfile %s: only %+#v\n", logfile, w.watches)
-	}
-
-	w.InjectEvent(&inotify.Event{Mask: inotify.IN_CREATE | inotify.IN_ONLYDIR,
-		Name: logfile})
+	// Tail also causes the log to be read, so no need to inject an event.
 
 	if _, ok := ta.files[logfile]; !ok {
 		t.Errorf("path not found in files map: %+#v", ta.files)
 	}
 }
 
-func TestHandleLogChange(t *testing.T) {
+func TestHandleLogUpdate(t *testing.T) {
 	fs := &afero.MemMapFs{}
 	err := fs.Mkdir("/tail_test", os.ModePerm)
 	if err != nil {
@@ -60,67 +51,63 @@ func TestHandleLogChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	defer f.Close()
 
-	w, err := watcher.NewFakeWatcher()
-	if err != nil {
-		t.Fatalf("Couldn't make a watcher: %s", err)
-	}
-	lines := make(chan string, 4)
+	lines := make(chan string)
+	result := []string{}
+	done := make(chan struct{})
+	go func() {
+		for line := range lines {
+			glog.Infof("line: %q\n", line)
+			result = append(result, line)
+		}
+		close(done)
+	}()
+
+	w := watcher.NewFakeWatcher()
 	ta := NewTailer(lines, w, fs)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
-	defer ta.Stop()
-	t.Logf("hi")
+
 	ta.Tail(logfile)
 
 	_, err = f.WriteString("a\nb\nc\nd\n")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	t.Logf("hi")
-	f.Seek(0, os.SEEK_SET)
-	f.Close()
-	go ta.handleLogUpdate(logfile)
-	// var result string[]
-	// for _, line := range(ta.lines) {
-	// 	result = append(result, line)
-	// }
+	f.Seek(0, 0) // In memory files share the same offset
 
-	t.Logf("hi again")
+	w.InjectUpdate(logfile)
 
-	for _, expected := range []string{"a", "b", "c", "d"} {
-		t.Logf("hi")
-		// Run as a goroutine because it's going to emit lines via output channel
-		line := <-ta.lines
-		if line != expected {
-			t.Errorf("line doesn't match:\n\texpected: %s\n\tgot: %s", expected, line)
-			continue
-		}
+	// ugh
+	time.Sleep(1 * time.Millisecond)
+
+	ta.Stop()
+	t.Logf("waiting")
+	<-done
+
+	expected := []string{"a", "b", "c", "d"}
+	t.Logf("result: %v", result)
+	if !reflect.DeepEqual(expected, result) {
+		t.Errorf("result didn't match:\n\texpected: %v\n\treceived: %v", expected, result)
 	}
 }
 
 func TestHandleLogChangePartialLine(t *testing.T) {
-	d, err := ioutil.TempDir("", "tail_test")
+	fs := &afero.MemMapFs{}
+	err := fs.Mkdir("/tail_test", os.ModePerm)
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("err: %s", err)
 	}
-	defer os.RemoveAll(d)
+	logfile := "/tail_test/log"
+	f, err := fs.Create(logfile)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 
-	logfile := d + "/log"
-	f, err := os.Create(logfile)
-	if err != nil {
-		t.Error(err)
-	}
-	defer f.Close()
-
-	w, err := watcher.NewLogWatcher()
-	if err != nil {
-		t.Fatalf("Couldn't make a watcher: %s", err)
-	}
+	w := watcher.NewFakeWatcher()
 	lines := make(chan string)
-	ta := NewTailer(lines, w, &afero.OsFs{})
+	ta := NewTailer(lines, w, fs)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -131,33 +118,37 @@ func TestHandleLogChangePartialLine(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	go ta.handleLogUpdate(logfile)
+	w.InjectUpdate(logfile)
 	select {
 	case line := <-ta.lines:
 		t.Errorf("unexpected line found: %s", line)
-	default:
+	case <-time.After(10 * time.Millisecond):
 	}
 
 	_, err = f.WriteString("b")
 	if err != nil {
 		t.Error(err)
 	}
-	go ta.handleLogUpdate(logfile)
+	w.InjectUpdate(logfile)
 
 	select {
 	case line := <-ta.lines:
 		t.Errorf("unexpected line found: %s", line)
-	default:
+	case <-time.After(10 * time.Millisecond):
 	}
 
 	_, err = f.WriteString("\n")
 	if err != nil {
 		t.Error(err)
 	}
-	go ta.handleLogUpdate(logfile)
-	line := <-ta.lines
-	expected := "ab"
-	if line != expected {
-		t.Errorf("line doesn't match: expected %q received %q", expected, line)
+	w.InjectUpdate(logfile)
+	select {
+	case line := <-ta.lines:
+		expected := "ab"
+		if line != expected {
+			t.Errorf("line doesn't match: expected %q received %q", expected, line)
+		}
+	case <-time.After(10 * time.Millisecond):
+		t.Errorf("no line read")
 	}
 }
