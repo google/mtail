@@ -2,45 +2,46 @@
 # This file is available under the Apache license.
 
 GOFILES=\
-	compiler/ast.go\
-	compiler/compiler.go\
-	mtail.go\
 	export.go\
-	compiler/lexer.go\
 	metrics/metric.go\
-	compiler/parser.go\
-	progs.go\
-	compiler/symtab.go\
+	mtail.go\
+	vm/progs.go\
 	tailer/tail.go\
-	compiler/unparser.go\
+	vm/ast.go\
+	vm/compiler.go\
+	vm/lexer.go\
+	vm/parser.go\
+	vm/symtab.go\
+	vm/unparser.go\
 	vm/vm.go\
-	watcher/watcher.go\
-	watcher/log_watcher.go\
 	watcher/fake_watcher.go\
+	watcher/log_watcher.go\
+	watcher/watcher.go\
 
 GOTESTFILES=\
-	mtail_test.go\
 	ex_test.go\
 	export_test.go\
-	compiler/lexer_test.go\
-	compiler/parser_test.go\
+	mtail_test.go\
 	tailer/tail_test.go\
-	compiler/vm_test.go\
+	vm/lexer_test.go\
+	vm/parser_test.go\
+	vm/progs_test.go\
+	vm/vm_test.go\
 	watcher/fake_watcher_test.go\
 	watcher/log_watcher_test.go\
 
 
 CLEANFILES+=\
-	compiler/parser.go\
-	compiler/y.output\
+	vm/parser.go\
+	vm/y.output\
 
 all: mtail
 
 mtail: $(GOFILES)
 	go build
 
-compiler/parser.go: compiler/parser.y
-	cd compiler && go generate
+vm/parser.go: vm/parser.y
+	cd vm && go generate
 
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build

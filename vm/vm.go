@@ -7,11 +7,13 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
+	"os"
 	"regexp"
 	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/golang/glog"
@@ -20,11 +22,11 @@ import (
 )
 
 var (
-	syslog_use_current_year = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
+	Syslog_use_current_year = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 )
 
 var (
-	line_count = expvar.NewInt("line_count")
+	Line_count = expvar.NewInt("line_count")
 )
 
 type opcode int
@@ -91,7 +93,7 @@ type thread struct {
 
 type VM struct {
 	name string
-	prog []Instr
+	prog []instr
 
 	re  []*regexp.Regexp  // Regular expression constants
 	str []string          // String constants
@@ -160,7 +162,7 @@ func (t *thread) PopInt() (int64, error) {
 		return r, nil
 	case time.Time:
 		return n.Unix(), nil
-	case *Datum:
+	case *metrics.Datum:
 		return n.Value, nil
 	}
 	return 0, fmt.Errorf("unexpected numeric type %T %q", val, val)
@@ -168,7 +170,7 @@ func (t *thread) PopInt() (int64, error) {
 
 // Execute acts on the current instruction, and returns a boolean indicating
 // if the current thread should terminate.
-func (v *vm) execute(t *thread, i instr) {
+func (v *VM) execute(t *thread, i instr) {
 	switch i.op {
 	case match:
 		// match regex and store success
@@ -276,7 +278,7 @@ func (v *vm) execute(t *thread, i instr) {
 				v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
 			}
 			// Hack for yearless syslog.
-			if tm.Year() == 0 && *syslog_use_current_year {
+			if tm.Year() == 0 && *Syslog_use_current_year {
 				tm = tm.AddDate(time.Now().Year(), 0, 0)
 			}
 			v.ts_mem[ts] = tm
@@ -335,7 +337,7 @@ func (v *vm) execute(t *thread, i instr) {
 	case dload:
 		// Load a datum from metric at TOS onto stack
 		//fmt.Printf("Stack: %v\n", t.stack)
-		m := t.Pop().(*Metric)
+		m := t.Pop().(*metrics.Metric)
 		//fmt.Printf("Metric: %v\n", m)
 		keys := make([]string, i.opnd)
 		//fmt.Printf("keys: %v\n", keys)
@@ -372,7 +374,7 @@ func (v *vm) execute(t *thread, i instr) {
 // Run fetches and executes each instruction in the program on the input string
 // until termination. It returns a boolean indicating a successful action was
 // taken.
-func (v *vm) Run(input string) {
+func (v *VM) Run(input string) {
 	t := new(thread)
 	v.t = t
 	v.input = input
@@ -391,7 +393,7 @@ func (v *vm) Run(input string) {
 	}
 }
 
-func New(name string, re []*regexp.Regexp, str []string, m []*metrics.Metric, prog []Instr) *VM {
+func New(name string, re []*regexp.Regexp, str []string, m []*metrics.Metric, prog []instr) *VM {
 	return &VM{
 		name:   name,
 		re:     re,
@@ -405,27 +407,51 @@ func New(name string, re []*regexp.Regexp, str []string, m []*metrics.Metric, pr
 // vms contains a list of virtual machines to execute when each new line is received
 type Engine map[string]*VM
 
-func (e Engine) addVm(name string, v *VM) {
+func (e Engine) AddVm(name string, v *VM) {
 	e[name] = v
 }
 
-func (e Engine) removeVm(name string) {
+func (e Engine) RemoveVm(name string) {
 	delete(e, name)
 }
 
 // RunVms receives a line from a channel and sends it to all VMs.
-func (e *Engine) run(lines chan string, stop chan bool) {
-Loop:
+func (e *Engine) Run(lines chan string, stop chan bool) {
 	for {
 		select {
-		case line := <-lines:
-			line_count.Add(1)
+		case line, more := <-lines:
+			if !more {
+				return
+			}
+			Line_count.Add(1)
 			for _, v := range *e {
 				// TODO(jaq): Instead of forking a goroutine each time, set up a line channel to each VM.
 				v.Run(line)
 			}
 		case <-stop:
-			break Loop
+			return
 		}
 	}
+}
+
+func (v *VM) DumpByteCode(name string) {
+	fmt.Printf("Prog %s\n", name)
+	fmt.Println("Metrics")
+	for i, m := range v.m {
+		if m.Program == v.name {
+			fmt.Printf(" %8d %s\n", i, m)
+		}
+	}
+	fmt.Println("REs")
+	for i, re := range v.re {
+		fmt.Printf(" %8d /%s/\n", i, re)
+	}
+	w := new(tabwriter.Writer)
+	w.Init(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight)
+
+	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
+	for n, i := range v.prog {
+		fmt.Fprintf(w, "\t%d\t%s\t%d\t\n", n, opNames[i.op], i.opnd)
+	}
+	w.Flush()
 }

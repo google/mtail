@@ -340,11 +340,11 @@ decl
         n = d.name
    	}
       sort.Sort(sort.StringSlice(d.keys))
-      d.m = NewMetric(n, Mtaillex.(*parser).name, d.kind, d.keys...)
+      d.m = metrics.NewMetric(n, Mtaillex.(*parser).name, d.kind, d.keys...)
       d.sym = Mtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
                                            Mtaillex.(*parser).t.pos)
       if !$1 {
-        ExportMetric(d.m)
+         Mtaillex.(*parser).ms.Add(d.m)
       }
   }
   ;
@@ -385,11 +385,11 @@ declarator
 type_spec
   : COUNTER
   {
-    $$ = Counter
+    $$ = metrics.Counter
   }
   | GAUGE
   {
-    $$ = Gauge
+    $$ = metrics.Gauge
   }
   ;
 
@@ -466,7 +466,8 @@ type parser struct {
     t      Token             // Most recently lexed token.
     pos Position             // Maybe contains the position of the start of a node.
     s      *scope
-    res    map[string]string // Mapping of regex constants to patterns
+    res    map[string]string // Mapping of regex constants to patterns.
+    ms     metrics.Store     // List of metrics exported by this program.
 }
 
 func NewParser(name string, input io.Reader) *parser {

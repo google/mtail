@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/google/mtail/metrics"
 )
 
 var instructions = []struct {
@@ -173,12 +175,12 @@ var instructions = []struct {
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		ClearMetrics()
-		m := append(metrics,
-			NewMetric("foo", "test", Counter),
-			NewMetric("bar", "test", Counter))
+		m := make([]*metrics.Metric, 0)
+		m = append(m,
+			metrics.NewMetric("foo", "test", metrics.Counter),
+			metrics.NewMetric("bar", "test", metrics.Counter))
 
-		v := newVm(tc.name, tc.re, tc.str, m, []instr{tc.i})
+		v := New(tc.name, tc.re, tc.str, m, []instr{tc.i})
 		v.t = new(thread)
 		v.t.stack = make([]interface{}, 0)
 		for _, item := range tc.reversed_stack {

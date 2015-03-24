@@ -18,9 +18,9 @@ import (
 	"syscall"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/compiler"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
+	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
 	"github.com/spf13/afero"
 
@@ -32,20 +32,16 @@ var (
 	logs  *string = flag.String("logs", "", "List of files to monitor.")
 	progs *string = flag.String("progs", "", "Directory containing programs")
 
-	one_shot      *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
-	dump_bytecode *bool = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
+	one_shot *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
 )
 
 type mtail struct {
 	lines chan string
 	stop  chan bool
+	store metrics.Store
 
 	closeOnce sync.Once
 }
-
-var (
-	store metrics.Store
-)
 
 func (m *mtail) OneShot(logfile string, lines chan string, stop chan bool) error {
 	defer func() { stop <- true }()
@@ -112,13 +108,13 @@ func (m *mtail) Serve() {
 		glog.Fatal("Couldn't create an inotify watcher:", err)
 	}
 
-	p := NewProgLoader(w)
+	p := vm.NewProgLoader(w)
 	if p == nil {
 		glog.Fatal("Couldn't create a program loader.")
 	}
 	e, errors := p.LoadProgs(*progs)
 
-	if *compiler.Compile_only || *compiler.Dump_bytecode {
+	if *vm.Compile_only || *vm.Dump_bytecode {
 		os.Exit(errors)
 	}
 
@@ -132,7 +128,8 @@ func (m *mtail) Serve() {
 		glog.Fatal("No logs to tail.")
 	}
 
-	go e.run(m.lines, m.stop)
+	go e.Run(m.lines, m.stop)
+	ex := &Exporter{m.store}
 
 	if *one_shot {
 		for _, pathname := range pathnames {
@@ -141,19 +138,19 @@ func (m *mtail) Serve() {
 				glog.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
 			}
 		}
-		b, err := json.MarshalIndent(metrics, "", "  ")
+		b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
 		if err != nil {
 			glog.Fatalf("Failed to marshal metrics into json: %s", err)
 		}
 		os.Stdout.Write(b)
-		WriteMetrics()
+		ex.WriteMetrics()
 	} else {
 		m.StartTailing(pathnames)
 
 		http.Handle("/", m)
-		http.HandleFunc("/json", handleJson)
-		http.HandleFunc("/metrics", handlePrometheusMetrics)
-		StartMetricPush()
+		http.HandleFunc("/json", http.HandlerFunc(ex.handleJson))
+		http.HandleFunc("/metrics", http.HandlerFunc(ex.handlePrometheusMetrics))
+		ex.StartMetricPush()
 
 		go func() {
 			err := http.ListenAndServe(":"+*port, nil)
@@ -184,7 +181,6 @@ func (m *mtail) close() {
 }
 
 func main() {
-	store.ClearMetrics()
 	flag.Parse()
 	m := NewMtail()
 	m.Serve()

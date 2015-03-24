@@ -8,30 +8,30 @@ package vm
 
 import (
 	"expvar"
-	"fmt"
+	"flag"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"sync"
-	"text/tabwriter"
 
 	"github.com/golang/glog"
 
-	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
 )
 
 var (
-	prog_loads       = expvar.NewMap("prog_loads_total")
-	prog_load_errors = expvar.NewMap("prog_load_errors")
+	Prog_loads       = expvar.NewMap("prog_loads_total")
+	Prog_load_errors = expvar.NewMap("prog_load_errors")
+
+	Dump_bytecode *bool = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 )
 
 const (
 	fileext = ".mtail"
 )
 
-func (p *progloader) LoadProgs(program_path string) (*vm.Engine, int) {
+func (p *progloader) LoadProgs(program_path string) (*Engine, int) {
 	p.w.Add(program_path)
 
 	fis, err := ioutil.ReadDir(program_path)
@@ -49,7 +49,7 @@ func (p *progloader) LoadProgs(program_path string) (*vm.Engine, int) {
 		}
 		errors += p.LoadProg(program_path, fi.Name())
 	}
-	return &p.e, errors
+	return &p.E, errors
 }
 
 func (p *progloader) LoadProg(program_path string, name string) (errors int) {
@@ -58,7 +58,7 @@ func (p *progloader) LoadProg(program_path string, name string) (errors int) {
 	if err != nil {
 		glog.Infof("Failed to read program %q: %s", pth, err)
 		errors = 1
-		prog_load_errors.Add(name, 1)
+		Prog_load_errors.Add(name, 1)
 		return
 	}
 	defer f.Close()
@@ -68,49 +68,27 @@ func (p *progloader) LoadProg(program_path string, name string) (errors int) {
 		for _, e := range errs {
 			glog.Info(e)
 		}
-		prog_load_errors.Add(name, 1)
+		Prog_load_errors.Add(name, 1)
 		return
 	}
-	if *dump_bytecode {
-		p.DumpByteCode(name, v)
+	if *Dump_bytecode {
+		v.DumpByteCode(name)
 	}
-	p.e.addVm(name, v)
-	prog_loads.Add(name, 1)
+	p.E.AddVm(name, v)
+	Prog_loads.Add(name, 1)
 	return
-}
-
-func (p *progloader) DumpByteCode(name string, v *vm.VM) {
-	fmt.Printf("Prog %s\n", name)
-	fmt.Println("Metrics")
-	for i, m := range metrics {
-		if m.Program == v.name {
-			fmt.Printf(" %8d %s\n", i, m)
-		}
-	}
-	fmt.Println("REs")
-	for i, re := range v.re {
-		fmt.Printf(" %8d /%s/\n", i, re)
-	}
-	w := new(tabwriter.Writer)
-	w.Init(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight)
-
-	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
-	for n, i := range v.prog {
-		fmt.Fprintf(w, "\t%d\t%s\t%d\t\n", n, opNames[i.op], i.opnd)
-	}
-	w.Flush()
 }
 
 type progloader struct {
 	sync.RWMutex
 	w         watcher.Watcher
 	pathnames map[string]struct{}
-	e         vm.Engine
+	E         Engine
 }
 
 func NewProgLoader(w watcher.Watcher) (p *progloader) {
 	p = &progloader{w: w,
-		e: make(map[string]*vm.VM)}
+		E: make(map[string]*VM)}
 	p.Lock()
 	p.pathnames = make(map[string]struct{})
 	p.Unlock()
@@ -124,7 +102,7 @@ func (p *progloader) start() {
 		select {
 		case name := <-p.w.Deletes():
 			_, f := filepath.Split(name)
-			p.e.removeVm(f)
+			p.E.RemoveVm(f)
 			p.Lock()
 			delete(p.pathnames, f)
 			p.Unlock()

@@ -22,13 +22,13 @@ func NoHyphens(s string) string {
 	return strings.Replace(s, "-", "_", -1)
 }
 
-func handlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
-	store.RLock()
-	defer store.RUnlock()
+func (e *Exporter) handlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
+	e.store.RLock()
+	defer e.store.RUnlock()
 
 	w.Header().Add("Content-type", "text/plain; version=0.0.4")
 
-	for _, m := range store.Metrics {
+	for _, m := range e.store.Metrics {
 		m.RLock()
 		m.RUnlock()
 		metric_export_total.Add(1)

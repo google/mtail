@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/vm"
 	"github.com/kylelemons/godebug/pretty"
 )
 
@@ -56,14 +58,14 @@ func CompileAndLoad(programfile string, stop chan bool) (chan string, string) {
 
 	// MtailDebug = 999 // All the debugging.
 
-	v, errs := Compile(programfile, p)
+	v, errs := vm.Compile(programfile, p)
 	if errs != nil {
 		return lines, fmt.Sprintf("%s: compile failed: %s", programfile, strings.Join(errs, "\n"))
 	}
 
-	e := &engine{}
-	e.addVm(programfile, v)
-	go e.run(lines, stop)
+	e := &vm.Engine{}
+	e.AddVm(programfile, v)
+	go e.Run(lines, stop)
 	return lines, ""
 }
 
@@ -71,9 +73,8 @@ func TestExamplePrograms(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	*syslog_use_current_year = false
+	*vm.Syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
-		ClearMetrics()
 		stop := make(chan bool, 1)
 		lines, errs := CompileAndLoad(tc.programfile, stop)
 		if errs != "" {
@@ -97,7 +98,7 @@ func TestExamplePrograms(t *testing.T) {
 				continue
 			}
 			defer j.Close()
-			b, err := json.MarshalIndent(metrics, "", "  ")
+			b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
 			if err != nil {
 				t.Errorf("couldn't marshall metrics: %q", err)
 				continue
@@ -112,7 +113,7 @@ func TestExamplePrograms(t *testing.T) {
 		}
 		defer j.Close()
 
-		var expected_metrics []*Metric
+		var expected_metrics []*metrics.Metric
 
 		d := json.NewDecoder(j)
 		err = d.Decode(&expected_metrics)
@@ -120,15 +121,12 @@ func TestExamplePrograms(t *testing.T) {
 			t.Errorf("%s: could not decode json: %s", tc.jsonfile, err)
 			continue
 		}
-		metric_lock.Lock()
-		sort.Sort(Metrics(expected_metrics))
-		sort.Sort(Metrics(metrics))
-		diff := pretty.Compare(expected_metrics, metrics)
+		sort.Sort(metrics.Metrics(expected_metrics))
+		sort.Sort(metrics.Metrics(m.store.Metrics))
+		diff := pretty.Compare(expected_metrics, m.store.Metrics)
 		if len(diff) > 0 {
 			t.Errorf("%s: metrics don't match:\n%s\n", tc.programfile, diff)
 		}
-		metric_lock.Unlock()
-
 	}
 }
 
@@ -149,7 +147,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
 				stop_fake := make(chan bool, 1)
-				line_count.Set(0)
+				vm.Line_count.Set(0)
 				m := &mtail{}
 				b.StartTimer()
 				err := m.OneShot(tc.logfile, lines, stop_fake)
@@ -158,7 +156,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 					return
 				}
 				b.StopTimer()
-				l, err := strconv.ParseInt(line_count.String(), 10, 64)
+				l, err := strconv.ParseInt(vm.Line_count.String(), 10, 64)
 				if err != nil {
 					b.Errorf("strconv.ParseInt failed: %s", err)
 					return

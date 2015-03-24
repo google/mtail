@@ -219,7 +219,6 @@ var programs = []struct {
 func TestCompile(t *testing.T) {
 	for _, tc := range programs {
 		// Wipe metrics
-		metrics = make([]*Metric, 0)
 		v, err := Compile(tc.name, strings.NewReader(tc.source))
 		if err != nil {
 			t.Errorf("Compile errors: %q", err)

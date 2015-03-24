@@ -6,6 +6,8 @@ package vm
 import (
 	"fmt"
 	"strings"
+
+	"github.com/google/mtail/metrics"
 )
 
 type Unparser struct {
@@ -123,9 +125,9 @@ func (u *Unparser) unparse(n node) {
 
 	case *declNode:
 		switch v.kind {
-		case Counter:
+		case metrics.Counter:
 			u.emit("counter ")
-		case Gauge:
+		case metrics.Gauge:
 			u.emit("gauge ")
 		}
 		u.emit(v.name)

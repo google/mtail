@@ -52,26 +52,30 @@ const (
 	COLLECTD_FORMAT = "PUTVAL \"%s/mtail-%s/%s-%s\" interval=%d %d:%d\n"
 )
 
-// JSON export
-func handleJson(w http.ResponseWriter, r *http.Request) {
-	store.RLock()
-	defer store.RUnlock()
+type Exporter struct {
+	store metrics.Store
+}
 
-	b, err := json.MarshalIndent(store.Metrics, "", "  ")
+// JSON export
+func (e *Exporter) handleJson(w http.ResponseWriter, r *http.Request) {
+	e.store.RLock()
+	defer e.store.RUnlock()
+
+	b, err := json.MarshalIndent(e.store.Metrics, "", "  ")
 	if err != nil {
 		glog.Info("error marshalling metrics into json:", err.Error())
 	}
 	w.Write(b)
 }
 
-func CollectdWriteMetrics(socketpath string) error {
+func (e *Exporter) CollectdWriteMetrics(socketpath string) error {
 	c, err := net.Dial("unix", socketpath)
 	if err != nil {
 		return err
 	}
 	defer c.Close()
 
-	return WriteSocketMetrics(c, MetricToCollectd, collectd_export_total, collectd_export_success)
+	return e.WriteSocketMetrics(c, MetricToCollectd, collectd_export_total, collectd_export_success)
 }
 
 func FormatLabels(name string, m map[string]string, ksep, sep string) string {
@@ -102,11 +106,11 @@ func MetricToCollectd(m *metrics.Metric, l *metrics.LabelSet) string {
 // Format a LabelSet into a string to be written to one of the timeseries sockets
 type formatter func(*metrics.Metric, *metrics.LabelSet) string
 
-func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, export_success *expvar.Int) error {
-	store.RLock()
-	defer store.RUnlock()
+func (e *Exporter) WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, export_success *expvar.Int) error {
+	e.store.RLock()
+	defer e.store.RUnlock()
 
-	for _, m := range store.Metrics {
+	for _, m := range e.store.Metrics {
 		m.RLock()
 		defer m.RUnlock()
 		export_total.Add(1)
@@ -130,14 +134,14 @@ func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, 
 	return nil
 }
 
-func GraphiteWriteMetrics(hostport string) error {
+func (e *Exporter) GraphiteWriteMetrics(hostport string) error {
 	c, err := net.Dial("tcp", hostport)
 	if err != nil {
 		return fmt.Errorf("Dial error: %s\n", err)
 	}
 	defer c.Close()
 
-	return WriteSocketMetrics(c, MetricToGraphite, graphite_export_total, graphite_export_success)
+	return e.WriteSocketMetrics(c, MetricToGraphite, graphite_export_total, graphite_export_success)
 }
 
 func MetricToGraphite(m *metrics.Metric, l *metrics.LabelSet) string {
@@ -150,13 +154,13 @@ func MetricToGraphite(m *metrics.Metric, l *metrics.LabelSet) string {
 		l.Datum.Time.Unix())
 }
 
-func StatsdWriteMetrics(hostport string) error {
+func (e *Exporter) StatsdWriteMetrics(hostport string) error {
 	c, err := net.Dial("udp", hostport)
 	if err != nil {
 		return fmt.Errorf("Dial error: %s\n", err)
 	}
 	defer c.Close()
-	return WriteSocketMetrics(c, MetricToStatsd, statsd_export_total, statsd_export_success)
+	return e.WriteSocketMetrics(c, MetricToStatsd, statsd_export_total, statsd_export_success)
 }
 
 func MetricToStatsd(m *metrics.Metric, l *metrics.LabelSet) string {
@@ -169,24 +173,24 @@ func MetricToStatsd(m *metrics.Metric, l *metrics.LabelSet) string {
 		l.Datum.Get())
 }
 
-func WriteMetrics() {
+func (e *Exporter) WriteMetrics() {
 	if metrics.Metric_update_time.Sub(last_metric_push_time) <= 0 {
 		return
 	}
 	if *collectd_socketpath != "" {
-		err := CollectdWriteMetrics(*collectd_socketpath)
+		err := e.CollectdWriteMetrics(*collectd_socketpath)
 		if err != nil {
 			glog.Infof("collectd write error: %s", err)
 		}
 	}
 	if *graphite_hostport != "" {
-		err := GraphiteWriteMetrics(*graphite_hostport)
+		err := e.GraphiteWriteMetrics(*graphite_hostport)
 		if err != nil {
 			glog.Infof("graphite write error: %s", err)
 		}
 	}
 	if *statsd_hostport != "" {
-		err := StatsdWriteMetrics(*statsd_hostport)
+		err := e.StatsdWriteMetrics(*statsd_hostport)
 		if err != nil {
 			glog.Infof("statsd error: %s", err)
 		}
@@ -194,14 +198,14 @@ func WriteMetrics() {
 	last_metric_push_time = time.Now()
 }
 
-func StartMetricPush() {
+func (e *Exporter) StartMetricPush() {
 	if *collectd_socketpath != "" || *graphite_hostport != "" || *statsd_hostport != "" {
 		ticker := time.NewTicker(time.Duration(*push_interval) * time.Second)
 		go func() {
 			for {
 				select {
 				case <-ticker.C:
-					WriteMetrics()
+					e.WriteMetrics()
 				}
 			}
 		}()
