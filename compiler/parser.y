@@ -15,6 +15,8 @@ import (
     "regexp"
     "sort"
     "strconv"
+
+    "github.com/google/mtail/metrics"
 )
 
 %}
@@ -26,7 +28,7 @@ import (
     texts []string
     flag bool
     n node
-    mtype metric_type
+    mtype metrics.MetricType
 }
 
 %type <n> stmt_list stmt cond arg_expr_list

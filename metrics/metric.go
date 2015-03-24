@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package main
+package metrics
 
 import (
 	"errors"
@@ -11,20 +11,18 @@ import (
 	"time"
 )
 
-type metric_type int
+type MetricType int
 
 const (
-	Counter metric_type = iota
+	Counter MetricType = iota
 	Gauge
 )
 
 var (
-	metric_lock        sync.RWMutex
-	metrics            []*Metric
-	metric_update_time time.Time
+	Metric_update_time time.Time
 )
 
-func (m metric_type) String() string {
+func (m MetricType) String() string {
 	switch m {
 	case Counter:
 		return "Counter"
@@ -48,14 +46,15 @@ type LabelValue struct {
 }
 
 type Metric struct {
+	sync.RWMutex
 	Name        string // Name
 	Program     string // Instantiating program
-	Kind        metric_type
+	Kind        MetricType
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
 }
 
-func NewMetric(name string, prog string, kind metric_type, keys ...string) *Metric {
+func NewMetric(name string, prog string, kind MetricType, keys ...string) *Metric {
 	m := &Metric{Name: name, Program: prog, Kind: kind,
 		Keys:        make([]string, len(keys), len(keys)),
 		LabelValues: make([]*LabelValue, 0)}
@@ -80,8 +79,8 @@ func (m *Metric) GetDatum(labelvalues ...string) (d *Datum, err error) {
 	if len(labelvalues) != len(m.Keys) {
 		return nil, errors.New(fmt.Sprintf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m))
 	}
-	metric_lock.Lock()
-	defer metric_lock.Unlock()
+	m.Lock()
+	defer m.Unlock()
 	if lv := m.FindLabelValueOrNil(labelvalues); lv != nil {
 		d = lv.Value
 	} else {
@@ -92,8 +91,8 @@ func (m *Metric) GetDatum(labelvalues ...string) (d *Datum, err error) {
 }
 
 type LabelSet struct {
-	labels map[string]string
-	datum  *Datum
+	Labels map[string]string
+	Datum  *Datum
 }
 
 func zip(keys []string, values []string) map[string]string {
@@ -123,7 +122,7 @@ func (d *Datum) stamp(timestamp time.Time) {
 	} else {
 		d.Time = timestamp
 	}
-	metric_update_time = time.Now()
+	Metric_update_time = time.Now()
 }
 
 func (d *Datum) Set(value int64, timestamp time.Time) {
@@ -140,18 +139,50 @@ func (d *Datum) Get() int64 {
 	return atomic.LoadInt64(&d.Value)
 }
 
-func ClearMetrics() {
-	metric_lock.Lock()
-	defer metric_lock.Unlock()
-	metrics = make([]*Metric, 0)
+type Store struct {
+	sync.RWMutex
+	Metrics []*Metric
 }
 
-func init() {
-	ClearMetrics()
+func (ms *Store) Add(m ...*Metric) {
+	ms.Lock()
+	defer ms.Unlock()
+	ms.Metrics = append(ms.Metrics, m...)
 }
 
-func ExportMetric(m *Metric) {
-	metric_lock.Lock()
-	defer metric_lock.Unlock()
-	metrics = append(metrics, m)
+func (ms *Store) ClearMetrics() {
+	ms.Lock()
+	defer ms.Unlock()
+	ms.Metrics = make([]*Metric, 0)
+}
+
+// Debug printing.
+func (d *Datum) String() string {
+	return fmt.Sprintf("%+#v", *d)
+}
+
+func (lv *LabelValue) String() string {
+	return fmt.Sprintf("%+#v", *lv)
+}
+
+func (m *Metric) String() string {
+	return fmt.Sprintf("%+#v", *m)
+}
+
+// Sort a slice of metrics.
+type Metrics []*Metric
+
+func (ms Metrics) Len() int      { return len(ms) }
+func (ms Metrics) Swap(i, j int) { ms[i], ms[j] = ms[j], ms[i] }
+func (ms Metrics) Less(i, j int) bool {
+	switch {
+	case ms[i].Program < ms[j].Program:
+		return true
+	case ms[i].Name < ms[j].Name:
+		return true
+	case len(ms[i].Keys) < len(ms[j].Keys):
+		return true
+	default:
+		return false
+	}
 }

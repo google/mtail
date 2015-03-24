@@ -5,6 +5,8 @@ package compiler
 
 import (
 	"regexp"
+
+	"github.com/google/mtail/metrics"
 )
 
 type node interface {
@@ -70,9 +72,9 @@ type indexedExprNode struct {
 type declNode struct {
 	name          string
 	keys          []string
-	kind          metric_type
+	kind          metrics.MetricType
 	exported_name string
-	m             *Metric
+	m             *metrics.Metric
 	sym           *symbol
 }
 

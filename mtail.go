@@ -1,9 +1,6 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-// Build the parser:
-//go:generate go tool yacc -v y.output -o parser.go -p Mtail parser.y
-
 package main
 
 import (
@@ -21,9 +18,10 @@ import (
 	"syscall"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/compiler"
+	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/watcher"
-
 	"github.com/spf13/afero"
 
 	_ "net/http/pprof"
@@ -44,6 +42,10 @@ type mtail struct {
 
 	closeOnce sync.Once
 }
+
+var (
+	store metrics.Store
+)
 
 func (m *mtail) OneShot(logfile string, lines chan string, stop chan bool) error {
 	defer func() { stop <- true }()
@@ -116,7 +118,7 @@ func (m *mtail) Serve() {
 	}
 	e, errors := p.LoadProgs(*progs)
 
-	if *compile_only || *dump_bytecode {
+	if *compiler.Compile_only || *compiler.Dump_bytecode {
 		os.Exit(errors)
 	}
 
@@ -182,6 +184,7 @@ func (m *mtail) close() {
 }
 
 func main() {
+	store.ClearMetrics()
 	flag.Parse()
 	m := NewMtail()
 	m.Serve()

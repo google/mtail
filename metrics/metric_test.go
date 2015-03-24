@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package main
+package metrics
 
 import (
 	"encoding/json"
@@ -90,7 +90,7 @@ func TestEmitLabelSet(t *testing.T) {
 
 	var labels []map[string]string
 	for ls := range c {
-		labels = append(labels, ls.labels)
+		labels = append(labels, ls.Labels)
 	}
 
 	// Equivalence for slices is not defined under ==, and DeepEqual does an

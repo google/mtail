@@ -1,6 +1,9 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
+// Build the parser:
+//go:generate go tool yacc -v y.output -o parser.go -p Mtail parser.y
+
 package compiler
 
 import (
@@ -9,32 +12,35 @@ import (
 	"io"
 	"path/filepath"
 	"regexp"
+
+	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/vm"
 )
 
-var compile_only *bool = flag.Bool("compile_only", false, "Compile programs only.")
+var Compile_only *bool = flag.Bool("compile_only", false, "Compile programs only.")
 
 type compiler struct {
 	name string // Name of the program.
 
-	errors []string         // Compile errors.
-	prog   []instr          // The emitted program.
-	str    []string         // Static strings.
-	re     []*regexp.Regexp // Static regular expressions.
-	m      []*Metric        // Metrics accessible to this program.
+	errors []string          // Compile errors.
+	prog   []vm.Instr        // The emitted program.
+	str    []string          // Static strings.
+	re     []*regexp.Regexp  // Static regular expressions.
+	m      []*metrics.Metric // Metrics accessible to this program.
 
 	decos []*decoNode // Decorator stack to unwind
 
 	symtab *scope
 }
 
-func Compile(name string, input io.Reader) (*vm, []string) {
+func Compile(name string, input io.Reader) (*vm.VM, []string) {
 	name = filepath.Base(name)
 	p := NewParser(name, input)
 	r := MtailParse(p)
 	if r != 0 || p == nil || len(p.errors) > 0 {
 		return nil, p.errors
 	}
-	if *compile_only {
+	if *Compile_only {
 		u := Unparser{}
 		output := u.Unparse(p.root)
 		fmt.Printf("Unparsing %s:\n%s", name, output)
@@ -45,7 +51,7 @@ func Compile(name string, input io.Reader) (*vm, []string) {
 		return nil, c.errors
 	}
 
-	vm := newVm(name, c.re, c.str, c.m, c.prog)
+	vm := vm.New(name, c.re, c.str, c.m, c.prog)
 	return vm, nil
 }
 
@@ -54,7 +60,7 @@ func (c *compiler) errorf(format string, args ...interface{}) {
 	c.errors = append(c.errors, e)
 }
 
-func (c *compiler) emit(i instr) {
+func (c *compiler) emit(i vm.Instr) {
 	c.prog = append(c.prog, i)
 }
 
@@ -73,7 +79,7 @@ func (c *compiler) compile(untyped_node node) {
 	case *declNode:
 		// Build the list of addressable metrics for this program, and set the symbol's address.
 		n.sym.addr = len(c.m)
-		c.m = append(c.m, n.sym.binding.(*Metric))
+		c.m = append(c.m, n.sym.binding.(*metrics.Metric))
 
 	case *condNode:
 		if n.cond != nil {
@@ -86,7 +92,7 @@ func (c *compiler) compile(untyped_node node) {
 			c.compile(child)
 		}
 		// Rewrite jump target to jump to instruction after block.
-		c.prog[pc].opnd = len(c.prog)
+		c.prog[pc].Opnd = len(c.prog)
 
 	case *regexNode:
 		if n.re == nil {
@@ -101,57 +107,57 @@ func (c *compiler) compile(untyped_node node) {
 				n.addr = len(c.re) - 1
 			}
 		}
-		c.emit(instr{match, n.addr})
-		c.emit(instr{op: jnm})
+		c.emit(vm.Instr{vm.Match, n.addr})
+		c.emit(vm.Instr{Op: jnm})
 
 	case *relNode:
 		c.compile(n.lhs)
 		c.compile(n.rhs)
 		switch n.op {
 		case LT:
-			c.emit(instr{cmp, -1})
-			c.emit(instr{op: jnm})
+			c.emit(vm.Instr{cmp, -1})
+			c.emit(vm.Instr{Op: jnm})
 		case GT:
-			c.emit(instr{cmp, 1})
-			c.emit(instr{op: jnm})
+			c.emit(vm.Instr{cmp, 1})
+			c.emit(vm.Instr{Op: jnm})
 		case LE:
-			c.emit(instr{cmp, 1})
-			c.emit(instr{op: jm})
+			c.emit(vm.Instr{cmp, 1})
+			c.emit(vm.Instr{Op: jm})
 		case GE:
-			c.emit(instr{cmp, -1})
-			c.emit(instr{op: jm})
+			c.emit(vm.Instr{cmp, -1})
+			c.emit(vm.Instr{Op: jm})
 		case EQ:
-			c.emit(instr{cmp, 0})
-			c.emit(instr{op: jnm})
+			c.emit(vm.Instr{cmp, 0})
+			c.emit(vm.Instr{Op: jnm})
 		case NE:
-			c.emit(instr{cmp, 0})
-			c.emit(instr{op: jm})
+			c.emit(vm.Instr{cmp, 0})
+			c.emit(vm.Instr{Op: jm})
 		default:
 			c.errorf("invalid op: %q\n", n.op)
 		}
 
 	case *stringNode:
 		c.str = append(c.str, n.text)
-		c.emit(instr{str, len(c.str) - 1})
+		c.emit(vm.Instr{str, len(c.str) - 1})
 
 	case *idNode:
-		c.emit(instr{mload, n.sym.addr})
+		c.emit(vm.Instr{mload, n.sym.addr})
 		m := n.sym.binding.(*Metric)
-		c.emit(instr{dload, len(m.Keys)})
+		c.emit(vm.Instr{dload, len(m.Keys)})
 
 	case *caprefNode:
 		rn := n.sym.binding.(*regexNode)
 		// rn.addr contains the index of the regular expression object,
 		// which correlates to storage on the re heap
-		c.emit(instr{push, rn.addr})
-		c.emit(instr{capref, n.sym.addr})
+		c.emit(vm.Instr{push, rn.addr})
+		c.emit(vm.Instr{capref, n.sym.addr})
 
 	case *builtinNode:
 		if n.args != nil {
 			c.compile(n.args)
-			c.emit(instr{builtin[n.name], len(n.args.(*exprlistNode).children)})
+			c.emit(vm.Instr{builtin[n.name], len(n.args.(*exprlistNode).children)})
 		} else {
-			c.emit(instr{op: builtin[n.name]})
+			c.emit(vm.Instr{Op: builtin[n.name]})
 		}
 
 	case *additiveExprNode:
@@ -159,9 +165,9 @@ func (c *compiler) compile(untyped_node node) {
 		c.compile(n.rhs)
 		switch n.op {
 		case '+':
-			c.emit(instr{op: add})
+			c.emit(vm.Instr{Op: add})
 		case '-':
-			c.emit(instr{op: sub})
+			c.emit(vm.Instr{Op: sub})
 		default:
 			c.errorf("invalid op: %q\n", n.op)
 		}
@@ -169,7 +175,7 @@ func (c *compiler) compile(untyped_node node) {
 	case *assignExprNode:
 		c.compile(n.lhs)
 		c.compile(n.rhs)
-		c.emit(instr{op: set})
+		c.emit(vm.Instr{Op: set})
 
 	case *indexedExprNode:
 		c.compile(n.index)
@@ -177,15 +183,15 @@ func (c *compiler) compile(untyped_node node) {
 
 	case *incExprNode:
 		c.compile(n.lhs)
-		c.emit(instr{op: inc})
+		c.emit(vm.Instr{Op: inc})
 
 	case *incByExprNode:
 		c.compile(n.lhs)
 		c.compile(n.rhs)
-		c.emit(instr{inc, 1})
+		c.emit(vm.Instr{inc, 1})
 
 	case *numericExprNode:
-		c.emit(instr{push, n.value})
+		c.emit(vm.Instr{push, n.value})
 
 	case *defNode:
 		// Do nothing, defs are inlined.

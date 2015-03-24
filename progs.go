@@ -18,6 +18,7 @@ import (
 
 	"github.com/golang/glog"
 
+	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
 )
 
@@ -30,7 +31,7 @@ const (
 	fileext = ".mtail"
 )
 
-func (p *progloader) LoadProgs(program_path string) (*engine, int) {
+func (p *progloader) LoadProgs(program_path string) (*vm.Engine, int) {
 	p.w.Add(program_path)
 
 	fis, err := ioutil.ReadDir(program_path)
@@ -78,7 +79,7 @@ func (p *progloader) LoadProg(program_path string, name string) (errors int) {
 	return
 }
 
-func (p *progloader) DumpByteCode(name string, v *vm) {
+func (p *progloader) DumpByteCode(name string, v *vm.VM) {
 	fmt.Printf("Prog %s\n", name)
 	fmt.Println("Metrics")
 	for i, m := range metrics {
@@ -104,12 +105,12 @@ type progloader struct {
 	sync.RWMutex
 	w         watcher.Watcher
 	pathnames map[string]struct{}
-	e         engine
+	e         vm.Engine
 }
 
 func NewProgLoader(w watcher.Watcher) (p *progloader) {
 	p = &progloader{w: w,
-		e: make(map[string]*vm)}
+		e: make(map[string]*vm.VM)}
 	p.Lock()
 	p.pathnames = make(map[string]struct{})
 	p.Unlock()

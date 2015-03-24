@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/google/mtail/metrics"
 )
 
 var (
@@ -21,18 +23,20 @@ func NoHyphens(s string) string {
 }
 
 func handlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
-	metric_lock.RLock()
-	defer metric_lock.RUnlock()
+	store.RLock()
+	defer store.RUnlock()
 
 	w.Header().Add("Content-type", "text/plain; version=0.0.4")
 
-	for _, m := range metrics {
+	for _, m := range store.Metrics {
+		m.RLock()
+		m.RUnlock()
 		metric_export_total.Add(1)
 		fmt.Fprintf(w,
 			"# TYPE %s %s\n",
 			NoHyphens(m.Name),
 			strings.ToLower(m.Kind.String()))
-		lc := make(chan *LabelSet)
+		lc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lc)
 		for l := range lc {
 			line := MetricToPrometheus(m, l)
@@ -41,9 +45,9 @@ func handlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func MetricToPrometheus(m *Metric, l *LabelSet) string {
+func MetricToPrometheus(m *metrics.Metric, l *metrics.LabelSet) string {
 	var s []string
-	for k, v := range l.labels {
+	for k, v := range l.Labels {
 		s = append(s, fmt.Sprintf("%s=\"%s\"", k, v))
 	}
 	s = append(s, fmt.Sprintf("prog=\"%s\"", m.Program))
@@ -51,6 +55,6 @@ func MetricToPrometheus(m *Metric, l *LabelSet) string {
 	return fmt.Sprintf(PROMETHEUS_FORMAT,
 		NoHyphens(m.Name),
 		strings.Join(s, ","),
-		l.datum.Get(),
-		l.datum.Time.UnixNano()/1e6)
+		l.Datum.Get(),
+		l.Datum.Time.UnixNano()/1e6)
 }

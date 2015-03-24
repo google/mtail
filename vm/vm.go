@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package main
+package vm
 
 import (
 	"expvar"
@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+
+	"github.com/google/mtail/metrics"
 )
 
 var (
@@ -87,13 +89,13 @@ type thread struct {
 	stack   []interface{}    // Data stack.
 }
 
-type vm struct {
+type VM struct {
 	name string
-	prog []instr
+	prog []Instr
 
-	re  []*regexp.Regexp // Regular expression constants
-	str []string         // String constants
-	m   []*Metric        // Metrics accessible to this program.
+	re  []*regexp.Regexp  // Regular expression constants
+	str []string          // String constants
+	m   []*metrics.Metric // Metrics accessible to this program.
 
 	ts_mem map[string]time.Time // memo of time string parse results
 
@@ -118,7 +120,7 @@ func (t *thread) Pop() (value interface{}) {
 }
 
 // Log a runtime error and terminate the program
-func (v *vm) errorf(format string, args ...interface{}) {
+func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof("Runtime error: "+format+"\n", args...)
 	glog.Infof("VM stack:\n%s", debug.Stack())
 	glog.Infof("Dumping vm state")
@@ -219,7 +221,7 @@ func (v *vm) execute(t *thread, i instr) {
 			}
 		}
 		switch n := t.Pop().(type) {
-		case Incrementable:
+		case metrics.Incrementable:
 			n.IncBy(delta, t.time)
 		case int:
 			m := v.m[n]
@@ -240,7 +242,7 @@ func (v *vm) execute(t *thread, i instr) {
 		}
 
 		switch n := t.Pop().(type) {
-		case Settable:
+		case metrics.Settable:
 			n.Set(value, t.time)
 		case int:
 			m := v.m[n]
@@ -389,8 +391,8 @@ func (v *vm) Run(input string) {
 	}
 }
 
-func newVm(name string, re []*regexp.Regexp, str []string, m []*Metric, prog []instr) *vm {
-	return &vm{
+func New(name string, re []*regexp.Regexp, str []string, m []*metrics.Metric, prog []Instr) *VM {
+	return &VM{
 		name:   name,
 		re:     re,
 		str:    str,
@@ -401,18 +403,18 @@ func newVm(name string, re []*regexp.Regexp, str []string, m []*Metric, prog []i
 }
 
 // vms contains a list of virtual machines to execute when each new line is received
-type engine map[string]*vm
+type Engine map[string]*VM
 
-func (e engine) addVm(name string, v *vm) {
+func (e Engine) addVm(name string, v *VM) {
 	e[name] = v
 }
 
-func (e engine) removeVm(name string) {
+func (e Engine) removeVm(name string) {
 	delete(e, name)
 }
 
 // RunVms receives a line from a channel and sends it to all VMs.
-func (e *engine) run(lines chan string, stop chan bool) {
+func (e *Engine) run(lines chan string, stop chan bool) {
 Loop:
 	for {
 		select {

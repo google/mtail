@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/metrics"
 )
 
 // Commandline Flags.
@@ -53,10 +54,10 @@ const (
 
 // JSON export
 func handleJson(w http.ResponseWriter, r *http.Request) {
-	metric_lock.RLock()
-	defer metric_lock.RUnlock()
+	store.RLock()
+	defer store.RUnlock()
 
-	b, err := json.MarshalIndent(metrics, "", "  ")
+	b, err := json.MarshalIndent(store.Metrics, "", "  ")
 	if err != nil {
 		glog.Info("error marshalling metrics into json:", err.Error())
 	}
@@ -85,27 +86,31 @@ func FormatLabels(name string, m map[string]string, ksep, sep string) string {
 	return r
 }
 
-func MetricToCollectd(m *Metric, l *LabelSet) string {
+func MetricToCollectd(m *metrics.Metric, l *metrics.LabelSet) string {
+	m.RLock()
+	defer m.RUnlock()
 	return fmt.Sprintf(COLLECTD_FORMAT,
 		hostname,
 		m.Program,
 		strings.ToLower(m.Kind.String()),
-		FormatLabels(m.Name, l.labels, "-", "-"),
+		FormatLabels(m.Name, l.Labels, "-", "-"),
 		*push_interval,
-		l.datum.Time.Unix(),
-		l.datum.Get())
+		l.Datum.Time.Unix(),
+		l.Datum.Get())
 }
 
 // Format a LabelSet into a string to be written to one of the timeseries sockets
-type formatter func(*Metric, *LabelSet) string
+type formatter func(*metrics.Metric, *metrics.LabelSet) string
 
 func WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, export_success *expvar.Int) error {
-	metric_lock.RLock()
-	defer metric_lock.RUnlock()
+	store.RLock()
+	defer store.RUnlock()
 
-	for _, m := range metrics {
+	for _, m := range store.Metrics {
+		m.RLock()
+		defer m.RUnlock()
 		export_total.Add(1)
-		lc := make(chan *LabelSet)
+		lc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lc)
 		for l := range lc {
 			line := f(m, l)
@@ -135,12 +140,14 @@ func GraphiteWriteMetrics(hostport string) error {
 	return WriteSocketMetrics(c, MetricToGraphite, graphite_export_total, graphite_export_success)
 }
 
-func MetricToGraphite(m *Metric, l *LabelSet) string {
+func MetricToGraphite(m *metrics.Metric, l *metrics.LabelSet) string {
+	m.RLock()
+	defer m.RUnlock()
 	return fmt.Sprintf("%s.%s %v %v\n",
 		m.Program,
-		FormatLabels(m.Name, l.labels, ".", "."),
-		l.datum.Get(),
-		l.datum.Time.Unix())
+		FormatLabels(m.Name, l.Labels, ".", "."),
+		l.Datum.Get(),
+		l.Datum.Time.Unix())
 }
 
 func StatsdWriteMetrics(hostport string) error {
@@ -152,16 +159,18 @@ func StatsdWriteMetrics(hostport string) error {
 	return WriteSocketMetrics(c, MetricToStatsd, statsd_export_total, statsd_export_success)
 }
 
-func MetricToStatsd(m *Metric, l *LabelSet) string {
+func MetricToStatsd(m *metrics.Metric, l *metrics.LabelSet) string {
 	// TODO(jaq): handle units better, send timing as |ms
+	m.RLock()
+	defer m.RUnlock()
 	return fmt.Sprintf("%s.%s:%d|c",
 		m.Program,
-		FormatLabels(m.Name, l.labels, ".", "."),
-		l.datum.Get())
+		FormatLabels(m.Name, l.Labels, ".", "."),
+		l.Datum.Get())
 }
 
 func WriteMetrics() {
-	if metric_update_time.Sub(last_metric_push_time) <= 0 {
+	if metrics.Metric_update_time.Sub(last_metric_push_time) <= 0 {
 		return
 	}
 	if *collectd_socketpath != "" {

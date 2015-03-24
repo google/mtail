@@ -23,37 +23,6 @@ var (
 	record_benchmark = flag.Bool("record_benchmark", false, "Record the benchmark results to 'benchmark_results.csv'.")
 )
 
-// Debug printing.
-func (d *Datum) String() string {
-	return fmt.Sprintf("%+#v", *d)
-}
-
-func (lv *LabelValue) String() string {
-	return fmt.Sprintf("%+#v", *lv)
-}
-
-func (m *Metric) String() string {
-	return fmt.Sprintf("%+#v", *m)
-}
-
-// Sort a slice of metrics.
-type Metrics []*Metric
-
-func (ms Metrics) Len() int      { return len(ms) }
-func (ms Metrics) Swap(i, j int) { ms[i], ms[j] = ms[j], ms[i] }
-func (ms Metrics) Less(i, j int) bool {
-	switch {
-	case ms[i].Program < ms[j].Program:
-		return true
-	case ms[i].Name < ms[j].Name:
-		return true
-	case len(ms[i].Keys) < len(ms[j].Keys):
-		return true
-	default:
-		return false
-	}
-}
-
 var exampleProgramTests = []struct {
 	programfile string // Example program file.
 	logfile     string // Sample log input.
