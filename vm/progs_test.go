@@ -1,7 +1,7 @@
 // Copyright 2013 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package main
+package vm
 
 import "code.google.com/p/go.exp/inotify"
 

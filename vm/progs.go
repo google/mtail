@@ -1,4 +1,4 @@
-package main
+package vm
 
 // mtail programs may be updated while emtail is running, and they will be
 // reloaded without having to restart the mtail process. Programs can be
