@@ -4,7 +4,7 @@
 // Build the parser:
 //go:generate go tool yacc -v y.output -o parser.go -p Mtail parser.y
 
-package compiler
+package vm
 
 import (
 	"flag"

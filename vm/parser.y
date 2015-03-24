@@ -7,7 +7,7 @@ mtail is a metric exporting, modular tail.
 
 This file describes a parser for the mtail language.
 */
-package compiler
+package vm
 
 import (
     "io"
