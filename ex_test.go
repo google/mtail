@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/vm"
 	"github.com/kylelemons/godebug/pretty"
@@ -47,26 +48,24 @@ var exampleProgramTests = []struct {
 	},
 }
 
-func CompileAndLoad(programfile string, stop chan bool) (chan string, string) {
-	lines := make(chan string)
-
+func CompileAndLoad(programfile string, lines chan string, stop chan bool) error {
 	p, err := os.Open(programfile)
 	if err != nil {
-		return lines, fmt.Sprintf("%s: could not open program file: %s", programfile, err)
+		return fmt.Errorf("%s: could not open program file: %s", programfile, err)
 	}
 	defer p.Close()
 
 	// MtailDebug = 999 // All the debugging.
 
-	v, errs := vm.Compile(programfile, p)
+	v, errs := vm.Compile(programfile, p, &metrics.Store{})
 	if errs != nil {
-		return lines, fmt.Sprintf("%s: compile failed: %s", programfile, strings.Join(errs, "\n"))
+		return fmt.Errorf("%s: compile failed: %s", programfile, strings.Join(errs, "\n"))
 	}
 
 	e := &vm.Engine{}
 	e.AddVm(programfile, v)
 	go e.Run(lines, stop)
-	return lines, ""
+	return nil
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -75,16 +74,14 @@ func TestExamplePrograms(t *testing.T) {
 	}
 	*vm.Syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
-		stop := make(chan bool, 1)
-		lines, errs := CompileAndLoad(tc.programfile, stop)
-		if errs != "" {
-			t.Errorf(errs)
+		mtail := NewMtail()
+		err := CompileAndLoad(tc.programfile, mtail.lines, mtail.stop)
+		if err != nil {
+			t.Errorf("%s", err)
 			continue
 		}
 
-		m := &mtail{}
-
-		err := m.OneShot(tc.logfile, lines, stop)
+		err = mtail.OneShot(tc.logfile, mtail.lines, mtail.stop)
 		if err != nil {
 			t.Errorf("Oneshot failed for %s: %s", tc.logfile, err)
 			continue
@@ -98,7 +95,7 @@ func TestExamplePrograms(t *testing.T) {
 				continue
 			}
 			defer j.Close()
-			b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
+			b, err := json.MarshalIndent(mtail.store.Metrics, "", "  ")
 			if err != nil {
 				t.Errorf("couldn't marshall metrics: %q", err)
 				continue
@@ -122,8 +119,10 @@ func TestExamplePrograms(t *testing.T) {
 			continue
 		}
 		sort.Sort(metrics.Metrics(expected_metrics))
-		sort.Sort(metrics.Metrics(m.store.Metrics))
-		diff := pretty.Compare(expected_metrics, m.store.Metrics)
+		glog.Infof("expected: %s", expected_metrics)
+		sort.Sort(metrics.Metrics(mtail.store.Metrics))
+		glog.Infof("received: %s", mtail.store.Metrics)
+		diff := pretty.Compare(expected_metrics, mtail.store.Metrics)
 		if len(diff) > 0 {
 			t.Errorf("%s: metrics don't match:\n%s\n", tc.programfile, diff)
 		}
@@ -137,10 +136,10 @@ func BenchmarkExamplePrograms(b *testing.B) {
 	}
 	b.Logf("\n")
 	for _, tc := range exampleProgramTests {
-		stop := make(chan bool, 1)
-		lines, errs := CompileAndLoad(tc.programfile, stop)
-		if errs != "" {
-			b.Errorf(errs)
+		mtail := NewMtail()
+		err := CompileAndLoad(tc.programfile, mtail.lines, mtail.stop)
+		if err != nil {
+			b.Errorf("%s", err)
 			continue
 		}
 		r := testing.Benchmark(func(b *testing.B) {
@@ -148,9 +147,9 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				b.StopTimer()
 				stop_fake := make(chan bool, 1)
 				vm.Line_count.Set(0)
-				m := &mtail{}
+				mtail.store.ClearMetrics()
 				b.StartTimer()
-				err := m.OneShot(tc.logfile, lines, stop_fake)
+				err := mtail.OneShot(tc.logfile, mtail.lines, stop_fake)
 				if err != nil {
 					b.Errorf("OneShot log parse failed: %s", err)
 					return
@@ -164,7 +163,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				b.SetBytes(l)
 			}
 		})
-		stop <- true
+		mtail.stop <- true
 
 		kl_s := float64(r.Bytes) * float64(r.N) / (r.T.Seconds() * 1000)
 		ms_run := float64(r.NsPerOp()) / 1e6

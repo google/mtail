@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
 )
@@ -19,13 +20,14 @@ import (
 var test_program = "/$/ { }"
 
 func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) chan bool {
+	m := NewMtail()
 	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		t.Errorf("Couldn't create watcher: %s", err)
 	}
 	p := vm.NewProgLoader(w)
 	// start server
-	prog, errors := vm.Compile("test", strings.NewReader(test_program))
+	prog, errors := vm.Compile("test", strings.NewReader(test_program), &m.store)
 	if len(errors) > 0 {
 		t.Errorf("Couldn't compile program: %s", errors)
 	}
@@ -33,7 +35,6 @@ func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) chan
 	if prog_pathname != "" {
 		p.LoadProgs(prog_pathname)
 	}
-	m := NewMtail()
 	vm.Line_count.Set(0)
 	go p.E.Run(m.lines, m.stop)
 	m.StartTailing(log_pathnames)
@@ -268,6 +269,7 @@ func TestHandleNewProgram(t *testing.T) {
 	}
 	prog_file.WriteString("/$/ {}\n")
 	prog_file.Close()
+	glog.Infof("hi")
 
 	// Wait for inotify
 	time.Sleep(100 * time.Millisecond)

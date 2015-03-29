@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/google/mtail/metrics"
 )
 
 type validProgram struct {
@@ -167,7 +169,7 @@ var kMtailPrograms = []validProgram{
 
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range kMtailPrograms {
-		p := NewParser(tc.name, strings.NewReader(tc.program))
+		p := NewParser(tc.name, strings.NewReader(tc.program), &metrics.Store{})
 		//MtailDebug = 999 // All the debugging.
 		r := MtailParse(p)
 
@@ -182,7 +184,7 @@ func TestParserRoundTrip(t *testing.T) {
 		u := Unparser{}
 		output := u.Unparse(p.root)
 
-		p2 := NewParser(tc.name+" 2", strings.NewReader(output))
+		p2 := NewParser(tc.name+" 2", strings.NewReader(output), &metrics.Store{})
 		r = MtailParse(p2)
 		if r != 0 || p2.root == nil || len(p2.errors) > 0 {
 			t.Errorf("2nd pass parse errors:\n")
@@ -261,7 +263,7 @@ var InvalidPrograms = []InvalidProgram{
 
 func TestInvalidPrograms(t *testing.T) {
 	for _, tc := range InvalidPrograms {
-		p := NewParser(tc.name, strings.NewReader(tc.program))
+		p := NewParser(tc.name, strings.NewReader(tc.program), &metrics.Store{})
 		//MtailDebug = 999 // All the debugging.
 		MtailParse(p)
 

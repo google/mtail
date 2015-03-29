@@ -6,6 +6,10 @@ package vm
 // rename of the program when it is installed, so mtail is also aware of file
 // moves.
 
+// prog lifecycle
+// create/write/close
+//
+
 import (
 	"expvar"
 	"flag"
@@ -17,6 +21,7 @@ import (
 
 	"github.com/golang/glog"
 
+	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/watcher"
 )
 
@@ -62,7 +67,7 @@ func (p *progloader) LoadProg(program_path string, name string) (errors int) {
 		return
 	}
 	defer f.Close()
-	v, errs := Compile(name, f)
+	v, errs := Compile(name, f, p.ms)
 	if errs != nil {
 		errors = 1
 		for _, e := range errs {
@@ -84,6 +89,7 @@ type progloader struct {
 	w         watcher.Watcher
 	pathnames map[string]struct{}
 	E         Engine
+	ms        *metrics.Store
 }
 
 func NewProgLoader(w watcher.Watcher) (p *progloader) {
@@ -100,7 +106,11 @@ func NewProgLoader(w watcher.Watcher) (p *progloader) {
 func (p *progloader) start() {
 	for {
 		select {
-		case name := <-p.w.Deletes():
+		case name, more := <-p.w.Deletes():
+			if !more {
+				return
+			}
+			glog.Infof("delete prog")
 			_, f := filepath.Split(name)
 			p.E.RemoveVm(f)
 			p.Lock()
@@ -110,7 +120,11 @@ func (p *progloader) start() {
 				glog.Info("Remove watch failed:", err)
 			}
 
-		case name := <-p.w.Creates():
+		case name, more := <-p.w.Creates():
+			if !more {
+				return
+			}
+			glog.Infof("create prog")
 			if filepath.Ext(name) != fileext {
 				continue
 			}
@@ -123,7 +137,11 @@ func (p *progloader) start() {
 			}
 			p.Unlock()
 			p.LoadProg(d, f)
-		case name := <-p.w.Updates():
+		case name, more := <-p.w.Updates():
+			if !more {
+				return
+			}
+			glog.Infof("update prog")
 			if filepath.Ext(name) != fileext {
 				continue
 			}

@@ -32,9 +32,9 @@ type compiler struct {
 	symtab *scope
 }
 
-func Compile(name string, input io.Reader) (*VM, []string) {
+func Compile(name string, input io.Reader, ms *metrics.Store) (*VM, []string) {
 	name = filepath.Base(name)
-	p := NewParser(name, input)
+	p := NewParser(name, input, ms)
 	r := MtailParse(p)
 	if r != 0 || p == nil || len(p.errors) > 0 {
 		return nil, p.errors

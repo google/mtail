@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/google/mtail/metrics"
 )
 
 type in_out struct {
@@ -218,8 +220,8 @@ var programs = []struct {
 
 func TestCompile(t *testing.T) {
 	for _, tc := range programs {
-		// Wipe metrics
-		v, err := Compile(tc.name, strings.NewReader(tc.source))
+		m := metrics.Store{}
+		v, err := Compile(tc.name, strings.NewReader(tc.source), &m)
 		if err != nil {
 			t.Errorf("Compile errors: %q", err)
 			continue

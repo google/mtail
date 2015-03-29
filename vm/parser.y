@@ -467,11 +467,11 @@ type parser struct {
     pos Position             // Maybe contains the position of the start of a node.
     s      *scope
     res    map[string]string // Mapping of regex constants to patterns.
-    ms     metrics.Store     // List of metrics exported by this program.
+    ms     *metrics.Store     // List of metrics exported by this program.
 }
 
-func NewParser(name string, input io.Reader) *parser {
-    return &parser{name: name, l: NewLexer(name, input), res: make(map[string]string)}
+func NewParser(name string, input io.Reader, ms *metrics.Store) *parser {
+        return &parser{name: name, l: NewLexer(name, input), res: make(map[string]string), ms: ms}
 }
 
 func (p *parser) ErrorP(s string, pos Position) {
