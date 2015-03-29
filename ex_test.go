@@ -48,7 +48,7 @@ var exampleProgramTests = []struct {
 	},
 }
 
-func CompileAndLoad(programfile string, lines chan string, stop chan bool) error {
+func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string, stop chan bool) error {
 	p, err := os.Open(programfile)
 	if err != nil {
 		return fmt.Errorf("%s: could not open program file: %s", programfile, err)
@@ -57,7 +57,7 @@ func CompileAndLoad(programfile string, lines chan string, stop chan bool) error
 
 	// MtailDebug = 999 // All the debugging.
 
-	v, errs := vm.Compile(programfile, p, &metrics.Store{})
+	v, errs := vm.Compile(programfile, p, ms)
 	if errs != nil {
 		return fmt.Errorf("%s: compile failed: %s", programfile, strings.Join(errs, "\n"))
 	}
@@ -75,7 +75,7 @@ func TestExamplePrograms(t *testing.T) {
 	*vm.Syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
 		mtail := NewMtail()
-		err := CompileAndLoad(tc.programfile, mtail.lines, mtail.stop)
+		err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines, mtail.stop)
 		if err != nil {
 			t.Errorf("%s", err)
 			continue
@@ -137,7 +137,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 	b.Logf("\n")
 	for _, tc := range exampleProgramTests {
 		mtail := NewMtail()
-		err := CompileAndLoad(tc.programfile, mtail.lines, mtail.stop)
+		err := CompileAndLoad(tc.programfile, &metrics.Store{}, mtail.lines, mtail.stop)
 		if err != nil {
 			b.Errorf("%s", err)
 			continue
