@@ -93,6 +93,9 @@ type progloader struct {
 	fs        afero.Fs
 }
 
+// NewProgLoader creates a new program loader.  It takes a filesystem watcher
+// and a filesystem interface as arguments.  If fs is nil, it will use the
+// default filesystem interface.
 func NewProgLoader(w watcher.Watcher, fs afero.Fs) (p *progloader) {
 	if fs == nil {
 		fs = afero.OsFs{}
