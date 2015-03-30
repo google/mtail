@@ -128,7 +128,7 @@ func (p *progloader) start() {
 			if filepath.Ext(name) != fileext {
 				continue
 			}
-			d, f := filepath.Split(name)
+			f := filepath.Base(name)
 
 			p.Lock()
 			if _, ok := p.pathnames[f]; !ok {
@@ -136,7 +136,6 @@ func (p *progloader) start() {
 				p.w.Add(name)
 			}
 			p.Unlock()
-			p.LoadProg(d, f)
 		case name, more := <-p.w.Updates():
 			if !more {
 				return
