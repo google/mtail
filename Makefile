@@ -48,19 +48,23 @@ emgen/emgen: emgen/emgen.go
 
 .PHONY: test
 test: $(GOFILES) $(GOTESTFILES)
-	go test -gcflags '-N -l' -v -race
+	go test -v ./...
+
+.PHONY: testrace
+testrace: $(GOFILES) $(GOTESTFILES)
+	go test -v -race ./...
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES)
-	go test -gcflags '-N -l' -v -test.short -race
+	go test -v -test.short ./...
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES)
-	go test -bench=. -run=XXX
+	go test -bench=. -run=XXX ./...
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOTESTFILES)
-	go test -bench=. -run=XXX --record_benchmark
+	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: testall
-testall: test bench
+testall: testrace bench
