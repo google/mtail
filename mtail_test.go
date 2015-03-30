@@ -298,7 +298,7 @@ func TestHandleNewProgram(t *testing.T) {
 
 	os.Rename(bad_prog_path, prog_path)
 	time.Sleep(100 * time.Millisecond)
-	expected_prog_loads = `{"prog.mtail": 2}`
+	expected_prog_loads = `{"prog.mtail": 1}`
 	if vm.Prog_loads.String() != expected_prog_loads {
 		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, vm.Prog_loads.String())
 	}
@@ -317,7 +317,7 @@ func TestHandleNewProgram(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	expected_prog_loads = `{"prog.mtail": 2}`
+	expected_prog_loads = `{"prog.mtail": 1}`
 	if vm.Prog_loads.String() != expected_prog_loads {
 		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, vm.Prog_loads.String())
 	}
