@@ -14,12 +14,12 @@ import (
 	"expvar"
 	"flag"
 	"io/ioutil"
-	"os"
 	"path"
 	"path/filepath"
 	"sync"
 
 	"github.com/golang/glog"
+	"github.com/spf13/afero"
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/watcher"
@@ -59,7 +59,7 @@ func (p *progloader) LoadProgs(program_path string) (*Engine, int) {
 
 func (p *progloader) LoadProg(program_path string, name string) (errors int) {
 	pth := path.Join(program_path, name)
-	f, err := os.Open(pth)
+	f, err := p.fs.Open(pth)
 	if err != nil {
 		glog.Infof("Failed to read program %q: %s", pth, err)
 		errors = 1
@@ -90,11 +90,13 @@ type progloader struct {
 	pathnames map[string]struct{}
 	E         Engine
 	ms        *metrics.Store
+	fs        afero.Fs
 }
 
 func NewProgLoader(w watcher.Watcher) (p *progloader) {
 	p = &progloader{w: w,
-		E: make(map[string]*VM)}
+		E:  make(map[string]*VM),
+		fs: afero.OsFs{}}
 	p.Lock()
 	p.pathnames = make(map[string]struct{})
 	p.Unlock()
