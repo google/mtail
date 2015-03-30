@@ -86,11 +86,9 @@ func TestHandleLogUpdate(t *testing.T) {
 	wg.Wait()
 
 	ta.Stop()
-	t.Logf("waiting")
 	<-done
 
 	expected := []string{"a", "b", "c", "d"}
-	t.Logf("result: %v", result)
 	if !reflect.DeepEqual(expected, result) {
 		t.Errorf("result didn't match:\n\texpected: %v\n\treceived: %v", expected, result)
 	}
@@ -162,7 +160,6 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	<-done
 
 	expected := []string{"ab"}
-	t.Logf("result: %v", result)
 	if !reflect.DeepEqual(expected, result) {
 		t.Errorf("result didn't match:\n\texpected: %v\n\treceived: %v", expected, result)
 	}
