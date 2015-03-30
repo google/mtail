@@ -10,6 +10,7 @@ import (
 
 	"code.google.com/p/go.exp/inotify"
 	"github.com/google/mtail/watcher"
+	"github.com/spf13/afero"
 )
 
 type fakewatcher struct {
@@ -68,7 +69,8 @@ var progloadertests = []struct {
 func TestProgLoader(t *testing.T) {
 	fake := watcher.NewFakeWatcher()
 	fake.Add(".")
-	l := NewProgLoader(fake)
+	fs := &afero.MemMapFs{}
+	l := NewProgLoader(fake, fs)
 	for _, tt := range progloadertests {
 		l.Lock()
 		switch tt.Event.Mask {

@@ -93,10 +93,13 @@ type progloader struct {
 	fs        afero.Fs
 }
 
-func NewProgLoader(w watcher.Watcher) (p *progloader) {
+func NewProgLoader(w watcher.Watcher, fs afero.Fs) (p *progloader) {
+	if fs == nil {
+		fs = afero.OsFs{}
+	}
 	p = &progloader{w: w,
 		E:  make(map[string]*VM),
-		fs: afero.OsFs{}}
+		fs: fs}
 	p.Lock()
 	p.pathnames = make(map[string]struct{})
 	p.Unlock()
