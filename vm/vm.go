@@ -416,7 +416,7 @@ func (e Engine) RemoveVm(name string) {
 }
 
 // RunVms receives a line from a channel and sends it to all VMs.
-func (e *Engine) Run(lines chan string, stop chan bool) {
+func (e *Engine) Run(lines <-chan string, stop <-chan struct{}) {
 	for {
 		select {
 		case line, more := <-lines:

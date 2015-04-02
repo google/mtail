@@ -48,7 +48,7 @@ var exampleProgramTests = []struct {
 	},
 }
 
-func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string, stop chan bool) error {
+func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string, stop chan struct{}) error {
 	p, err := os.Open(programfile)
 	if err != nil {
 		return fmt.Errorf("%s: could not open program file: %s", programfile, err)
@@ -145,7 +145,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 		r := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
-				stop_fake := make(chan bool, 1)
+				stop_fake := make(chan struct{})
 				vm.Line_count.Set(0)
 				mtail.store.ClearMetrics()
 				b.StartTimer()
@@ -163,7 +163,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				b.SetBytes(l)
 			}
 		})
-		mtail.stop <- true
+		close(mtail.stop)
 
 		kl_s := float64(r.Bytes) * float64(r.N) / (r.T.Seconds() * 1000)
 		ms_run := float64(r.NsPerOp()) / 1e6

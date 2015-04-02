@@ -37,14 +37,14 @@ var (
 
 type mtail struct {
 	lines chan string
-	stop  chan bool
+	stop  chan struct{}
 	store metrics.Store
 
 	closeOnce sync.Once
 }
 
-func (m *mtail) OneShot(logfile string, lines chan string, stop chan bool) error {
-	defer func() { stop <- true }()
+func (m *mtail) OneShot(logfile string, lines chan string, stop chan struct{}) error {
+	defer func() { close(stop) }()
 	l, err := os.Open(logfile)
 	if err != nil {
 		return fmt.Errorf("Failed to open log file %q: %s", logfile, err)
@@ -89,9 +89,8 @@ func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func NewMtail() *mtail {
 	return &mtail{
 		lines: make(chan string),
-		stop:  make(chan bool, 1),
+		stop:  make(chan struct{}),
 	}
-
 }
 
 func (m *mtail) Serve() {
@@ -177,7 +176,6 @@ func (m *mtail) Close() {
 func (m *mtail) close() {
 	log.Print("Shutdown requested.")
 	close(m.lines)
-
 }
 
 func main() {
