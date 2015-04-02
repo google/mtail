@@ -25,7 +25,7 @@ func TestFakeWatcher(t *testing.T) {
 	go func() {
 		e := <-w.Events()
 		if e.Type != Create || e.Pathname != "/tmp/log" {
-			t.Errorf("event doesn't match: %s\n", e)
+			t.Errorf("event doesn't match: %q\n", e)
 		}
 		wg.Done()
 	}()
@@ -38,7 +38,7 @@ func TestFakeWatcher(t *testing.T) {
 	go func() {
 		e := <-w.Events()
 		if e.Type != Update || e.Pathname != "/tmp/foo" {
-			t.Errorf("event doesn't match name: %s\n", e)
+			t.Errorf("event doesn't match name: %q\n", e)
 		}
 		wg.Done()
 	}()
