@@ -23,9 +23,9 @@ func TestFakeWatcher(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		name := <-w.Creates()
-		if name != "/tmp/log" {
-			t.Errorf("event doesn't match: %s\n", name)
+		e := <-w.Events()
+		if e.Type != Create || e.Pathname != "/tmp/log" {
+			t.Errorf("event doesn't match: %s\n", e)
 		}
 		wg.Done()
 	}()
@@ -36,9 +36,9 @@ func TestFakeWatcher(t *testing.T) {
 	wg = sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		name := <-w.Updates()
-		if name != "/tmp/foo" {
-			t.Errorf("event doesn't match name: %s\n", name)
+		e := <-w.Events()
+		if e.Type != Update || e.Pathname != "/tmp/foo" {
+			t.Errorf("event doesn't match name: %s\n", e)
 		}
 		wg.Done()
 	}()

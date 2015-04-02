@@ -13,10 +13,8 @@ var (
 
 type LogWatcher struct {
 	*fsnotify.Watcher
-	creates chan string
-	updates chan string
-	deletes chan string
-	quit    chan bool
+	events chan Event
+	quit   chan struct{}
 }
 
 func NewLogWatcher() (w *LogWatcher, err error) {
@@ -24,29 +22,31 @@ func NewLogWatcher() (w *LogWatcher, err error) {
 	if err != nil {
 		return
 	}
-	w = &LogWatcher{f, make(chan string), make(chan string), make(chan string), make(chan bool)}
+	w = &LogWatcher{f, make(chan Event), make(chan struct{})}
 	go w.run()
 	return
 }
 
-func (w *LogWatcher) Creates() chan string { return w.creates }
-func (w *LogWatcher) Updates() chan string { return w.updates }
-func (w *LogWatcher) Deletes() chan string { return w.deletes }
+func (w *LogWatcher) Events() <-chan Event { return w.events }
 
 func (w *LogWatcher) run() {
 	for {
 		select {
-		case e, more := <-w.Events:
+		case e, more := <-w.Watcher.Events:
 			event_count.Add(e.Name, 1)
 			glog.Infof("Writing %v", e)
+			event := Event{Pathname: e.Name}
 			switch {
 			case e.Op&fsnotify.Create == fsnotify.Create:
-				w.creates <- e.Name
+				event.Type = Create
 			case e.Op&fsnotify.Write == fsnotify.Write:
-				w.updates <- e.Name
+				event.Type = Update
 			case e.Op&fsnotify.Remove == fsnotify.Remove:
-				w.deletes <- e.Name
+				event.Type = Delete
+			default:
+				glog.Errorf("Unexpected event tpe detected: %+#v", e)
 			}
+			w.events <- event
 			if !more {
 				goto end
 			}
@@ -57,13 +57,11 @@ func (w *LogWatcher) run() {
 		}
 	}
 end:
-	close(w.creates)
-	close(w.updates)
-	close(w.deletes)
+	close(w.events)
 }
 
 func (w *LogWatcher) Close() (err error) {
-	w.quit <- true
+	close(w.quit)
 	err = w.Watcher.Close()
 	return
 }

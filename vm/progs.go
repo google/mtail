@@ -112,55 +112,47 @@ func NewProgLoader(w watcher.Watcher, fs afero.Fs) (p *progloader) {
 }
 
 func (p *progloader) start() {
-	for {
-		select {
-		case name, more := <-p.w.Deletes():
-			if !more {
-				return
-			}
+	for event := range p.w.Events() {
+		switch event.Type {
+		case watcher.Delete:
 			glog.Infof("delete prog")
-			_, f := filepath.Split(name)
+			_, f := filepath.Split(event.Pathname)
 			p.E.RemoveVm(f)
 			p.Lock()
 			delete(p.pathnames, f)
 			p.Unlock()
-			if err := p.w.Remove(name); err != nil {
+			if err := p.w.Remove(event.Pathname); err != nil {
 				glog.Info("Remove watch failed:", err)
 			}
-
-		case name, more := <-p.w.Creates():
-			if !more {
-				return
-			}
+		case watcher.Create:
 			glog.Infof("create prog")
-			if filepath.Ext(name) != fileext {
+			if filepath.Ext(event.Pathname) != fileext {
 				continue
 			}
-			f := filepath.Base(name)
+			f := filepath.Base(event.Pathname)
 
 			p.Lock()
 			if _, ok := p.pathnames[f]; !ok {
 				p.pathnames[f] = struct{}{}
-				p.w.Add(name)
+				p.w.Add(event.Pathname)
 			}
 			p.Unlock()
-		case name, more := <-p.w.Updates():
-			if !more {
-				return
-			}
+		case watcher.Update:
 			glog.Infof("update prog")
-			if filepath.Ext(name) != fileext {
+			if filepath.Ext(event.Pathname) != fileext {
 				continue
 			}
-			d, f := filepath.Split(name)
+			d, f := filepath.Split(event.Pathname)
 
 			p.Lock()
 			if _, ok := p.pathnames[f]; !ok {
 				p.pathnames[f] = struct{}{}
-				p.w.Add(name)
+				p.w.Add(event.Pathname)
 			}
 			p.Unlock()
 			p.LoadProg(d, f)
+		default:
+			glog.Info("Unexected event type %+#v", event)
 		}
 	}
 }

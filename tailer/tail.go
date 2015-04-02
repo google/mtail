@@ -39,7 +39,7 @@ var (
 type tailer struct {
 	w watcher.Watcher
 
-	quit chan bool
+	quit chan struct{}
 
 	watched      map[string]struct{}   // Names of logs being watched.
 	watched_lock sync.RWMutex          // protects `watched'
@@ -55,7 +55,7 @@ type tailer struct {
 func New(lines chan string, w watcher.Watcher, fs afero.Fs) *tailer {
 	t := &tailer{
 		w:        w,
-		quit:     make(chan bool, 1),
+		quit:     make(chan struct{}),
 		watched:  make(map[string]struct{}),
 		lines:    lines,
 		files:    make(map[string]afero.File),
@@ -239,19 +239,18 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 func (t *tailer) start() {
 	for {
 		select {
-		case name, more := <-t.w.Updates():
-			if more {
-				glog.Infof("name: %q", name)
-				t.handleLogUpdate(name)
-			} else {
+		case e, more := <-t.w.Events():
+			if !more {
 				goto end
 			}
-		case name, more := <-t.w.Creates():
-			if more {
-				glog.Infof("name: %q", name)
-				t.handleLogCreate(name)
-			} else {
-				goto end
+			glog.Infof("name: %q", e.Pathname)
+			switch e.Type {
+			case watcher.Update:
+				t.handleLogUpdate(e.Pathname)
+			case watcher.Create:
+				t.handleLogCreate(e.Pathname)
+			default:
+				glog.Infof("unexpected event %+#v", e)
 			}
 		case <-t.quit:
 			goto end
@@ -262,6 +261,6 @@ end:
 }
 
 func (t *tailer) Stop() {
-	t.quit <- true
+	close(t.quit)
 	t.w.Close()
 }

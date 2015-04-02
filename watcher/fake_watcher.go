@@ -9,17 +9,13 @@ import (
 // FakeWatcher implements an in-memory Watcher.
 type FakeWatcher struct {
 	watches map[string]bool
-	creates chan string
-	updates chan string
-	deletes chan string
+	events  chan Event
 }
 
 func NewFakeWatcher() *FakeWatcher {
 	return &FakeWatcher{
 		make(map[string]bool),
-		make(chan string),
-		make(chan string),
-		make(chan string)}
+		make(chan Event)}
 }
 
 // Add adds a watch to the FakeWatcher
@@ -30,9 +26,7 @@ func (w *FakeWatcher) Add(name string) error {
 
 // Close closes down the FakeWatcher
 func (w *FakeWatcher) Close() error {
-	close(w.creates)
-	close(w.updates)
-	close(w.deletes)
+	close(w.events)
 	return nil
 }
 
@@ -42,16 +36,14 @@ func (w *FakeWatcher) Remove(name string) error {
 	return nil
 }
 
-// Creates, Updates, and Deletes return the channel of messages for their respective event.
-func (w *FakeWatcher) Creates() chan string { return w.creates }
-func (w *FakeWatcher) Updates() chan string { return w.updates }
-func (w *FakeWatcher) Deletes() chan string { return w.deletes }
+// Events returns the channel of messages.
+func (w *FakeWatcher) Events() <-chan Event { return w.events }
 
 // InjectCreate lets a test inject a fake creation event.
 func (w *FakeWatcher) InjectCreate(name string) {
 	dirname := path.Dir(name)
 	if w.watches[dirname] {
-		w.creates <- name
+		w.events <- Event{name, Create}
 	} else {
 		glog.Infof("not watching %s to see %s", dirname, name)
 	}
@@ -60,7 +52,7 @@ func (w *FakeWatcher) InjectCreate(name string) {
 // InjectUpdate lets a test inject a fake update event.
 func (w *FakeWatcher) InjectUpdate(name string) {
 	if w.watches[name] {
-		w.updates <- name
+		w.events <- Event{name, Update}
 	} else {
 		glog.Infof("not watching %s", name)
 	}
@@ -69,7 +61,7 @@ func (w *FakeWatcher) InjectUpdate(name string) {
 // InjectDelete lets a test inject a fake deletion event.
 func (w *FakeWatcher) InjectDelete(name string) {
 	if w.watches[name] {
-		w.deletes <- name
+		w.events <- Event{name, Delete}
 	} else {
 		glog.Infof("not watching %s", name)
 	}

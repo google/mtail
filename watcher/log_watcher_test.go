@@ -37,8 +37,8 @@ func TestLogWatcher(t *testing.T) {
 		t.Fatalf("couldn't make a logfile in temp dir: %s\n", err)
 	}
 	select {
-	case n := <-w.Creates():
-		if n != filepath.Join(workdir, "logfile") {
+	case e := <-w.Events():
+		if e.Type != Create || e.Pathname != filepath.Join(workdir, "logfile") {
 			t.Errorf("create doesn't match")
 		}
 	case <-time.After(10 * time.Millisecond):
@@ -47,8 +47,8 @@ func TestLogWatcher(t *testing.T) {
 	f.WriteString("hi")
 	f.Close()
 	select {
-	case n := <-w.Updates():
-		if n != filepath.Join(workdir, "logfile") {
+	case e := <-w.Events():
+		if e.Type != Update || e.Pathname != filepath.Join(workdir, "logfile") {
 			t.Errorf("update doesn't match")
 		}
 	case <-time.After(10 * time.Millisecond):
@@ -56,8 +56,8 @@ func TestLogWatcher(t *testing.T) {
 	}
 	os.Remove(filepath.Join(workdir, "logfile"))
 	select {
-	case n := <-w.Deletes():
-		if n != filepath.Join(workdir, "logfile") {
+	case e := <-w.Events():
+		if e.Type != Delete || e.Pathname != filepath.Join(workdir, "logfile") {
 			t.Errorf("delete doesn't match")
 		}
 	case <-time.After(10 * time.Millisecond):
