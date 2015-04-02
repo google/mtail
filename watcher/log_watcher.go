@@ -60,8 +60,7 @@ end:
 	close(w.events)
 }
 
-func (w *LogWatcher) Close() (err error) {
+func (w *LogWatcher) Close() err error {
 	close(w.quit)
-	err = w.Watcher.Close()
-	return
+	return w.Watcher.Close()
 }
