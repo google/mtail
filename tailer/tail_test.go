@@ -27,12 +27,12 @@ func TestTail(t *testing.T) {
 	defer f.Close()
 
 	w := watcher.NewFakeWatcher()
+	defer w.Close()
 	lines := make(chan string)
 	ta := New(lines, w, fs)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
-	defer ta.Stop()
 	ta.Tail(logfile)
 	// Tail also causes the log to be read, so no need to inject an event.
 
@@ -84,8 +84,7 @@ func TestHandleLogUpdate(t *testing.T) {
 
 	// ugh
 	wg.Wait()
-
-	ta.Stop()
+	w.Close()
 	<-done
 
 	expected := []string{"a", "b", "c", "d"}
@@ -156,7 +155,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	w.InjectUpdate(logfile)
 
 	wg.Wait()
-	ta.Stop()
+	w.Close()
 	<-done
 
 	expected := []string{"ab"}

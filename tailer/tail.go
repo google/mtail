@@ -39,11 +39,9 @@ var (
 type tailer struct {
 	w watcher.Watcher
 
-	quit chan struct{}
-
 	watched      map[string]struct{}   // Names of logs being watched.
 	watched_lock sync.RWMutex          // protects `watched'
-	lines        chan string           // Logfile lines being emitted.
+	lines        chan<- string         // Logfile lines being emitted.
 	files        map[string]afero.File // File handles for each pathname.
 	files_lock   sync.Mutex            // protects `files'
 	partials     map[string]string     // Accumulator for the currently read line for each pathname.
@@ -52,10 +50,9 @@ type tailer struct {
 }
 
 // New returns a new tailer.
-func New(lines chan string, w watcher.Watcher, fs afero.Fs) *tailer {
+func New(lines chan<- string, w watcher.Watcher, fs afero.Fs) *tailer {
 	t := &tailer{
 		w:        w,
-		quit:     make(chan struct{}),
 		watched:  make(map[string]struct{}),
 		lines:    lines,
 		files:    make(map[string]afero.File),
@@ -237,31 +234,17 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 // It receives notification of log file changes from the watcher channel, and
 // handles them.
 func (t *tailer) start() {
-	for {
-		select {
-		case e, more := <-t.w.Events():
-			if !more {
-				goto end
-			}
-			switch e := e.(type) {
-			case watcher.UpdateEvent:
-				glog.Infof("name: %q", e.Pathname)
-				t.handleLogUpdate(e.Pathname)
-			case watcher.CreateEvent:
-				glog.Infof("name: %q", e.Pathname)
-				t.handleLogCreate(e.Pathname)
-			default:
-				glog.Infof("Unexpected event %q", e)
-			}
-		case <-t.quit:
-			goto end
+	for e := range t.w.Events() {
+		switch e := e.(type) {
+		case watcher.UpdateEvent:
+			glog.Infof("name: %q", e.Pathname)
+			t.handleLogUpdate(e.Pathname)
+		case watcher.CreateEvent:
+			glog.Infof("name: %q", e.Pathname)
+			t.handleLogCreate(e.Pathname)
+		default:
+			glog.Infof("Unexpected event %q", e)
 		}
 	}
-end:
 	close(t.lines)
-}
-
-func (t *tailer) Stop() {
-	close(t.quit)
-	t.w.Close()
 }
