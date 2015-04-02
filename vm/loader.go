@@ -6,10 +6,6 @@ package vm
 // rename of the program when it is installed, so mtail is also aware of file
 // moves.
 
-// prog lifecycle
-// create/write/close
-//
-
 import (
 	"expvar"
 	"flag"
