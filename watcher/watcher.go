@@ -1,18 +1,19 @@
 package watcher
 
-// EventType enumerates the type of event from the watcher.
-type EventType int
+// Event is a generalisation of events sent from the watcher to its listeners.
+type Event interface {
+}
 
-const (
-	Create EventType = iota
-	Update
-	Delete
-)
-
-// Event is a message describing a filesystem event.
-type Event struct {
+type CreateEvent struct {
 	Pathname string
-	Type     EventType
+}
+
+type UpdateEvent struct {
+	Pathname string
+}
+
+type DeleteEvent struct {
+	Pathname string
 }
 
 type Watcher interface {

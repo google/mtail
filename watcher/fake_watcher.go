@@ -43,7 +43,7 @@ func (w *FakeWatcher) Events() <-chan Event { return w.events }
 func (w *FakeWatcher) InjectCreate(name string) {
 	dirname := path.Dir(name)
 	if w.watches[dirname] {
-		w.events <- Event{name, Create}
+		w.events <- CreateEvent{name}
 	} else {
 		glog.Infof("not watching %s to see %s", dirname, name)
 	}
@@ -52,7 +52,7 @@ func (w *FakeWatcher) InjectCreate(name string) {
 // InjectUpdate lets a test inject a fake update event.
 func (w *FakeWatcher) InjectUpdate(name string) {
 	if w.watches[name] {
-		w.events <- Event{name, Update}
+		w.events <- UpdateEvent{name}
 	} else {
 		glog.Infof("not watching %s", name)
 	}
@@ -61,7 +61,7 @@ func (w *FakeWatcher) InjectUpdate(name string) {
 // InjectDelete lets a test inject a fake deletion event.
 func (w *FakeWatcher) InjectDelete(name string) {
 	if w.watches[name] {
-		w.events <- Event{name, Delete}
+		w.events <- DeleteEvent{name}
 	} else {
 		glog.Infof("not watching %s", name)
 	}

@@ -38,8 +38,13 @@ func TestLogWatcher(t *testing.T) {
 	}
 	select {
 	case e := <-w.Events():
-		if e.Type != Create || e.Pathname != filepath.Join(workdir, "logfile") {
-			t.Errorf("create doesn't match")
+		switch e := e.(type) {
+		case CreateEvent:
+			if e.Pathname != filepath.Join(workdir, "logfile") {
+				t.Errorf("create doesn't match")
+			}
+		default:
+			t.Errorf("Wrong event type: %q", e)
 		}
 	case <-time.After(10 * time.Millisecond):
 		t.Errorf("didn't receive create message")
@@ -48,8 +53,13 @@ func TestLogWatcher(t *testing.T) {
 	f.Close()
 	select {
 	case e := <-w.Events():
-		if e.Type != Update || e.Pathname != filepath.Join(workdir, "logfile") {
-			t.Errorf("update doesn't match")
+		switch e := e.(type) {
+		case UpdateEvent:
+			if e.Pathname != filepath.Join(workdir, "logfile") {
+				t.Errorf("update doesn't match")
+			}
+		default:
+			t.Errorf("Wrong event type: %q", e)
 		}
 	case <-time.After(10 * time.Millisecond):
 		t.Errorf("didn't receive update message")
@@ -57,8 +67,13 @@ func TestLogWatcher(t *testing.T) {
 	os.Remove(filepath.Join(workdir, "logfile"))
 	select {
 	case e := <-w.Events():
-		if e.Type != Delete || e.Pathname != filepath.Join(workdir, "logfile") {
-			t.Errorf("delete doesn't match")
+		switch e := e.(type) {
+		case DeleteEvent:
+			if e.Pathname != filepath.Join(workdir, "logfile") {
+				t.Errorf("delete doesn't match")
+			}
+		default:
+			t.Errorf("Wrong event type: %q", e)
 		}
 	case <-time.After(10 * time.Millisecond):
 		t.Errorf("didn't receive delete message")

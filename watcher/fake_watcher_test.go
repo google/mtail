@@ -24,8 +24,13 @@ func TestFakeWatcher(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		e := <-w.Events()
-		if e.Type != Create || e.Pathname != "/tmp/log" {
-			t.Errorf("event doesn't match: %q\n", e)
+		switch e := e.(type) {
+		case CreateEvent:
+			if e.Pathname != "/tmp/log" {
+				t.Errorf("event doesn't match: %q\n", e)
+			}
+		default:
+			t.Errorf("Wrong event type: %q", e)
 		}
 		wg.Done()
 	}()
@@ -37,8 +42,13 @@ func TestFakeWatcher(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		e := <-w.Events()
-		if e.Type != Update || e.Pathname != "/tmp/foo" {
-			t.Errorf("event doesn't match name: %q\n", e)
+		switch e := e.(type) {
+		case UpdateEvent:
+			if e.Pathname != "/tmp/foo" {
+				t.Errorf("event doesn't match name: %q\n", e)
+			}
+		default:
+			t.Errorf("Wrong event type: %q", e)
 		}
 		wg.Done()
 	}()

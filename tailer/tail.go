@@ -243,14 +243,15 @@ func (t *tailer) start() {
 			if !more {
 				goto end
 			}
-			glog.Infof("name: %q", e.Pathname)
-			switch e.Type {
-			case watcher.Update:
+			switch e := e.(type) {
+			case watcher.UpdateEvent:
+				glog.Infof("name: %q", e.Pathname)
 				t.handleLogUpdate(e.Pathname)
-			case watcher.Create:
+			case watcher.CreateEvent:
+				glog.Infof("name: %q", e.Pathname)
 				t.handleLogCreate(e.Pathname)
 			default:
-				glog.Infof("unexpected event %+#v", e)
+				glog.Infof("Unexpected event %q", e)
 			}
 		case <-t.quit:
 			goto end

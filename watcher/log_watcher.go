@@ -35,18 +35,16 @@ func (w *LogWatcher) run() {
 		case e, more := <-w.Watcher.Events:
 			event_count.Add(e.Name, 1)
 			glog.Infof("Writing %v", e)
-			event := Event{Pathname: e.Name}
 			switch {
 			case e.Op&fsnotify.Create == fsnotify.Create:
-				event.Type = Create
+				w.events <- CreateEvent{e.Name}
 			case e.Op&fsnotify.Write == fsnotify.Write:
-				event.Type = Update
+				w.events <- UpdateEvent{e.Name}
 			case e.Op&fsnotify.Remove == fsnotify.Remove:
-				event.Type = Delete
+				w.events <- DeleteEvent{e.Name}
 			default:
 				glog.Infof("Unexpected event type detected: %q", e)
 			}
-			w.events <- event
 			if !more {
 				goto end
 			}
