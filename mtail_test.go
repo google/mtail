@@ -19,7 +19,7 @@ import (
 
 var test_program = "/$/ { }"
 
-func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) chan struct{} {
+func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) *mtail {
 	m := NewMtail()
 	w, err := watcher.NewLogWatcher()
 	if err != nil {
@@ -36,9 +36,9 @@ func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) chan
 		p.LoadProgs(prog_pathname)
 	}
 	vm.Line_count.Set(0)
-	go p.E.Run(m.lines, m.stop)
+	go p.E.Run(m.lines)
 	m.StartTailing(log_pathnames)
-	return m.stop
+	return m
 }
 
 func TestHandleLogUpdates(t *testing.T) {
@@ -64,8 +64,8 @@ func TestHandleLogUpdates(t *testing.T) {
 	}
 	defer log_file.Close()
 	pathnames := []string{log_filepath}
-	stop := startMtail(t, pathnames, "")
-	defer func() { close(stop) }()
+	m := startMtail(t, pathnames, "")
+	defer close(m.lines)
 	ex_lines := []string{"hi", "hi2", "hi3"}
 	for i, x := range ex_lines {
 		// write to log file
@@ -106,8 +106,8 @@ func TestHandleLogRotation(t *testing.T) {
 	stop := make(chan bool, 1)
 	hup := make(chan bool, 1)
 	pathnames := []string{log_filepath}
-	end := startMtail(t, pathnames, "")
-	defer func() { close(end) }()
+	m := startMtail(t, pathnames, "")
+	defer close(m.lines)
 
 	go func() {
 		log_file := log_file
@@ -172,8 +172,8 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	// Start up mtail
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
-	stop := startMtail(t, pathnames, "")
-	defer func() { close(stop) }()
+	m := startMtail(t, pathnames, "")
+	defer close(m.lines)
 
 	// touch log file
 	log_file, err := os.Create(log_filepath)
@@ -214,8 +214,8 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	// Start mtail
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
-	stop := startMtail(t, pathnames, "")
-	defer func() { close(stop) }()
+	m := startMtail(t, pathnames, "")
+	defer close(m.lines)
 
 	// touch log file
 	new_log_filepath := path.Join(workdir, "log1")
@@ -254,8 +254,8 @@ func TestHandleNewProgram(t *testing.T) {
 	workdir := makeTempDir(t)
 	defer removeTempDir(t, workdir)
 
-	stop := startMtail(t, []string{}, workdir)
-	defer func() { close(stop) }()
+	m := startMtail(t, []string{}, workdir)
+	defer close(m.lines)
 
 	expected_prog_loads := "{}"
 	if vm.Prog_loads.String() != expected_prog_loads {

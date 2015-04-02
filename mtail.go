@@ -37,14 +37,13 @@ var (
 
 type mtail struct {
 	lines chan string
-	stop  chan struct{}
 	store metrics.Store
 
 	closeOnce sync.Once
 }
 
-func (m *mtail) OneShot(logfile string, lines chan string, stop chan struct{}) error {
-	defer func() { close(stop) }()
+func (m *mtail) OneShot(logfile string, lines chan string) error {
+	defer close(lines)
 	l, err := os.Open(logfile)
 	if err != nil {
 		return fmt.Errorf("Failed to open log file %q: %s", logfile, err)
@@ -89,7 +88,6 @@ func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func NewMtail() *mtail {
 	return &mtail{
 		lines: make(chan string),
-		stop:  make(chan struct{}),
 	}
 }
 
@@ -127,12 +125,12 @@ func (m *mtail) Serve() {
 		glog.Fatal("No logs to tail.")
 	}
 
-	go e.Run(m.lines, m.stop)
+	go e.Run(m.lines)
 	ex := &Exporter{m.store}
 
 	if *one_shot {
 		for _, pathname := range pathnames {
-			err := m.OneShot(pathname, m.lines, m.stop)
+			err := m.OneShot(pathname, m.lines)
 			if err != nil {
 				glog.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
 			}

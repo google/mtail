@@ -416,20 +416,12 @@ func (e Engine) RemoveVm(name string) {
 }
 
 // RunVms receives a line from a channel and sends it to all VMs.
-func (e *Engine) Run(lines <-chan string, stop <-chan struct{}) {
-	for {
-		select {
-		case line, more := <-lines:
-			if !more {
-				return
-			}
-			Line_count.Add(1)
-			for _, v := range *e {
-				// TODO(jaq): Instead of forking a goroutine each time, set up a line channel to each VM.
-				v.Run(line)
-			}
-		case <-stop:
-			return
+func (e *Engine) Run(lines <-chan string) {
+	for line := range lines {
+		Line_count.Add(1)
+		for _, v := range *e {
+			// TODO(jaq): Instead of forking a goroutine each time, set up a line channel to each VM.
+			v.Run(line)
 		}
 	}
 }

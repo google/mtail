@@ -48,7 +48,7 @@ var exampleProgramTests = []struct {
 	},
 }
 
-func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string, stop chan struct{}) error {
+func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) error {
 	p, err := os.Open(programfile)
 	if err != nil {
 		return fmt.Errorf("%s: could not open program file: %s", programfile, err)
@@ -64,7 +64,7 @@ func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string, st
 
 	e := &vm.Engine{}
 	e.AddVm(programfile, v)
-	go e.Run(lines, stop)
+	go e.Run(lines)
 	return nil
 }
 
@@ -75,13 +75,13 @@ func TestExamplePrograms(t *testing.T) {
 	*vm.Syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
 		mtail := NewMtail()
-		err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines, mtail.stop)
+		err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines)
 		if err != nil {
 			t.Errorf("%s", err)
 			continue
 		}
 
-		err = mtail.OneShot(tc.logfile, mtail.lines, mtail.stop)
+		err = mtail.OneShot(tc.logfile, mtail.lines)
 		if err != nil {
 			t.Errorf("Oneshot failed for %s: %s", tc.logfile, err)
 			continue
@@ -137,7 +137,8 @@ func BenchmarkExamplePrograms(b *testing.B) {
 	b.Logf("\n")
 	for _, tc := range exampleProgramTests {
 		mtail := NewMtail()
-		err := CompileAndLoad(tc.programfile, &metrics.Store{}, mtail.lines, mtail.stop)
+		spare_lines := make(chan string)
+		err := CompileAndLoad(tc.programfile, &metrics.Store{}, spare_lines)
 		if err != nil {
 			b.Errorf("%s", err)
 			continue
@@ -145,11 +146,10 @@ func BenchmarkExamplePrograms(b *testing.B) {
 		r := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
-				stop_fake := make(chan struct{})
 				vm.Line_count.Set(0)
 				mtail.store.ClearMetrics()
 				b.StartTimer()
-				err := mtail.OneShot(tc.logfile, mtail.lines, stop_fake)
+				err := mtail.OneShot(tc.logfile, spare_lines)
 				if err != nil {
 					b.Errorf("OneShot log parse failed: %s", err)
 					return
@@ -163,7 +163,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				b.SetBytes(l)
 			}
 		})
-		close(mtail.stop)
+		close(spare_lines)
 
 		kl_s := float64(r.Bytes) * float64(r.N) / (r.T.Seconds() * 1000)
 		ms_run := float64(r.NsPerOp()) / 1e6
