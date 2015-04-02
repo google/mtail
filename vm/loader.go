@@ -109,8 +109,8 @@ func NewProgLoader(w watcher.Watcher, fs afero.Fs) (p *progloader) {
 
 func (p *progloader) start() {
 	for event := range p.w.Events() {
-		switch event.Type {
-		case watcher.Delete:
+		switch event := event.(type) {
+		case watcher.DeleteEvent:
 			glog.Infof("delete prog")
 			_, f := filepath.Split(event.Pathname)
 			p.E.RemoveVm(f)
@@ -120,7 +120,7 @@ func (p *progloader) start() {
 			if err := p.w.Remove(event.Pathname); err != nil {
 				glog.Info("Remove watch failed:", err)
 			}
-		case watcher.Create:
+		case watcher.CreateEvent:
 			glog.Infof("create prog")
 			if filepath.Ext(event.Pathname) != fileext {
 				continue
@@ -133,7 +133,7 @@ func (p *progloader) start() {
 				p.w.Add(event.Pathname)
 			}
 			p.Unlock()
-		case watcher.Update:
+		case watcher.UpdateEvent:
 			glog.Infof("update prog")
 			if filepath.Ext(event.Pathname) != fileext {
 				continue

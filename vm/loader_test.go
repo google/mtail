@@ -17,32 +17,32 @@ var progloadertests = []struct {
 	pathnames []string
 }{
 	{
-		watcher.Event{Type: watcher.Create,
+		watcher.CreateEvent{
 			Pathname: "foo.mtail"},
 		[]string{"foo.mtail"},
 	},
 	{
-		watcher.Event{Type: watcher.Create,
+		watcher.CreateEvent{
 			Pathname: "foo.mtail"},
 		[]string{"foo.mtail"},
 	},
 	{
-		watcher.Event{Type: watcher.Create,
+		watcher.CreateEvent{
 			Pathname: "bar.mtail"},
 		[]string{"foo.mtail", "bar.mtail"},
 	},
 	{
-		watcher.Event{Type: watcher.Update,
+		watcher.UpdateEvent{
 			Pathname: "bar.mtail"},
 		[]string{"foo.mtail", "bar.mtail"},
 	},
 	{
-		watcher.Event{Type: watcher.Create,
+		watcher.CreateEvent{
 			Pathname: "no.gz"},
 		[]string{"foo.mtail", "bar.mtail"},
 	},
 	{
-		watcher.Event{Type: watcher.Delete,
+		watcher.DeleteEvent{
 			Pathname: "foo.mtail"},
 		[]string{"bar.mtail"},
 	},
@@ -55,13 +55,13 @@ func TestProgLoader(t *testing.T) {
 	l := NewProgLoader(fake, fs)
 	for _, tt := range progloadertests {
 		l.Lock()
-		switch tt.Event.Type {
-		case watcher.Create:
-			fake.InjectCreate(tt.Event.Pathname)
-		case watcher.Delete:
-			fake.InjectDelete(tt.Event.Pathname)
-		case watcher.Update:
-			fake.InjectUpdate(tt.Event.Pathname)
+		switch e := tt.Event.(type) {
+		case watcher.CreateEvent:
+			fake.InjectCreate(e.Pathname)
+		case watcher.DeleteEvent:
+			fake.InjectDelete(e.Pathname)
+		case watcher.UpdateEvent:
+			fake.InjectUpdate(e.Pathname)
 		}
 		pathnames := make(map[string]struct{})
 		for _, p := range tt.pathnames {
