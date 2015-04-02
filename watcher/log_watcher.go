@@ -44,14 +44,14 @@ func (w *LogWatcher) run() {
 			case e.Op&fsnotify.Remove == fsnotify.Remove:
 				event.Type = Delete
 			default:
-				glog.Errorf("Unexpected event tpe detected: %+#v", e)
+				glog.Infof("Unexpected event type detected: %q", e)
 			}
 			w.events <- event
 			if !more {
 				goto end
 			}
 		case err := <-w.Errors:
-			glog.Infof("fsnotify error: %s\n", err)
+			glog.Errorf("fsnotify error: %s\n", err)
 		case <-w.quit:
 			goto end
 		}
