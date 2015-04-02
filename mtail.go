@@ -43,7 +43,7 @@ type mtail struct {
 }
 
 func (m *mtail) OneShot(logfile string, lines chan string) error {
-	defer close(lines)
+	defer m.close()
 	l, err := os.Open(logfile)
 	if err != nil {
 		return fmt.Errorf("Failed to open log file %q: %s", logfile, err)

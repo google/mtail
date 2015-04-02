@@ -65,7 +65,7 @@ func TestHandleLogUpdates(t *testing.T) {
 	defer log_file.Close()
 	pathnames := []string{log_filepath}
 	m := startMtail(t, pathnames, "")
-	defer close(m.lines)
+	defer m.close()
 	ex_lines := []string{"hi", "hi2", "hi3"}
 	for i, x := range ex_lines {
 		// write to log file
@@ -107,7 +107,7 @@ func TestHandleLogRotation(t *testing.T) {
 	hup := make(chan bool, 1)
 	pathnames := []string{log_filepath}
 	m := startMtail(t, pathnames, "")
-	defer close(m.lines)
+	defer m.close()
 
 	go func() {
 		log_file := log_file
@@ -173,7 +173,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
 	m := startMtail(t, pathnames, "")
-	defer close(m.lines)
+	defer m.close()
 
 	// touch log file
 	log_file, err := os.Create(log_filepath)
@@ -215,7 +215,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	log_filepath := path.Join(workdir, "log")
 	pathnames := []string{log_filepath}
 	m := startMtail(t, pathnames, "")
-	defer close(m.lines)
+	defer m.close()
 
 	// touch log file
 	new_log_filepath := path.Join(workdir, "log1")
@@ -255,7 +255,7 @@ func TestHandleNewProgram(t *testing.T) {
 	defer removeTempDir(t, workdir)
 
 	m := startMtail(t, []string{}, workdir)
-	defer close(m.lines)
+	defer m.close()
 
 	expected_prog_loads := "{}"
 	if vm.Prog_loads.String() != expected_prog_loads {
