@@ -13,7 +13,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/watcher"
 
-	"github.com/spf13/afero"
+	"github.com/jaqx0r/afero"
 )
 
 func TestTail(t *testing.T) {

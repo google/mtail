@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 
 	"github.com/golang/glog"
-	"github.com/spf13/afero"
+	"github.com/jaqx0r/afero"
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/watcher"
