@@ -25,7 +25,6 @@ GOTESTFILES=\
 	tailer/tail_test.go\
 	vm/lexer_test.go\
 	vm/parser_test.go\
-	vm/loader_test.go\
 	vm/vm_test.go\
 	watcher/fake_watcher_test.go\
 	watcher/log_watcher_test.go\

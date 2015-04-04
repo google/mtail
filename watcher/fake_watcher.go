@@ -66,3 +66,12 @@ func (w *FakeWatcher) InjectDelete(name string) {
 		glog.Infof("not watching %s", name)
 	}
 }
+
+// Watches returns a list of paths being watched.
+func (w *FakeWatcher) Watches() (keys []string) {
+	keys = make([]string, 0, len(w.watches))
+	for k := range w.watches {
+		keys = append(keys, k)
+	}
+	return
+}

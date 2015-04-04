@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 	"path"
 	"path/filepath"
-	"sync"
 
 	"github.com/golang/glog"
 	"github.com/spf13/afero"
@@ -45,19 +44,21 @@ func (p *progloader) LoadProgs(program_path string) (*Engine, int) {
 		if fi.IsDir() {
 			continue
 		}
-		if filepath.Ext(fi.Name()) != fileext {
-			continue
-		}
-		errors += p.LoadProg(program_path, fi.Name())
+		errors += p.LoadProg(path.Join(program_path, fi.Name()))
 	}
 	return &p.E, errors
 }
 
-func (p *progloader) LoadProg(program_path string, name string) (errors int) {
-	pth := path.Join(program_path, name)
-	f, err := p.fs.Open(pth)
+// LoadProg loads or reloads a program from the path specified.  The name of the program is the basename of the file.
+func (p *progloader) LoadProg(program_path string) (errors int) {
+	name := filepath.Base(program_path)
+	if filepath.Ext(name) != fileext {
+		glog.Infof("Skipping %s due to file extension.", program_path)
+		return
+	}
+	f, err := p.fs.Open(program_path)
 	if err != nil {
-		glog.Infof("Failed to read program %q: %s", pth, err)
+		glog.Infof("Failed to read program %q: %s", program_path, err)
 		errors = 1
 		Prog_load_errors.Add(name, 1)
 		return
@@ -81,12 +82,10 @@ func (p *progloader) LoadProg(program_path string, name string) (errors int) {
 }
 
 type progloader struct {
-	sync.RWMutex
-	w         watcher.Watcher
-	pathnames map[string]struct{}
-	E         Engine
-	ms        *metrics.Store
-	fs        afero.Fs
+	w  watcher.Watcher
+	E  Engine
+	ms *metrics.Store
+	fs afero.Fs
 }
 
 // NewProgLoader creates a new program loader.  It takes a filesystem watcher
@@ -99,54 +98,24 @@ func NewProgLoader(w watcher.Watcher, fs afero.Fs) (p *progloader) {
 	p = &progloader{w: w,
 		E:  make(map[string]*VM),
 		fs: fs}
-	p.Lock()
-	p.pathnames = make(map[string]struct{})
-	p.Unlock()
 
-	go p.start()
+	go p.run()
 	return
 }
 
-func (p *progloader) start() {
+func (p *progloader) run() {
 	for event := range p.w.Events() {
 		switch event := event.(type) {
 		case watcher.DeleteEvent:
 			glog.Infof("delete prog")
 			_, f := filepath.Split(event.Pathname)
 			p.E.RemoveVm(f)
-			p.Lock()
-			delete(p.pathnames, f)
-			p.Unlock()
 			if err := p.w.Remove(event.Pathname); err != nil {
 				glog.Info("Remove watch failed:", err)
 			}
-		case watcher.CreateEvent:
-			glog.Infof("create prog")
-			if filepath.Ext(event.Pathname) != fileext {
-				continue
-			}
-			f := filepath.Base(event.Pathname)
-
-			p.Lock()
-			if _, ok := p.pathnames[f]; !ok {
-				p.pathnames[f] = struct{}{}
-				p.w.Add(event.Pathname)
-			}
-			p.Unlock()
 		case watcher.UpdateEvent:
 			glog.Infof("update prog")
-			if filepath.Ext(event.Pathname) != fileext {
-				continue
-			}
-			d, f := filepath.Split(event.Pathname)
-
-			p.Lock()
-			if _, ok := p.pathnames[f]; !ok {
-				p.pathnames[f] = struct{}{}
-				p.w.Add(event.Pathname)
-			}
-			p.Unlock()
-			p.LoadProg(d, f)
+			p.LoadProg(event.Pathname)
 		default:
 			glog.Info("Unexected event type %+#v", event)
 		}
