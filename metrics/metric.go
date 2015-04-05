@@ -4,22 +4,28 @@
 package metrics
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
+// MetricType enumerates the types of metrics supported.
 type MetricType int
 
 const (
+	// Counter is a MetricType that is nondecreasing, typically only
+	// incrementable.
 	Counter MetricType = iota
+	// Gauge is a MetricType that can take on any value, and may be set
+	// discontinuously from its previous value.
 	Gauge
 )
 
 var (
-	Metric_update_time time.Time
+	// MetricUpdateTime contains the timestamp of the last update of a metric.
+	// TODO(jaq): move this global value to be a property of the Store.
+	MetricUpdateTime time.Time
 )
 
 func (m MetricType) String() string {
@@ -32,19 +38,29 @@ func (m MetricType) String() string {
 	return "Unknown"
 }
 
+// Incrementable describes an interface for Counter MetricTypes, that must be
+// nondecreasing.
 type Incrementable interface {
 	IncBy(delta int64, ts time.Time)
 }
 
+// Settable describes an interface for Gauge MetricTypes, that can be set to
+// any value discontinuously from its previous.
 type Settable interface {
 	Set(value int64, ts time.Time)
 }
 
+// LabelValue is an object that names a Datum value with a list of label
+// strings.
 type LabelValue struct {
 	Labels []string `json:",omitempty"`
 	Value  *Datum
 }
 
+// Metric is an object that describes a metric, with its name, the creator and
+// owner program name, its MetricType, a sequence of Keys that may be used to
+// add dimension to the metric, and a list of LabelValues that contain data for
+// labels in each dimension of the Keys.
 type Metric struct {
 	sync.RWMutex
 	Name        string // Name
@@ -54,6 +70,7 @@ type Metric struct {
 	LabelValues []*LabelValue `json:",omitempty"`
 }
 
+// NewMetric returns a new empty metric of dimension len(keys).
 func NewMetric(name string, prog string, kind MetricType, keys ...string) *Metric {
 	m := &Metric{Name: name, Program: prog, Kind: kind,
 		Keys:        make([]string, len(keys), len(keys)),
@@ -62,7 +79,7 @@ func NewMetric(name string, prog string, kind MetricType, keys ...string) *Metri
 	return m
 }
 
-func (m *Metric) FindLabelValueOrNil(labelvalues []string) *LabelValue {
+func (m *Metric) findLabelValueOrNil(labelvalues []string) *LabelValue {
 Loop:
 	for i, lv := range m.LabelValues {
 		for j := 0; j < len(lv.Labels); j++ {
@@ -75,13 +92,15 @@ Loop:
 	return nil
 }
 
+// GetDatum returns the datum named by a sequence of string label values from a
+// Metric.
 func (m *Metric) GetDatum(labelvalues ...string) (d *Datum, err error) {
 	if len(labelvalues) != len(m.Keys) {
-		return nil, errors.New(fmt.Sprintf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m))
+		return nil, fmt.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
 	}
 	m.Lock()
 	defer m.Unlock()
-	if lv := m.FindLabelValueOrNil(labelvalues); lv != nil {
+	if lv := m.findLabelValueOrNil(labelvalues); lv != nil {
 		d = lv.Value
 	} else {
 		d = &Datum{}
@@ -90,6 +109,8 @@ func (m *Metric) GetDatum(labelvalues ...string) (d *Datum, err error) {
 	return d, nil
 }
 
+// LabelSet is an object that maps the keys of a Metric to the labels naming a
+// Datum, for use when enumerating Datums from a Metric.
 type LabelSet struct {
 	Labels map[string]string
 	Datum  *Datum
@@ -103,6 +124,9 @@ func zip(keys []string, values []string) map[string]string {
 	return r
 }
 
+// EmitLabelSets enumerates the LabelSets corresponding to the LabelValues of a
+// Metric.  It emits them onto the provided channel, then closes the channel to
+// signal completion.
 func (m *Metric) EmitLabelSets(c chan *LabelSet) {
 	for _, lv := range m.LabelValues {
 		ls := &LabelSet{zip(m.Keys, lv.Labels), lv.Value}
@@ -111,6 +135,7 @@ func (m *Metric) EmitLabelSets(c chan *LabelSet) {
 	close(c)
 }
 
+// Datum describes a LabelSet's or LabelValue's value at a given timestamp.
 type Datum struct {
 	Value int64
 	Time  time.Time
@@ -122,41 +147,46 @@ func (d *Datum) stamp(timestamp time.Time) {
 	} else {
 		d.Time = timestamp
 	}
-	Metric_update_time = time.Now()
+	MetricUpdateTime = time.Now()
 }
 
+// Set implements the Settable interface for a Datum.
 func (d *Datum) Set(value int64, timestamp time.Time) {
 	atomic.StoreInt64(&d.Value, value)
 	d.stamp(timestamp)
 }
 
+// IncBy implements the Incrementable interface for a Datum.
 func (d *Datum) IncBy(delta int64, timestamp time.Time) {
 	atomic.AddInt64(&d.Value, delta)
 	d.stamp(timestamp)
 }
 
+// Get returns the value of the Datum.
 func (d *Datum) Get() int64 {
 	return atomic.LoadInt64(&d.Value)
 }
 
+// Store contains Metrics.
 type Store struct {
 	sync.RWMutex
 	Metrics []*Metric
 }
 
+// Add is used to add one or more metrics in the Store.
 func (ms *Store) Add(m ...*Metric) {
 	ms.Lock()
 	defer ms.Unlock()
 	ms.Metrics = append(ms.Metrics, m...)
 }
 
+// ClearMetrics empties the store of all metrics.
 func (ms *Store) ClearMetrics() {
 	ms.Lock()
 	defer ms.Unlock()
 	ms.Metrics = make([]*Metric, 0)
 }
 
-// Debug printing.
 func (d *Datum) String() string {
 	return fmt.Sprintf("%+#v", *d)
 }
@@ -169,7 +199,7 @@ func (m *Metric) String() string {
 	return fmt.Sprintf("%+#v", *m)
 }
 
-// Sort a slice of metrics.
+// Metrics defines a Sortable type for a slice of metrics.
 type Metrics []*Metric
 
 func (ms Metrics) Len() int      { return len(ms) }

@@ -263,12 +263,12 @@ func TestHandleNewProgram(t *testing.T) {
 	}
 
 	progPath := path.Join(workdir, "prog.mtail")
-	prog_file, err := os.Create(progPath)
+	progFile, err := os.Create(progPath)
 	if err != nil {
 		t.Errorf("prog create failed: %s", err)
 	}
-	prog_file.WriteString("/$/ {}\n")
-	prog_file.Close()
+	progFile.WriteString("/$/ {}\n")
+	progFile.Close()
 	glog.Infof("hi")
 
 	// Wait for inotify

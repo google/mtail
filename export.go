@@ -178,7 +178,7 @@ func metricToStatsd(m *metrics.Metric, l *metrics.LabelSet) string {
 
 // WriteMetrics writes metrics to each of the configured services.
 func (e *Exporter) WriteMetrics() {
-	if metrics.Metric_update_time.Sub(lastMetricPushTime) <= 0 {
+	if metrics.MetricUpdateTime.Sub(lastMetricPushTime) <= 0 {
 		return
 	}
 	if *collectdSocketPath != "" {

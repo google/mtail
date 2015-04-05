@@ -22,15 +22,15 @@ func TestScalarMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter)
 	d, _ := v.GetDatum()
 	d.IncBy(1, time.Now())
-	lv := v.FindLabelValueOrNil([]string{})
+	lv := v.findLabelValueOrNil([]string{})
 	if lv == nil {
 		t.Errorf("couldn't find labelvalue")
 	}
-	new_d := lv.Value
-	if new_d == nil {
+	newD := lv.Value
+	if newD == nil {
 		t.Errorf("new_d is nil")
 	}
-	if new_d.Value != 1 {
+	if newD.Value != 1 {
 		t.Errorf("value not 1")
 	}
 	// TODO: try setting datum with labels on scalar
@@ -40,28 +40,28 @@ func TestDimensionedMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, "foo")
 	d, _ := v.GetDatum("a")
 	d.IncBy(1, time.Now())
-	if v.FindLabelValueOrNil([]string{"a"}).Value.Value != 1 {
+	if v.findLabelValueOrNil([]string{"a"}).Value.Value != 1 {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar")
 	d, _ = v.GetDatum("a", "b")
 	d.IncBy(1, time.Now())
-	if v.FindLabelValueOrNil([]string{"a", "b"}).Value.Value != 1 {
+	if v.findLabelValueOrNil([]string{"a", "b"}).Value.Value != 1 {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar", "quux")
 	d, _ = v.GetDatum("a", "b", "c")
 	d.IncBy(1, time.Now())
-	if v.FindLabelValueOrNil([]string{"a", "b", "c"}).Value.Value != 1 {
+	if v.findLabelValueOrNil([]string{"a", "b", "c"}).Value.Value != 1 {
 		t.Errorf("fail")
 	}
 }
 
 var labelSetTests = []struct {
-	values          []string
-	expected_labels map[string]string
+	values         []string
+	expectedLabels map[string]string
 }{
 	{
 		[]string{"a", "b", "c"},
@@ -79,11 +79,11 @@ func TestEmitLabelSet(t *testing.T) {
 
 	ts := time.Now()
 
-	var expected_labels []map[string]string
+	var expectedLabels []map[string]string
 	for _, tc := range labelSetTests {
 		d, _ := m.GetDatum(tc.values...)
 		d.Set(37, ts)
-		expected_labels = append(expected_labels, tc.expected_labels)
+		expectedLabels = append(expectedLabels, tc.expectedLabels)
 	}
 
 	go m.EmitLabelSets(c)
@@ -96,32 +96,32 @@ func TestEmitLabelSet(t *testing.T) {
 	// Equivalence for slices is not defined under ==, and DeepEqual does an
 	// elementwise comparison.  We can't guarantee that the labels are in
 	// order, so do the N^2 comparision.
-	if len(labels) != len(expected_labels) {
-		t.Errorf("Label length doesn't match\n\texpected %v\n\treceived %v\n", expected_labels, labels)
+	if len(labels) != len(expectedLabels) {
+		t.Errorf("Label length doesn't match\n\texpected %v\n\treceived %v\n", expectedLabels, labels)
 	}
 
 Loop:
-	for i := range expected_labels {
+	for i := range expectedLabels {
 		for j := range labels {
-			if reflect.DeepEqual(expected_labels[i], labels[j]) {
+			if reflect.DeepEqual(expectedLabels[i], labels[j]) {
 				continue Loop
 			}
 		}
-		t.Errorf("Labels don't match: couldn't find %v in labels\n\texpected %v\n\treceived %v\n", expected_labels[i], expected_labels, labels)
+		t.Errorf("Labels don't match: couldn't find %v in labels\n\texpected %v\n\treceived %v\n", expectedLabels[i], expectedLabels, labels)
 
 	}
 }
 
 func TestFindLabelValueOrNil(t *testing.T) {
 	m0 := NewMetric("foo", "prog", Counter)
-	if r0 := m0.FindLabelValueOrNil([]string{}); r0 != nil {
+	if r0 := m0.findLabelValueOrNil([]string{}); r0 != nil {
 		t.Errorf("m0 should be nil: %v", r0)
 	}
 	d, err := m0.GetDatum()
 	if err != nil {
 		t.Errorf("Bad datum %v: %v\n", d, err)
 	}
-	if r1 := m0.FindLabelValueOrNil([]string{}); r1 == nil {
+	if r1 := m0.findLabelValueOrNil([]string{}); r1 == nil {
 		t.Errorf("m0 should not be nil: %v", r1)
 	}
 	m1 := NewMetric("bar", "prog", Counter, "a")
@@ -129,10 +129,10 @@ func TestFindLabelValueOrNil(t *testing.T) {
 	if err1 != nil {
 		t.Errorf("err1 %v: %v\n", d1, err1)
 	}
-	if r2 := m1.FindLabelValueOrNil([]string{"0"}); r2 != nil {
+	if r2 := m1.findLabelValueOrNil([]string{"0"}); r2 != nil {
 		t.Errorf("r2 should be nil")
 	}
-	if r3 := m1.FindLabelValueOrNil([]string{"1"}); r3 == nil {
+	if r3 := m1.findLabelValueOrNil([]string{"1"}); r3 == nil {
 		t.Errorf("r3 should be non nil")
 	}
 }
