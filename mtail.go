@@ -99,7 +99,6 @@ func (m *mtail) InitLoader(path string) {
 	}
 
 	go e.Run(m.lines)
-
 }
 
 func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
