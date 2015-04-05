@@ -162,6 +162,11 @@ func (m *mtail) Serve() {
 }
 
 func (m *mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Add("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 	fmt.Fprintf(w, "Exiting...")
 	close(m.webquit)
 }
