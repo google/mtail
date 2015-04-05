@@ -101,7 +101,6 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 			return
 		}
 		n, err := f.Read(b)
-		glog.Infof("err: %v, n: %d", err, n)
 		if err != nil {
 			if err == io.EOF && n == 0 {
 				// end of file for now, return
