@@ -1,14 +1,13 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-// tail is responsible for tailing a log file and extracting new log lines to
-// be passed into the virtual machines.
+// Package tailer provides a class that is responsible for tailing a log file
+// and extracting new log lines to be passed into the virtual machines.
+package tailer
 
 // mtail gets notified on modifications (i.e. appends) to log files that are
 // being watched, in order to read the new lines. Log files can also be
 // rotated, so mtail is also notified of creates in the log file directory.
-
-package tailer
 
 import (
 	"expvar"

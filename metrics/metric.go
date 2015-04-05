@@ -1,6 +1,8 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
+// Package metrics provides storage for metrics being recorded by mtail
+// programs.
 package metrics
 
 import (

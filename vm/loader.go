@@ -1,3 +1,6 @@
+// Copyright 2015 Google Inc. All Rights Reserved.
+// This file is available under the Apache license.
+
 package vm
 
 // mtail programs may be updated while emtail is running, and they will be

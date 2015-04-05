@@ -1,3 +1,8 @@
+// Copyright 2015 Google Inc. All Rights Reserved.
+// This file is available under the Apache license.
+
+// Package watcher provides a way of watching for filesystem events and
+// notifying observers when they occur.
 package watcher
 
 // Event is a generalisation of events sent from the watcher to its listeners.

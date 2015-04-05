@@ -1,6 +1,8 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
+// Package exporter provides the interface for getting metrics out of mtail,
+// into your monitoring system of choice.
 package exporter
 
 import (
