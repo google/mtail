@@ -12,6 +12,7 @@ type FakeWatcher struct {
 	events  chan Event
 }
 
+// NewFakeWatcher returns a fake Watcher for use in tests.
 func NewFakeWatcher() *FakeWatcher {
 	return &FakeWatcher{
 		make(map[string]bool),

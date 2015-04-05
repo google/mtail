@@ -8,14 +8,16 @@ import (
 )
 
 var (
-	event_count = expvar.NewMap("log_watcher_event_count")
+	eventCount = expvar.NewMap("log_watcher_event_count")
 )
 
+// LogWatcher implements a Watcher for watching real filesystems.
 type LogWatcher struct {
 	*fsnotify.Watcher
 	events chan Event
 }
 
+// NewLogWatcher returns a new LogWatcher, or returns an error.
 func NewLogWatcher() (w *LogWatcher, err error) {
 	f, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -26,6 +28,7 @@ func NewLogWatcher() (w *LogWatcher, err error) {
 	return
 }
 
+// Events returns a readable channel of events from this watcher.
 func (w *LogWatcher) Events() <-chan Event { return w.events }
 
 func (w *LogWatcher) run() {
@@ -36,7 +39,7 @@ func (w *LogWatcher) run() {
 		}
 	}()
 	for e := range w.Watcher.Events {
-		event_count.Add(e.Name, 1)
+		eventCount.Add(e.Name, 1)
 		switch {
 		case e.Op&fsnotify.Create == fsnotify.Create:
 			w.events <- CreateEvent{e.Name}
