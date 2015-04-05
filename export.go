@@ -124,11 +124,11 @@ func (e *Exporter) writeSocketMetrics(c io.ReadWriter, f formatter, exportTotal 
 			if err == nil {
 				_, err = bufio.NewReader(c).ReadString('\n')
 				if err != nil {
-					return fmt.Errorf("Read error: %s\n", err)
+					return fmt.Errorf("read error: %s\n", err)
 				}
 				exportSuccess.Add(1)
 			} else {
-				return fmt.Errorf("Write error: %s\n", err)
+				return fmt.Errorf("write error: %s\n", err)
 			}
 		}
 	}
@@ -139,7 +139,7 @@ func (e *Exporter) writeSocketMetrics(c io.ReadWriter, f formatter, exportTotal 
 func (e *Exporter) GraphiteWriteMetrics(hostport string) error {
 	c, err := net.Dial("tcp", hostport)
 	if err != nil {
-		return fmt.Errorf("Dial error: %s\n", err)
+		return fmt.Errorf("dial error: %s\n", err)
 	}
 	defer c.Close()
 
@@ -160,7 +160,7 @@ func metricToGraphite(m *metrics.Metric, l *metrics.LabelSet) string {
 func (e *Exporter) StatsdWriteMetrics(hostport string) error {
 	c, err := net.Dial("udp", hostport)
 	if err != nil {
-		return fmt.Errorf("Dial error: %s\n", err)
+		return fmt.Errorf("dial error: %s\n", err)
 	}
 	defer c.Close()
 	return e.writeSocketMetrics(c, metricToStatsd, statsdExportTotal, statsdExportSuccess)
