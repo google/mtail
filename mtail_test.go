@@ -25,7 +25,7 @@ func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) *mta
 	if err != nil {
 		t.Errorf("Couldn't create watcher: %s", err)
 	}
-	p := vm.NewProgLoader(w, nil, &m.store)
+	p := vm.NewLoader(w, &m.store)
 	// start server
 	prog, errors := vm.Compile("test", strings.NewReader(test_program), &m.store)
 	if len(errors) > 0 {

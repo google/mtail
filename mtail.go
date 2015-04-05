@@ -108,7 +108,7 @@ func (m *mtail) Serve() {
 		glog.Fatal("Couldn't create an inotify watcher:", err)
 	}
 
-	p := vm.NewProgLoader(w, nil, &m.store)
+	p := vm.NewLoader(w, &m.store)
 	if p == nil {
 		glog.Fatal("Couldn't create a program loader.")
 	}

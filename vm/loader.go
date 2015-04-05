@@ -31,7 +31,9 @@ const (
 	fileext = ".mtail"
 )
 
-func (p *progloader) LoadProgs(program_path string) (*Engine, int) {
+// LoadProgs loads all programs in a directory and starts watching the
+// directory for filesystem changes.
+func (p *Loader) LoadProgs(program_path string) (*Engine, int) {
 	p.w.Add(program_path)
 
 	fis, err := ioutil.ReadDir(program_path)
@@ -49,8 +51,9 @@ func (p *progloader) LoadProgs(program_path string) (*Engine, int) {
 	return &p.E, errors
 }
 
-// LoadProg loads or reloads a program from the path specified.  The name of the program is the basename of the file.
-func (p *progloader) LoadProg(program_path string) (errors int) {
+// LoadProg loads or reloads a program from the path specified.  The name of
+// the program is the basename of the file.
+func (p *Loader) LoadProg(program_path string) (errors int) {
 	name := filepath.Base(program_path)
 	if filepath.Ext(name) != fileext {
 		glog.Infof("Skipping %s due to file extension.", program_path)
@@ -81,21 +84,27 @@ func (p *progloader) LoadProg(program_path string) (errors int) {
 	return
 }
 
-type progloader struct {
+// Loader handles the lifecycle of programs and virtual machines, by watching
+// the configured program source directory, compiling changes to programs, and
+// managing the running virtual machines that receive input from the lines
+// channel.
+type Loader struct {
 	w  watcher.Watcher
 	E  Engine
 	ms *metrics.Store
 	fs afero.Fs
 }
 
-// NewProgLoader creates a new program loader.  It takes a filesystem watcher
+// NewLoader creates a new program loader.  It takes a filesystem watcher
 // and a filesystem interface as arguments.  If fs is nil, it will use the
 // default filesystem interface.
-func NewProgLoader(w watcher.Watcher, fs afero.Fs, ms *metrics.Store) (p *progloader) {
-	if fs == nil {
-		fs = afero.OsFs{}
-	}
-	p = &progloader{w: w,
+func NewLoader(w watcher.Watcher, ms *metrics.Store) *Loader {
+	return newLoaderWithFs(w, ms, afero.OsFs{})
+}
+
+// newLoaderWithFs creates a new program loader with a supplied filesystem implementation, for testing.
+func newLoaderWithFs(w watcher.Watcher, ms *metrics.Store, fs afero.Fs) (p *Loader) {
+	p = &Loader{w: w,
 		E:  make(map[string]*VM),
 		ms: ms,
 		fs: fs}
@@ -104,7 +113,7 @@ func NewProgLoader(w watcher.Watcher, fs afero.Fs, ms *metrics.Store) (p *proglo
 	return
 }
 
-func (p *progloader) run() {
+func (p *Loader) run() {
 	for event := range p.w.Events() {
 		switch event := event.(type) {
 		case watcher.DeleteEvent:
