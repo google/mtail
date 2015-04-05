@@ -1,4 +1,7 @@
-package main
+// Copyright 2015 Google Inc. All Rights Reserved.
+// This file is available under the Apache license.
+
+package exporter
 
 import (
 	"expvar"
@@ -21,7 +24,9 @@ func noHyphens(s string) string {
 	return strings.Replace(s, "-", "_", -1)
 }
 
-func (e *Exporter) handlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
+// HandlePrometheusMetrics exports the metrics in a format readable by
+// Prometheus via HTTP.
+func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
 	e.store.RLock()
 	defer e.store.RUnlock()
 

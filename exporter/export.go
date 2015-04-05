@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package main
+package exporter
 
 import (
 	"bufio"
@@ -54,11 +54,16 @@ const (
 
 // Exporter manages the export of metrics to passive and active collectors.
 type Exporter struct {
-	store metrics.Store
+	store *metrics.Store
 }
 
-// JSON export
-func (e *Exporter) handleJSON(w http.ResponseWriter, r *http.Request) {
+// New creates a new Exporter.
+func New(store *metrics.Store) *Exporter {
+	return &Exporter{store}
+}
+
+// HandleJSON exports the metrics in JSON format via HTTP.
+func (e *Exporter) HandleJSON(w http.ResponseWriter, r *http.Request) {
 	e.store.RLock()
 	defer e.store.RUnlock()
 

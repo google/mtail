@@ -17,6 +17,7 @@ import (
 	"syscall"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/exporter"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
@@ -132,7 +133,7 @@ func (m *mtail) Serve() {
 
 	m.InitLoader(*progs)
 
-	ex := &Exporter{m.store}
+	ex := exporter.New(&m.store)
 
 	if *oneShot {
 		for _, pathname := range pathnames {
@@ -151,8 +152,8 @@ func (m *mtail) Serve() {
 		m.StartTailing(pathnames)
 
 		http.Handle("/", m)
-		http.HandleFunc("/json", http.HandlerFunc(ex.handleJSON))
-		http.HandleFunc("/metrics", http.HandlerFunc(ex.handlePrometheusMetrics))
+		http.HandleFunc("/json", http.HandlerFunc(ex.HandleJSON))
+		http.HandleFunc("/metrics", http.HandlerFunc(ex.HandlePrometheusMetrics))
 		http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
 		ex.StartMetricPush()
 

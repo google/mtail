@@ -2,14 +2,15 @@
 # This file is available under the Apache license.
 
 GOFILES=\
-	export.go\
+	exporter/export.go\
+	exporter/export_prometheus.go\
 	metrics/metric.go\
 	mtail.go\
-	vm/loader.go\
 	tailer/tail.go\
 	vm/ast.go\
 	vm/compiler.go\
 	vm/lexer.go\
+	vm/loader.go\
 	vm/parser.go\
 	vm/symtab.go\
 	vm/unparser.go\
@@ -20,7 +21,7 @@ GOFILES=\
 
 GOTESTFILES=\
 	ex_test.go\
-	export_test.go\
+	exporter/export_test.go\
 	mtail_test.go\
 	tailer/tail_test.go\
 	vm/lexer_test.go\
