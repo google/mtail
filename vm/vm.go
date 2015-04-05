@@ -424,6 +424,7 @@ func (e *Engine) Run(lines <-chan string) {
 			v.Run(line)
 		}
 	}
+	glog.Infof("Shutting down VM engine.")
 }
 
 func (v *VM) DumpByteCode(name string) {
