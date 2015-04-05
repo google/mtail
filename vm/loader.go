@@ -81,6 +81,7 @@ func (p *Loader) LoadProg(program_path string) (errors int) {
 	}
 	p.E.AddVm(name, v)
 	Prog_loads.Add(name, 1)
+	glog.Infof("Loaded %s", name)
 	return
 }
 
