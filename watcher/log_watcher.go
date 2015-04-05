@@ -37,7 +37,6 @@ func (w *LogWatcher) run() {
 	}()
 	for e := range w.Watcher.Events {
 		event_count.Add(e.Name, 1)
-		glog.Infof("Writing %v", e)
 		switch {
 		case e.Op&fsnotify.Create == fsnotify.Create:
 			w.events <- CreateEvent{e.Name}
@@ -46,7 +45,7 @@ func (w *LogWatcher) run() {
 		case e.Op&fsnotify.Remove == fsnotify.Remove:
 			w.events <- DeleteEvent{e.Name}
 		default:
-			glog.Infof("Unexpected event type detected: %q", e)
+			glog.Infof("Unexpected event type detected: %v", e)
 		}
 	}
 	glog.Infof("Shutting down log watcher.")

@@ -171,13 +171,14 @@ func (t *Tailer) handleLogCreate(pathname string) {
 				glog.Info("Failed removing watches on", pathname)
 			}
 			// Always seek to start on log rotation.
+			glog.Infof("Seek to start on %s", pathname)
 			t.openLogFile(pathname, true)
 		} else {
 			glog.Infof("Path %s already being watched, and inode not changed.",
 				pathname)
 		}
 	} else {
-		// Freshly opened log file, never seen before, so do not seek to start.
+		// Freshly opened log file, never seen before.
 		t.openLogFile(pathname, true)
 	}
 }
@@ -216,6 +217,8 @@ func (t *Tailer) openLogFile(pathname string, seek_to_start bool) {
 
 	if seek_to_start {
 		t.files[pathname].Seek(0, os.SEEK_SET)
+	} else {
+		t.files[pathname].Seek(0, os.SEEK_END)
 	}
 
 	t.files_lock.Unlock()
@@ -224,6 +227,8 @@ func (t *Tailer) openLogFile(pathname string, seek_to_start bool) {
 	if err != nil {
 		glog.Infof("Adding a change watch failed on %q: %s", pathname, err)
 	}
+
+	glog.Infof("Tailing %s", pathname)
 
 	// In case the new log has been written to already, attempt to read the first lines.
 	t.handleLogUpdate(pathname)
@@ -236,10 +241,8 @@ func (t *Tailer) run() {
 	for e := range t.w.Events() {
 		switch e := e.(type) {
 		case watcher.UpdateEvent:
-			glog.Infof("name: %q", e.Pathname)
 			t.handleLogUpdate(e.Pathname)
 		case watcher.CreateEvent:
-			glog.Infof("name: %q", e.Pathname)
 			t.handleLogCreate(e.Pathname)
 		default:
 			glog.Infof("Unexpected event %q", e)
