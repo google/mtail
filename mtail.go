@@ -38,7 +38,8 @@ type mtail struct {
 	lines chan string   // Channel of lines from tailer to VM engine.
 	store metrics.Store // Metrics storage.
 
-	t *tailer.Tailer // t tails the watched files and feeds lines to the VM.
+	t *tailer.Tailer // t tails the watched files and feeds lines to the VMs.
+	l *vm.Loader     // l loads programs and manages the VM lifecycle.
 
 	webquit   chan struct{} // Channel to signal shutdown from web UI.
 	closeOnce sync.Once     // Ensure shutdown happens only once.
@@ -68,11 +69,11 @@ func (m *mtail) OneShot(logfile string, lines chan string) error {
 }
 
 func (m *mtail) StartTailing(pathnames []string) {
-	tw, err := watcher.NewLogWatcher()
+	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		glog.Fatal("Couldn't create log path watcher:", err)
 	}
-	m.t = tailer.New(m.lines, tw, &afero.OsFs{})
+	m.t = tailer.New(m.lines, w, &afero.OsFs{})
 	if m.t == nil {
 		glog.Fatal("Couldn't create a log tailer.")
 	}
@@ -80,6 +81,24 @@ func (m *mtail) StartTailing(pathnames []string) {
 	for _, pathname := range pathnames {
 		m.t.Tail(pathname)
 	}
+}
+
+func (m *mtail) InitLoader(path string) {
+	w, err := watcher.NewLogWatcher()
+	if err != nil {
+		glog.Fatal("Couldn't create prog watcher:", err)
+	}
+	m.l = vm.NewLoader(w, &m.store)
+	if m.l == nil {
+		glog.Fatal("Couldn't create a program loader.")
+	}
+	e, errors := m.l.LoadProgs(path)
+	if *vm.Compile_only || *vm.Dump_bytecode {
+		os.Exit(errors)
+	}
+
+	go e.Run(m.lines)
+
 }
 
 func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -95,29 +114,12 @@ func NewMtail() *mtail {
 }
 
 func (m *mtail) Serve() {
-
 	if *progs == "" {
 		glog.Fatalf("No mtail program directory specified; use -progs")
 	}
 	if *logs == "" {
 		glog.Fatalf("No logs specified to tail; use -logs")
 	}
-
-	w, err := watcher.NewLogWatcher()
-	if err != nil {
-		glog.Fatal("Couldn't create an inotify watcher:", err)
-	}
-
-	p := vm.NewLoader(w, &m.store)
-	if p == nil {
-		glog.Fatal("Couldn't create a program loader.")
-	}
-	e, errors := p.LoadProgs(*progs)
-
-	if *vm.Compile_only || *vm.Dump_bytecode {
-		os.Exit(errors)
-	}
-
 	var pathnames []string
 	for _, pathname := range strings.Split(*logs, ",") {
 		if pathname != "" {
@@ -128,7 +130,8 @@ func (m *mtail) Serve() {
 		glog.Fatal("No logs to tail.")
 	}
 
-	go e.Run(m.lines)
+	m.InitLoader(*progs)
+
 	ex := &Exporter{m.store}
 
 	if *one_shot {
