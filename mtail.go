@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -36,14 +35,15 @@ var (
 )
 
 type mtail struct {
-	lines chan string
-	store metrics.Store
+	lines chan string   // Channel of lines from tailer to VM engine.
+	store metrics.Store // Metrics storage.
 
-	closeOnce sync.Once
+	webquit   chan struct{} // Channel to signal shutdown from web UI.
+	closeOnce sync.Once     // Ensure shutdown happens only once.
 }
 
 func (m *mtail) OneShot(logfile string, lines chan string) error {
-	defer m.close()
+	defer m.Close()
 	l, err := os.Open(logfile)
 	if err != nil {
 		return fmt.Errorf("Failed to open log file %q: %s", logfile, err)
@@ -87,7 +87,8 @@ func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func NewMtail() *mtail {
 	return &mtail{
-		lines: make(chan string),
+		lines:   make(chan string),
+		webquit: make(chan struct{}),
 	}
 }
 
@@ -105,7 +106,7 @@ func (m *mtail) Serve() {
 		glog.Fatal("Couldn't create an inotify watcher:", err)
 	}
 
-	p := vm.NewProgLoader(w, nil)
+	p := vm.NewProgLoader(w, nil, &m.store)
 	if p == nil {
 		glog.Fatal("Couldn't create a program loader.")
 	}
@@ -147,6 +148,7 @@ func (m *mtail) Serve() {
 		http.Handle("/", m)
 		http.HandleFunc("/json", http.HandlerFunc(ex.handleJson))
 		http.HandleFunc("/metrics", http.HandlerFunc(ex.handlePrometheusMetrics))
+		http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
 		ex.StartMetricPush()
 
 		go func() {
@@ -155,25 +157,32 @@ func (m *mtail) Serve() {
 				glog.Fatal(err)
 			}
 		}()
-		m.interruptHandler()
+		m.shutdownHandler()
 	}
 }
 
-func (m *mtail) interruptHandler() {
+func (m *mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Exiting...")
+	close(m.webquit)
+}
+
+func (m *mtail) shutdownHandler() {
 	n := make(chan os.Signal)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
-	<-n
-	log.Print("Received SIGTERM, exiting...")
+	select {
+	case <-n:
+		glog.Info("Received SIGTERM, exiting...")
+	case <-m.webquit:
+		glog.Info("Received Quit from UI, exiting...")
+	}
 	m.Close()
 }
 
 func (m *mtail) Close() {
-	m.closeOnce.Do(m.close)
-}
-
-func (m *mtail) close() {
-	log.Print("Shutdown requested.")
-	close(m.lines)
+	m.closeOnce.Do(func() {
+		glog.Info("Shutdown requested.")
+		close(m.lines)
+	})
 }
 
 func main() {

@@ -91,12 +91,13 @@ type progloader struct {
 // NewProgLoader creates a new program loader.  It takes a filesystem watcher
 // and a filesystem interface as arguments.  If fs is nil, it will use the
 // default filesystem interface.
-func NewProgLoader(w watcher.Watcher, fs afero.Fs) (p *progloader) {
+func NewProgLoader(w watcher.Watcher, fs afero.Fs, ms *metrics.Store) (p *progloader) {
 	if fs == nil {
 		fs = afero.OsFs{}
 	}
 	p = &progloader{w: w,
 		E:  make(map[string]*VM),
+		ms: ms,
 		fs: fs}
 
 	go p.run()
