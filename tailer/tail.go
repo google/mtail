@@ -33,10 +33,10 @@ var (
 	log_rotations = expvar.NewMap("log_rotations_total")
 )
 
-// tailer receives notification of changes from inotify and extracts new log
+// Tailer receives notification of changes from a Watcher and extracts new log
 // lines from files. It also handles new log file creation events and log
 // rotations.
-type tailer struct {
+type Tailer struct {
 	w watcher.Watcher
 
 	watched      map[string]struct{}   // Names of logs being watched.
@@ -49,9 +49,9 @@ type tailer struct {
 	fs afero.Fs // mockable filesystem interface
 }
 
-// New returns a new tailer.
-func New(lines chan<- string, w watcher.Watcher, fs afero.Fs) *tailer {
-	t := &tailer{
+// New returns a new Tailer.
+func New(lines chan<- string, w watcher.Watcher, fs afero.Fs) *Tailer {
+	t := &Tailer{
 		w:        w,
 		watched:  make(map[string]struct{}),
 		lines:    lines,
@@ -59,17 +59,17 @@ func New(lines chan<- string, w watcher.Watcher, fs afero.Fs) *tailer {
 		partials: make(map[string]string),
 		fs:       fs,
 	}
-	go t.start()
+	go t.run()
 	return t
 }
 
-func (t *tailer) addWatched(path string) {
+func (t *Tailer) addWatched(path string) {
 	t.watched_lock.Lock()
 	defer t.watched_lock.Unlock()
 	t.watched[path] = struct{}{}
 }
 
-func (t *tailer) isWatching(path string) bool {
+func (t *Tailer) isWatching(path string) bool {
 	t.watched_lock.RLock()
 	defer t.watched_lock.RUnlock()
 	_, ok := t.watched[path]
@@ -77,7 +77,7 @@ func (t *tailer) isWatching(path string) bool {
 }
 
 // Tail registers a file to be tailed.
-func (t *tailer) Tail(pathname string) {
+func (t *Tailer) Tail(pathname string) {
 	fullpath, err := filepath.Abs(pathname)
 	if err != nil {
 		glog.Infof("Failed to find absolute path for %q: %s\n", pathname, err)
@@ -92,7 +92,7 @@ func (t *tailer) Tail(pathname string) {
 
 // handleLogUpdate reads all available bytes from an already opened file
 // identified by pathname, and sends them to be processed on the lines channel.
-func (t *tailer) handleLogUpdate(pathname string) {
+func (t *Tailer) handleLogUpdate(pathname string) {
 	for {
 		b := make([]byte, 4096)
 		f, ok := t.files[pathname]
@@ -142,7 +142,7 @@ func inode(f os.FileInfo) uint64 {
 }
 
 // handleLogCreate handles both new and rotated log files.
-func (t *tailer) handleLogCreate(pathname string) {
+func (t *Tailer) handleLogCreate(pathname string) {
 	if !t.isWatching(pathname) {
 		glog.V(1).Info("Not watching path %q, ignoring.\n", pathname)
 		return
@@ -186,7 +186,7 @@ func (t *tailer) handleLogCreate(pathname string) {
 // openLogFile opens a new log file at pathname, and optionally seeks to the
 // start or end of the file. Rotated logs should start at the start, but logs
 // opened for the first time start at the end.
-func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
+func (t *Tailer) openLogFile(pathname string, seek_to_start bool) {
 	if !t.isWatching(pathname) {
 		glog.Infof("Not watching %q, ignoring.", pathname)
 		return
@@ -230,10 +230,10 @@ func (t *tailer) openLogFile(pathname string, seek_to_start bool) {
 	t.handleLogUpdate(pathname)
 }
 
-// start is the main event loop for the tailer.
+// start is the main event loop for the Tailer.
 // It receives notification of log file changes from the watcher channel, and
 // handles them.
-func (t *tailer) start() {
+func (t *Tailer) run() {
 	for e := range t.w.Events() {
 		switch e := e.(type) {
 		case watcher.UpdateEvent:
@@ -246,6 +246,11 @@ func (t *tailer) start() {
 			glog.Infof("Unexpected event %q", e)
 		}
 	}
-	glog.Infof("Shutting down tailer.")
+	glog.Infof("Shutting down Tailer.")
 	close(t.lines)
+}
+
+// Close signals termination to the watcher.
+func (t *Tailer) Close() {
+	t.w.Close()
 }

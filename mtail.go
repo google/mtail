@@ -38,6 +38,8 @@ type mtail struct {
 	lines chan string   // Channel of lines from tailer to VM engine.
 	store metrics.Store // Metrics storage.
 
+	t *tailer.Tailer // t tails the watched files and feeds lines to the VM.
+
 	webquit   chan struct{} // Channel to signal shutdown from web UI.
 	closeOnce sync.Once     // Ensure shutdown happens only once.
 }
@@ -70,13 +72,13 @@ func (m *mtail) StartTailing(pathnames []string) {
 	if err != nil {
 		glog.Fatal("Couldn't create log path watcher:", err)
 	}
-	t := tailer.New(m.lines, tw, &afero.OsFs{})
-	if t == nil {
+	m.t = tailer.New(m.lines, tw, &afero.OsFs{})
+	if m.t == nil {
 		glog.Fatal("Couldn't create a log tailer.")
 	}
 
 	for _, pathname := range pathnames {
-		t.Tail(pathname)
+		m.t.Tail(pathname)
 	}
 }
 
@@ -171,6 +173,7 @@ func (m *mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
 	close(m.webquit)
 }
 
+// shutdownHandler handles external shutdown request events.
 func (m *mtail) shutdownHandler() {
 	n := make(chan os.Signal)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
@@ -183,10 +186,15 @@ func (m *mtail) shutdownHandler() {
 	m.Close()
 }
 
+// Close handles the graceful shutdown of this mtail instance, ensuring that it only occurs once.
 func (m *mtail) Close() {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
-		close(m.lines)
+		if m.t != nil {
+			m.t.Close()
+		} else {
+			close(m.lines)
+		}
 	})
 }
 
