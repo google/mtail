@@ -28,9 +28,9 @@ import (
 )
 
 var (
-	log_count     = expvar.NewInt("log_count")
-	log_errors    = expvar.NewMap("log_errors_total")
-	log_rotations = expvar.NewMap("log_rotations_total")
+	logCount     = expvar.NewInt("log_count")
+	logErrors    = expvar.NewMap("log_errors_total")
+	logRotations = expvar.NewMap("log_rotations_total")
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
@@ -39,12 +39,12 @@ var (
 type Tailer struct {
 	w watcher.Watcher
 
-	watched      map[string]struct{}   // Names of logs being watched.
-	watched_lock sync.RWMutex          // protects `watched'
-	lines        chan<- string         // Logfile lines being emitted.
-	files        map[string]afero.File // File handles for each pathname.
-	files_lock   sync.Mutex            // protects `files'
-	partials     map[string]string     // Accumulator for the currently read line for each pathname.
+	watched     map[string]struct{}   // Names of logs being watched.
+	watchedLock sync.RWMutex          // protects `watched'
+	lines       chan<- string         // Logfile lines being emitted.
+	files       map[string]afero.File // File handles for each pathname.
+	filesLock   sync.Mutex            // protects `files'
+	partials    map[string]string     // Accumulator for the currently read line for each pathname.
 
 	fs afero.Fs // mockable filesystem interface
 }
@@ -64,14 +64,14 @@ func New(lines chan<- string, w watcher.Watcher, fs afero.Fs) *Tailer {
 }
 
 func (t *Tailer) addWatched(path string) {
-	t.watched_lock.Lock()
-	defer t.watched_lock.Unlock()
+	t.watchedLock.Lock()
+	defer t.watchedLock.Unlock()
 	t.watched[path] = struct{}{}
 }
 
 func (t *Tailer) isWatching(path string) bool {
-	t.watched_lock.RLock()
-	defer t.watched_lock.RUnlock()
+	t.watchedLock.RLock()
+	defer t.watchedLock.RUnlock()
 	_, ok := t.watched[path]
 	return ok
 }
@@ -85,7 +85,7 @@ func (t *Tailer) Tail(pathname string) {
 	}
 	if !t.isWatching(fullpath) {
 		t.addWatched(fullpath)
-		log_count.Add(1)
+		logCount.Add(1)
 		t.openLogFile(fullpath, false)
 	}
 }
@@ -107,20 +107,19 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 				return
 			}
 			glog.Infof("Failed to read updates from %q: %s", pathname, err)
-			return
-		} else {
-			for i, width := 0, 0; i < len(b) && i < n; i += width {
-				var rune rune
-				rune, width = utf8.DecodeRune(b[i:])
-				switch {
-				case rune != '\n':
-					t.partials[pathname] += string(rune)
-				default:
-					// send off line for processing
-					t.lines <- t.partials[pathname]
-					// reset accumulator
-					t.partials[pathname] = ""
-				}
+			return // TODO(jaq): handle this path better
+		}
+		for i, width := 0, 0; i < len(b) && i < n; i += width {
+			var rune rune
+			rune, width = utf8.DecodeRune(b[i:])
+			switch {
+			case rune != '\n':
+				t.partials[pathname] += string(rune)
+			default:
+				// send off line for processing
+				t.lines <- t.partials[pathname]
+				// reset accumulator
+				t.partials[pathname] = ""
 			}
 		}
 	}
@@ -147,9 +146,9 @@ func (t *Tailer) handleLogCreate(pathname string) {
 		return
 	}
 
-	t.files_lock.Lock()
+	t.filesLock.Lock()
 	fd, ok := t.files[pathname]
-	t.files_lock.Unlock()
+	t.filesLock.Unlock()
 	if ok {
 		s1, err := fd.Stat()
 		if err != nil {
@@ -162,7 +161,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 			return
 		}
 		if inode(s1) != inode(s2) {
-			log_rotations.Add(pathname, 1)
+			logRotations.Add(pathname, 1)
 			// flush the old log, pathname is still an index into t.files with the old inode.
 			t.handleLogUpdate(pathname)
 			fd.Close()
@@ -186,7 +185,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 // openLogFile opens a new log file at pathname, and optionally seeks to the
 // start or end of the file. Rotated logs should start at the start, but logs
 // opened for the first time start at the end.
-func (t *Tailer) openLogFile(pathname string, seek_to_start bool) {
+func (t *Tailer) openLogFile(pathname string, seekStart bool) {
 	if !t.isWatching(pathname) {
 		glog.Infof("Not watching %q, ignoring.", pathname)
 		return
@@ -209,19 +208,19 @@ func (t *Tailer) openLogFile(pathname string, seek_to_start bool) {
 			return
 		}
 		glog.Infof("Failed to open %q for reading: %s", pathname, err)
-		log_errors.Add(pathname, 1)
+		logErrors.Add(pathname, 1)
 		return
 	}
-	t.files_lock.Lock()
+	t.filesLock.Lock()
 	t.files[pathname] = fd
 
-	if seek_to_start {
+	if seekStart {
 		t.files[pathname].Seek(0, os.SEEK_SET)
 	} else {
 		t.files[pathname].Seek(0, os.SEEK_END)
 	}
 
-	t.files_lock.Unlock()
+	t.filesLock.Unlock()
 
 	err = t.w.Add(pathname)
 	if err != nil {
