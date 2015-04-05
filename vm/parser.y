@@ -66,9 +66,9 @@ import (
 start
   : stmt_list
   {
-      $1.(*stmtlistNode).s = Mtaillex.(*parser).s
-      Mtaillex.(*parser).endScope()
-      Mtaillex.(*parser).root = $1
+      $1.(*stmtlistNode).s = mtaillex.(*parser).s
+      mtaillex.(*parser).endScope()
+      mtaillex.(*parser).root = $1
   }
   ;
 
@@ -76,7 +76,7 @@ stmt_list
   : /* empty */
   {  
       $$ = &stmtlistNode{}
-      Mtaillex.(*parser).startScope()
+      mtaillex.(*parser).startScope()
   }
   | stmt_list stmt
   {
@@ -90,8 +90,8 @@ stmt_list
 stmt
   : cond LCURLY stmt_list RCURLY
   {
-      $3.(*stmtlistNode).s = Mtaillex.(*parser).s
-      Mtaillex.(*parser).endScope()
+      $3.(*stmtlistNode).s = mtaillex.(*parser).s
+      mtaillex.(*parser).endScope()
       if $1 != nil {
           $$ = &condNode{$1, []node{$3}}
       } else {
@@ -121,7 +121,7 @@ stmt
   | CONST ID pattern_expr
   {
     // Store the regex for concatenation
-    Mtaillex.(*parser).res[$2] = $3
+    mtaillex.(*parser).res[$2] = $3
   }
   ;
 
@@ -234,18 +234,18 @@ postfix_expr
 primary_expr
   : ID
   {
-    if sym, ok := Mtaillex.(*parser).s.lookupSym($1, IDSymbol); ok {
+    if sym, ok := mtaillex.(*parser).s.lookupSym($1, IDSymbol); ok {
       $$ = &idNode{$1, sym}
     } else {
-      Mtaillex.Error(fmt.Sprintf("Identifier '%s' not declared.", $1))
+      mtaillex.Error(fmt.Sprintf("Identifier '%s' not declared.", $1))
     }
   }
   | CAPREF
   {
-    if sym, ok := Mtaillex.(*parser).s.lookupSym($1, CaprefSymbol); ok {
+    if sym, ok := mtaillex.(*parser).s.lookupSym($1, CaprefSymbol); ok {
       $$ = &caprefNode{$1, sym}
     } else {
-      Mtaillex.Error(fmt.Sprintf("Capture group $%s not defined " +
+      mtaillex.Error(fmt.Sprintf("Capture group $%s not defined " +
                                   "by prior regular expression in " +
                                   "this or an outer scope",  $1))
       // TODO(jaq) force a parse error
@@ -270,7 +270,7 @@ cond
   : pattern_expr
   {
     if re, err := regexp.Compile($1); err != nil {
-      Mtaillex.(*parser).ErrorP(fmt.Sprintf(err.Error()), Mtaillex.(*parser).pos)
+      mtaillex.(*parser).ErrorP(fmt.Sprintf(err.Error()), mtaillex.(*parser).pos)
       // TODO(jaq): force a parse error
     } else {
       $$ = &regexNode{pattern: $1}
@@ -278,15 +278,15 @@ cond
       // the current scope, so that future CAPTUREGROUPs can retrieve their
       // value.  At parse time, we can warn about nonexistent names.
       for i := 1; i < re.NumSubexp() + 1; i++ {
-        sym := Mtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
+        sym := mtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
                                             CaprefSymbol, $$,
-                                            Mtaillex.(*parser).pos)
+                                            mtaillex.(*parser).pos)
         sym.addr = i - 1
       }
       for i, capref := range re.SubexpNames() {
         if capref != "" {
-          sym := Mtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$,
-                                              Mtaillex.(*parser).pos)
+          sym := mtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$,
+                                              mtaillex.(*parser).pos)
           sym.addr = i
         }
       }
@@ -303,7 +303,7 @@ pattern_expr
   {
     // Stash the start of the pattern_expr in a state variable.
     // We know it's the start because pattern_expr is left associative.
-    Mtaillex.(*parser).pos = Mtaillex.(*parser).t.pos
+    mtaillex.(*parser).pos = mtaillex.(*parser).t.pos
     $$ = $1
   }
   | pattern_expr PLUS REGEX
@@ -312,10 +312,10 @@ pattern_expr
   }
   | pattern_expr PLUS ID
   {
-    if s, ok := Mtaillex.(*parser).res[$3]; ok {
+    if s, ok := mtaillex.(*parser).res[$3]; ok {
       $$ = $1 + s
     } else {
-      Mtaillex.Error(fmt.Sprintf("Constant '%s' not defined.", $3))
+      mtaillex.Error(fmt.Sprintf("Constant '%s' not defined.", $3))
     }
   }
   ;
@@ -335,11 +335,11 @@ decl
         n = d.name
    	}
       sort.Sort(sort.StringSlice(d.keys))
-      d.m = metrics.NewMetric(n, Mtaillex.(*parser).name, d.kind, d.keys...)
-      d.sym = Mtaillex.(*parser).s.addSym(d.name, IDSymbol, d.m,
-                                           Mtaillex.(*parser).t.pos)
+      d.m = metrics.NewMetric(n, mtaillex.(*parser).name, d.kind, d.keys...)
+      d.sym = mtaillex.(*parser).s.addSym(d.name, IDSymbol, d.m,
+                                           mtaillex.(*parser).t.pos)
       if !$1 {
-         Mtaillex.(*parser).ms.Add(d.m)
+         mtaillex.(*parser).ms.Add(d.m)
       }
   }
   ;
@@ -428,23 +428,23 @@ as_spec
 def
   : DEF ID LCURLY stmt_list RCURLY
   {
-      $4.(*stmtlistNode).s = Mtaillex.(*parser).s
-      Mtaillex.(*parser).endScope()
+      $4.(*stmtlistNode).s = mtaillex.(*parser).s
+      mtaillex.(*parser).endScope()
       $$ = &defNode{name: $2, children: []node{$4}}
       d := $$.(*defNode)
-      d.sym = Mtaillex.(*parser).s.addSym(d.name, DefSymbol, d, Mtaillex.(*parser).t.pos)
+      d.sym = mtaillex.(*parser).s.addSym(d.name, DefSymbol, d, mtaillex.(*parser).t.pos)
   }
   ;
 
 deco
   : DECO LCURLY stmt_list RCURLY
   {
-    $3.(*stmtlistNode).s = Mtaillex.(*parser).s
-    Mtaillex.(*parser).endScope()
-    if sym, ok := Mtaillex.(*parser).s.lookupSym($1, DefSymbol); ok {
+    $3.(*stmtlistNode).s = mtaillex.(*parser).s
+    mtaillex.(*parser).endScope()
+    if sym, ok := mtaillex.(*parser).s.lookupSym($1, DefSymbol); ok {
       $$ = &decoNode{$1, []node{$3}, sym.binding.(*defNode)}
     } else {
-      Mtaillex.Error(fmt.Sprintf("Decorator %s not defined", $1))
+      mtaillex.Error(fmt.Sprintf("Decorator %s not defined", $1))
       // TODO(jaq): force a parse error.
     }
   }
@@ -478,7 +478,7 @@ func (p *parser) Error(s string) {
     p.ErrorP(s, p.t.pos)
 }
 
-func (p *parser) Lex(lval *MtailSymType) int {
+func (p *parser) Lex(lval *mtailSymType) int {
     p.t = p.l.NextToken()
     switch p.t.kind {
     case INVALID:

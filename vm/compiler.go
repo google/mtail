@@ -2,7 +2,7 @@
 // This file is available under the Apache license.
 
 // Build the parser:
-//go:generate go tool yacc -v y.output -o parser.go -p Mtail parser.y
+//go:generate go tool yacc -v y.output -o parser.go -p mtail parser.y
 
 package vm
 
@@ -40,7 +40,7 @@ type compiler struct {
 func Compile(name string, input io.Reader, ms *metrics.Store) (*VM, []string) {
 	name = filepath.Base(name)
 	p := NewParser(name, input, ms)
-	r := MtailParse(p)
+	r := mtailParse(p)
 	if r != 0 || p == nil || len(p.errors) > 0 {
 		return nil, p.errors
 	}
