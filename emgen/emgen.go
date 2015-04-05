@@ -11,6 +11,7 @@ import (
 var (
 	use_crypto_rand = flag.Bool("use_crypto_rand", false, "Use crypto/rand instead of math/rand")
 	rand_seed       = flag.Int64("rand_seed", 1, "Seed to use for math.rand.")
+	min_iterations  = flag.Int64("min_iterations", 5000, "Minimum number of iterations before stopping program generation.")
 )
 
 type node struct {
@@ -103,7 +104,7 @@ func main() {
 	c := make(chan string, 1)
 	go emitter(c)
 
-	runs := 5000
+	runs := *min_iterations
 
 	// Initial state
 	var states = []string{"start"}
