@@ -17,27 +17,27 @@ import (
 	"github.com/google/mtail/watcher"
 )
 
-var test_program = "/$/ { }"
+const testProgram = "/$/ { }"
 
-func startMtail(t *testing.T, log_pathnames []string, prog_pathname string) *mtail {
-	m := NewMtail()
+func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail {
+	m := newMtail()
 	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		t.Errorf("Couldn't create watcher: %s", err)
 	}
 	p := vm.NewLoader(w, &m.store)
 	// start server
-	prog, errors := vm.Compile("test", strings.NewReader(test_program), &m.store)
+	prog, errors := vm.Compile("test", strings.NewReader(testProgram), &m.store)
 	if len(errors) > 0 {
 		t.Errorf("Couldn't compile program: %s", errors)
 	}
 	p.E.AddVm("test", prog)
-	if prog_pathname != "" {
-		p.LoadProgs(prog_pathname)
+	if progPathname != "" {
+		p.LoadProgs(progPathname)
 	}
 	vm.Line_count.Set(0)
 	go p.E.Run(m.lines)
-	m.StartTailing(log_pathnames)
+	m.StartTailing(logPathnames)
 	return m
 }
 
@@ -57,19 +57,19 @@ func TestHandleLogUpdates(t *testing.T) {
 		}
 	}()
 	// touch log file
-	log_filepath := path.Join(workdir, "log")
-	log_file, err := os.Create(log_filepath)
+	logFilepath := path.Join(workdir, "log")
+	logFile, err := os.Create(logFilepath)
 	if err != nil {
 		t.Errorf("could not touch log file: %s", err)
 	}
-	defer log_file.Close()
-	pathnames := []string{log_filepath}
+	defer logFile.Close()
+	pathnames := []string{logFilepath}
 	m := startMtail(t, pathnames, "")
 	defer m.Close()
-	ex_lines := []string{"hi", "hi2", "hi3"}
-	for i, x := range ex_lines {
+	inputLines := []string{"hi", "hi2", "hi3"}
+	for i, x := range inputLines {
 		// write to log file
-		log_file.WriteString(x + "\n")
+		logFile.WriteString(x + "\n")
 		// TODO(jaq): remove slow sleep
 		time.Sleep(100 * time.Millisecond)
 		// check log line count increase
@@ -95,22 +95,22 @@ func TestHandleLogRotation(t *testing.T) {
 			t.Errorf("Could not remove temp dir: %s", err)
 		}
 	}()
-	log_filepath := path.Join(workdir, "log")
+	logFilepath := path.Join(workdir, "log")
 	// touch log file
-	log_file, err := os.Create(log_filepath)
+	logFile, err := os.Create(logFilepath)
 	if err != nil {
 		t.Errorf("could not touch log file: %s", err)
 	}
-	defer log_file.Close()
+	defer logFile.Close()
 	// Create a logger
 	stop := make(chan bool, 1)
 	hup := make(chan bool, 1)
-	pathnames := []string{log_filepath}
+	pathnames := []string{logFilepath}
 	m := startMtail(t, pathnames, "")
 	defer m.Close()
 
 	go func() {
-		log_file := log_file
+		logFile := logFile
 		var err error
 		i := 0
 		running := true
@@ -118,13 +118,13 @@ func TestHandleLogRotation(t *testing.T) {
 			select {
 			case <-hup:
 				// touch log file
-				log_file, err = os.Create(log_filepath)
+				logFile, err = os.Create(logFilepath)
 				if err != nil {
 					t.Errorf("could not touch log file: %s", err)
 				}
-				defer log_file.Close()
+				defer logFile.Close()
 			default:
-				log_file.WriteString(fmt.Sprintf("%d\n", i))
+				logFile.WriteString(fmt.Sprintf("%d\n", i))
 				time.Sleep(100 * time.Millisecond)
 				i++
 				if i >= 10 {
@@ -138,7 +138,7 @@ func TestHandleLogRotation(t *testing.T) {
 		for {
 			select {
 			case <-time.After(5 * 100 * time.Millisecond):
-				err = os.Rename(log_filepath, log_filepath+".1")
+				err = os.Rename(logFilepath, logFilepath+".1")
 				if err != nil {
 					t.Errorf("could not rename log file: %s", err)
 				}
@@ -170,27 +170,27 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		}
 	}()
 	// Start up mtail
-	log_filepath := path.Join(workdir, "log")
-	pathnames := []string{log_filepath}
+	logFilepath := path.Join(workdir, "log")
+	pathnames := []string{logFilepath}
 	m := startMtail(t, pathnames, "")
 	defer m.Close()
 
 	// touch log file
-	log_file, err := os.Create(log_filepath)
+	logFile, err := os.Create(logFilepath)
 	if err != nil {
 		t.Errorf("could not touch log file: %s", err)
 	}
-	defer log_file.Close()
-	ex_lines := []string{"hi", "hi2", "hi3"}
-	for _, x := range ex_lines {
+	defer logFile.Close()
+	inputLines := []string{"hi", "hi2", "hi3"}
+	for _, x := range inputLines {
 		// write to log file
-		log_file.WriteString(x + "\n")
-		log_file.Sync()
+		logFile.WriteString(x + "\n")
+		logFile.Sync()
 	}
 	// TODO(jaq): remove slow sleep
 	time.Sleep(100 * time.Millisecond)
 	// check log line count increase
-	expected := fmt.Sprintf("%d", len(ex_lines))
+	expected := fmt.Sprintf("%d", len(inputLines))
 	if vm.Line_count.String() != expected {
 		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.Line_count.String())
 	}
@@ -212,19 +212,19 @@ func TestHandleNewLogIgnored(t *testing.T) {
 		}
 	}()
 	// Start mtail
-	log_filepath := path.Join(workdir, "log")
-	pathnames := []string{log_filepath}
+	logFilepath := path.Join(workdir, "log")
+	pathnames := []string{logFilepath}
 	m := startMtail(t, pathnames, "")
 	defer m.Close()
 
 	// touch log file
-	new_log_filepath := path.Join(workdir, "log1")
+	newLogFilepath := path.Join(workdir, "log1")
 
-	log_file, err := os.Create(new_log_filepath)
+	logFile, err := os.Create(newLogFilepath)
 	if err != nil {
 		t.Errorf("could not touch log file: %s", err)
 	}
-	defer log_file.Close()
+	defer logFile.Close()
 	expected := "0"
 	if vm.Line_count.String() != expected {
 		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.Line_count.String())
@@ -257,13 +257,13 @@ func TestHandleNewProgram(t *testing.T) {
 	m := startMtail(t, []string{}, workdir)
 	defer m.Close()
 
-	expected_prog_loads := "{}"
-	if vm.Prog_loads.String() != expected_prog_loads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, vm.Prog_loads.String())
+	expectedProgLoads := "{}"
+	if vm.Prog_loads.String() != expectedProgLoads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.Prog_loads.String())
 	}
 
-	prog_path := path.Join(workdir, "prog.mtail")
-	prog_file, err := os.Create(prog_path)
+	progPath := path.Join(workdir, "prog.mtail")
+	prog_file, err := os.Create(progPath)
 	if err != nil {
 		t.Errorf("prog create failed: %s", err)
 	}
@@ -273,57 +273,57 @@ func TestHandleNewProgram(t *testing.T) {
 
 	// Wait for inotify
 	time.Sleep(100 * time.Millisecond)
-	expected_prog_loads = `{"prog.mtail": 1}`
-	if vm.Prog_loads.String() != expected_prog_loads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, vm.Prog_loads.String())
+	expectedProgLoads = `{"prog.mtail": 1}`
+	if vm.Prog_loads.String() != expectedProgLoads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.Prog_loads.String())
 	}
 
-	bad_prog_path := path.Join(workdir, "prog.mtail.dpkg-dist")
-	bad_prog_file, err := os.Create(bad_prog_path)
+	badProgPath := path.Join(workdir, "prog.mtail.dpkg-dist")
+	badProgFile, err := os.Create(badProgPath)
 	if err != nil {
 		t.Errorf("prog create failed: %s", err)
 	}
-	bad_prog_file.WriteString("/$/ {}\n")
-	bad_prog_file.Close()
+	badProgFile.WriteString("/$/ {}\n")
+	badProgFile.Close()
 
 	time.Sleep(100 * time.Millisecond)
-	expected_prog_loads = `{"prog.mtail": 1}`
-	if vm.Prog_loads.String() != expected_prog_loads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, vm.Prog_loads.String())
+	expectedProgLoads = `{"prog.mtail": 1}`
+	if vm.Prog_loads.String() != expectedProgLoads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.Prog_loads.String())
 	}
-	expected_prog_errs := `{}`
-	if vm.Prog_load_errors.String() != expected_prog_errs {
-		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expected_prog_errs, vm.Prog_load_errors.String())
+	expectedProgErrs := `{}`
+	if vm.Prog_load_errors.String() != expectedProgErrs {
+		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.Prog_load_errors.String())
 	}
 
-	os.Rename(bad_prog_path, prog_path)
+	os.Rename(badProgPath, progPath)
 	time.Sleep(100 * time.Millisecond)
-	expected_prog_loads = `{"prog.mtail": 1}`
-	if vm.Prog_loads.String() != expected_prog_loads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, vm.Prog_loads.String())
+	expectedProgLoads = `{"prog.mtail": 1}`
+	if vm.Prog_loads.String() != expectedProgLoads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.Prog_loads.String())
 	}
-	expected_prog_errs = `{}`
-	if vm.Prog_load_errors.String() != expected_prog_errs {
-		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expected_prog_errs, vm.Prog_load_errors.String())
+	expectedProgErrs = `{}`
+	if vm.Prog_load_errors.String() != expectedProgErrs {
+		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.Prog_load_errors.String())
 	}
 
-	broken_prog_path := path.Join(workdir, "broken.mtail")
-	broken_prog_file, err := os.Create(broken_prog_path)
+	brokenProgPath := path.Join(workdir, "broken.mtail")
+	brokenProgFile, err := os.Create(brokenProgPath)
 	if err != nil {
 		t.Errorf("prog create failed: %s", err)
 	}
-	broken_prog_file.WriteString("?\n")
-	broken_prog_file.Close()
+	brokenProgFile.WriteString("?\n")
+	brokenProgFile.Close()
 
 	time.Sleep(100 * time.Millisecond)
 
-	expected_prog_loads = `{"prog.mtail": 1}`
-	if vm.Prog_loads.String() != expected_prog_loads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expected_prog_loads, vm.Prog_loads.String())
+	expectedProgLoads = `{"prog.mtail": 1}`
+	if vm.Prog_loads.String() != expectedProgLoads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.Prog_loads.String())
 	}
-	expected_prog_errs = `{"broken.mtail": 1}`
-	if vm.Prog_load_errors.String() != expected_prog_errs {
-		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expected_prog_errs, vm.Prog_load_errors.String())
+	expectedProgErrs = `{"broken.mtail": 1}`
+	if vm.Prog_load_errors.String() != expectedProgErrs {
+		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.Prog_load_errors.String())
 	}
 
 }

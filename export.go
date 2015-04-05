@@ -22,42 +22,43 @@ import (
 
 // Commandline Flags.
 var (
-	collectd_socketpath *string = flag.String("collectd_socketpath", "",
+	collectdSocketPath = flag.String("collectd_socketpath", "",
 		"Path to collectd unixsock to write metrics to.")
-	graphite_hostport *string = flag.String("graphite_hostport", "",
+	graphiteHostPort = flag.String("graphite_host_port", "",
 		"Host:port to graphite carbon server to write metrics to.")
-	statsd_hostport *string = flag.String("statsd_hostport", "",
+	statsdHostPort = flag.String("statsd_hostport", "",
 		"Host:port to statsd server to write metrics to.")
-	push_interval *int = flag.Int("metric_push_interval_seconds", 60,
+	pushInterval = flag.Int("metric_push_interval_seconds", 60,
 		"Interval between metric pushes, in seconds")
 )
 
 var (
 	// Exported variables
-	collectd_export_total   = expvar.NewInt("collectd_export_total")
-	collectd_export_success = expvar.NewInt("collectd_export_success")
+	collectdExportTotal   = expvar.NewInt("collectd_export_total")
+	collectdExportSuccess = expvar.NewInt("collectd_export_success")
 
-	graphite_export_total   = expvar.NewInt("graphite_export_total")
-	graphite_export_success = expvar.NewInt("graphite_export_success")
+	graphiteExportTotal   = expvar.NewInt("graphite_export_total")
+	graphiteExportSuccess = expvar.NewInt("graphite_export_success")
 
-	statsd_export_total   = expvar.NewInt("statsd_export_total")
-	statsd_export_success = expvar.NewInt("statsd_export_success")
+	statsdExportTotal   = expvar.NewInt("statsd_export_total")
+	statsdExportSuccess = expvar.NewInt("statsd_export_success")
 
 	// Internal state
-	hostname              string
-	last_metric_push_time time.Time
+	hostname           string
+	lastMetricPushTime time.Time
 )
 
 const (
-	COLLECTD_FORMAT = "PUTVAL \"%s/mtail-%s/%s-%s\" interval=%d %d:%d\n"
+	collectdFormat = "PUTVAL \"%s/mtail-%s/%s-%s\" interval=%d %d:%d\n"
 )
 
+// Exporter manages the export of metrics to passive and active collectors.
 type Exporter struct {
 	store metrics.Store
 }
 
 // JSON export
-func (e *Exporter) handleJson(w http.ResponseWriter, r *http.Request) {
+func (e *Exporter) handleJSON(w http.ResponseWriter, r *http.Request) {
 	e.store.RLock()
 	defer e.store.RUnlock()
 
@@ -68,6 +69,7 @@ func (e *Exporter) handleJson(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
+// CollectdWriteMetrics writes metrics to a collectd unix socket plugin.
 func (e *Exporter) CollectdWriteMetrics(socketpath string) error {
 	c, err := net.Dial("unix", socketpath)
 	if err != nil {
@@ -75,10 +77,10 @@ func (e *Exporter) CollectdWriteMetrics(socketpath string) error {
 	}
 	defer c.Close()
 
-	return e.WriteSocketMetrics(c, MetricToCollectd, collectd_export_total, collectd_export_success)
+	return e.writeSocketMetrics(c, metricToCollectd, collectdExportTotal, collectdExportSuccess)
 }
 
-func FormatLabels(name string, m map[string]string, ksep, sep string) string {
+func formatLabels(name string, m map[string]string, ksep, sep string) string {
 	r := name
 	if len(m) > 0 {
 		var s []string
@@ -90,15 +92,15 @@ func FormatLabels(name string, m map[string]string, ksep, sep string) string {
 	return r
 }
 
-func MetricToCollectd(m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToCollectd(m *metrics.Metric, l *metrics.LabelSet) string {
 	m.RLock()
 	defer m.RUnlock()
-	return fmt.Sprintf(COLLECTD_FORMAT,
+	return fmt.Sprintf(collectdFormat,
 		hostname,
 		m.Program,
 		strings.ToLower(m.Kind.String()),
-		FormatLabels(m.Name, l.Labels, "-", "-"),
-		*push_interval,
+		formatLabels(m.Name, l.Labels, "-", "-"),
+		*pushInterval,
 		l.Datum.Time.Unix(),
 		l.Datum.Get())
 }
@@ -106,14 +108,14 @@ func MetricToCollectd(m *metrics.Metric, l *metrics.LabelSet) string {
 // Format a LabelSet into a string to be written to one of the timeseries sockets
 type formatter func(*metrics.Metric, *metrics.LabelSet) string
 
-func (e *Exporter) WriteSocketMetrics(c io.ReadWriter, f formatter, export_total *expvar.Int, export_success *expvar.Int) error {
+func (e *Exporter) writeSocketMetrics(c io.ReadWriter, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
 	e.store.RLock()
 	defer e.store.RUnlock()
 
 	for _, m := range e.store.Metrics {
 		m.RLock()
 		defer m.RUnlock()
-		export_total.Add(1)
+		exportTotal.Add(1)
 		lc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lc)
 		for l := range lc {
@@ -123,9 +125,8 @@ func (e *Exporter) WriteSocketMetrics(c io.ReadWriter, f formatter, export_total
 				_, err = bufio.NewReader(c).ReadString('\n')
 				if err != nil {
 					return fmt.Errorf("Read error: %s\n", err)
-				} else {
-					export_success.Add(1)
 				}
+				exportSuccess.Add(1)
 			} else {
 				return fmt.Errorf("Write error: %s\n", err)
 			}
@@ -134,6 +135,7 @@ func (e *Exporter) WriteSocketMetrics(c io.ReadWriter, f formatter, export_total
 	return nil
 }
 
+// GraphiteWriteMetrics writes metrics to a graphite instance.
 func (e *Exporter) GraphiteWriteMetrics(hostport string) error {
 	c, err := net.Dial("tcp", hostport)
 	if err != nil {
@@ -141,66 +143,69 @@ func (e *Exporter) GraphiteWriteMetrics(hostport string) error {
 	}
 	defer c.Close()
 
-	return e.WriteSocketMetrics(c, MetricToGraphite, graphite_export_total, graphite_export_success)
+	return e.writeSocketMetrics(c, metricToGraphite, graphiteExportTotal, graphiteExportSuccess)
 }
 
-func MetricToGraphite(m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToGraphite(m *metrics.Metric, l *metrics.LabelSet) string {
 	m.RLock()
 	defer m.RUnlock()
 	return fmt.Sprintf("%s.%s %v %v\n",
 		m.Program,
-		FormatLabels(m.Name, l.Labels, ".", "."),
+		formatLabels(m.Name, l.Labels, ".", "."),
 		l.Datum.Get(),
 		l.Datum.Time.Unix())
 }
 
+// StatsdWriteMetrics writes metrics to a statsd udp collector.
 func (e *Exporter) StatsdWriteMetrics(hostport string) error {
 	c, err := net.Dial("udp", hostport)
 	if err != nil {
 		return fmt.Errorf("Dial error: %s\n", err)
 	}
 	defer c.Close()
-	return e.WriteSocketMetrics(c, MetricToStatsd, statsd_export_total, statsd_export_success)
+	return e.writeSocketMetrics(c, metricToStatsd, statsdExportTotal, statsdExportSuccess)
 }
 
-func MetricToStatsd(m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToStatsd(m *metrics.Metric, l *metrics.LabelSet) string {
 	// TODO(jaq): handle units better, send timing as |ms
 	m.RLock()
 	defer m.RUnlock()
 	return fmt.Sprintf("%s.%s:%d|c",
 		m.Program,
-		FormatLabels(m.Name, l.Labels, ".", "."),
+		formatLabels(m.Name, l.Labels, ".", "."),
 		l.Datum.Get())
 }
 
+// WriteMetrics writes metrics to each of the configured services.
 func (e *Exporter) WriteMetrics() {
-	if metrics.Metric_update_time.Sub(last_metric_push_time) <= 0 {
+	if metrics.Metric_update_time.Sub(lastMetricPushTime) <= 0 {
 		return
 	}
-	if *collectd_socketpath != "" {
-		err := e.CollectdWriteMetrics(*collectd_socketpath)
+	if *collectdSocketPath != "" {
+		err := e.CollectdWriteMetrics(*collectdSocketPath)
 		if err != nil {
 			glog.Infof("collectd write error: %s", err)
 		}
 	}
-	if *graphite_hostport != "" {
-		err := e.GraphiteWriteMetrics(*graphite_hostport)
+	if *graphiteHostPort != "" {
+		err := e.GraphiteWriteMetrics(*graphiteHostPort)
 		if err != nil {
 			glog.Infof("graphite write error: %s", err)
 		}
 	}
-	if *statsd_hostport != "" {
-		err := e.StatsdWriteMetrics(*statsd_hostport)
+	if *statsdHostPort != "" {
+		err := e.StatsdWriteMetrics(*statsdHostPort)
 		if err != nil {
 			glog.Infof("statsd error: %s", err)
 		}
 	}
-	last_metric_push_time = time.Now()
+	lastMetricPushTime = time.Now()
 }
 
+// StartMetricPush pushes metrics to the configured services each interval.
 func (e *Exporter) StartMetricPush() {
-	if *collectd_socketpath != "" || *graphite_hostport != "" || *statsd_hostport != "" {
-		ticker := time.NewTicker(time.Duration(*push_interval) * time.Second)
+	if *collectdSocketPath != "" || *graphiteHostPort != "" || *statsdHostPort != "" {
+		ticker := time.NewTicker(time.Duration(*pushInterval) * time.Second)
 		go func() {
 			for {
 				select {

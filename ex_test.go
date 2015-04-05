@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	record_benchmark = flag.Bool("record_benchmark", false, "Record the benchmark results to 'benchmark_results.csv'.")
+	recordBenchmark = flag.Bool("record_benchmark", false, "Record the benchmark results to 'benchmark_results.csv'.")
 )
 
 var exampleProgramTests = []struct {
@@ -74,7 +74,7 @@ func TestExamplePrograms(t *testing.T) {
 	}
 	*vm.Syslog_use_current_year = false
 	for _, tc := range exampleProgramTests {
-		mtail := NewMtail()
+		mtail := newMtail()
 		err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines)
 		if err != nil {
 			t.Errorf("%s", err)
@@ -110,19 +110,19 @@ func TestExamplePrograms(t *testing.T) {
 		}
 		defer j.Close()
 
-		var expected_metrics []*metrics.Metric
+		var expectedMetrics []*metrics.Metric
 
 		d := json.NewDecoder(j)
-		err = d.Decode(&expected_metrics)
+		err = d.Decode(&expectedMetrics)
 		if err != nil {
 			t.Errorf("%s: could not decode json: %s", tc.jsonfile, err)
 			continue
 		}
-		sort.Sort(metrics.Metrics(expected_metrics))
-		glog.Infof("expected: %s", expected_metrics)
+		sort.Sort(metrics.Metrics(expectedMetrics))
+		glog.Infof("expected: %s", expectedMetrics)
 		sort.Sort(metrics.Metrics(mtail.store.Metrics))
 		glog.Infof("received: %s", mtail.store.Metrics)
-		diff := pretty.Compare(expected_metrics, mtail.store.Metrics)
+		diff := pretty.Compare(expectedMetrics, mtail.store.Metrics)
 		if len(diff) > 0 {
 			t.Errorf("%s: metrics don't match:\n%s\n", tc.programfile, diff)
 		}
@@ -136,9 +136,9 @@ func BenchmarkExamplePrograms(b *testing.B) {
 	}
 	b.Logf("\n")
 	for _, tc := range exampleProgramTests {
-		mtail := NewMtail()
-		spare_lines := make(chan string)
-		err := CompileAndLoad(tc.programfile, &metrics.Store{}, spare_lines)
+		mtail := newMtail()
+		spareLines := make(chan string)
+		err := CompileAndLoad(tc.programfile, &metrics.Store{}, spareLines)
 		if err != nil {
 			b.Errorf("%s", err)
 			continue
@@ -149,7 +149,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				vm.Line_count.Set(0)
 				mtail.store.ClearMetrics()
 				b.StartTimer()
-				err := mtail.OneShot(tc.logfile, spare_lines)
+				err := mtail.OneShot(tc.logfile, spareLines)
 				if err != nil {
 					b.Errorf("OneShot log parse failed: %s", err)
 					return
@@ -163,15 +163,15 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				b.SetBytes(l)
 			}
 		})
-		close(spare_lines)
+		close(spareLines)
 
-		kl_s := float64(r.Bytes) * float64(r.N) / (r.T.Seconds() * 1000)
-		ms_run := float64(r.NsPerOp()) / 1e6
+		klPerSecond := float64(r.Bytes) * float64(r.N) / (r.T.Seconds() * 1000)
+		msPerRun := float64(r.NsPerOp()) / 1e6
 		lr := r.Bytes * int64(r.N)
-		µs_l := float64(r.T.Nanoseconds()) / (float64(r.Bytes) * float64(r.N) * 1000)
+		µsPerL := float64(r.T.Nanoseconds()) / (float64(r.Bytes) * float64(r.N) * 1000)
 		fmt.Printf("%s: %d runs, %d lines in %s (%f ms/run, %d lines/run, %f Klines/s, %f µs/line)\n",
-			tc.programfile, r.N, lr, r.T, ms_run, r.Bytes, kl_s, µs_l)
-		if *record_benchmark {
+			tc.programfile, r.N, lr, r.T, msPerRun, r.Bytes, klPerSecond, µsPerL)
+		if *recordBenchmark {
 			f, err := os.OpenFile("benchmark_results.csv", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 			if err != nil {
 				fmt.Printf("benchmark write failed: %s\n", err)
@@ -181,7 +181,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 			c := csv.NewWriter(f)
 			defer c.Flush()
 			record := func(v ...interface{}) []string {
-				r := make([]string, 0)
+				var r []string
 				for _, x := range v {
 					r = append(r, fmt.Sprintf("%v", x))
 				}
@@ -190,7 +190,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 				runtime.GOMAXPROCS(-1),
 				runtime.NumCPU(),
 				tc.programfile,
-				r.N, lr, r.T, ms_run, r.Bytes, kl_s, µs_l)
+				r.N, lr, r.T, msPerRun, r.Bytes, klPerSecond, µsPerL)
 			// Format is time, concurrency, number of cores,
 			// name, data
 			err = c.Write(record)

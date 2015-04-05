@@ -27,11 +27,11 @@ import (
 )
 
 var (
-	port  *string = flag.String("port", "3903", "HTTP port to listen on.")
-	logs  *string = flag.String("logs", "", "List of files to monitor.")
-	progs *string = flag.String("progs", "", "Directory containing programs")
+	port  = flag.String("port", "3903", "HTTP port to listen on.")
+	logs  = flag.String("logs", "", "List of files to monitor.")
+	progs = flag.String("progs", "", "Directory containing programs")
 
-	one_shot *bool = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
+	oneShot = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
 )
 
 type mtail struct {
@@ -49,7 +49,7 @@ func (m *mtail) OneShot(logfile string, lines chan string) error {
 	defer m.Close()
 	l, err := os.Open(logfile)
 	if err != nil {
-		return fmt.Errorf("Failed to open log file %q: %s", logfile, err)
+		return fmt.Errorf("failed to open log file %q: %s", logfile, err)
 	}
 	defer l.Close()
 
@@ -61,7 +61,7 @@ func (m *mtail) OneShot(logfile string, lines chan string) error {
 		case err == io.EOF:
 			return nil
 		case err != nil:
-			return fmt.Errorf("Failed to read from %q: %s", logfile, err)
+			return fmt.Errorf("failed to read from %q: %s", logfile, err)
 		default:
 			lines <- line
 		}
@@ -106,7 +106,7 @@ func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>`))
 }
 
-func NewMtail() *mtail {
+func newMtail() *mtail {
 	return &mtail{
 		lines:   make(chan string),
 		webquit: make(chan struct{}),
@@ -134,7 +134,7 @@ func (m *mtail) Serve() {
 
 	ex := &Exporter{m.store}
 
-	if *one_shot {
+	if *oneShot {
 		for _, pathname := range pathnames {
 			err := m.OneShot(pathname, m.lines)
 			if err != nil {
@@ -151,7 +151,7 @@ func (m *mtail) Serve() {
 		m.StartTailing(pathnames)
 
 		http.Handle("/", m)
-		http.HandleFunc("/json", http.HandlerFunc(ex.handleJson))
+		http.HandleFunc("/json", http.HandlerFunc(ex.handleJSON))
 		http.HandleFunc("/metrics", http.HandlerFunc(ex.handlePrometheusMetrics))
 		http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
 		ex.StartMetricPush()
@@ -203,6 +203,6 @@ func (m *mtail) Close() {
 
 func main() {
 	flag.Parse()
-	m := NewMtail()
+	m := newMtail()
 	m.Serve()
 }
