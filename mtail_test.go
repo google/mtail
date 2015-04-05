@@ -31,11 +31,11 @@ func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail
 	if len(errors) > 0 {
 		t.Errorf("Couldn't compile program: %s", errors)
 	}
-	p.E.AddVm("test", prog)
+	p.E.AddVM("test", prog)
 	if progPathname != "" {
 		p.LoadProgs(progPathname)
 	}
-	vm.Line_count.Set(0)
+	vm.LineCount.Set(0)
 	go p.E.Run(m.lines)
 	m.StartTailing(logPathnames)
 	return m
@@ -74,8 +74,8 @@ func TestHandleLogUpdates(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 		// check log line count increase
 		expected := fmt.Sprintf("%d", i+1)
-		if vm.Line_count.String() != expected {
-			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.Line_count.String())
+		if vm.LineCount.String() != expected {
+			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
 		}
 	}
 }
@@ -149,8 +149,8 @@ func TestHandleLogRotation(t *testing.T) {
 	}()
 	<-stop
 	expected := "10"
-	if vm.Line_count.String() != expected {
-		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.Line_count.String())
+	if vm.LineCount.String() != expected {
+		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
 	}
 }
 
@@ -191,8 +191,8 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	// check log line count increase
 	expected := fmt.Sprintf("%d", len(inputLines))
-	if vm.Line_count.String() != expected {
-		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.Line_count.String())
+	if vm.LineCount.String() != expected {
+		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
 	}
 }
 
@@ -226,8 +226,8 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	}
 	defer logFile.Close()
 	expected := "0"
-	if vm.Line_count.String() != expected {
-		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.Line_count.String())
+	if vm.LineCount.String() != expected {
+		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
 	}
 }
 
@@ -258,8 +258,8 @@ func TestHandleNewProgram(t *testing.T) {
 	defer m.Close()
 
 	expectedProgLoads := "{}"
-	if vm.Prog_loads.String() != expectedProgLoads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.Prog_loads.String())
+	if vm.ProgLoads.String() != expectedProgLoads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.ProgLoads.String())
 	}
 
 	progPath := path.Join(workdir, "prog.mtail")
@@ -274,8 +274,8 @@ func TestHandleNewProgram(t *testing.T) {
 	// Wait for inotify
 	time.Sleep(100 * time.Millisecond)
 	expectedProgLoads = `{"prog.mtail": 1}`
-	if vm.Prog_loads.String() != expectedProgLoads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.Prog_loads.String())
+	if vm.ProgLoads.String() != expectedProgLoads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.ProgLoads.String())
 	}
 
 	badProgPath := path.Join(workdir, "prog.mtail.dpkg-dist")
@@ -288,23 +288,23 @@ func TestHandleNewProgram(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 	expectedProgLoads = `{"prog.mtail": 1}`
-	if vm.Prog_loads.String() != expectedProgLoads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.Prog_loads.String())
+	if vm.ProgLoads.String() != expectedProgLoads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.ProgLoads.String())
 	}
 	expectedProgErrs := `{}`
-	if vm.Prog_load_errors.String() != expectedProgErrs {
-		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.Prog_load_errors.String())
+	if vm.ProgLoadErrors.String() != expectedProgErrs {
+		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.ProgLoadErrors.String())
 	}
 
 	os.Rename(badProgPath, progPath)
 	time.Sleep(100 * time.Millisecond)
 	expectedProgLoads = `{"prog.mtail": 1}`
-	if vm.Prog_loads.String() != expectedProgLoads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.Prog_loads.String())
+	if vm.ProgLoads.String() != expectedProgLoads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.ProgLoads.String())
 	}
 	expectedProgErrs = `{}`
-	if vm.Prog_load_errors.String() != expectedProgErrs {
-		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.Prog_load_errors.String())
+	if vm.ProgLoadErrors.String() != expectedProgErrs {
+		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.ProgLoadErrors.String())
 	}
 
 	brokenProgPath := path.Join(workdir, "broken.mtail")
@@ -318,12 +318,12 @@ func TestHandleNewProgram(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	expectedProgLoads = `{"prog.mtail": 1}`
-	if vm.Prog_loads.String() != expectedProgLoads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.Prog_loads.String())
+	if vm.ProgLoads.String() != expectedProgLoads {
+		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.ProgLoads.String())
 	}
 	expectedProgErrs = `{"broken.mtail": 1}`
-	if vm.Prog_load_errors.String() != expectedProgErrs {
-		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.Prog_load_errors.String())
+	if vm.ProgLoadErrors.String() != expectedProgErrs {
+		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.ProgLoadErrors.String())
 	}
 
 }

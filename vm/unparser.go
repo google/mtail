@@ -10,6 +10,7 @@ import (
 	"github.com/google/mtail/metrics"
 )
 
+// Unparser is for converting program syntax trees back to program text.
 type Unparser struct {
 	pos    int
 	output string
@@ -175,6 +176,7 @@ func (u *Unparser) unparse(n node) {
 	}
 }
 
+// Unparse begins the unparsing of the syntax tree, returning the program text as a single string.
 func (u *Unparser) Unparse(n node) string {
 	u.unparse(n)
 	return u.output

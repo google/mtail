@@ -11,6 +11,7 @@ import (
 	"unicode"
 )
 
+// Lexeme enumerates the types of lexical tokens in a mtail program.
 type Lexeme int
 
 // Printable names for lexemes.
@@ -93,6 +94,8 @@ func (p Position) String() string {
 	return r
 }
 
+// Token describes a lexed token from the input, containing its type, the
+// original text of the token, and its position in the input.
 type Token struct {
 	kind Lexeme
 	text string
@@ -125,8 +128,8 @@ type lexer struct {
 	tokens chan Token // Output channel for tokens emitted.
 }
 
-// NewLexer creates a new scanner type that reads the input provided.
-func NewLexer(name string, input io.Reader) *lexer {
+// newLexer creates a new scanner type that reads the input provided.
+func newLexer(name string, input io.Reader) *lexer {
 	l := &lexer{
 		name:   name,
 		input:  bufio.NewReader(input),

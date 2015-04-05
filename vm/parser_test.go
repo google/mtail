@@ -16,7 +16,7 @@ type validProgram struct {
 	program string
 }
 
-var kMtailPrograms = []validProgram{
+var mtailPrograms = []validProgram{
 	{"empty",
 		""},
 
@@ -168,7 +168,7 @@ var kMtailPrograms = []validProgram{
 }
 
 func TestParserRoundTrip(t *testing.T) {
-	for _, tc := range kMtailPrograms {
+	for _, tc := range mtailPrograms {
 		p := NewParser(tc.name, strings.NewReader(tc.program), &metrics.Store{})
 		//MtailDebug = 999 // All the debugging.
 		r := MtailParse(p)

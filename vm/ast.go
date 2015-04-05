@@ -70,12 +70,12 @@ type indexedExprNode struct {
 }
 
 type declNode struct {
-	name          string
-	keys          []string
-	kind          metrics.MetricType
-	exported_name string
-	m             *metrics.Metric
-	sym           *symbol
+	name         string
+	keys         []string
+	kind         metrics.MetricType
+	exportedName string
+	m            *metrics.Metric
+	sym          *symbol
 }
 
 type incByExprNode struct {

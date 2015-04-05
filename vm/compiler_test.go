@@ -12,11 +12,6 @@ import (
 	"github.com/google/mtail/metrics"
 )
 
-type in_out struct {
-	input string // no newlines
-	ok    bool
-}
-
 // debug print for instructions
 func (i instr) String() string {
 	return fmt.Sprintf("{%s %d}", opNames[i.op], i.opnd)

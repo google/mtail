@@ -22,11 +22,13 @@ import (
 )
 
 var (
-	Syslog_use_current_year = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
+	// SyslogUseCurrentYear instructs the virtual machine to inject the current year when parsing timestamps without a year component.
+	SyslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 )
 
 var (
-	Line_count = expvar.NewInt("line_count")
+	// LineCount counts the number of lines read by the virtual machine engine from the input channel.
+	LineCount = expvar.NewInt("line_count")
 )
 
 type opcode int
@@ -91,6 +93,10 @@ type thread struct {
 	stack   []interface{}    // Data stack.
 }
 
+// VM describes the virtual machine for each program.  It contains virtual
+// segments of the executable bytecode, constant data (string and regular
+// expressions), mutable state (metrics), and a stack for the current thread of
+// execution.
 type VM struct {
 	name string
 	prog []instr
@@ -99,7 +105,7 @@ type VM struct {
 	str []string          // String constants
 	m   []*metrics.Metric // Metrics accessible to this program.
 
-	ts_mem map[string]time.Time // memo of time string parse results
+	timeMemos map[string]time.Time // memo of time string parse results
 
 	t *thread // Current thread of execution
 
@@ -272,16 +278,16 @@ func (v *VM) execute(t *thread, i instr) {
 			// Store the result from the re'th index at the s'th index
 			ts = t.matches[re][s]
 		}
-		if tm, ok := v.ts_mem[ts]; !ok {
+		if tm, ok := v.timeMemos[ts]; !ok {
 			tm, err := time.Parse(layout, ts)
 			if err != nil {
 				v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
 			}
 			// Hack for yearless syslog.
-			if tm.Year() == 0 && *Syslog_use_current_year {
+			if tm.Year() == 0 && *SyslogUseCurrentYear {
 				tm = tm.AddDate(time.Now().Year(), 0, 0)
 			}
-			v.ts_mem[ts] = tm
+			v.timeMemos[ts] = tm
 			t.time = tm
 		} else {
 			t.time = tm
@@ -393,32 +399,36 @@ func (v *VM) Run(input string) {
 	}
 }
 
+// New creates a new virtual machine with the given name, and compiler
+// artifacts for executable and data segments.
 func New(name string, re []*regexp.Regexp, str []string, m []*metrics.Metric, prog []instr) *VM {
 	return &VM{
-		name:   name,
-		re:     re,
-		str:    str,
-		m:      m,
-		prog:   prog,
-		ts_mem: make(map[string]time.Time, 0),
+		name:      name,
+		re:        re,
+		str:       str,
+		m:         m,
+		prog:      prog,
+		timeMemos: make(map[string]time.Time, 0),
 	}
 }
 
-// vms contains a list of virtual machines to execute when each new line is received
+// Engine manages the virtual machines to execute when each new line is received
 type Engine map[string]*VM
 
-func (e Engine) AddVm(name string, v *VM) {
+// AddVM adds a new virtual machine to the execution Engine.
+func (e Engine) AddVM(name string, v *VM) {
 	e[name] = v
 }
 
-func (e Engine) RemoveVm(name string) {
+// RemoveVM removes the named virtual machine from the execution Engine.
+func (e Engine) RemoveVM(name string) {
 	delete(e, name)
 }
 
-// RunVms receives a line from a channel and sends it to all VMs.
+// Run iterates over the input channel and sends each line to all VMs.
 func (e *Engine) Run(lines <-chan string) {
 	for line := range lines {
-		Line_count.Add(1)
+		LineCount.Add(1)
 		for _, v := range *e {
 			// TODO(jaq): Instead of forking a goroutine each time, set up a line channel to each VM.
 			v.Run(line)
@@ -427,6 +437,7 @@ func (e *Engine) Run(lines <-chan string) {
 	glog.Infof("Shutting down VM engine.")
 }
 
+// DumpByteCode emits the program disassembly and data to standard out.
 func (v *VM) DumpByteCode(name string) {
 	fmt.Printf("Prog %s\n", name)
 	fmt.Println("Metrics")

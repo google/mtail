@@ -138,7 +138,7 @@ var lexerTests = []lexerTest{
 
 // collect gathers the emitted items into a slice.
 func collect(t *lexerTest) (tokens []Token) {
-	l := NewLexer(t.name, strings.NewReader(t.input))
+	l := newLexer(t.name, strings.NewReader(t.input))
 	for {
 		token := l.NextToken()
 		tokens = append(tokens, token)

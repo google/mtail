@@ -5,8 +5,9 @@ package vm
 
 type symtype int
 
+// symtype enumerates the types of symbols found in the program text.
 const (
-	IdSymbol     symtype = iota // Identifiers
+	IDSymbol     symtype = iota // Identifiers
 	CaprefSymbol                // Capture group references
 	DefSymbol                   // Definitions
 

@@ -21,10 +21,13 @@ import (
 )
 
 var (
-	Prog_loads       = expvar.NewMap("prog_loads_total")
-	Prog_load_errors = expvar.NewMap("prog_load_errors")
+	// ProgLoads counts the number of program load events.
+	ProgLoads = expvar.NewMap("prog_loads_total")
+	// ProgLoadErrors counts the number of program load errors.
+	ProgLoadErrors = expvar.NewMap("prog_load_errors")
 
-	Dump_bytecode *bool = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
+	// DumpBytecode instructs the loader to dump the compiled program after compilation, for debugging.
+	DumpBytecode = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 )
 
 const (
@@ -33,12 +36,12 @@ const (
 
 // LoadProgs loads all programs in a directory and starts watching the
 // directory for filesystem changes.
-func (p *Loader) LoadProgs(program_path string) (*Engine, int) {
-	p.w.Add(program_path)
+func (p *Loader) LoadProgs(programPath string) (*Engine, int) {
+	p.w.Add(programPath)
 
-	fis, err := ioutil.ReadDir(program_path)
+	fis, err := ioutil.ReadDir(programPath)
 	if err != nil {
-		glog.Fatalf("Failed to list programs in %q: %s", program_path, err)
+		glog.Fatalf("Failed to list programs in %q: %s", programPath, err)
 	}
 
 	errors := 0
@@ -46,24 +49,24 @@ func (p *Loader) LoadProgs(program_path string) (*Engine, int) {
 		if fi.IsDir() {
 			continue
 		}
-		errors += p.LoadProg(path.Join(program_path, fi.Name()))
+		errors += p.LoadProg(path.Join(programPath, fi.Name()))
 	}
 	return &p.E, errors
 }
 
 // LoadProg loads or reloads a program from the path specified.  The name of
 // the program is the basename of the file.
-func (p *Loader) LoadProg(program_path string) (errors int) {
-	name := filepath.Base(program_path)
+func (p *Loader) LoadProg(programPath string) (errors int) {
+	name := filepath.Base(programPath)
 	if filepath.Ext(name) != fileext {
-		glog.Infof("Skipping %s due to file extension.", program_path)
+		glog.Infof("Skipping %s due to file extension.", programPath)
 		return
 	}
-	f, err := p.fs.Open(program_path)
+	f, err := p.fs.Open(programPath)
 	if err != nil {
-		glog.Infof("Failed to read program %q: %s", program_path, err)
+		glog.Infof("Failed to read program %q: %s", programPath, err)
 		errors = 1
-		Prog_load_errors.Add(name, 1)
+		ProgLoadErrors.Add(name, 1)
 		return
 	}
 	defer f.Close()
@@ -73,14 +76,14 @@ func (p *Loader) LoadProg(program_path string) (errors int) {
 		for _, e := range errs {
 			glog.Info(e)
 		}
-		Prog_load_errors.Add(name, 1)
+		ProgLoadErrors.Add(name, 1)
 		return
 	}
-	if *Dump_bytecode {
+	if *DumpBytecode {
 		v.DumpByteCode(name)
 	}
-	p.E.AddVm(name, v)
-	Prog_loads.Add(name, 1)
+	p.E.AddVM(name, v)
+	ProgLoads.Add(name, 1)
 	glog.Infof("Loaded %s", name)
 	return
 }
@@ -120,7 +123,7 @@ func (p *Loader) run() {
 		case watcher.DeleteEvent:
 			glog.Infof("delete prog")
 			_, f := filepath.Split(event.Pathname)
-			p.E.RemoveVm(f)
+			p.E.RemoveVM(f)
 			if err := p.w.Remove(event.Pathname); err != nil {
 				glog.Info("Remove watch failed:", err)
 			}

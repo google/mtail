@@ -93,7 +93,7 @@ func (m *mtail) InitLoader(path string) {
 		glog.Fatal("Couldn't create a program loader.")
 	}
 	e, errors := m.l.LoadProgs(path)
-	if *vm.Compile_only || *vm.Dump_bytecode {
+	if *vm.CompileOnly || *vm.DumpBytecode {
 		os.Exit(errors)
 	}
 

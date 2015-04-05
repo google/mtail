@@ -2,11 +2,6 @@
 // This file is available under the Apache license.
 
 %{
-/*
-mtail is a metric exporting, modular tail.
-
-This file describes a parser for the mtail language.
-*/
 package vm
 
 import (
@@ -239,7 +234,7 @@ postfix_expr
 primary_expr
   : ID
   {
-    if sym, ok := Mtaillex.(*parser).s.lookupSym($1, IdSymbol); ok {
+    if sym, ok := Mtaillex.(*parser).s.lookupSym($1, IDSymbol); ok {
       $$ = &idNode{$1, sym}
     } else {
       Mtaillex.Error(fmt.Sprintf("Identifier '%s' not declared.", $1))
@@ -334,14 +329,14 @@ decl
     d.kind = $2
 
     var n string
-    if d.exported_name != "" {
-        n = d.exported_name
+    if d.exportedName != "" {
+        n = d.exportedName
 	} else {
         n = d.name
    	}
       sort.Sort(sort.StringSlice(d.keys))
       d.m = metrics.NewMetric(n, Mtaillex.(*parser).name, d.kind, d.keys...)
-      d.sym = Mtaillex.(*parser).s.addSym(d.name, IdSymbol, d.m,
+      d.sym = Mtaillex.(*parser).s.addSym(d.name, IDSymbol, d.m,
                                            Mtaillex.(*parser).t.pos)
       if !$1 {
          Mtaillex.(*parser).ms.Add(d.m)
@@ -369,7 +364,7 @@ declarator
   | declarator as_spec
   {
     $$ = $1
-    $$.(*declNode).exported_name = $2
+    $$.(*declNode).exportedName = $2
   }
   | ID
   {
@@ -471,7 +466,7 @@ type parser struct {
 }
 
 func NewParser(name string, input io.Reader, ms *metrics.Store) *parser {
-        return &parser{name: name, l: NewLexer(name, input), res: make(map[string]string), ms: ms}
+        return &parser{name: name, l: newLexer(name, input), res: make(map[string]string), ms: ms}
 }
 
 func (p *parser) ErrorP(s string, pos Position) {

@@ -16,7 +16,9 @@ import (
 	"github.com/google/mtail/metrics"
 )
 
-var Compile_only *bool = flag.Bool("compile_only", false, "Compile programs only.")
+// CompileOnly instructs the compiler to not load the virtual machines, for
+// testing.
+var CompileOnly = flag.Bool("compile_only", false, "Compile programs only.")
 
 type compiler struct {
 	name string // Name of the program.
@@ -32,6 +34,9 @@ type compiler struct {
 	symtab *scope
 }
 
+// Compile compiles a program from the input into a virtual machine or a list
+// of compile errors.  It takes the program's name and the metric store as
+// additional arguments to build the virtual machine.
 func Compile(name string, input io.Reader, ms *metrics.Store) (*VM, []string) {
 	name = filepath.Base(name)
 	p := NewParser(name, input, ms)
@@ -39,7 +44,7 @@ func Compile(name string, input io.Reader, ms *metrics.Store) (*VM, []string) {
 	if r != 0 || p == nil || len(p.errors) > 0 {
 		return nil, p.errors
 	}
-	if *Compile_only {
+	if *CompileOnly {
 		u := Unparser{}
 		output := u.Unparse(p.root)
 		fmt.Printf("Unparsing %s:\n%s", name, output)
@@ -63,8 +68,8 @@ func (c *compiler) emit(i instr) {
 	c.prog = append(c.prog, i)
 }
 
-func (c *compiler) compile(untyped_node node) {
-	switch n := untyped_node.(type) {
+func (c *compiler) compile(untypedNode node) {
+	switch n := untypedNode.(type) {
 	case *stmtlistNode:
 		for _, child := range n.children {
 			c.compile(child)
@@ -99,12 +104,11 @@ func (c *compiler) compile(untyped_node node) {
 			if err != nil {
 				c.errorf("%s", err)
 				return
-			} else {
-				c.re = append(c.re, re)
-				n.re = re
-				// Store the location of this regular expression in the regexNode
-				n.addr = len(c.re) - 1
 			}
+			c.re = append(c.re, re)
+			n.re = re
+			// Store the location of this regular expression in the regexNode
+			n.addr = len(c.re) - 1
 		}
 		c.emit(instr{match, n.addr})
 		c.emit(instr{op: jnm})
@@ -213,6 +217,6 @@ func (c *compiler) compile(untyped_node node) {
 		}
 
 	default:
-		c.errorf("undefined node type %T (%q)6", untyped_node, untyped_node)
+		c.errorf("undefined node type %T (%q)6", untypedNode, untypedNode)
 	}
 }

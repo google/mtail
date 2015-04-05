@@ -13,14 +13,14 @@ import (
 )
 
 var instructions = []struct {
-	name           string
-	i              instr
-	re             []*regexp.Regexp
-	str            []string
-	reversed_stack []interface{} // stack is inverted to be pushed onto vm stack
+	name          string
+	i             instr
+	re            []*regexp.Regexp
+	str           []string
+	reversedStack []interface{} // stack is inverted to be pushed onto vm stack
 
-	expected_stack  []interface{}
-	expected_thread thread
+	expectedStack  []interface{}
+	expectedThread thread
 }{
 	// Composite literals require too many explicit conversions.
 	{"inc",
@@ -175,7 +175,7 @@ var instructions = []struct {
 // TestInstrs tests that each instruction behaves as expected through one execution cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		m := make([]*metrics.Metric, 0)
+		var m []*metrics.Metric
 		m = append(m,
 			metrics.NewMetric("foo", "test", metrics.Counter),
 			metrics.NewMetric("bar", "test", metrics.Counter))
@@ -183,19 +183,19 @@ func TestInstrs(t *testing.T) {
 		v := New(tc.name, tc.re, tc.str, m, []instr{tc.i})
 		v.t = new(thread)
 		v.t.stack = make([]interface{}, 0)
-		for _, item := range tc.reversed_stack {
+		for _, item := range tc.reversedStack {
 			v.t.Push(item)
 		}
 		v.t.matches = make(map[int][]string, 0)
 		v.input = "aaaab"
 		v.execute(v.t, tc.i)
 
-		if !reflect.DeepEqual(tc.expected_stack, v.t.stack) {
-			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %v\n\treceived: %v", tc.name, tc.expected_stack, v.t.stack)
+		if !reflect.DeepEqual(tc.expectedStack, v.t.stack) {
+			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %v\n\treceived: %v", tc.name, tc.expectedStack, v.t.stack)
 		}
-		tc.expected_thread.stack = tc.expected_stack
-		if !reflect.DeepEqual(&tc.expected_thread, v.t) {
-			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %v\n\treceived: %v", tc.name, tc.expected_thread, v.t)
+		tc.expectedThread.stack = tc.expectedStack
+		if !reflect.DeepEqual(&tc.expectedThread, v.t) {
+			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %v\n\treceived: %v", tc.name, tc.expectedThread, v.t)
 		}
 	}
 }

@@ -63,7 +63,7 @@ func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) er
 	}
 
 	e := &vm.Engine{}
-	e.AddVm(programfile, v)
+	e.AddVM(programfile, v)
 	go e.Run(lines)
 	return nil
 }
@@ -72,7 +72,7 @@ func TestExamplePrograms(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	*vm.Syslog_use_current_year = false
+	*vm.SyslogUseCurrentYear = false
 	for _, tc := range exampleProgramTests {
 		mtail := newMtail()
 		err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines)
@@ -146,7 +146,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 		r := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
-				vm.Line_count.Set(0)
+				vm.LineCount.Set(0)
 				mtail.store.ClearMetrics()
 				b.StartTimer()
 				err := mtail.OneShot(tc.logfile, spareLines)
@@ -155,7 +155,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 					return
 				}
 				b.StopTimer()
-				l, err := strconv.ParseInt(vm.Line_count.String(), 10, 64)
+				l, err := strconv.ParseInt(vm.LineCount.String(), 10, 64)
 				if err != nil {
 					b.Errorf("strconv.ParseInt failed: %s", err)
 					return
