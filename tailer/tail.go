@@ -246,7 +246,7 @@ func (t *Tailer) run() {
 			glog.Infof("Unexpected event %q", e)
 		}
 	}
-	glog.Infof("Shutting down Tailer.")
+	glog.Infof("Shutting down tailer.")
 	close(t.lines)
 }
 
