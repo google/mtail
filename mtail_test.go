@@ -8,11 +8,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
 )
@@ -23,19 +23,22 @@ func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail
 	m := newMtail()
 	w, err := watcher.NewLogWatcher()
 	if err != nil {
-		t.Errorf("Couldn't create watcher: %s", err)
+		t.Fatalf("Couldn't create watcher: %s", err)
 	}
-	p := vm.NewLoader(w, &m.store, m.lines)
-	// start server
-	prog, errors := vm.Compile("test", strings.NewReader(testProgram), &m.store)
-	if len(errors) > 0 {
-		t.Errorf("Couldn't compile program: %s", errors)
+	if m.l = vm.NewLoader(w, &m.store, m.lines); m.l == nil {
+		t.Fatalf("Couldn't create program loader.")
 	}
+
 	if progPathname != "" {
-		p.LoadProgs(progPathname)
+		m.l.LoadProgs(progPathname)
+	} else {
+		if pErr := m.l.CompileAndRun("test", strings.NewReader(testProgram), &m.store); pErr != nil {
+			t.Errorf("Couldn't compile program: %s", pErr)
+		}
 	}
+
 	vm.LineCount.Set(0)
-	go prog.Run(m.lines)
+
 	m.StartTailing(logPathnames)
 	return m
 }
@@ -67,14 +70,18 @@ func TestHandleLogUpdates(t *testing.T) {
 	defer m.Close()
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
+		t.Logf("string is %q", x)
 		// write to log file
 		logFile.WriteString(x + "\n")
 		// TODO(jaq): remove slow sleep
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 		// check log line count increase
 		expected := fmt.Sprintf("%d", i+1)
 		if vm.LineCount.String() != expected {
 			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
+			buf := make([]byte, 1<<16)
+			runtime.Stack(buf, true)
+			fmt.Printf("%s", buf)
 		}
 	}
 }
@@ -264,11 +271,10 @@ func TestHandleNewProgram(t *testing.T) {
 	progPath := path.Join(workdir, "prog.mtail")
 	progFile, err := os.Create(progPath)
 	if err != nil {
-		t.Errorf("prog create failed: %s", err)
+		t.Fatalf("prog create failed: %s", err)
 	}
 	progFile.WriteString("/$/ {}\n")
 	progFile.Close()
-	glog.Infof("hi")
 
 	// Wait for inotify
 	time.Sleep(100 * time.Millisecond)
@@ -280,7 +286,7 @@ func TestHandleNewProgram(t *testing.T) {
 	badProgPath := path.Join(workdir, "prog.mtail.dpkg-dist")
 	badProgFile, err := os.Create(badProgPath)
 	if err != nil {
-		t.Errorf("prog create failed: %s", err)
+		t.Fatalf("prog create failed: %s", err)
 	}
 	badProgFile.WriteString("/$/ {}\n")
 	badProgFile.Close()

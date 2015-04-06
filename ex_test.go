@@ -9,16 +9,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/vm"
+	"github.com/google/mtail/watcher"
 	"github.com/kylelemons/godebug/pretty"
 )
 
@@ -55,14 +56,12 @@ func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) er
 	}
 	defer p.Close()
 
-	// MtailDebug = 999 // All the debugging.
-
-	v, errs := vm.Compile(programfile, p, ms)
-	if errs != nil {
-		return fmt.Errorf("%s: compile failed: %s", programfile, strings.Join(errs, "\n"))
+	name := filepath.Base(programfile)
+	w := watcher.NewFakeWatcher()
+	l := vm.NewLoader(w, ms, lines)
+	if pErr := l.CompileAndRun(name, p, ms); pErr != nil {
+		return fmt.Errorf("couldn't compile program: %s: %s", programfile, pErr)
 	}
-
-	go v.Run(lines)
 	return nil
 }
 
@@ -73,14 +72,11 @@ func TestExamplePrograms(t *testing.T) {
 	*vm.SyslogUseCurrentYear = false
 	for _, tc := range exampleProgramTests {
 		mtail := newMtail()
-		err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines)
-		if err != nil {
-			t.Errorf("%s", err)
-			continue
+		if err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines); err != nil {
+			t.Fatalf("Compile failed: %s", err)
 		}
 
-		err = mtail.OneShot(tc.logfile, mtail.lines)
-		if err != nil {
+		if err := mtail.OneShot(tc.logfile, mtail.lines); err != nil {
 			t.Errorf("Oneshot failed for %s: %s", tc.logfile, err)
 			continue
 		}
@@ -136,10 +132,8 @@ func BenchmarkExamplePrograms(b *testing.B) {
 	for _, tc := range exampleProgramTests {
 		mtail := newMtail()
 		spareLines := make(chan string)
-		err := CompileAndLoad(tc.programfile, &metrics.Store{}, spareLines)
-		if err != nil {
-			b.Errorf("%s", err)
-			continue
+		if err := CompileAndLoad(tc.programfile, &metrics.Store{}, spareLines); err != nil {
+			b.Errorf("Compile failed: %s", err)
 		}
 		r := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {

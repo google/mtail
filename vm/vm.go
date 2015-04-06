@@ -373,10 +373,10 @@ func (v *VM) execute(t *thread, i instr) {
 	}
 }
 
-// handleLine fetches and executes each instruction in the program on the input
-// string until termination. It returns a boolean indicating a successful
+// processLine fetches and executes each instruction in the program on the
+// input string until termination. It returns a boolean indicating a successful
 // action was taken.
-func (v *VM) handleLine(input string) {
+func (v *VM) processLine(input string) {
 	t := new(thread)
 	v.t = t
 	v.input = input
@@ -395,9 +395,13 @@ func (v *VM) handleLine(input string) {
 	}
 }
 
-func (v *VM) Run(lines <-chan string) {
+// Run executes the virtual machine on each line of input received.  When the
+// input closes, it signals to the loader that it has terminated by closing the
+// shutdown channel.
+func (v *VM) Run(lines <-chan string, shutdown chan<- struct{}) {
+	defer close(shutdown)
 	for line := range lines {
-		v.handleLine(line)
+		v.processLine(line)
 	}
 	glog.Infof("Stopping program %s", v.name)
 }
