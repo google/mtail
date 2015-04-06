@@ -89,16 +89,14 @@ func (m *mtail) InitLoader(path string) {
 	if err != nil {
 		glog.Fatal("Couldn't create prog watcher:", err)
 	}
-	m.l = vm.NewLoader(w, &m.store)
+	m.l = vm.NewLoader(w, &m.store, m.lines)
 	if m.l == nil {
 		glog.Fatal("Couldn't create a program loader.")
 	}
-	e, errors := m.l.LoadProgs(path)
+	errors := m.l.LoadProgs(path)
 	if *vm.CompileOnly || *vm.DumpBytecode {
 		os.Exit(errors)
 	}
-
-	go e.Run(m.lines)
 }
 
 func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {

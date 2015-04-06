@@ -6,7 +6,6 @@
 package vm
 
 import (
-	"expvar"
 	"flag"
 	"fmt"
 	"os"
@@ -26,11 +25,6 @@ import (
 var (
 	// SyslogUseCurrentYear instructs the virtual machine to inject the current year when parsing timestamps without a year component.
 	SyslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
-)
-
-var (
-	// LineCount counts the number of lines read by the virtual machine engine from the input channel.
-	LineCount = expvar.NewInt("line_count")
 )
 
 type opcode int
@@ -379,10 +373,10 @@ func (v *VM) execute(t *thread, i instr) {
 	}
 }
 
-// Run fetches and executes each instruction in the program on the input string
-// until termination. It returns a boolean indicating a successful action was
-// taken.
-func (v *VM) Run(input string) {
+// handleLine fetches and executes each instruction in the program on the input
+// string until termination. It returns a boolean indicating a successful
+// action was taken.
+func (v *VM) handleLine(input string) {
 	t := new(thread)
 	v.t = t
 	v.input = input
@@ -401,6 +395,13 @@ func (v *VM) Run(input string) {
 	}
 }
 
+func (v *VM) Run(lines <-chan string) {
+	for line := range lines {
+		v.handleLine(line)
+	}
+	glog.Infof("Stopping program %s", v.name)
+}
+
 // New creates a new virtual machine with the given name, and compiler
 // artifacts for executable and data segments.
 func New(name string, re []*regexp.Regexp, str []string, m []*metrics.Metric, prog []instr) *VM {
@@ -412,31 +413,6 @@ func New(name string, re []*regexp.Regexp, str []string, m []*metrics.Metric, pr
 		prog:      prog,
 		timeMemos: make(map[string]time.Time, 0),
 	}
-}
-
-// Engine manages the virtual machines to execute when each new line is received
-type Engine map[string]*VM
-
-// AddVM adds a new virtual machine to the execution Engine.
-func (e Engine) AddVM(name string, v *VM) {
-	e[name] = v
-}
-
-// RemoveVM removes the named virtual machine from the execution Engine.
-func (e Engine) RemoveVM(name string) {
-	delete(e, name)
-}
-
-// Run iterates over the input channel and sends each line to all VMs.
-func (e *Engine) Run(lines <-chan string) {
-	for line := range lines {
-		LineCount.Add(1)
-		for _, v := range *e {
-			// TODO(jaq): Instead of forking a goroutine each time, set up a line channel to each VM.
-			v.Run(line)
-		}
-	}
-	glog.Infof("Shutting down VM engine.")
 }
 
 // DumpByteCode emits the program disassembly and data to standard out.

@@ -62,9 +62,7 @@ func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) er
 		return fmt.Errorf("%s: compile failed: %s", programfile, strings.Join(errs, "\n"))
 	}
 
-	e := &vm.Engine{}
-	e.AddVM(programfile, v)
-	go e.Run(lines)
+	go v.Run(lines)
 	return nil
 }
 

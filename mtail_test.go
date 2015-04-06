@@ -25,18 +25,17 @@ func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail
 	if err != nil {
 		t.Errorf("Couldn't create watcher: %s", err)
 	}
-	p := vm.NewLoader(w, &m.store)
+	p := vm.NewLoader(w, &m.store, m.lines)
 	// start server
 	prog, errors := vm.Compile("test", strings.NewReader(testProgram), &m.store)
 	if len(errors) > 0 {
 		t.Errorf("Couldn't compile program: %s", errors)
 	}
-	p.E.AddVM("test", prog)
 	if progPathname != "" {
 		p.LoadProgs(progPathname)
 	}
 	vm.LineCount.Set(0)
-	go p.E.Run(m.lines)
+	go prog.Run(m.lines)
 	m.StartTailing(logPathnames)
 	return m
 }
