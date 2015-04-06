@@ -458,18 +458,18 @@ type parser struct {
     root   node
     errors []string
     l      *lexer
-    t      Token             // Most recently lexed token.
-    pos Position             // Maybe contains the position of the start of a node.
+    t      token             // Most recently lexed token.
+    pos position             // Maybe contains the position of the start of a node.
     s      *scope
     res    map[string]string // Mapping of regex constants to patterns.
     ms     *metrics.Store     // List of metrics exported by this program.
 }
 
-func NewParser(name string, input io.Reader, ms *metrics.Store) *parser {
+func newParser(name string, input io.Reader, ms *metrics.Store) *parser {
         return &parser{name: name, l: newLexer(name, input), res: make(map[string]string), ms: ms}
 }
 
-func (p *parser) ErrorP(s string, pos Position) {
+func (p *parser) ErrorP(s string, pos position) {
     e := fmt.Sprintf("%s:%s: %s", p.l.name, pos, s)
     p.errors = append(p.errors, e)
 }
@@ -479,7 +479,7 @@ func (p *parser) Error(s string) {
 }
 
 func (p *parser) Lex(lval *mtailSymType) int {
-    p.t = p.l.NextToken()
+    p.t = p.l.nextToken()
     switch p.t.kind {
     case INVALID:
         p.Error(p.t.text)

@@ -12,10 +12,10 @@ import (
 )
 
 // Lexeme enumerates the types of lexical tokens in a mtail program.
-type Lexeme int
+type lexeme int
 
 // Printable names for lexemes.
-var lexemeName = map[Lexeme]string{
+var lexemeName = map[lexeme]string{
 	EOF:        "EOF",
 	INVALID:    "INVALID",
 	LCURLY:     "LCURLY",
@@ -52,7 +52,7 @@ var lexemeName = map[Lexeme]string{
 	CONST:      "CONST",
 }
 
-func (t Lexeme) String() string {
+func (t lexeme) String() string {
 	if s, ok := lexemeName[t]; ok {
 		return s
 	}
@@ -60,7 +60,7 @@ func (t Lexeme) String() string {
 }
 
 // List of keywords.  Keep this list sorted!
-var keywords = map[string]Lexeme{
+var keywords = map[string]lexeme{
 	"as":      AS,
 	"by":      BY,
 	"const":   CONST,
@@ -79,14 +79,14 @@ var builtins = []string{
 	"tolower",
 }
 
-// A Position is the location in the source program that a token appears.
-type Position struct {
+// A position is the location in the source program that a token appears.
+type position struct {
 	line     int // Line in the source for this token.
 	startcol int // Starting and ending columns in the source for this token.
 	endcol   int
 }
 
-func (p Position) String() string {
+func (p position) String() string {
 	r := fmt.Sprintf("%d:%d", p.line+1, p.startcol+1)
 	if p.endcol > p.startcol {
 		r += fmt.Sprintf("-%d", p.endcol+1)
@@ -94,15 +94,15 @@ func (p Position) String() string {
 	return r
 }
 
-// Token describes a lexed token from the input, containing its type, the
+// token describes a lexed token from the input, containing its type, the
 // original text of the token, and its position in the input.
-type Token struct {
-	kind Lexeme
+type token struct {
+	kind lexeme
 	text string
-	pos  Position
+	pos  position
 }
 
-func (t Token) String() string {
+func (t token) String() string {
 	return fmt.Sprintf("%s(%q,%s)", t.kind, t.text, t.pos)
 }
 
@@ -125,7 +125,7 @@ type lexer struct {
 	startcol int    // Starting column of the current token.
 	text     string // the text of the current token
 
-	tokens chan Token // Output channel for tokens emitted.
+	tokens chan token // Output channel for tokens emitted.
 }
 
 // newLexer creates a new scanner type that reads the input provided.
@@ -134,13 +134,13 @@ func newLexer(name string, input io.Reader) *lexer {
 		name:   name,
 		input:  bufio.NewReader(input),
 		state:  lexProg,
-		tokens: make(chan Token, 2),
+		tokens: make(chan token, 2),
 	}
 	return l
 }
 
-// NextToken returns the next token in the input.
-func (l *lexer) NextToken() Token {
+// nextToken returns the next token in the input.
+func (l *lexer) nextToken() token {
 	for {
 		select {
 		case token := <-l.tokens:
@@ -152,9 +152,9 @@ func (l *lexer) NextToken() Token {
 }
 
 // emit passes a token to the client.
-func (l *lexer) emit(kind Lexeme) {
-	pos := Position{l.line, l.startcol, l.col - 1}
-	l.tokens <- Token{kind, l.text, pos}
+func (l *lexer) emit(kind lexeme) {
+	pos := position{l.line, l.startcol, l.col - 1}
+	l.tokens <- token{kind, l.text, pos}
 	// Reset the current token
 	l.text = ""
 	l.startcol = l.col
@@ -215,8 +215,8 @@ func (l *lexer) ignore() {
 // errorf returns an error token and terminates the scanner by passing back a
 // nil state function to the state machine.
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
-	pos := Position{l.line, l.startcol, l.col - 1}
-	l.tokens <- Token{kind: INVALID,
+	pos := position{l.line, l.startcol, l.col - 1}
+	l.tokens <- token{kind: INVALID,
 		text: fmt.Sprintf(format, args...),
 		pos:  pos}
 	return nil

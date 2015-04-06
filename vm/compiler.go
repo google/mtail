@@ -39,7 +39,7 @@ type compiler struct {
 // additional arguments to build the virtual machine.
 func Compile(name string, input io.Reader, ms *metrics.Store) (*VM, []string) {
 	name = filepath.Base(name)
-	p := NewParser(name, input, ms)
+	p := newParser(name, input, ms)
 	r := mtailParse(p)
 	if r != 0 || p == nil || len(p.errors) > 0 {
 		return nil, p.errors

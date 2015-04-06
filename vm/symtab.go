@@ -18,7 +18,7 @@ type symbol struct {
 	name    string      // Symbol name
 	kind    symtype     // Type
 	binding interface{} // Binding to storage allocated
-	loc     Position    // Source file position
+	loc     position    // Source file position
 	addr    int         // Address offset in another structure
 }
 
@@ -37,7 +37,7 @@ func (s *scope) lookupSym(name string, kind symtype) (*symbol, bool) {
 	return nil, ok
 }
 
-func (s *scope) addSym(name string, kind symtype, binding interface{}, loc Position) *symbol {
+func (s *scope) addSym(name string, kind symtype, binding interface{}, loc position) *symbol {
 	sym := &symbol{name, kind, binding, loc, 0}
 	if _, ok := s.symtab[name]; !ok {
 		s.symtab[name] = make([]*symbol, endSymbol)
