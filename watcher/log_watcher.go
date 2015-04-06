@@ -50,8 +50,6 @@ func (w *LogWatcher) run() {
 			w.events <- UpdateEvent{e.Name}
 		case e.Op&fsnotify.Remove == fsnotify.Remove:
 			w.events <- DeleteEvent{e.Name}
-		default:
-			glog.Infof("Unexpected event type detected: %v", e)
 		}
 	}
 	glog.Infof("Shutting down log watcher.")

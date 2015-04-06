@@ -67,6 +67,12 @@ func TestLogWatcher(t *testing.T) {
 	case <-time.After(10 * time.Millisecond):
 		t.Errorf("didn't receive update message")
 	}
+	os.Chmod(filepath.Join(workdir, "logfile"), os.ModePerm)
+	select {
+	case e := <-w.Events():
+		t.Errorf("no event expected, got %q", e)
+	case <-time.After(10 * time.Millisecond):
+	}
 	os.Remove(filepath.Join(workdir, "logfile"))
 	select {
 	case e := <-w.Events():
