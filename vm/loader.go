@@ -83,7 +83,7 @@ func (l *Loader) LoadProg(programPath string) (errors int) {
 		return
 	}
 	defer f.Close()
-	l.CompileAndRun(name, f, l.ms)
+	l.CompileAndRun(name, f)
 	return
 }
 
@@ -92,8 +92,8 @@ func (l *Loader) LoadProg(programPath string) (errors int) {
 // exists, the previous virtual machine is terminated and the new loaded over
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
-func (l *Loader) CompileAndRun(name string, input io.Reader, ms *metrics.Store) error {
-	v, errs := Compile(name, input, ms)
+func (l *Loader) CompileAndRun(name string, input io.Reader) error {
+	v, errs := Compile(name, input, l.ms)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("compile failed for %s: %s", name, strings.Join(errs, "\n"))
@@ -108,10 +108,10 @@ func (l *Loader) CompileAndRun(name string, input io.Reader, ms *metrics.Store) 
 	defer l.handleMu.Unlock()
 	if handle, ok := l.handles[name]; ok {
 		close(handle.lines)
-		<-handle.shutdown
+		<-handle.done
 	}
 	l.handles[name] = &vmHandle{make(chan string), make(chan struct{})}
-	go v.Run(l.handles[name].lines, l.handles[name].shutdown)
+	go v.Run(l.handles[name].lines, l.handles[name].done)
 	return nil
 }
 
@@ -124,10 +124,10 @@ type Loader struct {
 	fs afero.Fs        // filesystem interface
 	ms *metrics.Store  // pointer to store to pass to compiler
 
-	handleMu sync.Mutex           // guards accesses to handles
 	handles  map[string]*vmHandle // map of program names to virtual machines
+	handleMu sync.Mutex           // guards accesses to handles
 
-	shutdown chan struct{} // Synchronise shutdown of the watcher and lines handlers.
+	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
 }
 
 // NewLoader creates a new program loader.  It takes a filesystem watcher
@@ -140,11 +140,12 @@ func NewLoader(w watcher.Watcher, ms *metrics.Store, lines <-chan string) *Loade
 // newLoaderWithFs creates a new program loader with a supplied filesystem
 // implementation, for testing.
 func newLoaderWithFs(w watcher.Watcher, ms *metrics.Store, lines <-chan string, fs afero.Fs) *Loader {
-	l := &Loader{w: w,
-		ms:       ms,
-		fs:       fs,
-		handles:  make(map[string]*vmHandle),
-		shutdown: make(chan struct{})}
+	l := &Loader{
+		w:           w,
+		ms:          ms,
+		fs:          fs,
+		handles:     make(map[string]*vmHandle),
+		watcherDone: make(chan struct{})}
 
 	go l.processEvents()
 	go l.processLines(lines)
@@ -152,14 +153,14 @@ func newLoaderWithFs(w watcher.Watcher, ms *metrics.Store, lines <-chan string, 
 }
 
 type vmHandle struct {
-	lines    chan string
-	shutdown chan struct{}
+	lines chan string
+	done  chan struct{}
 }
 
 // processEvents manages program lifecycle triggered by events from the
 // filesystem watcher.
 func (l *Loader) processEvents() {
-	defer close(l.shutdown)
+	defer close(l.watcherDone)
 	for event := range l.w.Events() {
 		switch event := event.(type) {
 		case watcher.DeleteEvent:
@@ -190,12 +191,12 @@ func (l *Loader) processLines(lines <-chan string) {
 	}
 	glog.Info("Shutting down loader.")
 	l.w.Close()
-	<-l.shutdown
+	<-l.watcherDone
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
 	for prog := range l.handles {
 		close(l.handles[prog].lines)
-		<-l.handles[prog].shutdown
+		<-l.handles[prog].done
 		delete(l.handles, prog)
 	}
 }
@@ -209,7 +210,7 @@ func (l *Loader) UnloadProgram(pathname string) {
 	defer l.handleMu.Unlock()
 	if handle, ok := l.handles[name]; ok {
 		close(handle.lines)
-		<-handle.shutdown
+		<-handle.done
 		delete(l.handles, name)
 	}
 }

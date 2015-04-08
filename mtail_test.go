@@ -32,7 +32,7 @@ func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail
 	if progPathname != "" {
 		m.l.LoadProgs(progPathname)
 	} else {
-		if pErr := m.l.CompileAndRun("test", strings.NewReader(testProgram), &m.store); pErr != nil {
+		if pErr := m.l.CompileAndRun("test", strings.NewReader(testProgram)); pErr != nil {
 			t.Errorf("Couldn't compile program: %s", pErr)
 		}
 	}
