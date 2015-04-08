@@ -399,6 +399,7 @@ func (v *VM) processLine(input string) {
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
 func (v *VM) Run(lines <-chan string, shutdown chan<- struct{}) {
+	glog.Infof("Starting program %s", v.name)
 	defer close(shutdown)
 	for line := range lines {
 		v.processLine(line)
