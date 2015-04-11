@@ -46,8 +46,8 @@ const (
 // LoadProgs loads all programs in a directory and starts watching the
 // directory for filesystem changes.  The total number of program errors is
 // returned.
-func (p *Loader) LoadProgs(programPath string) int {
-	p.w.Add(programPath)
+func (l *Loader) LoadProgs(programPath string) int {
+	l.w.Add(programPath)
 
 	fis, err := ioutil.ReadDir(programPath)
 	if err != nil {
@@ -59,20 +59,20 @@ func (p *Loader) LoadProgs(programPath string) int {
 		if fi.IsDir() {
 			continue
 		}
-		errors += p.LoadProg(path.Join(programPath, fi.Name()))
+		errors += l.LoadProg(path.Join(programPath, fi.Name()))
 	}
 	return errors
 }
 
 // LoadProg loads or reloads a program from the path specified.  The name of
 // the program is the basename of the file.
-func (p *Loader) LoadProg(programPath string) (errors int) {
+func (l *Loader) LoadProg(programPath string) (errors int) {
 	name := filepath.Base(programPath)
 	if filepath.Ext(name) != fileExt {
 		glog.Infof("Skipping %s due to file extension.", programPath)
 		return
 	}
-	f, err := p.fs.Open(programPath)
+	f, err := l.fs.Open(programPath)
 	if err != nil {
 		glog.Infof("Failed to read program %q: %s", programPath, err)
 		errors = 1
@@ -80,7 +80,7 @@ func (p *Loader) LoadProg(programPath string) (errors int) {
 		return
 	}
 	defer f.Close()
-	v, errs := Compile(name, f, p.ms)
+	v, errs := Compile(name, f, l.ms)
 	if errs != nil {
 		errors = 1
 		for _, e := range errs {
@@ -133,23 +133,24 @@ func newLoaderWithFs(w watcher.Watcher, ms *metrics.Store, lines <-chan string, 
 
 // handleEvents manages program lifecycle triggered by events from the
 // filesystem watcher.
-func (p *Loader) handleEvents() {
-	for event := range p.w.Events() {
+func (l *Loader) handleEvents() {
+	for event := range l.w.Events() {
 		switch event := event.(type) {
 		case watcher.DeleteEvent:
 			glog.Infof("delete prog")
 			f := filepath.Base(event.Pathname)
-			p.linesLock.Lock()
-			close(p.lines[f])
-			delete(p.lines, f)
-			if err := p.w.Remove(event.Pathname); err != nil {
-				glog.Info("Remove watch failed:", err)
+			l.linesLock.Lock()
+			if l.lines[f] != nil {
+				close(l.lines[f])
+				delete(l.lines, f)
+			}
+			if err := l.w.Remove(event.Pathname); err != nil {
+				glog.Info("Remove watch failed: ", err)
 			}
 		case watcher.UpdateEvent:
-			glog.Infof("update prog")
-			p.LoadProg(event.Pathname)
+			l.LoadProg(event.Pathname)
 		case watcher.CreateEvent:
-			p.LoadProg(event.Pathname)
+			l.w.Add(event.Pathname)
 		default:
 			glog.Info("Unexected event type %+#v", event)
 		}
@@ -169,9 +170,11 @@ func (l *Loader) handleLines(lines <-chan string) {
 		l.linesLock.Unlock()
 	}
 	glog.Info("Shutting down loader.")
+	l.w.Close()
 	l.linesLock.Lock()
 	for prog := range l.lines {
 		close(l.lines[prog])
+		delete(l.lines, prog)
 	}
 	l.linesLock.Unlock()
 }
