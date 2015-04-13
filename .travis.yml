@@ -1,4 +1,6 @@
 language: go
+before_install:
+ - make vm/parser.go
 install:
  - go get -t ./...
 script: make test
