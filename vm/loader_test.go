@@ -47,13 +47,13 @@ func TestCompileAndRun(t *testing.T) {
 	}
 	l.handleMu.Lock()
 	if len(l.handles) < 1 {
-		t.Errorf("no vm handles: %q", l.handles)
+		t.Errorf("no vm handles: %v", l.handles)
 	}
 	l.handleMu.Unlock()
 	l.handleMu.Lock()
 	c := l.handles["Test"].done
 	if c == nil {
-		t.Errorf("No done channel in handles: %q", l.handles)
+		t.Errorf("No done channel in handles: %v", l.handles)
 	}
 	l.handleMu.Unlock()
 	close(lines)
@@ -62,7 +62,7 @@ func TestCompileAndRun(t *testing.T) {
 		l.handleMu.Lock()
 		defer l.handleMu.Unlock()
 		if len(l.handles) != 0 {
-			t.Errorf("some vm handles: %q", l.handles)
+			t.Errorf("some vm handles: %v", l.handles)
 		}
 	}
 }
