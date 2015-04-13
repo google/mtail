@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/watcher"
@@ -144,15 +145,20 @@ func TestProcessEvents(t *testing.T) {
 				w.InjectUpdate(e.Pathname)
 			}
 		}
+		// ugh; figure out something to synchronise after LoadProg
+		time.Sleep(10 * time.Millisecond)
 		programs := make([]string, 0)
-		l.handleMu.Lock()
+		l.handleMu.RLock()
 		for program := range l.handles {
 			programs = append(programs, program)
 		}
+		l.handleMu.RUnlock()
+		l.handleMu.RLock()
 		if !reflect.DeepEqual(tt.expectedPrograms, programs) {
 			t.Errorf("%s: loaded programs don't match.\n\texpected: %v\n\treceived: %v\n\tl.handles: %+#v", tt.name, tt.expectedPrograms, programs, l.handles)
 		}
-		l.handleMu.Unlock()
+		l.handleMu.RUnlock()
 		close(lines)
+
 	}
 }

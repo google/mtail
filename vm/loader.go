@@ -106,6 +106,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
+	// Stop any previous VM.
 	if handle, ok := l.handles[name]; ok {
 		close(handle.lines)
 		<-handle.done
@@ -125,7 +126,7 @@ type Loader struct {
 	ms *metrics.Store  // pointer to store to pass to compiler
 
 	handles  map[string]*vmHandle // map of program names to virtual machines
-	handleMu sync.Mutex           // guards accesses to handles
+	handleMu sync.RWMutex         // guards accesses to handles
 
 	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
 }
@@ -183,11 +184,11 @@ func (l *Loader) processEvents() {
 func (l *Loader) processLines(lines <-chan string) {
 	for line := range lines {
 		LineCount.Add(1)
-		l.handleMu.Lock()
-		defer l.handleMu.Unlock()
+		l.handleMu.RLock()
 		for prog := range l.handles {
 			l.handles[prog].lines <- line
 		}
+		l.handleMu.RUnlock()
 	}
 	glog.Info("Shutting down loader.")
 	l.w.Close()
