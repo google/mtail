@@ -281,6 +281,7 @@ func (v *VM) execute(t *thread, i instr) {
 			}
 			// Hack for yearless syslog.
 			if tm.Year() == 0 && *SyslogUseCurrentYear {
+				// No .UTC() as we use local time to match the local log.
 				tm = tm.AddDate(time.Now().Year(), 0, 0)
 			}
 			v.timeMemos[ts] = tm

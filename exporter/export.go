@@ -207,7 +207,7 @@ func (e *Exporter) WriteMetrics() {
 			glog.Infof("statsd error: %s", err)
 		}
 	}
-	lastMetricPushTime = time.Now()
+	lastMetricPushTime = time.Now().UTC()
 }
 
 // StartMetricPush pushes metrics to the configured services each interval.
