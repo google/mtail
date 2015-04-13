@@ -12,3 +12,14 @@ install:
 
 # Run all tests, under race detector.
 script: make testrace
+
+go:
+  - tip
+  - 1.4
+
+matrix:
+  fast_finish: true
+
+  allow_failures:
+    - go: tip
+ 
