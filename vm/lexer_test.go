@@ -4,9 +4,10 @@
 package vm
 
 import (
-	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/kylelemons/godebug/pretty"
 )
 
 type lexerTest struct {
@@ -152,8 +153,9 @@ func collect(t *lexerTest) (tokens []token) {
 func TestLex(t *testing.T) {
 	for _, test := range lexerTests {
 		tokens := collect(&test)
-		if !reflect.DeepEqual(tokens, test.tokens) {
-			t.Errorf("%s: got\n\t%v\nexpected\n\t%v", test.name, tokens, test.tokens)
+		diff := pretty.Compare(test.tokens, tokens)
+		if len(diff) > 0 {
+			t.Errorf("%s tokens didn't match:\n%s:", test.name, diff)
 		}
 	}
 }

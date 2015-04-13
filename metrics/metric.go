@@ -139,11 +139,14 @@ func (m *Metric) EmitLabelSets(c chan *LabelSet) {
 
 // Datum describes a LabelSet's or LabelValue's value at a given timestamp.
 type Datum struct {
+	sync.RWMutex
 	Value int64
 	Time  time.Time
 }
 
 func (d *Datum) stamp(timestamp time.Time) {
+	d.Lock()
+	defer d.Unlock()
 	if timestamp.IsZero() {
 		d.Time = time.Now()
 	} else {
@@ -198,6 +201,8 @@ func (lv *LabelValue) String() string {
 }
 
 func (m *Metric) String() string {
+	m.RLock()
+	defer m.RUnlock()
 	return fmt.Sprintf("%+#v", *m)
 }
 

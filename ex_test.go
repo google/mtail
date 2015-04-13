@@ -114,9 +114,11 @@ func TestExamplePrograms(t *testing.T) {
 		}
 		sort.Sort(metrics.Metrics(expectedMetrics))
 		glog.Infof("expected: %s", expectedMetrics)
+		mtail.store.Lock()
 		sort.Sort(metrics.Metrics(mtail.store.Metrics))
 		glog.Infof("received: %s", mtail.store.Metrics)
-		diff := pretty.Compare(expectedMetrics, mtail.store.Metrics)
+		diff := pretty.Compare(mtail.store.Metrics, expectedMetrics)
+		mtail.store.Unlock()
 		if len(diff) > 0 {
 			t.Errorf("%s: metrics don't match:\n%s\n", tc.programfile, diff)
 		}

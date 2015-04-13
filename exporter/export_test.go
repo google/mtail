@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/mtail/metrics"
+	"github.com/kylelemons/godebug/pretty"
 )
 
 func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
@@ -39,8 +40,9 @@ func TestMetricToCollectd(t *testing.T) {
 	d.Set(37, ts)
 	r := FakeSocketWrite(metricToCollectd, scalarMetric)
 	expected := []string{"PUTVAL \"" + hostname + "/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
-	if !reflect.DeepEqual(expected, r) {
-		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
+	diff := pretty.Compare(r, expected)
+	if len(diff) > 0 {
+		t.Errorf("String didn't match:\n%s", diff)
 	}
 
 	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "label")
@@ -52,8 +54,9 @@ func TestMetricToCollectd(t *testing.T) {
 	expected = []string{
 		"PUTVAL \"" + hostname + "/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
 		"PUTVAL \"" + hostname + "/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
-	if !reflect.DeepEqual(expected, r) {
-		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
+	diff = pretty.Compare(r, expected)
+	if len(diff) > 0 {
+		t.Errorf("String didn't match:\n%s", diff)
 	}
 }
 
@@ -68,8 +71,9 @@ func TestMetricToGraphite(t *testing.T) {
 	d.Set(37, ts)
 	r := FakeSocketWrite(metricToGraphite, scalarMetric)
 	expected := []string{"prog.foo 37 1343124840\n"}
-	if !reflect.DeepEqual(expected, r) {
-		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
+	diff := pretty.Compare(r, expected)
+	if len(diff) > 0 {
+		t.Errorf("String didn't match:\n%s", diff)
 	}
 
 	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "l")
@@ -81,8 +85,9 @@ func TestMetricToGraphite(t *testing.T) {
 	expected = []string{
 		"prog.bar.l.quux 37 1343124840\n",
 		"prog.bar.l.snuh 37 1343124840\n"}
-	if !reflect.DeepEqual(expected, r) {
-		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
+	diff = pretty.Compare(r, expected)
+	if len(diff) > 0 {
+		t.Errorf("String didn't match:\n%s", diff)
 	}
 }
 

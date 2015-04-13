@@ -4,11 +4,11 @@
 package vm
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/google/mtail/metrics"
+	"github.com/kylelemons/godebug/pretty"
 )
 
 type validProgram struct {
@@ -197,8 +197,9 @@ func TestParserRoundTrip(t *testing.T) {
 		u = Unparser{}
 		output2 := u.Unparse(p2.root)
 
-		if !reflect.DeepEqual(output, output2) {
-			t.Errorf("Round trip failed to generate same output.\n1: %s\n2: %s\n", output, output)
+		diff := pretty.Compare(output2, output)
+		if len(diff) > 0 {
+			t.Errorf("Round trip failed to generate same output.\n%s", diff)
 		}
 	}
 }
@@ -267,8 +268,9 @@ func TestInvalidPrograms(t *testing.T) {
 		//mtailDebug = 999 // All the debugging.
 		mtailParse(p)
 
-		if !reflect.DeepEqual(tc.errors, p.errors) {
-			t.Errorf("Incorrect error for '%s'\n\treceived: %q\n\texpected: %q\n", tc.name, p.errors, tc.errors)
+		diff := pretty.Compare(p.errors, tc.errors)
+		if len(diff) > 0 {
+			t.Errorf("Incorrect error for '%s'\n%s", tc.name, diff)
 		}
 	}
 }

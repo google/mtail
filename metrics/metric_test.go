@@ -5,7 +5,6 @@ package metrics
 
 import (
 	"encoding/json"
-	"reflect"
 	"testing"
 	"time"
 
@@ -95,22 +94,9 @@ func TestEmitLabelSet(t *testing.T) {
 		labels = append(labels, ls.Labels)
 	}
 
-	// Equivalence for slices is not defined under ==, and DeepEqual does an
-	// elementwise comparison.  We can't guarantee that the labels are in
-	// order, so do the N^2 comparision.
-	if len(labels) != len(expectedLabels) {
-		t.Errorf("Label length doesn't match\n\texpected %v\n\treceived %v\n", expectedLabels, labels)
-	}
-
-Loop:
-	for i := range expectedLabels {
-		for j := range labels {
-			if reflect.DeepEqual(expectedLabels[i], labels[j]) {
-				continue Loop
-			}
-		}
-		t.Errorf("Labels don't match: couldn't find %v in labels\n\texpected %v\n\treceived %v\n", expectedLabels[i], expectedLabels, labels)
-
+	diff := pretty.Compare(labels, expectedLabels)
+	if len(diff) > 0 {
+		t.Errorf("Labels don't match:\n%s", diff)
 	}
 }
 
@@ -157,7 +143,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 
 	// pretty.Compare uses the opposite order to xUnit for comparisons.
 	diff := pretty.Compare(r, m)
-	if len(diff) != 0 {
+	if len(diff) > 0 {
 		t.Errorf("Round trip wasn't stable:\n%s", diff)
 	}
 }

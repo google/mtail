@@ -4,7 +4,6 @@
 package vm
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/watcher"
 	"github.com/jaqx0r/afero"
+	"github.com/kylelemons/godebug/pretty"
 )
 
 func TestNewLoaderWithFs(t *testing.T) {
@@ -154,8 +154,8 @@ func TestProcessEvents(t *testing.T) {
 		}
 		l.handleMu.RUnlock()
 		l.handleMu.RLock()
-		if !reflect.DeepEqual(tt.expectedPrograms, programs) {
-			t.Errorf("%s: loaded programs don't match.\n\texpected: %v\n\treceived: %v\n\tl.handles: %+#v", tt.name, tt.expectedPrograms, programs, l.handles)
+		if diff := pretty.Compare(programs, tt.expectedPrograms); len(diff) > 0 {
+			t.Errorf("%s: loaded programs don't match. l.handles: %+#v\n%s", tt.name, l.handles, diff)
 		}
 		l.handleMu.RUnlock()
 		close(lines)
