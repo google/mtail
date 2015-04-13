@@ -13,7 +13,7 @@ import (
 
 func BenchmarkIncrementScalar(b *testing.B) {
 	d := &Datum{}
-	ts := time.Now()
+	ts := time.Now().UTC()
 	for i := 0; i < b.N; i++ {
 		d.IncBy(1, ts)
 	}
@@ -22,7 +22,7 @@ func BenchmarkIncrementScalar(b *testing.B) {
 func TestScalarMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter)
 	d, _ := v.GetDatum()
-	d.IncBy(1, time.Now())
+	d.IncBy(1, time.Now().UTC())
 	lv := v.findLabelValueOrNil([]string{})
 	if lv == nil {
 		t.Errorf("couldn't find labelvalue")
@@ -40,21 +40,21 @@ func TestScalarMetric(t *testing.T) {
 func TestDimensionedMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, "foo")
 	d, _ := v.GetDatum("a")
-	d.IncBy(1, time.Now())
+	d.IncBy(1, time.Now().UTC())
 	if v.findLabelValueOrNil([]string{"a"}).Value.Value != 1 {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar")
 	d, _ = v.GetDatum("a", "b")
-	d.IncBy(1, time.Now())
+	d.IncBy(1, time.Now().UTC())
 	if v.findLabelValueOrNil([]string{"a", "b"}).Value.Value != 1 {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar", "quux")
 	d, _ = v.GetDatum("a", "b", "c")
-	d.IncBy(1, time.Now())
+	d.IncBy(1, time.Now().UTC())
 	if v.findLabelValueOrNil([]string{"a", "b", "c"}).Value.Value != 1 {
 		t.Errorf("fail")
 	}
@@ -78,7 +78,7 @@ func TestEmitLabelSet(t *testing.T) {
 	m := NewMetric("test", "prog", Gauge, "foo", "bar", "quux")
 	c := make(chan *LabelSet)
 
-	ts := time.Now()
+	ts := time.Now().UTC()
 
 	var expectedLabels []map[string]string
 	for _, tc := range labelSetTests {

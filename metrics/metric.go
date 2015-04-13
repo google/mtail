@@ -146,11 +146,11 @@ type Datum struct {
 
 func (d *Datum) stamp(timestamp time.Time) {
 	if timestamp.IsZero() {
-		d.Time = time.Now()
+		d.Time = time.Now().UTC()
 	} else {
 		d.Time = timestamp
 	}
-	MetricUpdateTime.Store(time.Now())
+	MetricUpdateTime.Store(time.Now().UTC())
 }
 
 // Set implements the Settable interface for a Datum.
