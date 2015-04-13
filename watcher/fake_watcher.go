@@ -5,12 +5,14 @@ package watcher
 
 import (
 	"path"
+	"sync"
 
 	"github.com/golang/glog"
 )
 
 // FakeWatcher implements an in-memory Watcher.
 type FakeWatcher struct {
+	sync.RWMutex
 	watches map[string]bool
 	events  chan Event
 }
@@ -18,13 +20,15 @@ type FakeWatcher struct {
 // NewFakeWatcher returns a fake Watcher for use in tests.
 func NewFakeWatcher() *FakeWatcher {
 	return &FakeWatcher{
-		make(map[string]bool),
-		make(chan Event)}
+		watches: make(map[string]bool),
+		events:  make(chan Event)}
 }
 
 // Add adds a watch to the FakeWatcher
 func (w *FakeWatcher) Add(name string) error {
+	w.Lock()
 	w.watches[name] = true
+	w.Unlock()
 	return nil
 }
 
@@ -36,7 +40,9 @@ func (w *FakeWatcher) Close() error {
 
 // Remove removes a watch from the FakeWatcher
 func (w *FakeWatcher) Remove(name string) error {
+	w.Lock()
 	delete(w.watches, name)
+	w.Unlock()
 	return nil
 }
 
@@ -46,6 +52,8 @@ func (w *FakeWatcher) Events() <-chan Event { return w.events }
 // InjectCreate lets a test inject a fake creation event.
 func (w *FakeWatcher) InjectCreate(name string) {
 	dirname := path.Dir(name)
+	w.RLock()
+	defer w.RUnlock()
 	if w.watches[dirname] {
 		w.events <- CreateEvent{name}
 	} else {
@@ -55,6 +63,8 @@ func (w *FakeWatcher) InjectCreate(name string) {
 
 // InjectUpdate lets a test inject a fake update event.
 func (w *FakeWatcher) InjectUpdate(name string) {
+	w.RLock()
+	defer w.RUnlock()
 	if w.watches[name] {
 		w.events <- UpdateEvent{name}
 	} else {
@@ -64,6 +74,8 @@ func (w *FakeWatcher) InjectUpdate(name string) {
 
 // InjectDelete lets a test inject a fake deletion event.
 func (w *FakeWatcher) InjectDelete(name string) {
+	w.RLock()
+	defer w.RUnlock()
 	if w.watches[name] {
 		w.events <- DeleteEvent{name}
 	} else {
@@ -73,6 +85,8 @@ func (w *FakeWatcher) InjectDelete(name string) {
 
 // Watches returns a list of paths being watched.
 func (w *FakeWatcher) Watches() (keys []string) {
+	w.RLock()
+	defer w.RUnlock()
 	keys = make([]string, 0, len(w.watches))
 	for k := range w.watches {
 		keys = append(keys, k)
