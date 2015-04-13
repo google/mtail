@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/kylelemons/godebug/pretty"
 )
 
 func BenchmarkIncrementScalar(b *testing.B) {
@@ -153,7 +155,9 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 		t.Errorf("json.Unmarshal failed: %s\n", e)
 	}
 
-	if !reflect.DeepEqual(m, r) {
-		t.Errorf("Round trip wasn't stable.\n\texpected: %v\n\treceived: %v\n", m, r)
+	// pretty.Compare uses the opposite order to xUnit for comparisons.
+	diff := pretty.Compare(r, m)
+	if len(diff) != 0 {
+		t.Errorf("Round trip wasn't stable:\n%s", diff)
 	}
 }
