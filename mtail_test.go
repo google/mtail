@@ -47,17 +47,8 @@ func TestHandleLogUpdates(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	// make temp dir
-	workdir, err := ioutil.TempDir("", "mtail_test")
-	if err != nil {
-		t.Errorf("could not create temporary directory: %s", err)
-	}
-	defer func() {
-		err := os.RemoveAll(workdir)
-		if err != nil {
-			t.Errorf("Could not remove temp dir: %s", err)
-		}
-	}()
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
 	// touch log file
 	logFilepath := path.Join(workdir, "log")
 	logFile, err := os.Create(logFilepath)
@@ -90,17 +81,8 @@ func TestHandleLogRotation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	// make temp dir
-	workdir, err := ioutil.TempDir("", "mtail_test")
-	if err != nil {
-		t.Errorf("could not create temporary directory: %s", err)
-	}
-	defer func() {
-		err := os.RemoveAll(workdir)
-		if err != nil {
-			t.Errorf("Could not remove temp dir: %s", err)
-		}
-	}()
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
 	logFilepath := path.Join(workdir, "log")
 	// touch log file
 	logFile, err := os.Create(logFilepath)
@@ -164,17 +146,9 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	// make temp dir
-	workdir, err := ioutil.TempDir("", "mtail_test")
-	if err != nil {
-		t.Errorf("could not create temporary directory: %s", err)
-	}
-	defer func() {
-		err := os.RemoveAll(workdir)
-		if err != nil {
-			t.Errorf("Could not remove temp dir: %s", err)
-		}
-	}()
+
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
 	// Start up mtail
 	logFilepath := path.Join(workdir, "log")
 	pathnames := []string{logFilepath}
@@ -206,17 +180,8 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	// make temp dir
-	workdir, err := ioutil.TempDir("", "mtail_test")
-	if err != nil {
-		t.Errorf("could not create temporary directory: %s", err)
-	}
-	defer func() {
-		err := os.RemoveAll(workdir)
-		if err != nil {
-			t.Errorf("Could not remove temp dir: %s", err)
-		}
-	}()
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
 	// Start mtail
 	logFilepath := path.Join(workdir, "log")
 	pathnames := []string{logFilepath}
@@ -240,14 +205,14 @@ func TestHandleNewLogIgnored(t *testing.T) {
 func makeTempDir(t *testing.T) (workdir string) {
 	var err error
 	if workdir, err = ioutil.TempDir("", "mtail_test"); err != nil {
-		t.Errorf("ioutil.TempDir failed: %s", err)
+		t.Fatalf("ioutil.TempDir failed: %s", err)
 	}
 	return
 }
 
 func removeTempDir(t *testing.T, workdir string) {
 	if err := os.RemoveAll(workdir); err != nil {
-		t.Errorf("os.RemoveAll failed: %s", err)
+		t.Fatalf("os.RemoveAll failed: %s", err)
 	}
 }
 
