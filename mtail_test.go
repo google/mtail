@@ -75,11 +75,10 @@ func TestHandleLogUpdates(t *testing.T) {
 	defer m.Close()
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
-		t.Logf("string is %q", x)
 		// write to log file
 		logFile.WriteString(x + "\n")
 		// TODO(jaq): remove slow sleep
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 		// check log line count increase
 		expected := fmt.Sprintf("%d", i+1)
 		if vm.LineCount.String() != expected {
@@ -213,86 +212,5 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	expected := "0"
 	if vm.LineCount.String() != expected {
 		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
-	}
-}
-
-// TODO(jaq): The sleeps in here are racy.  What can we use to sync through inotify?
-func TestHandleNewProgram(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
-
-	m := startMtail(t, []string{}, workdir)
-	defer m.Close()
-
-	expectedProgLoads := "{}"
-	if vm.ProgLoads.String() != expectedProgLoads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.ProgLoads.String())
-	}
-
-	progPath := path.Join(workdir, "prog.mtail")
-	progFile, err := os.Create(progPath)
-	if err != nil {
-		t.Fatalf("prog create failed: %s", err)
-	}
-	progFile.WriteString("/$/ {}\n")
-	progFile.Close()
-
-	// Wait for inotify
-	time.Sleep(100 * time.Millisecond)
-	expectedProgLoads = `{"prog.mtail": 1}`
-	if vm.ProgLoads.String() != expectedProgLoads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.ProgLoads.String())
-	}
-
-	badProgPath := path.Join(workdir, "prog.mtail.dpkg-dist")
-	badProgFile, err := os.Create(badProgPath)
-	if err != nil {
-		t.Fatalf("prog create failed: %s", err)
-	}
-	badProgFile.WriteString("/$/ {}\n")
-	badProgFile.Close()
-
-	time.Sleep(100 * time.Millisecond)
-	expectedProgLoads = `{"prog.mtail": 1}`
-	if vm.ProgLoads.String() != expectedProgLoads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.ProgLoads.String())
-	}
-	expectedProgErrs := `{}`
-	if vm.ProgLoadErrors.String() != expectedProgErrs {
-		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.ProgLoadErrors.String())
-	}
-
-	os.Rename(badProgPath, progPath)
-	time.Sleep(100 * time.Millisecond)
-	expectedProgLoads = `{"prog.mtail": 1}`
-	if vm.ProgLoads.String() != expectedProgLoads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.ProgLoads.String())
-	}
-	expectedProgErrs = `{}`
-	if vm.ProgLoadErrors.String() != expectedProgErrs {
-		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.ProgLoadErrors.String())
-	}
-
-	brokenProgPath := path.Join(workdir, "broken.mtail")
-	brokenProgFile, err := os.Create(brokenProgPath)
-	if err != nil {
-		t.Errorf("prog create failed: %s", err)
-	}
-	brokenProgFile.WriteString("?\n")
-	brokenProgFile.Close()
-
-	time.Sleep(100 * time.Millisecond)
-
-	expectedProgLoads = `{"prog.mtail": 1}`
-	if vm.ProgLoads.String() != expectedProgLoads {
-		t.Errorf("Prog loads not same\n\texpected: %s\n\treceived: %s", expectedProgLoads, vm.ProgLoads.String())
-	}
-	expectedProgErrs = `{"broken.mtail": 1}`
-	if vm.ProgLoadErrors.String() != expectedProgErrs {
-		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.ProgLoadErrors.String())
 	}
 }
