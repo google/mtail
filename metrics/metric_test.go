@@ -128,7 +128,7 @@ func TestFindLabelValueOrNil(t *testing.T) {
 func TestMetricJSONRoundTrip(t *testing.T) {
 	m := NewMetric("test", "prog", Gauge, "foo", "bar", "quux")
 	d, _ := m.GetDatum("a", "2", "d")
-	d.Set(1, time.Now())
+	d.Set(1, time.Now().UTC())
 
 	j, e := json.Marshal(m)
 	if e != nil {
