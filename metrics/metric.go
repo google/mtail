@@ -27,7 +27,7 @@ const (
 var (
 	// MetricUpdateTime contains the timestamp of the last update of a metric.
 	// TODO(jaq): move this global value to be a property of the Store.
-	MetricUpdateTime time.Time
+	MetricUpdateTime atomic.Value
 )
 
 func (m MetricType) String() string {
@@ -145,31 +145,35 @@ type Datum struct {
 }
 
 func (d *Datum) stamp(timestamp time.Time) {
-	d.Lock()
-	defer d.Unlock()
 	if timestamp.IsZero() {
 		d.Time = time.Now()
 	} else {
 		d.Time = timestamp
 	}
-	MetricUpdateTime = time.Now()
+	MetricUpdateTime.Store(time.Now())
 }
 
 // Set implements the Settable interface for a Datum.
 func (d *Datum) Set(value int64, timestamp time.Time) {
-	atomic.StoreInt64(&d.Value, value)
+	d.Lock()
+	defer d.Unlock()
+	d.Value = value
 	d.stamp(timestamp)
 }
 
 // IncBy implements the Incrementable interface for a Datum.
 func (d *Datum) IncBy(delta int64, timestamp time.Time) {
-	atomic.AddInt64(&d.Value, delta)
+	d.Lock()
+	defer d.Unlock()
+	d.Value += delta
 	d.stamp(timestamp)
 }
 
 // Get returns the value of the Datum.
 func (d *Datum) Get() int64 {
-	return atomic.LoadInt64(&d.Value)
+	d.RLock()
+	defer d.RUnlock()
+	return d.Value
 }
 
 // Store contains Metrics.
@@ -193,6 +197,8 @@ func (ms *Store) ClearMetrics() {
 }
 
 func (d *Datum) String() string {
+	d.RLock()
+	defer d.RUnlock()
 	return fmt.Sprintf("%+#v", *d)
 }
 
