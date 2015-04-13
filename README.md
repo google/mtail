@@ -2,7 +2,7 @@ mtail - extract whitebox monitoring data from application logs for collection in
 ========================================================================================================
 
 [![GoDoc](https://godoc.org/github.com/google/mtail?status.png)](http://godoc.org/github.com/google/mtail)
-[![Travis-CI](https://travis-ci.org/google/mtail.svg)]
+[![Build Status](https://travis-ci.org/google/mtail.svg)](https://travis-ci.org/google/mtail)
 
 mtail is a tool for extracting metrics from application logs to be exported into a timeseries database or timeseries calculator for alerting and dashboarding.
 
