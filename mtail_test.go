@@ -19,6 +19,20 @@ import (
 
 const testProgram = "/$/ { }"
 
+func makeTempDir(t *testing.T) (workdir string) {
+	var err error
+	if workdir, err = ioutil.TempDir("", "mtail_test"); err != nil {
+		t.Fatalf("ioutil.TempDir failed: %s", err)
+	}
+	return
+}
+
+func removeTempDir(t *testing.T, workdir string) {
+	if err := os.RemoveAll(workdir); err != nil {
+		t.Fatalf("os.RemoveAll failed: %s", err)
+	}
+}
+
 func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail {
 	m := newMtail()
 	w, err := watcher.NewLogWatcher()
@@ -202,20 +216,6 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	}
 }
 
-func makeTempDir(t *testing.T) (workdir string) {
-	var err error
-	if workdir, err = ioutil.TempDir("", "mtail_test"); err != nil {
-		t.Fatalf("ioutil.TempDir failed: %s", err)
-	}
-	return
-}
-
-func removeTempDir(t *testing.T, workdir string) {
-	if err := os.RemoveAll(workdir); err != nil {
-		t.Fatalf("os.RemoveAll failed: %s", err)
-	}
-}
-
 // TODO(jaq): The sleeps in here are racy.  What can we use to sync through inotify?
 func TestHandleNewProgram(t *testing.T) {
 	if testing.Short() {
@@ -295,5 +295,4 @@ func TestHandleNewProgram(t *testing.T) {
 	if vm.ProgLoadErrors.String() != expectedProgErrs {
 		t.Errorf("Prog errors not same\n\texpected: %s\n\treceived: %s", expectedProgErrs, vm.ProgLoadErrors.String())
 	}
-
 }
