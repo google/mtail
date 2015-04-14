@@ -6,20 +6,32 @@ before_install:
  - make vm/parser.go
 
 # Default dependency installation command, which is disabled when Makefile
-# detected.
+# detected.  Also install three tools for measuring coverage and sending to
+# coveralls.io.
 install:
  - go get -t ./...
+ - go get golang.org/x/tools/cmd/cover
+ - go get github.com/modocache/gover
+ - go get github.com/mattn/goveralls
 
 # Run all tests, under race detector.
 script: make testrace
 
+# If the full suite passes, run again to collect coverage, merge all of the
+# packages reports, and send to coveralls.io.
+after_success:
+ - make coverage
+ - goveralls -coverprofile=gover.coverprofile -service=travis-ci
+
+# Run tests at these Go versions.
 go:
   - tip
   - 1.4
 
+# Allow tip to fail, and only wait for 1.4 to succeed before reporting build
+# status.
 matrix:
   fast_finish: true
-
   allow_failures:
     - go: tip
- 
+
