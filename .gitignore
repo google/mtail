@@ -14,3 +14,5 @@ emgen/emgen
 foo.log
 /watcher/watcher.test
 /vm/vm.test
+/coverage.html
+*.coverprofile
