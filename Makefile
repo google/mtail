@@ -66,5 +66,20 @@ bench: $(GOFILES) $(GOTESTFILES)
 recbench: $(GOFILES) $(GOTESTFILES)
 	go test -bench=. -run=XXX --record_benchmark ./...
 
+.PHONY: coverage
+coverage: gover.coverprofile
+gover.coverprofile: $(GOFILES) $(GOTESTFILES)
+	for package in exporter metrics tailer vm watcher; do\
+		go test -coverprofile=$$package.coverprofile ./$$package;\
+    done
+	go test -coverprofile=main.coverprofile .
+	gover
+
+.PHONY: covrep
+covrep: coverage.html
+coverage.html: gover.coverprofile
+	go tool cover -html=$< -o $@
+	xdg-open $@
+
 .PHONY: testall
 testall: testrace bench
