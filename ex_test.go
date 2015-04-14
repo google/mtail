@@ -60,7 +60,7 @@ func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) er
 	w := watcher.NewFakeWatcher()
 	l := vm.NewLoader(w, ms, lines)
 	if l == nil {
-		return fmt.Errorf("couldn't create program loader.")
+		return fmt.Errorf("couldn't create program loader")
 	}
 	if pErr := l.CompileAndRun(name, p); pErr != nil {
 		return fmt.Errorf("couldn't compile program: %s: %s", programfile, pErr)

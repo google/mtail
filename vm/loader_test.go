@@ -147,7 +147,7 @@ func TestProcessEvents(t *testing.T) {
 		}
 		// ugh; figure out something to synchronise after LoadProg
 		time.Sleep(10 * time.Millisecond)
-		programs := make([]string, 0)
+		var programs []string
 		l.handleMu.RLock()
 		for program := range l.handles {
 			programs = append(programs, program)

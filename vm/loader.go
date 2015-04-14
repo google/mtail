@@ -202,6 +202,8 @@ func (l *Loader) processLines(lines <-chan string) {
 	}
 }
 
+// UnloadProgram removes the named program from the watcher to prevent future
+// updates, and terminates any currently running VM goroutine.
 func (l *Loader) UnloadProgram(pathname string) {
 	if err := l.w.Remove(pathname); err != nil {
 		glog.Infof("Remove watch on %s failed: %s", pathname, err)
