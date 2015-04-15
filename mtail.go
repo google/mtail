@@ -197,6 +197,9 @@ func (m *mtail) Close() {
 			glog.Info("Closing lines")
 			close(m.lines)
 		}
+		if m.l != nil {
+			<-m.l.VMsDone
+		}
 	})
 }
 

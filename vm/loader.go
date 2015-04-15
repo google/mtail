@@ -129,6 +129,7 @@ type Loader struct {
 	handleMu sync.RWMutex         // guards accesses to handles
 
 	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
+	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 }
 
 // NewLoader creates a new program loader.  It takes a filesystem watcher
@@ -146,7 +147,8 @@ func newLoaderWithFs(w watcher.Watcher, ms *metrics.Store, lines <-chan string, 
 		ms:          ms,
 		fs:          fs,
 		handles:     make(map[string]*vmHandle),
-		watcherDone: make(chan struct{})}
+		watcherDone: make(chan struct{}),
+		VMsDone:     make(chan struct{})}
 
 	go l.processEvents()
 	go l.processLines(lines)
@@ -200,6 +202,7 @@ func (l *Loader) processLines(lines <-chan string) {
 		<-l.handles[prog].done
 		delete(l.handles, prog)
 	}
+	close(l.VMsDone)
 }
 
 // UnloadProgram removes the named program from the watcher to prevent future

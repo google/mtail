@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
@@ -49,10 +48,10 @@ var exampleProgramTests = []struct {
 	},
 }
 
-func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) error {
+func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) (*vm.Loader, error) {
 	p, err := os.Open(programfile)
 	if err != nil {
-		return fmt.Errorf("%s: could not open program file: %s", programfile, err)
+		return nil, fmt.Errorf("%s: could not open program file: %s", programfile, err)
 	}
 	defer p.Close()
 
@@ -60,25 +59,26 @@ func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) er
 	w := watcher.NewFakeWatcher()
 	l := vm.NewLoader(w, ms, lines)
 	if l == nil {
-		return fmt.Errorf("couldn't create program loader")
+		return nil, fmt.Errorf("couldn't create program loader")
 	}
 	if pErr := l.CompileAndRun(name, p); pErr != nil {
-		return fmt.Errorf("couldn't compile program: %s: %s", programfile, pErr)
+		return nil, fmt.Errorf("couldn't compile program: %s: %s", programfile, pErr)
 	}
-	return nil
+	return l, nil
 }
 
 func TestExamplePrograms(t *testing.T) {
-	t.Skip("race bugs")
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
 	*vm.SyslogUseCurrentYear = false
 	for _, tc := range exampleProgramTests {
 		mtail := newMtail()
-		if err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines); err != nil {
+		l, err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines)
+		if err != nil {
 			t.Fatalf("Compile failed: %s", err)
 		}
+		mtail.l = l
 
 		if err := mtail.OneShot(tc.logfile, mtail.lines); err != nil {
 			t.Errorf("Oneshot failed for %s: %s", tc.logfile, err)
@@ -116,11 +116,10 @@ func TestExamplePrograms(t *testing.T) {
 			t.Errorf("%s: could not decode json: %s", tc.jsonfile, err)
 			continue
 		}
+		mtail.Close()
 		sort.Sort(metrics.Metrics(expectedMetrics))
-		glog.Infof("expected: %s", expectedMetrics)
 		mtail.store.Lock()
 		sort.Sort(metrics.Metrics(mtail.store.Metrics))
-		glog.Infof("received: %s", mtail.store.Metrics)
 		diff := pretty.Compare(mtail.store.Metrics, expectedMetrics)
 		mtail.store.Unlock()
 		if len(diff) > 0 {
@@ -138,9 +137,11 @@ func BenchmarkExamplePrograms(b *testing.B) {
 	for _, tc := range exampleProgramTests {
 		mtail := newMtail()
 		spareLines := make(chan string)
-		if err := CompileAndLoad(tc.programfile, &metrics.Store{}, spareLines); err != nil {
+		l, err := CompileAndLoad(tc.programfile, &metrics.Store{}, spareLines)
+		if err != nil {
 			b.Errorf("Compile failed: %s", err)
 		}
+		mtail.l = l
 		r := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
