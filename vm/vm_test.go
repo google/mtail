@@ -172,7 +172,8 @@ var instructions = []struct {
 		thread{pc: 0, matches: map[int][]string{}}},
 }
 
-// TestInstrs tests that each instruction behaves as expected through one execution cycle.
+// TestInstrs tests that each instruction behaves as expected through one
+// instruction cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
 		var m []*metrics.Metric

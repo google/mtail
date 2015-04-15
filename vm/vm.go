@@ -170,8 +170,9 @@ func (t *thread) PopInt() (int64, error) {
 	return 0, fmt.Errorf("unexpected numeric type %T %q", val, val)
 }
 
-// Execute acts on the current instruction, and returns a boolean indicating
-// if the current thread should terminate.
+// Execute performs an instruction cycle in the VM -- acting on the current
+// instruction, and returns a boolean indicating if the current thread should
+// terminate.
 func (v *VM) execute(t *thread, i instr) {
 	switch i.op {
 	case match:
@@ -374,9 +375,9 @@ func (v *VM) execute(t *thread, i instr) {
 	}
 }
 
-// processLine fetches and executes each instruction in the program on the
-// input string until termination. It returns a boolean indicating a successful
-// action was taken.
+// processLine handles the incoming lines from the input channel, by running a
+// fetch-execute cycle on the VM bytecode with the line as input to the
+// program, until termination.
 func (v *VM) processLine(input string) {
 	t := new(thread)
 	v.t = t
