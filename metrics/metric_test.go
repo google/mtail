@@ -5,14 +5,15 @@ package metrics
 
 import (
 	"encoding/json"
-	"reflect"
 	"testing"
 	"time"
+
+	"github.com/kylelemons/godebug/pretty"
 )
 
 func BenchmarkIncrementScalar(b *testing.B) {
 	d := &Datum{}
-	ts := time.Now()
+	ts := time.Now().UTC()
 	for i := 0; i < b.N; i++ {
 		d.IncBy(1, ts)
 	}
@@ -21,7 +22,7 @@ func BenchmarkIncrementScalar(b *testing.B) {
 func TestScalarMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter)
 	d, _ := v.GetDatum()
-	d.IncBy(1, time.Now())
+	d.IncBy(1, time.Now().UTC())
 	lv := v.findLabelValueOrNil([]string{})
 	if lv == nil {
 		t.Errorf("couldn't find labelvalue")
@@ -39,21 +40,21 @@ func TestScalarMetric(t *testing.T) {
 func TestDimensionedMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, "foo")
 	d, _ := v.GetDatum("a")
-	d.IncBy(1, time.Now())
+	d.IncBy(1, time.Now().UTC())
 	if v.findLabelValueOrNil([]string{"a"}).Value.Value != 1 {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar")
 	d, _ = v.GetDatum("a", "b")
-	d.IncBy(1, time.Now())
+	d.IncBy(1, time.Now().UTC())
 	if v.findLabelValueOrNil([]string{"a", "b"}).Value.Value != 1 {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar", "quux")
 	d, _ = v.GetDatum("a", "b", "c")
-	d.IncBy(1, time.Now())
+	d.IncBy(1, time.Now().UTC())
 	if v.findLabelValueOrNil([]string{"a", "b", "c"}).Value.Value != 1 {
 		t.Errorf("fail")
 	}
@@ -77,7 +78,7 @@ func TestEmitLabelSet(t *testing.T) {
 	m := NewMetric("test", "prog", Gauge, "foo", "bar", "quux")
 	c := make(chan *LabelSet)
 
-	ts := time.Now()
+	ts := time.Now().UTC()
 
 	var expectedLabels []map[string]string
 	for _, tc := range labelSetTests {
@@ -93,22 +94,9 @@ func TestEmitLabelSet(t *testing.T) {
 		labels = append(labels, ls.Labels)
 	}
 
-	// Equivalence for slices is not defined under ==, and DeepEqual does an
-	// elementwise comparison.  We can't guarantee that the labels are in
-	// order, so do the N^2 comparision.
-	if len(labels) != len(expectedLabels) {
-		t.Errorf("Label length doesn't match\n\texpected %v\n\treceived %v\n", expectedLabels, labels)
-	}
-
-Loop:
-	for i := range expectedLabels {
-		for j := range labels {
-			if reflect.DeepEqual(expectedLabels[i], labels[j]) {
-				continue Loop
-			}
-		}
-		t.Errorf("Labels don't match: couldn't find %v in labels\n\texpected %v\n\treceived %v\n", expectedLabels[i], expectedLabels, labels)
-
+	diff := pretty.Compare(labels, expectedLabels)
+	if len(diff) > 0 {
+		t.Errorf("Labels don't match:\n%s", diff)
 	}
 }
 
@@ -140,7 +128,7 @@ func TestFindLabelValueOrNil(t *testing.T) {
 func TestMetricJSONRoundTrip(t *testing.T) {
 	m := NewMetric("test", "prog", Gauge, "foo", "bar", "quux")
 	d, _ := m.GetDatum("a", "2", "d")
-	d.Set(1, time.Now())
+	d.Set(1, time.Now().UTC())
 
 	j, e := json.Marshal(m)
 	if e != nil {
@@ -153,7 +141,9 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 		t.Errorf("json.Unmarshal failed: %s\n", e)
 	}
 
-	if !reflect.DeepEqual(m, r) {
-		t.Errorf("Round trip wasn't stable.\n\texpected: %v\n\treceived: %v\n", m, r)
+	// pretty.Compare uses the opposite order to xUnit for comparisons.
+	diff := pretty.Compare(r, m)
+	if len(diff) > 0 {
+		t.Errorf("Round trip wasn't stable:\n%s", diff)
 	}
 }

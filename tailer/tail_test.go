@@ -5,13 +5,13 @@ package tailer
 
 import (
 	"os"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/watcher"
+	"github.com/kylelemons/godebug/pretty"
 
 	"github.com/jaqx0r/afero"
 )
@@ -88,8 +88,9 @@ func TestHandleLogUpdate(t *testing.T) {
 	<-done
 
 	expected := []string{"a", "b", "c", "d"}
-	if !reflect.DeepEqual(expected, result) {
-		t.Errorf("result didn't match:\n\texpected: %v\n\treceived: %v", expected, result)
+	diff := pretty.Compare(result, expected)
+	if len(diff) > 0 {
+		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
 
@@ -159,8 +160,9 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	<-done
 
 	expected := []string{"ab"}
-	if !reflect.DeepEqual(expected, result) {
-		t.Errorf("result didn't match:\n\texpected: %v\n\treceived: %v", expected, result)
+	diff := pretty.Compare(result, expected)
+	if len(diff) > 0 {
+		t.Errorf("result didn't match:\n%s", diff)
 	}
 
 }

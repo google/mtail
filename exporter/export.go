@@ -185,7 +185,8 @@ func metricToStatsd(m *metrics.Metric, l *metrics.LabelSet) string {
 
 // WriteMetrics writes metrics to each of the configured services.
 func (e *Exporter) WriteMetrics() {
-	if metrics.MetricUpdateTime.Sub(lastMetricPushTime) <= 0 {
+	lastUpdateTime := metrics.MetricUpdateTime.Load().(time.Time)
+	if lastUpdateTime.Sub(lastMetricPushTime) <= 0 {
 		return
 	}
 	if *collectdSocketPath != "" {
@@ -206,7 +207,7 @@ func (e *Exporter) WriteMetrics() {
 			glog.Infof("statsd error: %s", err)
 		}
 	}
-	lastMetricPushTime = time.Now()
+	lastMetricPushTime = time.Now().UTC()
 }
 
 // StartMetricPush pushes metrics to the configured services each interval.

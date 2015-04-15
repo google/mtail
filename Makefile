@@ -48,15 +48,15 @@ emgen/emgen: emgen/emgen.go
 
 .PHONY: test
 test: $(GOFILES) $(GOTESTFILES)
-	go test -v ./...
+	go test -v -timeout 60s ./...
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOTESTFILES)
-	go test -v -race ./...
+	go test -v -timeout 5m -race ./...
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES)
-	go test -v -test.short ./...
+	go test -v -timeout 10s -test.short ./...
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES)
@@ -65,6 +65,21 @@ bench: $(GOFILES) $(GOTESTFILES)
 .PHONY: recbench
 recbench: $(GOFILES) $(GOTESTFILES)
 	go test -bench=. -run=XXX --record_benchmark ./...
+
+.PHONY: coverage
+coverage: gover.coverprofile
+gover.coverprofile: $(GOFILES) $(GOTESTFILES)
+	for package in exporter metrics tailer vm watcher; do\
+		go test -coverprofile=$$package.coverprofile ./$$package;\
+    done
+	go test -coverprofile=main.coverprofile .
+	gover
+
+.PHONY: covrep
+covrep: coverage.html
+coverage.html: gover.coverprofile
+	go tool cover -html=$< -o $@
+	xdg-open $@
 
 .PHONY: testall
 testall: testrace bench

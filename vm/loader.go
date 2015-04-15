@@ -12,9 +12,12 @@ package vm
 import (
 	"expvar"
 	"flag"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/golang/glog"
@@ -80,23 +83,37 @@ func (l *Loader) LoadProg(programPath string) (errors int) {
 		return
 	}
 	defer f.Close()
-	v, errs := Compile(name, f, l.ms)
+	l.CompileAndRun(name, f)
+	return
+}
+
+// CompileAndRun compiles a program read from the input, starting execution if
+// it succeeds.  If an existing virtual machine of the same name already
+// exists, the previous virtual machine is terminated and the new loaded over
+// it.  If the new program fails to compile, any existing virtual machine with
+// the same name remains running.
+func (l *Loader) CompileAndRun(name string, input io.Reader) error {
+	v, errs := Compile(name, input, l.ms)
 	if errs != nil {
-		errors = 1
-		for _, e := range errs {
-			glog.Info(e)
-		}
 		ProgLoadErrors.Add(name, 1)
-		return
+		return fmt.Errorf("compile failed for %s: %s", name, strings.Join(errs, "\n"))
 	}
 	if *DumpBytecode {
 		v.DumpByteCode(name)
 	}
-
 	ProgLoads.Add(name, 1)
-	glog.Infof("Loaded %s", name)
+	glog.Infof("Loaded program %s", name)
 
-	return
+	l.handleMu.Lock()
+	defer l.handleMu.Unlock()
+	// Stop any previous VM.
+	if handle, ok := l.handles[name]; ok {
+		close(handle.lines)
+		<-handle.done
+	}
+	l.handles[name] = &vmHandle{make(chan string), make(chan struct{})}
+	go v.Run(l.handles[name].lines, l.handles[name].done)
+	return nil
 }
 
 // Loader handles the lifecycle of programs and virtual machines, by watching
@@ -108,8 +125,11 @@ type Loader struct {
 	fs afero.Fs        // filesystem interface
 	ms *metrics.Store  // pointer to store to pass to compiler
 
-	linesLock sync.Mutex               // guards accesses to lines
-	lines     map[string]chan<- string // map of program names to input channels
+	handles  map[string]*vmHandle // map of program names to virtual machines
+	handleMu sync.RWMutex         // guards accesses to handles
+
+	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
+	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 }
 
 // NewLoader creates a new program loader.  It takes a filesystem watcher
@@ -122,59 +142,81 @@ func NewLoader(w watcher.Watcher, ms *metrics.Store, lines <-chan string) *Loade
 // newLoaderWithFs creates a new program loader with a supplied filesystem
 // implementation, for testing.
 func newLoaderWithFs(w watcher.Watcher, ms *metrics.Store, lines <-chan string, fs afero.Fs) *Loader {
-	l := &Loader{w: w,
-		ms: ms,
-		fs: fs}
+	l := &Loader{
+		w:           w,
+		ms:          ms,
+		fs:          fs,
+		handles:     make(map[string]*vmHandle),
+		watcherDone: make(chan struct{}),
+		VMsDone:     make(chan struct{})}
 
-	go l.handleEvents()
-	go l.handleLines(lines)
+	go l.processEvents()
+	go l.processLines(lines)
 	return l
 }
 
-// handleEvents manages program lifecycle triggered by events from the
+type vmHandle struct {
+	lines chan string
+	done  chan struct{}
+}
+
+// processEvents manages program lifecycle triggered by events from the
 // filesystem watcher.
-func (l *Loader) handleEvents() {
+func (l *Loader) processEvents() {
+	defer close(l.watcherDone)
 	for event := range l.w.Events() {
 		switch event := event.(type) {
 		case watcher.DeleteEvent:
-			glog.Infof("delete prog")
-			f := filepath.Base(event.Pathname)
-			l.linesLock.Lock()
-			if l.lines[f] != nil {
-				close(l.lines[f])
-				delete(l.lines, f)
-			}
-			if err := l.w.Remove(event.Pathname); err != nil {
-				glog.Info("Remove watch failed: ", err)
-			}
+			glog.Infof("delete prog %s", event.Pathname)
+			l.UnloadProgram(event.Pathname)
 		case watcher.UpdateEvent:
+			glog.Infof("update prog %s", event.Pathname)
 			l.LoadProg(event.Pathname)
 		case watcher.CreateEvent:
 			l.w.Add(event.Pathname)
 		default:
-			glog.Info("Unexected event type %+#v", event)
+			glog.V(1).Infof("Unexected event type %+#v", event)
 		}
 	}
 }
 
-// handleLines provides fanout of the input log lines to each virtual machine
+// processLines provides fanout of the input log lines to each virtual machine
 // running.  Upon close of the incoming lines channel, it also communicates
 // shutdown to the target VMs via channel close.
-func (l *Loader) handleLines(lines <-chan string) {
+func (l *Loader) processLines(lines <-chan string) {
 	for line := range lines {
 		LineCount.Add(1)
-		l.linesLock.Lock()
-		for prog := range l.lines {
-			l.lines[prog] <- line
+		l.handleMu.RLock()
+		for prog := range l.handles {
+			l.handles[prog].lines <- line
 		}
-		l.linesLock.Unlock()
+		l.handleMu.RUnlock()
 	}
 	glog.Info("Shutting down loader.")
 	l.w.Close()
-	l.linesLock.Lock()
-	for prog := range l.lines {
-		close(l.lines[prog])
-		delete(l.lines, prog)
+	<-l.watcherDone
+	l.handleMu.Lock()
+	defer l.handleMu.Unlock()
+	for prog := range l.handles {
+		close(l.handles[prog].lines)
+		<-l.handles[prog].done
+		delete(l.handles, prog)
 	}
-	l.linesLock.Unlock()
+	close(l.VMsDone)
+}
+
+// UnloadProgram removes the named program from the watcher to prevent future
+// updates, and terminates any currently running VM goroutine.
+func (l *Loader) UnloadProgram(pathname string) {
+	if err := l.w.Remove(pathname); err != nil {
+		glog.Infof("Remove watch on %s failed: %s", pathname, err)
+	}
+	name := filepath.Base(pathname)
+	l.handleMu.Lock()
+	defer l.handleMu.Unlock()
+	if handle, ok := l.handles[name]; ok {
+		close(handle.lines)
+		<-handle.done
+		delete(l.handles, name)
+	}
 }

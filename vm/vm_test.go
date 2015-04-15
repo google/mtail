@@ -4,12 +4,12 @@
 package vm
 
 import (
-	"reflect"
 	"regexp"
 	"testing"
 	"time"
 
 	"github.com/google/mtail/metrics"
+	"github.com/kylelemons/godebug/pretty"
 )
 
 var instructions = []struct {
@@ -172,7 +172,8 @@ var instructions = []struct {
 		thread{pc: 0, matches: map[int][]string{}}},
 }
 
-// TestInstrs tests that each instruction behaves as expected through one execution cycle.
+// TestInstrs tests that each instruction behaves as expected through one
+// instruction cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
 		var m []*metrics.Metric
@@ -190,12 +191,15 @@ func TestInstrs(t *testing.T) {
 		v.input = "aaaab"
 		v.execute(v.t, tc.i)
 
-		if !reflect.DeepEqual(tc.expectedStack, v.t.stack) {
-			t.Errorf("%s: unexpected virtual machine stack state.\n\texpected: %v\n\treceived: %v", tc.name, tc.expectedStack, v.t.stack)
+		diff := pretty.Compare(v.t.stack, tc.expectedStack)
+		if len(diff) > 0 {
+			t.Errorf("%s: unexpected virtual machine stack state.\n%s", tc.name, diff)
 		}
+		// patch in the thread stack because otherwise the test table is huge
 		tc.expectedThread.stack = tc.expectedStack
-		if !reflect.DeepEqual(&tc.expectedThread, v.t) {
-			t.Errorf("%s: unexpected virtual machine thread state.\n\texpected: %v\n\treceived: %v", tc.name, tc.expectedThread, v.t)
+
+		if diff = pretty.Compare(v.t, &tc.expectedThread); len(diff) > 0 {
+			t.Errorf("%s: unexpected virtual machine thread state.\n%s", tc.name, diff)
 		}
 	}
 }

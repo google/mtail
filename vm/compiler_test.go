@@ -5,11 +5,11 @@ package vm
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/google/mtail/metrics"
+	"github.com/kylelemons/godebug/pretty"
 )
 
 // debug print for instructions
@@ -221,9 +221,9 @@ func TestCompile(t *testing.T) {
 			t.Errorf("Compile errors: %q", err)
 			continue
 		}
-		if !reflect.DeepEqual(tc.prog, v.prog) {
-			t.Errorf("%s: VM prog doesn't match.\n\texpected: %v\n\treceived: %v",
-				tc.name, tc.prog, v.prog)
+		diff := pretty.Compare(v.prog, tc.prog)
+		if len(diff) > 0 {
+			t.Errorf("%s: VM prog doesn't match.\n%s", tc.name, diff)
 		}
 	}
 }

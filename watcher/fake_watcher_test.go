@@ -4,7 +4,6 @@
 package watcher
 
 import (
-	"reflect"
 	"sync"
 	"testing"
 )
@@ -14,14 +13,12 @@ func TestFakeWatcher(t *testing.T) {
 	defer w.Close()
 
 	w.Add("/tmp")
-	expectedWatches := []string{"/tmp"}
-	if !reflect.DeepEqual(expectedWatches, w.Watches()) {
+	if _, ok := w.watches["/tmp"]; !ok {
 		t.Errorf("Not watching /tmp, w contains: %+#v", w.watches)
 	}
 
 	w.Remove("/tmp")
-	expectedWatches = []string{}
-	if !reflect.DeepEqual(expectedWatches, w.Watches()) {
+	if _, ok := w.watches["/tmp"]; ok {
 		t.Errorf("Still watching /tmp, w contains: %+#v", w.watches)
 	}
 

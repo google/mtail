@@ -170,8 +170,9 @@ func (t *thread) PopInt() (int64, error) {
 	return 0, fmt.Errorf("unexpected numeric type %T %q", val, val)
 }
 
-// Execute acts on the current instruction, and returns a boolean indicating
-// if the current thread should terminate.
+// Execute performs an instruction cycle in the VM -- acting on the current
+// instruction, and returns a boolean indicating if the current thread should
+// terminate.
 func (v *VM) execute(t *thread, i instr) {
 	switch i.op {
 	case match:
@@ -281,6 +282,7 @@ func (v *VM) execute(t *thread, i instr) {
 			}
 			// Hack for yearless syslog.
 			if tm.Year() == 0 && *SyslogUseCurrentYear {
+				// No .UTC() as we use local time to match the local log.
 				tm = tm.AddDate(time.Now().Year(), 0, 0)
 			}
 			v.timeMemos[ts] = tm
@@ -373,10 +375,10 @@ func (v *VM) execute(t *thread, i instr) {
 	}
 }
 
-// handleLine fetches and executes each instruction in the program on the input
-// string until termination. It returns a boolean indicating a successful
-// action was taken.
-func (v *VM) handleLine(input string) {
+// processLine handles the incoming lines from the input channel, by running a
+// fetch-execute cycle on the VM bytecode with the line as input to the
+// program, until termination.
+func (v *VM) processLine(input string) {
 	t := new(thread)
 	v.t = t
 	v.input = input
@@ -395,9 +397,14 @@ func (v *VM) handleLine(input string) {
 	}
 }
 
-func (v *VM) Run(lines <-chan string) {
+// Run executes the virtual machine on each line of input received.  When the
+// input closes, it signals to the loader that it has terminated by closing the
+// shutdown channel.
+func (v *VM) Run(lines <-chan string, shutdown chan<- struct{}) {
+	glog.Infof("Starting program %s", v.name)
+	defer close(shutdown)
 	for line := range lines {
-		v.handleLine(line)
+		v.processLine(line)
 	}
 	glog.Infof("Stopping program %s", v.name)
 }

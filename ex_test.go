@@ -9,16 +9,16 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/vm"
+	"github.com/google/mtail/watcher"
 	"github.com/kylelemons/godebug/pretty"
 )
 
@@ -48,22 +48,23 @@ var exampleProgramTests = []struct {
 	},
 }
 
-func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) error {
+func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) (*vm.Loader, error) {
 	p, err := os.Open(programfile)
 	if err != nil {
-		return fmt.Errorf("%s: could not open program file: %s", programfile, err)
+		return nil, fmt.Errorf("%s: could not open program file: %s", programfile, err)
 	}
 	defer p.Close()
 
-	// MtailDebug = 999 // All the debugging.
-
-	v, errs := vm.Compile(programfile, p, ms)
-	if errs != nil {
-		return fmt.Errorf("%s: compile failed: %s", programfile, strings.Join(errs, "\n"))
+	name := filepath.Base(programfile)
+	w := watcher.NewFakeWatcher()
+	l := vm.NewLoader(w, ms, lines)
+	if l == nil {
+		return nil, fmt.Errorf("couldn't create program loader")
 	}
-
-	go v.Run(lines)
-	return nil
+	if pErr := l.CompileAndRun(name, p); pErr != nil {
+		return nil, fmt.Errorf("couldn't compile program: %s: %s", programfile, pErr)
+	}
+	return l, nil
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -73,14 +74,13 @@ func TestExamplePrograms(t *testing.T) {
 	*vm.SyslogUseCurrentYear = false
 	for _, tc := range exampleProgramTests {
 		mtail := newMtail()
-		err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines)
+		l, err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines)
 		if err != nil {
-			t.Errorf("%s", err)
-			continue
+			t.Fatalf("Compile failed: %s", err)
 		}
+		mtail.l = l
 
-		err = mtail.OneShot(tc.logfile, mtail.lines)
-		if err != nil {
+		if err := mtail.OneShot(tc.logfile, mtail.lines); err != nil {
 			t.Errorf("Oneshot failed for %s: %s", tc.logfile, err)
 			continue
 		}
@@ -116,11 +116,12 @@ func TestExamplePrograms(t *testing.T) {
 			t.Errorf("%s: could not decode json: %s", tc.jsonfile, err)
 			continue
 		}
+		mtail.Close()
 		sort.Sort(metrics.Metrics(expectedMetrics))
-		glog.Infof("expected: %s", expectedMetrics)
+		mtail.store.Lock()
 		sort.Sort(metrics.Metrics(mtail.store.Metrics))
-		glog.Infof("received: %s", mtail.store.Metrics)
-		diff := pretty.Compare(expectedMetrics, mtail.store.Metrics)
+		diff := pretty.Compare(mtail.store.Metrics, expectedMetrics)
+		mtail.store.Unlock()
 		if len(diff) > 0 {
 			t.Errorf("%s: metrics don't match:\n%s\n", tc.programfile, diff)
 		}
@@ -136,11 +137,11 @@ func BenchmarkExamplePrograms(b *testing.B) {
 	for _, tc := range exampleProgramTests {
 		mtail := newMtail()
 		spareLines := make(chan string)
-		err := CompileAndLoad(tc.programfile, &metrics.Store{}, spareLines)
+		l, err := CompileAndLoad(tc.programfile, &metrics.Store{}, spareLines)
 		if err != nil {
-			b.Errorf("%s", err)
-			continue
+			b.Errorf("Compile failed: %s", err)
 		}
+		mtail.l = l
 		r := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
