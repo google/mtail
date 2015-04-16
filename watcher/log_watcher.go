@@ -21,14 +21,14 @@ type LogWatcher struct {
 }
 
 // NewLogWatcher returns a new LogWatcher, or returns an error.
-func NewLogWatcher() (w *LogWatcher, err error) {
+func NewLogWatcher() (*LogWatcher, error) {
 	f, err := fsnotify.NewWatcher()
-	if err != nil {
-		return
+	if err == nil {
+		w := &LogWatcher{f, make(chan Event)}
+		go w.run()
+		return w, nil
 	}
-	w = &LogWatcher{f, make(chan Event)}
-	go w.run()
-	return
+	return nil, err
 }
 
 // Events returns a readable channel of events from this watcher.

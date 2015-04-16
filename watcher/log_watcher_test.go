@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -86,5 +87,25 @@ func TestLogWatcher(t *testing.T) {
 		}
 	case <-time.After(10 * time.Millisecond):
 		t.Errorf("didn't receive delete message")
+	}
+}
+
+func TestNewLogWatcherError(t *testing.T) {
+	var rLimit syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
+		t.Fatalf("coulnd't get rlimit: %s", err)
+	}
+	var zero syscall.Rlimit = rLimit
+	zero.Cur = 0
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &zero); err != nil {
+		t.Fatalf("couldn't set rlimit: %s", err)
+	}
+	_, err := NewLogWatcher()
+	if err == nil {
+		t.Errorf("didn't fail as expected")
+	}
+	//t.Logf("expected error: %s", err)
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
+		t.Fatalf("couldn't reset rlimit: %s", err)
 	}
 }
