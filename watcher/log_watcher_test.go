@@ -4,12 +4,16 @@
 package watcher
 
 import (
+	"errors"
+	"expvar"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/kylelemons/godebug/pretty"
 )
 
 func TestLogWatcher(t *testing.T) {
@@ -152,5 +156,18 @@ func TestLogWatcherAddError(t *testing.T) {
 	//t.Logf("error: %s", err)
 	if err := os.Chmod(filename, 0777); err != nil {
 		t.Fatalf("coulnd't reset file perms: %s", err)
+	}
+}
+
+func TestWatcherErrors(t *testing.T) {
+	w, err := NewLogWatcher()
+	if err != nil {
+		t.Fatalf("couldn't create a watcher")
+	}
+	w.Errors <- errors.New("test error")
+	w.Close()
+	diff := pretty.Compare(expvar.Get("log_watcher_error_count").String(), "1")
+	if len(diff) > 0 {
+		t.Errorf("log watcher error count doens't match:\n%s", diff)
 	}
 }

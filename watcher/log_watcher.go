@@ -12,6 +12,7 @@ import (
 
 var (
 	eventCount = expvar.NewMap("log_watcher_event_count")
+	errorCount = expvar.NewInt("log_watcher_error_count")
 )
 
 // LogWatcher implements a Watcher for watching real filesystems.
@@ -39,6 +40,7 @@ func (w *LogWatcher) run() {
 	go func() {
 		for err := range w.Watcher.Errors {
 			glog.Errorf("fsnotify error: %s\n", err)
+			errorCount.Add(1)
 		}
 	}()
 	for e := range w.Watcher.Events {
