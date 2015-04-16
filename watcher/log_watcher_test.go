@@ -90,7 +90,12 @@ func TestLogWatcher(t *testing.T) {
 	}
 }
 
+// This test may be OS specific; possibly break it out to a file with build tags.
 func TestNewLogWatcherError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping log watcher test in short mode")
+	}
+
 	var rLimit syscall.Rlimit
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
 		t.Fatalf("coulnd't get rlimit: %s", err)
@@ -107,5 +112,45 @@ func TestNewLogWatcherError(t *testing.T) {
 	//t.Logf("expected error: %s", err)
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
 		t.Fatalf("couldn't reset rlimit: %s", err)
+	}
+}
+
+func TestLogWatcherAddError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping log watcher test in short mode")
+	}
+
+	workdir, err := ioutil.TempDir("", "log_watcher_test")
+	if err != nil {
+		t.Fatalf("could not create temporary working directory: %s", err)
+	}
+
+	defer func() {
+		err := os.RemoveAll(workdir)
+		if err != nil {
+			t.Fatalf("could not remove temp dir %s: %s:", workdir, err)
+		}
+	}()
+
+	w, err := NewLogWatcher()
+	if err != nil {
+		t.Fatalf("couldn't create a watcher: %s\n", err)
+	}
+	defer w.Close()
+
+	filename := filepath.Join(workdir, "test")
+	if _, err := os.Create(filename); err != nil {
+		t.Fatalf("couldn't create file: %s", err)
+	}
+	if err := os.Chmod(filename, 0); err != nil {
+		t.Fatalf("couldn't chmod file: %s", err)
+	}
+	err = w.Add(filename)
+	if err == nil {
+		t.Errorf("didn't fail to add file")
+	}
+	//t.Logf("error: %s", err)
+	if err := os.Chmod(filename, 0777); err != nil {
+		t.Fatalf("coulnd't reset file perms: %s", err)
 	}
 }
