@@ -3,7 +3,11 @@
 
 GOFILES=\
 	exporter/export.go\
+	exporter/export_collectd.go\
+	exporter/export_graphite.go\
+	exporter/export_json.go\
 	exporter/export_prometheus.go\
+	exporter/export_statsd.go\
 	metrics/metric.go\
 	mtail.go\
 	tailer/tail.go\

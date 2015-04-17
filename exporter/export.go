@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"strings"
 	"time"
@@ -33,23 +32,9 @@ var (
 )
 
 var (
-	// Exported variables
-	collectdExportTotal   = expvar.NewInt("collectd_export_total")
-	collectdExportSuccess = expvar.NewInt("collectd_export_success")
-
-	graphiteExportTotal   = expvar.NewInt("graphite_export_total")
-	graphiteExportSuccess = expvar.NewInt("graphite_export_success")
-
-	statsdExportTotal   = expvar.NewInt("statsd_export_total")
-	statsdExportSuccess = expvar.NewInt("statsd_export_success")
-
 	// Internal state
 	hostname           string
 	lastMetricPushTime time.Time
-)
-
-const (
-	collectdFormat = "PUTVAL \"%s/mtail-%s/%s-%s\" interval=%d %d:%d\n"
 )
 
 // Exporter manages the export of metrics to passive and active collectors.
@@ -62,17 +47,8 @@ func New(store *metrics.Store) *Exporter {
 	return &Exporter{store}
 }
 
-// CollectdWriteMetrics writes metrics to a collectd unix socket plugin.
-func (e *Exporter) CollectdWriteMetrics(socketpath string) error {
-	c, err := net.Dial("unix", socketpath)
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-
-	return e.writeSocketMetrics(c, metricToCollectd, collectdExportTotal, collectdExportSuccess)
-}
-
+// formatLabels converts a metric name and key-value map of labels to a single
+// string for exporting to the correct output format for each export target.
 func formatLabels(name string, m map[string]string, ksep, sep string) string {
 	r := name
 	if len(m) > 0 {
@@ -83,19 +59,6 @@ func formatLabels(name string, m map[string]string, ksep, sep string) string {
 		return r + sep + strings.Join(s, sep)
 	}
 	return r
-}
-
-func metricToCollectd(m *metrics.Metric, l *metrics.LabelSet) string {
-	m.RLock()
-	defer m.RUnlock()
-	return fmt.Sprintf(collectdFormat,
-		hostname,
-		m.Program,
-		strings.ToLower(m.Kind.String()),
-		formatLabels(m.Name, l.Labels, "-", "-"),
-		*pushInterval,
-		l.Datum.Time.Unix(),
-		l.Datum.Get())
 }
 
 // Format a LabelSet into a string to be written to one of the timeseries sockets
@@ -126,47 +89,6 @@ func (e *Exporter) writeSocketMetrics(c io.ReadWriter, f formatter, exportTotal 
 		}
 	}
 	return nil
-}
-
-// GraphiteWriteMetrics writes metrics to a graphite instance.
-func (e *Exporter) GraphiteWriteMetrics(hostport string) error {
-	c, err := net.Dial("tcp", hostport)
-	if err != nil {
-		return fmt.Errorf("dial error: %s\n", err)
-	}
-	defer c.Close()
-
-	return e.writeSocketMetrics(c, metricToGraphite, graphiteExportTotal, graphiteExportSuccess)
-}
-
-func metricToGraphite(m *metrics.Metric, l *metrics.LabelSet) string {
-	m.RLock()
-	defer m.RUnlock()
-	return fmt.Sprintf("%s.%s %v %v\n",
-		m.Program,
-		formatLabels(m.Name, l.Labels, ".", "."),
-		l.Datum.Get(),
-		l.Datum.Time.Unix())
-}
-
-// StatsdWriteMetrics writes metrics to a statsd udp collector.
-func (e *Exporter) StatsdWriteMetrics(hostport string) error {
-	c, err := net.Dial("udp", hostport)
-	if err != nil {
-		return fmt.Errorf("dial error: %s\n", err)
-	}
-	defer c.Close()
-	return e.writeSocketMetrics(c, metricToStatsd, statsdExportTotal, statsdExportSuccess)
-}
-
-func metricToStatsd(m *metrics.Metric, l *metrics.LabelSet) string {
-	// TODO(jaq): handle units better, send timing as |ms
-	m.RLock()
-	defer m.RUnlock()
-	return fmt.Sprintf("%s.%s:%d|c",
-		m.Program,
-		formatLabels(m.Name, l.Labels, ".", "."),
-		l.Datum.Get())
 }
 
 // WriteMetrics writes metrics to each of the configured services.
