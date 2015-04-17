@@ -77,9 +77,9 @@ gover.coverprofile: $(GOFILES) $(GOTESTFILES)
 
 .PHONY: covrep
 covrep: coverage.html
+	xdg-open $<
 coverage.html: gover.coverprofile
 	go tool cover -html=$< -o $@
-	xdg-open $@
 
 .PHONY: testall
 testall: testrace bench
