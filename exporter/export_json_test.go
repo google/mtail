@@ -15,20 +15,20 @@ import (
 
 var handleJSONTests = []struct {
 	name     string
-	metrics  []metrics.Metric
+	metrics  []*metrics.Metric
 	expected string
 }{
 	{"empty",
-		[]metrics.Metric{},
+		[]*metrics.Metric{},
 		"null",
 	},
 	{"single",
-		[]metrics.Metric{
-			metrics.Metric{
+		[]*metrics.Metric{
+			&metrics.Metric{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{[]string{}, &metrics.Datum{Value: 1}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.Datum{Value: 1}}},
 			},
 		},
 		`[
@@ -48,13 +48,13 @@ var handleJSONTests = []struct {
 ]`,
 	},
 	{"dimensioned",
-		[]metrics.Metric{
-			metrics.Metric{
+		[]*metrics.Metric{
+			&metrics.Metric{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a", "b"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{[]string{"1", "2"}, &metrics.Datum{Value: 1}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: &metrics.Datum{Value: 1}}},
 			},
 		},
 		`[
@@ -87,13 +87,13 @@ func TestHandleJSON(t *testing.T) {
 	for _, tc := range handleJSONTests {
 		ms := metrics.Store{}
 		for _, metric := range tc.metrics {
-			ms.Add(&metric)
+			ms.Add(metric)
 		}
 		e := New(&ms)
 		response := httptest.NewRecorder()
 		e.HandleJSON(response, &http.Request{})
 		if response.Code != 200 {
-			t.Errorf("test case %s: response code not 200: %s", tc.name, response.Code)
+			t.Errorf("test case %s: response code not 200: %d", tc.name, response.Code)
 		}
 		b, err := ioutil.ReadAll(response.Body)
 		if err != nil {

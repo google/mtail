@@ -74,30 +74,30 @@ var testProcessEvents = []struct {
 }{
 	{"load",
 		[]watcher.Event{
-			watcher.CreateEvent{"foo.mtail"},
-			watcher.UpdateEvent{"foo.mtail"}},
+			watcher.CreateEvent{Pathname: "foo.mtail"},
+			watcher.UpdateEvent{Pathname: "foo.mtail"}},
 		[]string{"foo.mtail"}},
 	{"unload",
 		[]watcher.Event{
-			watcher.CreateEvent{"foo.mtail"},
-			watcher.UpdateEvent{"foo.mtail"},
-			watcher.DeleteEvent{"foo.mtail"}},
+			watcher.CreateEvent{Pathname: "foo.mtail"},
+			watcher.UpdateEvent{Pathname: "foo.mtail"},
+			watcher.DeleteEvent{Pathname: "foo.mtail"}},
 		[]string{}},
 	{"reload",
 		[]watcher.Event{
-			watcher.CreateEvent{"foo.mtail"},
-			watcher.UpdateEvent{"foo.mtail"},
-			watcher.UpdateEvent{"foo.mtail"}},
+			watcher.CreateEvent{Pathname: "foo.mtail"},
+			watcher.UpdateEvent{Pathname: "foo.mtail"},
+			watcher.UpdateEvent{Pathname: "foo.mtail"}},
 		[]string{"foo.mtail"}},
 	{"bad extension",
 		[]watcher.Event{
-			watcher.CreateEvent{"foo.mtail.dpkg-dist"},
-			watcher.UpdateEvent{"foo.mtail.dpkg-dist"}},
+			watcher.CreateEvent{Pathname: "foo.mtail.dpkg-dist"},
+			watcher.UpdateEvent{Pathname: "foo.mtail.dpkg-dist"}},
 		[]string{}},
 	{"not exist",
 		[]watcher.Event{
-			watcher.CreateEvent{"notexist.mtail"},
-			watcher.UpdateEvent{"notexist.mtail"}},
+			watcher.CreateEvent{Pathname: "notexist.mtail"},
+			watcher.UpdateEvent{Pathname: "notexist.mtail"}},
 		[]string{}},
 }
 
