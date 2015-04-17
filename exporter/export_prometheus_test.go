@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/mtail/metrics"
 	"github.com/kylelemons/godebug/pretty"
@@ -28,11 +29,10 @@ var handlePrometheusTests = []struct {
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.Datum{Value: 1}}},
-			},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.Datum{Value: 1, Time: time.Date(2014, time.April, 16, 216, 35, 0, 0, time.FixedZone("AEST", +1000))}}}},
 		},
 		`# TYPE foo counter
-foo{prog="test",instance="gunstar"} 1 -6795364578871
+foo{prog="test",instance="gunstar"} 1 1398385100000
 `,
 	},
 	{"dimensioned",
@@ -42,11 +42,11 @@ foo{prog="test",instance="gunstar"} 1 -6795364578871
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a", "b"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: &metrics.Datum{Value: 1}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: &metrics.Datum{Value: 1, Time: time.Date(2014, time.April, 16, 216, 35, 0, 0, time.FixedZone("AEST", +1000))}}},
 			},
 		},
 		`# TYPE foo counter
-foo{a="1",b="2",prog="test",instance="gunstar"} 1 -6795364578871
+foo{a="1",b="2",prog="test",instance="gunstar"} 1 1398385100000
 `,
 	},
 }
