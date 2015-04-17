@@ -27,7 +27,7 @@ func (e *Exporter) GraphiteWriteMetrics(hostport string) error {
 	return e.writeSocketMetrics(c, metricToGraphite, graphiteExportTotal, graphiteExportSuccess)
 }
 
-func metricToGraphite(m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToGraphite(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
 	m.RLock()
 	defer m.RUnlock()
 	return fmt.Sprintf("%s.%s %v %v\n",

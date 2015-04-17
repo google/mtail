@@ -31,20 +31,20 @@ var (
 		"Interval between metric pushes, in seconds")
 )
 
-var (
-	// Internal global state
-	hostname string
-)
-
 // Exporter manages the export of metrics to passive and active collectors.
 type Exporter struct {
 	store              *metrics.Store
+	hostname           string
 	lastMetricPushTime time.Time
 }
 
 // New creates a new Exporter.
 func New(store *metrics.Store) *Exporter {
-	return &Exporter{store: store}
+	hostname, err := os.Hostname()
+	if err != nil {
+		glog.Fatalf("Error getting hostname: %s\n", err)
+	}
+	return &Exporter{store: store, hostname: hostname}
 }
 
 // formatLabels converts a metric name and key-value map of labels to a single
@@ -61,8 +61,9 @@ func formatLabels(name string, m map[string]string, ksep, sep string) string {
 	return r
 }
 
-// Format a LabelSet into a string to be written to one of the timeseries sockets
-type formatter func(*metrics.Metric, *metrics.LabelSet) string
+// Format a LabelSet into a string to be written to one of the timeseries
+// sockets.
+type formatter func(string, *metrics.Metric, *metrics.LabelSet) string
 
 func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
 	e.store.RLock()
@@ -85,7 +86,7 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 			}
 		}()
 		for l := range lc {
-			line := f(m, l)
+			line := f(e.hostname, m, l)
 			n, err := fmt.Fprint(c, line)
 			fmt.Printf("Sent %d bytes\n", n)
 			if err == nil {
@@ -137,13 +138,5 @@ func (e *Exporter) StartMetricPush() {
 				}
 			}
 		}()
-	}
-}
-
-func init() {
-	var err error
-	hostname, err = os.Hostname()
-	if err != nil {
-		glog.Fatalf("Error getting hostname: %s\n", err)
 	}
 }

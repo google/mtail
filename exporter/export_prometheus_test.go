@@ -58,6 +58,7 @@ func TestHandlePrometheus(t *testing.T) {
 			ms.Add(metric)
 		}
 		e := New(&ms)
+		e.hostname = "gunstar"
 		response := httptest.NewRecorder()
 		e.HandlePrometheusMetrics(response, &http.Request{})
 		if response.Code != 200 {

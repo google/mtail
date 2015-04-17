@@ -32,7 +32,7 @@ func (e *Exporter) CollectdWriteMetrics(socketpath string) error {
 	return e.writeSocketMetrics(c, metricToCollectd, collectdExportTotal, collectdExportSuccess)
 }
 
-func metricToCollectd(m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToCollectd(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
 	m.RLock()
 	defer m.RUnlock()
 	return fmt.Sprintf(collectdFormat,
