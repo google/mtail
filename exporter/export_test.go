@@ -4,9 +4,14 @@
 package exporter
 
 import (
+	"bytes"
+	"io/ioutil"
+	"net"
 	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,30 +39,46 @@ func TestMetricToCollectd(t *testing.T) {
 	if herr != nil {
 		t.Errorf("hostname error: %s", herr)
 	}
+	ms := metrics.Store{}
+	e := New(&ms)
 
 	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
 	d, _ := scalarMetric.GetDatum()
 	d.Set(37, ts)
-	r := FakeSocketWrite(metricToCollectd, scalarMetric)
+	ms.Add(scalarMetric)
+
+	r := newRecordingSocketListener(t)
+	if err := e.CollectdWriteMetrics(r.Addr); err != nil {
+		t.Errorf("Write failed: %s", err)
+	}
+
 	expected := []string{"PUTVAL \"" + hostname + "/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
-	diff := pretty.Compare(r, expected)
+	diff := pretty.Compare(r.Record.String(), strings.Join(expected, ""))
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
+	r.Close()
 
 	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "label")
 	d, _ = dimensionedMetric.GetDatum("quux")
 	d.Set(37, ts)
 	d, _ = dimensionedMetric.GetDatum("snuh")
 	d.Set(37, ts)
-	r = FakeSocketWrite(metricToCollectd, dimensionedMetric)
+	ms.ClearMetrics()
+	ms.Add(dimensionedMetric)
+
+	r = newRecordingSocketListener(t)
+	if err := e.CollectdWriteMetrics(r.Addr); err != nil {
+		t.Errorf("Write failed: %s", err)
+	}
 	expected = []string{
 		"PUTVAL \"" + hostname + "/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
 		"PUTVAL \"" + hostname + "/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
-	diff = pretty.Compare(r, expected)
+	diff = pretty.Compare(r.Record.String(), strings.Join(expected, ""))
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
+	r.Close()
 }
 
 func TestMetricToGraphite(t *testing.T) {
@@ -118,4 +139,70 @@ func TestMetricToStatsd(t *testing.T) {
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
+}
+
+type RecordingListener struct {
+	net.Listener
+	t      *testing.T
+	dir    string
+	Addr   string
+	Record bytes.Buffer
+}
+
+func newRecordingTCPListener(t *testing.T) *RecordingListener {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	addr := "127.0.0.1:0"
+	if err != nil {
+		l, err = net.Listen("tcp6", "[::1]:0")
+		addr = "[::1]:0"
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := &RecordingListener{Listener: l, t: t, Addr: addr}
+	go r.run()
+	return r
+}
+
+func newRecordingSocketListener(t *testing.T) *RecordingListener {
+	dir, err := ioutil.TempDir("", "export_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := filepath.Join(dir, "socket")
+	l, err := net.Listen("unix", addr)
+	if err != nil {
+		t.Fatalf("can't listen at %s: %s", addr, err)
+	}
+	r := &RecordingListener{Listener: l, dir: dir, t: t, Addr: addr}
+	go r.run()
+	return r
+}
+
+func (r *RecordingListener) run() {
+	conn, err := r.Accept()
+	if err != nil {
+		r.t.Logf("error accepting: %s", err)
+		return
+	}
+	go func(c net.Conn) {
+		defer c.Close()
+		r.t.Logf("reading")
+		n, err := r.Record.ReadFrom(c)
+		r.t.Logf("%d bytes read", n)
+		if err != nil {
+			r.t.Fatalf("error reading: %s", err)
+			return
+		}
+		r.t.Logf("%d bytes read", n)
+	}(conn)
+}
+
+func (r *RecordingListener) Close() {
+	if r.dir != "" {
+		if err := os.RemoveAll(r.Addr); err != nil {
+			r.t.Fatalf("failed to remove socket: %s")
+		}
+	}
+	r.Listener.Close()
 }

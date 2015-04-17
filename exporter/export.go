@@ -6,11 +6,11 @@
 package exporter
 
 import (
-	"bufio"
+	"bytes"
 	"expvar"
 	"flag"
 	"fmt"
-	"io"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -64,7 +64,7 @@ func formatLabels(name string, m map[string]string, ksep, sep string) string {
 // Format a LabelSet into a string to be written to one of the timeseries sockets
 type formatter func(*metrics.Metric, *metrics.LabelSet) string
 
-func (e *Exporter) writeSocketMetrics(c io.ReadWriter, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
+func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
 	e.store.RLock()
 	defer e.store.RUnlock()
 
@@ -74,14 +74,21 @@ func (e *Exporter) writeSocketMetrics(c io.ReadWriter, f formatter, exportTotal 
 		exportTotal.Add(1)
 		lc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lc)
+		// This goroutine sucks out any text returned from the remote end.
+		go func() {
+			var buf bytes.Buffer
+			for {
+				_, err := buf.ReadFrom(c)
+				if err == nil {
+					return
+				}
+			}
+		}()
 		for l := range lc {
 			line := f(m, l)
-			_, err := fmt.Fprint(c, line)
+			n, err := fmt.Fprint(c, line)
+			fmt.Printf("Sent %d bytes\n", n)
 			if err == nil {
-				_, err = bufio.NewReader(c).ReadString('\n')
-				if err != nil {
-					return fmt.Errorf("read error: %s\n", err)
-				}
 				exportSuccess.Add(1)
 			} else {
 				return fmt.Errorf("write error: %s\n", err)

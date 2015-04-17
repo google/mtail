@@ -16,3 +16,4 @@ foo.log
 /vm/vm.test
 /coverage.html
 *.coverprofile
+/exporter/exporter.test
