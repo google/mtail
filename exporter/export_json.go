@@ -5,9 +5,14 @@ package exporter
 
 import (
 	"encoding/json"
+	"expvar"
 	"net/http"
 
 	"github.com/golang/glog"
+)
+
+var (
+	exportJSONErrors = expvar.NewInt("exporter_json_errors")
 )
 
 // HandleJSON exports the metrics in JSON format via HTTP.
@@ -17,7 +22,11 @@ func (e *Exporter) HandleJSON(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.MarshalIndent(e.store.Metrics, "", "  ")
 	if err != nil {
+		exportJSONErrors.Add(1)
 		glog.Info("error marshalling metrics into json:", err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("content-type", "application/json")
 	w.Write(b)
 }
