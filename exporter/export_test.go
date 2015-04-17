@@ -4,7 +4,6 @@
 package exporter
 
 import (
-	"os"
 	"reflect"
 	"sort"
 	"testing"
@@ -19,7 +18,7 @@ func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
 	lc := make(chan *metrics.LabelSet)
 	go m.EmitLabelSets(lc)
 	for l := range lc {
-		ret = append(ret, f(m, l))
+		ret = append(ret, f("hostname", m, l))
 	}
 	sort.Strings(ret)
 	return ret
@@ -30,16 +29,12 @@ func TestMetricToCollectd(t *testing.T) {
 	if terr != nil {
 		t.Errorf("time parse error: %s", terr)
 	}
-	hostname, herr := os.Hostname()
-	if herr != nil {
-		t.Errorf("hostname error: %s", herr)
-	}
 
 	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
 	d, _ := scalarMetric.GetDatum()
 	d.Set(37, ts)
 	r := FakeSocketWrite(metricToCollectd, scalarMetric)
-	expected := []string{"PUTVAL \"" + hostname + "/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
+	expected := []string{"PUTVAL \"hostname/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
 	diff := pretty.Compare(r, expected)
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
@@ -52,8 +47,8 @@ func TestMetricToCollectd(t *testing.T) {
 	d.Set(37, ts)
 	r = FakeSocketWrite(metricToCollectd, dimensionedMetric)
 	expected = []string{
-		"PUTVAL \"" + hostname + "/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
-		"PUTVAL \"" + hostname + "/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
+		"PUTVAL \"hostname/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
+		"PUTVAL \"hostname/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
 	diff = pretty.Compare(r, expected)
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)

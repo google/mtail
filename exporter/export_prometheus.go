@@ -7,6 +7,7 @@ import (
 	"expvar"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/google/mtail/metrics"
@@ -43,22 +44,23 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 		lc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lc)
 		for l := range lc {
-			line := metricToPrometheus(m, l)
+			line := metricToPrometheus(e.hostname, m, l)
 			fmt.Fprintf(w, line)
 		}
 	}
 }
 
-func metricToPrometheus(m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToPrometheus(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
 	var s []string
 	for k, v := range l.Labels {
 		s = append(s, fmt.Sprintf("%s=\"%s\"", k, v))
 	}
+	sort.Strings(s)
 	s = append(s, fmt.Sprintf("prog=\"%s\"", m.Program))
 	s = append(s, fmt.Sprintf("instance=\"%s\"", hostname))
 	return fmt.Sprintf(prometheusFormat,
 		noHyphens(m.Name),
 		strings.Join(s, ","),
 		l.Datum.Get(),
-		l.Datum.Time.UnixNano()/1e6)
+		l.Datum.Time.UnixNano()/int64(1e6))
 }

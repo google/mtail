@@ -26,7 +26,7 @@ func (e *Exporter) StatsdWriteMetrics(hostport string) error {
 	return e.writeSocketMetrics(c, metricToStatsd, statsdExportTotal, statsdExportSuccess)
 }
 
-func metricToStatsd(m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
 	// TODO(jaq): handle units better, send timing as |ms
 	m.RLock()
 	defer m.RUnlock()
