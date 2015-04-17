@@ -32,19 +32,19 @@ var (
 )
 
 var (
-	// Internal state
-	hostname           string
-	lastMetricPushTime time.Time
+	// Internal global state
+	hostname string
 )
 
 // Exporter manages the export of metrics to passive and active collectors.
 type Exporter struct {
-	store *metrics.Store
+	store              *metrics.Store
+	lastMetricPushTime time.Time
 }
 
 // New creates a new Exporter.
 func New(store *metrics.Store) *Exporter {
-	return &Exporter{store}
+	return &Exporter{store: store}
 }
 
 // formatLabels converts a metric name and key-value map of labels to a single
@@ -94,7 +94,7 @@ func (e *Exporter) writeSocketMetrics(c io.ReadWriter, f formatter, exportTotal 
 // WriteMetrics writes metrics to each of the configured services.
 func (e *Exporter) WriteMetrics() {
 	lastUpdateTime := metrics.MetricUpdateTime.Load().(time.Time)
-	if lastUpdateTime.Sub(lastMetricPushTime) <= 0 {
+	if lastUpdateTime.Sub(e.lastMetricPushTime) <= 0 {
 		return
 	}
 	if *collectdSocketPath != "" {
@@ -115,7 +115,7 @@ func (e *Exporter) WriteMetrics() {
 			glog.Infof("statsd error: %s", err)
 		}
 	}
-	lastMetricPushTime = time.Now().UTC()
+	e.lastMetricPushTime = time.Now().UTC()
 }
 
 // StartMetricPush pushes metrics to the configured services each interval.
