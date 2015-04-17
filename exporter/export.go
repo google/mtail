@@ -7,13 +7,11 @@ package exporter
 
 import (
 	"bufio"
-	"encoding/json"
 	"expvar"
 	"flag"
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -62,18 +60,6 @@ type Exporter struct {
 // New creates a new Exporter.
 func New(store *metrics.Store) *Exporter {
 	return &Exporter{store}
-}
-
-// HandleJSON exports the metrics in JSON format via HTTP.
-func (e *Exporter) HandleJSON(w http.ResponseWriter, r *http.Request) {
-	e.store.RLock()
-	defer e.store.RUnlock()
-
-	b, err := json.MarshalIndent(e.store.Metrics, "", "  ")
-	if err != nil {
-		glog.Info("error marshalling metrics into json:", err.Error())
-	}
-	w.Write(b)
 }
 
 // CollectdWriteMetrics writes metrics to a collectd unix socket plugin.
