@@ -143,6 +143,9 @@ type LoaderOptions struct {
 // and a filesystem interface as arguments.  If fs is nil, it will use the
 // default filesystem interface.
 func NewLoader(o LoaderOptions) *Loader {
+	if o.Store == nil || o.Lines == nil {
+		return nil
+	}
 	fs := o.FS
 	if fs == nil {
 		fs = &afero.OsFs{}

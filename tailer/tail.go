@@ -57,6 +57,9 @@ type Options struct {
 
 // New returns a new Tailer, configured with the supplied Options
 func New(o Options) *Tailer {
+	if o.Lines == nil {
+		return nil
+	}
 	fs := o.FS
 	if fs == nil {
 		fs = &afero.OsFs{}
