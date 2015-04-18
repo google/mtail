@@ -7,6 +7,7 @@ package exporter
 
 import (
 	"bufio"
+	"errors"
 	"expvar"
 	"flag"
 	"fmt"
@@ -38,27 +39,27 @@ type Exporter struct {
 	lastMetricPushTime time.Time
 }
 
+// Options contains the required and optional parameters for constructing an
+// Exporter.
 type Options struct {
 	Store    *metrics.Store
 	Hostname string // Not required, uses os.Hostname if zero.
 }
 
 // New creates a new Exporter.
-func New(o Options) *Exporter {
+func New(o Options) (*Exporter, error) {
 	if o.Store == nil {
-		return nil
+		return nil, errors.New("exporter needs a Store")
 	}
 	hostname := o.Hostname
 	if hostname == "" {
 		var err error
 		hostname, err = os.Hostname()
-
 		if err != nil {
-			glog.Fatalf("Error getting hostname: %s\n", err)
-			return nil
+			return nil, fmt.Errorf("Error getting hostname: %s\n", err)
 		}
 	}
-	return &Exporter{store: o.Store, hostname: hostname}
+	return &Exporter{store: o.Store, hostname: hostname}, nil
 }
 
 // formatLabels converts a metric name and key-value map of labels to a single
@@ -107,6 +108,7 @@ func (e *Exporter) writeSocketMetrics(c io.ReadWriter, f formatter, exportTotal 
 }
 
 // WriteMetrics writes metrics to each of the configured services.
+// TODO(jaq) rename to PushMetrics.
 func (e *Exporter) WriteMetrics() {
 	lastUpdateTime := metrics.MetricUpdateTime.Load().(time.Time)
 	if lastUpdateTime.Sub(e.lastMetricPushTime) <= 0 {

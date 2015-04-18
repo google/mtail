@@ -10,7 +10,9 @@ package tailer
 // rotated, so mtail is also notified of creates in the log file directory.
 
 import (
+	"errors"
 	"expvar"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -56,9 +58,9 @@ type Options struct {
 }
 
 // New returns a new Tailer, configured with the supplied Options
-func New(o Options) *Tailer {
+func New(o Options) (*Tailer, error) {
 	if o.Lines == nil {
-		return nil
+		return nil, errors.New("tailer needs lines")
 	}
 	fs := o.FS
 	if fs == nil {
@@ -69,7 +71,7 @@ func New(o Options) *Tailer {
 		var err error
 		w, err = watcher.NewLogWatcher()
 		if err != nil {
-			glog.Fatalf("Couldn't create a watcher for tailer: %s", err)
+			return nil, fmt.Errorf("Couldn't create a watcher for tailer: %s", err)
 		}
 	}
 	t := &Tailer{
@@ -81,7 +83,7 @@ func New(o Options) *Tailer {
 		fs:       fs,
 	}
 	go t.run()
-	return t
+	return t, nil
 }
 
 func (t *Tailer) addWatched(path string) {
