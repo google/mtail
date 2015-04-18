@@ -20,8 +20,6 @@ import (
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
-
-	_ "net/http/pprof"
 )
 
 type mtail struct {
@@ -212,7 +210,7 @@ func (m *mtail) Close() {
 		if m.t != nil {
 			m.t.Close()
 		} else {
-			glog.Info("Closing lines")
+			glog.Info("Closing lines channel.")
 			close(m.lines)
 		}
 		if m.l != nil {
