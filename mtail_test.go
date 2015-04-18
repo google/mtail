@@ -35,6 +35,7 @@ func removeTempDir(t *testing.T, workdir string) {
 
 func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail {
 	m := newMtail()
+	m.pathnames = logPathnames
 	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		t.Fatalf("Couldn't create watcher: %s", err)
@@ -54,7 +55,7 @@ func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail
 
 	vm.LineCount.Set(0)
 
-	m.StartTailing(logPathnames)
+	m.StartTailing()
 	return m
 }
 

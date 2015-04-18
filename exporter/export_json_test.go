@@ -89,7 +89,8 @@ func TestHandleJSON(t *testing.T) {
 		for _, metric := range tc.metrics {
 			ms.Add(metric)
 		}
-		e := New(&ms)
+		o := Options{&ms, "gunstar"}
+		e := New(o)
 		response := httptest.NewRecorder()
 		e.HandleJSON(response, &http.Request{})
 		if response.Code != 200 {

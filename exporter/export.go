@@ -38,13 +38,27 @@ type Exporter struct {
 	lastMetricPushTime time.Time
 }
 
+type Options struct {
+	Store    *metrics.Store
+	Hostname string // Not required, uses os.Hostname if zero.
+}
+
 // New creates a new Exporter.
-func New(store *metrics.Store) *Exporter {
-	hostname, err := os.Hostname()
-	if err != nil {
-		glog.Fatalf("Error getting hostname: %s\n", err)
+func New(o Options) *Exporter {
+	if o.Store == nil {
+		return nil
 	}
-	return &Exporter{store: store, hostname: hostname}
+	hostname := o.Hostname
+	if hostname == "" {
+		var err error
+		hostname, err = os.Hostname()
+
+		if err != nil {
+			glog.Fatalf("Error getting hostname: %s\n", err)
+			return nil
+		}
+	}
+	return &Exporter{store: o.Store, hostname: hostname}
 }
 
 // formatLabels converts a metric name and key-value map of labels to a single

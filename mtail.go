@@ -43,8 +43,12 @@ type mtail struct {
 	lines chan string   // Channel of lines from tailer to VM engine.
 	store metrics.Store // Metrics storage.
 
-	t *tailer.Tailer // t tails the watched files and feeds lines to the VMs.
-	l *vm.Loader     // l loads programs and manages the VM lifecycle.
+	pathnames []string // pathnames of logs to tail
+	progs     string   // directory path containing mital programs to load
+
+	t *tailer.Tailer     // t tails the watched files and feeds lines to the VMs.
+	l *vm.Loader         // l loads programs and manages the VM lifecycle.
+	e *exporter.Exporter // e manages the export of metrics from the store.
 
 	webquit   chan struct{} // Channel to signal shutdown from web UI.
 	closeOnce sync.Once     // Ensure shutdown happens only once.
@@ -73,25 +77,25 @@ func (m *mtail) OneShot(logfile string, lines chan string) error {
 	}
 }
 
-func (m *mtail) StartTailing(pathnames []string) {
+func (m *mtail) StartTailing() {
 	o := tailer.Options{Lines: m.lines}
 	m.t = tailer.New(o)
 	if m.t == nil {
 		glog.Fatal("Couldn't create a log tailer.")
 	}
 
-	for _, pathname := range pathnames {
+	for _, pathname := range m.pathnames {
 		m.t.Tail(pathname)
 	}
 }
 
-func (m *mtail) InitLoader(path string) {
+func (m *mtail) InitLoader() {
 	o := vm.LoaderOptions{Store: &m.store, Lines: m.lines, CompileOnly: *compileOnly, DumpBytecode: *dumpBytecode, SyslogUseCurrentYear: *syslogUseCurrentYear}
 	m.l = vm.NewLoader(o)
 	if m.l == nil {
 		glog.Fatal("Couldn't create a program loader.")
 	}
-	errors := m.l.LoadProgs(path)
+	errors := m.l.LoadProgs(m.progs)
 	if *compileOnly || *dumpBytecode {
 		os.Exit(errors)
 	}
@@ -109,57 +113,71 @@ func newMtail() *mtail {
 	}
 }
 
-func (m *mtail) Serve() {
-	if *progs == "" {
+type Options struct {
+	progs string
+	logs  string
+	port  string
+}
+
+func New(o Options) *mtail {
+	m := newMtail()
+	if o.progs == "" {
 		glog.Fatalf("No mtail program directory specified; use -progs")
+		return nil
 	}
-	if *logs == "" {
+	if o.logs == "" {
+
 		glog.Fatalf("No logs specified to tail; use -logs")
+		return nil
 	}
-	var pathnames []string
-	for _, pathname := range strings.Split(*logs, ",") {
+	for _, pathname := range strings.Split(o.logs, ",") {
 		if pathname != "" {
-			pathnames = append(pathnames, pathname)
+			m.pathnames = append(m.pathnames, pathname)
 		}
 	}
-	if len(pathnames) == 0 {
+	if len(m.pathnames) == 0 {
 		glog.Fatal("No logs to tail.")
+		return nil
 	}
 
-	m.InitLoader(*progs)
+	m.InitLoader()
 
-	ex := exporter.New(&m.store)
+	m.e = exporter.New(exporter.Options{Store: &m.store})
 
-	if *oneShot {
-		for _, pathname := range pathnames {
-			err := m.OneShot(pathname, m.lines)
-			if err != nil {
-				glog.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
-			}
-		}
-		b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
+	return m
+}
+
+func (m *mtail) RunOneShot() {
+	for _, pathname := range m.pathnames {
+		err := m.OneShot(pathname, m.lines)
 		if err != nil {
-			glog.Fatalf("Failed to marshal metrics into json: %s", err)
+			glog.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
 		}
-		os.Stdout.Write(b)
-		ex.WriteMetrics()
-	} else {
-		m.StartTailing(pathnames)
-
-		http.Handle("/", m)
-		http.HandleFunc("/json", http.HandlerFunc(ex.HandleJSON))
-		http.HandleFunc("/metrics", http.HandlerFunc(ex.HandlePrometheusMetrics))
-		http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
-		ex.StartMetricPush()
-
-		go func() {
-			err := http.ListenAndServe(":"+*port, nil)
-			if err != nil {
-				glog.Fatal(err)
-			}
-		}()
-		m.shutdownHandler()
 	}
+	b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
+	if err != nil {
+		glog.Fatalf("Failed to marshal metrics into json: %s", err)
+	}
+	os.Stdout.Write(b)
+	m.e.WriteMetrics()
+}
+
+func (m *mtail) Serve() {
+	m.StartTailing()
+
+	http.Handle("/", m)
+	http.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
+	http.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
+	http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
+	m.e.StartMetricPush()
+
+	go func() {
+		err := http.ListenAndServe(":"+*port, nil)
+		if err != nil {
+			glog.Fatal(err)
+		}
+	}()
+	m.shutdownHandler()
 }
 
 func (m *mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
@@ -203,6 +221,11 @@ func (m *mtail) Close() {
 
 func main() {
 	flag.Parse()
-	m := newMtail()
-	m.Serve()
+	o := Options{*progs, *logs, *port}
+	m := New(o)
+	if *oneShot {
+		m.RunOneShot()
+	} else {
+		m.Serve()
+	}
 }
