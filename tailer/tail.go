@@ -51,8 +51,8 @@ type Tailer struct {
 // Options configures a Tailer
 type Options struct {
 	Lines chan<- string
-	W     watcher.Watcher // not required, will use a watcher.LogWatcher if it is zero.
-	FS    afero.Fs        // not required, will use afero.OsFs{} if it is zero.
+	W     watcher.Watcher // Not required, will use watcher.LogWatcher if it is zero.
+	FS    afero.Fs        // Not required, will use afero.OsFs if it is zero.
 }
 
 // New returns a new Tailer, configured with the supplied Options
