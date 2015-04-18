@@ -61,7 +61,7 @@ func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) (*
 	o := vm.LoaderOptions{W: w, Store: ms, Lines: lines, SyslogUseCurrentYear: false}
 
 	l := vm.NewLoader(o)
-	i l == nil {
+	if l == nil {
 		return nil, fmt.Errorf("couldn't create program loader")
 	}
 	if pErr := l.CompileAndRun(name, p); pErr != nil {
