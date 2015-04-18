@@ -75,7 +75,8 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 		exportTotal.Add(1)
 		lc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lc)
-		// This goroutine sucks out any text returned from the remote end.
+		// This goroutine reads any bytes returned from the remote end, to keep
+		// it unblocked.
 		go func() {
 			var buf bytes.Buffer
 			for {
@@ -88,7 +89,7 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 		for l := range lc {
 			line := f(e.hostname, m, l)
 			n, err := fmt.Fprint(c, line)
-			fmt.Printf("Sent %d bytes\n", n)
+			glog.Infof("Sent %d bytes\n", n)
 			if err == nil {
 				exportSuccess.Add(1)
 			} else {

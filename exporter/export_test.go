@@ -5,6 +5,7 @@ package exporter
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 	"github.com/kylelemons/godebug/pretty"
 )
@@ -24,7 +26,7 @@ func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
 	lc := make(chan *metrics.LabelSet)
 	go m.EmitLabelSets(lc)
 	for l := range lc {
-		ret = append(ret, f("hostname", m, l))
+		ret = append(ret, f("gunstar", m, l))
 	}
 	sort.Strings(ret)
 	return ret
@@ -37,6 +39,7 @@ func TestMetricToCollectd(t *testing.T) {
 	}
 	ms := metrics.Store{}
 	e := New(&ms)
+	e.hostname = "gunstar"
 
 	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
 	d, _ := scalarMetric.GetDatum()
@@ -44,16 +47,19 @@ func TestMetricToCollectd(t *testing.T) {
 	ms.Add(scalarMetric)
 
 	r := newRecordingSocketListener(t)
+	glog.Infof("Path: %s", r.Addr)
 	if err := e.CollectdWriteMetrics(r.Addr); err != nil {
 		t.Errorf("Write failed: %s", err)
 	}
+	r.Close()
+	<-r.Done
 
-	expected := []string{"PUTVAL \"hostname/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
-	diff := pretty.Compare(r.Record.String(), strings.Join(expected, ""))
+	expected := []string{"PUTVAL \"gunstar/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
+	glog.Infof("fuckin: %+#v", r.Record)
+	diff := pretty.Compare(string(r.Record), strings.Join(expected, ""))
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
-	r.Close()
 
 	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "label")
 	d, _ = dimensionedMetric.GetDatum("quux")
@@ -68,9 +74,9 @@ func TestMetricToCollectd(t *testing.T) {
 		t.Errorf("Write failed: %s", err)
 	}
 	expected = []string{
-		"PUTVAL \"hostname/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
-		"PUTVAL \"hostname/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
-	diff = pretty.Compare(r.Record.String(), strings.Join(expected, ""))
+		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
+		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
+	diff = pretty.Compare(string(r.Record), strings.Join(expected, ""))
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
@@ -142,7 +148,8 @@ type RecordingListener struct {
 	t      *testing.T
 	dir    string
 	Addr   string
-	Record bytes.Buffer
+	Record string
+	Done   chan struct{}
 }
 
 func newRecordingTCPListener(t *testing.T) *RecordingListener {
@@ -155,7 +162,8 @@ func newRecordingTCPListener(t *testing.T) *RecordingListener {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := &RecordingListener{Listener: l, t: t, Addr: addr}
+	r := &RecordingListener{Listener: l, t: t, Addr: addr,
+		Done: make(chan struct{})}
 	go r.run()
 	return r
 }
@@ -170,35 +178,63 @@ func newRecordingSocketListener(t *testing.T) *RecordingListener {
 	if err != nil {
 		t.Fatalf("can't listen at %s: %s", addr, err)
 	}
-	r := &RecordingListener{Listener: l, dir: dir, t: t, Addr: addr}
+	r := &RecordingListener{Listener: l, dir: dir, t: t, Addr: addr,
+		Done: make(chan struct{})}
 	go r.run()
 	return r
 }
 
 func (r *RecordingListener) run() {
-	conn, err := r.Accept()
-	if err != nil {
-		r.t.Logf("error accepting: %s", err)
-		return
-	}
-	go func(c net.Conn) {
-		defer c.Close()
-		r.t.Logf("reading")
-		n, err := r.Record.ReadFrom(c)
-		r.t.Logf("%d bytes read", n)
+	for {
+		glog.Infof("accepting")
+		conn, err := r.Accept()
+		glog.Infof("accepted")
+
 		if err != nil {
-			r.t.Fatalf("error reading: %s", err)
-			return
+			select {
+			case <-r.Done:
+				glog.Infof("done")
+				return
+			default:
+				r.t.Logf("error accepting: %s", err)
+			}
+			continue
 		}
-		r.t.Logf("%d bytes read", n)
-	}(conn)
+		go func(c net.Conn) {
+			defer c.Close()
+			glog.Infof("reading")
+		Loop:
+			var (
+				buf bytes.Buffer
+				r bufio.NewReader(c)
+				w bufio.NewWriter(c)
+			)
+			for {
+				n, err := b.ReadFrom(r)
+				glog.Infof("%d bytes read", n)
+				switch err {
+				case io.EOF:
+					return
+				case nil:
+					buf.Writer.Record = append(r.Record, string(buf[:n]))
+				default:
+					r.t.Fatalf("error reading: %s", err)
+					return
+				}
+				glog.Infof("%d bytes read", n)
+				glog.Infof("buf is now %q", r.Record)
+				c.Write([]byte("\n"))
+			}
+		}(conn)
+	}
 }
 
 func (r *RecordingListener) Close() {
+	close(r.Done)
+	r.Listener.Close()
 	if r.dir != "" {
-		if err := os.RemoveAll(r.Addr); err != nil {
-			r.t.Fatalf("failed to remove socket: %s")
+		if err := os.RemoveAll(r.dir); err != nil {
+			r.t.Fatalf("failed to remove dir: %s", r.dir)
 		}
 	}
-	r.Listener.Close()
 }
