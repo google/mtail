@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package main
+package mtail
 
 import (
 	"fmt"
@@ -34,7 +34,7 @@ func removeTempDir(t *testing.T, workdir string) {
 }
 
 func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail {
-	m := newMtail()
+	m := NewMtail()
 	m.pathnames = logPathnames
 	w, err := watcher.NewLogWatcher()
 	if err != nil {

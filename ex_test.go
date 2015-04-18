@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/mtail"
 	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
 	"github.com/kylelemons/godebug/pretty"
@@ -60,7 +61,7 @@ func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) (*
 	o := vm.LoaderOptions{W: w, Store: ms, Lines: lines, SyslogUseCurrentYear: false}
 
 	l := vm.NewLoader(o)
-	if l == nil {
+	i l == nil {
 		return nil, fmt.Errorf("couldn't create program loader")
 	}
 	if pErr := l.CompileAndRun(name, p); pErr != nil {
@@ -74,7 +75,7 @@ func TestExamplePrograms(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 	for _, tc := range exampleProgramTests {
-		mtail := newMtail()
+		mtail := mtail.NewMtail()
 		l, err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines)
 		if err != nil {
 			t.Fatalf("Compile failed: %s", err)
@@ -136,7 +137,7 @@ func BenchmarkExamplePrograms(b *testing.B) {
 	}
 	b.Logf("\n")
 	for _, tc := range exampleProgramTests {
-		mtail := newMtail()
+		mtail := mtail.NewMtail()
 		spareLines := make(chan string)
 		l, err := CompileAndLoad(tc.programfile, &metrics.Store{}, spareLines)
 		if err != nil {

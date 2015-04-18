@@ -1,12 +1,11 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package main
+package mtail
 
 import (
 	"bufio"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,20 +22,6 @@ import (
 	"github.com/google/mtail/vm"
 
 	_ "net/http/pprof"
-)
-
-var (
-	port  = flag.String("port", "3903", "HTTP port to listen on.")
-	logs  = flag.String("logs", "", "List of files to monitor.")
-	progs = flag.String("progs", "", "Directory containing programs")
-
-	oneShot = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
-
-	compileOnly = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
-
-	dumpBytecode = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
-
-	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 )
 
 type mtail struct {
@@ -112,7 +97,7 @@ func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>`))
 }
 
-func newMtail() *mtail {
+func NewMtail() *mtail {
 	return &mtail{
 		lines:   make(chan string),
 		webquit: make(chan struct{}),
@@ -120,31 +105,31 @@ func newMtail() *mtail {
 }
 
 type Options struct {
-	progs                string
-	logs                 string
-	port                 string
-	oneShot              bool
-	compileOnly          bool
-	dumpBytecode         bool
-	syslogUseCurrentYear bool
+	Progs                string
+	Logs                 string
+	Port                 string
+	OneShot              bool
+	CompileOnly          bool
+	DumpBytecode         bool
+	SyslogUseCurrentYear bool
 }
 
 func New(o Options) *mtail {
-	if o.progs == "" {
+	if o.Progs == "" {
 		glog.Fatalf("No mtail program directory specified; use -progs")
 		return nil
 	}
-	if o.logs == "" {
+	if o.Logs == "" {
 		glog.Fatalf("No logs specified to tail; use -logs")
 		return nil
 	}
-	m := newMtail()
-	m.oneShot = o.oneShot
-	m.compileOnly = o.compileOnly
-	m.dumpBytecode = o.dumpBytecode
-	m.syslogUseCurrentYear = o.syslogUseCurrentYear
+	m := NewMtail()
+	m.oneShot = o.OneShot
+	m.compileOnly = o.CompileOnly
+	m.dumpBytecode = o.DumpBytecode
+	m.syslogUseCurrentYear = o.SyslogUseCurrentYear
 
-	for _, pathname := range strings.Split(o.logs, ",") {
+	for _, pathname := range strings.Split(o.Logs, ",") {
 		if pathname != "" {
 			m.pathnames = append(m.pathnames, pathname)
 		}
@@ -239,11 +224,4 @@ func (m *mtail) Run() {
 	} else {
 		m.Serve()
 	}
-}
-
-func main() {
-	flag.Parse()
-	o := Options{*progs, *logs, *port, *oneShot, *compileOnly, *dumpBytecode, *syslogUseCurrentYear}
-	m := New(o)
-	m.Run()
 }

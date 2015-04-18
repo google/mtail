@@ -8,8 +8,9 @@ GOFILES=\
 	exporter/export_json.go\
 	exporter/export_prometheus.go\
 	exporter/export_statsd.go\
+	main.go\
 	metrics/metric.go\
-	mtail.go\
+	mtail/mtail.go\
 	tailer/tail.go\
 	vm/ast.go\
 	vm/compiler.go\
@@ -26,7 +27,7 @@ GOFILES=\
 GOTESTFILES=\
 	ex_test.go\
 	exporter/export_test.go\
-	mtail_test.go\
+	mtail/mtail_test.go\
 	tailer/tail_test.go\
 	vm/lexer_test.go\
 	vm/parser_test.go\
