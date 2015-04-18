@@ -29,7 +29,8 @@ func TestTail(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	defer w.Close()
 	lines := make(chan string)
-	ta := New(lines, w, fs)
+	o := Options{lines, w, fs}
+	ta := New(o)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -67,7 +68,8 @@ func TestHandleLogUpdate(t *testing.T) {
 	}()
 
 	w := watcher.NewFakeWatcher()
-	ta := New(lines, w, fs)
+	o := Options{lines, w, fs}
+	ta := New(o)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}
@@ -121,7 +123,8 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	}()
 
 	w := watcher.NewFakeWatcher()
-	ta := New(lines, w, fs)
+	o := Options{lines, w, fs}
+	ta := New(o)
 	if ta == nil {
 		t.Fatalf("Couldn't make a tailer.")
 	}

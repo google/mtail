@@ -22,7 +22,6 @@ import (
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
-	"github.com/jaqx0r/afero"
 
 	_ "net/http/pprof"
 )
@@ -70,11 +69,8 @@ func (m *mtail) OneShot(logfile string, lines chan string) error {
 }
 
 func (m *mtail) StartTailing(pathnames []string) {
-	w, err := watcher.NewLogWatcher()
-	if err != nil {
-		glog.Fatal("Couldn't create log path watcher:", err)
-	}
-	m.t = tailer.New(m.lines, w, &afero.OsFs{})
+	o := tailer.Options{Lines: m.lines}
+	m.t = tailer.New(o)
 	if m.t == nil {
 		glog.Fatal("Couldn't create a log tailer.")
 	}
