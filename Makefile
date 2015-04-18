@@ -74,9 +74,9 @@ recbench: $(GOFILES) $(GOTESTFILES)
 coverage: gover.coverprofile
 gover.coverprofile: $(GOFILES) $(GOTESTFILES)
 	for package in exporter metrics tailer vm watcher; do\
-		go test -coverprofile=$$package.coverprofile ./$$package;\
+		go test -covermode=count -coverprofile=$$package.coverprofile ./$$package;\
     done
-	go test -coverprofile=main.coverprofile .
+	go test -covermode=count -coverprofile=main.coverprofile .
 	gover
 
 .PHONY: covrep
