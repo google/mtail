@@ -5,7 +5,9 @@ package main
 
 import (
 	"flag"
+	"strings"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/mtail"
 
 	_ "net/http/pprof"
@@ -25,15 +27,33 @@ var (
 
 func main() {
 	flag.Parse()
+	if *progs == "" {
+		glog.Fatalf("No mtail program directory specified; use -progs")
+	}
+	if *logs == "" {
+		glog.Fatalf("No logs specified to tail; use -logs")
+	}
+	var logPathnames []string
+	for _, pathname := range strings.Split(*logs, ",") {
+		if pathname != "" {
+			logPathnames = append(logPathnames, pathname)
+		}
+	}
+	if len(logPathnames) == 0 {
+		glog.Fatal("No logs to tail.")
+	}
 	o := mtail.Options{
 		Progs:                *progs,
-		Logs:                 *logs,
+		Logs:                 logPathnames,
 		Port:                 *port,
 		OneShot:              *oneShot,
 		CompileOnly:          *compileOnly,
 		DumpBytecode:         *dumpBytecode,
 		SyslogUseCurrentYear: *syslogUseCurrentYear,
 	}
-	m := mtail.New(o)
+	m, err := mtail.New(o)
+	if err != nil {
+		glog.Fatalf("couldn't start: %s", err)
+	}
 	m.Run()
 }

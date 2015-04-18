@@ -6,12 +6,12 @@ package mtail
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 
@@ -20,16 +20,14 @@ import (
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
+	"github.com/google/mtail/watcher"
+	"github.com/jaqx0r/afero"
 )
 
 // Mtail contains the state of the main program object.
 type Mtail struct {
 	lines chan string   // Channel of lines from tailer to VM engine.
 	store metrics.Store // Metrics storage.
-
-	pathnames []string // pathnames of logs to tail
-	progs     string   // directory path containing mital programs to load
-	port      string   // port to serve HTTP on
 
 	t *tailer.Tailer     // t tails the watched files and feeds lines to the VMs.
 	l *vm.Loader         // l loads programs and manages the VM lifecycle.
@@ -38,10 +36,7 @@ type Mtail struct {
 	webquit   chan struct{} // Channel to signal shutdown from web UI.
 	closeOnce sync.Once     // Ensure shutdown happens only once.
 
-	oneShot              bool
-	compileOnly          bool
-	dumpBytecode         bool
-	syslogUseCurrentYear bool
+	o Options // Options passed in at creation time.
 }
 
 // OneShot reads the contents of a log file into the lines channel from start to finish, terminating the program at the end.
@@ -71,26 +66,26 @@ func (m *Mtail) OneShot(logfile string, lines chan string) error {
 // StartTailing constructs a new Tailer and commences sending log lines into
 // the lines channel.
 func (m *Mtail) StartTailing() {
-	o := tailer.Options{Lines: m.lines}
+	o := tailer.Options{Lines: m.lines, W: m.o.W, FS: m.o.FS}
 	m.t = tailer.New(o)
 	if m.t == nil {
 		glog.Fatal("Couldn't create a log tailer.")
 	}
 
-	for _, pathname := range m.pathnames {
+	for _, pathname := range m.o.Logs {
 		m.t.Tail(pathname)
 	}
 }
 
 // InitLoader constructs a new program loader and performs the inital load of program files in the program directory.
 func (m *Mtail) InitLoader() {
-	o := vm.LoaderOptions{Store: &m.store, Lines: m.lines, CompileOnly: m.compileOnly, DumpBytecode: m.dumpBytecode, SyslogUseCurrentYear: m.syslogUseCurrentYear}
+	o := vm.LoaderOptions{Store: &m.store, Lines: m.lines, CompileOnly: m.o.CompileOnly, DumpBytecode: m.o.DumpBytecode, SyslogUseCurrentYear: m.o.SyslogUseCurrentYear, W: m.o.W, FS: m.o.FS}
 	m.l = vm.NewLoader(o)
 	if m.l == nil {
 		glog.Fatal("Couldn't create a program loader.")
 	}
-	errors := m.l.LoadProgs(m.progs)
-	if m.compileOnly || m.dumpBytecode {
+	errors := m.l.LoadProgs(m.o.Progs)
+	if m.o.CompileOnly || m.o.DumpBytecode {
 		os.Exit(errors)
 	}
 }
@@ -102,61 +97,46 @@ func (m *Mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // NewMtail is a temporary function used for creating bare Mtail objects.
 func NewMtail() *Mtail {
-	return &Mtail{
-		lines:   make(chan string),
-		webquit: make(chan struct{}),
-	}
+	return &Mtail{}
 }
 
 // Options contains all the parameters necessary for constructing a new Mtail.
 type Options struct {
 	Progs                string
-	Logs                 string
+	Logs                 []string
 	Port                 string
 	OneShot              bool
 	CompileOnly          bool
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
+
+	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
+	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 }
 
 // New creates an Mtail from the supplied Options.
-func New(o Options) *Mtail {
+func New(o Options) (*Mtail, error) {
 	if o.Progs == "" {
-		glog.Fatalf("No mtail program directory specified; use -progs")
-		return nil
+		return nil, errors.New("Must supply some program paths.")
 	}
-	if o.Logs == "" {
-		glog.Fatalf("No logs specified to tail; use -logs")
-		return nil
+	if len(o.Logs) < 1 {
+		return nil, errors.New("Must supply some log filenames.")
 	}
-	m := NewMtail()
-	m.progs = o.Progs
-	m.port = o.Port
-	m.oneShot = o.OneShot
-	m.compileOnly = o.CompileOnly
-	m.dumpBytecode = o.DumpBytecode
-	m.syslogUseCurrentYear = o.SyslogUseCurrentYear
-
-	for _, pathname := range strings.Split(o.Logs, ",") {
-		if pathname != "" {
-			m.pathnames = append(m.pathnames, pathname)
-		}
-	}
-	if len(m.pathnames) == 0 {
-		glog.Fatal("No logs to tail.")
-		return nil
-	}
+	m := &Mtail{
+		lines:   make(chan string),
+		webquit: make(chan struct{}),
+		o:       o}
 
 	m.InitLoader()
 
 	m.e = exporter.New(exporter.Options{Store: &m.store})
 
-	return m
+	return m, nil
 }
 
 // RunOneShot performs the work of the one_shot commandline flag; after compiling programs mtail will read all of the log files in full, once, dump the metric results at the end, and then exit.
 func (m *Mtail) RunOneShot() {
-	for _, pathname := range m.pathnames {
+	for _, pathname := range m.o.Logs {
 		err := m.OneShot(pathname, m.lines)
 		if err != nil {
 			glog.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
@@ -184,8 +164,8 @@ func (m *Mtail) Serve() {
 	m.e.StartMetricPush()
 
 	go func() {
-		glog.Infof("Listening on port %s", m.port)
-		err := http.ListenAndServe(":"+m.port, nil)
+		glog.Infof("Listening on port %s", m.o.Port)
+		err := http.ListenAndServe(":"+m.o.Port, nil)
 		if err != nil {
 			glog.Fatal(err)
 		}
@@ -235,7 +215,7 @@ func (m *Mtail) Close() {
 
 // Run starts Mtail in the configuration supplied in Options at creation.
 func (m *Mtail) Run() {
-	if m.oneShot {
+	if m.o.OneShot {
 		m.RunOneShot()
 	} else {
 		m.Serve()
