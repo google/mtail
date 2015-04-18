@@ -28,10 +28,10 @@ var (
 func main() {
 	flag.Parse()
 	if *progs == "" {
-		glog.Fatalf("No mtail program directory specified; use -progs")
+		glog.Exitf("No mtail program directory specified; use -progs")
 	}
 	if *logs == "" {
-		glog.Fatalf("No logs specified to tail; use -logs")
+		glog.Exitf("No logs specified to tail; use -logs")
 	}
 	var logPathnames []string
 	for _, pathname := range strings.Split(*logs, ",") {
@@ -40,7 +40,7 @@ func main() {
 		}
 	}
 	if len(logPathnames) == 0 {
-		glog.Fatal("No logs to tail.")
+		glog.Exit("No logs to tail.")
 	}
 	o := mtail.Options{
 		Progs:                *progs,

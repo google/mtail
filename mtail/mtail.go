@@ -152,11 +152,11 @@ func (m *Mtail) RunOneShot() {
 	for _, pathname := range m.o.Logs {
 		err := m.OneShot(pathname)
 		if err != nil {
-			glog.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
+			glog.Exitf("Failed one shot mode for %q: %s\n", pathname, err)
 		}
 	}
 	if err := m.WriteMetrics(os.Stdout); err != nil {
-		glog.Fatal(err)
+		glog.Exit(err)
 	}
 	m.e.WriteMetrics()
 }
@@ -168,7 +168,7 @@ func (m *Mtail) RunOneShot() {
 func (m *Mtail) Serve() {
 	err := m.StartTailing()
 	if err != nil {
-		glog.Fatalf("tailing failed: %s", err)
+		glog.Exitf("tailing failed: %s", err)
 	}
 
 	http.Handle("/", m)
@@ -181,7 +181,7 @@ func (m *Mtail) Serve() {
 		glog.Infof("Listening on port %s", m.o.Port)
 		err := http.ListenAndServe(":"+m.o.Port, nil)
 		if err != nil {
-			glog.Fatal(err)
+			glog.Exit(err)
 		}
 	}()
 	m.shutdownHandler()
