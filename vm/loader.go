@@ -89,7 +89,7 @@ func (l *Loader) LoadProg(programPath string) (errors int) {
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
-	v, errs := Compile(name, input, l.ms, l.compileOnly)
+	v, errs := Compile(name, input, l.ms, l.compileOnly, l.syslogUseCurrentYear)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("compile failed for %s: %s", name, strings.Join(errs, "\n"))
@@ -127,8 +127,9 @@ type Loader struct {
 	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
-	compileOnly  bool // Only compile programs and report errors, do not load VMs.
-	dumpBytecode bool // Instructs the loader to dump to stdout the compiled program after compilation.
+	compileOnly          bool // Only compile programs and report errors, do not load VMs.
+	dumpBytecode         bool // Instructs the loader to dump to stdout the compiled program after compilation.
+	syslogUseCurrentYear bool // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
 }
 
 type LoaderOptions struct {
@@ -137,8 +138,9 @@ type LoaderOptions struct {
 	W     watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS    afero.Fs        // Not required, will use afero.OsFs if zero.
 
-	CompileOnly  bool
-	DumpBytecode bool
+	CompileOnly          bool
+	DumpBytecode         bool
+	SyslogUseCurrentYear bool
 }
 
 // NewLoader creates a new program loader.  It takes a filesystem watcher
@@ -161,14 +163,15 @@ func NewLoader(o LoaderOptions) *Loader {
 		}
 	}
 	l := &Loader{
-		w:            w,
-		ms:           o.Store,
-		fs:           fs,
-		handles:      make(map[string]*vmHandle),
-		watcherDone:  make(chan struct{}),
-		VMsDone:      make(chan struct{}),
-		compileOnly:  o.CompileOnly,
-		dumpBytecode: o.DumpBytecode}
+		w:                    w,
+		ms:                   o.Store,
+		fs:                   fs,
+		handles:              make(map[string]*vmHandle),
+		watcherDone:          make(chan struct{}),
+		VMsDone:              make(chan struct{}),
+		compileOnly:          o.CompileOnly,
+		dumpBytecode:         o.DumpBytecode,
+		syslogUseCurrentYear: o.SyslogUseCurrentYear}
 
 	go l.processEvents()
 	go l.processLines(o.Lines)

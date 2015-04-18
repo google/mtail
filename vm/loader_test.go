@@ -19,7 +19,7 @@ func TestNewLoaderWithFs(t *testing.T) {
 	store := &metrics.Store{}
 	inLines := make(chan string)
 	fs := &afero.MemMapFs{}
-	o := LoaderOptions{store, inLines, w, fs, false, false}
+	o := LoaderOptions{store, inLines, w, fs, false, false, true}
 	l := NewLoader(o)
 	done := make(chan struct{})
 	outLines := make(chan string)
@@ -42,7 +42,7 @@ func TestCompileAndRun(t *testing.T) {
 	lines := make(chan string)
 	w := watcher.NewFakeWatcher()
 	fs := &afero.MemMapFs{}
-	o := LoaderOptions{store, lines, w, fs, false, false}
+	o := LoaderOptions{store, lines, w, fs, false, false, true}
 	l := NewLoader(o)
 	if err := l.CompileAndRun("Test", strings.NewReader(testProgram)); err != nil {
 		t.Errorf("CompileAndRun returned error: %s", err)
@@ -112,7 +112,7 @@ func TestProcessEvents(t *testing.T) {
 		store := &metrics.Store{}
 		lines := make(chan string)
 		fs := &afero.MemMapFs{}
-		o := LoaderOptions{store, lines, w, fs, false, false}
+		o := LoaderOptions{store, lines, w, fs, false, false, true}
 		l := NewLoader(o)
 		for i := range tt.events {
 			e := tt.events[i]

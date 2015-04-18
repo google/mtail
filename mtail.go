@@ -34,8 +34,9 @@ var (
 
 	compileOnly = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
 
-	// DumpBytecode
 	dumpBytecode = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
+
+	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 )
 
 type mtail struct {
@@ -85,7 +86,7 @@ func (m *mtail) StartTailing(pathnames []string) {
 }
 
 func (m *mtail) InitLoader(path string) {
-	o := vm.LoaderOptions{Store: &m.store, Lines: m.lines, CompileOnly: *compileOnly, DumpBytecode: *dumpBytecode}
+	o := vm.LoaderOptions{Store: &m.store, Lines: m.lines, CompileOnly: *compileOnly, DumpBytecode: *dumpBytecode, SyslogUseCurrentYear: *syslogUseCurrentYear}
 	m.l = vm.NewLoader(o)
 	if m.l == nil {
 		glog.Fatal("Couldn't create a program loader.")

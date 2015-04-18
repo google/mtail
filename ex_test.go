@@ -57,7 +57,8 @@ func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) (*
 
 	name := filepath.Base(programfile)
 	w := watcher.NewFakeWatcher()
-	o := vm.LoaderOptions{W: w, Store: ms, Lines: lines}
+	o := vm.LoaderOptions{W: w, Store: ms, Lines: lines, SyslogUseCurrentYear: false}
+
 	l := vm.NewLoader(o)
 	if l == nil {
 		return nil, fmt.Errorf("couldn't create program loader")
@@ -72,7 +73,6 @@ func TestExamplePrograms(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	*vm.SyslogUseCurrentYear = false
 	for _, tc := range exampleProgramTests {
 		mtail := newMtail()
 		l, err := CompileAndLoad(tc.programfile, &mtail.store, mtail.lines)

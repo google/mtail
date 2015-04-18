@@ -6,7 +6,6 @@
 package vm
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"regexp"
@@ -20,11 +19,6 @@ import (
 	"github.com/golang/glog"
 
 	"github.com/google/mtail/metrics"
-)
-
-var (
-	// SyslogUseCurrentYear instructs the virtual machine to inject the current year when parsing timestamps without a year component.
-	SyslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 )
 
 type opcode int
@@ -108,6 +102,8 @@ type VM struct {
 	input string // Log line input to this round of execution.
 
 	terminate bool // Flag to stop the VM program.
+
+	syslogUseCurrentYear bool // Overwrite zero years with the current year in a strptime.
 }
 
 // Push a value onto the stack
@@ -281,7 +277,7 @@ func (v *VM) execute(t *thread, i instr) {
 				v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
 			}
 			// Hack for yearless syslog.
-			if tm.Year() == 0 && *SyslogUseCurrentYear {
+			if tm.Year() == 0 && v.syslogUseCurrentYear {
 				// No .UTC() as we use local time to match the local log.
 				tm = tm.AddDate(time.Now().Year(), 0, 0)
 			}
@@ -411,14 +407,15 @@ func (v *VM) Run(lines <-chan string, shutdown chan<- struct{}) {
 
 // New creates a new virtual machine with the given name, and compiler
 // artifacts for executable and data segments.
-func New(name string, re []*regexp.Regexp, str []string, m []*metrics.Metric, prog []instr) *VM {
+func New(name string, re []*regexp.Regexp, str []string, m []*metrics.Metric, prog []instr, syslogUseCurrentYear bool) *VM {
 	return &VM{
-		name:      name,
-		re:        re,
-		str:       str,
-		m:         m,
-		prog:      prog,
-		timeMemos: make(map[string]time.Time, 0),
+		name:                 name,
+		re:                   re,
+		str:                  str,
+		m:                    m,
+		prog:                 prog,
+		timeMemos:            make(map[string]time.Time, 0),
+		syslogUseCurrentYear: syslogUseCurrentYear,
 	}
 }
 

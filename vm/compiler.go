@@ -32,7 +32,7 @@ type compiler struct {
 // Compile compiles a program from the input into a virtual machine or a list
 // of compile errors.  It takes the program's name and the metric store as
 // additional arguments to build the virtual machine.
-func Compile(name string, input io.Reader, ms *metrics.Store, compileOnly bool) (*VM, []string) {
+func Compile(name string, input io.Reader, ms *metrics.Store, compileOnly bool, syslogUseCurrentYear bool) (*VM, []string) {
 	name = filepath.Base(name)
 	p := newParser(name, input, ms)
 	r := mtailParse(p)
@@ -48,7 +48,7 @@ func Compile(name string, input io.Reader, ms *metrics.Store, compileOnly bool) 
 		return nil, nil
 	}
 
-	vm := New(name, c.re, c.str, c.m, c.prog)
+	vm := New(name, c.re, c.str, c.m, c.prog, syslogUseCurrentYear)
 	return vm, nil
 }
 

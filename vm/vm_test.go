@@ -181,7 +181,7 @@ func TestInstrs(t *testing.T) {
 			metrics.NewMetric("foo", "test", metrics.Counter),
 			metrics.NewMetric("bar", "test", metrics.Counter))
 
-		v := New(tc.name, tc.re, tc.str, m, []instr{tc.i})
+		v := New(tc.name, tc.re, tc.str, m, []instr{tc.i}, true)
 		v.t = new(thread)
 		v.t.stack = make([]interface{}, 0)
 		for _, item := range tc.reversedStack {
