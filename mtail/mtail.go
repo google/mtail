@@ -6,7 +6,6 @@ package mtail
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -84,9 +83,11 @@ func (m *Mtail) InitLoader() {
 	if m.l == nil {
 		glog.Fatal("Couldn't create a program loader.")
 	}
-	errors := m.l.LoadProgs(m.o.Progs)
-	if m.o.CompileOnly || m.o.DumpBytecode {
-		os.Exit(errors)
+	if m.o.Progs != "" {
+		errors := m.l.LoadProgs(m.o.Progs)
+		if m.o.CompileOnly || m.o.DumpBytecode {
+			os.Exit(errors)
+		}
 	}
 }
 
@@ -116,9 +117,6 @@ type Options struct {
 
 // New creates an Mtail from the supplied Options.
 func New(o Options) (*Mtail, error) {
-	if o.Progs == "" {
-		return nil, errors.New("Must supply some program paths.")
-	}
 	m := &Mtail{
 		lines:   make(chan string),
 		webquit: make(chan struct{}),
