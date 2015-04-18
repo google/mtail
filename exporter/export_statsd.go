@@ -5,6 +5,7 @@ package exporter
 
 import (
 	"expvar"
+	"flag"
 	"fmt"
 	"net"
 
@@ -12,6 +13,9 @@ import (
 )
 
 var (
+	statsdHostPort = flag.String("statsd_hostport", "",
+		"Host:port to statsd server to write metrics to.")
+
 	statsdExportTotal   = expvar.NewInt("statsd_export_total")
 	statsdExportSuccess = expvar.NewInt("statsd_export_success")
 )

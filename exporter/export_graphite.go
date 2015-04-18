@@ -5,6 +5,7 @@ package exporter
 
 import (
 	"expvar"
+	"flag"
 	"fmt"
 	"net"
 
@@ -12,6 +13,9 @@ import (
 )
 
 var (
+	graphiteHostPort = flag.String("graphite_host_port", "",
+		"Host:port to graphite carbon server to write metrics to.")
+
 	graphiteExportTotal   = expvar.NewInt("graphite_export_total")
 	graphiteExportSuccess = expvar.NewInt("graphite_export_success")
 )

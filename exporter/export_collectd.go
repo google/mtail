@@ -5,6 +5,7 @@ package exporter
 
 import (
 	"expvar"
+	"flag"
 	"fmt"
 	"net"
 	"strings"
@@ -17,6 +18,9 @@ const (
 )
 
 var (
+	collectdSocketPath = flag.String("collectd_socketpath", "",
+		"Path to collectd unixsock to write metrics to.")
+
 	collectdExportTotal   = expvar.NewInt("collectd_export_total")
 	collectdExportSuccess = expvar.NewInt("collectd_export_success")
 )

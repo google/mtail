@@ -21,12 +21,6 @@ import (
 
 // Commandline Flags.
 var (
-	collectdSocketPath = flag.String("collectd_socketpath", "",
-		"Path to collectd unixsock to write metrics to.")
-	graphiteHostPort = flag.String("graphite_host_port", "",
-		"Host:port to graphite carbon server to write metrics to.")
-	statsdHostPort = flag.String("statsd_hostport", "",
-		"Host:port to statsd server to write metrics to.")
 	pushInterval = flag.Int("metric_push_interval_seconds", 60,
 		"Interval between metric pushes, in seconds")
 )
@@ -36,6 +30,7 @@ type Exporter struct {
 	store              *metrics.Store
 	hostname           string
 	lastMetricPushTime time.Time
+	pushTargets        []pushOptions
 }
 
 // New creates a new Exporter.
@@ -106,30 +101,43 @@ func (e *Exporter) WriteMetrics() {
 	if lastUpdateTime.Sub(e.lastMetricPushTime) <= 0 {
 		return
 	}
-	if *collectdSocketPath != "" {
-		err := e.CollectdWriteMetrics(*collectdSocketPath)
+	for _, target := range e.pushTargets {
+		conn, err := net.Dial(target.net, target.addr)
 		if err != nil {
-			glog.Infof("collectd write error: %s", err)
+			glog.Info("pusher dial error: %s", err)
+			continue
+		}
+		defer conn.Close()
+		err = e.writeSocketMetrics(conn, target.f, target.total, target.success)
+		if err != nil {
+			glog.Info("pusher write error: %s", err)
 		}
 	}
-	if *graphiteHostPort != "" {
-		err := e.GraphiteWriteMetrics(*graphiteHostPort)
-		if err != nil {
-			glog.Infof("graphite write error: %s", err)
-		}
-	}
-	if *statsdHostPort != "" {
-		err := e.StatsdWriteMetrics(*statsdHostPort)
-		if err != nil {
-			glog.Infof("statsd error: %s", err)
-		}
-	}
+
+	// if *collectdSocketPath != "" {
+	// 	err := e.CollectdWriteMetrics(*collectdSocketPath)
+	// 	if err != nil {
+	// 		glog.Infof("collectd write error: %s", err)
+	// 	}
+	// }
+	// if *graphiteHostPort != "" {
+	// 	err := e.GraphiteWriteMetrics(*graphiteHostPort)
+	// 	if err != nil {
+	// 		glog.Infof("graphite write error: %s", err)
+	// 	}
+	// }
+	// if *statsdHostPort != "" {
+	// 	err := e.StatsdWriteMetrics(*statsdHostPort)
+	// 	if err != nil {
+	// 		glog.Infof("statsd error: %s", err)
+	// 	}
+	// }
 	e.lastMetricPushTime = time.Now().UTC()
 }
 
 // StartMetricPush pushes metrics to the configured services each interval.
 func (e *Exporter) StartMetricPush() {
-	if *collectdSocketPath != "" || *graphiteHostPort != "" || *statsdHostPort != "" {
+	if len(e.pushTargets) > 0 {
 		ticker := time.NewTicker(time.Duration(*pushInterval) * time.Second)
 		go func() {
 			for {
@@ -140,4 +148,17 @@ func (e *Exporter) StartMetricPush() {
 			}
 		}()
 	}
+}
+
+type pushOptions struct {
+	net, addr      string
+	f              formatter
+	total, success *expvar.Int
+}
+
+// RegisterPushExport adds a push export connection to the Exporter.  Items in
+// the list must describe a Dial()able connection and will have all the metrics
+// pushed to each pushInterval.
+func (e *Exporter) RegisterPushExport(p pushOptions) {
+	e.pushTargets = append(e.pushTargets, p)
 }
