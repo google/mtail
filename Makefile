@@ -76,7 +76,7 @@ recbench: $(GOFILES) $(GOTESTFILES)
 coverage: gover.coverprofile
 gover.coverprofile: $(GOFILES) $(GOTESTFILES)
 	for package in exporter metrics mtail tailer vm watcher; do\
-		go test -coverprofile=$$package.coverprofile ./$$package;\
+		go test -covermode=count -coverprofile=$$package.coverprofile ./$$package;\
     done
 	gover
 
