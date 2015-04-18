@@ -11,7 +11,6 @@ package vm
 
 import (
 	"expvar"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -32,9 +31,6 @@ var (
 	ProgLoads = expvar.NewMap("prog_loads_total")
 	// ProgLoadErrors counts the number of program load errors.
 	ProgLoadErrors = expvar.NewMap("prog_load_errors")
-
-	// DumpBytecode instructs the loader to dump the compiled program after compilation, for debugging.
-	DumpBytecode = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 )
 
 var (
@@ -93,12 +89,12 @@ func (l *Loader) LoadProg(programPath string) (errors int) {
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
-	v, errs := Compile(name, input, l.ms)
+	v, errs := Compile(name, input, l.ms, l.compileOnly)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("compile failed for %s: %s", name, strings.Join(errs, "\n"))
 	}
-	if *DumpBytecode {
+	if l.dumpBytecode {
 		v.DumpByteCode(name)
 	}
 	ProgLoads.Add(name, 1)
@@ -130,6 +126,9 @@ type Loader struct {
 
 	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
+
+	compileOnly  bool // Only compile programs and report errors, do not load VMs.
+	dumpBytecode bool // Instructs the loader to dump to stdout the compiled program after compilation.
 }
 
 type LoaderOptions struct {
@@ -137,6 +136,9 @@ type LoaderOptions struct {
 	Lines <-chan string
 	W     watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS    afero.Fs        // Not required, will use afero.OsFs if zero.
+
+	CompileOnly  bool
+	DumpBytecode bool
 }
 
 // NewLoader creates a new program loader.  It takes a filesystem watcher
@@ -159,12 +161,14 @@ func NewLoader(o LoaderOptions) *Loader {
 		}
 	}
 	l := &Loader{
-		w:           w,
-		ms:          o.Store,
-		fs:          fs,
-		handles:     make(map[string]*vmHandle),
-		watcherDone: make(chan struct{}),
-		VMsDone:     make(chan struct{})}
+		w:            w,
+		ms:           o.Store,
+		fs:           fs,
+		handles:      make(map[string]*vmHandle),
+		watcherDone:  make(chan struct{}),
+		VMsDone:      make(chan struct{}),
+		compileOnly:  o.CompileOnly,
+		dumpBytecode: o.DumpBytecode}
 
 	go l.processEvents()
 	go l.processLines(o.Lines)

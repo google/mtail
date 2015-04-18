@@ -7,7 +7,6 @@
 package vm
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -15,10 +14,6 @@ import (
 
 	"github.com/google/mtail/metrics"
 )
-
-// CompileOnly instructs the compiler to not load the virtual machines, for
-// testing.
-var CompileOnly = flag.Bool("compile_only", false, "Compile programs only.")
 
 type compiler struct {
 	name string // Name of the program.
@@ -37,22 +32,20 @@ type compiler struct {
 // Compile compiles a program from the input into a virtual machine or a list
 // of compile errors.  It takes the program's name and the metric store as
 // additional arguments to build the virtual machine.
-func Compile(name string, input io.Reader, ms *metrics.Store) (*VM, []string) {
+func Compile(name string, input io.Reader, ms *metrics.Store, compileOnly bool) (*VM, []string) {
 	name = filepath.Base(name)
 	p := newParser(name, input, ms)
 	r := mtailParse(p)
 	if r != 0 || p == nil || len(p.errors) > 0 {
 		return nil, p.errors
 	}
-	if *CompileOnly {
-		u := Unparser{}
-		output := u.Unparse(p.root)
-		fmt.Printf("Unparsing %s:\n%s", name, output)
-	}
 	c := &compiler{name: name, symtab: p.s}
 	c.compile(p.root)
 	if len(c.errors) > 0 {
 		return nil, c.errors
+	}
+	if compileOnly {
+		return nil, nil
 	}
 
 	vm := New(name, c.re, c.str, c.m, c.prog)
