@@ -64,41 +64,40 @@ func (m *Mtail) OneShot(logfile string) error {
 
 // StartTailing constructs a new Tailer and commences sending log lines into
 // the lines channel.
-func (m *Mtail) StartTailing() {
+func (m *Mtail) StartTailing() error {
 	o := tailer.Options{Lines: m.lines, W: m.o.W, FS: m.o.FS}
-	m.t = tailer.New(o)
-	if m.t == nil {
-		glog.Fatal("Couldn't create a log tailer.")
+	var err error
+	m.t, err = tailer.New(o)
+	if err != nil {
+		return fmt.Errorf("couldn't create a log tailer: %s", err)
 	}
 
 	for _, pathname := range m.o.Logs {
 		m.t.Tail(pathname)
 	}
+	return nil
 }
 
 // InitLoader constructs a new program loader and performs the inital load of program files in the program directory.
-func (m *Mtail) InitLoader() {
+func (m *Mtail) InitLoader() error {
 	o := vm.LoaderOptions{Store: &m.store, Lines: m.lines, CompileOnly: m.o.CompileOnly, DumpBytecode: m.o.DumpBytecode, SyslogUseCurrentYear: m.o.SyslogUseCurrentYear, W: m.o.W, FS: m.o.FS}
-	m.l = vm.NewLoader(o)
-	if m.l == nil {
-		glog.Fatal("Couldn't create a program loader.")
+	var err error
+	m.l, err = vm.NewLoader(o)
+	if err != nil {
+		return err
 	}
 	if m.o.Progs != "" {
 		errors := m.l.LoadProgs(m.o.Progs)
 		if m.o.CompileOnly || m.o.DumpBytecode {
-			os.Exit(errors)
+			return fmt.Errorf("Compile encountered %d errors", errors)
 		}
 	}
+	return nil
 }
 
 func (m *Mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>`))
-}
-
-// NewMtail is a temporary function used for creating bare Mtail objects.
-func NewMtail() *Mtail {
-	return &Mtail{}
 }
 
 // Options contains all the parameters necessary for constructing a new Mtail.
@@ -122,9 +121,15 @@ func New(o Options) (*Mtail, error) {
 		webquit: make(chan struct{}),
 		o:       o}
 
-	m.InitLoader()
+	err := m.InitLoader()
+	if err != nil {
+		return nil, err
+	}
 
-	m.e = exporter.New(exporter.Options{Store: &m.store})
+	m.e, err = exporter.New(exporter.Options{Store: &m.store})
+	if err != nil {
+		return nil, err
+	}
 
 	return m, nil
 }
@@ -161,7 +166,10 @@ func (m *Mtail) RunOneShot() {
 // pick up by the virtual machines.  It will continue to do so until it is
 // signalled to exit.
 func (m *Mtail) Serve() {
-	m.StartTailing()
+	err := m.StartTailing()
+	if err != nil {
+		glog.Fatalf("tailing failed: %s", err)
+	}
 
 	http.Handle("/", m)
 	http.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))

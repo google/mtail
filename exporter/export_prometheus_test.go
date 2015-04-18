@@ -58,7 +58,10 @@ func TestHandlePrometheus(t *testing.T) {
 			ms.Add(metric)
 		}
 		o := Options{&ms, "gunstar"}
-		e := New(o)
+		e, err := New(o)
+		if err != nil {
+			t.Fatalf("couldn't make exporter: %s", err)
+		}
 		response := httptest.NewRecorder()
 		e.HandlePrometheusMetrics(response, &http.Request{})
 		if response.Code != 200 {

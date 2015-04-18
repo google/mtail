@@ -10,6 +10,7 @@ package vm
 // moves.
 
 import (
+	"errors"
 	"expvar"
 	"fmt"
 	"io"
@@ -46,28 +47,27 @@ const (
 // LoadProgs loads all programs in a directory and starts watching the
 // directory for filesystem changes.  The total number of program errors is
 // returned.
-func (l *Loader) LoadProgs(programPath string) int {
+func (l *Loader) LoadProgs(programPath string) error {
 	l.w.Add(programPath)
 
 	s, err := os.Stat(programPath)
 	if err != nil {
-		glog.Fatalf("failed to stat: %s", err)
+		return fmt.Errorf("failed to stat: %s", err)
 	}
 	switch {
 	case s.IsDir():
 		fis, err := ioutil.ReadDir(programPath)
 		if err != nil {
-			glog.Fatalf("Failed to list programs in %q: %s", programPath, err)
+			return fmt.Errorf("Failed to list programs in %q: %s", programPath, err)
 		}
 
-		errors := 0
 		for _, fi := range fis {
 			if fi.IsDir() {
 				continue
 			}
-			errors += l.LoadProg(path.Join(programPath, fi.Name()))
+			l.LoadProg(path.Join(programPath, fi.Name()))
 		}
-		return errors
+		return nil
 	default:
 		return l.LoadProg(programPath)
 	}
@@ -75,22 +75,19 @@ func (l *Loader) LoadProgs(programPath string) int {
 
 // LoadProg loads or reloads a program from the path specified.  The name of
 // the program is the basename of the file.
-func (l *Loader) LoadProg(programPath string) (errors int) {
+func (l *Loader) LoadProg(programPath string) error {
 	name := filepath.Base(programPath)
 	if filepath.Ext(name) != fileExt {
 		glog.Infof("Skipping %s due to file extension.", programPath)
-		return
+		return nil
 	}
 	f, err := l.fs.Open(programPath)
 	if err != nil {
-		glog.Infof("Failed to read program %q: %s", programPath, err)
-		errors = 1
 		ProgLoadErrors.Add(name, 1)
-		return
+		return fmt.Errorf("Failed to read program %q: %s", programPath, err)
 	}
 	defer f.Close()
-	l.CompileAndRun(name, f)
-	return
+	return l.CompileAndRun(name, f)
 }
 
 // CompileAndRun compiles a program read from the input, starting execution if
@@ -158,9 +155,9 @@ type LoaderOptions struct {
 // NewLoader creates a new program loader.  It takes a filesystem watcher
 // and a filesystem interface as arguments.  If fs is nil, it will use the
 // default filesystem interface.
-func NewLoader(o LoaderOptions) *Loader {
+func NewLoader(o LoaderOptions) (*Loader, error) {
 	if o.Store == nil || o.Lines == nil {
-		return nil
+		return nil, errors.New("loader needs a store and lines")
 	}
 	fs := o.FS
 	if fs == nil {
@@ -171,7 +168,7 @@ func NewLoader(o LoaderOptions) *Loader {
 		var err error
 		w, err = watcher.NewLogWatcher()
 		if err != nil {
-			glog.Fatalf("Couldn't create a watcher for loader: %s", err)
+			return nil, fmt.Errorf("Couldn't create a watcher for loader: %s", err)
 		}
 	}
 	l := &Loader{
@@ -187,7 +184,7 @@ func NewLoader(o LoaderOptions) *Loader {
 
 	go l.processEvents()
 	go l.processLines(o.Lines)
-	return l
+	return l, nil
 }
 
 type vmHandle struct {
