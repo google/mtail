@@ -16,10 +16,8 @@ var (
 	logs  = flag.String("logs", "", "List of files to monitor.")
 	progs = flag.String("progs", "", "Directory containing programs")
 
-	oneShot = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
-
-	compileOnly = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
-
+	oneShot      = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
+	compileOnly  = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
 	dumpBytecode = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
@@ -27,7 +25,15 @@ var (
 
 func main() {
 	flag.Parse()
-	o := mtail.Options{*progs, *logs, *port, *oneShot, *compileOnly, *dumpBytecode, *syslogUseCurrentYear}
+	o := mtail.Options{
+		Progs:                *progs,
+		Logs:                 *logs,
+		Port:                 *port,
+		OneShot:              *oneShot,
+		CompileOnly:          *compileOnly,
+		DumpBytecode:         *dumpBytecode,
+		SyslogUseCurrentYear: *syslogUseCurrentYear,
+	}
 	m := mtail.New(o)
 	m.Run()
 }
