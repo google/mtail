@@ -42,8 +42,9 @@ CLEANFILES+=\
 
 all: mtail
 
+.PHONY: mtail
 mtail: $(GOFILES)
-	go build
+	go install
 
 vm/parser.go: vm/parser.y
 	cd vm && go generate

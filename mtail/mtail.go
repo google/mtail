@@ -124,6 +124,8 @@ func New(o Options) *mtail {
 		return nil
 	}
 	m := NewMtail()
+	m.progs = o.Progs
+	m.port = o.Port
 	m.oneShot = o.OneShot
 	m.compileOnly = o.CompileOnly
 	m.dumpBytecode = o.DumpBytecode
@@ -171,6 +173,7 @@ func (m *mtail) Serve() {
 	m.e.StartMetricPush()
 
 	go func() {
+		glog.Infof("Listening on port %s", m.port)
 		err := http.ListenAndServe(":"+m.port, nil)
 		if err != nil {
 			glog.Fatal(err)
@@ -215,6 +218,7 @@ func (m *mtail) Close() {
 		if m.l != nil {
 			<-m.l.VMsDone
 		}
+		glog.Info("All done.")
 	})
 }
 
