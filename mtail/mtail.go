@@ -40,7 +40,7 @@ type Mtail struct {
 }
 
 // OneShot reads the contents of a log file into the lines channel from start to finish, terminating the program at the end.
-func (m *Mtail) OneShot(logfile string, lines chan string) error {
+func (m *Mtail) OneShot(logfile string) error {
 	defer m.Close()
 	l, err := os.Open(logfile)
 	if err != nil {
@@ -58,7 +58,7 @@ func (m *Mtail) OneShot(logfile string, lines chan string) error {
 		case err != nil:
 			return fmt.Errorf("failed to read from %q: %s", logfile, err)
 		default:
-			lines <- line
+			m.lines <- line
 		}
 	}
 }
@@ -119,9 +119,6 @@ func New(o Options) (*Mtail, error) {
 	if o.Progs == "" {
 		return nil, errors.New("Must supply some program paths.")
 	}
-	if len(o.Logs) < 1 {
-		return nil, errors.New("Must supply some log filenames.")
-	}
 	m := &Mtail{
 		lines:   make(chan string),
 		webquit: make(chan struct{}),
@@ -134,19 +131,30 @@ func New(o Options) (*Mtail, error) {
 	return m, nil
 }
 
+// WriteMetrics dumps the current state of the metrics store in JSON format to
+// the io.Writer.
+func (m *Mtail) WriteMetrics(w io.Writer) error {
+	m.store.RLock()
+	b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
+	m.store.RUnlock()
+	if err != nil {
+		return fmt.Errorf("failed to marshal metrics into json: %s", err)
+	}
+	w.Write(b)
+	return nil
+}
+
 // RunOneShot performs the work of the one_shot commandline flag; after compiling programs mtail will read all of the log files in full, once, dump the metric results at the end, and then exit.
 func (m *Mtail) RunOneShot() {
 	for _, pathname := range m.o.Logs {
-		err := m.OneShot(pathname, m.lines)
+		err := m.OneShot(pathname)
 		if err != nil {
 			glog.Fatalf("Failed one shot mode for %q: %s\n", pathname, err)
 		}
 	}
-	b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
-	if err != nil {
-		glog.Fatalf("Failed to marshal metrics into json: %s", err)
+	if err := m.WriteMetrics(os.Stdout); err != nil {
+		glog.Fatal(err)
 	}
-	os.Stdout.Write(b)
 	m.e.WriteMetrics()
 }
 

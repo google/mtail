@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -48,19 +49,28 @@ const (
 func (l *Loader) LoadProgs(programPath string) int {
 	l.w.Add(programPath)
 
-	fis, err := ioutil.ReadDir(programPath)
+	s, err := os.Stat(programPath)
 	if err != nil {
-		glog.Fatalf("Failed to list programs in %q: %s", programPath, err)
+		glog.Fatalf("failed to stat: %s", err)
 	}
-
-	errors := 0
-	for _, fi := range fis {
-		if fi.IsDir() {
-			continue
+	switch {
+	case s.IsDir():
+		fis, err := ioutil.ReadDir(programPath)
+		if err != nil {
+			glog.Fatalf("Failed to list programs in %q: %s", programPath, err)
 		}
-		errors += l.LoadProg(path.Join(programPath, fi.Name()))
+
+		errors := 0
+		for _, fi := range fis {
+			if fi.IsDir() {
+				continue
+			}
+			errors += l.LoadProg(path.Join(programPath, fi.Name()))
+		}
+		return errors
+	default:
+		return l.LoadProg(programPath)
 	}
-	return errors
 }
 
 // LoadProg loads or reloads a program from the path specified.  The name of
