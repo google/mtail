@@ -57,7 +57,8 @@ func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) (*
 
 	name := filepath.Base(programfile)
 	w := watcher.NewFakeWatcher()
-	l := vm.NewLoader(w, ms, lines)
+	o := vm.LoaderOptions{W: w, Store: ms, Lines: lines}
+	l := vm.NewLoader(o)
 	if l == nil {
 		return nil, fmt.Errorf("couldn't create program loader")
 	}

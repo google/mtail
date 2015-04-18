@@ -21,7 +21,6 @@ import (
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
-	"github.com/google/mtail/watcher"
 
 	_ "net/http/pprof"
 )
@@ -81,11 +80,8 @@ func (m *mtail) StartTailing(pathnames []string) {
 }
 
 func (m *mtail) InitLoader(path string) {
-	w, err := watcher.NewLogWatcher()
-	if err != nil {
-		glog.Fatal("Couldn't create prog watcher:", err)
-	}
-	m.l = vm.NewLoader(w, &m.store, m.lines)
+	o := vm.LoaderOptions{Store: &m.store, Lines: m.lines}
+	m.l = vm.NewLoader(o)
 	if m.l == nil {
 		glog.Fatal("Couldn't create a program loader.")
 	}

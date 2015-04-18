@@ -39,7 +39,8 @@ func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail
 	if err != nil {
 		t.Fatalf("Couldn't create watcher: %s", err)
 	}
-	if m.l = vm.NewLoader(w, &m.store, m.lines); m.l == nil {
+	o := vm.LoaderOptions{W: w, Store: &m.store, Lines: m.lines}
+	if m.l = vm.NewLoader(o); m.l == nil {
 		t.Fatalf("Couldn't create program loader.")
 	}
 

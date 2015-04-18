@@ -132,26 +132,39 @@ type Loader struct {
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 }
 
+type LoaderOptions struct {
+	Store *metrics.Store
+	Lines <-chan string
+	W     watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
+	FS    afero.Fs        // Not required, will use afero.OsFs if zero.
+}
+
 // NewLoader creates a new program loader.  It takes a filesystem watcher
 // and a filesystem interface as arguments.  If fs is nil, it will use the
 // default filesystem interface.
-func NewLoader(w watcher.Watcher, ms *metrics.Store, lines <-chan string) *Loader {
-	return newLoaderWithFs(w, ms, lines, afero.OsFs{})
-}
-
-// newLoaderWithFs creates a new program loader with a supplied filesystem
-// implementation, for testing.
-func newLoaderWithFs(w watcher.Watcher, ms *metrics.Store, lines <-chan string, fs afero.Fs) *Loader {
+func NewLoader(o LoaderOptions) *Loader {
+	fs := o.FS
+	if fs == nil {
+		fs = &afero.OsFs{}
+	}
+	w := o.W
+	if w == nil {
+		var err error
+		w, err = watcher.NewLogWatcher()
+		if err != nil {
+			glog.Fatalf("Couldn't create a watcher for loader: %s", err)
+		}
+	}
 	l := &Loader{
 		w:           w,
-		ms:          ms,
+		ms:          o.Store,
 		fs:          fs,
 		handles:     make(map[string]*vmHandle),
 		watcherDone: make(chan struct{}),
 		VMsDone:     make(chan struct{})}
 
 	go l.processEvents()
-	go l.processLines(lines)
+	go l.processLines(o.Lines)
 	return l
 }
 
