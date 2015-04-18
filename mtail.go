@@ -45,6 +45,7 @@ type mtail struct {
 
 	pathnames []string // pathnames of logs to tail
 	progs     string   // directory path containing mital programs to load
+	port      string   // port to serve HTTP on
 
 	t *tailer.Tailer     // t tails the watched files and feeds lines to the VMs.
 	l *vm.Loader         // l loads programs and manages the VM lifecycle.
@@ -52,6 +53,11 @@ type mtail struct {
 
 	webquit   chan struct{} // Channel to signal shutdown from web UI.
 	closeOnce sync.Once     // Ensure shutdown happens only once.
+
+	oneShot              bool
+	compileOnly          bool
+	dumpBytecode         bool
+	syslogUseCurrentYear bool
 }
 
 func (m *mtail) OneShot(logfile string, lines chan string) error {
@@ -90,13 +96,13 @@ func (m *mtail) StartTailing() {
 }
 
 func (m *mtail) InitLoader() {
-	o := vm.LoaderOptions{Store: &m.store, Lines: m.lines, CompileOnly: *compileOnly, DumpBytecode: *dumpBytecode, SyslogUseCurrentYear: *syslogUseCurrentYear}
+	o := vm.LoaderOptions{Store: &m.store, Lines: m.lines, CompileOnly: m.compileOnly, DumpBytecode: m.dumpBytecode, SyslogUseCurrentYear: m.syslogUseCurrentYear}
 	m.l = vm.NewLoader(o)
 	if m.l == nil {
 		glog.Fatal("Couldn't create a program loader.")
 	}
 	errors := m.l.LoadProgs(m.progs)
-	if *compileOnly || *dumpBytecode {
+	if m.compileOnly || m.dumpBytecode {
 		os.Exit(errors)
 	}
 }
@@ -114,22 +120,30 @@ func newMtail() *mtail {
 }
 
 type Options struct {
-	progs string
-	logs  string
-	port  string
+	progs                string
+	logs                 string
+	port                 string
+	oneShot              bool
+	compileOnly          bool
+	dumpBytecode         bool
+	syslogUseCurrentYear bool
 }
 
 func New(o Options) *mtail {
-	m := newMtail()
 	if o.progs == "" {
 		glog.Fatalf("No mtail program directory specified; use -progs")
 		return nil
 	}
 	if o.logs == "" {
-
 		glog.Fatalf("No logs specified to tail; use -logs")
 		return nil
 	}
+	m := newMtail()
+	m.oneShot = o.oneShot
+	m.compileOnly = o.compileOnly
+	m.dumpBytecode = o.dumpBytecode
+	m.syslogUseCurrentYear = o.syslogUseCurrentYear
+
 	for _, pathname := range strings.Split(o.logs, ",") {
 		if pathname != "" {
 			m.pathnames = append(m.pathnames, pathname)
@@ -172,7 +186,7 @@ func (m *mtail) Serve() {
 	m.e.StartMetricPush()
 
 	go func() {
-		err := http.ListenAndServe(":"+*port, nil)
+		err := http.ListenAndServe(":"+m.port, nil)
 		if err != nil {
 			glog.Fatal(err)
 		}
@@ -219,13 +233,17 @@ func (m *mtail) Close() {
 	})
 }
 
-func main() {
-	flag.Parse()
-	o := Options{*progs, *logs, *port}
-	m := New(o)
-	if *oneShot {
+func (m *mtail) Run() {
+	if m.oneShot {
 		m.RunOneShot()
 	} else {
 		m.Serve()
 	}
+}
+
+func main() {
+	flag.Parse()
+	o := Options{*progs, *logs, *port, *oneShot, *compileOnly, *dumpBytecode, *syslogUseCurrentYear}
+	m := New(o)
+	m.Run()
 }
