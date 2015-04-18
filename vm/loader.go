@@ -132,6 +132,8 @@ type Loader struct {
 	syslogUseCurrentYear bool // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
 }
 
+// LoaderOptions contains the required and optional parameters for creating a
+// new Loader.
 type LoaderOptions struct {
 	Store *metrics.Store
 	Lines <-chan string

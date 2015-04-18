@@ -22,7 +22,8 @@ import (
 	"github.com/google/mtail/vm"
 )
 
-type mtail struct {
+// Mtail contains the state of the main program object.
+type Mtail struct {
 	lines chan string   // Channel of lines from tailer to VM engine.
 	store metrics.Store // Metrics storage.
 
@@ -43,7 +44,8 @@ type mtail struct {
 	syslogUseCurrentYear bool
 }
 
-func (m *mtail) OneShot(logfile string, lines chan string) error {
+// OneShot reads the contents of a log file into the lines channel from start to finish, terminating the program at the end.
+func (m *Mtail) OneShot(logfile string, lines chan string) error {
 	defer m.Close()
 	l, err := os.Open(logfile)
 	if err != nil {
@@ -66,7 +68,9 @@ func (m *mtail) OneShot(logfile string, lines chan string) error {
 	}
 }
 
-func (m *mtail) StartTailing() {
+// StartTailing constructs a new Tailer and commences sending log lines into
+// the lines channel.
+func (m *Mtail) StartTailing() {
 	o := tailer.Options{Lines: m.lines}
 	m.t = tailer.New(o)
 	if m.t == nil {
@@ -78,7 +82,8 @@ func (m *mtail) StartTailing() {
 	}
 }
 
-func (m *mtail) InitLoader() {
+// InitLoader constructs a new program loader and performs the inital load of program files in the program directory.
+func (m *Mtail) InitLoader() {
 	o := vm.LoaderOptions{Store: &m.store, Lines: m.lines, CompileOnly: m.compileOnly, DumpBytecode: m.dumpBytecode, SyslogUseCurrentYear: m.syslogUseCurrentYear}
 	m.l = vm.NewLoader(o)
 	if m.l == nil {
@@ -90,18 +95,20 @@ func (m *mtail) InitLoader() {
 	}
 }
 
-func (m *mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *Mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>`))
 }
 
-func NewMtail() *mtail {
-	return &mtail{
+// NewMtail is a temporary function used for creating bare Mtail objects.
+func NewMtail() *Mtail {
+	return &Mtail{
 		lines:   make(chan string),
 		webquit: make(chan struct{}),
 	}
 }
 
+// Options contains all the parameters necessary for constructing a new Mtail.
 type Options struct {
 	Progs                string
 	Logs                 string
@@ -112,7 +119,8 @@ type Options struct {
 	SyslogUseCurrentYear bool
 }
 
-func New(o Options) *mtail {
+// New creates an Mtail from the supplied Options.
+func New(o Options) *Mtail {
 	if o.Progs == "" {
 		glog.Fatalf("No mtail program directory specified; use -progs")
 		return nil
@@ -146,7 +154,8 @@ func New(o Options) *mtail {
 	return m
 }
 
-func (m *mtail) RunOneShot() {
+// RunOneShot performs the work of the one_shot commandline flag; after compiling programs mtail will read all of the log files in full, once, dump the metric results at the end, and then exit.
+func (m *Mtail) RunOneShot() {
 	for _, pathname := range m.pathnames {
 		err := m.OneShot(pathname, m.lines)
 		if err != nil {
@@ -161,7 +170,11 @@ func (m *mtail) RunOneShot() {
 	m.e.WriteMetrics()
 }
 
-func (m *mtail) Serve() {
+// Serve begins the long-running mode of mtail, in which it watches the log
+// files for changes and sends any new lines found into the lines channel for
+// pick up by the virtual machines.  It will continue to do so until it is
+// signalled to exit.
+func (m *Mtail) Serve() {
 	m.StartTailing()
 
 	http.Handle("/", m)
@@ -180,7 +193,7 @@ func (m *mtail) Serve() {
 	m.shutdownHandler()
 }
 
-func (m *mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
+func (m *Mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Header().Add("Allow", "POST")
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -191,7 +204,7 @@ func (m *mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
 }
 
 // shutdownHandler handles external shutdown request events.
-func (m *mtail) shutdownHandler() {
+func (m *Mtail) shutdownHandler() {
 	n := make(chan os.Signal)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
 	select {
@@ -204,7 +217,7 @@ func (m *mtail) shutdownHandler() {
 }
 
 // Close handles the graceful shutdown of this mtail instance, ensuring that it only occurs once.
-func (m *mtail) Close() {
+func (m *Mtail) Close() {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		if m.t != nil {
@@ -220,7 +233,8 @@ func (m *mtail) Close() {
 	})
 }
 
-func (m *mtail) Run() {
+// Run starts Mtail in the configuration supplied in Options at creation.
+func (m *Mtail) Run() {
 	if m.oneShot {
 		m.RunOneShot()
 	} else {

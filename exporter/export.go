@@ -38,6 +38,8 @@ type Exporter struct {
 	lastMetricPushTime time.Time
 }
 
+// Options contains the required and optional parameters for constructing an
+// Exporter.
 type Options struct {
 	Store    *metrics.Store
 	Hostname string // Not required, uses os.Hostname if zero.
