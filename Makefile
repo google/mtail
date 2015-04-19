@@ -8,8 +8,9 @@ GOFILES=\
 	exporter/export_json.go\
 	exporter/export_prometheus.go\
 	exporter/export_statsd.go\
+	main.go\
 	metrics/metric.go\
-	mtail.go\
+	mtail/mtail.go\
 	tailer/tail.go\
 	vm/ast.go\
 	vm/compiler.go\
@@ -26,7 +27,7 @@ GOFILES=\
 GOTESTFILES=\
 	ex_test.go\
 	exporter/export_test.go\
-	mtail_test.go\
+	mtail/mtail_test.go\
 	tailer/tail_test.go\
 	vm/lexer_test.go\
 	vm/parser_test.go\
@@ -41,8 +42,9 @@ CLEANFILES+=\
 
 all: mtail
 
+.PHONY: mtail
 mtail: $(GOFILES)
-	go build
+	go install
 
 vm/parser.go: vm/parser.y
 	cd vm && go generate
@@ -73,10 +75,9 @@ recbench: $(GOFILES) $(GOTESTFILES)
 .PHONY: coverage
 coverage: gover.coverprofile
 gover.coverprofile: $(GOFILES) $(GOTESTFILES)
-	for package in exporter metrics tailer vm watcher; do\
-		go test -coverprofile=$$package.coverprofile ./$$package;\
+	for package in exporter metrics mtail tailer vm watcher; do\
+		go test -covermode=count -coverprofile=$$package.coverprofile ./$$package;\
     done
-	go test -coverprofile=main.coverprofile .
 	gover
 
 .PHONY: covrep

@@ -104,7 +104,7 @@ func TestNewLogWatcherError(t *testing.T) {
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
 		t.Fatalf("coulnd't get rlimit: %s", err)
 	}
-	var zero syscall.Rlimit = rLimit
+	var zero = rLimit
 	zero.Cur = 0
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &zero); err != nil {
 		t.Fatalf("couldn't set rlimit: %s", err)

@@ -10,4 +10,6 @@ ntp bitfield parsing
 
 refactor fs and notify into single interface
 
-close inofity then use it to force errors
+make benchmarks work again
+
+use error interface for compile errors

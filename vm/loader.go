@@ -10,11 +10,12 @@ package vm
 // moves.
 
 import (
+	"errors"
 	"expvar"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -32,9 +33,6 @@ var (
 	ProgLoads = expvar.NewMap("prog_loads_total")
 	// ProgLoadErrors counts the number of program load errors.
 	ProgLoadErrors = expvar.NewMap("prog_load_errors")
-
-	// DumpBytecode instructs the loader to dump the compiled program after compilation, for debugging.
-	DumpBytecode = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 )
 
 var (
@@ -49,42 +47,47 @@ const (
 // LoadProgs loads all programs in a directory and starts watching the
 // directory for filesystem changes.  The total number of program errors is
 // returned.
-func (l *Loader) LoadProgs(programPath string) int {
+func (l *Loader) LoadProgs(programPath string) error {
 	l.w.Add(programPath)
 
-	fis, err := ioutil.ReadDir(programPath)
+	s, err := os.Stat(programPath)
 	if err != nil {
-		glog.Fatalf("Failed to list programs in %q: %s", programPath, err)
+		return fmt.Errorf("failed to stat: %s", err)
 	}
-
-	errors := 0
-	for _, fi := range fis {
-		if fi.IsDir() {
-			continue
+	switch {
+	case s.IsDir():
+		fis, err := ioutil.ReadDir(programPath)
+		if err != nil {
+			return fmt.Errorf("Failed to list programs in %q: %s", programPath, err)
 		}
-		errors += l.LoadProg(path.Join(programPath, fi.Name()))
+
+		for _, fi := range fis {
+			if fi.IsDir() {
+				continue
+			}
+			l.LoadProg(path.Join(programPath, fi.Name()))
+		}
+		return nil
+	default:
+		return l.LoadProg(programPath)
 	}
-	return errors
 }
 
 // LoadProg loads or reloads a program from the path specified.  The name of
 // the program is the basename of the file.
-func (l *Loader) LoadProg(programPath string) (errors int) {
+func (l *Loader) LoadProg(programPath string) error {
 	name := filepath.Base(programPath)
 	if filepath.Ext(name) != fileExt {
 		glog.Infof("Skipping %s due to file extension.", programPath)
-		return
+		return nil
 	}
 	f, err := l.fs.Open(programPath)
 	if err != nil {
-		glog.Infof("Failed to read program %q: %s", programPath, err)
-		errors = 1
 		ProgLoadErrors.Add(name, 1)
-		return
+		return fmt.Errorf("Failed to read program %q: %s", programPath, err)
 	}
 	defer f.Close()
-	l.CompileAndRun(name, f)
-	return
+	return l.CompileAndRun(name, f)
 }
 
 // CompileAndRun compiles a program read from the input, starting execution if
@@ -93,12 +96,12 @@ func (l *Loader) LoadProg(programPath string) (errors int) {
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
-	v, errs := Compile(name, input, l.ms)
+	v, errs := Compile(name, input, l.ms, l.compileOnly, l.syslogUseCurrentYear)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("compile failed for %s: %s", name, strings.Join(errs, "\n"))
 	}
-	if *DumpBytecode {
+	if l.dumpBytecode {
 		v.DumpByteCode(name)
 	}
 	ProgLoads.Add(name, 1)
@@ -130,29 +133,58 @@ type Loader struct {
 
 	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
+
+	compileOnly          bool // Only compile programs and report errors, do not load VMs.
+	dumpBytecode         bool // Instructs the loader to dump to stdout the compiled program after compilation.
+	syslogUseCurrentYear bool // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
+}
+
+// LoaderOptions contains the required and optional parameters for creating a
+// new Loader.
+type LoaderOptions struct {
+	Store *metrics.Store
+	Lines <-chan string
+	W     watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
+	FS    afero.Fs        // Not required, will use afero.OsFs if zero.
+
+	CompileOnly          bool
+	DumpBytecode         bool
+	SyslogUseCurrentYear bool
 }
 
 // NewLoader creates a new program loader.  It takes a filesystem watcher
 // and a filesystem interface as arguments.  If fs is nil, it will use the
 // default filesystem interface.
-func NewLoader(w watcher.Watcher, ms *metrics.Store, lines <-chan string) *Loader {
-	return newLoaderWithFs(w, ms, lines, afero.OsFs{})
-}
-
-// newLoaderWithFs creates a new program loader with a supplied filesystem
-// implementation, for testing.
-func newLoaderWithFs(w watcher.Watcher, ms *metrics.Store, lines <-chan string, fs afero.Fs) *Loader {
+func NewLoader(o LoaderOptions) (*Loader, error) {
+	if o.Store == nil || o.Lines == nil {
+		return nil, errors.New("loader needs a store and lines")
+	}
+	fs := o.FS
+	if fs == nil {
+		fs = &afero.OsFs{}
+	}
+	w := o.W
+	if w == nil {
+		var err error
+		w, err = watcher.NewLogWatcher()
+		if err != nil {
+			return nil, fmt.Errorf("Couldn't create a watcher for loader: %s", err)
+		}
+	}
 	l := &Loader{
-		w:           w,
-		ms:          ms,
-		fs:          fs,
-		handles:     make(map[string]*vmHandle),
-		watcherDone: make(chan struct{}),
-		VMsDone:     make(chan struct{})}
+		w:                    w,
+		ms:                   o.Store,
+		fs:                   fs,
+		handles:              make(map[string]*vmHandle),
+		watcherDone:          make(chan struct{}),
+		VMsDone:              make(chan struct{}),
+		compileOnly:          o.CompileOnly,
+		dumpBytecode:         o.DumpBytecode,
+		syslogUseCurrentYear: o.SyslogUseCurrentYear}
 
 	go l.processEvents()
-	go l.processLines(lines)
-	return l
+	go l.processLines(o.Lines)
+	return l, nil
 }
 
 type vmHandle struct {

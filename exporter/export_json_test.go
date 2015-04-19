@@ -89,7 +89,11 @@ func TestHandleJSON(t *testing.T) {
 		for _, metric := range tc.metrics {
 			ms.Add(metric)
 		}
-		e := New(&ms)
+		o := Options{&ms, "gunstar"}
+		e, err := New(o)
+		if err != nil {
+			t.Fatalf("couldn't make exporter: %s", err)
+		}
 		response := httptest.NewRecorder()
 		e.HandleJSON(response, &http.Request{})
 		if response.Code != 200 {

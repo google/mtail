@@ -14,12 +14,16 @@ import (
 	"github.com/kylelemons/godebug/pretty"
 )
 
-func TestNewLoaderWithFs(t *testing.T) {
+func TestNewLoader(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := &metrics.Store{}
 	inLines := make(chan string)
 	fs := &afero.MemMapFs{}
-	l := newLoaderWithFs(w, store, inLines, fs)
+	o := LoaderOptions{store, inLines, w, fs, false, false, true}
+	l, err := NewLoader(o)
+	if err != nil {
+		t.Fatalf("couldn't create loader: %s", err)
+	}
 	done := make(chan struct{})
 	outLines := make(chan string)
 	handle := &vmHandle{outLines, done}
@@ -41,7 +45,11 @@ func TestCompileAndRun(t *testing.T) {
 	lines := make(chan string)
 	w := watcher.NewFakeWatcher()
 	fs := &afero.MemMapFs{}
-	l := newLoaderWithFs(w, store, lines, fs)
+	o := LoaderOptions{store, lines, w, fs, false, false, true}
+	l, err := NewLoader(o)
+	if err != nil {
+		t.Fatalf("couldn't create loader: %s", err)
+	}
 	if err := l.CompileAndRun("Test", strings.NewReader(testProgram)); err != nil {
 		t.Errorf("CompileAndRun returned error: %s", err)
 	}
@@ -110,7 +118,11 @@ func TestProcessEvents(t *testing.T) {
 		store := &metrics.Store{}
 		lines := make(chan string)
 		fs := &afero.MemMapFs{}
-		l := newLoaderWithFs(w, store, lines, fs)
+		o := LoaderOptions{store, lines, w, fs, false, false, true}
+		l, err := NewLoader(o)
+		if err != nil {
+			t.Fatalf("couldn't create loader: %s", err)
+		}
 		for i := range tt.events {
 			e := tt.events[i]
 			switch e := e.(type) {

@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package main
+package mtail
 
 import (
 	"fmt"
@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/google/mtail/vm"
-	"github.com/google/mtail/watcher"
 )
 
 const testProgram = "/$/ { }"
@@ -33,14 +32,11 @@ func removeTempDir(t *testing.T, workdir string) {
 	}
 }
 
-func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail {
-	m := newMtail()
-	w, err := watcher.NewLogWatcher()
+func startMtail(t *testing.T, logPathnames []string, progPathname string) *Mtail {
+	o := Options{Logs: logPathnames}
+	m, err := New(o)
 	if err != nil {
-		t.Fatalf("Couldn't create watcher: %s", err)
-	}
-	if m.l = vm.NewLoader(w, &m.store, m.lines); m.l == nil {
-		t.Fatalf("Couldn't create program loader.")
+		t.Fatalf("couldn't create mtail: %s", err)
 	}
 
 	if progPathname != "" {
@@ -53,7 +49,7 @@ func startMtail(t *testing.T, logPathnames []string, progPathname string) *mtail
 
 	vm.LineCount.Set(0)
 
-	m.StartTailing(logPathnames)
+	m.StartTailing()
 	return m
 }
 

@@ -10,7 +10,9 @@ package tailer
 // rotated, so mtail is also notified of creates in the log file directory.
 
 import (
+	"errors"
 	"expvar"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -48,18 +50,40 @@ type Tailer struct {
 	fs afero.Fs // mockable filesystem interface
 }
 
-// New returns a new Tailer.
-func New(lines chan<- string, w watcher.Watcher, fs afero.Fs) *Tailer {
+// Options configures a Tailer
+type Options struct {
+	Lines chan<- string
+	W     watcher.Watcher // Not required, will use watcher.LogWatcher if it is zero.
+	FS    afero.Fs        // Not required, will use afero.OsFs if it is zero.
+}
+
+// New returns a new Tailer, configured with the supplied Options
+func New(o Options) (*Tailer, error) {
+	if o.Lines == nil {
+		return nil, errors.New("tailer needs lines")
+	}
+	fs := o.FS
+	if fs == nil {
+		fs = &afero.OsFs{}
+	}
+	w := o.W
+	if w == nil {
+		var err error
+		w, err = watcher.NewLogWatcher()
+		if err != nil {
+			return nil, fmt.Errorf("Couldn't create a watcher for tailer: %s", err)
+		}
+	}
 	t := &Tailer{
 		w:        w,
 		watched:  make(map[string]struct{}),
-		lines:    lines,
+		lines:    o.Lines,
 		files:    make(map[string]afero.File),
 		partials: make(map[string]string),
 		fs:       fs,
 	}
 	go t.run()
-	return t
+	return t, nil
 }
 
 func (t *Tailer) addWatched(path string) {
