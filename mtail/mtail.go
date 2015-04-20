@@ -89,7 +89,7 @@ func (m *Mtail) InitLoader() error {
 	if m.o.Progs != "" {
 		errors := m.l.LoadProgs(m.o.Progs)
 		if m.o.CompileOnly || m.o.DumpBytecode {
-			return fmt.Errorf("Compile encountered %d errors", errors)
+			return fmt.Errorf("Compile encountered errors:\n%s", errors)
 		}
 	}
 	return nil
