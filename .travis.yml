@@ -9,10 +9,10 @@ before_install:
 # detected.  Also install three tools for measuring coverage and sending to
 # coveralls.io.
 install:
- - go get -t ./...
- - go get golang.org/x/tools/cmd/cover
- - go get github.com/modocache/gover
- - go get github.com/mattn/goveralls
+ - until go get -t -v ./... ; do sleep 1; done
+ - until go get golang.org/x/tools/cmd/cover; do sleep 1; done
+ - until go get github.com/modocache/gover; do sleep 1; done
+ - until go get github.com/mattn/goveralls; do sleep 1; done
 
 # Run all tests, under race detector.
 script: make testrace
