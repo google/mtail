@@ -7,7 +7,6 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
-	"net"
 
 	"github.com/google/mtail/metrics"
 )
@@ -19,16 +18,6 @@ var (
 	statsdExportTotal   = expvar.NewInt("statsd_export_total")
 	statsdExportSuccess = expvar.NewInt("statsd_export_success")
 )
-
-// StatsdWriteMetrics writes metrics to a statsd udp collector.
-func (e *Exporter) StatsdWriteMetrics(hostport string) error {
-	c, err := net.Dial("udp", hostport)
-	if err != nil {
-		return fmt.Errorf("dial error: %s\n", err)
-	}
-	defer c.Close()
-	return e.writeSocketMetrics(c, metricToStatsd, statsdExportTotal, statsdExportSuccess)
-}
 
 func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
 	// TODO(jaq): handle units better, send timing as |ms

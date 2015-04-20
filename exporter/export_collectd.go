@@ -7,7 +7,6 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
-	"net"
 	"strings"
 
 	"github.com/google/mtail/metrics"
@@ -24,17 +23,6 @@ var (
 	collectdExportTotal   = expvar.NewInt("collectd_export_total")
 	collectdExportSuccess = expvar.NewInt("collectd_export_success")
 )
-
-// CollectdWriteMetrics writes metrics to a collectd unix socket plugin.
-func (e *Exporter) CollectdWriteMetrics(socketpath string) error {
-	c, err := net.Dial("unix", socketpath)
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-
-	return e.writeSocketMetrics(c, metricToCollectd, collectdExportTotal, collectdExportSuccess)
-}
 
 func metricToCollectd(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
 	m.RLock()

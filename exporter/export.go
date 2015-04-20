@@ -54,7 +54,22 @@ func New(o Options) (*Exporter, error) {
 			return nil, fmt.Errorf("Error getting hostname: %s\n", err)
 		}
 	}
-	return &Exporter{store: o.Store, hostname: hostname}, nil
+	e := &Exporter{store: o.Store, hostname: hostname}
+
+	if *collectdSocketPath != "" {
+		o := pushOptions{"unix", *collectdSocketPath, metricToCollectd, collectdExportTotal, collectdExportSuccess}
+		e.RegisterPushExport(o)
+	}
+	if *graphiteHostPort != "" {
+		o := pushOptions{"tcp", *graphiteHostPort, metricToGraphite, graphiteExportTotal, graphiteExportSuccess}
+		e.RegisterPushExport(o)
+	}
+	if *statsdHostPort != "" {
+		o := pushOptions{"udp", *statsdHostPort, metricToStatsd, statsdExportTotal, statsdExportSuccess}
+		e.RegisterPushExport(o)
+	}
+
+	return e, nil
 }
 
 // formatLabels converts a metric name and key-value map of labels to a single
@@ -129,25 +144,6 @@ func (e *Exporter) WriteMetrics() {
 			glog.Info("pusher write error: %s", err)
 		}
 	}
-
-	// if *collectdSocketPath != "" {
-	// 	err := e.CollectdWriteMetrics(*collectdSocketPath)
-	// 	if err != nil {
-	// 		glog.Infof("collectd write error: %s", err)
-	// 	}
-	// }
-	// if *graphiteHostPort != "" {
-	// 	err := e.GraphiteWriteMetrics(*graphiteHostPort)
-	// 	if err != nil {
-	// 		glog.Infof("graphite write error: %s", err)
-	// 	}
-	// }
-	// if *statsdHostPort != "" {
-	// 	err := e.StatsdWriteMetrics(*statsdHostPort)
-	// 	if err != nil {
-	// 		glog.Infof("statsd error: %s", err)
-	// 	}
-	// }
 	e.lastMetricPushTime = time.Now().UTC()
 }
 
