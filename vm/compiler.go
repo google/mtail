@@ -18,7 +18,7 @@ import (
 type compiler struct {
 	name string // Name of the program.
 
-	errors []string          // Compile errors.
+	errors []error           // Compile errors.
 	prog   []instr           // The emitted program.
 	str    []string          // Static strings.
 	re     []*regexp.Regexp  // Static regular expressions.
@@ -32,7 +32,7 @@ type compiler struct {
 // Compile compiles a program from the input into a virtual machine or a list
 // of compile errors.  It takes the program's name and the metric store as
 // additional arguments to build the virtual machine.
-func Compile(name string, input io.Reader, ms *metrics.Store, compileOnly bool, syslogUseCurrentYear bool) (*VM, []string) {
+func Compile(name string, input io.Reader, ms *metrics.Store, compileOnly bool, syslogUseCurrentYear bool) (*VM, []error) {
 	name = filepath.Base(name)
 	p := newParser(name, input, ms)
 	r := mtailParse(p)
@@ -53,7 +53,7 @@ func Compile(name string, input io.Reader, ms *metrics.Store, compileOnly bool, 
 }
 
 func (c *compiler) errorf(format string, args ...interface{}) {
-	e := fmt.Sprintf(c.name+": "+format, args...)
+	e := fmt.Errorf(c.name+": "+format, args...)
 	c.errors = append(c.errors, e)
 }
 

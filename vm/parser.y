@@ -456,7 +456,7 @@ const EOF = 0
 type parser struct {
     name   string
     root   node
-    errors []string
+    errors []error
     l      *lexer
     t      token             // Most recently lexed token.
     pos position             // Maybe contains the position of the start of a node.
@@ -470,7 +470,7 @@ func newParser(name string, input io.Reader, ms *metrics.Store) *parser {
 }
 
 func (p *parser) ErrorP(s string, pos position) {
-    e := fmt.Sprintf("%s:%s: %s", p.l.name, pos, s)
+    e := fmt.Errorf("%s:%s: %s", p.l.name, pos, s)
     p.errors = append(p.errors, e)
 }
 
