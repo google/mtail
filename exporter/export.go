@@ -133,16 +133,17 @@ func (e *Exporter) WriteMetrics() {
 		return
 	}
 	for _, target := range e.pushTargets {
+		glog.Infof("pushing to %s", target.addr)
 		conn, err := net.Dial(target.net, target.addr)
 		if err != nil {
-			glog.Info("pusher dial error: %s", err)
+			glog.Infof("pusher dial error: %s", err)
 			continue
 		}
-		defer conn.Close()
 		err = e.writeSocketMetrics(conn, target.f, target.total, target.success)
 		if err != nil {
-			glog.Info("pusher write error: %s", err)
+			glog.Infof("pusher write error: %s", err)
 		}
+		conn.Close()
 	}
 	e.lastMetricPushTime = time.Now().UTC()
 }
@@ -150,6 +151,7 @@ func (e *Exporter) WriteMetrics() {
 // StartMetricPush pushes metrics to the configured services each interval.
 func (e *Exporter) StartMetricPush() {
 	if len(e.pushTargets) > 0 {
+		glog.Info("Started metric push.")
 		ticker := time.NewTicker(time.Duration(*pushInterval) * time.Second)
 		go func() {
 			for {
