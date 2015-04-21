@@ -18,7 +18,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/golang/glog"
@@ -99,7 +98,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	v, errs := Compile(name, input, l.ms, l.compileOnly, l.syslogUseCurrentYear)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
-		return fmt.Errorf("compile failed for %s: %s", name, strings.Join(errs, "\n"))
+		return fmt.Errorf("compile failed for %s:\n%s", name, errs)
 	}
 	if l.dumpBytecode {
 		v.DumpByteCode(name)

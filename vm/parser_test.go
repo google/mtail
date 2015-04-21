@@ -268,7 +268,7 @@ func TestInvalidPrograms(t *testing.T) {
 		//mtailDebug = 999 // All the debugging.
 		mtailParse(p)
 
-		diff := pretty.Compare(p.errors, tc.errors)
+		diff := pretty.Compare(strings.TrimRight(p.errors.Error(), "\n"), strings.Join(tc.errors, "\n"))
 		if len(diff) > 0 {
 			t.Errorf("Incorrect error for '%s'\n%s", tc.name, diff)
 		}

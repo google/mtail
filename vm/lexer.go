@@ -81,13 +81,14 @@ var builtins = []string{
 
 // A position is the location in the source program that a token appears.
 type position struct {
+	filename string
 	line     int // Line in the source for this token.
 	startcol int // Starting and ending columns in the source for this token.
 	endcol   int
 }
 
 func (p position) String() string {
-	r := fmt.Sprintf("%d:%d", p.line+1, p.startcol+1)
+	r := fmt.Sprintf("%s:%d:%d", p.filename, p.line+1, p.startcol+1)
 	if p.endcol > p.startcol {
 		r += fmt.Sprintf("-%d", p.endcol+1)
 	}
@@ -153,7 +154,7 @@ func (l *lexer) nextToken() token {
 
 // emit passes a token to the client.
 func (l *lexer) emit(kind lexeme) {
-	pos := position{l.line, l.startcol, l.col - 1}
+	pos := position{l.name, l.line, l.startcol, l.col - 1}
 	l.tokens <- token{kind, l.text, pos}
 	// Reset the current token
 	l.text = ""
@@ -215,7 +216,7 @@ func (l *lexer) ignore() {
 // errorf returns an error token and terminates the scanner by passing back a
 // nil state function to the state machine.
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
-	pos := position{l.line, l.startcol, l.col - 1}
+	pos := position{l.name, l.line, l.startcol, l.col - 1}
 	l.tokens <- token{kind: INVALID,
 		text: fmt.Sprintf(format, args...),
 		pos:  pos}
