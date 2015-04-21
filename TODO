@@ -11,5 +11,3 @@ ntp bitfield parsing
 refactor fs and notify into single interface
 
 make benchmarks work again
-
-use error interface for compile errors
