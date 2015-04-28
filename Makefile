@@ -66,7 +66,7 @@ smoke: $(GOFILES) $(GOTESTFILES)
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES)
-	go test -bench=. -run=XXX ./...
+	go test -bench=. -timeout 60s -run=XXX ./...
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOTESTFILES)
