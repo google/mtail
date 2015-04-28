@@ -40,7 +40,6 @@ type Mtail struct {
 
 // OneShot reads the contents of a log file into the lines channel from start to finish, terminating the program at the end.
 func (m *Mtail) OneShot(logfile string) error {
-	defer m.Close()
 	l, err := os.Open(logfile)
 	if err != nil {
 		return fmt.Errorf("failed to open log file %q: %s", logfile, err)
@@ -159,6 +158,7 @@ func (m *Mtail) RunOneShot() {
 		glog.Exit(err)
 	}
 	m.e.WriteMetrics()
+	m.Close()
 }
 
 // Serve begins the long-running mode of mtail, in which it watches the log

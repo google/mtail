@@ -5,11 +5,15 @@ package main
 
 import (
 	"bytes"
+	"encoding/csv"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
@@ -117,74 +121,68 @@ func TestExamplePrograms(t *testing.T) {
 	}
 }
 
-// // These benchmarks run the testdata logs through the example programs.
-// func BenchmarkExamplePrograms(b *testing.B) {
-// 	if testing.Short() {
-// 		b.Skip("skipping test in short mode")
-// 	}
-// 	b.Logf("\n")
-// 	for _, tc := range exampleProgramTests {
-// 		mtail := mtail.NewMtail()
-// 		spareLines := make(chan string)
-// 		l, err := CompileAndLoad(tc.programfile, &metrics.Store{}, spareLines)
-// 		if err != nil {
-// 			b.Errorf("Compile failed: %s", err)
-// 		}
-// 		mtail.l = l
-// 		r := testing.Benchmark(func(b *testing.B) {
-// 			for i := 0; i < b.N; i++ {
-// 				b.StopTimer()
-// 				vm.LineCount.Set(0)
-// 				mtail.store.ClearMetrics()
-// 				b.StartTimer()
-// 				err := mtail.OneShot(tc.logfile, spareLines)
-// 				if err != nil {
-// 					b.Errorf("OneShot log parse failed: %s", err)
-// 					return
-// 				}
-// 				b.StopTimer()
-// 				l, err := strconv.ParseInt(vm.LineCount.String(), 10, 64)
-// 				if err != nil {
-// 					b.Errorf("strconv.ParseInt failed: %s", err)
-// 					return
-// 				}
-// 				b.SetBytes(l)
-// 			}
-// 		})
-// 		close(spareLines)
+// These benchmarks run the testdata logs through the example programs.
+func BenchmarkExamplePrograms(b *testing.B) {
+	if testing.Short() {
+		b.Skip("skipping test in short mode")
+	}
+	b.Logf("\n")
+	for _, tc := range exampleProgramTests {
+		w := watcher.NewFakeWatcher()
+		o := mtail.Options{Progs: tc.programfile, W: w}
+		mtail, err := mtail.New(o)
+		if err != nil {
+			b.Fatalf("Failed to create mtail: %s", err)
+		}
 
-// 		klPerSecond := float64(r.Bytes) * float64(r.N) / (r.T.Seconds() * 1000)
-// 		msPerRun := float64(r.NsPerOp()) / 1e6
-// 		lr := r.Bytes * int64(r.N)
-// 		µsPerL := float64(r.T.Nanoseconds()) / (float64(r.Bytes) * float64(r.N) * 1000)
-// 		fmt.Printf("%s: %d runs, %d lines in %s (%f ms/run, %d lines/run, %f Klines/s, %f µs/line)\n",
-// 			tc.programfile, r.N, lr, r.T, msPerRun, r.Bytes, klPerSecond, µsPerL)
-// 		if *recordBenchmark {
-// 			f, err := os.OpenFile("benchmark_results.csv", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
-// 			if err != nil {
-// 				fmt.Printf("benchmark write failed: %s\n", err)
-// 				continue
-// 			}
-// 			defer f.Close()
-// 			c := csv.NewWriter(f)
-// 			defer c.Flush()
-// 			record := func(v ...interface{}) []string {
-// 				var r []string
-// 				for _, x := range v {
-// 					r = append(r, fmt.Sprintf("%v", x))
-// 				}
-// 				return r
-// 			}(time.Now().Unix(),
-// 				runtime.GOMAXPROCS(-1),
-// 				runtime.NumCPU(),
-// 				tc.programfile,
-// 				r.N, lr, r.T, msPerRun, r.Bytes, klPerSecond, µsPerL)
-// 			// Format is time, concurrency, number of cores,
-// 			// name, data
-// 			err = c.Write(record)
-// 			if err != nil {
-// 				fmt.Printf("failed to write csv record %q: %s\n", record, err)
-// 			}
-// 		}
-// 	}
-// }
+		r := testing.Benchmark(func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				if err := mtail.OneShot(tc.logfile); err != nil {
+					b.Errorf("OneShot log parse failed: %s", err)
+					return
+				}
+			}
+		})
+		mtail.Close()
+		l, err := strconv.ParseInt(vm.LineCount.String(), 10, 64)
+		if err != nil {
+			b.Fatalf("strconv.ParseInt failed: %s", err)
+			return
+		}
+		b.SetBytes(l)
+
+		klPerSecond := float64(r.Bytes) * float64(r.N) / (r.T.Seconds() * 1000)
+		msPerRun := float64(r.NsPerOp()) / 1e6
+		lr := r.Bytes * int64(r.N)
+		µsPerL := float64(r.T.Nanoseconds()) / (float64(r.Bytes) * float64(r.N) * 1000)
+		fmt.Printf("%s: %d runs, %d lines in %s (%f ms/run, %d lines/run, %f Klines/s, %f µs/line)\n",
+			tc.programfile, r.N, lr, r.T, msPerRun, r.Bytes, klPerSecond, µsPerL)
+		if *recordBenchmark {
+			f, err := os.OpenFile("benchmark_results.csv", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+			if err != nil {
+				fmt.Printf("benchmark write failed: %s\n", err)
+				continue
+			}
+			defer f.Close()
+			c := csv.NewWriter(f)
+			defer c.Flush()
+			record := func(v ...interface{}) []string {
+				var r []string
+				for _, x := range v {
+					r = append(r, fmt.Sprintf("%v", x))
+				}
+				return r
+			}(time.Now().Unix(),
+				runtime.GOMAXPROCS(-1),
+				runtime.NumCPU(),
+				tc.programfile,
+				r.N, lr, r.T, msPerRun, r.Bytes, klPerSecond, µsPerL)
+			// Format is time, concurrency, number of cores,
+			// name, data
+			err = c.Write(record)
+			if err != nil {
+				fmt.Printf("failed to write csv record %q: %s\n", record, err)
+			}
+		}
+	}
+}
