@@ -5,7 +5,10 @@ package metrics
 
 import (
 	"encoding/json"
+	"math/rand"
+	"reflect"
 	"testing"
+	"testing/quick"
 	"time"
 
 	"github.com/kylelemons/godebug/pretty"
@@ -125,25 +128,68 @@ func TestFindLabelValueOrNil(t *testing.T) {
 	}
 }
 
+func timeGenerator(rand *rand.Rand) time.Time {
+	months := []time.Month{
+		time.January, time.February, time.March,
+		time.April, time.May, time.June,
+		time.July, time.August, time.September,
+		time.October, time.November, time.December,
+	}
+
+	return time.Date(
+		rand.Intn(9999),
+		months[rand.Intn(len(months))],
+		rand.Intn(31),
+		rand.Intn(24),
+		rand.Intn(60),
+		rand.Intn(60),
+		int(rand.Int31()),
+		time.UTC,
+	)
+}
+
 func TestMetricJSONRoundTrip(t *testing.T) {
-	m := NewMetric("test", "prog", Gauge, "foo", "bar", "quux")
-	d, _ := m.GetDatum("a", "2", "d")
-	d.Set(1, time.Now().UTC())
+	rand := rand.New(rand.NewSource(0))
+	f := func(name, prog string, kind MetricType, keys []string, val, ti, tns int64) bool {
+		m := NewMetric(name, prog, kind, keys...)
+		var labels []string
+		for _ = range keys {
+			if l, ok := quick.Value(reflect.TypeOf(name), rand); ok {
+				labels = append(labels, l.String())
+			} else {
+				t.Errorf("failed to create value for labels")
+				break
+			}
+		}
+		d, _ := m.GetDatum(labels...)
+		d.Set(val, timeGenerator(rand))
 
-	j, e := json.Marshal(m)
-	if e != nil {
-		t.Errorf("json.Marshal failed: %s\n", e)
+		j, e := json.Marshal(m)
+		if e != nil {
+			t.Errorf("json.Marshal failed: %s\n", e)
+			return false
+		}
+
+		r := &Metric{}
+		e = json.Unmarshal(j, &r)
+		if e != nil {
+			t.Errorf("json.Unmarshal failed: %s\n", e)
+			return false
+		}
+
+		// pretty.Compare uses the opposite order to xUnit for comparisons.
+		diff := pretty.Compare(r, m)
+		if len(diff) > 0 {
+			t.Errorf("Round trip wasn't stable:\n%s", diff)
+			return false
+		}
+		return true
 	}
-
-	r := &Metric{}
-	e = json.Unmarshal(j, &r)
-	if e != nil {
-		t.Errorf("json.Unmarshal failed: %s\n", e)
+	q := quick.Config{MaxCount: 100000}
+	if testing.Short() {
+		q.MaxCount = 1000
 	}
-
-	// pretty.Compare uses the opposite order to xUnit for comparisons.
-	diff := pretty.Compare(r, m)
-	if len(diff) > 0 {
-		t.Errorf("Round trip wasn't stable:\n%s", diff)
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
 	}
 }
