@@ -122,7 +122,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 			glog.Infof("No file found for %q", pathname)
 			return
 		}
-		partial, err := t.read(f, t.partials[pathname])
+		partial, err := t.readPartial(f, t.partials[pathname])
 		t.partials[pathname] = partial
 		if err != nil {
 			if err == io.EOF {
@@ -135,7 +135,10 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	}
 }
 
-func (t *Tailer) read(f afero.File, partial string) (string, error) {
+// readPartial reads blocks of 4096 bytes from the File, sending lines to the
+// channel as it encounters newlines.  If EOF is encountered, the partial line
+// is returned to be concatenated with on the next call.
+func (t *Tailer) readPartial(f afero.File, partial string) (string, error) {
 	b := make([]byte, 4096)
 	n, err := f.Read(b)
 	if err != nil {
