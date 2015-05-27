@@ -4,6 +4,7 @@
 package tailer
 
 import (
+	"io"
 	"os"
 	"sync"
 	"testing"
@@ -168,4 +169,52 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 
+}
+
+func TestReadPartial(t *testing.T) {
+	fs := &afero.MemMapFs{}
+	w := watcher.NewFakeWatcher()
+	lines := make(chan string, 1)
+	o := Options{lines, w, fs}
+	ta, err := New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := fs.Create("t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := ta.readPartial(f, "")
+	if p != "" {
+		t.Errorf("partial line returned not empty: %q", p)
+	}
+	if err != io.EOF {
+		t.Errorf("error returned not EOF: %v", err)
+	}
+	f.WriteString("hi")
+	f.Seek(0, 0)
+	p, err = ta.readPartial(f, "o")
+	if p != "ohi" {
+		t.Errorf("partial line returned not expected: %q", p)
+	}
+	if err != nil {
+		t.Errorf("error returned not nil: %v", err)
+	}
+	p, err = ta.readPartial(f, "")
+	if err != io.EOF {
+		t.Errorf("error returned not EOF: %v", err)
+	}
+	f.WriteString("\n")
+	f.Seek(-1, os.SEEK_END)
+	p, err = ta.readPartial(f, "ohi")
+	l := <-lines
+	if l != "ohi" {
+		t.Errorf("line emitted not ohi: %q", l)
+	}
+	if p != "" {
+		t.Errorf("partial not empty: %q", p)
+	}
+	if err != nil {
+		t.Errorf("error returned not nil: %v", err)
+	}
 }
