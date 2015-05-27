@@ -117,35 +117,44 @@ func (t *Tailer) Tail(pathname string) {
 // identified by pathname, and sends them to be processed on the lines channel.
 func (t *Tailer) handleLogUpdate(pathname string) {
 	for {
-		b := make([]byte, 4096)
 		f, ok := t.files[pathname]
 		if !ok {
 			glog.Infof("No file found for %q", pathname)
 			return
 		}
-		n, err := f.Read(b)
+		partial, err := t.read(f, t.partials[pathname])
+		t.partials[pathname] = partial
 		if err != nil {
-			if err == io.EOF && n == 0 {
+			if err == io.EOF {
 				// end of file for now, return
 				return
 			}
 			glog.Infof("Failed to read updates from %q: %s", pathname, err)
-			return // TODO(jaq): handle this path better
-		}
-		for i, width := 0, 0; i < len(b) && i < n; i += width {
-			var rune rune
-			rune, width = utf8.DecodeRune(b[i:])
-			switch {
-			case rune != '\n':
-				t.partials[pathname] += string(rune)
-			default:
-				// send off line for processing
-				t.lines <- t.partials[pathname]
-				// reset accumulator
-				t.partials[pathname] = ""
-			}
+			return
 		}
 	}
+}
+
+func (t *Tailer) read(f afero.File, partial string) (string, error) {
+	b := make([]byte, 4096)
+	n, err := f.Read(b)
+	if err != nil {
+		return partial, err // TODO(jaq): handle this path better
+	}
+	for i, width := 0, 0; i < len(b) && i < n; i += width {
+		var rune rune
+		rune, width = utf8.DecodeRune(b[i:])
+		switch {
+		case rune != '\n':
+			partial += string(rune)
+		default:
+			// send off line for processing
+			t.lines <- partial
+			// reset accumulator
+			partial = ""
+		}
+	}
+	return partial, nil
 }
 
 // inode returns the inode number of a file, or 0 if the file has no underlying Sys implementation.
