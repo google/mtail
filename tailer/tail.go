@@ -235,7 +235,7 @@ func (t *Tailer) openLogFile(pathname string, seekStart bool) {
 		t.addWatched(d)
 	}
 
-	fd, err := t.fs.Open(pathname)
+	f, err := t.fs.Open(pathname)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
@@ -247,7 +247,7 @@ func (t *Tailer) openLogFile(pathname string, seekStart bool) {
 		return
 	}
 	t.filesLock.Lock()
-	t.files[pathname] = fd
+	t.files[pathname] = f
 
 	if seekStart {
 		t.files[pathname].Seek(0, os.SEEK_SET)
