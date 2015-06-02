@@ -8,6 +8,7 @@ GOFILES=\
 	exporter/export_json.go\
 	exporter/export_prometheus.go\
 	exporter/export_statsd.go\
+	exporter/export_varz.go\
 	main.go\
 	metrics/metric.go\
 	mtail/mtail.go\
