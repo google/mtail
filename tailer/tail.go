@@ -25,7 +25,7 @@ import (
 
 	"github.com/google/mtail/watcher"
 
-	"github.com/jaqx0r/afero"
+	"github.com/spf13/afero"
 )
 
 var (
