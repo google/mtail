@@ -116,12 +116,12 @@ func (t *Tailer) Tail(pathname string) {
 // handleLogUpdate reads all available bytes from an already opened file
 // identified by pathname, and sends them to be processed on the lines channel.
 func (t *Tailer) handleLogUpdate(pathname string) {
+	f, ok := t.files[pathname]
+	if !ok {
+		glog.Infof("No file found for %q", pathname)
+		return
+	}
 	for {
-		f, ok := t.files[pathname]
-		if !ok {
-			glog.Infof("No file found for %q", pathname)
-			return
-		}
 		partial, err := t.readPartial(f, t.partials[pathname])
 		t.partials[pathname] = partial
 		if err != nil {
