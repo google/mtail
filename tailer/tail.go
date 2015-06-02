@@ -246,22 +246,31 @@ func (t *Tailer) openLogFile(pathname string, seekStart bool) {
 		logErrors.Add(pathname, 1)
 		return
 	}
+	fi, err := f.Stat()
+	if err != nil {
+		// Stat failed, log error and return.
+		glog.Infof("Failed to stat %q: %s", pathname, err)
+		logErrors.Add(pathname, 1)
+		return
+	}
+	switch m := fi.Mode(); {
+	case m&os.ModeType == 0:
+		if seekStart {
+			f.Seek(0, os.SEEK_SET)
+		} else {
+			f.Seek(0, os.SEEK_END)
+		}
+		err = t.w.Add(pathname)
+		if err != nil {
+			glog.Infof("Adding a change watch failed on %q: %s", pathname, err)
+		}
+	default:
+		glog.Info("Can't open files with mode %v: %s", m&os.ModeType, pathname)
+		return
+	}
 	t.filesLock.Lock()
 	t.files[pathname] = f
-
-	if seekStart {
-		t.files[pathname].Seek(0, os.SEEK_SET)
-	} else {
-		t.files[pathname].Seek(0, os.SEEK_END)
-	}
-
 	t.filesLock.Unlock()
-
-	err = t.w.Add(pathname)
-	if err != nil {
-		glog.Infof("Adding a change watch failed on %q: %s", pathname, err)
-	}
-
 	glog.Infof("Tailing %s", pathname)
 
 	// In case the new log has been written to already, attempt to read the first lines.
