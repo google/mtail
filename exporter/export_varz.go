@@ -14,8 +14,7 @@ import (
 )
 
 var (
-	exportVarzTotal  = expvar.NewInt("exporter_varz_total")
-	exportVarzErrors = expvar.NewInt("exporter_varz_errors")
+	exportVarzTotal = expvar.NewInt("exporter_varz_total")
 )
 
 const varzFormat = "%s{%s} %s"
@@ -30,11 +29,11 @@ func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
 	for _, m := range e.store.Metrics {
 		m.RLock()
 		m.RUnlock()
-		exporterVarzTotal.Add(1)
+		exportVarzTotal.Add(1)
 		lc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lc)
 		for l := range lc {
-			line = metricToVarz(e.hostname, m, l)
+			line := metricToVarz(e.hostname, m, l)
 			fmt.Fprint(w, line)
 		}
 	}
