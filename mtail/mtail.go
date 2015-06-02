@@ -97,7 +97,7 @@ func (m *Mtail) InitLoader() error {
 
 func (m *Mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
-	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>`))
+	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>, <a href="/varz">varz</a>`))
 }
 
 // Options contains all the parameters necessary for constructing a new Mtail.
@@ -174,6 +174,7 @@ func (m *Mtail) Serve() {
 	http.Handle("/", m)
 	http.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	http.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
+	http.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
 	http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
 	m.e.StartMetricPush()
 
