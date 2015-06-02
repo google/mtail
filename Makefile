@@ -27,7 +27,6 @@ GOFILES=\
 
 GOTESTFILES=\
 	ex_test.go\
-	exporter/export_test.go\
 	exporter/export_json_test.go\
 	exporter/export_test.go\
 	exporter/export_prometheus_test.go\
