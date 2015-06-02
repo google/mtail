@@ -45,7 +45,7 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 		go m.EmitLabelSets(lc)
 		for l := range lc {
 			line := metricToPrometheus(e.hostname, m, l)
-			fmt.Fprintf(w, line)
+			fmt.Fprint(w, line)
 		}
 	}
 }
