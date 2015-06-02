@@ -28,6 +28,10 @@ GOFILES=\
 GOTESTFILES=\
 	ex_test.go\
 	exporter/export_test.go\
+	exporter/export_json_test.go\
+	exporter/export_test.go\
+	exporter/export_prometheus_test.go\
+	exporter/export_varz_test.go\
 	mtail/mtail_test.go\
 	tailer/tail_test.go\
 	vm/lexer_test.go\
