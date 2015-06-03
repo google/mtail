@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-func makeFakeTail(t *testing.T) (*Tailer, chan string, watcher.Watcher, afero.Fs) {
+func makeTestTail(t *testing.T) (*Tailer, chan string, watcher.Watcher, afero.Fs) {
 	fs := &afero.MemMapFs{}
 	w := watcher.NewFakeWatcher()
 	lines := make(chan string, 1)
@@ -184,7 +184,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 }
 
 func TestReadPartial(t *testing.T) {
-	ta, lines, _, fs := makeFakeTail(t)
+	ta, lines, _, fs := makeTestTail(t)
 	f, err := fs.Create("t")
 	if err != nil {
 		t.Fatal(err)
@@ -221,5 +221,22 @@ func TestReadPartial(t *testing.T) {
 	}
 	if err != nil {
 		t.Errorf("error returned not nil: %v", err)
+	}
+}
+
+func TestReadPipe(t *testing.T) {
+	ta, lines, _, _ := makeTestTail(t)
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ta.TailFile(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.WriteString("hi")
+	l := <-lines
+	if l != "hi\n" {
+		t.Errorf("line not expected: %q", l)
 	}
 }

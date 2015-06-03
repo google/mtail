@@ -100,7 +100,7 @@ func (t *Tailer) isWatching(path string) bool {
 	return ok
 }
 
-// Tail registers a file to be tailed.
+// Tail registers a file path to be tailed.
 func (t *Tailer) Tail(pathname string) {
 	fullpath, err := filepath.Abs(pathname)
 	if err != nil {
@@ -112,6 +112,12 @@ func (t *Tailer) Tail(pathname string) {
 		logCount.Add(1)
 		t.openLogPath(fullpath, false)
 	}
+}
+
+// TailFile registers a file descriptor to be tailed.
+func (t *Tailer) TailFile(f afero.File) error {
+	logCount.Add(1)
+	return t.startNewFile(f, false)
 }
 
 // handleLogUpdate reads all available bytes from an already opened file
@@ -223,8 +229,8 @@ func (t *Tailer) handleLogCreate(pathname string) {
 }
 
 // openLogPath opens a new log file at pathname, and optionally seeks to the
-// start or end of the file. Rotated logs should start at the start, but logs
-// opened for the first time start at the end.
+// start or end of the file. Rotated logs should read from the start, but logs
+// opened for the first time read from the end.
 func (t *Tailer) openLogPath(pathname string, seekStart bool) {
 	if !t.isWatching(pathname) {
 		glog.Infof("Not watching %q, ignoring.", pathname)
@@ -264,6 +270,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		logErrors.Add(f.Name(), 1)
 		return fmt.Errorf("Failed to stat %q: %s", f.Name(), err)
 	}
+	glog.Infof("Mode: %q", fi.Mode())
 	switch m := fi.Mode(); {
 	case m&os.ModeType == 0:
 		if seekStart {
@@ -275,6 +282,8 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		if err != nil {
 			return fmt.Errorf("Adding a change watch failed on %q: %s", f.Name(), err)
 		}
+	case m&os.ModeType == os.ModeNamedPipe:
+		return fmt.Errorf("named pipe")
 	default:
 		return fmt.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}
