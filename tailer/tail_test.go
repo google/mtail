@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-func makeTestTail(t *testing.T) (*Tailer, chan string, watcher.Watcher, afero.Fs) {
+func makeTestTail(t *testing.T) (*Tailer, chan string, *watcher.FakeWatcher, afero.Fs) {
 	fs := &afero.MemMapFs{}
 	w := watcher.NewFakeWatcher()
 	lines := make(chan string, 1)
@@ -30,7 +30,7 @@ func makeTestTail(t *testing.T) (*Tailer, chan string, watcher.Watcher, afero.Fs
 }
 
 func TestTail(t *testing.T) {
-	fs := &afero.MemMapFs{}
+	ta, _, w, fs := makeTestTail(t)
 	fs.Mkdir("tail_test", os.ModePerm)
 	logfile := "/tmp/log"
 	f, err := fs.Create(logfile)
@@ -38,15 +38,8 @@ func TestTail(t *testing.T) {
 		t.Error(err)
 	}
 	defer f.Close()
-
-	w := watcher.NewFakeWatcher()
 	defer w.Close()
-	lines := make(chan string)
-	o := Options{lines, w, fs}
-	ta, err := New(o)
-	if err != nil {
-		t.Fatalf("Couldn't make a tailer: %s", err)
-	}
+
 	ta.Tail(logfile)
 	// Tail also causes the log to be read, so no need to inject an event.
 
@@ -56,7 +49,7 @@ func TestTail(t *testing.T) {
 }
 
 func TestHandleLogUpdate(t *testing.T) {
-	fs := &afero.MemMapFs{}
+	ta, lines, w, fs := makeTestTail(t)
 	err := fs.Mkdir("/tail_test", os.ModePerm)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -67,7 +60,6 @@ func TestHandleLogUpdate(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	lines := make(chan string)
 	result := []string{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
@@ -79,13 +71,6 @@ func TestHandleLogUpdate(t *testing.T) {
 		}
 		close(done)
 	}()
-
-	w := watcher.NewFakeWatcher()
-	o := Options{lines, w, fs}
-	ta, err := New(o)
-	if err != nil {
-		t.Fatalf("Couldn't make a tailer: %s", err)
-	}
 
 	ta.Tail(logfile)
 
@@ -110,7 +95,7 @@ func TestHandleLogUpdate(t *testing.T) {
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
-	fs := &afero.MemMapFs{}
+	ta, lines, w, fs := makeTestTail(t)
 	err := fs.Mkdir("/tail_test", os.ModePerm)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -121,7 +106,6 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	lines := make(chan string)
 	result := []string{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
@@ -134,13 +118,6 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 		}
 		close(done)
 	}()
-
-	w := watcher.NewFakeWatcher()
-	o := Options{lines, w, fs}
-	ta, err := New(o)
-	if err != nil {
-		t.Fatalf("Couldn't make a tailer: %s", err)
-	}
 
 	ta.Tail(logfile)
 
