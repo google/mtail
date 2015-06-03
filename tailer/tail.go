@@ -109,7 +109,7 @@ func (t *Tailer) Tail(pathname string) {
 	if !t.isWatching(fullpath) {
 		t.addWatched(fullpath)
 		logCount.Add(1)
-		t.openLogFile(fullpath, false)
+		t.openLogPath(fullpath, false)
 	}
 }
 
@@ -206,21 +206,21 @@ func (t *Tailer) handleLogCreate(pathname string) {
 			}
 			// Always seek to start on log rotation.
 			glog.Infof("Seek to start on %s", pathname)
-			t.openLogFile(pathname, true)
+			t.openLogPath(pathname, true)
 		} else {
 			glog.Infof("Path %s already being watched, and inode not changed.",
 				pathname)
 		}
 	} else {
 		// Freshly opened log file, never seen before.
-		t.openLogFile(pathname, true)
+		t.openLogPath(pathname, true)
 	}
 }
 
-// openLogFile opens a new log file at pathname, and optionally seeks to the
+// openLogPath opens a new log file at pathname, and optionally seeks to the
 // start or end of the file. Rotated logs should start at the start, but logs
 // opened for the first time start at the end.
-func (t *Tailer) openLogFile(pathname string, seekStart bool) {
+func (t *Tailer) openLogPath(pathname string, seekStart bool) {
 	if !t.isWatching(pathname) {
 		glog.Infof("Not watching %q, ignoring.", pathname)
 		return
