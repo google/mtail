@@ -121,15 +121,19 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 		glog.Infof("No file found for %q", pathname)
 		return
 	}
+	t.readFile(f)
+}
+
+func (t *Tailer) readFile(f afero.File) {
 	for {
-		partial, err := t.readPartial(f, t.partials[pathname])
-		t.partials[pathname] = partial
+		partial, err := t.readPartial(f, t.partials[f.Name()])
+		t.partials[f.Name()] = partial
 		if err != nil {
 			if err == io.EOF {
 				// end of file for now, return
 				return
 			}
-			glog.Infof("Failed to read updates from %q: %s", pathname, err)
+			glog.Infof("Failed to read updates from %q: %s", f.Name(), err)
 			return
 		}
 	}
@@ -246,12 +250,18 @@ func (t *Tailer) openLogPath(pathname string, seekStart bool) {
 		logErrors.Add(pathname, 1)
 		return
 	}
+	err = t.startNewFile(f, seekStart)
+	if err != nil {
+		glog.Info(err)
+	}
+}
+
+func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	fi, err := f.Stat()
 	if err != nil {
 		// Stat failed, log error and return.
-		glog.Infof("Failed to stat %q: %s", pathname, err)
-		logErrors.Add(pathname, 1)
-		return
+		logErrors.Add(f.Name(), 1)
+		return fmt.Errorf("Failed to stat %q: %s", f.Name(), err)
 	}
 	switch m := fi.Mode(); {
 	case m&os.ModeType == 0:
@@ -260,21 +270,21 @@ func (t *Tailer) openLogPath(pathname string, seekStart bool) {
 		} else {
 			f.Seek(0, os.SEEK_END)
 		}
-		err = t.w.Add(pathname)
+		err = t.w.Add(f.Name())
 		if err != nil {
-			glog.Infof("Adding a change watch failed on %q: %s", pathname, err)
+			return fmt.Errorf("Adding a change watch failed on %q: %s", f.Name(), err)
 		}
 	default:
-		glog.Info("Can't open files with mode %v: %s", m&os.ModeType, pathname)
-		return
+		return fmt.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}
 	t.filesLock.Lock()
-	t.files[pathname] = f
+	t.files[f.Name()] = f
 	t.filesLock.Unlock()
-	glog.Infof("Tailing %s", pathname)
+	glog.Infof("Tailing %s", f.Name())
 
 	// In case the new log has been written to already, attempt to read the first lines.
-	t.handleLogUpdate(pathname)
+	t.readFile(f)
+	return nil
 }
 
 // start is the main event loop for the Tailer.
