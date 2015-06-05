@@ -41,6 +41,9 @@ var (
 type Tailer struct {
 	w watcher.Watcher
 
+	pipeGroup sync.WaitGroup
+	pipeQuit  chan struct{}
+
 	watched     map[string]struct{}   // Names of logs being watched.
 	watchedLock sync.RWMutex          // protects `watched'
 	lines       chan<- string         // Logfile lines being emitted.
@@ -128,16 +131,20 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 		glog.Infof("No file found for %q", pathname)
 		return
 	}
-	t.readFile(f)
+	var err error
+	t.partials[pathname], err = t.readFile(f, t.partials[pathname])
+	if err != nil {
+		glog.Info(err)
+	}
 }
 
-func (t *Tailer) readFile(f afero.File) {
+func (t *Tailer) readFile(f afero.File, partialIn string) (partialOut string, err error) {
 	for {
-		partial, err := t.readPartial(f, t.partials[f.Name()])
-		t.partials[f.Name()] = partial
+		partialOut, err = t.readPartial(f, partialIn)
 		if err != nil {
 			if err == io.EOF {
 				// end of file for now, return
+				err = nil
 				return
 			}
 			glog.Infof("Failed to read updates from %q: %s", f.Name(), err)
@@ -282,8 +289,14 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		if err != nil {
 			return fmt.Errorf("Adding a change watch failed on %q: %s", f.Name(), err)
 		}
+		// In case the new log has been written to already, attempt to read the
+		// first lines.
+		t.partials[f.Name()], err = t.readFile(f, "")
+		if err != nil {
+			return err
+		}
 	case m&os.ModeType == os.ModeNamedPipe:
-		return fmt.Errorf("named pipe")
+		go t.readForever(f)
 	default:
 		return fmt.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}
@@ -292,8 +305,6 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	t.filesLock.Unlock()
 	glog.Infof("Tailing %s", f.Name())
 
-	// In case the new log has been written to already, attempt to read the first lines.
-	t.readFile(f)
 	return nil
 }
 
@@ -315,7 +326,29 @@ func (t *Tailer) run() {
 	close(t.lines)
 }
 
+func (t *Tailer) readForever(f afero.File) {
+	t.pipeGroup.Add(1)
+	defer t.pipeGroup.Done()
+
+	var err error
+	partial := ""
+	for {
+		select {
+		case <-t.pipeQuit:
+			return
+		default:
+			partial, err = t.readFile(f, partial)
+			if err != nil {
+				glog.Infof("%s: %s", err, f.Name())
+				return
+			}
+		}
+	}
+}
+
 // Close signals termination to the watcher.
 func (t *Tailer) Close() {
 	t.w.Close()
+	close(t.pipeQuit)
+	t.pipeGroup.Wait()
 }
