@@ -41,9 +41,6 @@ var (
 type Tailer struct {
 	w watcher.Watcher
 
-	pipeGroup sync.WaitGroup
-	pipeQuit  chan struct{}
-
 	watched     map[string]struct{}   // Names of logs being watched.
 	watchedLock sync.RWMutex          // protects `watched'
 	lines       chan<- string         // Logfile lines being emitted.
@@ -144,7 +141,6 @@ func (t *Tailer) readFile(f afero.File, partialIn string) (partialOut string, er
 		if err != nil {
 			if err == io.EOF {
 				// end of file for now, return
-				err = nil
 				return
 			}
 			glog.Infof("Failed to read updates from %q: %s", f.Name(), err)
@@ -278,7 +274,6 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		logErrors.Add(f.Name(), 1)
 		return fmt.Errorf("Failed to stat %q: %s", f.Name(), err)
 	}
-	glog.Infof("Mode: %q", fi.Mode())
 	switch m := fi.Mode(); {
 	case m&os.ModeType == 0:
 		if seekStart {
@@ -293,7 +288,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
 		t.partials[f.Name()], err = t.readFile(f, "")
-		if err != nil {
+		if err != nil && err != io.EOF {
 			return err
 		}
 	case m&os.ModeType == os.ModeNamedPipe:
@@ -328,21 +323,13 @@ func (t *Tailer) run() {
 }
 
 func (t *Tailer) readForever(f afero.File) {
-	t.pipeGroup.Add(1)
-	defer t.pipeGroup.Done()
-
 	var err error
 	partial := ""
 	for {
-		select {
-		case <-t.pipeQuit:
+		partial, err = t.readFile(f, partial)
+		if err != nil {
+			glog.Infof("%s: %s", err, f.Name())
 			return
-		default:
-			partial, err = t.readFile(f, partial)
-			if err != nil {
-				glog.Infof("%s: %s", err, f.Name())
-				return
-			}
 		}
 	}
 }
@@ -350,6 +337,4 @@ func (t *Tailer) readForever(f afero.File) {
 // Close signals termination to the watcher.
 func (t *Tailer) Close() {
 	t.w.Close()
-	close(t.pipeQuit)
-	t.pipeGroup.Wait()
 }

@@ -50,6 +50,7 @@ func TestTail(t *testing.T) {
 
 func TestHandleLogUpdate(t *testing.T) {
 	ta, lines, w, fs := makeTestTail(t)
+
 	err := fs.Mkdir("/tail_test", os.ModePerm)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -96,6 +97,7 @@ func TestHandleLogUpdate(t *testing.T) {
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
 	ta, lines, w, fs := makeTestTail(t)
+
 	err := fs.Mkdir("/tail_test", os.ModePerm)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -161,7 +163,9 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 }
 
 func TestReadPartial(t *testing.T) {
-	ta, lines, _, fs := makeTestTail(t)
+	ta, lines, w, fs := makeTestTail(t)
+	defer w.Close()
+
 	f, err := fs.Create("t")
 	if err != nil {
 		t.Fatal(err)
@@ -202,18 +206,27 @@ func TestReadPartial(t *testing.T) {
 }
 
 func TestReadPipe(t *testing.T) {
-	ta, lines, _, _ := makeTestTail(t)
+	ta, lines, wa, _ := makeTestTail(t)
+	defer wa.Close()
+
 	r, w, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	err = ta.TailFile(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	w.WriteString("hi")
+	n, err := w.WriteString("hi\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n < 2 {
+		t.Fatalf("Didn't write enough bytes: %d", n)
+	}
 	l := <-lines
-	if l != "hi\n" {
+	if l != "hi" {
 		t.Errorf("line not expected: %q", l)
 	}
 }
