@@ -170,7 +170,7 @@ func TestReadPartial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := ta.readPartial(f, "")
+	p, err := ta.read(f, "")
 	if p != "" {
 		t.Errorf("partial line returned not empty: %q", p)
 	}
@@ -179,20 +179,20 @@ func TestReadPartial(t *testing.T) {
 	}
 	f.WriteString("hi")
 	f.Seek(0, 0)
-	p, err = ta.readPartial(f, "o")
+	p, err = ta.read(f, "o")
 	if p != "ohi" {
 		t.Errorf("partial line returned not expected: %q", p)
 	}
-	if err != nil {
-		t.Errorf("error returned not nil: %v", err)
+	if err != io.EOF {
+		t.Errorf("error returned not EOF: %v", err)
 	}
-	p, err = ta.readPartial(f, "")
+	p, err = ta.read(f, "")
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
 	f.WriteString("\n")
 	f.Seek(-1, os.SEEK_END)
-	p, err = ta.readPartial(f, "ohi")
+	p, err = ta.read(f, "ohi")
 	l := <-lines
 	if l != "ohi" {
 		t.Errorf("line emitted not ohi: %q", l)
@@ -200,8 +200,8 @@ func TestReadPartial(t *testing.T) {
 	if p != "" {
 		t.Errorf("partial not empty: %q", p)
 	}
-	if err != nil {
-		t.Errorf("error returned not nil: %v", err)
+	if err != io.EOF {
+		t.Errorf("error returned not EOF: %v", err)
 	}
 }
 

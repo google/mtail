@@ -129,50 +129,39 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 		return
 	}
 	var err error
-	t.partials[pathname], err = t.readFile(f, t.partials[pathname])
-	if err != nil {
+	t.partials[pathname], err = t.read(f, t.partials[pathname])
+	if err != nil && err != io.EOF {
 		glog.Info(err)
 	}
 }
 
-func (t *Tailer) readFile(f afero.File, partialIn string) (partialOut string, err error) {
-	for {
-		partialOut, err = t.readPartial(f, partialIn)
-		if err != nil {
-			if err == io.EOF {
-				// end of file for now, return
-				return
-			}
-			glog.Infof("Failed to read updates from %q: %s", f.Name(), err)
-			return
-		}
-		partialIn = partialOut
-	}
-}
-
-// readPartial reads blocks of 4096 bytes from the File, sending lines to the
+// read reads blocks of 4096 bytes from the File, sending lines to the
 // channel as it encounters newlines.  If EOF is encountered, the partial line
 // is returned to be concatenated with on the next call.
-func (t *Tailer) readPartial(f afero.File, partial string) (string, error) {
-	b := make([]byte, 4096)
-	n, err := f.Read(b)
-	if err != nil {
-		return partial, err // TODO(jaq): handle this path better
-	}
-	for i, width := 0, 0; i < len(b) && i < n; i += width {
-		var rune rune
-		rune, width = utf8.DecodeRune(b[i:])
-		switch {
-		case rune != '\n':
-			partial += string(rune)
-		default:
-			// send off line for processing
-			t.lines <- partial
-			// reset accumulator
-			partial = ""
+func (t *Tailer) read(f afero.File, partialIn string) (partialOut string, err error) {
+	partial := partialIn
+	b := make([]byte, 0, 4096)
+	for {
+		n, err := f.Read(b[:cap(b)])
+		b = b[:n]
+		if err != nil {
+			return partial, err
+		}
+
+		for i, width := 0, 0; i < len(b) && i < n; i += width {
+			var rune rune
+			rune, width = utf8.DecodeRune(b[i:])
+			switch {
+			case rune != '\n':
+				partial += string(rune)
+			default:
+				// send off line for processing
+				t.lines <- partial
+				// reset accumulator
+				partial = ""
+			}
 		}
 	}
-	return partial, nil
 }
 
 // inode returns the inode number of a file, or 0 if the file has no underlying Sys implementation.
@@ -287,7 +276,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		}
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
-		t.partials[f.Name()], err = t.readFile(f, "")
+		t.partials[f.Name()], err = t.read(f, "")
 		if err != nil && err != io.EOF {
 			return err
 		}
@@ -326,7 +315,8 @@ func (t *Tailer) readForever(f afero.File) {
 	var err error
 	partial := ""
 	for {
-		partial, err = t.readFile(f, partial)
+		partial, err = t.read(f, partial)
+		// We want to exit at EOF, because the FD has been closed.
 		if err != nil {
 			glog.Infof("%s: %s", err, f.Name())
 			return
