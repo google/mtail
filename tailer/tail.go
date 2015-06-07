@@ -150,6 +150,7 @@ func (t *Tailer) readFile(f afero.File, partialIn string) (partialOut string, er
 			glog.Infof("Failed to read updates from %q: %s", f.Name(), err)
 			return
 		}
+		partialIn = partialOut
 	}
 }
 
