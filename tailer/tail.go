@@ -123,13 +123,15 @@ func (t *Tailer) TailFile(f afero.File) error {
 // handleLogUpdate reads all available bytes from an already opened file
 // identified by pathname, and sends them to be processed on the lines channel.
 func (t *Tailer) handleLogUpdate(pathname string) {
-	f, ok := t.files[pathname]
+	t.filesLock.Lock()
+	fd, ok := t.files[pathname]
+	t.filesLock.Unlock()
 	if !ok {
-		glog.Infof("No file found for %q", pathname)
+		glog.Infof("No file descriptor found for %q", pathname)
 		return
 	}
 	var err error
-	t.partials[pathname], err = t.read(f, t.partials[pathname])
+	t.partials[pathname], err = t.read(fd, t.partials[pathname])
 	if err != nil && err != io.EOF {
 		glog.Info(err)
 	}
@@ -277,7 +279,11 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
 		t.partials[f.Name()], err = t.read(f, "")
-		if err != nil && err != io.EOF {
+		if err != nil {
+			if err == io.EOF {
+				// Don't worry about EOF on first read, that's expected.
+				break
+			}
 			return err
 		}
 	case m&os.ModeType == os.ModeNamedPipe:
