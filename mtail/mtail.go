@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 
@@ -74,6 +75,10 @@ func (m *Mtail) StartTailing() error {
 
 	for _, pathname := range m.o.LogPaths {
 		m.t.Tail(pathname)
+	}
+	for _, fd := range m.o.LogFds {
+		f := os.NewFile(uintptr(fd), strconv.Itoa(fd))
+		m.t.TailFile(f)
 	}
 	return nil
 }
