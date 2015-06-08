@@ -72,7 +72,7 @@ func (m *Mtail) StartTailing() error {
 		return fmt.Errorf("couldn't create a log tailer: %s", err)
 	}
 
-	for _, pathname := range m.o.Logs {
+	for _, pathname := range m.o.LogPaths {
 		m.t.Tail(pathname)
 	}
 	return nil
@@ -103,7 +103,8 @@ func (m *Mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Options contains all the parameters necessary for constructing a new Mtail.
 type Options struct {
 	Progs                string
-	Logs                 []string
+	LogPaths             []string
+	LogFds               []int
 	Port                 string
 	OneShot              bool
 	CompileOnly          bool
@@ -149,7 +150,7 @@ func (m *Mtail) WriteMetrics(w io.Writer) error {
 
 // RunOneShot performs the work of the one_shot commandline flag; after compiling programs mtail will read all of the log files in full, once, dump the metric results at the end, and then exit.
 func (m *Mtail) RunOneShot() {
-	for _, pathname := range m.o.Logs {
+	for _, pathname := range m.o.LogPaths {
 		err := m.OneShot(pathname)
 		if err != nil {
 			glog.Exitf("Failed one shot mode for %q: %s\n", pathname, err)

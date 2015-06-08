@@ -44,7 +44,7 @@ func main() {
 	}
 	o := mtail.Options{
 		Progs:                *progs,
-		Logs:                 logPathnames,
+		LogPaths:             logPathnames,
 		Port:                 *port,
 		OneShot:              *oneShot,
 		CompileOnly:          *compileOnly,
