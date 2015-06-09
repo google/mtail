@@ -5,6 +5,7 @@ package main
 
 import (
 	"flag"
+	"strconv"
 	"strings"
 
 	"github.com/golang/glog"
@@ -14,9 +15,10 @@ import (
 )
 
 var (
-	port  = flag.String("port", "3903", "HTTP port to listen on.")
-	logs  = flag.String("logs", "", "List of files to monitor.")
-	progs = flag.String("progs", "", "Directory containing programs")
+	port   = flag.String("port", "3903", "HTTP port to listen on.")
+	logs   = flag.String("logs", "", "List of files to monitor.")
+	logFds = flag.String("logfds", "", "List of file descriptors to monitor.")
+	progs  = flag.String("progs", "", "Directory containing programs")
 
 	oneShot      = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
 	compileOnly  = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
@@ -30,8 +32,8 @@ func main() {
 	if *progs == "" {
 		glog.Exitf("No mtail program directory specified; use -progs")
 	}
-	if *logs == "" {
-		glog.Exitf("No logs specified to tail; use -logs")
+	if *logs == "" && *logFds == "" {
+		glog.Exitf("No logs specified to tail; use -logs or -logfds")
 	}
 	var logPathnames []string
 	for _, pathname := range strings.Split(*logs, ",") {
@@ -39,12 +41,20 @@ func main() {
 			logPathnames = append(logPathnames, pathname)
 		}
 	}
-	if len(logPathnames) == 0 {
+	var logDescriptors []int
+	for _, fdStr := range strings.Split(*logFds, ",") {
+		fdNum, err := strconv.Atoi(fdStr)
+		if err == nil {
+			logDescriptors = append(logDescriptors, fdNum)
+		}
+	}
+	if len(logPathnames) == 0 && len(logDescriptors) == 0 {
 		glog.Exit("No logs to tail.")
 	}
 	o := mtail.Options{
 		Progs:                *progs,
-		Logs:                 logPathnames,
+		LogPaths:             logPathnames,
+		LogFds:               logDescriptors,
 		Port:                 *port,
 		OneShot:              *oneShot,
 		CompileOnly:          *compileOnly,

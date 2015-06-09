@@ -1,13 +1,14 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-// Package tailer provides a class that is responsible for tailing a log file
+// Package tailer provides a class that is responsible for tailing log files
 // and extracting new log lines to be passed into the virtual machines.
 package tailer
 
-// mtail gets notified on modifications (i.e. appends) to log files that are
-// being watched, in order to read the new lines. Log files can also be
-// rotated, so mtail is also notified of creates in the log file directory.
+// For regular files, mtail gets notified on modifications (i.e. appends) to
+// log files that are being watched, in order to read the new lines. Log files
+// can also be rotated, so mtail is also notified of creates in the log file
+// directory.
 
 import (
 	"errors"
@@ -99,7 +100,7 @@ func (t *Tailer) isWatching(path string) bool {
 	return ok
 }
 
-// Tail registers a file to be tailed.
+// Tail registers a file path to be tailed.
 func (t *Tailer) Tail(pathname string) {
 	fullpath, err := filepath.Abs(pathname)
 	if err != nil {
@@ -109,40 +110,57 @@ func (t *Tailer) Tail(pathname string) {
 	if !t.isWatching(fullpath) {
 		t.addWatched(fullpath)
 		logCount.Add(1)
-		t.openLogFile(fullpath, false)
+		t.openLogPath(fullpath, false)
 	}
+}
+
+// TailFile registers a file descriptor to be tailed.
+func (t *Tailer) TailFile(f afero.File) error {
+	logCount.Add(1)
+	return t.startNewFile(f, false)
 }
 
 // handleLogUpdate reads all available bytes from an already opened file
 // identified by pathname, and sends them to be processed on the lines channel.
 func (t *Tailer) handleLogUpdate(pathname string) {
+	t.filesLock.Lock()
+	fd, ok := t.files[pathname]
+	t.filesLock.Unlock()
+	if !ok {
+		glog.Infof("No file descriptor found for %q", pathname)
+		return
+	}
+	var err error
+	t.partials[pathname], err = t.read(fd, t.partials[pathname])
+	if err != nil && err != io.EOF {
+		glog.Info(err)
+	}
+}
+
+// read reads blocks of 4096 bytes from the File, sending lines to the
+// channel as it encounters newlines.  If EOF is encountered, the partial line
+// is returned to be concatenated with on the next call.
+func (t *Tailer) read(f afero.File, partialIn string) (partialOut string, err error) {
+	partial := partialIn
+	b := make([]byte, 0, 4096)
 	for {
-		b := make([]byte, 4096)
-		f, ok := t.files[pathname]
-		if !ok {
-			glog.Infof("No file found for %q", pathname)
-			return
-		}
-		n, err := f.Read(b)
+		n, err := f.Read(b[:cap(b)])
+		b = b[:n]
 		if err != nil {
-			if err == io.EOF && n == 0 {
-				// end of file for now, return
-				return
-			}
-			glog.Infof("Failed to read updates from %q: %s", pathname, err)
-			return // TODO(jaq): handle this path better
+			return partial, err
 		}
+
 		for i, width := 0, 0; i < len(b) && i < n; i += width {
 			var rune rune
 			rune, width = utf8.DecodeRune(b[i:])
 			switch {
 			case rune != '\n':
-				t.partials[pathname] += string(rune)
+				partial += string(rune)
 			default:
 				// send off line for processing
-				t.lines <- t.partials[pathname]
+				t.lines <- partial
 				// reset accumulator
-				t.partials[pathname] = ""
+				partial = ""
 			}
 		}
 	}
@@ -194,21 +212,21 @@ func (t *Tailer) handleLogCreate(pathname string) {
 			}
 			// Always seek to start on log rotation.
 			glog.Infof("Seek to start on %s", pathname)
-			t.openLogFile(pathname, true)
+			t.openLogPath(pathname, true)
 		} else {
 			glog.Infof("Path %s already being watched, and inode not changed.",
 				pathname)
 		}
 	} else {
 		// Freshly opened log file, never seen before.
-		t.openLogFile(pathname, true)
+		t.openLogPath(pathname, true)
 	}
 }
 
-// openLogFile opens a new log file at pathname, and optionally seeks to the
-// start or end of the file. Rotated logs should start at the start, but logs
-// opened for the first time start at the end.
-func (t *Tailer) openLogFile(pathname string, seekStart bool) {
+// openLogPath opens a new log file at pathname, and optionally seeks to the
+// start or end of the file. Rotated logs should read from the start, but logs
+// opened for the first time read from the end.
+func (t *Tailer) openLogPath(pathname string, seekStart bool) {
 	if !t.isWatching(pathname) {
 		glog.Infof("Not watching %q, ignoring.", pathname)
 		return
@@ -223,7 +241,7 @@ func (t *Tailer) openLogFile(pathname string, seekStart bool) {
 		t.addWatched(d)
 	}
 
-	fd, err := t.fs.Open(pathname)
+	f, err := t.fs.Open(pathname)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
@@ -234,26 +252,51 @@ func (t *Tailer) openLogFile(pathname string, seekStart bool) {
 		logErrors.Add(pathname, 1)
 		return
 	}
-	t.filesLock.Lock()
-	t.files[pathname] = fd
-
-	if seekStart {
-		t.files[pathname].Seek(0, os.SEEK_SET)
-	} else {
-		t.files[pathname].Seek(0, os.SEEK_END)
-	}
-
-	t.filesLock.Unlock()
-
-	err = t.w.Add(pathname)
+	err = t.startNewFile(f, seekStart)
 	if err != nil {
-		glog.Infof("Adding a change watch failed on %q: %s", pathname, err)
+		glog.Info(err)
 	}
+}
 
-	glog.Infof("Tailing %s", pathname)
+func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
+	fi, err := f.Stat()
+	if err != nil {
+		// Stat failed, log error and return.
+		logErrors.Add(f.Name(), 1)
+		return fmt.Errorf("Failed to stat %q: %s", f.Name(), err)
+	}
+	switch m := fi.Mode(); {
+	case m&os.ModeType == 0:
+		if seekStart {
+			f.Seek(0, os.SEEK_SET)
+		} else {
+			f.Seek(0, os.SEEK_END)
+		}
+		err = t.w.Add(f.Name())
+		if err != nil {
+			return fmt.Errorf("Adding a change watch failed on %q: %s", f.Name(), err)
+		}
+		// In case the new log has been written to already, attempt to read the
+		// first lines.
+		t.partials[f.Name()], err = t.read(f, "")
+		if err != nil {
+			if err == io.EOF {
+				// Don't worry about EOF on first read, that's expected.
+				break
+			}
+			return err
+		}
+	case m&os.ModeType == os.ModeNamedPipe:
+		go t.readForever(f)
+	default:
+		return fmt.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
+	}
+	t.filesLock.Lock()
+	t.files[f.Name()] = f
+	t.filesLock.Unlock()
+	glog.Infof("Tailing %s", f.Name())
 
-	// In case the new log has been written to already, attempt to read the first lines.
-	t.handleLogUpdate(pathname)
+	return nil
 }
 
 // start is the main event loop for the Tailer.
@@ -272,6 +315,19 @@ func (t *Tailer) run() {
 	}
 	glog.Infof("Shutting down tailer.")
 	close(t.lines)
+}
+
+func (t *Tailer) readForever(f afero.File) {
+	var err error
+	partial := ""
+	for {
+		partial, err = t.read(f, partial)
+		// We want to exit at EOF, because the FD has been closed.
+		if err != nil {
+			glog.Infof("%s: %s", err, f.Name())
+			return
+		}
+	}
 }
 
 // Close signals termination to the watcher.

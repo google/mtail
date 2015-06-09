@@ -33,7 +33,7 @@ func removeTempDir(t *testing.T, workdir string) {
 }
 
 func startMtail(t *testing.T, logPathnames []string, progPathname string) *Mtail {
-	o := Options{Logs: logPathnames}
+	o := Options{LogPaths: logPathnames}
 	m, err := New(o)
 	if err != nil {
 		t.Fatalf("couldn't create mtail: %s", err)
@@ -80,8 +80,8 @@ func TestHandleLogUpdates(t *testing.T) {
 		if vm.LineCount.String() != expected {
 			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
 			buf := make([]byte, 1<<16)
-			runtime.Stack(buf, true)
-			fmt.Printf("%s", buf)
+			count := runtime.Stack(buf, true)
+			fmt.Println(string(buf[:count]))
 		}
 	}
 }
