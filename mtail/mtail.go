@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/exporter"
@@ -41,6 +42,7 @@ type Mtail struct {
 
 // OneShot reads the contents of a log file into the lines channel from start to finish, terminating the program at the end.
 func (m *Mtail) OneShot(logfile string) error {
+	glog.Infof("Oneshot %q", logfile)
 	l, err := os.Open(logfile)
 	if err != nil {
 		return fmt.Errorf("failed to open log file %q: %s", logfile, err)
@@ -49,17 +51,29 @@ func (m *Mtail) OneShot(logfile string) error {
 
 	r := bufio.NewReader(l)
 
+	start := time.Now()
+
+Loop:
 	for {
 		line, err := r.ReadString('\n')
 		switch {
 		case err == io.EOF:
-			return nil
+			m.lines <- line
+			break Loop
 		case err != nil:
 			return fmt.Errorf("failed to read from %q: %s", logfile, err)
 		default:
 			m.lines <- line
 		}
 	}
+	duration := time.Since(start)
+	count, err := strconv.Atoi(vm.LineCount.String())
+	if err != nil {
+		return err
+	}
+	µsPerL := float64(duration.Nanoseconds()) / (float64(count) * 1000)
+	fmt.Printf("%s: %d lines, %6.3f µs/line\n", logfile, count, µsPerL)
+	return nil
 }
 
 // StartTailing constructs a new Tailer and commences sending log lines into
@@ -154,16 +168,17 @@ func (m *Mtail) WriteMetrics(w io.Writer) error {
 
 // RunOneShot performs the work of the one_shot commandline flag; after compiling programs mtail will read all of the log files in full, once, dump the metric results at the end, and then exit.
 func (m *Mtail) RunOneShot() {
+	fmt.Println("Oneshot results:")
 	for _, pathname := range m.o.LogPaths {
 		err := m.OneShot(pathname)
 		if err != nil {
 			glog.Exitf("Failed one shot mode for %q: %s\n", pathname, err)
 		}
 	}
-	if err := m.WriteMetrics(os.Stdout); err != nil {
-		glog.Exit(err)
-	}
-	m.e.WriteMetrics()
+	// if err := m.WriteMetrics(os.Stdout); err != nil {
+	// 	glog.Exit(err)
+	// }
+	// m.e.WriteMetrics()
 	m.Close()
 }
 
