@@ -58,14 +58,14 @@
     "Program": "rsyncd.mtail",
     "Kind": 0,
     "Keys": [
-      "module",
-      "operation"
+      "operation",
+      "module"
     ],
     "LabelValues": [
       {
         "Labels": [
-          "module",
-          "send"
+          "send",
+          "module"
         ],
         "Value": {
           "Value": 2,
@@ -74,8 +74,8 @@
       },
       {
         "Labels": [
-          "repo",
-          "send"
+          "send",
+          "repo"
         ],
         "Value": {
           "Value": 25,

@@ -35,7 +35,6 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 
 	for _, m := range e.store.Metrics {
 		m.RLock()
-		m.RUnlock()
 		metricExportTotal.Add(1)
 		fmt.Fprintf(w,
 			"# TYPE %s %s\n",
@@ -47,6 +46,7 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 			line := metricToPrometheus(e.hostname, m, l)
 			fmt.Fprint(w, line)
 		}
+		m.RUnlock()
 	}
 }
 

@@ -10,7 +10,6 @@ import (
 	"os"
 	"regexp"
 	"runtime/debug"
-	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -348,7 +347,6 @@ func (v *VM) execute(t *thread, i instr) {
 			//fmt.Printf("Keys: %v\n", keys)
 		}
 		//fmt.Printf("Keys: %v\n", keys)
-		sort.Sort(sort.StringSlice(keys))
 		d, err := m.GetDatum(keys...)
 		if err != nil {
 			v.errorf("GetDatum failed: %s", err)
