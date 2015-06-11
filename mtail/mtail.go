@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
@@ -51,6 +52,8 @@ func (m *Mtail) OneShot(logfile string) error {
 
 	r := bufio.NewReader(l)
 
+	fmt.Printf("%s: %d MAXPROCS, %d CPUs, ", logfile, runtime.GOMAXPROCS(-1), runtime.NumCPU())
+
 	start := time.Now()
 
 Loop:
@@ -72,7 +75,7 @@ Loop:
 		return err
 	}
 	µsPerL := float64(duration.Nanoseconds()) / (float64(count) * 1000)
-	fmt.Printf("%s: %d lines, %6.3f µs/line\n", logfile, count, µsPerL)
+	fmt.Printf("%d lines, %s total time, %6.3f µs/line\n", count, duration, µsPerL)
 	return nil
 }
 
@@ -175,6 +178,7 @@ func (m *Mtail) RunOneShot() {
 			glog.Exitf("Failed one shot mode for %q: %s\n", pathname, err)
 		}
 	}
+	// TODO(jaq): wrap with a flag
 	// if err := m.WriteMetrics(os.Stdout); err != nil {
 	// 	glog.Exit(err)
 	// }
