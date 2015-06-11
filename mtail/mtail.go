@@ -128,6 +128,7 @@ type Options struct {
 	LogFds               []int
 	Port                 string
 	OneShot              bool
+	OneShotMetrics       bool
 	CompileOnly          bool
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
@@ -178,10 +179,12 @@ func (m *Mtail) RunOneShot() {
 			glog.Exitf("Failed one shot mode for %q: %s\n", pathname, err)
 		}
 	}
-	// TODO(jaq): wrap with a flag
-	// if err := m.WriteMetrics(os.Stdout); err != nil {
-	// 	glog.Exit(err)
-	// }
+	if m.o.OneShotMetrics {
+		fmt.Printf("Metrics store:")
+		if err := m.WriteMetrics(os.Stdout); err != nil {
+			glog.Exit(err)
+		}
+	}
 	m.Close()
 }
 

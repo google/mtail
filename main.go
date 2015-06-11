@@ -20,9 +20,10 @@ var (
 	logFds = flag.String("logfds", "", "List of file descriptors to monitor.")
 	progs  = flag.String("progs", "", "Directory containing programs")
 
-	oneShot      = flag.Bool("one_shot", false, "Run once on a log file, dump json, and exit.")
-	compileOnly  = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
-	dumpBytecode = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
+	oneShot        = flag.Bool("one_shot", false, "Run on logs until EOF and exit.")
+	oneShotMetrics = flag.Bool("one_shot_metrics", false, "Dump metrics to stdout after one shot mode.")
+	compileOnly    = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
+	dumpBytecode   = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 )
@@ -57,6 +58,7 @@ func main() {
 		LogFds:               logDescriptors,
 		Port:                 *port,
 		OneShot:              *oneShot,
+		OneShotMetrics:       *oneShotMetrics,
 		CompileOnly:          *compileOnly,
 		DumpBytecode:         *dumpBytecode,
 		SyslogUseCurrentYear: *syslogUseCurrentYear,
