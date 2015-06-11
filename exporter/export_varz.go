@@ -28,7 +28,6 @@ func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
 
 	for _, m := range e.store.Metrics {
 		m.RLock()
-		m.RUnlock()
 		exportVarzTotal.Add(1)
 		lc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lc)
@@ -36,6 +35,7 @@ func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
 			line := metricToVarz(e.hostname, m, l)
 			fmt.Fprint(w, line)
 		}
+		m.RUnlock()
 	}
 }
 
