@@ -178,7 +178,6 @@ func (m *Mtail) RunOneShot() {
 	// if err := m.WriteMetrics(os.Stdout); err != nil {
 	// 	glog.Exit(err)
 	// }
-	// m.e.WriteMetrics()
 	m.Close()
 }
 
