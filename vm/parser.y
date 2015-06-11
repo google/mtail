@@ -8,7 +8,6 @@ import (
     "io"
     "fmt"
     "regexp"
-    "sort"
     "strconv"
 
     "github.com/google/mtail/metrics"
@@ -334,7 +333,6 @@ decl
 	} else {
         n = d.name
    	}
-      sort.Sort(sort.StringSlice(d.keys))
       d.m = metrics.NewMetric(n, mtaillex.(*parser).name, d.kind, d.keys...)
       d.sym = mtaillex.(*parser).s.addSym(d.name, IDSymbol, d.m,
                                            mtaillex.(*parser).t.pos)
