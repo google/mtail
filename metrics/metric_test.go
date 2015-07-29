@@ -193,3 +193,17 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestMetricWithUnit(t *testing.T) {
+	m := NewMetric("test", "prog", Counter)
+	n := NewMetric("test", "prog", Counter)
+	diff := pretty.Compare(m, n)
+	if len(diff) > 0 {
+		t.Errorf("Identical metrics not the same:\n%s", diff)
+	}
+	m.Unit = "ms"
+	diff = pretty.Compare(m, n)
+	if len(diff) == 0 {
+		t.Errorf("Setting units not different:\n%s", diff)
+	}
+}
