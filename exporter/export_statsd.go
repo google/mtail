@@ -22,11 +22,14 @@ var (
 func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
 	m.RLock()
 	defer m.RUnlock()
-	t := "c" // StatsD Counter
-	if m.Unit != "" {
-		t = m.Unit
-	} else if m.Kind == metrics.Gauge {
-		t = "g"
+	var t string
+	switch m.Kind {
+	case metrics.Counter:
+		t = "c" // StatsD Counter
+	case metrics.Gauge:
+		t = "g" // StatsD Gauge
+	case metrics.Timer:
+		t = "ms" // StatsD Timer
 	}
 	return fmt.Sprintf("%s.%s:%d|%s",
 		m.Program,

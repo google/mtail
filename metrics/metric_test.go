@@ -194,16 +194,24 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 	}
 }
 
-func TestMetricWithUnit(t *testing.T) {
-	m := NewMetric("test", "prog", Counter)
-	n := NewMetric("test", "prog", Counter)
+func TestTimer(t *testing.T) {
+	m := NewMetric("test", "prog", Timer)
+	n := NewMetric("test", "prog", Timer)
 	diff := pretty.Compare(m, n)
 	if len(diff) > 0 {
 		t.Errorf("Identical metrics not the same:\n%s", diff)
 	}
-	m.Unit = "ms"
-	diff = pretty.Compare(m, n)
-	if len(diff) == 0 {
-		t.Errorf("Setting units not different:\n%s", diff)
+	d, _ := m.GetDatum()
+	d.IncBy(1, time.Now().UTC())
+	lv := m.findLabelValueOrNil([]string{})
+	if lv == nil {
+		t.Errorf("couldn't find labelvalue")
+	}
+	newD := lv.Value
+	if newD == nil {
+		t.Errorf("new_d is nil")
+	}
+	if newD.Value != 1 {
+		t.Errorf("value not 1")
 	}
 }

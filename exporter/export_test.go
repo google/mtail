@@ -120,8 +120,7 @@ func TestMetricToStatsd(t *testing.T) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
 
-	timingMetric := metrics.NewMetric("foo", "prog", metrics.Gauge)
-	timingMetric.Unit = "ms"
+	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer)
 	d, _ = timingMetric.GetDatum()
 	d.Set(37, ts)
 	r = FakeSocketWrite(metricToStatsd, timingMetric)

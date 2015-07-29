@@ -22,6 +22,10 @@ const (
 	// Gauge is a MetricType that can take on any value, and may be set
 	// discontinuously from its previous value.
 	Gauge
+	// Timer is a specialisation of Gauge that can be used to store time
+	// intervals, such as latency and durations.  It enables certain behaviour
+	// in exporters that handle time intervals such as StatsD.
+	Timer
 )
 
 var (
@@ -36,6 +40,8 @@ func (m MetricType) String() string {
 		return "Counter"
 	case Gauge:
 		return "Gauge"
+	case Timer:
+		return "Timer"
 	}
 	return "Unknown"
 }
@@ -70,7 +76,6 @@ type Metric struct {
 	Kind        MetricType
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
-	Unit        string        `json:",omitempty"` // Unit of measurement, optional
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).
