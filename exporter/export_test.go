@@ -114,8 +114,18 @@ func TestMetricToStatsd(t *testing.T) {
 	d.Set(42, ts)
 	r = FakeSocketWrite(metricToStatsd, dimensionedMetric)
 	expected = []string{
-		"prog.bar.l.quux:37|c",
-		"prog.bar.l.snuh:42|c"}
+		"prog.bar.l.quux:37|g",
+		"prog.bar.l.snuh:42|g"}
+	if !reflect.DeepEqual(expected, r) {
+		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
+	}
+
+	timingMetric := metrics.NewMetric("foo", "prog", metrics.Gauge)
+	timingMetric.Unit = "ms"
+	d, _ = timingMetric.GetDatum()
+	d.Set(37, ts)
+	r = FakeSocketWrite(metricToStatsd, timingMetric)
+	expected = []string{"prog.foo:37|ms"}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}

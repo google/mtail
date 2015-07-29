@@ -20,12 +20,16 @@ var (
 )
 
 func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
-	// TODO(jaq): handle units better, send timing as |ms
 	m.RLock()
 	defer m.RUnlock()
-	// TODO(jaq): handle gauge types
-	return fmt.Sprintf("%s.%s:%d|c",
+	t := "c" // StatsD Counter
+	if m.Unit != "" {
+		t = m.Unit
+	} else if m.Kind == metrics.Gauge {
+		t = "g"
+	}
+	return fmt.Sprintf("%s.%s:%d|%s",
 		m.Program,
 		formatLabels(m.Name, l.Labels, ".", "."),
-		l.Datum.Get())
+		l.Datum.Get(), t)
 }
