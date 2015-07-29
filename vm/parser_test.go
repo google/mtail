@@ -35,6 +35,12 @@ var mtailPrograms = []validProgram{
 	{"declare hidden counter",
 		"hidden counter foo"},
 
+	{"declare gauge",
+		"gauge foo"},
+
+	{"declare timer",
+		"timer foo"},
+
 	{"simple pattern action",
 		"/foo/ {}"},
 

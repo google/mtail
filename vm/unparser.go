@@ -130,6 +130,8 @@ func (u *Unparser) unparse(n node) {
 			u.emit("counter ")
 		case metrics.Gauge:
 			u.emit("gauge ")
+		case metrics.Timer:
+			u.emit("timer ")
 		}
 		u.emit(v.name)
 		if len(v.keys) > 0 {

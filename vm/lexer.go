@@ -43,6 +43,7 @@ var lexemeName = map[lexeme]string{
 	BUILTIN:    "BUILTIN",
 	COUNTER:    "COUNTER",
 	GAUGE:      "GAUGE",
+	TIMER:      "TIMER",
 	AS:         "AS",
 	BY:         "BY",
 	HIDDEN:     "HIDDEN",
@@ -69,6 +70,7 @@ var keywords = map[string]lexeme{
 	"gauge":   GAUGE,
 	"hidden":  HIDDEN,
 	"next":    NEXT,
+	"timer":   TIMER,
 }
 
 // List of builtin functions.  Keep this list sorted!

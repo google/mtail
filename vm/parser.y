@@ -38,7 +38,7 @@ import (
 // Invalid input
 %token <text> INVALID
 // Types
-%token COUNTER GAUGE
+%token COUNTER GAUGE TIMER
 // Reserved words
 %token AS BY CONST HIDDEN DEF NEXT
 // Builtins
@@ -383,6 +383,10 @@ type_spec
   | GAUGE
   {
     $$ = metrics.Gauge
+  }
+  | TIMER
+  {
+    $$ = metrics.Timer
   }
   ;
 
