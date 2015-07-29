@@ -70,7 +70,7 @@ type Metric struct {
 	Kind        MetricType
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
-	Unit        string        // Unit of measurement, optional
+	Unit        string        `json:",omitempty"` // Unit of measurement, optional
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).
