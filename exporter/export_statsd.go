@@ -23,6 +23,7 @@ func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) str
 	// TODO(jaq): handle units better, send timing as |ms
 	m.RLock()
 	defer m.RUnlock()
+	// TODO(jaq): handle gauge types
 	return fmt.Sprintf("%s.%s:%d|c",
 		m.Program,
 		formatLabels(m.Name, l.Labels, ".", "."),
