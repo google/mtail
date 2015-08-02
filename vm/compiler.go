@@ -168,6 +168,18 @@ func (c *compiler) compile(untypedNode node) {
 			c.errorf("invalid op: %q\n", n.op)
 		}
 
+	case *multiplicativeExprNode:
+		c.compile(n.lhs)
+		c.compile(n.rhs)
+		switch n.op {
+		case '*':
+			c.emit(instr{op: mul})
+		case '/':
+			c.emit(instr{op: div})
+		default:
+			c.errorf("invalid op: %q\n", n.op)
+		}
+
 	case *assignExprNode:
 		c.compile(n.lhs)
 		c.compile(n.rhs)
