@@ -128,7 +128,11 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 // WriteMetrics writes metrics to each of the configured services.
 // TODO(jaq) rename to PushMetrics.
 func (e *Exporter) WriteMetrics() {
-	lastUpdateTime := metrics.MetricUpdateTime.Load().(time.Time)
+	var lastUpdateTime time.Time
+	v := metrics.MetricUpdateTime.Load()
+	if v != nil {
+		lastUpdateTime = metrics.MetricUpdateTime.Load().(time.Time)
+	}
 	if lastUpdateTime.Sub(e.lastMetricPushTime) <= 0 {
 		return
 	}
