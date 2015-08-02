@@ -26,7 +26,7 @@ import (
 }
 
 %type <n> stmt_list stmt cond arg_expr_list
-%type <n> expr primary_expr additive_expr postfix_expr unary_expr assign_expr rel_expr
+%type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr
 %type <n> decl declarator def deco
 %type <mtype> type_spec
 %type <text> as_spec
@@ -52,7 +52,7 @@ import (
 %token <text> DECO
 %token <value> NUMERIC
 // Operators, in order of precedence
-%token INC MINUS PLUS
+%token INC DIV MUL MINUS PLUS
 %token <value> LT GT LE GE EQ NE
 %token ADD_ASSIGN ASSIGN
 // Punctuation
@@ -73,7 +73,7 @@ start
 
 stmt_list
   : /* empty */
-  {  
+  {
       $$ = &stmtlistNode{}
       mtaillex.(*parser).startScope()
   }
@@ -171,19 +171,34 @@ relop
   | NE
   { $$ = $1 }
   ;
-  
+
 additive_expr
+  : multiplicative_expr
+  {
+    $$ = $1
+  }
+  | additive_expr PLUS multiplicative_expr
+  {
+    $$ = &additiveExprNode{$1, $3, '+'}
+  }
+  | additive_expr MINUS multiplicative_expr
+  {
+    $$ = &additiveExprNode{$1, $3, '-'}
+  }
+  ;
+
+multiplicative_expr
   : unary_expr
   {
     $$ = $1
   }
-  | additive_expr PLUS unary_expr
+  | multiplicative_expr MUL unary_expr
   {
-    $$ = &additiveExprNode{$1, $3, '+'}
+    $$ = &multiplicativeExprNode{$1, $3, '*'}
   }
-  | additive_expr MINUS unary_expr
+  | multiplicative_expr DIV unary_expr
   {
-    $$ = &additiveExprNode{$1, $3, '-'}
+    $$ = &multiplicativeExprNode{$1, $3, '/'}
   }
   ;
 

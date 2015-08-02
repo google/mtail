@@ -118,6 +118,12 @@ var mtailPrograms = []validProgram{
 			"  timestamp() - time_total\n" +
 			"}\n"},
 
+	{"multiplicative",
+		"counter a\n" +
+			"counter b\n" +
+			"   /foo/ {\n   a * b\n" +
+			"}\n"},
+
 	{"additive and mem storage",
 		"counter time_total\n" +
 			"counter variable by foo\n" +

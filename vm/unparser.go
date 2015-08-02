@@ -113,6 +113,11 @@ func (u *Unparser) unparse(n node) {
 		u.emit(fmt.Sprintf(" %c ", v.op))
 		u.unparse(v.rhs)
 
+	case *multiplicativeExprNode:
+		u.unparse(v.lhs)
+		u.emit(fmt.Sprintf(" %c ", v.op))
+		u.unparse(v.rhs)
+
 	case *assignExprNode:
 		u.unparse(v.lhs)
 		u.emit(" = ")

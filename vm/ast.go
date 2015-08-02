@@ -61,6 +61,11 @@ type additiveExprNode struct {
 	op       int
 }
 
+type multiplicativeExprNode struct {
+	lhs, rhs node
+	op       int
+}
+
 type assignExprNode struct {
 	lhs, rhs node
 }
