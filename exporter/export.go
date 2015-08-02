@@ -131,7 +131,7 @@ func (e *Exporter) WriteMetrics() {
 	var lastUpdateTime time.Time
 	v := metrics.MetricUpdateTime.Load()
 	if v != nil {
-		lastUpdateTime = metrics.MetricUpdateTime.Load().(time.Time)
+		lastUpdateTime = v.(time.Time)
 	}
 	if lastUpdateTime.Sub(e.lastMetricPushTime) <= 0 {
 		return
