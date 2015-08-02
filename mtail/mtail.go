@@ -28,8 +28,8 @@ import (
 
 // Mtail contains the state of the main program object.
 type Mtail struct {
-	lines chan string   // Channel of lines from tailer to VM engine.
-	store metrics.Store // Metrics storage.
+	lines chan string    // Channel of lines from tailer to VM engine.
+	store *metrics.Store // Metrics storage.
 
 	t *tailer.Tailer     // t tails the watched files and feeds lines to the VMs.
 	l *vm.Loader         // l loads programs and manages the VM lifecycle.
@@ -101,7 +101,7 @@ func (m *Mtail) StartTailing() error {
 
 // InitLoader constructs a new program loader and performs the inital load of program files in the program directory.
 func (m *Mtail) InitLoader() error {
-	o := vm.LoaderOptions{Store: &m.store, Lines: m.lines, CompileOnly: m.o.CompileOnly, DumpBytecode: m.o.DumpBytecode, SyslogUseCurrentYear: m.o.SyslogUseCurrentYear, W: m.o.W, FS: m.o.FS}
+	o := vm.LoaderOptions{Store: m.store, Lines: m.lines, CompileOnly: m.o.CompileOnly, DumpBytecode: m.o.DumpBytecode, SyslogUseCurrentYear: m.o.SyslogUseCurrentYear, W: m.o.W, FS: m.o.FS}
 	var err error
 	m.l, err = vm.NewLoader(o)
 	if err != nil {
@@ -133,14 +133,21 @@ type Options struct {
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
 
+	Store *metrics.Store
+
 	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 }
 
 // New creates an Mtail from the supplied Options.
 func New(o Options) (*Mtail, error) {
+	store := o.Store
+	if store == nil {
+		store = &metrics.Store{}
+	}
 	m := &Mtail{
 		lines:   make(chan string),
+		store:   store,
 		webquit: make(chan struct{}),
 		o:       o}
 
@@ -149,7 +156,7 @@ func New(o Options) (*Mtail, error) {
 		return nil, err
 	}
 
-	m.e, err = exporter.New(exporter.Options{Store: &m.store})
+	m.e, err = exporter.New(exporter.Options{Store: m.store})
 	if err != nil {
 		return nil, err
 	}
