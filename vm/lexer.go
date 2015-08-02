@@ -145,7 +145,7 @@ func newLexer(name string, input io.Reader) *lexer {
 }
 
 // nextToken returns the next token in the input.  When no token is available
-// to be returned, it executes the next action in the state machine.
+// to be returned it executes the next action in the state machine.
 func (l *lexer) nextToken() token {
 	for {
 		select {
