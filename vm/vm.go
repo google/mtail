@@ -35,8 +35,10 @@ const (
 	str                     // Push string constant at operand onto stack
 	set                     // Set a variable value
 	add                     // Add top values on stack and push to stack
-	sub                     // Subtract tpo value from second top value on stack, and push to stack.
-	mload                   // Load metric at operand onto top of stack.
+	sub                     // Subtract top value from second top value on stack, and push to stack.
+	mul                     // Multiply top values on stack and push to stack
+	div                     // Divide top value into second top on stack, and push
+	mload                   // Load metric at operand onto top of stack
 	dload                   // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
 	tolower                 // Convert the string at the top of the stack to lowercase.
 	length                  // Compute the length of a string.
@@ -56,6 +58,8 @@ var opNames = map[opcode]string{
 	set:       "set",
 	add:       "add",
 	sub:       "sub",
+	mul:       "mul",
+	div:       "div",
 	mload:     "mload",
 	dload:     "dload",
 	tolower:   "tolower",
@@ -328,6 +332,30 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("%s", err)
 		}
 		t.Push(a - b)
+
+	case mul:
+		// Multiply two values at TOS, push result
+		b, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(a * b)
+
+	case div:
+		// Divide two values at TOS, push result
+		b, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(a / b)
 
 	case mload:
 		// Load a metric at operand onto stack
