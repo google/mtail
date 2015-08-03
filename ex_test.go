@@ -111,7 +111,7 @@ func TestExamplePrograms(t *testing.T) {
 		if _, err := ex.ReadFrom(j); err != nil {
 			t.Fatalf("Coldn't read from json: %s", err)
 		}
-		diff := pretty.Compare(m.String(), ex.String())
+		diff := pretty.Compare(ex.String(), m.String())
 		if len(diff) > 0 {
 			t.Errorf("%s: metrics don't match:\n%s", tc.programfile, diff)
 		}
