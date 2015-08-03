@@ -16,7 +16,7 @@ import (
 	"github.com/google/mtail/vm"
 )
 
-const testProgram = "/$/ { }"
+const testProgram = "/$/ { }\n"
 
 func makeTempDir(t *testing.T) (workdir string) {
 	var err error
