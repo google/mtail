@@ -313,16 +313,16 @@ cond
   ;
 
 pattern_expr
-  : REGEX
+  : DIV { mtaillex.(*parser).inRegex() } REGEX DIV
   {
     // Stash the start of the pattern_expr in a state variable.
     // We know it's the start because pattern_expr is left associative.
     mtaillex.(*parser).pos = mtaillex.(*parser).t.pos
-    $$ = $1
+    $$ = $3
   }
-  | pattern_expr PLUS REGEX
+  | pattern_expr PLUS DIV { mtaillex.(*parser).inRegex() } REGEX DIV
   {
-    $$ = $1 + $3
+    $$ = $1 + $5
   }
   | pattern_expr PLUS ID
   {
@@ -524,4 +524,8 @@ func (p *parser) endScope() {
     if p.s != nil && p.s.parent != nil {
         p.s = p.s.parent
     }
+}
+
+func (p *parser) inRegex() {
+    p.l.in_regex = true
 }

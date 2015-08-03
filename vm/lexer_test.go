@@ -34,7 +34,7 @@ var lexerTests = []lexerTest{
 		token{RSQUARE, "]", position{"punctuation", 0, 5, 5}},
 		token{COMMA, ",", position{"punctuation", 0, 6, 6}},
 		token{EOF, "", position{"punctuation", 0, 7, 7}}}},
-	{"operators", "- + = ++ += < > <= >= == != *", []token{
+	{"operators", "- + = ++ += < > <= >= == != * /", []token{
 		token{MINUS, "-", position{"operators", 0, 0, 0}},
 		token{PLUS, "+", position{"operators", 0, 2, 2}},
 		token{ASSIGN, "=", position{"operators", 0, 4, 4}},
@@ -47,7 +47,8 @@ var lexerTests = []lexerTest{
 		token{EQ, "==", position{"operators", 0, 22, 23}},
 		token{NE, "!=", position{"operators", 0, 25, 26}},
 		token{MUL, "*", position{"operators", 0, 28, 28}},
-		token{EOF, "", position{"operators", 0, 29, 29}}}},
+		token{DIV, "/", position{"operators", 0, 30, 30}},
+		token{EOF, "", position{"operators", 0, 31, 31}}}},
 	{"keywords",
 		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\n", []token{
 			token{COUNTER, "counter", position{"keywords", 0, 0, 6}},
@@ -79,13 +80,19 @@ var lexerTests = []lexerTest{
 		token{ID, "line-count", position{"identifier", 1, 5, 14}},
 		token{EOF, "", position{"identifier", 1, 15, 15}}}},
 	{"regex", "/asdf/", []token{
-		token{REGEX, "asdf", position{"regex", 0, 0, 5}},
+		token{DIV, "/", position{"regex", 0, 0, 0}},
+		token{REGEX, "asdf", position{"regex", 0, 1, 4}},
+		token{DIV, "/", position{"regex", 0, 5, 5}},
 		token{EOF, "", position{"regex", 0, 6, 6}}}},
 	{"regex with escape", `/asdf\//`, []token{
-		token{REGEX, `asdf/`, position{"regex with escape", 0, 0, 7}},
+		token{DIV, "/", position{"regex with escape", 0, 0, 0}},
+		token{REGEX, `asdf/`, position{"regex with escape", 0, 1, 6}},
+		token{DIV, "/", position{"regex with escape", 0, 7, 7}},
 		token{EOF, "", position{"regex with escape", 0, 8, 8}}}},
 	{"regex with escape and special char", `/foo\d\//`, []token{
-		token{REGEX, `foo\d/`, position{"regex with escape and special char", 0, 0, 8}},
+		token{DIV, "/", position{"regex with escape and special char", 0, 0, 0}},
+		token{REGEX, `foo\d/`, position{"regex with escape and special char", 0, 1, 7}},
+		token{DIV, "/", position{"regex with escape and special char", 0, 8, 8}},
 		token{EOF, "", position{"regex with escape and special char", 0, 9, 9}}}},
 	{"capref", "$foo", []token{
 		token{CAPREF, "foo", position{"capref", 0, 0, 3}},
@@ -111,7 +118,9 @@ var lexerTests = []lexerTest{
 			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
 			"  foo++\n" +
 			"}", []token{
-			token{REGEX, "(?P<date>[[:digit:]-/ ])", position{"large program", 0, 0, 26}},
+			token{DIV, "/", position{"large program", 0, 0, 0}},
+			token{REGEX, "(?P<date>[[:digit:]-/ ])", position{"large program", 0, 1, 25}},
+			token{DIV, "/", position{"large program", 0, 26, 26}},
 			token{LCURLY, "{", position{"large program", 0, 28, 28}},
 			token{BUILTIN, "strptime", position{"large program", 1, 2, 9}},
 			token{LPAREN, "(", position{"large program", 1, 10, 10}},
@@ -134,16 +143,24 @@ var lexerTests = []lexerTest{
 	{"unexpected char", "?", []token{
 		token{INVALID, "Unexpected input: '?'", position{"unexpected char", 0, 0, 0}}}},
 	{"unterminated regex", "/foo\n", []token{
-		token{INVALID, "Unterminated regular expression: \"/foo\"", position{"unterminated regex", 0, 0, 3}}}},
+		token{DIV, "/", position{"unterminated regex", 0, 0, 0}},
+		token{INVALID, "Unterminated regular expression: \"/foo\"", position{"unterminated regex", 0, 1, 3}}}},
 	{"unterminated quoted string", "\"foo\n", []token{
 		token{INVALID, "Unterminated quoted string: \"\\\"foo\"", position{"unterminated quoted string", 0, 0, 3}}}},
 }
 
 // collect gathers the emitted items into a slice.
 func collect(t *lexerTest) (tokens []token) {
+	// Hack to count divs seen for regex tests.
+	in_regex_set := false
 	l := newLexer(t.name, strings.NewReader(t.input))
 	for {
 		token := l.nextToken()
+		// Hack to simulate context signal from parser.
+		if token.kind == DIV && (strings.Contains(t.name, "regex") || strings.HasPrefix(t.name, "large program")) && !in_regex_set {
+			l.in_regex = true
+			in_regex_set = true
+		}
 		tokens = append(tokens, token)
 		if token.kind == EOF || token.kind == INVALID {
 			break

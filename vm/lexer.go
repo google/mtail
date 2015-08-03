@@ -126,6 +126,8 @@ type lexer struct {
 	line  int  // The line position of the current rune.
 	col   int  // The column position of the current rune.
 
+	in_regex bool // Context aware flag from parser to say we're in a regex
+
 	// The currently being lexed token.
 	startcol int    // Starting column of the current token.
 	text     string // the text of the current token
@@ -232,6 +234,9 @@ func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 
 // Start lexing a program.
 func lexProg(l *lexer) stateFn {
+	if l.in_regex {
+		return lexRegex
+	}
 	switch r := l.next(); {
 	case r == '#':
 		return lexComment
@@ -318,7 +323,8 @@ func lexProg(l *lexer) stateFn {
 			return l.errorf("Unexpected input: %q", r)
 		}
 	case r == '/':
-		return lexRegex
+		l.accept()
+		l.emit(DIV)
 	case r == '"':
 		return lexQuotedString
 	case r == '$':
@@ -450,7 +456,8 @@ Loop:
 // Lex a regular expression. The text of the regular expression does not
 // include the '/' quotes.
 func lexRegex(l *lexer) stateFn {
-	l.skip() // Skip leading quote
+	// Exit regex mode when leaving this function.
+	defer func() { l.in_regex = false }()
 Loop:
 	for {
 		switch l.next() {
@@ -467,7 +474,7 @@ Loop:
 		case eof, '\n':
 			return l.errorf("Unterminated regular expression: \"/%s\"", l.text)
 		case '/':
-			l.skip() // Skip trailing quote
+			l.backup() // Backup trailing slash on successful parse
 			break Loop
 		default:
 			l.accept()

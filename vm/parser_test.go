@@ -17,57 +17,57 @@ type validProgram struct {
 }
 
 var mtailPrograms = []validProgram{
-	{"empty",
-		""},
+	// {"empty",
+	// 	""},
 
-	{"declare counter",
-		"counter line_count"},
+	// {"declare counter",
+	// 	"counter line_count"},
 
-	{"declare counter string name",
-		"counter line_count as \"line-count\""},
+	// {"declare counter string name",
+	// 	"counter line_count as \"line-count\""},
 
-	{"declare dimensioned counter",
-		"counter foo by bar"},
+	// {"declare dimensioned counter",
+	// 	"counter foo by bar"},
 
-	{"declare multi-dimensioned counter",
-		"counter foo by bar, baz, quux"},
+	// {"declare multi-dimensioned counter",
+	// 	"counter foo by bar, baz, quux"},
 
-	{"declare hidden counter",
-		"hidden counter foo"},
+	// {"declare hidden counter",
+	// 	"hidden counter foo"},
 
-	{"declare gauge",
-		"gauge foo"},
+	// {"declare gauge",
+	// 	"gauge foo"},
 
-	{"declare timer",
-		"timer foo"},
+	// {"declare timer",
+	// 	"timer foo"},
 
-	{"simple pattern action",
-		"/foo/ {}"},
+	// {"simple pattern action",
+	// 	"/foo/ {}"},
 
-	{"more complex action, calling builtin",
-		"counter line_count\n" +
-			"/foo/ {\n" +
-			"  line_count++\n" +
-			"}"},
+	// {"more complex action, calling builtin",
+	// 	"counter line_count\n" +
+	// 		"/foo/ {\n" +
+	// 		"  line_count++\n" +
+	// 		"}"},
 
-	{"regex match includes escaped slashes",
-		"counter foo\n" +
-			"/foo\\// { foo++ }"},
+	// {"regex match includes escaped slashes",
+	// 	"counter foo\n" +
+	// 		"/foo\\// { foo++ }"},
 
-	{"numeric capture group reference",
-		"/(foo)/ {\n" +
-			"  $1++\n" +
-			"}"},
+	// {"numeric capture group reference",
+	// 	"/(foo)/ {\n" +
+	// 		"  $1++\n" +
+	// 		"}"},
 
-	{"strptime and capref",
-		"/(.*)/ {\n" +
-			"strptime($1, \"2006-01-02T15:04:05Z07:00\")\n" +
-			" }"},
+	// {"strptime and capref",
+	// 	"/(.*)/ {\n" +
+	// 		"strptime($1, \"2006-01-02T15:04:05Z07:00\")\n" +
+	// 		" }"},
 
-	{"named capture group reference",
-		"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
-			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
-			"}"},
+	// {"named capture group reference",
+	// 	"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
+	// 		"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
+	// 		"}"},
 
 	{"nested match conditions",
 		"counter foo\n" +
@@ -80,109 +80,109 @@ var mtailPrograms = []validProgram{
 			"  }\n" +
 			"}\n"},
 
-	{"nested scope",
-		"counter foo\n" +
-			"/fo(o)/ {\n" +
-			"  $1++\n" +
-			"  /bar(xxx)/ {\n" +
-			"    $1 += $1\n" +
-			"    foo = $1\n" +
-			"  }\n" +
-			"}\n"},
+	// {"nested scope",
+	// 	"counter foo\n" +
+	// 		"/fo(o)/ {\n" +
+	// 		"  $1++\n" +
+	// 		"  /bar(xxx)/ {\n" +
+	// 		"    $1 += $1\n" +
+	// 		"    foo = $1\n" +
+	// 		"  }\n" +
+	// 		"}\n"},
 
-	{"comment then code",
-		"# %d [%p]\n" +
-			"/^(?P<date>\\d+\\/\\d+\\/\\d+ \\d+:\\d+:\\d+) \\[(?P<pid>\\d+)\\] / {\n" +
-			"  strptime($1, \"2006/01/02 15:04:05\")\n" +
-			"}\n"},
+	// {"comment then code",
+	// 	"# %d [%p]\n" +
+	// 		"/^(?P<date>\\d+\\/\\d+\\/\\d+ \\d+:\\d+:\\d+) \\[(?P<pid>\\d+)\\] / {\n" +
+	// 		"  strptime($1, \"2006/01/02 15:04:05\")\n" +
+	// 		"}\n"},
 
-	{"assignment",
-		"counter variable\n" +
-			"/(?P<foo>.*)/ {\n" +
-			"variable = $foo\n" +
-			"}\n"},
+	// {"assignment",
+	// 	"counter variable\n" +
+	// 		"/(?P<foo>.*)/ {\n" +
+	// 		"variable = $foo\n" +
+	// 		"}\n"},
 
-	{"increment operator",
-		"counter var\n" +
-			"/foo/ {\n" +
-			"  var++\n" +
-			"}\n"},
+	// {"increment operator",
+	// 	"counter var\n" +
+	// 		"/foo/ {\n" +
+	// 		"  var++\n" +
+	// 		"}\n"},
 
-	{"incby operator",
-		"counter var\n" +
-			"/foo/ {\n  var += 2\n}\n"},
+	// {"incby operator",
+	// 	"counter var\n" +
+	// 		"/foo/ {\n  var += 2\n}\n"},
 
-	{"additive",
-		"counter time_total\n" +
-			"/(?P<foo>.*)/ {\n" +
-			"  timestamp() - time_total\n" +
-			"}\n"},
+	// {"additive",
+	// 	"counter time_total\n" +
+	// 		"/(?P<foo>.*)/ {\n" +
+	// 		"  timestamp() - time_total\n" +
+	// 		"}\n"},
 
-	{"multiplicative",
-		"counter a\n" +
-			"counter b\n" +
-			"   /foo/ {\n   a * b\n" +
-			"}\n"},
+	// {"multiplicative",
+	// 	"counter a\n" +
+	// 		"counter b\n" +
+	// 		"   /foo/ {\n   a * b\n" +
+	// 		"}\n"},
 
-	{"additive and mem storage",
-		"counter time_total\n" +
-			"counter variable by foo\n" +
-			"/(?P<foo>.*)/ {\n" +
-			"  time_total += timestamp() - variable[$foo]\n" +
-			"}\n"},
+	// {"additive and mem storage",
+	// 	"counter time_total\n" +
+	// 		"counter variable by foo\n" +
+	// 		"/(?P<foo>.*)/ {\n" +
+	// 		"  time_total += timestamp() - variable[$foo]\n" +
+	// 		"}\n"},
 
-	{"conditional expressions",
-		"counter foo\n" +
-			"/(?P<foo>.*)/ {\n" +
-			"  $foo > 0 {\n" +
-			"    foo += $foo\n" +
-			"  }\n" +
-			"  $foo >= 0 {\n" +
-			"    foo += $foo\n" +
-			"  }\n" +
-			"  $foo < 0 {\n" +
-			"    foo += $foo\n" +
-			"  }\n" +
-			"  $foo <= 0 {\n" +
-			"    foo += $foo\n" +
-			"  }\n" +
-			"  $foo == 0 {\n" +
-			"    foo += $foo\n" +
-			"  }\n" +
-			"  $foo != 0 {\n" +
-			"    foo += $foo\n" +
-			"  }\n" +
-			"}\n"},
+	// {"conditional expressions",
+	// 	"counter foo\n" +
+	// 		"/(?P<foo>.*)/ {\n" +
+	// 		"  $foo > 0 {\n" +
+	// 		"    foo += $foo\n" +
+	// 		"  }\n" +
+	// 		"  $foo >= 0 {\n" +
+	// 		"    foo += $foo\n" +
+	// 		"  }\n" +
+	// 		"  $foo < 0 {\n" +
+	// 		"    foo += $foo\n" +
+	// 		"  }\n" +
+	// 		"  $foo <= 0 {\n" +
+	// 		"    foo += $foo\n" +
+	// 		"  }\n" +
+	// 		"  $foo == 0 {\n" +
+	// 		"    foo += $foo\n" +
+	// 		"  }\n" +
+	// 		"  $foo != 0 {\n" +
+	// 		"    foo += $foo\n" +
+	// 		"  }\n" +
+	// 		"}\n"},
 
-	{"decorator definition and invocation",
-		"def foo { next }\n" +
-			"@foo { }\n",
-	},
+	// {"decorator definition and invocation",
+	// 	"def foo { next }\n" +
+	// 		"@foo { }\n",
+	// },
 
-	{"const regex",
-		"const X /foo/\n" +
-			"/foo / + X + / bar/ {\n" +
-			"}\n",
-	},
+	// {"const regex",
+	// 	"const X /foo/\n" +
+	// 		"/foo / + X + / bar/ {\n" +
+	// 		"}\n",
+	// },
 
-	{"multiline regex",
-		"/foo / +\n" +
-			"/barrr/ {\n" +
-			"}\n",
-	},
+	// {"multiline regex",
+	// 	"/foo / +\n" +
+	// 		"/barrr/ {\n" +
+	// 		"}\n",
+	// },
 
-	{"len",
-		"/(?P<foo>foo)/ {\n" +
-			"len($foo) > 0 {\n" +
-			"}\n" +
-			"}\n",
-	},
+	// {"len",
+	// 	"/(?P<foo>foo)/ {\n" +
+	// 		"len($foo) > 0 {\n" +
+	// 		"}\n" +
+	// 		"}\n",
+	// },
 }
 
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range mtailPrograms {
 		p := newParser(tc.name, strings.NewReader(tc.program), &metrics.Store{})
-		//mtailDebug = 999 // All the debugging.
+		mtailDebug = 999 // All the debugging.
 		r := mtailParse(p)
 
 		if r != 0 || p.root == nil || len(p.errors) > 0 {
@@ -229,21 +229,22 @@ var InvalidPrograms = []InvalidProgram{
 
 	{"unterminated regex",
 		"/foo\n",
-		[]string{"unterminated regex:1:1-4: Unterminated regular expression: \"/foo\""}},
+		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\"",
+			"unterminated regex:1:2-4: syntax error"}},
 
 	{"invalid regex",
 		"/foo(/\n",
-		[]string{"invalid regex:1:1-6: error parsing regexp: missing closing ): `foo(`",
+		[]string{"invalid regex:1:6: error parsing regexp: missing closing ): `foo(`",
 			"invalid regex:2:1: syntax error"}},
 
 	{"invalid regex 2",
 		"/blurg(?P<x.)/\n",
-		[]string{"invalid regex 2:1:1-14: error parsing regexp: invalid named capture: `(?P<x.)`",
+		[]string{"invalid regex 2:1:14: error parsing regexp: invalid named capture: `(?P<x.)`",
 			"invalid regex 2:2:1: syntax error"}},
 
 	{"invalid regex 3",
 		"/blurg(?P<x>[[:alph:]])/\n",
-		[]string{"invalid regex 3:1:1-24: error parsing regexp: invalid character class range: `[:alph:]`",
+		[]string{"invalid regex 3:1:24: error parsing regexp: invalid character class range: `[:alph:]`",
 			"invalid regex 3:2:1: syntax error"}},
 
 	{"unterminated string",
@@ -266,8 +267,8 @@ var InvalidPrograms = []InvalidProgram{
 
 	{"unterminated const regex",
 		"const X /(?P<foo>",
-		[]string{"unterminated const regex:1:9-17: Unterminated regular expression: \"/(?P<foo>\"",
-			"unterminated const regex:1:9-17: syntax error"}},
+		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",
+			"unterminated const regex:1:10-17: syntax error"}},
 
 	{"undefined const regex",
 		"/foo / + X + / bar/ {}\n",
@@ -280,7 +281,9 @@ func TestInvalidPrograms(t *testing.T) {
 		//mtailDebug = 999 // All the debugging.
 		mtailParse(p)
 
-		diff := pretty.Compare(strings.TrimRight(p.errors.Error(), "\n"), strings.Join(tc.errors, "\n"))
+		diff := pretty.Compare(
+			strings.Join(tc.errors, "\n"),             // want
+			strings.TrimRight(p.errors.Error(), "\n")) // got
 		if len(diff) > 0 {
 			t.Errorf("Incorrect error for '%s'\n%s", tc.name, diff)
 		}
