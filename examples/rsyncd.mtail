@@ -33,4 +33,3 @@ hidden gauge connection_time by pid
     connection_time_total += timestamp() - connection_time[$pid]
   }
 }
-
