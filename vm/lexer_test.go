@@ -19,8 +19,11 @@ type lexerTest struct {
 var lexerTests = []lexerTest{
 	{"empty", "", []token{
 		token{EOF, "", position{"empty", 0, 0, 0}}}},
-	{"spaces", " \t\n", []token{
-		token{EOF, "", position{"spaces", 1, 0, 0}}}},
+	{"spaces", " \t", []token{
+		token{EOF, "", position{"spaces", 0, 2, 2}}}},
+	{"newlines", "\n", []token{
+		token{NL, "\n", position{"newlines", 1, 0, -1}},
+		token{EOF, "", position{"newlines", 1, 0, 0}}}},
 	{"comment", "# comment", []token{
 		token{EOF, "", position{"comment", 0, 9, 9}}}},
 	{"comment not at col 1", "  # comment", []token{
@@ -52,21 +55,34 @@ var lexerTests = []lexerTest{
 	{"keywords",
 		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\n", []token{
 			token{COUNTER, "counter", position{"keywords", 0, 0, 6}},
+			token{NL, "\n", position{"keywords", 1, 7, -1}},
 			token{GAUGE, "gauge", position{"keywords", 1, 0, 4}},
+			token{NL, "\n", position{"keywords", 2, 5, -1}},
 			token{AS, "as", position{"keywords", 2, 0, 1}},
+			token{NL, "\n", position{"keywords", 3, 2, -1}},
 			token{BY, "by", position{"keywords", 3, 0, 1}},
+			token{NL, "\n", position{"keywords", 4, 2, -1}},
 			token{HIDDEN, "hidden", position{"keywords", 4, 0, 5}},
+			token{NL, "\n", position{"keywords", 5, 6, -1}},
 			token{DEF, "def", position{"keywords", 5, 0, 2}},
+			token{NL, "\n", position{"keywords", 6, 3, -1}},
 			token{NEXT, "next", position{"keywords", 6, 0, 3}},
+			token{NL, "\n", position{"keywords", 7, 4, -1}},
 			token{CONST, "const", position{"keywords", 7, 0, 4}},
+			token{NL, "\n", position{"keywords", 8, 5, -1}},
 			token{TIMER, "timer", position{"keywords", 8, 0, 4}},
+			token{NL, "\n", position{"keywords", 9, 5, -1}},
 			token{EOF, "", position{"keywords", 9, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\ntolower\nlen\n", []token{
 			token{BUILTIN, "strptime", position{"builtins", 0, 0, 7}},
+			token{NL, "\n", position{"builtins", 1, 8, -1}},
 			token{BUILTIN, "timestamp", position{"builtins", 1, 0, 8}},
+			token{NL, "\n", position{"builtins", 2, 9, -1}},
 			token{BUILTIN, "tolower", position{"builtins", 2, 0, 6}},
+			token{NL, "\n", position{"builtins", 3, 7, -1}},
 			token{BUILTIN, "len", position{"builtins", 3, 0, 2}},
+			token{NL, "\n", position{"builtins", 4, 3, -1}},
 			token{EOF, "", position{"builtins", 4, 0, 0}}}},
 	{"numeric", "1 23", []token{
 		token{NUMERIC, "1", position{"numeric", 0, 0, 0}},
@@ -76,6 +92,7 @@ var lexerTests = []lexerTest{
 		token{ID, "a", position{"identifier", 0, 0, 0}},
 		token{ID, "be", position{"identifier", 0, 2, 3}},
 		token{ID, "foo", position{"identifier", 0, 5, 7}},
+		token{NL, "\n", position{"identifier", 1, 8, -1}},
 		token{ID, "quux", position{"identifier", 1, 0, 3}},
 		token{ID, "line-count", position{"identifier", 1, 5, 14}},
 		token{EOF, "", position{"identifier", 1, 15, 15}}}},
@@ -122,14 +139,17 @@ var lexerTests = []lexerTest{
 			token{REGEX, "(?P<date>[[:digit:]-/ ])", position{"large program", 0, 1, 25}},
 			token{DIV, "/", position{"large program", 0, 26, 26}},
 			token{LCURLY, "{", position{"large program", 0, 28, 28}},
+			token{NL, "\n", position{"large program", 1, 29, -1}},
 			token{BUILTIN, "strptime", position{"large program", 1, 2, 9}},
 			token{LPAREN, "(", position{"large program", 1, 10, 10}},
 			token{CAPREF, "date", position{"large program", 1, 11, 15}},
 			token{COMMA, ",", position{"large program", 1, 16, 16}},
 			token{STRING, "%Y/%m/%d %H:%M:%S", position{"large program", 1, 18, 36}},
 			token{RPAREN, ")", position{"large program", 1, 37, 37}},
+			token{NL, "\n", position{"large program", 2, 38, -1}},
 			token{ID, "foo", position{"large program", 2, 2, 4}},
 			token{INC, "++", position{"large program", 2, 5, 6}},
+			token{NL, "\n", position{"large program", 3, 7, -1}},
 			token{RCURLY, "}", position{"large program", 3, 0, 0}},
 			token{EOF, "", position{"large program", 3, 1, 1}}}},
 	{"linecount",
@@ -137,6 +157,7 @@ var lexerTests = []lexerTest{
 			"# blank line\n" +
 			"\n" +
 			"foo", []token{
+			token{NL, "\n", position{"linecount", 3, 12, -1}},
 			token{ID, "foo", position{"linecount", 3, 0, 2}},
 			token{EOF, "", position{"linecount", 3, 3, 3}}}},
 	// errors

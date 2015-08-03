@@ -58,6 +58,7 @@ import (
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
 %token COMMA
+%token NL
 
 %start start
 %%
@@ -77,7 +78,7 @@ stmt_list
       $$ = &stmtlistNode{}
       mtaillex.(*parser).startScope()
   }
-  | stmt_list stmt
+  | stmt_list stmt NL
   {
       $$ = $1
       if ($2 != nil) {
@@ -87,14 +88,14 @@ stmt_list
   ;
 
 stmt
-  : cond LCURLY stmt_list RCURLY
+  : cond LCURLY opt_nl stmt_list RCURLY
   {
-      $3.(*stmtlistNode).s = mtaillex.(*parser).s
+      $4.(*stmtlistNode).s = mtaillex.(*parser).s
       mtaillex.(*parser).endScope()
       if $1 != nil {
-          $$ = &condNode{$1, []node{$3}}
+          $$ = &condNode{$1, []node{$4}}
       } else {
-          $$ = $3
+          $$ = $4
       }
   }
   | expr
@@ -320,9 +321,9 @@ pattern_expr
     mtaillex.(*parser).pos = mtaillex.(*parser).t.pos
     $$ = $3
   }
-  | pattern_expr PLUS DIV { mtaillex.(*parser).inRegex() } REGEX DIV
+  | pattern_expr PLUS opt_nl DIV { mtaillex.(*parser).inRegex() } REGEX DIV
   {
-    $$ = $1 + $5
+    $$ = $1 + $6
   }
   | pattern_expr PLUS ID
   {
@@ -443,28 +444,33 @@ as_spec
   ;
 
 def
-  : DEF ID LCURLY stmt_list RCURLY
+  : DEF ID LCURLY opt_nl stmt_list RCURLY
   {
-      $4.(*stmtlistNode).s = mtaillex.(*parser).s
+      $5.(*stmtlistNode).s = mtaillex.(*parser).s
       mtaillex.(*parser).endScope()
-      $$ = &defNode{name: $2, children: []node{$4}}
+      $$ = &defNode{name: $2, children: []node{$5}}
       d := $$.(*defNode)
       d.sym = mtaillex.(*parser).s.addSym(d.name, DefSymbol, d, mtaillex.(*parser).t.pos)
   }
   ;
 
 deco
-  : DECO LCURLY stmt_list RCURLY
+  : DECO LCURLY opt_nl stmt_list RCURLY
   {
-    $3.(*stmtlistNode).s = mtaillex.(*parser).s
+    $4.(*stmtlistNode).s = mtaillex.(*parser).s
     mtaillex.(*parser).endScope()
     if sym, ok := mtaillex.(*parser).s.lookupSym($1, DefSymbol); ok {
-      $$ = &decoNode{$1, []node{$3}, sym.binding.(*defNode)}
+      $$ = &decoNode{$1, []node{$4}, sym.binding.(*defNode)}
     } else {
       mtaillex.Error(fmt.Sprintf("Decorator %s not defined", $1))
       // TODO(jaq): force a parse error.
     }
   }
+  ;
+
+opt_nl
+  :
+  | NL
   ;
 
 %%

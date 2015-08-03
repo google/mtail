@@ -24,7 +24,7 @@ var programs = []struct {
 }{
 	// Composite literals require too many explicit conversions.
 	{"simple line counter",
-		"counter line_count\n/$/ { line_count++ }",
+		"counter line_count\n/$/ { line_count++\n }\n",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 5},
@@ -32,7 +32,7 @@ var programs = []struct {
 			instr{dload, 0},
 			instr{inc, 0}}},
 	{"count a",
-		"counter a_count\n/a$/ { a_count++ }",
+		"counter a_count\n/a$/ { a_count++\n }\n",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 5},
@@ -41,8 +41,8 @@ var programs = []struct {
 			instr{inc, 0}}},
 	{"strptime and capref",
 		"counter foo\n" +
-			"/(.*)/ { strptime($1, \"2006-01-02T15:04:05\")" +
-			"foo++ }",
+			"/(.*)/ { strptime($1, \"2006-01-02T15:04:05\")\n" +
+			"foo++\n}\n",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 9},
@@ -55,8 +55,8 @@ var programs = []struct {
 			instr{inc, 0}}},
 	{"strptime and named capref",
 		"counter foo\n" +
-			"/(?P<date>.*)/ { strptime($date, \"2006-01-02T15:04:05\")" +
-			"foo++ }",
+			"/(?P<date>.*)/ { strptime($date, \"2006-01-02T15:04:05\")\n" +
+			"foo++\n }\n",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 9},
@@ -72,7 +72,7 @@ var programs = []struct {
 			"/(.*)/ {\n" +
 			"foo += $1\n" +
 			"bar = $1\n" +
-			"}",
+			"}\n",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 12},
@@ -170,7 +170,7 @@ var programs = []struct {
 			"  $1 <= 1 {\n" +
 			"    foo++\n" +
 			"  }\n" +
-			"}",
+			"}\n",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 10},
@@ -192,7 +192,7 @@ var programs = []struct {
 			"  }\n" +
 			"}\n" +
 			"" +
-			"@foo { bar++ }\n",
+			"@foo { bar++\n }\n",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 8},

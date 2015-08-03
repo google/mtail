@@ -238,6 +238,9 @@ func lexProg(l *lexer) stateFn {
 		return lexRegex
 	}
 	switch r := l.next(); {
+	case r == '\n':
+		l.accept()
+		l.emit(NL)
 	case r == '#':
 		return lexComment
 	case isSpace(r):
