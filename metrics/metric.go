@@ -8,7 +8,6 @@ package metrics
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -26,12 +25,6 @@ const (
 	// intervals, such as latency and durations.  It enables certain behaviour
 	// in exporters that handle time intervals such as StatsD.
 	Timer
-)
-
-var (
-	// MetricUpdateTime contains the timestamp of the last update of a metric.
-	// TODO(jaq): move this global value to be a property of the Store.
-	MetricUpdateTime atomic.Value
 )
 
 func (m MetricType) String() string {
@@ -156,7 +149,6 @@ func (d *Datum) stamp(timestamp time.Time) {
 	} else {
 		d.Time = timestamp
 	}
-	MetricUpdateTime.Store(time.Now().UTC())
 }
 
 // Set implements the Settable interface for a Datum.

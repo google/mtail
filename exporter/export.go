@@ -28,10 +28,9 @@ var (
 
 // Exporter manages the export of metrics to passive and active collectors.
 type Exporter struct {
-	store              *metrics.Store
-	hostname           string
-	lastMetricPushTime time.Time
-	pushTargets        []pushOptions
+	store       *metrics.Store
+	hostname    string
+	pushTargets []pushOptions
 }
 
 // Options contains the required and optional parameters for constructing an
@@ -128,14 +127,6 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 // WriteMetrics writes metrics to each of the configured services.
 // TODO(jaq) rename to PushMetrics.
 func (e *Exporter) WriteMetrics() {
-	var lastUpdateTime time.Time
-	v := metrics.MetricUpdateTime.Load()
-	if v != nil {
-		lastUpdateTime = v.(time.Time)
-	}
-	if lastUpdateTime.Sub(e.lastMetricPushTime) <= 0 {
-		return
-	}
 	for _, target := range e.pushTargets {
 		glog.Infof("pushing to %s", target.addr)
 		conn, err := net.Dial(target.net, target.addr)
@@ -149,7 +140,6 @@ func (e *Exporter) WriteMetrics() {
 		}
 		conn.Close()
 	}
-	e.lastMetricPushTime = time.Now().UTC()
 }
 
 // StartMetricPush pushes metrics to the configured services each interval.
