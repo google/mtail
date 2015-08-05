@@ -98,7 +98,7 @@ func TestExamplePrograms(t *testing.T) {
 		if len(diff) > 0 {
 			t.Errorf("%s: metrics don't match:\n%s", tc.programfile, diff)
 
-			t.Errorf("Store: %#v", store)
+			t.Errorf("Store metrics: %#v", store.Metrics)
 		}
 	}
 }
