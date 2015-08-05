@@ -44,27 +44,6 @@ var exampleProgramTests = []struct {
 	},
 }
 
-func CompileAndLoad(programfile string, ms *metrics.Store, lines chan string) (*vm.Loader, error) {
-	p, err := os.Open(programfile)
-	if err != nil {
-		return nil, fmt.Errorf("%s: could not open program file: %s", programfile, err)
-	}
-	defer p.Close()
-
-	name := filepath.Base(programfile)
-	w := watcher.NewFakeWatcher()
-	o := vm.LoaderOptions{W: w, Store: ms, Lines: lines, SyslogUseCurrentYear: false}
-
-	l, err := vm.NewLoader(o)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't create program loader: %s", err)
-	}
-	if pErr := l.CompileAndRun(name, p); pErr != nil {
-		return nil, fmt.Errorf("couldn't compile program: %s: %s", programfile, pErr)
-	}
-	return l, nil
-}
-
 func TestExamplePrograms(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
