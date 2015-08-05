@@ -6,10 +6,9 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/google/mtail/metrics"
@@ -72,7 +71,8 @@ func TestExamplePrograms(t *testing.T) {
 	}
 	for _, tc := range exampleProgramTests {
 		w := watcher.NewFakeWatcher()
-		o := mtail.Options{Progs: tc.programfile, W: w}
+		store := &metrics.Store{}
+		o := mtail.Options{Progs: tc.programfile, W: w, Store: store}
 		mtail, err := mtail.New(o)
 		if err != nil {
 			t.Fatalf("create mtail failed: %s", err)
@@ -102,18 +102,24 @@ func TestExamplePrograms(t *testing.T) {
 			t.Fatalf("%s: could not open json file: %s", tc.jsonfile, err)
 		}
 		defer j.Close()
+		var ex bytes.Buffer
 
-		var m, ex bytes.Buffer
+		if _, err := ex.ReadFrom(j); err != nil {
+			t.Fatalf("Couldn't read from json: %s", err)
+		}
+
 		mtail.Close()
+		var m bytes.Buffer
 		mtail.WriteMetrics(&m)
 		m.WriteString("\n") // Golden data has trailing newline.
 
-		if _, err := ex.ReadFrom(j); err != nil {
-			t.Fatalf("Coldn't read from json: %s", err)
-		}
-		diff := pretty.Compare(ex.String(), m.String())
+		diff := pretty.Compare(
+			strings.Split(ex.String(), "\n"), // want
+			strings.Split(m.String(), "\n"))  // got
 		if len(diff) > 0 {
 			t.Errorf("%s: metrics don't match:\n%s", tc.programfile, diff)
+
+			t.Errorf("Store: %#v", store)
 		}
 	}
 }
