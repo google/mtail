@@ -182,7 +182,6 @@ var mtailPrograms = []validProgram{
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range mtailPrograms {
 		p := newParser(tc.name, strings.NewReader(tc.program), &metrics.Store{})
-		//mtailDebug = 999 // All the debugging.
 		r := mtailParse(p)
 
 		if r != 0 || p.root == nil || len(p.errors) > 0 {
@@ -278,7 +277,6 @@ var InvalidPrograms = []InvalidProgram{
 func TestInvalidPrograms(t *testing.T) {
 	for _, tc := range InvalidPrograms {
 		p := newParser(tc.name, strings.NewReader(tc.program), &metrics.Store{})
-		//mtailDebug = 999 // All the debugging.
 		mtailParse(p)
 
 		diff := pretty.Compare(

@@ -6,6 +6,7 @@ package vm
 
 import (
     "io"
+    "flag"
     "fmt"
     "regexp"
     "strconv"
@@ -489,6 +490,7 @@ type parser struct {
 }
 
 func newParser(name string, input io.Reader, ms *metrics.Store) *parser {
+    mtailDebug = *mtailDebugFlag
     return &parser{name: name, l: newLexer(name, input), res: make(map[string]string), ms: ms}
 }
 
@@ -535,3 +537,5 @@ func (p *parser) endScope() {
 func (p *parser) inRegex() {
     p.l.in_regex = true
 }
+
+var mtailDebugFlag = flag.Int("mtailDebug", 0, "Set parser debug level.")
