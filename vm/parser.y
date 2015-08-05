@@ -26,9 +26,9 @@ import (
     mtype metrics.MetricType
 }
 
-%type <n> stmt_list stmt cond arg_expr_list
+%type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr
-%type <n> decl declarator def deco
+%type <n> declaration declarator definition decoration_statement
 %type <mtype> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
@@ -65,11 +65,11 @@ import (
 %%
 
 start
-  : stmt_list
+  : { mtaillex.(*parser).startScope() } stmt_list
   {
-      $1.(*stmtlistNode).s = mtaillex.(*parser).s
+      $2.(*stmtlistNode).s = mtaillex.(*parser).s
       mtaillex.(*parser).endScope()
-      mtaillex.(*parser).root = $1
+      mtaillex.(*parser).root = $2
   }
   ;
 
@@ -77,9 +77,8 @@ stmt_list
   : /* empty */
   {
       $$ = &stmtlistNode{}
-      mtaillex.(*parser).startScope()
   }
-  | stmt_list stmt NL
+  | stmt_list stmt
   {
       $$ = $1
       if ($2 != nil) {
@@ -89,32 +88,54 @@ stmt_list
   ;
 
 stmt
-  : cond LCURLY opt_nl stmt_list RCURLY
+  : conditional_statement 
+  { $$ = $1 }
+  | expression_statement
+  { $$ = $1 }
+  | declaration
+  { $$ = $1 }
+  | definition
+  { $$ = $1 }
+  | decoration_statement
+  { $$ = $1 }
+;
+
+conditional_statement
+: cond compound_statement
+
+/* 
+ * /\* empty *\/
+ *   {
+ *   $$ = nil
+ *   }
+ *   | cond compound_stmt
+ *     // cond LCURLY opt_nl stmt_list RCURLY
+ */
   {
-      $4.(*stmtlistNode).s = mtaillex.(*parser).s
-      mtaillex.(*parser).endScope()
-      if $1 != nil {
-          $$ = &condNode{$1, []node{$4}}
+      if $1 != nil && $2 != nil {
+          $$ = &condNode{$1, []node{$2}}
       } else {
-          $$ = $4
+          $$ = $2
       }
   }
-  | expr
-  {
-    $$ = $1
-  }
-  | decl
-  {
-    $$ = $1
-  }
-  | def
-  {
-    $$ = $1
-  }
-  | deco
-  {
-    $$ = $1
-  }
+;
+
+expression_statement
+  : NL
+  { $$ = nil }
+  | expr NL
+  { $$ = $1 }
+;
+
+
+  /* 
+   * | expr
+   * {
+   *   $$ = $1
+   * }
+   */
+
+
   | NEXT
   {
     $$ = &nextNode{}
@@ -123,6 +144,15 @@ stmt
   {
     // Store the regex for concatenation
     mtaillex.(*parser).res[$2] = $3
+  }
+  ;
+
+compound_statement
+  : LCURLY { mtaillex.(*parser).startScope() } stmt_list RCURLY
+  {
+    $$ = $3
+    $$.(*stmtlistNode).s = mtaillex.(*parser).s
+    mtaillex.(*parser).endScope()
   }
   ;
 
@@ -337,7 +367,7 @@ pattern_expr
   ;
 
 
-decl
+declaration
   : hide_spec type_spec declarator
   {
     $$ = $3
@@ -350,12 +380,12 @@ decl
 	} else {
         n = d.name
    	}
-      d.m = metrics.NewMetric(n, mtaillex.(*parser).name, d.kind, d.keys...)
-      d.sym = mtaillex.(*parser).s.addSym(d.name, IDSymbol, d.m,
-                                           mtaillex.(*parser).t.pos)
-      if !$1 {
-         mtaillex.(*parser).ms.Add(d.m)
-      }
+    d.m = metrics.NewMetric(n, mtaillex.(*parser).name, d.kind, d.keys...)
+    d.sym = mtaillex.(*parser).s.addSym(d.name, IDSymbol, d.m,
+                                          mtaillex.(*parser).t.pos)
+    if !$1 {
+       mtaillex.(*parser).ms.Add(d.m)
+    }
   }
   ;
 
@@ -444,24 +474,20 @@ as_spec
   }
   ;
 
-def
-  : DEF ID LCURLY opt_nl stmt_list RCURLY
+definition
+: DEF ID compound_statement
   {
-      $5.(*stmtlistNode).s = mtaillex.(*parser).s
-      mtaillex.(*parser).endScope()
-      $$ = &defNode{name: $2, children: []node{$5}}
+      $$ = &defNode{name: $2, children: []node{$3}}
       d := $$.(*defNode)
       d.sym = mtaillex.(*parser).s.addSym(d.name, DefSymbol, d, mtaillex.(*parser).t.pos)
   }
   ;
 
-deco
-  : DECO LCURLY opt_nl stmt_list RCURLY
+decoration_statement
+  : DECO compound_statement
   {
-    $4.(*stmtlistNode).s = mtaillex.(*parser).s
-    mtaillex.(*parser).endScope()
     if sym, ok := mtaillex.(*parser).s.lookupSym($1, DefSymbol); ok {
-      $$ = &decoNode{$1, []node{$4}, sym.binding.(*defNode)}
+      $$ = &decoNode{$1, []node{$2}, sym.binding.(*defNode)}
     } else {
       mtaillex.Error(fmt.Sprintf("Decorator %s not defined", $1))
       // TODO(jaq): force a parse error.

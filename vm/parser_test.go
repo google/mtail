@@ -20,6 +20,9 @@ var mtailPrograms = []validProgram{
 	{"empty",
 		""},
 
+	{"newline",
+		"\n"},
+
 	{"declare counter",
 		"counter line_count\n"},
 
