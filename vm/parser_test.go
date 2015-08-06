@@ -196,9 +196,9 @@ var mtailPrograms = []validProgram{
   $1 & 7
   $1 | 8
   $1 << 4
-  $1 >> 1
+  $1 >> 20
   $1 ^ 15
-  $1 ~ 1
+  ~ 1
 }`},
 }
 

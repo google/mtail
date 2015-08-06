@@ -167,9 +167,15 @@ func (u *Unparser) unparse(n node) {
 			u.emit(" by " + strings.Join(v.keys, ", "))
 		}
 
-	case *incExprNode:
-		u.unparse(v.lhs)
-		u.emit("++")
+	case *unaryExprNode:
+		switch v.op {
+		case INC:
+			u.unparse(v.lhs)
+			u.emit("++")
+		case NOT:
+			u.emit(" ~")
+			u.unparse(v.lhs)
+		}
 
 	case *incByExprNode:
 		u.unparse(v.lhs)

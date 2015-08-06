@@ -97,8 +97,9 @@ type incByExprNode struct {
 	lhs, rhs node
 }
 
-type incExprNode struct {
+type unaryExprNode struct {
 	lhs node
+	op  int
 }
 
 type numericExprNode struct {

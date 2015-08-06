@@ -211,6 +211,26 @@ var programs = []struct {
 			instr{push, 0},
 			instr{cmp, 1},
 			instr{jnm, 5}}},
+	{"bitwise", `
+1 & 7 ^ 15 | 8
+~ 16 << 2
+1 >> 20
+`,
+		[]instr{
+			instr{push, 1},
+			instr{push, 7},
+			instr{and, 0},
+			instr{push, 15},
+			instr{xor, 0},
+			instr{push, 8},
+			instr{or, 0},
+			instr{push, 16},
+			instr{not, 0},
+			instr{push, 2},
+			instr{shl, 0},
+			instr{push, 1},
+			instr{push, 20},
+			instr{shr, 0}}},
 }
 
 func TestCompile(t *testing.T) {
@@ -221,7 +241,7 @@ func TestCompile(t *testing.T) {
 			t.Errorf("Compile errors: %q", err)
 			continue
 		}
-		diff := pretty.Compare(v.prog, tc.prog)
+		diff := pretty.Compare(tc.prog, v.prog)
 		if len(diff) > 0 {
 			t.Errorf("%s: VM prog doesn't match.\n%s", tc.name, diff)
 		}

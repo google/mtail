@@ -180,6 +180,28 @@ func (c *compiler) compile(untypedNode node) {
 			c.errorf("invalid op: %q\n", n.op)
 		}
 
+	case *bitwiseExprNode:
+		c.compile(n.lhs)
+		c.compile(n.rhs)
+		switch n.op {
+		case AND:
+			c.emit(instr{op: and})
+		case OR:
+			c.emit(instr{op: or})
+		case XOR:
+			c.emit(instr{op: xor})
+		}
+
+	case *shiftExprNode:
+		c.compile(n.lhs)
+		c.compile(n.rhs)
+		switch n.op {
+		case SHL:
+			c.emit(instr{op: shl})
+		case SHR:
+			c.emit(instr{op: shr})
+		}
+
 	case *assignExprNode:
 		c.compile(n.lhs)
 		c.compile(n.rhs)
@@ -189,9 +211,14 @@ func (c *compiler) compile(untypedNode node) {
 		c.compile(n.index)
 		c.compile(n.lhs)
 
-	case *incExprNode:
+	case *unaryExprNode:
 		c.compile(n.lhs)
-		c.emit(instr{op: inc})
+		switch n.op {
+		case INC:
+			c.emit(instr{op: inc})
+		case NOT:
+			c.emit(instr{op: not})
+		}
 
 	case *incByExprNode:
 		c.compile(n.lhs)

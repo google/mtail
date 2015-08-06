@@ -53,7 +53,8 @@ import (
 %token <text> DECO
 %token <value> NUMERIC
 // Operators, in order of precedence
-%token INC DIV MUL MINUS PLUS
+%token <value> INC
+%token <value> DIV MUL MINUS PLUS
 %token <value> SHL SHR
 %token <value> LT GT LE GE EQ NE
 %token <value> AND OR XOR NOT
@@ -176,8 +177,6 @@ bitwise_op
   { $$ = $1 }
   | XOR
   { $$ = $1 }
-  | NOT
-  { $$ = $1 }
   ;
 
 rel_expr
@@ -253,6 +252,10 @@ unary_expr
   {
     $$ = $1
   }
+  | NOT postfix_expr
+  {
+    $$ = &unaryExprNode{$2, $1}
+  }
   | BUILTIN LPAREN RPAREN
   {
     $$ = &builtinNode{name: $1}
@@ -283,7 +286,7 @@ postfix_expr
   }
   | postfix_expr INC
   {
-    $$ = &incExprNode{$1}
+    $$ = &unaryExprNode{$1, $2}
   }
   | postfix_expr LSQUARE expr RSQUARE
   {
@@ -555,7 +558,7 @@ func (p *parser) Lex(lval *mtailSymType) int {
             p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
             return INVALID
         }
-    case LT, GT, LE, GE, NE, EQ, SHL, SHR, AND, OR, XOR, NOT:
+    case LT, GT, LE, GE, NE, EQ, SHL, SHR, AND, OR, XOR, NOT, INC, DIV, MUL, MINUS, PLUS:
         lval.value = int(p.t.kind)
     default:
         lval.text = p.t.text

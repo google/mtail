@@ -38,6 +38,12 @@ const (
 	sub                     // Subtract top value from second top value on stack, and push to stack.
 	mul                     // Multiply top values on stack and push to stack
 	div                     // Divide top value into second top on stack, and push
+	and                     // Bitwise AND the 2 at top of stack, and push result
+	or                      // Bitwise OR the 2 at top of stack, and push result
+	xor                     // Bitwise XOR the 2 at top of stack, and push result
+	not                     // Bitwise NOT the top of stack, and push result
+	shl                     // Shift TOS left, push result
+	shr                     // Shift TOS right, push result
 	mload                   // Load metric at operand onto top of stack
 	dload                   // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
 	tolower                 // Convert the string at the top of the stack to lowercase.
@@ -60,6 +66,12 @@ var opNames = map[opcode]string{
 	sub:       "sub",
 	mul:       "mul",
 	div:       "div",
+	shl:       "shl",
+	shr:       "shr",
+	and:       "and",
+	or:        "or",
+	xor:       "xor",
+	not:       "not",
 	mload:     "mload",
 	dload:     "dload",
 	tolower:   "tolower",
