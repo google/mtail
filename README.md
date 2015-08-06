@@ -17,7 +17,7 @@ The extraction is controlled by mtail programs which define patterns and actions
       line_count++
     }
 
-Metrics are exported for scraping by a collector as JSON or Prometheus format over HTTP, or can be periodically sent to a collectd, statsd, or Graphite collector socket.
+Metrics are exported for scraping by a collector as JSON or Prometheus format over HTTP, or can be periodically sent to a collectd, StatsD, or Graphite collector socket.
 
 See [the Wiki](https://github.com/google/mtail/wiki/Home) for more details.
 
