@@ -66,6 +66,16 @@ type multiplicativeExprNode struct {
 	op       int
 }
 
+type shiftExprNode struct {
+	lhs, rhs node
+	op       int
+}
+
+type bitwiseExprNode struct {
+	lhs, rhs node
+	op       int
+}
+
 type assignExprNode struct {
 	lhs, rhs node
 }

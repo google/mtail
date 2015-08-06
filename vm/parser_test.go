@@ -190,6 +190,16 @@ var mtailPrograms = []validProgram{
 
 	{"const",
 		`const IP /\d+(\.\d+){3}/`},
+
+	{"bitwise",
+		`/foo(\d)/ {
+  $1 & 7
+  $1 | 8
+  $1 << 4
+  $1 >> 1
+  $1 ^ 15
+  $1 ~ 1
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {

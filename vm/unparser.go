@@ -92,6 +92,30 @@ func (u *Unparser) unparse(n node) {
 		}
 		u.unparse(v.rhs)
 
+	case *shiftExprNode:
+		u.unparse(v.lhs)
+		switch v.op {
+		case SHL:
+			u.emit(" << ")
+		case SHR:
+			u.emit(" >> ")
+		}
+		u.unparse(v.rhs)
+
+	case *bitwiseExprNode:
+		u.unparse(v.lhs)
+		switch v.op {
+		case AND:
+			u.emit(" & ")
+		case OR:
+			u.emit(" | ")
+		case XOR:
+			u.emit(" ^ ")
+		case NOT:
+			u.emit(" ~ ")
+		}
+		u.unparse(v.rhs)
+
 	case *stringNode:
 		u.emit("\"" + v.text + "\"")
 
