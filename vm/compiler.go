@@ -163,6 +163,10 @@ func (c *compiler) compile(untypedNode node) {
 			c.emit(instr{op: not})
 		}
 
+	case *indexedExprNode:
+		c.compile(n.index)
+		c.compile(n.lhs)
+
 	case *numericExprNode:
 		c.emit(instr{push, n.value})
 

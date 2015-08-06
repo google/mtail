@@ -242,6 +242,15 @@ a ** b
 			instr{mload, 1},
 			instr{dload, 0},
 			instr{pow, 0}}},
+	{"indexed expr", `
+counter a by b
+a["string"]++
+`,
+		[]instr{
+			instr{str, 0},
+			instr{mload, 0},
+			instr{dload, 1},
+			instr{inc, 0}}},
 }
 
 func TestCompile(t *testing.T) {
