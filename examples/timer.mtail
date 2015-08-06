@@ -1,0 +1,5 @@
+timer request_time_ms by vhost
+
+/(?P<vhost>\S+) (?P<latency_s>\d+)/ {
+  request_time_ms[$vhost] = $latency_s / 1000
+}
