@@ -37,7 +37,7 @@ var lexerTests = []lexerTest{
 		token{RSQUARE, "]", position{"punctuation", 0, 5, 5}},
 		token{COMMA, ",", position{"punctuation", 0, 6, 6}},
 		token{EOF, "", position{"punctuation", 0, 7, 7}}}},
-	{"operators", "- + = ++ += < > <= >= == != * /", []token{
+	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~", []token{
 		token{MINUS, "-", position{"operators", 0, 0, 0}},
 		token{PLUS, "+", position{"operators", 0, 2, 2}},
 		token{ASSIGN, "=", position{"operators", 0, 4, 4}},
@@ -51,7 +51,13 @@ var lexerTests = []lexerTest{
 		token{NE, "!=", position{"operators", 0, 25, 26}},
 		token{MUL, "*", position{"operators", 0, 28, 28}},
 		token{DIV, "/", position{"operators", 0, 30, 30}},
-		token{EOF, "", position{"operators", 0, 31, 31}}}},
+		token{SHL, "<<", position{"operators", 0, 32, 33}},
+		token{SHR, ">>", position{"operators", 0, 35, 36}},
+		token{AND, "&", position{"operators", 0, 38, 38}},
+		token{OR, "|", position{"operators", 0, 40, 40}},
+		token{XOR, "^", position{"operators", 0, 42, 42}},
+		token{NOT, "~", position{"operators", 0, 44, 44}},
+		token{EOF, "", position{"operators", 0, 45, 45}}}},
 	{"keywords",
 		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\n", []token{
 			token{COUNTER, "counter", position{"keywords", 0, 0, 6}},

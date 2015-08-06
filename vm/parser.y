@@ -54,7 +54,9 @@ import (
 %token <value> NUMERIC
 // Operators, in order of precedence
 %token INC DIV MUL MINUS PLUS
+%token SHL SHR
 %token <value> LT GT LE GE EQ NE
+%token AND OR XOR NOT
 %token ADD_ASSIGN ASSIGN
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE

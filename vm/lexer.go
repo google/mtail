@@ -30,6 +30,10 @@ var lexemeName = map[lexeme]string{
 	PLUS:       "PLUS",
 	MUL:        "MUL",
 	DIV:        "DIV",
+	SHL:        "SHL",
+	SHR:        "SHR",
+	AND:        "AND",
+	OR:         "OR",
 	ADD_ASSIGN: "ADD_ASSIGN",
 	ASSIGN:     "ASSIGN",
 	LT:         "LT",
@@ -301,6 +305,9 @@ func lexProg(l *lexer) stateFn {
 		case '=':
 			l.accept()
 			l.emit(LE)
+		case '<':
+			l.accept()
+			l.emit(SHL)
 		default:
 			l.backup()
 			l.emit(LT)
@@ -311,6 +318,9 @@ func lexProg(l *lexer) stateFn {
 		case '=':
 			l.accept()
 			l.emit(GE)
+		case '>':
+			l.accept()
+			l.emit(SHR)
 		default:
 			l.backup()
 			l.emit(GT)
@@ -328,6 +338,18 @@ func lexProg(l *lexer) stateFn {
 	case r == '/':
 		l.accept()
 		l.emit(DIV)
+	case r == '&':
+		l.accept()
+		l.emit(AND)
+	case r == '|':
+		l.accept()
+		l.emit(OR)
+	case r == '^':
+		l.accept()
+		l.emit(XOR)
+	case r == '~':
+		l.accept()
+		l.emit(NOT)
 	case r == '"':
 		return lexQuotedString
 	case r == '$':
