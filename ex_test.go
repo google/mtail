@@ -47,6 +47,11 @@ var exampleProgramTests = []struct {
 		"testdata/ntp4",
 		"testdata/ntp4.json",
 	},
+	{
+		"examples/ntpd.mtail",
+		"testdata/xntp3_peerstats",
+		"testdata/xntp3_peerstats.json",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {

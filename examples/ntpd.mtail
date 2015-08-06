@@ -83,13 +83,13 @@ counter num_peerstats by peer
   peer_dispersion[$peer] = $dispersion
   # http://www.cis.udel.edu/~mills/ntp/html/decode.html#peer
   # bits 0-4
-  peer_status[$peer] = ($status >> (16 - 5)) & ((2 ** 5) - 1)
+  peer_status[$peer] = (strtol($status, 16) >> (16 - 5)) & ((2 ** 5) - 1)
   # bits 5-7
-  peer_select[$peer] = ($status >> (16 - 8)) & ((2 ** 3) - 1)
+  peer_select[$peer] = (strtol($status, 16) >> (16 - 8)) & ((2 ** 3) - 1)
   # bits 6-11
-  peer_count[$peer] = ($status >> (16 - 12)) & ((2 ** 4) - 1)
+  peer_count[$peer] = (strtol($status, 16) >> (16 - 12)) & ((2 ** 4) - 1)
   # bits 12-15
-  peer_code[$peer] = $status & ((2 ** 4) - 1)
+  peer_code[$peer] = strtol($status, 16) & ((2 ** 4) - 1)
   num_peerstats[$peer]++
 }
 
