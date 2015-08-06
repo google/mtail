@@ -369,6 +369,68 @@ func (v *VM) execute(t *thread, i instr) {
 		}
 		t.Push(a / b)
 
+	case shl:
+		b, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(a << uint(b))
+
+	case shr:
+		b, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(a >> uint(b))
+
+	case and:
+		b, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(a & b)
+
+	case or:
+		b, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(a | b)
+
+	case xor:
+		b, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(a ^ b)
+
+	case not:
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(^a)
+
 	case mload:
 		// Load a metric at operand onto stack
 		t.Push(v.m[i.opnd])
