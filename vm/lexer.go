@@ -84,6 +84,7 @@ var keywords = map[string]lexeme{
 var builtins = []string{
 	"len",
 	"strptime",
+	"strtol",
 	"timestamp",
 	"tolower",
 }

@@ -251,6 +251,13 @@ a["string"]++
 			instr{mload, 0},
 			instr{dload, 1},
 			instr{inc, 0}}},
+	{"strtol", `
+strtol("deadbeef", 16)
+`,
+		[]instr{
+			instr{str, 0},
+			instr{push, 16},
+			instr{strtol, 2}}},
 }
 
 func TestCompile(t *testing.T) {

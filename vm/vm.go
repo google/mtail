@@ -50,6 +50,7 @@ const (
 	dload                   // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
 	tolower                 // Convert the string at the top of the stack to lowercase.
 	length                  // Compute the length of a string.
+	strtol                  // Convert a string to a number, given a base.
 )
 
 var opNames = map[opcode]string{
@@ -79,6 +80,7 @@ var opNames = map[opcode]string{
 	dload:     "dload",
 	tolower:   "tolower",
 	length:    "length",
+	strtol:    "strtol",
 }
 
 var builtin = map[string]opcode{
@@ -86,6 +88,7 @@ var builtin = map[string]opcode{
 	"timestamp": timestamp,
 	"tolower":   tolower,
 	"len":       length,
+	"strtol":    strtol,
 }
 
 type instr struct {
@@ -479,6 +482,18 @@ func (v *VM) execute(t *thread, i instr) {
 		// Compute the length of a string from TOS, and push result back.
 		s := t.Pop().(string)
 		t.Push(len(s))
+
+	case strtol:
+		base, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		str := t.Pop().(string)
+		i, err := strconv.ParseInt(str, int(base), 64)
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(i)
 
 	default:
 		v.errorf("illegal instruction: %q", i.op)
