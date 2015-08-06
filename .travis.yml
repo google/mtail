@@ -35,3 +35,6 @@ matrix:
   allow_failures:
     - go: tip
 
+
+# Not using sudo, can use containers.
+sudo: false
