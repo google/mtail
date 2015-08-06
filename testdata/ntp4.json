@@ -1,0 +1,153 @@
+[
+  {
+    "Name": "int_syscalls",
+    "Program": "ntpd.mtail",
+    "Kind": 0
+  },
+  {
+    "Name": "recvbuf_overflows",
+    "Program": "ntpd.mtail",
+    "Kind": 0
+  },
+  {
+    "Name": "last_recvbuf",
+    "Program": "ntpd.mtail",
+    "Kind": 1
+  },
+  {
+    "Name": "exits",
+    "Program": "ntpd.mtail",
+    "Kind": 0,
+    "LabelValues": [
+      {
+        "Value": {
+          "Value": 1,
+          "Time": "0000-06-30T12:07:12Z"
+        }
+      }
+    ]
+  },
+  {
+    "Name": "starts",
+    "Program": "ntpd.mtail",
+    "Kind": 0,
+    "LabelValues": [
+      {
+        "Value": {
+          "Value": 1,
+          "Time": "0000-06-30T12:04:43Z"
+        }
+      }
+    ]
+  },
+  {
+    "Name": "sync_status",
+    "Program": "ntpd.mtail",
+    "Kind": 1,
+    "LabelValues": [
+      {
+        "Value": {
+          "Value": 1,
+          "Time": "0000-12-01T17:42:09Z"
+        }
+      }
+    ]
+  },
+  {
+    "Name": "pll_changes",
+    "Program": "ntpd.mtail",
+    "Kind": 0
+  },
+  {
+    "Name": "pll_status",
+    "Program": "ntpd.mtail",
+    "Kind": 1
+  },
+  {
+    "Name": "peer_syncs",
+    "Program": "ntpd.mtail",
+    "Kind": 0,
+    "LabelValues": [
+      {
+        "Value": {
+          "Value": 1,
+          "Time": "0000-06-30T12:04:51Z"
+        }
+      }
+    ]
+  },
+  {
+    "Name": "driftfile_errors",
+    "Program": "ntpd.mtail",
+    "Kind": 0
+  },
+  {
+    "Name": "sync_lost_total",
+    "Program": "ntpd.mtail",
+    "Kind": 0
+  },
+  {
+    "Name": "peer_status",
+    "Program": "ntpd.mtail",
+    "Kind": 1,
+    "Keys": [
+      "peer"
+    ]
+  },
+  {
+    "Name": "peer_select",
+    "Program": "ntpd.mtail",
+    "Kind": 1,
+    "Keys": [
+      "peer"
+    ]
+  },
+  {
+    "Name": "peer_count",
+    "Program": "ntpd.mtail",
+    "Kind": 1,
+    "Keys": [
+      "peer"
+    ]
+  },
+  {
+    "Name": "peer_code",
+    "Program": "ntpd.mtail",
+    "Kind": 1,
+    "Keys": [
+      "peer"
+    ]
+  },
+  {
+    "Name": "peer_offset",
+    "Program": "ntpd.mtail",
+    "Kind": 1,
+    "Keys": [
+      "peer"
+    ]
+  },
+  {
+    "Name": "peer_delay",
+    "Program": "ntpd.mtail",
+    "Kind": 1,
+    "Keys": [
+      "peer"
+    ]
+  },
+  {
+    "Name": "peer_dispersion",
+    "Program": "ntpd.mtail",
+    "Kind": 1,
+    "Keys": [
+      "peer"
+    ]
+  },
+  {
+    "Name": "num_peerstats",
+    "Program": "ntpd.mtail",
+    "Kind": 0,
+    "Keys": [
+      "peer"
+    ]
+  }
+]

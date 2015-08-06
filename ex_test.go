@@ -42,6 +42,11 @@ var exampleProgramTests = []struct {
 		"testdata/anonymised_dhcpd_log",
 		"testdata/anonymised_dhcpd_log.json",
 	},
+	{
+		"examples/ntpd.mtail",
+		"testdata/ntp4",
+		"testdata/ntp4.json",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -73,6 +78,7 @@ func TestExamplePrograms(t *testing.T) {
 				t.Errorf("couldn't marshall metrics: %q", err)
 				continue
 			}
+			j.WriteString("\n")
 			j.Close()
 		}
 

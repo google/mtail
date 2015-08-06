@@ -1,0 +1,14 @@
+Jun 30 12:04:43 tera ntpd[17252]: ntpd 4.2.0a@1:4.2.0a+stable-8-r Mon May 29 02:48:41 UTC 2006 (1)
+Jun 30 12:04:43 tera ntpd[17252]: precision = 1.000 usec
+Jun 30 12:04:43 tera ntpd[17252]: Listening on interface wildcard, 0.0.0.0#123
+Jun 30 12:04:43 tera ntpd[17252]: Listening on interface wildcard, ::#123
+Jun 30 12:04:43 tera ntpd[17252]: Listening on interface lo, 127.0.0.1#123
+Jun 30 12:04:43 tera ntpd[17252]: Listening on interface eth0, 172.30.28.56#123
+Jun 30 12:04:43 tera ntpd[17252]: kernel time sync status 0040
+Jun 30 12:04:43 tera ntpd[17252]: frequency initialized -22.777 PPM from /var/lib/ntp/ntp.drift
+Jun 30 12:04:51 tera ntpd[17252]: synchronized to 172.30.56.70, stratum 2
+Jun 30 12:04:51 tera ntpd[17252]: kernel time sync disabled 0041
+Jun 30 12:05:48 tera ntpd[17252]: kernel time sync enabled 0001
+Jun 30 12:07:12 tera ntpd[17252]: ntpd exiting on signal 15
+Dec  1 17:42:09 tera ntpd[3504]: kernel time sync status change 0001
+Dec  1 18:46:18 tera ntpd[3504]: ntpd shutdown succeeded

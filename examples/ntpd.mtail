@@ -1,0 +1,95 @@
+# Syslog decorator
+def syslog {/(?P<date>(?P<legacy_date>\w+\s+\d+\s+\d+:\d+:\d+)|(?P<rfc3339_date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+[+-]\d{2}:\d{2}))/ +
+    /\s+(?:\w+@)?(?P<hostname>[\w\.-]+)\s+(?P<application>[\w\.-]+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)/ {
+        len($legacy_date) > 0 {
+            strptime($2, "Jan _2 15:04:05")
+        }
+        len($rfc3339_date) > 0 {
+            strptime($rfc3339_date, "2006-01-02T03:04:05-0700")
+        }
+        next
+    }
+}
+
+@syslog {
+counter int_syscalls
+
+/select\(.*\) error: Interrupted system call/ {
+  int_syscalls++
+}
+
+counter recvbuf_overflows
+gauge last_recvbuf
+/too many recvbufs allocated \((\d+)\)/ {
+  recvbuf_overflows++
+  last_recvbuf = $1
+}
+
+counter exits
+/ntpd exiting on signal 15/ {
+  exits++
+}
+
+counter starts
+/x?ntpd .* \w+\s+\w+\s+\d+\s+\d+:\d+:\d+\s+\w+\s+\d+\s+\(\d\)/ {
+  starts++
+}
+
+gauge sync_status
+/kernel time sync (status (change)?|enabled|disabled) (?P<status>\d+)/ {
+   sync_status = $status
+}
+
+# PLL status change.
+#
+# Described here: http://obswww.unige.ch/~bartho/xntp_faq/faq3Care.htm#araee
+counter pll_changes
+gauge pll_status
+/kernel pll status change (?P<status>\d+)/ {
+  pll_changes++
+  pll_status = $status
+}
+
+counter peer_syncs
+/synchronized to (\d+\.\d+\.\d+\.\d+|LOCAL\(\d\)), stratum(=| )(\d+)/ {
+  peer_syncs++
+}
+
+counter driftfile_errors
+/can't open .*drift.*: No such file or directory/ {
+  driftfile_errors++
+}
+
+counter sync_lost_total
+/synchronisation lost/ {
+  sync_lost_total++
+}
+
+} # end syslog
+
+
+# Peerstats log handling
+gauge peer_status by peer
+gauge peer_select by peer
+gauge peer_count by peer
+gauge peer_code by peer
+gauge peer_offset by peer
+gauge peer_delay by peer
+gauge peer_dispersion by peer
+counter num_peerstats by peer
+/(?P<days>\d+) (?P<seconds>\d+\.\d+) (?P<peer>\d+\.\d+\.\d+\.\d+) (?P<status>[0-9a-f]+) (?P<offset>-?\d+\.\d+) (?P<delay>\d+\.\d+) (?P<dispersion>\d+\.\d+)/ {
+  peer_offset[$peer] = $offset
+  peer_delay[$peer] = $delay
+  peer_dispersion[$peer] = $dispersion
+  # http://www.cis.udel.edu/~mills/ntp/html/decode.html#peer
+  # bits 0-4
+  peer_status[$peer] = ($status >> (16 - 5)) & ((2 ** 5) - 1)
+  # bits 5-7
+  peer_select[$peer] = ($status >> (16 - 8)) & ((2 ** 3) - 1)
+  # bits 6-11
+  peer_count[$peer] = ($status >> (16 - 12)) & ((2 ** 4) - 1)
+  # bits 12-15
+  peer_code[$peer] = $status & ((2 ** 4) - 1)
+  num_peerstats[$peer]++
+}
+
