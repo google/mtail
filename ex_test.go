@@ -69,11 +69,11 @@ func TestExamplePrograms(t *testing.T) {
 				t.Errorf("%s: could not open json file: %s", tc.jsonfile, err)
 				continue
 			}
-			defer j.Close()
 			if err := mtail.WriteMetrics(j); err != nil {
 				t.Errorf("couldn't marshall metrics: %q", err)
 				continue
 			}
+			j.Close()
 		}
 
 		j, err := os.Open(tc.jsonfile)
