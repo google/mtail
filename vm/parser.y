@@ -98,44 +98,6 @@ stmt
   { $$ = $1 }
   | decoration_statement
   { $$ = $1 }
-;
-
-conditional_statement
-: cond compound_statement
-
-/* 
- * /\* empty *\/
- *   {
- *   $$ = nil
- *   }
- *   | cond compound_stmt
- *     // cond LCURLY opt_nl stmt_list RCURLY
- */
-  {
-      if $1 != nil && $2 != nil {
-          $$ = &condNode{$1, []node{$2}}
-      } else {
-          $$ = $2
-      }
-  }
-;
-
-expression_statement
-  : NL
-  { $$ = nil }
-  | expr NL
-  { $$ = $1 }
-;
-
-
-  /* 
-   * | expr
-   * {
-   *   $$ = $1
-   * }
-   */
-
-
   | NEXT
   {
     $$ = &nextNode{}
@@ -145,6 +107,24 @@ expression_statement
     // Store the regex for concatenation
     mtaillex.(*parser).res[$2] = $3
   }
+  ;
+
+conditional_statement
+  : cond compound_statement
+  {
+      if $1 != nil && $2 != nil {
+          $$ = &condNode{$1, []node{$2}}
+      } else {
+          $$ = $2
+      }
+  }
+  ;
+
+expression_statement
+  : NL
+  { $$ = nil }
+  | expr NL
+  { $$ = $1 }
   ;
 
 compound_statement

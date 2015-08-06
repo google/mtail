@@ -180,6 +180,16 @@ var mtailPrograms = []validProgram{
 			"}\n" +
 			"}\n",
 	},
+
+	{"def and next",
+		"def foobar {/(?P<date>.*)/ {" +
+			"  next" +
+			"}" +
+			"}",
+	},
+
+	{"const",
+		`const IP /\d+(\.\d+){3}/`},
 }
 
 func TestParserRoundTrip(t *testing.T) {
