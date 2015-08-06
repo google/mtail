@@ -74,7 +74,7 @@ func (u *Unparser) unparse(n node) {
 	case *regexNode:
 		u.emit("/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/")
 
-	case *relNode:
+	case *binaryExprNode:
 		u.unparse(v.lhs)
 		switch v.op {
 		case LT:
@@ -89,22 +89,10 @@ func (u *Unparser) unparse(n node) {
 			u.emit(" == ")
 		case NE:
 			u.emit(" != ")
-		}
-		u.unparse(v.rhs)
-
-	case *shiftExprNode:
-		u.unparse(v.lhs)
-		switch v.op {
 		case SHL:
 			u.emit(" << ")
 		case SHR:
 			u.emit(" >> ")
-		}
-		u.unparse(v.rhs)
-
-	case *bitwiseExprNode:
-		u.unparse(v.lhs)
-		switch v.op {
 		case AND:
 			u.emit(" & ")
 		case OR:
@@ -113,6 +101,12 @@ func (u *Unparser) unparse(n node) {
 			u.emit(" ^ ")
 		case NOT:
 			u.emit(" ~ ")
+		case '+', '-', '*', '/':
+			u.emit(fmt.Sprintf(" %c ", v.op))
+		case ASSIGN:
+			u.emit(" = ")
+		case ADD_ASSIGN:
+			u.emit(" += ")
 		}
 		u.unparse(v.rhs)
 
@@ -131,21 +125,6 @@ func (u *Unparser) unparse(n node) {
 			u.unparse(v.args)
 		}
 		u.emit(")")
-
-	case *additiveExprNode:
-		u.unparse(v.lhs)
-		u.emit(fmt.Sprintf(" %c ", v.op))
-		u.unparse(v.rhs)
-
-	case *multiplicativeExprNode:
-		u.unparse(v.lhs)
-		u.emit(fmt.Sprintf(" %c ", v.op))
-		u.unparse(v.rhs)
-
-	case *assignExprNode:
-		u.unparse(v.lhs)
-		u.emit(" = ")
-		u.unparse(v.rhs)
 
 	case *indexedExprNode:
 		u.unparse(v.lhs)
@@ -176,11 +155,6 @@ func (u *Unparser) unparse(n node) {
 			u.emit(" ~")
 			u.unparse(v.lhs)
 		}
-
-	case *incByExprNode:
-		u.unparse(v.lhs)
-		u.emit(" += ")
-		u.unparse(v.rhs)
 
 	case *numericExprNode:
 		u.emit(fmt.Sprintf("%d", v.value))

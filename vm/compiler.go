@@ -106,7 +106,7 @@ func (c *compiler) compile(untypedNode node) {
 		c.emit(instr{match, n.addr})
 		c.emit(instr{op: jnm})
 
-	case *relNode:
+	case *binaryExprNode:
 		c.compile(n.lhs)
 		c.compile(n.rhs)
 		switch n.op {
@@ -128,9 +128,41 @@ func (c *compiler) compile(untypedNode node) {
 		case NE:
 			c.emit(instr{cmp, 0})
 			c.emit(instr{op: jm})
-		default:
-			c.errorf("invalid op: %q\n", n.op)
+		case '+':
+			c.emit(instr{op: add})
+		case '-':
+			c.emit(instr{op: sub})
+		case '*':
+			c.emit(instr{op: mul})
+		case '/':
+			c.emit(instr{op: div})
+		case AND:
+			c.emit(instr{op: and})
+		case OR:
+			c.emit(instr{op: or})
+		case XOR:
+			c.emit(instr{op: xor})
+		case ASSIGN:
+			c.emit(instr{op: set})
+		case ADD_ASSIGN:
+			c.emit(instr{inc, 1})
+		case SHL:
+			c.emit(instr{op: shl})
+		case SHR:
+			c.emit(instr{op: shr})
+
 		}
+	case *unaryExprNode:
+		c.compile(n.lhs)
+		switch n.op {
+		case INC:
+			c.emit(instr{op: inc})
+		case NOT:
+			c.emit(instr{op: not})
+		}
+
+	case *numericExprNode:
+		c.emit(instr{push, n.value})
 
 	case *stringNode:
 		c.str = append(c.str, n.text)
@@ -155,78 +187,6 @@ func (c *compiler) compile(untypedNode node) {
 		} else {
 			c.emit(instr{op: builtin[n.name]})
 		}
-
-	case *additiveExprNode:
-		c.compile(n.lhs)
-		c.compile(n.rhs)
-		switch n.op {
-		case '+':
-			c.emit(instr{op: add})
-		case '-':
-			c.emit(instr{op: sub})
-		default:
-			c.errorf("invalid op: %q\n", n.op)
-		}
-
-	case *multiplicativeExprNode:
-		c.compile(n.lhs)
-		c.compile(n.rhs)
-		switch n.op {
-		case '*':
-			c.emit(instr{op: mul})
-		case '/':
-			c.emit(instr{op: div})
-		default:
-			c.errorf("invalid op: %q\n", n.op)
-		}
-
-	case *bitwiseExprNode:
-		c.compile(n.lhs)
-		c.compile(n.rhs)
-		switch n.op {
-		case AND:
-			c.emit(instr{op: and})
-		case OR:
-			c.emit(instr{op: or})
-		case XOR:
-			c.emit(instr{op: xor})
-		}
-
-	case *shiftExprNode:
-		c.compile(n.lhs)
-		c.compile(n.rhs)
-		switch n.op {
-		case SHL:
-			c.emit(instr{op: shl})
-		case SHR:
-			c.emit(instr{op: shr})
-		}
-
-	case *assignExprNode:
-		c.compile(n.lhs)
-		c.compile(n.rhs)
-		c.emit(instr{op: set})
-
-	case *indexedExprNode:
-		c.compile(n.index)
-		c.compile(n.lhs)
-
-	case *unaryExprNode:
-		c.compile(n.lhs)
-		switch n.op {
-		case INC:
-			c.emit(instr{op: inc})
-		case NOT:
-			c.emit(instr{op: not})
-		}
-
-	case *incByExprNode:
-		c.compile(n.lhs)
-		c.compile(n.rhs)
-		c.emit(instr{inc, 1})
-
-	case *numericExprNode:
-		c.emit(instr{push, n.value})
 
 	case *defNode:
 		// Do nothing, defs are inlined.

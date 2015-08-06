@@ -58,7 +58,7 @@ import (
 %token <value> SHL SHR
 %token <value> LT GT LE GE EQ NE
 %token <value> AND OR XOR NOT
-%token ADD_ASSIGN ASSIGN
+%token <value> ADD_ASSIGN ASSIGN
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
 %token COMMA
@@ -153,11 +153,11 @@ assign_expr
   }
   | unary_expr ASSIGN bitwise_expr
   {
-    $$ = &assignExprNode{$1, $3}
+    $$ = &binaryExprNode{$1, $3, $2}
   }
   | unary_expr ADD_ASSIGN bitwise_expr
   {
-    $$ = &incByExprNode{$1, $3}
+    $$ = &binaryExprNode{$1, $3, $2}
   }
   ;
 
@@ -166,7 +166,7 @@ bitwise_expr
   { $$ = $1 }
   | bitwise_expr bitwise_op rel_expr
   {
-    $$ = &bitwiseExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{$1, $3, $2}
   }
   ;
 
@@ -184,7 +184,7 @@ rel_expr
   { $$ = $1 }
   | rel_expr relop shift_expr
   { 
-    $$ = &relNode{$1, $3, $2}
+    $$ = &binaryExprNode{$1, $3, $2}
   }
   ;
 
@@ -208,7 +208,7 @@ shift_expr
    { $$ = $1 }
   | shift_expr shift_op additive_expr
   {
-    $$ = &shiftExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{$1, $3, $2}
   }
   ;
 
@@ -224,11 +224,11 @@ additive_expr
   { $$ = $1 }
   | additive_expr PLUS multiplicative_expr
   {
-    $$ = &additiveExprNode{$1, $3, '+'}
+    $$ = &binaryExprNode{$1, $3, '+'}
   }
   | additive_expr MINUS multiplicative_expr
   {
-    $$ = &additiveExprNode{$1, $3, '-'}
+    $$ = &binaryExprNode{$1, $3, '-'}
   }
   ;
 
@@ -239,11 +239,11 @@ multiplicative_expr
   }
   | multiplicative_expr MUL unary_expr
   {
-    $$ = &multiplicativeExprNode{$1, $3, '*'}
+    $$ = &binaryExprNode{$1, $3, '*'}
   }
   | multiplicative_expr DIV unary_expr
   {
-    $$ = &multiplicativeExprNode{$1, $3, '/'}
+    $$ = &binaryExprNode{$1, $3, '/'}
   }
   ;
 
@@ -558,7 +558,7 @@ func (p *parser) Lex(lval *mtailSymType) int {
             p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
             return INVALID
         }
-    case LT, GT, LE, GE, NE, EQ, SHL, SHR, AND, OR, XOR, NOT, INC, DIV, MUL, MINUS, PLUS:
+    case LT, GT, LE, GE, NE, EQ, SHL, SHR, AND, OR, XOR, NOT, INC, DIV, MUL, MINUS, PLUS, ASSIGN, ADD_ASSIGN:
         lval.value = int(p.t.kind)
     default:
         lval.text = p.t.text

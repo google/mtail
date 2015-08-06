@@ -32,11 +32,6 @@ type regexNode struct {
 	re      *regexp.Regexp
 }
 
-type relNode struct {
-	lhs, rhs node
-	op       int
-}
-
 type stringNode struct {
 	text string
 }
@@ -56,28 +51,14 @@ type builtinNode struct {
 	args node
 }
 
-type additiveExprNode struct {
+type binaryExprNode struct {
 	lhs, rhs node
 	op       int
 }
 
-type multiplicativeExprNode struct {
-	lhs, rhs node
-	op       int
-}
-
-type shiftExprNode struct {
-	lhs, rhs node
-	op       int
-}
-
-type bitwiseExprNode struct {
-	lhs, rhs node
-	op       int
-}
-
-type assignExprNode struct {
-	lhs, rhs node
+type unaryExprNode struct {
+	lhs node
+	op  int
 }
 
 type indexedExprNode struct {
@@ -91,15 +72,6 @@ type declNode struct {
 	exportedName string
 	m            *metrics.Metric
 	sym          *symbol
-}
-
-type incByExprNode struct {
-	lhs, rhs node
-}
-
-type unaryExprNode struct {
-	lhs node
-	op  int
 }
 
 type numericExprNode struct {
