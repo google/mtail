@@ -7,6 +7,7 @@ package vm
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"runtime/debug"
@@ -38,6 +39,7 @@ const (
 	sub                     // Subtract top value from second top value on stack, and push to stack.
 	mul                     // Multiply top values on stack and push to stack
 	div                     // Divide top value into second top on stack, and push
+	pow                     // Put second TOS to power of TOS, and push.
 	and                     // Bitwise AND the 2 at top of stack, and push result
 	or                      // Bitwise OR the 2 at top of stack, and push result
 	xor                     // Bitwise XOR the 2 at top of stack, and push result
@@ -66,6 +68,7 @@ var opNames = map[opcode]string{
 	sub:       "sub",
 	mul:       "mul",
 	div:       "div",
+	pow:       "pow",
 	shl:       "shl",
 	shr:       "shr",
 	and:       "and",
@@ -368,6 +371,17 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("%s", err)
 		}
 		t.Push(a / b)
+
+	case pow:
+		b, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(int64(math.Pow(float64(a), float64(b))))
 
 	case shl:
 		b, err := t.PopInt()

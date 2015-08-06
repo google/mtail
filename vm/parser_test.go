@@ -125,6 +125,7 @@ var mtailPrograms = []validProgram{
 		"counter a\n" +
 			"counter b\n" +
 			"   /foo/ {\n   a * b\n" +
+			"      a ** b\n" +
 			"}\n"},
 
 	{"additive and mem storage",

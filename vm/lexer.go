@@ -30,6 +30,7 @@ var lexemeName = map[lexeme]string{
 	PLUS:       "PLUS",
 	MUL:        "MUL",
 	DIV:        "DIV",
+	POW:        "POW",
 	SHL:        "SHL",
 	SHR:        "SHR",
 	AND:        "AND",
@@ -288,7 +289,14 @@ func lexProg(l *lexer) stateFn {
 		}
 	case r == '*':
 		l.accept()
-		l.emit(MUL)
+		switch l.next() {
+		case '*':
+			l.accept()
+			l.emit(POW)
+		default:
+			l.backup()
+			l.emit(MUL)
+		}
 	case r == '=':
 		l.accept()
 		switch l.next() {

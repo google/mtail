@@ -54,7 +54,7 @@ import (
 %token <value> NUMERIC
 // Operators, in order of precedence
 %token <value> INC
-%token <value> DIV MUL MINUS PLUS
+%token <value> DIV MUL MINUS PLUS POW
 %token <value> SHL SHR
 %token <value> LT GT LE GE EQ NE
 %token <value> AND OR XOR NOT
@@ -244,6 +244,10 @@ multiplicative_expr
   | multiplicative_expr DIV unary_expr
   {
     $$ = &binaryExprNode{$1, $3, '/'}
+  }
+  | multiplicative_expr POW unary_expr
+  {
+    $$ = &binaryExprNode{$1, $3, $2}
   }
   ;
 
@@ -558,7 +562,7 @@ func (p *parser) Lex(lval *mtailSymType) int {
             p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
             return INVALID
         }
-    case LT, GT, LE, GE, NE, EQ, SHL, SHR, AND, OR, XOR, NOT, INC, DIV, MUL, MINUS, PLUS, ASSIGN, ADD_ASSIGN:
+    case LT, GT, LE, GE, NE, EQ, SHL, SHR, AND, OR, XOR, NOT, INC, DIV, MUL, MINUS, PLUS, ASSIGN, ADD_ASSIGN, POW:
         lval.value = int(p.t.kind)
     default:
         lval.text = p.t.text

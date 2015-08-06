@@ -37,7 +37,7 @@ var lexerTests = []lexerTest{
 		token{RSQUARE, "]", position{"punctuation", 0, 5, 5}},
 		token{COMMA, ",", position{"punctuation", 0, 6, 6}},
 		token{EOF, "", position{"punctuation", 0, 7, 7}}}},
-	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~", []token{
+	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~ **", []token{
 		token{MINUS, "-", position{"operators", 0, 0, 0}},
 		token{PLUS, "+", position{"operators", 0, 2, 2}},
 		token{ASSIGN, "=", position{"operators", 0, 4, 4}},
@@ -57,7 +57,8 @@ var lexerTests = []lexerTest{
 		token{OR, "|", position{"operators", 0, 40, 40}},
 		token{XOR, "^", position{"operators", 0, 42, 42}},
 		token{NOT, "~", position{"operators", 0, 44, 44}},
-		token{EOF, "", position{"operators", 0, 45, 45}}}},
+		token{POW, "**", position{"operators", 0, 46, 47}},
+		token{EOF, "", position{"operators", 0, 48, 48}}}},
 	{"keywords",
 		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\n", []token{
 			token{COUNTER, "counter", position{"keywords", 0, 0, 6}},

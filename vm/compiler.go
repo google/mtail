@@ -150,8 +150,10 @@ func (c *compiler) compile(untypedNode node) {
 			c.emit(instr{op: shl})
 		case SHR:
 			c.emit(instr{op: shr})
-
+		case POW:
+			c.emit(instr{op: pow})
 		}
+
 	case *unaryExprNode:
 		c.compile(n.lhs)
 		switch n.op {

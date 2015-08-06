@@ -103,6 +103,8 @@ func (u *Unparser) unparse(n node) {
 			u.emit(" ~ ")
 		case '+', '-', '*', '/':
 			u.emit(fmt.Sprintf(" %c ", v.op))
+		case POW:
+			u.emit(" ** ")
 		case ASSIGN:
 			u.emit(" = ")
 		case ADD_ASSIGN:

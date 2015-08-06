@@ -231,6 +231,17 @@ var programs = []struct {
 			instr{push, 1},
 			instr{push, 20},
 			instr{shr, 0}}},
+	{"pow", `
+counter a
+counter b
+a ** b
+`,
+		[]instr{
+			instr{mload, 0},
+			instr{dload, 0},
+			instr{mload, 1},
+			instr{dload, 0},
+			instr{pow, 0}}},
 }
 
 func TestCompile(t *testing.T) {
