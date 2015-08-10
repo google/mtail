@@ -21,7 +21,7 @@ hidden gauge connection_time by pid
   # Connection
   /connect from \S+ \(\d+\.\d+\.\d+\.\d+\)/ {
     connections_total++
-    connection_time[$pid] = timestamp()
+    connection_time[$pid] = gettime()
   }
 
   # Connection summary
@@ -30,6 +30,6 @@ hidden gauge connection_time by pid
 
     bytes_total["received"] += $received
 
-    connection_time_total += timestamp() - connection_time[$pid]
+    connection_time_total += gettime() - connection_time[$pid]
   }
 }
