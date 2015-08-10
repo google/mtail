@@ -24,71 +24,74 @@ import (
 type opcode int
 
 const (
-	match     opcode = iota // Match a regular expression against input, and set the match register.
-	cmp                     // Compare two values on the stack and set the match register.
-	jnm                     // Jump if no match.
-	jm                      // Jump if match.
-	inc                     // Increment a variable value
-	strptime                // Parse into the timestamp register
-	timestamp               // Return value of timestamp register
-	push                    // Push operand onto stack
-	capref                  // Push capture group reference at operand onto stack
-	str                     // Push string constant at operand onto stack
-	set                     // Set a variable value
-	add                     // Add top values on stack and push to stack
-	sub                     // Subtract top value from second top value on stack, and push to stack.
-	mul                     // Multiply top values on stack and push to stack
-	div                     // Divide top value into second top on stack, and push
-	pow                     // Put second TOS to power of TOS, and push.
-	and                     // Bitwise AND the 2 at top of stack, and push result
-	or                      // Bitwise OR the 2 at top of stack, and push result
-	xor                     // Bitwise XOR the 2 at top of stack, and push result
-	not                     // Bitwise NOT the top of stack, and push result
-	shl                     // Shift TOS left, push result
-	shr                     // Shift TOS right, push result
-	mload                   // Load metric at operand onto top of stack
-	dload                   // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
-	tolower                 // Convert the string at the top of the stack to lowercase.
-	length                  // Compute the length of a string.
-	strtol                  // Convert a string to a number, given a base.
+	match    opcode = iota // Match a regular expression against input, and set the match register.
+	cmp                    // Compare two values on the stack and set the match register.
+	jnm                    // Jump if no match.
+	jm                     // Jump if match.
+	inc                    // Increment a variable value
+	strptime               // Parse into the timestamp register
+	gettime                // Return value of timestamp register onto TOS.
+	settime                // Set timestamp register to value at TOS.
+	push                   // Push operand onto stack
+	capref                 // Push capture group reference at operand onto stack
+	str                    // Push string constant at operand onto stack
+	set                    // Set a variable value
+	add                    // Add top values on stack and push to stack
+	sub                    // Subtract top value from second top value on stack, and push to stack.
+	mul                    // Multiply top values on stack and push to stack
+	div                    // Divide top value into second top on stack, and push
+	pow                    // Put second TOS to power of TOS, and push.
+	and                    // Bitwise AND the 2 at top of stack, and push result
+	or                     // Bitwise OR the 2 at top of stack, and push result
+	xor                    // Bitwise XOR the 2 at top of stack, and push result
+	not                    // Bitwise NOT the top of stack, and push result
+	shl                    // Shift TOS left, push result
+	shr                    // Shift TOS right, push result
+	mload                  // Load metric at operand onto top of stack
+	dload                  // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
+	tolower                // Convert the string at the top of the stack to lowercase.
+	length                 // Compute the length of a string.
+	strtol                 // Convert a string to a number, given a base.
 )
 
 var opNames = map[opcode]string{
-	match:     "match",
-	cmp:       "cmp",
-	jnm:       "jnm",
-	jm:        "jm",
-	inc:       "inc",
-	strptime:  "strptime",
-	timestamp: "timestamp",
-	push:      "push",
-	capref:    "capref",
-	str:       "str",
-	set:       "set",
-	add:       "add",
-	sub:       "sub",
-	mul:       "mul",
-	div:       "div",
-	pow:       "pow",
-	shl:       "shl",
-	shr:       "shr",
-	and:       "and",
-	or:        "or",
-	xor:       "xor",
-	not:       "not",
-	mload:     "mload",
-	dload:     "dload",
-	tolower:   "tolower",
-	length:    "length",
-	strtol:    "strtol",
+	match:    "match",
+	cmp:      "cmp",
+	jnm:      "jnm",
+	jm:       "jm",
+	inc:      "inc",
+	strptime: "strptime",
+	gettime:  "gettime",
+	settime:  "settime",
+	push:     "push",
+	capref:   "capref",
+	str:      "str",
+	set:      "set",
+	add:      "add",
+	sub:      "sub",
+	mul:      "mul",
+	div:      "div",
+	pow:      "pow",
+	shl:      "shl",
+	shr:      "shr",
+	and:      "and",
+	or:       "or",
+	xor:      "xor",
+	not:      "not",
+	mload:    "mload",
+	dload:    "dload",
+	tolower:  "tolower",
+	length:   "length",
+	strtol:   "strtol",
 }
 
 var builtin = map[string]opcode{
-	"strptime":  strptime,
-	"timestamp": timestamp,
-	"tolower":   tolower,
-	"len":       length,
-	"strtol":    strtol,
+	"gettime":  gettime,
+	"len":      length,
+	"settime":  settime,
+	"strptime": strptime,
+	"strtol":   strtol,
+	"tolower":  tolower,
 }
 
 type instr struct {
@@ -308,9 +311,13 @@ func (v *VM) execute(t *thread, i instr) {
 			t.time = tm
 		}
 
-	case timestamp:
+	case gettime:
 		// Put the time register onto the stack
-		t.Push(t.time)
+		t.Push(t.time.Unix())
+
+	case settime:
+		// Pop TOS and store in time register
+		t.time = time.Unix(t.Pop().(int64), 0)
 
 	case capref:
 		// Put a capture group reference onto the stack.

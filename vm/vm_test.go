@@ -254,6 +254,13 @@ var instructions = []struct {
 		[]interface{}{"ff", 16},
 		[]interface{}{int64(255)},
 		thread{pc: 0, matches: map[int][]string{}}},
+	{"settime",
+		instr{settime, 0},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{int64(0)},
+		[]interface{}{},
+		thread{pc: 0, time: time.Unix(0, 0), matches: map[int][]string{}}},
 }
 
 // TestInstrs tests that each instruction behaves as expected through one
