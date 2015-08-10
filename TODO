@@ -6,6 +6,23 @@ concatenate programs into a single vm instance, so that common matches can be
 
 standard library, search path
 
-ntp bitfield parsing
-
 refactor fs and notify into single interface
+
+no trailing newline in parser test
+
+float types for gauges
+
+type checking
+
+type inference?
+
+type casting
+
+make example program golden data not json for easy reading
+
+parse tree/ast testing
+
+log all vm errors to debug
+
+am testing xntp peerstats, look for type errors from vm
+
