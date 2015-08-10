@@ -85,6 +85,17 @@
     "Keys": [
       "peer"
     ]
+      LabelValues: [
+          {
+              "Labels": [
+                  "64_113_32_5"
+                  ],
+              "Value": {
+                  "Value": 4
+                  "Timestamp": "xxx"
+              }
+          }
+      ]
   },
   {
     "Name": "peer_offset",
@@ -92,17 +103,6 @@
     "Kind": 1,
     "Keys": [
       "peer"
-    ],
-    "LabelValues": [
-      {
-        "Labels": [
-          "64.113.32.5"
-        ],
-        "Value": {
-          "Value": 0,
-          "Time": "2015-08-06T17:50:19.845395209Z"
-        }
-      }
     ]
   },
   {

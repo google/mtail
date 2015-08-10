@@ -78,9 +78,11 @@ gauge peer_delay by peer
 gauge peer_dispersion by peer
 counter num_peerstats by peer
 /(?P<days>\d+) (?P<seconds>\d+\.\d+) (?P<peer>\d+\.\d+\.\d+\.\d+) (?P<status>[0-9a-f]+) (?P<offset>-?\d+\.\d+) (?P<delay>\d+\.\d+) (?P<dispersion>\d+\.\d+)/ {
-  peer_offset[$peer] = $offset
-  peer_delay[$peer] = $delay
-  peer_dispersion[$peer] = $dispersion
+  #settime($days * 86400 + $seconds)
+
+  #peer_offset[$peer] = $offset
+  #peer_delay[$peer] = $delay
+  #peer_dispersion[$peer] = $dispersion
   # http://www.cis.udel.edu/~mills/ntp/html/decode.html#peer
   # bits 0-4
   peer_status[$peer] = (strtol($status, 16) >> (16 - 5)) & ((2 ** 5) - 1)
