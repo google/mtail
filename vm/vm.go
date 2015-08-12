@@ -317,7 +317,7 @@ func (v *VM) execute(t *thread, i instr) {
 
 	case settime:
 		// Pop TOS and store in time register
-		t.time = time.Unix(t.Pop().(int64), 0)
+		t.time = time.Unix(t.Pop().(int64), 0).UTC()
 
 	case capref:
 		// Put a capture group reference onto the stack.
