@@ -60,6 +60,17 @@
     "Kind": 1,
     "Keys": [
       "peer"
+    ],
+    "LabelValues": [
+      {
+        "Labels": [
+          "64.113.32.5"
+        ],
+        "Value": {
+          "Value": 18,
+          "Time": "2008-08-17T12:08:10+10:00"
+        }
+      }
     ]
   },
   {
@@ -68,6 +79,17 @@
     "Kind": 1,
     "Keys": [
       "peer"
+    ],
+    "LabelValues": [
+      {
+        "Labels": [
+          "64.113.32.5"
+        ],
+        "Value": {
+          "Value": 3,
+          "Time": "2008-08-17T12:08:10+10:00"
+        }
+      }
     ]
   },
   {
@@ -76,6 +98,17 @@
     "Kind": 1,
     "Keys": [
       "peer"
+    ],
+    "LabelValues": [
+      {
+        "Labels": [
+          "64.113.32.5"
+        ],
+        "Value": {
+          "Value": 11,
+          "Time": "2008-08-17T12:08:10+10:00"
+        }
+      }
     ]
   },
   {
@@ -84,18 +117,18 @@
     "Kind": 1,
     "Keys": [
       "peer"
+    ],
+    "LabelValues": [
+      {
+        "Labels": [
+          "64.113.32.5"
+        ],
+        "Value": {
+          "Value": 4,
+          "Time": "2008-08-17T12:08:10+10:00"
+        }
+      }
     ]
-      LabelValues: [
-          {
-              "Labels": [
-                  "64_113_32_5"
-                  ],
-              "Value": {
-                  "Value": 4
-                  "Timestamp": "xxx"
-              }
-          }
-      ]
   },
   {
     "Name": "peer_offset",
@@ -127,6 +160,17 @@
     "Kind": 0,
     "Keys": [
       "peer"
+    ],
+    "LabelValues": [
+      {
+        "Labels": [
+          "64.113.32.5"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": "2008-08-17T12:08:10+10:00"
+        }
+      }
     ]
   }
 ]

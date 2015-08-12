@@ -77,8 +77,10 @@ gauge peer_offset by peer
 gauge peer_delay by peer
 gauge peer_dispersion by peer
 counter num_peerstats by peer
-/(?P<days>\d+) (?P<seconds>\d+\.\d+) (?P<peer>\d+\.\d+\.\d+\.\d+) (?P<status>[0-9a-f]+) (?P<offset>-?\d+\.\d+) (?P<delay>\d+\.\d+) (?P<dispersion>\d+\.\d+)/ {
-  #settime($days * 86400 + $seconds)
+# TODO(jaq) seconds is int, not float
+/(?P<days>\d+) (?P<seconds>\d+)\.\d+ (?P<peer>\d+\.\d+\.\d+\.\d+) (?P<status>[0-9a-f]+) (?P<offset>-?\d+\.\d+) (?P<delay>\d+\.\d+) (?P<dispersion>\d+\.\d+)/ {
+  # Unix epoch in MJD is 40587.
+  settime(($days - 40587) * 86400 + $seconds)
 
   #peer_offset[$peer] = $offset
   #peer_delay[$peer] = $delay
