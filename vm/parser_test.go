@@ -118,7 +118,7 @@ var mtailPrograms = []validProgram{
 	{"additive",
 		"counter time_total\n" +
 			"/(?P<foo>.*)/ {\n" +
-			"  gettime() - time_total\n" +
+			"  timestamp() - time_total\n" +
 			"}\n"},
 
 	{"multiplicative",
@@ -132,7 +132,7 @@ var mtailPrograms = []validProgram{
 		"counter time_total\n" +
 			"counter variable by foo\n" +
 			"/(?P<foo>.*)/ {\n" +
-			"  time_total += gettime() - variable[$foo]\n" +
+			"  time_total += timestamp() - variable[$foo]\n" +
 			"}\n"},
 
 	{"conditional expressions",

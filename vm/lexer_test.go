@@ -81,11 +81,11 @@ var lexerTests = []lexerTest{
 			token{NL, "\n", position{"keywords", 9, 5, -1}},
 			token{EOF, "", position{"keywords", 9, 0, 0}}}},
 	{"builtins",
-		"strptime\ngettime\ntolower\nlen\nstrtol\nsettime\n", []token{
+		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\n", []token{
 			token{BUILTIN, "strptime", position{"builtins", 0, 0, 7}},
 			token{NL, "\n", position{"builtins", 1, 8, -1}},
-			token{BUILTIN, "gettime", position{"builtins", 1, 0, 6}},
-			token{NL, "\n", position{"builtins", 2, 7, -1}},
+			token{BUILTIN, "timestamp", position{"builtins", 1, 0, 8}},
+			token{NL, "\n", position{"builtins", 2, 9, -1}},
 			token{BUILTIN, "tolower", position{"builtins", 2, 0, 6}},
 			token{NL, "\n", position{"builtins", 3, 7, -1}},
 			token{BUILTIN, "len", position{"builtins", 3, 0, 2}},
