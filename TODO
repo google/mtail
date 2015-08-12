@@ -20,9 +20,4 @@ type casting
 
 make example program golden data not json for easy reading
 
-parse tree/ast testing
-
-log all vm errors to debug
-
-am testing xntp peerstats, look for type errors from vm
-
+parse tree/ast testing, s-expressions to render expected?
