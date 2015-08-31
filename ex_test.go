@@ -30,7 +30,6 @@ var exampleProgramTests = []struct {
 		"examples/rsyncd.mtail",
 		"testdata/rsyncd.log",
 		"testdata/rsyncd.golden",
-		//		"testdata/rsyncd.json",
 	},
 	// {
 	// 	"examples/sftp.mtail",
@@ -72,44 +71,19 @@ func TestExamplePrograms(t *testing.T) {
 			continue
 		}
 
-		// // Dirty hack to create json files :)
-		// if false {
-		// 	j, err := os.Create(tc.jsonfile)
-		// 	if err != nil {
-		// 		t.Errorf("%s: could not open json file: %s", tc.jsonfile, err)
-		// 		continue
-		// 	}
-		// 	if err := mtail.WriteMetrics(j); err != nil {
-		// 		t.Errorf("couldn't marshall metrics: %q", err)
-		// 		continue
-		// 	}
-		// 	j.WriteString("\n")
-		// 	j.Close()
-		// }
-
 		j, err := os.Open(tc.jsonfile)
 		if err != nil {
 			t.Fatalf("%s: could not open json file: %s", tc.jsonfile, err)
 		}
 		defer j.Close()
-		// var ex bytes.Buffer
 
-		// if _, err := ex.ReadFrom(j); err != nil {
-		// 	t.Fatalf("Couldn't read from json: %s", err)
-		// }
 		golden_store := &metrics.Store{}
 		testdata.ReadTestData(j, tc.programfile, golden_store)
 
 		mtail.Close()
-		// var m bytes.Buffer
-		// mtail.WriteMetrics(&m)
-		// m.WriteString("\n") // Golden data has trailing newline.
 
 		diff := pretty.Compare(golden_store, store)
 
-		// mtail.
-		// strings.Split(ex.String(), "\n"), // want
-		// strings.Split(m.String(), "\n"))  // got
 		if len(diff) > 0 {
 			t.Errorf("%s: metrics don't match:\n%s", tc.programfile, diff)
 
