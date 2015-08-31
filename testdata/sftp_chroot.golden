@@ -1,0 +1,18 @@
+counter login_count {username=user1} 1 0000-08-19T02:16:40Z
+counter login_count {username=user3} 2 0000-08-19T02:28:36Z
+counter login_count {username=user2} 1 0000-08-19T02:19:58Z
+counter logout_count {username=user2} 1 0000-08-19T02:24:44Z
+counter logout_count {username=user3} 1 0000-08-19T02:38:27Z
+counter bytes_read 78171021 0000-08-19T02:34:05Z
+counter files_read 10 0000-08-19T02:34:05Z
+counter bytes_written 739840 0000-08-19T02:37:58Z
+counter files_written 2 0000-08-19T02:37:58Z
+counter user_bytes_read {username=user1} 74809241 0000-08-19T02:29:13Z
+counter user_bytes_read {username=user6} 3307508 0000-08-19T02:31:25Z
+counter user_bytes_read {username=user5} 54272 0000-08-19T02:34:05Z
+counter user_files_read {username=user1} 2 0000-08-19T02:29:13Z
+counter user_files_read {username=user6} 7 0000-08-19T02:31:25Z
+counter user_files_read {username=user5} 1 0000-08-19T02:34:05Z
+counter user_bytes_written {username=user4} 739840 0000-08-19T02:37:58Z
+counter user_files_written {username=user4} 2 0000-08-19T02:37:58Z
+

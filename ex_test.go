@@ -31,11 +31,11 @@ var exampleProgramTests = []struct {
 		"testdata/rsyncd.log",
 		"testdata/rsyncd.golden",
 	},
-	// {
-	// 	"examples/sftp.mtail",
-	// 	"testdata/sftp_chroot.log",
-	// 	"testdata/sftp_chroot.json",
-	// },
+	{
+		"examples/sftp.mtail",
+		"testdata/sftp_chroot.log",
+		"testdata/sftp_chroot.golden",
+	},
 	// {
 	// 	"examples/dhcpd.mtail",
 	// 	"testdata/anonymised_dhcpd_log",
