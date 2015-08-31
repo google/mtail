@@ -1,0 +1,17 @@
+counter request_total {command=balancing} 9317 0000-11-16T07:45:14Z
+counter request_total {command=balanced} 9317 0000-11-16T07:45:14Z
+counter config_file_errors
+counter peer_disconnects
+counter dhcpdiscovers {mac=}
+counter bind_xid_mismatch 4088 0000-11-16T07:46:05Z
+counter duplicate_lease 53 0000-11-16T07:44:51Z
+counter bad_udp_checksum
+counter unknown_subnet
+counter dhcpdiscover_nofree {network=}
+counter unknown_lease {ip=}
+counter update_rejected
+counter failover_peer_timeout
+counter ip_already_in_use
+counter ip_abandoned {reason=pinged before offer} 2 0000-11-16T07:32:49Z
+counter negative_poolreq {pool=}
+counter lease_conflicts

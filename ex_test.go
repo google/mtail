@@ -36,11 +36,11 @@ var exampleProgramTests = []struct {
 		"testdata/sftp_chroot.log",
 		"testdata/sftp_chroot.golden",
 	},
-	// {
-	// 	"examples/dhcpd.mtail",
-	// 	"testdata/anonymised_dhcpd_log",
-	// 	"testdata/anonymised_dhcpd_log.json",
-	// },
+	{
+		"examples/dhcpd.mtail",
+		"testdata/anonymised_dhcpd_log",
+		"testdata/anonymised_dhcpd_log.golden",
+	},
 	// {
 	// 	"examples/ntpd.mtail",
 	// 	"testdata/ntp4",
