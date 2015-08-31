@@ -197,17 +197,17 @@ func (ms *Store) ClearMetrics() {
 func (d *Datum) String() string {
 	d.RLock()
 	defer d.RUnlock()
-	return fmt.Sprintf("%+#v", *d)
+	return fmt.Sprintf("%v", *d)
 }
 
 func (lv *LabelValue) String() string {
-	return fmt.Sprintf("%+#v", *lv)
+	return fmt.Sprintf("%v", *lv)
 }
 
 func (m *Metric) String() string {
 	m.RLock()
 	defer m.RUnlock()
-	return fmt.Sprintf("%+#v", *m)
+	return fmt.Sprintf("%v", *m)
 }
 
 // Metrics defines a Sortable type for a slice of metrics.
