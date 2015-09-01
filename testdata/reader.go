@@ -43,7 +43,9 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 				glog.V(2).Infof("pair: %s\n", pair)
 				kv := strings.Split(pair, "=")
 				keys = append(keys, kv[0])
-				vals = append(vals, kv[1])
+				if kv[1] != "" {
+					vals = append(vals, kv[1])
+				}
 			}
 		}
 		var timestamp time.Time
@@ -74,12 +76,14 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 		} else {
 			glog.V(2).Infof("found %v\n", m)
 		}
-		d, err := m.GetDatum(vals...)
-		if err != nil {
-			glog.V(2).Infof("Failed to get datum: %s\n", err)
-			continue
+		if len(vals) > 0 {
+			d, err := m.GetDatum(vals...)
+			if err != nil {
+				glog.V(2).Infof("Failed to get datum: %s\n", err)
+				continue
+			}
+			glog.V(2).Infof("setting %v with vals %v to %v\n", d, vals, val)
+			d.Set(val, timestamp)
 		}
-		glog.V(2).Infof("setting %v with vals %v to %v\n", d, vals, val)
-		d.Set(val, timestamp)
 	}
 }

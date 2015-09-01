@@ -1,0 +1,19 @@
+counter int_syscalls
+counter recvbuf_overflows
+gauge last_recvbuf
+counter exits 1 0000-06-30T12:07:12Z
+counter starts 1 0000-06-30T12:04:43Z
+gauge sync_status 1 0000-12-01T17:42:09Z
+counter pll_changes
+gauge pll_status
+counter peer_syncs 1 0000-06-30T12:04:51Z
+counter driftfile_errors
+counter sync_lost_total
+gauge peer_status {peer=}
+gauge peer_select {peer=}
+gauge peer_count {peer=}
+gauge peer_code {peer=}
+gauge peer_offset {peer=}
+gauge peer_delay {peer=}
+gauge peer_distribution {peer=}
+counter num_peerstats {peer=}
