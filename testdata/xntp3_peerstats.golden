@@ -1,0 +1,19 @@
+counter int_syscalls
+counter recvbuf_overflows
+gauge last_recvbuf
+counter exits
+counter starts
+gauge sync_status
+counter pll_changes
+gauge pll_status
+counter peer_syncs
+counter driftfile_errors
+counter sync_lost_total
+gauge peer_status {peer=64.113.32.5} 18 2008-08-17T02:08:10Z
+gauge peer_select {peer=64.113.32.5} 3 2008-08-17T02:08:10Z
+gauge peer_count {peer=64.113.32.5} 11 2008-08-17T02:08:10Z
+gauge peer_code {peer=64.113.32.5} 4 2008-08-17T02:08:10Z
+gauge peer_offset {peer=64.113.32.5} 
+gauge peer_delay {peer=64.113.32.5}
+gauge peer_dispersion {peer=64.113.32.5}
+counter num_peerstats {peer=64.113.32.5} 1 2008-08-17T02:08:10Z
