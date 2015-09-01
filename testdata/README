@@ -1,5 +1,7 @@
-This directory contains test input (.log) and expected output (.json) files for
-the ex_test.go test program.  It ensures that the example programs provided
+This directory contains test input (.log) and expected output (.golden) files
+for the ex_test.go test program.  It ensures that the example programs provided
 compile and run and generate the expected output.
+
+The golden file format is read by the reader.go source.
 
 All files in this directory are licensed under the Apache License 2.0.
