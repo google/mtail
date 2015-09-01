@@ -18,6 +18,4 @@ type inference?
 
 type casting
 
-make example program golden data not json for easy reading
-
 parse tree/ast testing, s-expressions to render expected?
