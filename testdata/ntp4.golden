@@ -15,5 +15,5 @@ gauge peer_count {peer=}
 gauge peer_code {peer=}
 gauge peer_offset {peer=}
 gauge peer_delay {peer=}
-gauge peer_distribution {peer=}
+gauge peer_dispersion {peer=}
 counter num_peerstats {peer=}
