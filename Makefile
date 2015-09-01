@@ -33,6 +33,8 @@ GOTESTFILES=\
 	exporter/export_varz_test.go\
 	mtail/mtail_test.go\
 	tailer/tail_test.go\
+	testdata/reader.go\
+	testdata/reader_test.go\
 	vm/lexer_test.go\
 	vm/parser_test.go\
 	vm/vm_test.go\

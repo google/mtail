@@ -1,7 +1,6 @@
 package testdata
 
 import (
-	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -66,7 +65,6 @@ func TestReadTestData(t *testing.T) {
 	defer f.Close()
 	store := &metrics.Store{}
 	ReadTestData(f, "reader_test", store)
-	fmt.Printf("%v\n", store.Metrics)
 	diff := pretty.Compare(expectedMetrics, store.Metrics)
 	if len(diff) > 0 {
 		t.Errorf("metrics don't match: %s\n", diff)
