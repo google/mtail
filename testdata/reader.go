@@ -13,7 +13,7 @@ import (
 	"github.com/google/mtail/metrics"
 )
 
-var var_re = regexp.MustCompile(`^(counter|gauge|timer) ([^ ]+)( {([^}]+)})? (\d+)( (.+))?`)
+var var_re = regexp.MustCompile(`^(counter|gauge|timer) ([^ ]+)(?: {([^}]+)})?(?: (\d+))?(?: (.+))?`)
 
 // Find a metric in a store
 func FindMetricOrNil(store *metrics.Store, name string) *metrics.Metric {
@@ -39,7 +39,7 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 		}
 		var keys, vals []string
 		if match[3] != "" {
-			for _, pair := range strings.Split(match[4], ",") {
+			for _, pair := range strings.Split(match[3], ",") {
 				glog.V(2).Infof("pair: %s\n", pair)
 				kv := strings.Split(pair, "=")
 				keys = append(keys, kv[0])
@@ -47,17 +47,6 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 					vals = append(vals, kv[1])
 				}
 			}
-		}
-		var timestamp time.Time
-		glog.V(2).Infof("match 7: %q\n", match[7])
-		if match[7] != "" {
-			timestamp, _ = time.Parse(time.RFC3339, match[7])
-		}
-		glog.V(2).Infof("timestamp is %s which is %v in unix\n", timestamp.Format(time.RFC3339), timestamp.Unix())
-
-		val, err := strconv.ParseInt(match[5], 10, 64)
-		if err != nil {
-			glog.Fatalf("parse failed for '%s': %s", match[5], err)
 		}
 		m := FindMetricOrNil(store, match[2])
 		if m == nil {
@@ -76,14 +65,30 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 		} else {
 			glog.V(2).Infof("found %v\n", m)
 		}
-		if len(vals) > 0 {
-			d, err := m.GetDatum(vals...)
-			if err != nil {
-				glog.V(2).Infof("Failed to get datum: %s\n", err)
-				continue
+		if len(keys) == len(vals) {
+			if match[4] != "" {
+				val, err := strconv.ParseInt(match[4], 10, 64)
+				if err != nil {
+					glog.Fatalf("parse failed for '%s': %s", match[4], err)
+				}
+
+				var timestamp time.Time
+				glog.V(2).Infof("match 5: %q\n", match[5])
+				if match[5] != "" {
+					timestamp, _ = time.Parse(time.RFC3339, match[5])
+				}
+				glog.V(2).Infof("timestamp is %s which is %v in unix\n", timestamp.Format(time.RFC3339), timestamp.Unix())
+
+				d, err := m.GetDatum(vals...)
+				if err != nil {
+					glog.V(2).Infof("Failed to get datum: %s\n", err)
+					continue
+				}
+
+				glog.V(2).Infof("setting %v with vals %v to %v at %v\n", d, vals, val, timestamp)
+				d.Set(val, timestamp)
 			}
-			glog.V(2).Infof("setting %v with vals %v to %v\n", d, vals, val)
-			d.Set(val, timestamp)
+
 		}
 	}
 }

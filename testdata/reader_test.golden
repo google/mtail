@@ -1,0 +1,7 @@
+counter bytes_total {operation=sent} 62793673 2011-02-23T05:54:10Z
+counter bytes_total {operation=received} 975017 2011-02-23T05:54:10Z
+counter connections_total 52 2011-02-22T21:54:13Z
+counter connection-time_total 1181011 2011-02-23T05:54:10Z
+counter transfers_total {operation=send,module=module} 2 2011-02-23T05:50:32Z
+counter transfers_total {operation=send,module=repo} 25 2011-02-23T05:51:14Z
+gauge foo {label=}

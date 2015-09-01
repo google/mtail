@@ -13,5 +13,6 @@ counter update_rejected
 counter failover_peer_timeout
 counter ip_already_in_use
 counter ip_abandoned {reason=pinged before offer} 2 0000-11-16T07:32:49Z
+counter invalid_state_transition
 counter negative_poolreq {pool=}
 counter lease_conflicts
