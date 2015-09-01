@@ -26,6 +26,7 @@ after_success:
 # Run tests at these Go versions.
 go:
   - tip
+  - 1.5
   - 1.4
 
 # Allow tip to fail, and only wait for 1.4 to succeed before reporting build
@@ -34,6 +35,7 @@ matrix:
   fast_finish: true
   allow_failures:
     - go: tip
+    - go: 1.5
 
 
 # Not using sudo, can use containers.
