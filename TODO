@@ -8,7 +8,7 @@ standard library, search path
 
 refactor fs and notify into single interface
 
-no trailing newline in parser test
+no trailing newline in parser test, requires changes to expr stmt
 
 float types for gauges
 
@@ -19,3 +19,5 @@ type inference?
 type casting
 
 parse tree/ast testing, s-expressions to render expected?
+
+mapping between progs and logs to reduce wasted processing
