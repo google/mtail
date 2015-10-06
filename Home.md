@@ -17,6 +17,6 @@ Metrics are exported for scraping by a collector as JSON or Prometheus format
 over HTTP, or can be periodically sent to a collectd, statsd, or Graphite
 collector socket.
 
-Read more about the [[Language]], or help for [[Interoperability]] and [[Deploying]]
+Read more about the [[Language]], how to [[Build]], or help for [[Interoperability]] and [[Deploying]]
 
 Mailing list: https://groups.google.com/forum/#!forum/mtail-users
