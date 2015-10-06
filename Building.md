@@ -2,14 +2,16 @@
 
 mtail is implemented in [Go](http://golang.org).
 
-You will need to install the golang-tip package for your distribution.  The Ubuntu PPA is at https://launchpad.net/~gophers/+archive/go
+You will need to install Go 1.4 or higher.
 
 # Details
 
-[Checkout](http://code.google.com/p/mtail/source/checkout) the source from Git.
+[Clone](http://github.com/google/mtail) the source from GitHub.
 
-mtail uses `make` to build.
+mtail uses `make` to build.  Type `make` at the commandline to install all the dependencies, and then build mtail.  This assumes that your Go environment is already set up.
 
 Run the unit tests with `make test`, which invokes `gotest`.
+
+## Contributing
 
 Please use `gofmt` to format your code before committing.  Emacs' go-mode has a lovely [gofmt-before-save](http://golang.org/misc/emacs/go-mode.el) function.
