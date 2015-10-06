@@ -9,10 +9,7 @@ before_install:
 # detected.  Also install three tools for measuring coverage and sending to
 # coveralls.io.
 install:
- - travis_retry go get -t -v ./...
- - travis_retry go get golang.org/x/tools/cmd/cover
- - travis_retry go get github.com/modocache/gover
- - travis_retry go get github.com/mattn/goveralls
+ - travis_retry make install_coverage_deps
 
 # Run all tests, under race detector.
 script: make testrace

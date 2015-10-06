@@ -22,3 +22,7 @@ Metrics are exported for scraping by a collector as JSON or Prometheus format ov
 See [the Wiki](https://github.com/google/mtail/wiki/Home) for more details.
 
 Mailing list: https://groups.google.com/forum/#!forum/mtail-users
+
+### Installation
+
+mtail uses a Makefile.  To build mtail, type `make` at the commandline.  See the [Build instructions](https://github.com/google/mtail/wiki/Building) for more details.

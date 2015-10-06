@@ -49,7 +49,7 @@ CLEANFILES+=\
 all: mtail
 
 .PHONY: mtail
-mtail: $(GOFILES)
+mtail: $(GOFILES) install_deps
 	go install
 
 vm/parser.go: vm/parser.y
@@ -59,15 +59,15 @@ emgen/emgen: emgen/emgen.go
 	cd emgen && go build
 
 .PHONY: test
-test: $(GOFILES) $(GOTESTFILES)
+test: $(GOFILES) $(GOTESTFILES) mtail
 	go test -v -timeout 60s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOTESTFILES)
+testrace: $(GOFILES) $(GOTESTFILES) mtail
 	go test -v -timeout 5m -race ./...
 
 .PHONY: smoke
-smoke: $(GOFILES) $(GOTESTFILES)
+smoke: $(GOFILES) $(GOTESTFILES) mtail
 	go test -v -timeout 10s -test.short ./...
 
 .PHONY: bench
@@ -94,3 +94,13 @@ coverage.html: gover.coverprofile
 
 .PHONY: testall
 testall: testrace bench
+
+.PHONY: install_deps
+install_deps: vm/parser.go
+	go get -t -v ./...
+
+.PHONY: install_coverage_deps
+install_coverage_deps: install_deps
+	go get golang.org/x/tools/cmd/cover
+	go get github.com/modocache/gover
+	go get github.com/mattn/goveralls
