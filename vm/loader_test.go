@@ -167,7 +167,7 @@ func TestProcessEvents(t *testing.T) {
 		l.handleMu.RUnlock()
 		l.handleMu.RLock()
 		if diff := pretty.Compare(tt.expectedPrograms, programs); len(diff) > 0 {
-			t.Errorf("%s: loaded programs don't match. l.handles: %+#v\n%s", tt.name, l.handles, diff)
+			t.Errorf("%q: loaded programs don't match. l.handles: %+#v\n%s", tt.name, l.handles, diff)
 		}
 		l.handleMu.RUnlock()
 		close(lines)
