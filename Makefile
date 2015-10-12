@@ -96,11 +96,17 @@ coverage.html: gover.coverprofile
 testall: testrace bench
 
 .PHONY: install_deps
-install_deps: vm/parser.go
+install_deps: .dep-stamp
+
+.dep-stamp: vm/parser.go
 	go get -t -v ./...
+	touch $@
 
 .PHONY: install_coverage_deps
-install_coverage_deps: install_deps
+install_coverage_deps: .cov-dep-stamp
+
+.cov-dep-stamp: install_deps
 	go get golang.org/x/tools/cmd/cover
 	go get github.com/modocache/gover
 	go get github.com/mattn/goveralls
+	touch $@
