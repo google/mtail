@@ -1,0 +1,22 @@
+# Copyright 2015 Ben Kochie <superq@gmail.com>. All Rights Reserved.
+# This file is available under the Apache license.
+
+# Parser for the common apache "NCSA extended/combined" log format
+# LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\"
+counter apache_http_requests_total by request_method, http_version, request_status
+counter apache_http_bytes_total by request_method, http_version, request_status
+
+/^/ +
+/(?P<hostname>[0-9A-Za-z\.-]+) / + # %h
+/(?P<remote_logname>[0-9A-Za-z-]+) / + # %l
+/(?P<remote_username>[0-9A-Za-z-]+) / + # %u
+/(?P<timestamp>\[\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2} \+\d{4}\]) / + # %u
+/"(?P<request_method>[A-Z]+) (?P<URI>\S+) (?P<http_version>HTTP\/[0-9\.]+)" / + # \"%r\"
+/(?P<request_status>\d{3}) / + # %>s
+/(?P<response_size>\d+) / + # %b
+/"(?P<referer>\S+)" / + # \"%{Referer}i\"
+/"(?P<user_agent>[[:print:]]+)"/ + # \"%{User-agent}i\"
+/$/ {
+  apache_http_requests_total[$request_method][$http_version][$request_status]++
+  apache_http_bytes_total[$request_method][$http_version][$request_status] += $response_size
+}
