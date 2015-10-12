@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"testing"
 	"time"
@@ -160,13 +161,17 @@ func TestLogWatcherAddError(t *testing.T) {
 }
 
 func TestWatcherErrors(t *testing.T) {
+	orig, err := strconv.ParseInt(expvar.Get("log_watcher_error_count").String(), 10, 64)
+	if err != nil {
+		t.Fatalf("couldn't convert expvar %q", expvar.Get("log_watcher_error_count").String())
+	}
 	w, err := NewLogWatcher()
 	if err != nil {
 		t.Fatalf("couldn't create a watcher")
 	}
 	w.Errors <- errors.New("test error")
 	w.Close()
-	diff := pretty.Compare(expvar.Get("log_watcher_error_count").String(), "1")
+	diff := pretty.Compare(strconv.FormatInt(orig+1, 10), expvar.Get("log_watcher_error_count").String())
 	if len(diff) > 0 {
 		t.Errorf("log watcher error count doens't match:\n%s", diff)
 	}
