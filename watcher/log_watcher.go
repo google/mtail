@@ -39,8 +39,8 @@ func (w *LogWatcher) run() {
 	// Suck out errors and dump them to the error log.
 	go func() {
 		for err := range w.Watcher.Errors {
-			glog.Errorf("fsnotify error: %s\n", err)
 			errorCount.Add(1)
+			glog.Errorf("fsnotify error: %s\n", err)
 		}
 	}()
 	for e := range w.Watcher.Events {
