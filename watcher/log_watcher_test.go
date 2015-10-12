@@ -169,8 +169,10 @@ func TestWatcherErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't create a watcher")
 	}
-	w.Errors <- errors.New("test error")
-	w.Close()
+	w.Errors <- errors.New("just a test, not really an error")
+	if err := w.Close(); err != nil {
+		t.Fatalf("watcher close failed: %q", err)
+	}
 	diff := pretty.Compare(strconv.FormatInt(orig+1, 10), expvar.Get("log_watcher_error_count").String())
 	if len(diff) > 0 {
 		t.Errorf("log watcher error count doens't match:\n%s", diff)
