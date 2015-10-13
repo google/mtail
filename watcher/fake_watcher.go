@@ -13,15 +13,16 @@ import (
 // FakeWatcher implements an in-memory Watcher.
 type FakeWatcher struct {
 	sync.RWMutex
-	watches map[string]bool
-	events  chan Event
+	watches  map[string]bool
+	events   chan Event
+	isClosed bool
 }
 
 // NewFakeWatcher returns a fake Watcher for use in tests.
 func NewFakeWatcher() *FakeWatcher {
 	return &FakeWatcher{
 		watches: make(map[string]bool),
-		events:  make(chan Event)}
+		events:  make(chan Event, 1)}
 }
 
 // Add adds a watch to the FakeWatcher
@@ -34,7 +35,10 @@ func (w *FakeWatcher) Add(name string) error {
 
 // Close closes down the FakeWatcher
 func (w *FakeWatcher) Close() error {
-	close(w.events)
+	if !w.isClosed {
+		close(w.events)
+		w.isClosed = true
+	}
 	return nil
 }
 
@@ -53,11 +57,13 @@ func (w *FakeWatcher) Events() <-chan Event { return w.events }
 func (w *FakeWatcher) InjectCreate(name string) {
 	dirname := path.Dir(name)
 	w.RLock()
-	defer w.RUnlock()
-	if w.watches[dirname] {
+	dir_watched := w.watches[dirname]
+	w.RUnlock()
+	if dir_watched {
 		w.events <- CreateEvent{name}
+		w.Add(name)
 	} else {
-		glog.Infof("not watching %s to see %s", dirname, name)
+		glog.Warningf("not watching %s to see %s", dirname, name)
 	}
 }
 
@@ -68,17 +74,19 @@ func (w *FakeWatcher) InjectUpdate(name string) {
 	if w.watches[name] {
 		w.events <- UpdateEvent{name}
 	} else {
-		glog.Infof("not watching %s", name)
+		glog.Warningf("can't update: not watching %s", name)
 	}
 }
 
 // InjectDelete lets a test inject a fake deletion event.
 func (w *FakeWatcher) InjectDelete(name string) {
 	w.RLock()
-	defer w.RUnlock()
-	if w.watches[name] {
+	watched := w.watches[name]
+	w.RUnlock()
+	if watched {
 		w.events <- DeleteEvent{name}
+		w.Remove(name)
 	} else {
-		glog.Infof("not watching %s", name)
+		glog.Warningf("can't delete: not watching %s", name)
 	}
 }

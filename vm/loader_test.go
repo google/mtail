@@ -6,7 +6,6 @@ package vm
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/watcher"
@@ -157,17 +156,17 @@ func TestProcessEvents(t *testing.T) {
 				w.InjectUpdate(e.Pathname)
 			}
 		}
-		// ugh; figure out something to synchronise after LoadProg
-		time.Sleep(10 * time.Millisecond)
-		var programs []string
+		w.Close()
+		<-l.watcherDone
 		l.handleMu.RLock()
+		var programs []string
 		for program := range l.handles {
 			programs = append(programs, program)
 		}
 		l.handleMu.RUnlock()
 		l.handleMu.RLock()
 		if diff := pretty.Compare(tt.expectedPrograms, programs); len(diff) > 0 {
-			t.Errorf("%q: loaded programs don't match. l.handles: %+#v\n%s", tt.name, l.handles, diff)
+			t.Errorf("%q: loaded programs don't match.\nl.handles: %+#v\n%s", tt.name, l.handles, diff)
 		}
 		l.handleMu.RUnlock()
 		close(lines)
