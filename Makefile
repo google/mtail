@@ -2,13 +2,13 @@
 # This file is available under the Apache license.
 
 GOFILES=\
+	exporter/collectd.go\
 	exporter/export.go\
-	exporter/export_collectd.go\
-	exporter/export_graphite.go\
-	exporter/export_json.go\
-	exporter/export_prometheus.go\
-	exporter/export_statsd.go\
-	exporter/export_varz.go\
+	exporter/graphite.go\
+	exporter/json.go\
+	exporter/prometheus.go\
+	exporter/statsd.go\
+	exporter/varz.go\
 	main.go\
 	metrics/metric.go\
 	mtail/mtail.go\
@@ -27,10 +27,10 @@ GOFILES=\
 
 GOTESTFILES=\
 	ex_test.go\
-	exporter/export_json_test.go\
 	exporter/export_test.go\
-	exporter/export_prometheus_test.go\
-	exporter/export_varz_test.go\
+	exporter/json_test.go\
+	exporter/prometheus_test.go\
+	exporter/varz_test.go\
 	mtail/mtail_test.go\
 	tailer/tail_test.go\
 	testdata/reader.go\
