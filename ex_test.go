@@ -6,13 +6,11 @@ package main
 import (
 	"flag"
 	"os"
-	"strconv"
 	"testing"
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
 	"github.com/google/mtail/testdata"
-	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
 	"github.com/kylelemons/godebug/pretty"
 )
@@ -66,7 +64,7 @@ func TestExamplePrograms(t *testing.T) {
 			t.Fatalf("create mtail failed: %s", err)
 		}
 
-		if err := mtail.OneShot(tc.logfile); err != nil {
+		if _, err := mtail.OneShot(tc.logfile, false); err != nil {
 			t.Errorf("Oneshot failed for %s: %s", tc.logfile, err)
 			continue
 		}
@@ -100,24 +98,26 @@ func benchmarkProgram(b *testing.B, programfile string, logfile string) {
 		b.Fatalf("Failed to create mtail: %s", err)
 	}
 
+	var lines int64
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := mtail.OneShot(logfile); err != nil {
+		count, err := mtail.OneShot(logfile, false)
+		if err != nil {
 			b.Errorf("OneShot log parse failed: %s", err)
 		}
+		lines += count
 	}
 	b.StopTimer()
 	mtail.Close()
-	l, err := strconv.ParseInt(vm.LineCount.String(), 10, 64)
 	if err != nil {
 		b.Fatalf("strconv.ParseInt failed: %s", err)
 		return
 	}
-	b.SetBytes(l)
+	b.SetBytes(lines)
 }
 
 func BenchmarkRsyncdProgram(b *testing.B) {
-	benchmarkProgram(b, "examples/rsync.mtail", "testdata/rsyncd.log")
+	benchmarkProgram(b, "examples/rsyncd.mtail", "testdata/rsyncd.log")
 }
 func BenchmarkSftpProgram(b *testing.B) {
 	benchmarkProgram(b, "examples/sftp.mtail", "testdata/sftp_chroot.log")

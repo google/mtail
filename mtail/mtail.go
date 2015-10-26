@@ -42,17 +42,19 @@ type Mtail struct {
 }
 
 // OneShot reads the contents of a log file into the lines channel from start to finish, terminating the program at the end.
-func (m *Mtail) OneShot(logfile string) error {
+func (m *Mtail) OneShot(logfile string, print bool) (count int64, err error) {
 	glog.Infof("Oneshot %q", logfile)
 	l, err := os.Open(logfile)
 	if err != nil {
-		return fmt.Errorf("failed to open log file %q: %s", logfile, err)
+		return 0, fmt.Errorf("failed to open log file %q: %s", logfile, err)
 	}
 	defer l.Close()
 
 	r := bufio.NewReader(l)
 
-	fmt.Printf("%s: %d MAXPROCS, %d CPUs, ", logfile, runtime.GOMAXPROCS(-1), runtime.NumCPU())
+	if print {
+		fmt.Printf("%s: %d MAXPROCS, %d CPUs, ", logfile, runtime.GOMAXPROCS(-1), runtime.NumCPU())
+	}
 
 	start := time.Now()
 
@@ -64,19 +66,21 @@ Loop:
 			m.lines <- line
 			break Loop
 		case err != nil:
-			return fmt.Errorf("failed to read from %q: %s", logfile, err)
+			return 0, fmt.Errorf("failed to read from %q: %s", logfile, err)
 		default:
 			m.lines <- line
 		}
 	}
 	duration := time.Since(start)
-	count, err := strconv.Atoi(vm.LineCount.String())
+	count, err = strconv.ParseInt(vm.LineCount.String(), 10, 64)
 	if err != nil {
-		return err
+		return
 	}
-	µsPerL := float64(duration.Nanoseconds()) / (float64(count) * 1000)
-	fmt.Printf("%d lines, %s total time, %6.3f µs/line\n", count, duration, µsPerL)
-	return nil
+	if print {
+		µsPerL := float64(duration.Nanoseconds()) / (float64(count) * 1000)
+		fmt.Printf("%d lines, %s total time, %6.3f µs/line\n", count, duration, µsPerL)
+	}
+	return
 }
 
 // StartTailing constructs a new Tailer and commences sending log lines into
@@ -181,7 +185,7 @@ func (m *Mtail) WriteMetrics(w io.Writer) error {
 func (m *Mtail) RunOneShot() {
 	fmt.Println("Oneshot results:")
 	for _, pathname := range m.o.LogPaths {
-		err := m.OneShot(pathname)
+		_, err := m.OneShot(pathname, true)
 		if err != nil {
 			glog.Exitf("Failed one shot mode for %q: %s\n", pathname, err)
 		}
