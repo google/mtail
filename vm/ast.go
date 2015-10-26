@@ -75,7 +75,9 @@ type declNode struct {
 }
 
 type numericExprNode struct {
-	value int
+	isint bool
+	i     int64
+	f     float64
 }
 
 type defNode struct {

@@ -5,6 +5,7 @@ package vm
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/google/mtail/metrics"
@@ -159,8 +160,11 @@ func (u *Unparser) unparse(n node) {
 		}
 
 	case *numericExprNode:
-		u.emit(fmt.Sprintf("%d", v.value))
-
+		if v.isint {
+			u.emit(strconv.FormatInt(v.i, 10))
+		} else {
+			u.emit(strconv.FormatFloat(v.f, 'g', -1, 64))
+		}
 	case *defNode:
 		u.emit(fmt.Sprintf("def %s {", v.name))
 		u.newline()

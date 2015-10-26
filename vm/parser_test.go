@@ -201,6 +201,11 @@ var mtailPrograms = []validProgram{
   $1 ^ 15
   ~ 1
 }`},
+	{"floats",
+		`gauge foo
+/foo/ {
+foo = 3.14
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {

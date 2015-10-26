@@ -95,10 +95,12 @@ var lexerTests = []lexerTest{
 			token{BUILTIN, "settime", position{"builtins", 5, 0, 6}},
 			token{NL, "\n", position{"builtins", 6, 7, -1}},
 			token{EOF, "", position{"builtins", 6, 0, 0}}}},
-	{"numeric", "1 23", []token{
-		token{NUMERIC, "1", position{"numeric", 0, 0, 0}},
-		token{NUMERIC, "23", position{"numeric", 0, 2, 3}},
-		token{EOF, "", position{"numeric", 0, 4, 4}}}},
+	{"numeric", "1 23 3.14 1.61.1", []token{
+		token{INTLITERAL, "1", position{"numeric", 0, 0, 0}},
+		token{INTLITERAL, "23", position{"numeric", 0, 2, 3}},
+		token{FLOATLITERAL, "3.14", position{"numeric", 0, 5, 8}},
+		token{FLOATLITERAL, "1.61", position{"numeric", 0, 10, 13}},
+		token{INVALID, "Unexpected input: '.'", position{"numeric", 0, 14, 14}}}},
 	{"identifier", "a be foo\nquux line-count", []token{
 		token{ID, "a", position{"identifier", 0, 0, 0}},
 		token{ID, "be", position{"identifier", 0, 2, 3}},

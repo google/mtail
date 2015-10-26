@@ -18,22 +18,24 @@ import (
 
 %union
 {
-    value int
+    intVal int64
+    floatVal float64
+    op int
     text string
     texts []string
     flag bool
     n node
-    mtype metrics.Kind
+    kind metrics.Kind
 }
 
 %type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr
 %type <n> declaration declarator definition decoration_statement
-%type <mtype> type_spec
+%type <kind> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
-%type <value> relop shift_op bitwise_op
+%type <op> relop shift_op bitwise_op
 %type <text> pattern_expr
 // Tokens and types are defined here.
 // Invalid input
@@ -51,14 +53,15 @@ import (
 %token <text> CAPREF
 %token <text> ID
 %token <text> DECO
-%token <value> NUMERIC
+%token <intVal> INTLITERAL
+%token <floatVal> FLOATLITERAL
 // Operators, in order of precedence
-%token <value> INC
-%token <value> DIV MUL MINUS PLUS POW
-%token <value> SHL SHR
-%token <value> LT GT LE GE EQ NE
-%token <value> AND OR XOR NOT
-%token <value> ADD_ASSIGN ASSIGN
+%token <op> INC
+%token <op> DIV MUL MINUS PLUS POW
+%token <op> SHL SHR
+%token <op> LT GT LE GE EQ NE
+%token <op> AND OR XOR NOT
+%token <op> ADD_ASSIGN ASSIGN
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
 %token COMMA
@@ -326,9 +329,13 @@ primary_expr
   {
     $$ = $2
   }
-  | NUMERIC
+  | INTLITERAL
   {
-    $$ = &numericExprNode{$1}
+    $$ = &numericExprNode{true, $1, 0}
+  }
+  | FLOATLITERAL
+  {
+    $$ = &numericExprNode{false, 0, $1}
   }
   ;
 
@@ -553,19 +560,26 @@ func (p *parser) Lex(lval *mtailSymType) int {
     p.t = p.l.nextToken()
     switch p.t.kind {
     case INVALID:
-        p.Error(p.t.text)
-        return EOF
-    case NUMERIC:
-        var err error
-        lval.value, err = strconv.Atoi(p.t.text)
-        if err != nil {
-            p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
-            return INVALID
-        }
+      p.Error(p.t.text)
+      return EOF
+    case INTLITERAL:
+      var err error
+      lval.intVal, err = strconv.ParseInt(p.t.text, 10, 64)
+      if err != nil {
+        p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
+        return INVALID
+      }
+    case FLOATLITERAL:
+      var err error
+      lval.floatVal, err = strconv.ParseFloat(p.t.text, 64)
+      if err != nil {
+        p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
+        return INVALID
+      }
     case LT, GT, LE, GE, NE, EQ, SHL, SHR, AND, OR, XOR, NOT, INC, DIV, MUL, MINUS, PLUS, ASSIGN, ADD_ASSIGN, POW:
-        lval.value = int(p.t.kind)
+      lval.op = int(p.t.kind)
     default:
-        lval.text = p.t.text
+      lval.text = p.t.text
     }
     return int(p.t.kind)
 }
@@ -586,3 +600,9 @@ func (p *parser) inRegex() {
 }
 
 var mtailDebugFlag = flag.Int("mtailDebug", 0, "Set parser debug level.")
+
+type numeric struct {
+  isint bool
+  i int64
+  f float64
+}                

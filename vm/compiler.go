@@ -168,7 +168,7 @@ func (c *compiler) compile(untypedNode node) {
 		c.compile(n.lhs)
 
 	case *numericExprNode:
-		c.emit(instr{push, n.value})
+		c.emit(instr{push, int(n.i)})
 
 	case *stringNode:
 		c.str = append(c.str, n.text)

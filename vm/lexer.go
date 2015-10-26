@@ -402,18 +402,26 @@ Loop:
 
 // Lex a numerical constant.
 func lexNumeric(l *lexer) stateFn {
+	kind := INTLITERAL
 	l.accept()
 Loop:
 	for {
 		switch r := l.next(); {
 		case isDigit(r):
 			l.accept()
+		case r == '.':
+			if kind == FLOATLITERAL {
+				l.backup()
+				break Loop
+			}
+			kind = FLOATLITERAL
+			l.accept()
 		default:
 			l.backup()
 			break Loop
 		}
 	}
-	l.emit(NUMERIC)
+	l.emit(lexeme(kind))
 	return lexProg
 }
 
