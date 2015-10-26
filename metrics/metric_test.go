@@ -150,7 +150,7 @@ func timeGenerator(rand *rand.Rand) time.Time {
 
 func TestMetricJSONRoundTrip(t *testing.T) {
 	rand := rand.New(rand.NewSource(0))
-	f := func(name, prog string, kind MetricType, keys []string, val, ti, tns int64) bool {
+	f := func(name, prog string, kind Kind, keys []string, val, ti, tns int64) bool {
 		m := NewMetric(name, prog, kind, keys...)
 		var labels []string
 		for _ = range keys {

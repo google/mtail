@@ -50,7 +50,7 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 		}
 		m := FindMetricOrNil(store, match[2])
 		if m == nil {
-			var kind metrics.MetricType
+			var kind metrics.Kind
 			switch match[1] {
 			case "counter":
 				kind = metrics.Counter

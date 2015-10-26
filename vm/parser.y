@@ -23,7 +23,7 @@ import (
     texts []string
     flag bool
     n node
-    mtype metrics.MetricType
+    mtype metrics.Kind
 }
 
 %type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement

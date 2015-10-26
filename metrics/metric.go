@@ -12,14 +12,15 @@ import (
 	"time"
 )
 
-// MetricType enumerates the types of metrics supported.
-type MetricType int
+// Kind enumerates the types of metrics supported.
+type Kind int
 
 const (
-	// Counter is a MetricType that is nondecreasing, typically only
+	_ Kind = iota
+	// Counter is a Kind that is nondecreasing, typically only
 	// incrementable.
-	Counter MetricType = iota
-	// Gauge is a MetricType that can take on any value, and may be set
+	Counter
+	// Gauge is a Kind that can take on any value, and may be set
 	// discontinuously from its previous value.
 	Gauge
 	// Timer is a specialisation of Gauge that can be used to store time
@@ -28,7 +29,7 @@ const (
 	Timer
 )
 
-func (m MetricType) String() string {
+func (m Kind) String() string {
 	switch m {
 	case Counter:
 		return "Counter"
@@ -40,13 +41,13 @@ func (m MetricType) String() string {
 	return "Unknown"
 }
 
-// Incrementable describes an interface for Counter MetricTypes, that must be
+// Incrementable describes an interface for Counter Kinds, that must be
 // nondecreasing.
 type Incrementable interface {
 	IncBy(delta int64, ts time.Time)
 }
 
-// Settable describes an interface for Gauge MetricTypes, that can be set to
+// Settable describes an interface for Gauge Kinds, that can be set to
 // any value discontinuously from its previous.
 type Settable interface {
 	Set(value int64, ts time.Time)
@@ -60,20 +61,20 @@ type LabelValue struct {
 }
 
 // Metric is an object that describes a metric, with its name, the creator and
-// owner program name, its MetricType, a sequence of Keys that may be used to
+// owner program name, its Kind, a sequence of Keys that may be used to
 // add dimension to the metric, and a list of LabelValues that contain data for
 // labels in each dimension of the Keys.
 type Metric struct {
 	sync.RWMutex
 	Name        string // Name
 	Program     string // Instantiating program
-	Kind        MetricType
+	Kind        Kind
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).
-func NewMetric(name string, prog string, kind MetricType, keys ...string) *Metric {
+func NewMetric(name string, prog string, kind Kind, keys ...string) *Metric {
 	m := &Metric{Name: name, Program: prog, Kind: kind,
 		Keys:        make([]string, len(keys), len(keys)),
 		LabelValues: make([]*LabelValue, 0)}

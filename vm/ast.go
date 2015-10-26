@@ -68,7 +68,7 @@ type indexedExprNode struct {
 type declNode struct {
 	name         string
 	keys         []string
-	kind         metrics.MetricType
+	kind         metrics.Kind
 	exportedName string
 	m            *metrics.Metric
 	sym          *symbol
