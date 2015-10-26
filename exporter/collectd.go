@@ -33,6 +33,6 @@ func metricToCollectd(hostname string, m *metrics.Metric, l *metrics.LabelSet) s
 		strings.ToLower(m.Kind.String()),
 		formatLabels(m.Name, l.Labels, "-", "-"),
 		*pushInterval,
-		l.Datum.Time.Unix(),
+		l.Datum.Time/1e9,
 		l.Datum.Get())
 }

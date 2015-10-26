@@ -8,6 +8,7 @@ package metrics
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -138,40 +139,33 @@ func (m *Metric) EmitLabelSets(c chan *LabelSet) {
 
 // Datum describes a LabelSet's or LabelValue's value at a given timestamp.
 type Datum struct {
-	sync.RWMutex
 	Value int64
-	Time  time.Time
+	Time  int64 // nanoseconds since unix epoch
 }
 
 func (d *Datum) stamp(timestamp time.Time) {
 	if timestamp.IsZero() {
-		d.Time = time.Now().UTC()
+		atomic.StoreInt64(&d.Time, time.Now().UTC().UnixNano())
 	} else {
-		d.Time = timestamp
+		atomic.StoreInt64(&d.Time, timestamp.UnixNano())
 	}
 }
 
 // Set implements the Settable interface for a Datum.
 func (d *Datum) Set(value int64, timestamp time.Time) {
-	d.Lock()
-	defer d.Unlock()
-	d.Value = value
+	atomic.StoreInt64(&d.Value, value)
 	d.stamp(timestamp)
 }
 
 // IncBy implements the Incrementable interface for a Datum.
 func (d *Datum) IncBy(delta int64, timestamp time.Time) {
-	d.Lock()
-	defer d.Unlock()
-	d.Value += delta
+	atomic.AddInt64(&d.Value, delta)
 	d.stamp(timestamp)
 }
 
 // Get returns the value of the Datum.
 func (d *Datum) Get() int64 {
-	d.RLock()
-	defer d.RUnlock()
-	return d.Value
+	return atomic.LoadInt64(&d.Value)
 }
 
 // Store contains Metrics.
@@ -195,9 +189,7 @@ func (ms *Store) ClearMetrics() {
 }
 
 func (d *Datum) String() string {
-	d.RLock()
-	defer d.RUnlock()
-	return fmt.Sprintf("%v", *d)
+	return fmt.Sprintf("%v@%d", atomic.LoadInt64(&d.Value), atomic.LoadInt64(&d.Time))
 }
 
 func (lv *LabelValue) String() string {

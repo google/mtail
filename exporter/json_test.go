@@ -40,7 +40,7 @@ var handleJSONTests = []struct {
       {
         "Value": {
           "Value": 1,
-          "Time": "0001-01-01T00:00:00Z"
+          "Time": 0
         }
       }
     ]
@@ -74,7 +74,7 @@ var handleJSONTests = []struct {
         ],
         "Value": {
           "Value": 1,
-          "Time": "0001-01-01T00:00:00Z"
+          "Time": 0
         }
       }
     ]
@@ -105,7 +105,7 @@ func TestHandleJSON(t *testing.T) {
 		}
 		diff := pretty.Compare(string(b), tc.expected)
 		if len(diff) > 0 {
-			t.Errorf("test case %s: response not expected: %s", tc.name, diff)
+			t.Errorf("test case %s: response not expected:\n%s", tc.name, diff)
 		}
 	}
 }

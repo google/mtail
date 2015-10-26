@@ -26,5 +26,5 @@ func metricToGraphite(hostname string, m *metrics.Metric, l *metrics.LabelSet) s
 		m.Program,
 		formatLabels(m.Name, l.Labels, ".", "."),
 		l.Datum.Get(),
-		l.Datum.Time.Unix())
+		l.Datum.Time/1e9)
 }
