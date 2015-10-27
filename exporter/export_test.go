@@ -29,7 +29,7 @@ func TestMetricToCollectd(t *testing.T) {
 	if terr != nil {
 		t.Errorf("time parse error: %s", terr)
 	}
-	ms := metrics.Store{}
+	ms := metrics.NewStore()
 
 	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
 	d, _ := scalarMetric.GetDatum()

@@ -63,7 +63,7 @@ func TestReadTestData(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	store := &metrics.Store{}
+	store := metrics.NewStore()
 	ReadTestData(f, "reader_test", store)
 	diff := pretty.Compare(expectedMetrics, store.Metrics)
 	if len(diff) > 0 {

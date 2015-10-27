@@ -175,6 +175,12 @@ type Store struct {
 	Metrics []*Metric
 }
 
+func NewStore() (s *Store) {
+	s = &Store{}
+	s.ClearMetrics()
+	return
+}
+
 // Add is used to add one or more metrics in the Store.
 func (ms *Store) Add(m ...*Metric) {
 	ms.Lock()

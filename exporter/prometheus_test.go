@@ -52,11 +52,11 @@ foo{a="1",b="2",prog="test",instance="gunstar"} 1
 
 func TestHandlePrometheus(t *testing.T) {
 	for _, tc := range handlePrometheusTests {
-		ms := metrics.Store{}
+		ms := metrics.NewStore()
 		for _, metric := range tc.metrics {
 			ms.Add(metric)
 		}
-		o := Options{&ms, "gunstar"}
+		o := Options{ms, "gunstar"}
 		e, err := New(o)
 		if err != nil {
 			t.Fatalf("couldn't make exporter: %s", err)

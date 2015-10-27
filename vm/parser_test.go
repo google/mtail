@@ -210,7 +210,7 @@ foo = 3.14
 
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range mtailPrograms {
-		p := newParser(tc.name, strings.NewReader(tc.program), &metrics.Store{})
+		p := newParser(tc.name, strings.NewReader(tc.program), metrics.NewStore())
 		r := mtailParse(p)
 
 		if r != 0 || p.root == nil || len(p.errors) > 0 {
@@ -224,7 +224,7 @@ func TestParserRoundTrip(t *testing.T) {
 		u := Unparser{}
 		output := u.Unparse(p.root)
 
-		p2 := newParser(tc.name+" 2", strings.NewReader(output), &metrics.Store{})
+		p2 := newParser(tc.name+" 2", strings.NewReader(output), metrics.NewStore())
 		r = mtailParse(p2)
 		if r != 0 || p2.root == nil || len(p2.errors) > 0 {
 			t.Errorf("2nd pass parse errors:\n")
@@ -305,7 +305,7 @@ var InvalidPrograms = []InvalidProgram{
 
 func TestInvalidPrograms(t *testing.T) {
 	for _, tc := range InvalidPrograms {
-		p := newParser(tc.name, strings.NewReader(tc.program), &metrics.Store{})
+		p := newParser(tc.name, strings.NewReader(tc.program), metrics.NewStore())
 		mtailParse(p)
 
 		diff := pretty.Compare(

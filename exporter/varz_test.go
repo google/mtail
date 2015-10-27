@@ -51,11 +51,11 @@ var handleVarzTests = []struct {
 
 func TestHandleVarz(t *testing.T) {
 	for _, tc := range handleVarzTests {
-		ms := metrics.Store{}
+		ms := metrics.NewStore()
 		for _, metric := range tc.metrics {
 			ms.Add(metric)
 		}
-		o := Options{&ms, "gunstar"}
+		o := Options{ms, "gunstar"}
 		e, err := New(o)
 		if err != nil {
 			t.Fatalf("couldn't make exporter: %s", err)

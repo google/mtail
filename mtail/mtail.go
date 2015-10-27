@@ -147,7 +147,7 @@ type Options struct {
 func New(o Options) (*Mtail, error) {
 	store := o.Store
 	if store == nil {
-		store = &metrics.Store{}
+		store = metrics.NewStore()
 	}
 	m := &Mtail{
 		lines:   make(chan string),

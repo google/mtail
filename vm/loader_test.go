@@ -15,7 +15,7 @@ import (
 
 func TestNewLoader(t *testing.T) {
 	w := watcher.NewFakeWatcher()
-	store := &metrics.Store{}
+	store := metrics.NewStore()
 	inLines := make(chan string)
 	fs := &afero.MemMapFs{}
 	o := LoaderOptions{store, inLines, w, fs, false, false, true}
@@ -40,7 +40,7 @@ func TestNewLoader(t *testing.T) {
 
 func TestCompileAndRun(t *testing.T) {
 	var testProgram = "/$/ {}\n"
-	store := &metrics.Store{}
+	store := metrics.NewStore()
 	lines := make(chan string)
 	w := watcher.NewFakeWatcher()
 	fs := &afero.MemMapFs{}
@@ -114,7 +114,7 @@ func TestProcessEvents(t *testing.T) {
 	for _, tt := range testProcessEvents {
 		w := watcher.NewFakeWatcher()
 		w.Add(".")
-		store := &metrics.Store{}
+		store := metrics.NewStore()
 		lines := make(chan string)
 		fs := &afero.MemMapFs{}
 		o := LoaderOptions{store, lines, w, fs, false, false, true}

@@ -57,7 +57,7 @@ func TestExamplePrograms(t *testing.T) {
 	}
 	for _, tc := range exampleProgramTests {
 		w := watcher.NewFakeWatcher()
-		store := &metrics.Store{}
+		store := metrics.NewStore()
 		o := mtail.Options{Progs: tc.programfile, W: w, Store: store}
 		mtail, err := mtail.New(o)
 		if err != nil {
@@ -75,7 +75,7 @@ func TestExamplePrograms(t *testing.T) {
 		}
 		defer j.Close()
 
-		golden_store := &metrics.Store{}
+		golden_store := metrics.NewStore()
 		testdata.ReadTestData(j, tc.programfile, golden_store)
 
 		mtail.Close()

@@ -262,8 +262,8 @@ strtol("deadbeef", 16)
 
 func TestCompile(t *testing.T) {
 	for _, tc := range programs {
-		m := metrics.Store{}
-		v, err := Compile(tc.name, strings.NewReader(tc.source), &m, false, true)
+		m := metrics.NewStore()
+		v, err := Compile(tc.name, strings.NewReader(tc.source), m, false, true)
 		if err != nil {
 			t.Errorf("Compile errors: %q", err)
 			continue
