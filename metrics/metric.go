@@ -8,7 +8,6 @@ package metrics
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -138,67 +137,6 @@ func (m *Metric) EmitLabelSets(c chan *LabelSet) {
 	close(c)
 }
 
-// Datum describes a LabelSet's or LabelValue's value at a given timestamp.
-type Datum struct {
-	Value int64
-	Time  int64 // nanoseconds since unix epoch
-}
-
-func (d *Datum) stamp(timestamp time.Time) {
-	if timestamp.IsZero() {
-		atomic.StoreInt64(&d.Time, time.Now().UTC().UnixNano())
-	} else {
-		atomic.StoreInt64(&d.Time, timestamp.UnixNano())
-	}
-}
-
-// Set implements the Settable interface for a Datum.
-func (d *Datum) Set(value int64, timestamp time.Time) {
-	atomic.StoreInt64(&d.Value, value)
-	d.stamp(timestamp)
-}
-
-// IncBy implements the Incrementable interface for a Datum.
-func (d *Datum) IncBy(delta int64, timestamp time.Time) {
-	atomic.AddInt64(&d.Value, delta)
-	d.stamp(timestamp)
-}
-
-// Get returns the value of the Datum.
-func (d *Datum) Get() int64 {
-	return atomic.LoadInt64(&d.Value)
-}
-
-// Store contains Metrics.
-type Store struct {
-	sync.RWMutex
-	Metrics []*Metric
-}
-
-func NewStore() (s *Store) {
-	s = &Store{}
-	s.ClearMetrics()
-	return
-}
-
-// Add is used to add one or more metrics in the Store.
-func (ms *Store) Add(m ...*Metric) {
-	ms.Lock()
-	defer ms.Unlock()
-	ms.Metrics = append(ms.Metrics, m...)
-}
-
-// ClearMetrics empties the store of all metrics.
-func (ms *Store) ClearMetrics() {
-	ms.Lock()
-	defer ms.Unlock()
-	ms.Metrics = make([]*Metric, 0)
-}
-
-func (d *Datum) String() string {
-	return fmt.Sprintf("%v@%d", atomic.LoadInt64(&d.Value), atomic.LoadInt64(&d.Time))
-}
-
 func (lv *LabelValue) String() string {
 	return fmt.Sprintf("%v", *lv)
 }
@@ -207,22 +145,4 @@ func (m *Metric) String() string {
 	m.RLock()
 	defer m.RUnlock()
 	return fmt.Sprintf("%v", *m)
-}
-
-// Metrics defines a Sortable type for a slice of metrics.
-type Metrics []*Metric
-
-func (ms Metrics) Len() int      { return len(ms) }
-func (ms Metrics) Swap(i, j int) { ms[i], ms[j] = ms[j], ms[i] }
-func (ms Metrics) Less(i, j int) bool {
-	switch {
-	case ms[i].Program < ms[j].Program:
-		return true
-	case ms[i].Name < ms[j].Name:
-		return true
-	case len(ms[i].Keys) < len(ms[j].Keys):
-		return true
-	default:
-		return false
-	}
 }
