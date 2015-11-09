@@ -127,7 +127,9 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	fd, ok := t.files[pathname]
 	t.filesLock.Unlock()
 	if !ok {
-		glog.Infof("No file descriptor found for %q", pathname)
+		// TODO(jaq): This method gets called on directory updates which wastes
+		// cycles.
+		glog.V(1).Infof("No file descriptor found for %q", pathname)
 		return
 	}
 	var err error
