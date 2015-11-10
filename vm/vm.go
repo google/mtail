@@ -238,7 +238,7 @@ func (v *VM) execute(t *thread, i instr) {
 	case inc:
 		// increment a counter
 		var delta int64 = 1
-		// If opnd is nonzero, the delta is on the stack.
+		// If opnd is non-nil, the delta is on the stack.
 		if i.opnd != nil {
 			var err error
 			delta, err = t.PopInt()
