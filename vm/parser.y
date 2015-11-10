@@ -600,9 +600,3 @@ func (p *parser) inRegex() {
 }
 
 var mtailDebugFlag = flag.Int("mtailDebug", 0, "Set parser debug level.")
-
-type numeric struct {
-  isint bool
-  i int64
-  f float64
-}                
