@@ -96,7 +96,7 @@ var builtin = map[string]opcode{
 
 type instr struct {
 	op   opcode
-	opnd int
+	opnd interface{}
 }
 
 type thread struct {
@@ -199,8 +199,9 @@ func (v *VM) execute(t *thread, i instr) {
 		// match regex and store success
 		// Store the results in the operandth element of the stack,
 		// where i.opnd == the matched re index
-		t.matches[i.opnd] = v.re[i.opnd].FindStringSubmatch(v.input)
-		t.match = t.matches[i.opnd] != nil
+		index := i.opnd.(int)
+		t.matches[index] = v.re[index].FindStringSubmatch(v.input)
+		t.match = t.matches[index] != nil
 
 	case cmp:
 		// Compare two elements on the stack.
@@ -226,19 +227,19 @@ func (v *VM) execute(t *thread, i instr) {
 
 	case jnm:
 		if !t.match {
-			t.pc = i.opnd
+			t.pc = i.opnd.(int)
 		}
 
 	case jm:
 		if t.match {
-			t.pc = i.opnd
+			t.pc = i.opnd.(int)
 		}
 
 	case inc:
 		// increment a counter
 		var delta int64 = 1
 		// If opnd is nonzero, the delta is on the stack.
-		if i.opnd > 0 {
+		if i.opnd.(int) > 0 {
 			var err error
 			delta, err = t.PopInt()
 			if err != nil {
@@ -324,11 +325,11 @@ func (v *VM) execute(t *thread, i instr) {
 		// First find the match storage index on the stack,
 		re := t.Pop().(int)
 		// Push the result from the re'th match at operandth index
-		t.Push(t.matches[re][i.opnd])
+		t.Push(t.matches[re][i.opnd.(int)])
 
 	case str:
 		// Put a string constant onto the stack
-		t.Push(v.str[i.opnd])
+		t.Push(v.str[i.opnd.(int)])
 
 	case push:
 		// Push a value onto the stack
@@ -457,16 +458,17 @@ func (v *VM) execute(t *thread, i instr) {
 
 	case mload:
 		// Load a metric at operand onto stack
-		t.Push(v.m[i.opnd])
+		t.Push(v.m[i.opnd.(int)])
 
 	case dload:
 		// Load a datum from metric at TOS onto stack
 		//fmt.Printf("Stack: %v\n", t.stack)
 		m := t.Pop().(*metrics.Metric)
 		//fmt.Printf("Metric: %v\n", m)
-		keys := make([]string, i.opnd)
+		index := i.opnd.(int)
+		keys := make([]string, index)
 		//fmt.Printf("keys: %v\n", keys)
-		for a := 0; a < i.opnd; a++ {
+		for a := 0; a < index; a++ {
 			s := t.Pop().(string)
 			//fmt.Printf("s: %v\n", s)
 			keys[a] = s

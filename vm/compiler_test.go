@@ -30,7 +30,7 @@ var programs = []struct {
 			instr{jnm, 5},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"count a",
 		"counter a_count\n/a$/ { a_count++\n }\n",
 		[]instr{
@@ -38,7 +38,7 @@ var programs = []struct {
 			instr{jnm, 5},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"strptime and capref",
 		"counter foo\n" +
 			"/(.*)/ { strptime($1, \"2006-01-02T15:04:05\")\n" +
@@ -52,7 +52,7 @@ var programs = []struct {
 			instr{strptime, 2},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"strptime and named capref",
 		"counter foo\n" +
 			"/(?P<date>.*)/ { strptime($date, \"2006-01-02T15:04:05\")\n" +
@@ -66,7 +66,7 @@ var programs = []struct {
 			instr{strptime, 2},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"inc by and set",
 		"counter foo\ncounter bar\n" +
 			"/(.*)/ {\n" +
@@ -85,7 +85,7 @@ var programs = []struct {
 			instr{dload, 0},
 			instr{push, 0},
 			instr{capref, 0},
-			instr{set, 0}}},
+			instr{set, nil}}},
 	{"cond expr gt",
 		"counter foo\n" +
 			"1 > 0 {\n" +
@@ -98,7 +98,7 @@ var programs = []struct {
 			instr{jnm, 7},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"cond expr lt",
 		"counter foo\n" +
 			"1 < 0 {\n" +
@@ -111,7 +111,7 @@ var programs = []struct {
 			instr{jnm, 7},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"cond expr eq",
 		"counter foo\n" +
 			"1 == 0 {\n" +
@@ -124,7 +124,7 @@ var programs = []struct {
 			instr{jnm, 7},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"cond expr le",
 		"counter foo\n" +
 			"1 <= 0 {\n" +
@@ -137,7 +137,7 @@ var programs = []struct {
 			instr{jm, 7},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"cond expr ge",
 		"counter foo\n" +
 			"1 >= 0 {\n" +
@@ -150,7 +150,7 @@ var programs = []struct {
 			instr{jm, 7},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"cond expr ne",
 		"counter foo\n" +
 			"1 != 0 {\n" +
@@ -163,7 +163,7 @@ var programs = []struct {
 			instr{jm, 7},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"nested cond",
 		"counter foo\n" +
 			"/(.*)/ {\n" +
@@ -181,7 +181,7 @@ var programs = []struct {
 			instr{jm, 10},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"deco",
 		"counter foo\n" +
 			"counter bar\n" +
@@ -198,10 +198,10 @@ var programs = []struct {
 			instr{jnm, 8},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, 0},
+			instr{inc, nil},
 			instr{mload, 1},
 			instr{dload, 0},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"length",
 		"len(\"foo\") > 0 {\n" +
 			"}\n",
@@ -219,18 +219,18 @@ var programs = []struct {
 		[]instr{
 			instr{push, 1},
 			instr{push, 7},
-			instr{and, 0},
+			instr{and, nil},
 			instr{push, 15},
-			instr{xor, 0},
+			instr{xor, nil},
 			instr{push, 8},
-			instr{or, 0},
+			instr{or, nil},
 			instr{push, 16},
-			instr{not, 0},
+			instr{not, nil},
 			instr{push, 2},
-			instr{shl, 0},
+			instr{shl, nil},
 			instr{push, 1},
 			instr{push, 20},
-			instr{shr, 0}}},
+			instr{shr, nil}}},
 	{"pow", `
 counter a
 counter b
@@ -241,7 +241,7 @@ a ** b
 			instr{dload, 0},
 			instr{mload, 1},
 			instr{dload, 0},
-			instr{pow, 0}}},
+			instr{pow, nil}}},
 	{"indexed expr", `
 counter a by b
 a["string"]++
@@ -250,7 +250,7 @@ a["string"]++
 			instr{str, 0},
 			instr{mload, 0},
 			instr{dload, 1},
-			instr{inc, 0}}},
+			instr{inc, nil}}},
 	{"strtol", `
 strtol("deadbeef", 16)
 `,
