@@ -87,12 +87,15 @@ func New(o Options) (*Tailer, error) {
 	return t, nil
 }
 
+// addWatched adds a path to the list of watched items.
 func (t *Tailer) addWatched(path string) {
 	t.watchedLock.Lock()
 	defer t.watchedLock.Unlock()
 	t.watched[path] = struct{}{}
 }
 
+// isWatching indicates if the path is being watched. It includes both
+// filenames and directories.
 func (t *Tailer) isWatching(path string) bool {
 	t.watchedLock.RLock()
 	defer t.watchedLock.RUnlock()
