@@ -22,5 +22,3 @@ parse tree/ast testing, s-expressions to render expected?
 
 mapping between progs and logs to reduce wasted processing
 
-tail event handling is inefficient for unwatched logs in a watched directory
-    (issue #13)

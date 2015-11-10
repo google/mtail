@@ -130,9 +130,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	fd, ok := t.files[pathname]
 	t.filesLock.Unlock()
 	if !ok {
-		// TODO(jaq): This method gets called on directory updates which wastes
-		// cycles.
-		glog.V(1).Infof("No file descriptor found for %q", pathname)
+		glog.Warningf("No file descriptor found for %q, but is being watched", pathname)
 		return
 	}
 	var err error
@@ -187,11 +185,6 @@ func inode(f os.FileInfo) uint64 {
 
 // handleLogCreate handles both new and rotated log files.
 func (t *Tailer) handleLogCreate(pathname string) {
-	if !t.isWatching(pathname) {
-		glog.V(1).Info("Not watching path %q, ignoring.\n", pathname)
-		return
-	}
-
 	t.filesLock.Lock()
 	fd, ok := t.files[pathname]
 	t.filesLock.Unlock()
@@ -232,11 +225,6 @@ func (t *Tailer) handleLogCreate(pathname string) {
 // start or end of the file. Rotated logs should read from the start, but logs
 // opened for the first time read from the end.
 func (t *Tailer) openLogPath(pathname string, seekStart bool) {
-	if !t.isWatching(pathname) {
-		glog.Infof("Not watching %q, ignoring.", pathname)
-		return
-	}
-
 	d := path.Dir(pathname)
 	if !t.isWatching(d) {
 		err := t.w.Add(d)
@@ -311,9 +299,13 @@ func (t *Tailer) run() {
 	for e := range t.w.Events() {
 		switch e := e.(type) {
 		case watcher.UpdateEvent:
-			t.handleLogUpdate(e.Pathname)
+			if t.isWatching(e.Pathname) {
+				t.handleLogUpdate(e.Pathname)
+			}
 		case watcher.CreateEvent:
-			t.handleLogCreate(e.Pathname)
+			if t.isWatching(e.Pathname) {
+				t.handleLogCreate(e.Pathname)
+			}
 		default:
 			glog.Infof("Unexpected event %q", e)
 		}
