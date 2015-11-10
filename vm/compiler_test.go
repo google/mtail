@@ -258,6 +258,11 @@ strtol("deadbeef", 16)
 			instr{str, 0},
 			instr{push, 16},
 			instr{strtol, 2}}},
+	{"float", `
+20.0
+`,
+		[]instr{
+			instr{push, 20.0}}},
 }
 
 func TestCompile(t *testing.T) {
