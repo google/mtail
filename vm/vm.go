@@ -239,7 +239,7 @@ func (v *VM) execute(t *thread, i instr) {
 		// increment a counter
 		var delta int64 = 1
 		// If opnd is nonzero, the delta is on the stack.
-		if i.opnd.(int) > 0 {
+		if i.opnd != nil {
 			var err error
 			delta, err = t.PopInt()
 			if err != nil {

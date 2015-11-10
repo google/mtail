@@ -24,7 +24,7 @@ var instructions = []struct {
 }{
 	// Composite literals require too many explicit conversions.
 	{"inc",
-		instr{inc, 0},
+		instr{inc, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{0},
