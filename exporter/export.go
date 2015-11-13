@@ -6,7 +6,6 @@
 package exporter
 
 import (
-	"bytes"
 	"errors"
 	"expvar"
 	"flag"
@@ -99,17 +98,6 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 		exportTotal.Add(1)
 		lc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lc)
-		// This goroutine reads any bytes returned from the remote end, to keep
-		// it unblocked.
-		go func() {
-			var buf bytes.Buffer
-			for {
-				_, err := buf.ReadFrom(c)
-				if err == nil {
-					return
-				}
-			}
-		}()
 		for l := range lc {
 			line := f(e.hostname, m, l)
 			n, err := fmt.Fprint(c, line)
