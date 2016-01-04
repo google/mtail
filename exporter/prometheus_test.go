@@ -48,6 +48,30 @@ foo{prog="test",instance="gunstar"} 1
 foo{a="1",b="2",prog="test",instance="gunstar"} 1
 `,
 	},
+	{"gauge",
+		[]*metrics.Metric{
+			&metrics.Metric{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Gauge,
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.Datum{Value: 1}}}},
+		},
+		`# TYPE foo gauge
+foo{prog="test",instance="gunstar"} 1
+`,
+	},
+	{"timer",
+		[]*metrics.Metric{
+			&metrics.Metric{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Timer,
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.Datum{Value: 1}}}},
+		},
+		`# TYPE foo gauge
+foo{prog="test",instance="gunstar"} 1
+`,
+	},
 }
 
 func TestHandlePrometheus(t *testing.T) {
