@@ -59,6 +59,18 @@ func TestMetricToCollectd(t *testing.T) {
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
+
+	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer)
+	d, _ = timingMetric.GetDatum()
+	d.Set(123, ts)
+	ms.Add(timingMetric)
+
+	r = FakeSocketWrite(metricToCollectd, timingMetric)
+	expected = []string{"PUTVAL \"gunstar/mtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
+	diff = pretty.Compare(r, expected)
+	if len(diff) > 0 {
+		t.Errorf("String didn't match:\n%s", diff)
+	}
 }
 
 func TestMetricToGraphite(t *testing.T) {
