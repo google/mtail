@@ -36,10 +36,11 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 	for _, m := range e.store.Metrics {
 		m.RLock()
 		metricExportTotal.Add(1)
+
 		fmt.Fprintf(w,
 			"# TYPE %s %s\n",
 			noHyphens(m.Name),
-			strings.ToLower(m.Kind.String()))
+			kindToPrometheusType(m.Kind))
 		lc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lc)
 		for l := range lc {
@@ -62,4 +63,11 @@ func metricToPrometheus(hostname string, m *metrics.Metric, l *metrics.LabelSet)
 		noHyphens(m.Name),
 		strings.Join(s, ","),
 		l.Datum.Get())
+}
+
+func kindToPrometheusType(kind metrics.Kind) string {
+	if kind != metrics.Timer {
+		return strings.ToLower(kind.String())
+	}
+	return "gauge"
 }

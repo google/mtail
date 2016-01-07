@@ -30,9 +30,16 @@ func metricToCollectd(hostname string, m *metrics.Metric, l *metrics.LabelSet) s
 	return fmt.Sprintf(collectdFormat,
 		hostname,
 		m.Program,
-		strings.ToLower(m.Kind.String()),
+		kindToCollectdType(m.Kind),
 		formatLabels(m.Name, l.Labels, "-", "-"),
 		*pushInterval,
 		l.Datum.Time/1e9,
 		l.Datum.Get())
+}
+
+func kindToCollectdType(kind metrics.Kind) string {
+	if kind != metrics.Timer {
+		return strings.ToLower(kind.String())
+	}
+	return "gauge"
 }
