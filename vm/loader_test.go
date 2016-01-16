@@ -141,7 +141,7 @@ func TestProcessEvents(t *testing.T) {
 				w.InjectDelete(e.Pathname)
 			case watcher.UpdateEvent:
 				if e.Pathname != "notexist.mtail" {
-					f, err := fs.Open(e.Pathname)
+					f, err := fs.Create(e.Pathname)
 					if err != nil {
 						t.Fatalf("Couldn't open file %s for test: %s", e.Pathname, err)
 					}
