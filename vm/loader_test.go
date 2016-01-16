@@ -17,7 +17,7 @@ func TestNewLoader(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
 	inLines := make(chan string)
-	fs := &afero.MemMapFs{}
+	fs := afero.NewMemMapFs()
 	o := LoaderOptions{store, inLines, w, fs, false, false, true}
 	l, err := NewLoader(o)
 	if err != nil {
@@ -43,7 +43,7 @@ func TestCompileAndRun(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan string)
 	w := watcher.NewFakeWatcher()
-	fs := &afero.MemMapFs{}
+	fs := afero.NewMemMapFs()
 	o := LoaderOptions{store, lines, w, fs, false, false, true}
 	l, err := NewLoader(o)
 	if err != nil {
@@ -116,7 +116,7 @@ func TestProcessEvents(t *testing.T) {
 		w.Add(".")
 		store := metrics.NewStore()
 		lines := make(chan string)
-		fs := &afero.MemMapFs{}
+		fs := afero.NewMemMapFs()
 		o := LoaderOptions{store, lines, w, fs, false, false, true}
 		l, err := NewLoader(o)
 		if err != nil {

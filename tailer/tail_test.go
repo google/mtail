@@ -18,7 +18,7 @@ import (
 )
 
 func makeTestTail(t *testing.T) (*Tailer, chan string, *watcher.FakeWatcher, afero.Fs) {
-	fs := &afero.MemMapFs{}
+	fs := afero.NewMemMapFs()
 	w := watcher.NewFakeWatcher()
 	lines := make(chan string, 1)
 	o := Options{lines, w, fs}
