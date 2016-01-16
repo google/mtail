@@ -8,7 +8,6 @@ import (
 	"os"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/watcher"
@@ -129,20 +128,16 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	}
 	f.Seek(0, 0)
 	w.InjectUpdate(logfile)
-	// These sleeps are due to afero using the same data structure for both
-	// this thread and the method under test, so the file offset is shared.  We
-	// have to wait for the handleLogUpdate method to run and as yet there's no
-	// signal that this occurred.
-	time.Sleep(1 * time.Millisecond)
 
+	f.Seek(1, 0)
 	_, err = f.WriteString("b")
 	if err != nil {
 		t.Error(err)
 	}
 	f.Seek(1, 0)
 	w.InjectUpdate(logfile)
-	time.Sleep(1 * time.Millisecond)
 
+	f.Seek(2, 0)
 	_, err = f.WriteString("\n")
 	if err != nil {
 		t.Error(err)
