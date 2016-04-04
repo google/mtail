@@ -151,11 +151,16 @@ func TestHandleLogRotation(t *testing.T) {
 		select {
 		case <-hup:
 			// touch log file
-			logFile, err = os.Create(logFilepath)
+			logFile, err = os.OpenFile(logFilepath, os.O_RDWR|os.O_CREATE, 0)
 			if err != nil {
 				t.Errorf("could not touch log file: %s", err)
 			}
 			defer logFile.Close()
+			time.Sleep(100 * time.Millisecond)
+			err = logFile.Chmod(0666)
+			if err != nil {
+				t.Errorf("could not chmod log file to read: %s", err)
+			}
 		default:
 			logFile.WriteString(fmt.Sprintf("%d\n", i))
 			time.Sleep(100 * time.Millisecond)
