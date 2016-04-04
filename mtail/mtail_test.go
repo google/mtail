@@ -156,7 +156,7 @@ func TestHandleLogRotation(t *testing.T) {
 				t.Errorf("could not touch log file: %s", err)
 			}
 			defer logFile.Close()
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(1 * time.Millisecond)
 			err = logFile.Chmod(0666)
 			if err != nil {
 				t.Errorf("could not chmod log file to read: %s", err)

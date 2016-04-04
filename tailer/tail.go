@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+	"time"
 	"unicode/utf8"
 
 	"github.com/golang/glog"
@@ -208,8 +209,6 @@ func (t *Tailer) handleLogCreate(pathname string) {
 			if err != nil {
 				glog.Info("Failed removing watches on", pathname)
 			}
-			// Always seek to start on log rotation.
-			glog.Infof("Seek to start on %s", pathname)
 			t.openLogPath(pathname, true)
 		} else {
 			glog.Infof("Path %s already being watched, and inode not changed.",
@@ -224,7 +223,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 // openLogPath opens a new log file at pathname, and optionally seeks to the
 // start or end of the file. Rotated logs should read from the start, but logs
 // opened for the first time read from the end.
-func (t *Tailer) openLogPath(pathname string, seekStart bool) {
+func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 	d := path.Dir(pathname)
 	if !t.isWatching(d) {
 		err := t.w.Add(d)
@@ -234,8 +233,15 @@ func (t *Tailer) openLogPath(pathname string, seekStart bool) {
 		t.addWatched(d)
 	}
 
-	f, err := t.fs.Open(pathname)
-	if err != nil {
+	retries := 3
+	retryDelay := 1 * time.Millisecond
+	var f afero.File
+	var err error
+	for retries > 0 {
+		f, err = t.fs.Open(pathname)
+		if err == nil {
+			break
+		}
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
 		if os.IsNotExist(err) {
@@ -243,9 +249,16 @@ func (t *Tailer) openLogPath(pathname string, seekStart bool) {
 		}
 		glog.Infof("Failed to open %q for reading: %s", pathname, err)
 		logErrors.Add(pathname, 1)
-		return
+		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
+		if seenBefore {
+			retries = retries - 1
+			time.Sleep(retryDelay)
+			retryDelay = retryDelay + retryDelay
+		} else {
+			return
+		}
 	}
-	err = t.startNewFile(f, seekStart)
+	err = t.startNewFile(f, seenBefore)
 	if err != nil {
 		glog.Info(err)
 	}
