@@ -127,7 +127,6 @@ func TestHandleLogRotation(t *testing.T) {
 	}
 	defer logFile.Close()
 	// Create a logger
-	stop := make(chan bool, 1)
 	hup := make(chan bool, 1)
 	pathnames := []string{logFilepath}
 	m := startMtail(t, pathnames, "")
@@ -146,32 +145,26 @@ func TestHandleLogRotation(t *testing.T) {
 			}
 		}
 	}()
-	go func() {
-		logFile := logFile
-		var err error
-		i := 0
-		running := true
-		for running {
-			select {
-			case <-hup:
-				// touch log file
-				logFile, err = os.Create(logFilepath)
-				if err != nil {
-					t.Errorf("could not touch log file: %s", err)
-				}
-				defer logFile.Close()
-			default:
-				logFile.WriteString(fmt.Sprintf("%d\n", i))
-				time.Sleep(100 * time.Millisecond)
-				i++
-				if i >= 10 {
-					running = false
-				}
+	i := 0
+	running := true
+	for running {
+		select {
+		case <-hup:
+			// touch log file
+			logFile, err = os.Create(logFilepath)
+			if err != nil {
+				t.Errorf("could not touch log file: %s", err)
+			}
+			defer logFile.Close()
+		default:
+			logFile.WriteString(fmt.Sprintf("%d\n", i))
+			time.Sleep(100 * time.Millisecond)
+			i++
+			if i >= 10 {
+				running = false
 			}
 		}
-		stop <- true
-	}()
-	<-stop
+	}
 	expected := "10"
 	if vm.LineCount.String() != expected {
 		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
