@@ -153,7 +153,7 @@ func TestHandleLogRotation(t *testing.T) {
 			// touch log file
 			logFile, err = os.OpenFile(logFilepath, os.O_RDWR|os.O_CREATE, 0)
 			if err != nil {
-				t.Errorf("could not touch log file: %s", err)
+				t.Errorf("could not create rotated log file: %s", err)
 			}
 			defer logFile.Close()
 			time.Sleep(1 * time.Millisecond)
@@ -235,7 +235,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 
 	logFile, err := os.Create(newLogFilepath)
 	if err != nil {
-		t.Errorf("could not touch log file: %s", err)
+		t.Errorf("could not open log file: %s", err)
 	}
 	defer logFile.Close()
 	expected := "0"
