@@ -134,6 +134,19 @@ func TestHandleLogRotation(t *testing.T) {
 	defer m.Close()
 
 	go func() {
+		for {
+			select {
+			case <-time.After(5 * 100 * time.Millisecond):
+				err = os.Rename(logFilepath, logFilepath+".1")
+				if err != nil {
+					t.Errorf("could not rename log file: %s", err)
+				}
+				hup <- true
+				return
+			}
+		}
+	}()
+	go func() {
 		logFile := logFile
 		var err error
 		i := 0
@@ -157,19 +170,6 @@ func TestHandleLogRotation(t *testing.T) {
 			}
 		}
 		stop <- true
-	}()
-	go func() {
-		for {
-			select {
-			case <-time.After(5 * 100 * time.Millisecond):
-				err = os.Rename(logFilepath, logFilepath+".1")
-				if err != nil {
-					t.Errorf("could not rename log file: %s", err)
-				}
-				hup <- true
-				return
-			}
-		}
 	}()
 	<-stop
 	expected := "10"
