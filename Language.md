@@ -67,6 +67,20 @@ variable > 0 {
 
 In the above program, ACTION1 is taken on each line input if that line matches the word `foo`, and ACTION2 is taken on each line if when that line is read, the variable `variable` is greater than 0.
 
+To re-use regular expressions, you can assign them to a `const` identifier:
+
+```
+const PREFIX /^\w+\W+\d+ /
+
+// + PREFIX {
+  ACTION1
+}
+
+// + PREFIX + /foo/ {
+  ACTION2
+}
+```
+In this example, ACTION1 is done for every line that starts with the prefix regex, and ACTION2 is done for the subset of those lines that also contain 'foo'.
 
 ## Incrementing a Counter
 
