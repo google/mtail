@@ -38,6 +38,12 @@ Variables can be dimensioned with one or more axes, with the `by` keyword.
 counter bytes by operation, direction
 ```
 
+Putting the `hidden` keyword at the start of the declaration means it won't be exported, which can be useful for storing temporary information.
+
+```
+hidden counter login_failures
+```
+
 ## Pattern/Actions
 
 mtail programs look a lot like awk programs.  They consist of a list of conditional expressions followed by a brace-delimited block of code:
