@@ -124,7 +124,7 @@ A regular expression that extracts the timestamp in boring old syslog format loo
 }
 ```
 
-Buyer beware!  The format string used by mtail is the same as the [golang format string](http://golang.org/src/pkg/time/format.go), which is completely unlike that used by C's strptime.  The format string must always be the 15th of January 2006 at 3:04:05 PM.  See the documentation for the **ANSIC** format in the above link for more details.
+Buyer beware!  The format string used by mtail is the same as the [golang format string](http://golang.org/src/pkg/time/format.go), which is completely unlike that used by C's strptime.  The format string must always be the 2nd of January 2006 at 3:04:05 PM.  See the documentation for the **ANSIC** format in the above link for more details.
 
 ## Nested Actions
 
