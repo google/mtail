@@ -47,7 +47,7 @@ var mtailPrograms = []validProgram{
 	{"simple pattern action",
 		"/foo/ {}\n"},
 
-	{"more complex action, calling builtin",
+	{"more complex action, increment counter",
 		"counter line_count\n" +
 			"/foo/ {\n" +
 			"  line_count++\n" +
@@ -206,6 +206,17 @@ var mtailPrograms = []validProgram{
 /foo/ {
 foo = 3.14
 }`},
+	{"simple otherwise action",
+		"otherwise {}\n"},
+
+	{"pattern action then otherwise action",
+		`counter line_count by type
+		/foo/ {
+			line_count["foo"]++
+		}
+		otherwise {
+			line_count["misc"] += 10
+		}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {

@@ -188,6 +188,9 @@ func (u *Unparser) unparse(n node) {
 	case *nextNode:
 		u.emit("next")
 
+	case *otherwiseNode:
+		u.emit("otherwise")
+
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}

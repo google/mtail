@@ -43,7 +43,7 @@ import (
 // Types
 %token COUNTER GAUGE TIMER
 // Reserved words
-%token AS BY CONST HIDDEN DEF NEXT
+%token AS BY CONST HIDDEN DEF NEXT OTHERWISE
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -369,6 +369,10 @@ cond
   | rel_expr
   {
     $$ = $1
+  }
+  | OTHERWISE
+  {
+    $$ = &otherwiseNode{}
   }
   ;
 
