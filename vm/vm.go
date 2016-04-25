@@ -570,6 +570,10 @@ func (v *VM) DumpByteCode(name string) {
 	for i, re := range v.re {
 		fmt.Printf(" %8d /%s/\n", i, re)
 	}
+	fmt.Println("Strings")
+	for i, str := range v.str {
+		fmt.Printf(" %8d \"%s\"\n", i, str)
+	}
 	w := new(tabwriter.Writer)
 	w.Init(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight)
 
