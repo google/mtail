@@ -1,0 +1,18 @@
+counter yes
+counter maybe
+counter no
+
+# To make ex_test.go happy
+strptime("2016-04-25T20:14:42Z", "2006-01-02T15:04:05Z07:00")
+
+/1/ {
+  /^1$/ {
+      yes++
+  }
+  otherwise {
+      maybe++
+  }
+}
+otherwise {
+    no++
+}
