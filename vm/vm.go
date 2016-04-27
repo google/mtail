@@ -24,65 +24,69 @@ import (
 type opcode int
 
 const (
-	match     opcode = iota // Match a regular expression against input, and set the match register.
-	cmp                     // Compare two values on the stack and set the match register.
-	jnm                     // Jump if no match.
-	jm                      // Jump if match.
-	inc                     // Increment a variable value
-	strptime                // Parse into the timestamp register
-	timestamp               // Return value of timestamp register onto TOS.
-	settime                 // Set timestamp register to value at TOS.
-	push                    // Push operand onto stack
-	capref                  // Push capture group reference at operand onto stack
-	str                     // Push string constant at operand onto stack
-	set                     // Set a variable value
-	add                     // Add top values on stack and push to stack
-	sub                     // Subtract top value from second top value on stack, and push to stack.
-	mul                     // Multiply top values on stack and push to stack
-	div                     // Divide top value into second top on stack, and push
-	pow                     // Put second TOS to power of TOS, and push.
-	and                     // Bitwise AND the 2 at top of stack, and push result
-	or                      // Bitwise OR the 2 at top of stack, and push result
-	xor                     // Bitwise XOR the 2 at top of stack, and push result
-	not                     // Bitwise NOT the top of stack, and push result
-	shl                     // Shift TOS left, push result
-	shr                     // Shift TOS right, push result
-	mload                   // Load metric at operand onto top of stack
-	dload                   // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
-	tolower                 // Convert the string at the top of the stack to lowercase.
-	length                  // Compute the length of a string.
-	strtol                  // Convert a string to a number, given a base.
+	match      opcode = iota // Match a regular expression against input, and set the match register.
+	cmp                      // Compare two values on the stack and set the match register.
+	jnm                      // Jump if no match.
+	jm                       // Jump if match.
+	inc                      // Increment a variable value
+	strptime                 // Parse into the timestamp register
+	timestamp                // Return value of timestamp register onto TOS.
+	settime                  // Set timestamp register to value at TOS.
+	push                     // Push operand onto stack
+	capref                   // Push capture group reference at operand onto stack
+	str                      // Push string constant at operand onto stack
+	set                      // Set a variable value
+	add                      // Add top values on stack and push to stack
+	sub                      // Subtract top value from second top value on stack, and push to stack.
+	mul                      // Multiply top values on stack and push to stack
+	div                      // Divide top value into second top on stack, and push
+	pow                      // Put second TOS to power of TOS, and push.
+	and                      // Bitwise AND the 2 at top of stack, and push result
+	or                       // Bitwise OR the 2 at top of stack, and push result
+	xor                      // Bitwise XOR the 2 at top of stack, and push result
+	not                      // Bitwise NOT the top of stack, and push result
+	shl                      // Shift TOS left, push result
+	shr                      // Shift TOS right, push result
+	mload                    // Load metric at operand onto top of stack
+	dload                    // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
+	tolower                  // Convert the string at the top of the stack to lowercase.
+	length                   // Compute the length of a string.
+	strtol                   // Convert a string to a number, given a base.
+	setmatched               // Set "matched" flag
+	otherwise                // Only match if "matched" flag is false.
 )
 
 var opNames = map[opcode]string{
-	match:     "match",
-	cmp:       "cmp",
-	jnm:       "jnm",
-	jm:        "jm",
-	inc:       "inc",
-	strptime:  "strptime",
-	timestamp: "timestamp",
-	settime:   "settime",
-	push:      "push",
-	capref:    "capref",
-	str:       "str",
-	set:       "set",
-	add:       "add",
-	sub:       "sub",
-	mul:       "mul",
-	div:       "div",
-	pow:       "pow",
-	shl:       "shl",
-	shr:       "shr",
-	and:       "and",
-	or:        "or",
-	xor:       "xor",
-	not:       "not",
-	mload:     "mload",
-	dload:     "dload",
-	tolower:   "tolower",
-	length:    "length",
-	strtol:    "strtol",
+	match:      "match",
+	cmp:        "cmp",
+	jnm:        "jnm",
+	jm:         "jm",
+	inc:        "inc",
+	strptime:   "strptime",
+	timestamp:  "timestamp",
+	settime:    "settime",
+	push:       "push",
+	capref:     "capref",
+	str:        "str",
+	set:        "set",
+	add:        "add",
+	sub:        "sub",
+	mul:        "mul",
+	div:        "div",
+	pow:        "pow",
+	shl:        "shl",
+	shr:        "shr",
+	and:        "and",
+	or:         "or",
+	xor:        "xor",
+	not:        "not",
+	mload:      "mload",
+	dload:      "dload",
+	tolower:    "tolower",
+	length:     "length",
+	strtol:     "strtol",
+	setmatched: "setmatched",
+	otherwise:  "otherwise",
 }
 
 var builtin = map[string]opcode{
@@ -102,6 +106,7 @@ type instr struct {
 type thread struct {
 	pc      int              // Program counter.
 	match   bool             // Match register.
+	matched bool             // Flag set if any match has been found.
 	matches map[int][]string // Match result variables.
 	time    time.Time        // Time register.
 	stack   []interface{}    // Data stack.
@@ -504,6 +509,13 @@ func (v *VM) execute(t *thread, i instr) {
 		}
 		t.Push(i)
 
+	case setmatched:
+		t.matched = i.opnd.(bool)
+
+	case otherwise:
+		// Only match if the matched flag is false.
+		t.match = !t.matched
+
 	default:
 		v.errorf("illegal instruction: %q", i.op)
 	}
@@ -514,6 +526,7 @@ func (v *VM) execute(t *thread, i instr) {
 // program, until termination.
 func (v *VM) processLine(input string) {
 	t := new(thread)
+	t.matched = false
 	v.t = t
 	v.input = input
 	t.stack = make([]interface{}, 0)
@@ -579,7 +592,7 @@ func (v *VM) DumpByteCode(name string) {
 
 	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
 	for n, i := range v.prog {
-		fmt.Fprintf(w, "\t%d\t%s\t%d\t\n", n, opNames[i.op], i.opnd)
+		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, opNames[i.op], i.opnd)
 	}
 	w.Flush()
 }

@@ -60,7 +60,7 @@ var lexerTests = []lexerTest{
 		token{POW, "**", position{"operators", 0, 46, 47}},
 		token{EOF, "", position{"operators", 0, 48, 48}}}},
 	{"keywords",
-		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\n", []token{
+		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\n", []token{
 			token{COUNTER, "counter", position{"keywords", 0, 0, 6}},
 			token{NL, "\n", position{"keywords", 1, 7, -1}},
 			token{GAUGE, "gauge", position{"keywords", 1, 0, 4}},
@@ -79,7 +79,9 @@ var lexerTests = []lexerTest{
 			token{NL, "\n", position{"keywords", 8, 5, -1}},
 			token{TIMER, "timer", position{"keywords", 8, 0, 4}},
 			token{NL, "\n", position{"keywords", 9, 5, -1}},
-			token{EOF, "", position{"keywords", 9, 0, 0}}}},
+			token{OTHERWISE, "otherwise", position{"keywords", 9, 0, 8}},
+			token{NL, "\n", position{"keywords", 10, 9, -1}},
+			token{EOF, "", position{"keywords", 10, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\n", []token{
 			token{BUILTIN, "strptime", position{"builtins", 0, 0, 7}},

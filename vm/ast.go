@@ -94,3 +94,6 @@ type decoNode struct {
 
 type nextNode struct {
 }
+
+type otherwiseNode struct {
+}

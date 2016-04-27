@@ -85,9 +85,13 @@ func (c *compiler) compile(untypedNode node) {
 		// Save PC of previous jump instruction
 		// (see regexNode and relNode cases, which will emit a jump)
 		pc := len(c.prog) - 1
+		// Set matched flag false for children
+		c.emit(instr{setmatched, false})
 		for _, child := range n.children {
 			c.compile(child)
 		}
+		// Re-set matched flag to true for rest of current block
+		c.emit(instr{setmatched, true})
 		// Rewrite jump target to jump to instruction after block.
 		c.prog[pc].opnd = len(c.prog)
 
@@ -217,6 +221,10 @@ func (c *compiler) compile(untypedNode node) {
 		for _, child := range deco.children {
 			c.compile(child)
 		}
+
+	case *otherwiseNode:
+		c.emit(instr{op: otherwise})
+		c.emit(instr{op: jnm})
 
 	default:
 		c.errorf("undefined node type %T (%q)6", untypedNode, untypedNode)

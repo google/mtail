@@ -49,6 +49,11 @@ var exampleProgramTests = []struct {
 		"testdata/xntp3_peerstats",
 		"testdata/xntp3_peerstats.golden",
 	},
+	{
+		"examples/otherwise.mtail",
+		"testdata/otherwise.log",
+		"testdata/otherwise.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {

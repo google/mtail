@@ -27,46 +27,54 @@ var programs = []struct {
 		"counter line_count\n/$/ { line_count++\n }\n",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 5},
+			instr{jnm, 7},
+			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 	{"count a",
 		"counter a_count\n/a$/ { a_count++\n }\n",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 5},
+			instr{jnm, 7},
+			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 	{"strptime and capref",
 		"counter foo\n" +
 			"/(.*)/ { strptime($1, \"2006-01-02T15:04:05\")\n" +
 			"foo++\n}\n",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 9},
+			instr{jnm, 11},
+			instr{setmatched, false},
 			instr{push, 0},
 			instr{capref, 0},
 			instr{str, 0},
 			instr{strptime, 2},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 	{"strptime and named capref",
 		"counter foo\n" +
 			"/(?P<date>.*)/ { strptime($date, \"2006-01-02T15:04:05\")\n" +
 			"foo++\n }\n",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 9},
+			instr{jnm, 11},
+			instr{setmatched, false},
 			instr{push, 0},
 			instr{capref, 1},
 			instr{str, 0},
 			instr{strptime, 2},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 	{"inc by and set",
 		"counter foo\ncounter bar\n" +
 			"/(.*)/ {\n" +
@@ -75,7 +83,8 @@ var programs = []struct {
 			"}\n",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 12},
+			instr{jnm, 14},
+			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
 			instr{push, 0},
@@ -85,7 +94,8 @@ var programs = []struct {
 			instr{dload, 0},
 			instr{push, 0},
 			instr{capref, 0},
-			instr{set, nil}}},
+			instr{set, nil},
+			instr{setmatched, true}}},
 	{"cond expr gt",
 		"counter foo\n" +
 			"1 > 0 {\n" +
@@ -95,10 +105,12 @@ var programs = []struct {
 			instr{push, 1},
 			instr{push, 0},
 			instr{cmp, 1},
-			instr{jnm, 7},
+			instr{jnm, 9},
+			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 	{"cond expr lt",
 		"counter foo\n" +
 			"1 < 0 {\n" +
@@ -108,10 +120,12 @@ var programs = []struct {
 			instr{push, 1},
 			instr{push, 0},
 			instr{cmp, -1},
-			instr{jnm, 7},
+			instr{jnm, 9},
+			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 	{"cond expr eq",
 		"counter foo\n" +
 			"1 == 0 {\n" +
@@ -121,10 +135,12 @@ var programs = []struct {
 			instr{push, 1},
 			instr{push, 0},
 			instr{cmp, 0},
-			instr{jnm, 7},
+			instr{jnm, 9},
+			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 	{"cond expr le",
 		"counter foo\n" +
 			"1 <= 0 {\n" +
@@ -134,10 +150,12 @@ var programs = []struct {
 			instr{push, 1},
 			instr{push, 0},
 			instr{cmp, 1},
-			instr{jm, 7},
+			instr{jm, 9},
+			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 	{"cond expr ge",
 		"counter foo\n" +
 			"1 >= 0 {\n" +
@@ -147,10 +165,12 @@ var programs = []struct {
 			instr{push, 1},
 			instr{push, 0},
 			instr{cmp, -1},
-			instr{jm, 7},
+			instr{jm, 9},
+			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 	{"cond expr ne",
 		"counter foo\n" +
 			"1 != 0 {\n" +
@@ -160,10 +180,12 @@ var programs = []struct {
 			instr{push, 1},
 			instr{push, 0},
 			instr{cmp, 0},
-			instr{jm, 7},
+			instr{jm, 9},
+			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 	{"nested cond",
 		"counter foo\n" +
 			"/(.*)/ {\n" +
@@ -173,15 +195,19 @@ var programs = []struct {
 			"}\n",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 10},
+			instr{jnm, 14},
+			instr{setmatched, false},
 			instr{push, 0},
 			instr{capref, 0},
 			instr{push, 1},
 			instr{cmp, 1},
-			instr{jm, 10},
+			instr{jm, 13},
+			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true},
+			instr{setmatched, true}}},
 	{"deco",
 		"counter foo\n" +
 			"counter bar\n" +
@@ -195,13 +221,15 @@ var programs = []struct {
 			"@foo { bar++\n }\n",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 8},
+			instr{jnm, 10},
+			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
 			instr{inc, nil},
 			instr{mload, 1},
 			instr{dload, 0},
-			instr{inc, nil}}},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 	{"length",
 		"len(\"foo\") > 0 {\n" +
 			"}\n",
@@ -210,7 +238,9 @@ var programs = []struct {
 			instr{length, 1},
 			instr{push, 0},
 			instr{cmp, 1},
-			instr{jnm, 5}}},
+			instr{jnm, 7},
+			instr{setmatched, false},
+			instr{setmatched, true}}},
 	{"bitwise", `
 1 & 7 ^ 15 | 8
 ~ 16 << 2
@@ -263,6 +293,20 @@ strtol("deadbeef", 16)
 `,
 		[]instr{
 			instr{push, 20.0}}},
+	{"otherwise", `
+counter a
+otherwise {
+	a++
+}
+`,
+		[]instr{
+			instr{otherwise, nil},
+			instr{jnm, 7},
+			instr{setmatched, false},
+			instr{mload, 0},
+			instr{dload, 0},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 }
 
 func TestCompile(t *testing.T) {

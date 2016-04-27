@@ -58,6 +58,7 @@ var lexemeName = map[lexeme]string{
 	DECO:       "DECO",
 	NEXT:       "NEXT",
 	CONST:      "CONST",
+	OTHERWISE:  "OTHERWISE",
 }
 
 func (t lexeme) String() string {
@@ -69,15 +70,16 @@ func (t lexeme) String() string {
 
 // List of keywords.  Keep this list sorted!
 var keywords = map[string]lexeme{
-	"as":      AS,
-	"by":      BY,
-	"const":   CONST,
-	"counter": COUNTER,
-	"def":     DEF,
-	"gauge":   GAUGE,
-	"hidden":  HIDDEN,
-	"next":    NEXT,
-	"timer":   TIMER,
+	"as":        AS,
+	"by":        BY,
+	"const":     CONST,
+	"counter":   COUNTER,
+	"def":       DEF,
+	"gauge":     GAUGE,
+	"hidden":    HIDDEN,
+	"next":      NEXT,
+	"otherwise": OTHERWISE,
+	"timer":     TIMER,
 }
 
 // List of builtin functions.  Keep this list sorted!
