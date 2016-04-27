@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -61,9 +62,12 @@ func (m *Mtail) OneShot(logfile string, print bool) (count int64, err error) {
 Loop:
 	for {
 		line, err := r.ReadString('\n')
+		line = strings.TrimSuffix(line, "\n")
 		switch {
 		case err == io.EOF:
-			m.lines <- line
+			if len(line) > 0 {
+				m.lines <- line
+			}
 			break Loop
 		case err != nil:
 			return 0, fmt.Errorf("failed to read from %q: %s", logfile, err)
