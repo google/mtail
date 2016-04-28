@@ -53,7 +53,7 @@ COND {
 }
 ```
 
-COND can be a regular expression, which if matched, enters the action block, or a conditional expression, as you might see in a C program's `if` statement:
+COND is a conditional expression.  It can be a regular expression, which if matched, enters the action block, or a relational expression, as you might see in a C program's `if` statement:
 
 ```
 /foo/ {
