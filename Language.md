@@ -48,12 +48,12 @@ hidden counter login_failures
 
 mtail programs look a lot like awk programs.  They consist of a list of conditional expressions followed by a brace-delimited block of code:
 ```
-PATTERN {
+COND {
   ACTION
 }
 ```
 
-PATTERN is either a regular expression, which if matched, enters the action block, or a conditional expression, as you might see in a C program's `if` statement:
+COND can be a regular expression, which if matched, enters the action block, or a conditional expression, as you might see in a C program's `if` statement:
 
 ```
 /foo/ {
@@ -93,6 +93,11 @@ The simplest mtail program merely counts lines read:
 
 This program instructs mtail to increment the `line_count` counter variable on every line received (specifically anytime an end-of-line is matched.)
 
+## Advanced conditionals
+
+The `otherwise` keyword can be used as a conditional statement. It matches if no preceding conditional in the current scope has matched. This functions like the "default" clause in a switch statement in a C-like language.
+
+Coming soon: an `else` keyword to allow chaining of mutually-exclusive conditionals. (https://github.com/google/mtail/issues/18)
 
 ## Capture Groups
 
