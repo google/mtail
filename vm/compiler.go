@@ -82,16 +82,24 @@ func (c *compiler) compile(untypedNode node) {
 		if n.cond != nil {
 			c.compile(n.cond)
 		}
-		// Save PC of previous jump instruction
-		// (see regexNode and relNode cases, which will emit a jump)
+		// Save PC of previous jump instruction emitted by the n.cond
+		// compilation.  (See regexNode and relNode cases, which will emit a
+		// jump as the last instr.)  This jump will skip over the truthNode.
 		pc := len(c.prog) - 1
-		// Set matched flag false for children
+		// Set matched flag false for children.
 		c.emit(instr{setmatched, false})
 		c.compile(n.truthNode)
-		// Re-set matched flag to true for rest of current block
+		// Re-set matched flag to true for rest of current block.
 		c.emit(instr{setmatched, true})
-		// Rewrite jump target to jump to instruction after block.
+		// Rewrite n.cond's jump target to jump to instruction after block.
 		c.prog[pc].opnd = len(c.prog)
+		// Now also emit the else clause, and a jump.
+		if n.elseNode != nil {
+			c.emit(instr{op: jm})
+			pc = len(c.prog) - 1
+			c.compile(n.elseNode)
+			c.prog[pc].opnd = len(c.prog)
+		}
 
 	case *regexNode:
 		if n.re == nil {

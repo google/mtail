@@ -307,6 +307,30 @@ otherwise {
 			instr{dload, 0},
 			instr{inc, nil},
 			instr{setmatched, true}}},
+	{"cond else",
+		`counter foo
+counter bar
+1 > 0 {
+  foo++
+} else {
+  bar++
+}`,
+		[]instr{
+			instr{push, 1},
+			instr{push, 0},
+			instr{cmp, 1},
+			instr{jnm, 9},
+			instr{setmatched, false},
+			instr{mload, 0},
+			instr{dload, 0},
+			instr{inc, nil},
+			instr{setmatched, true},
+			instr{jm, 13},
+			instr{mload, 1},
+			instr{dload, 0},
+			instr{inc, nil},
+		},
+	},
 }
 
 func TestCompile(t *testing.T) {
