@@ -59,6 +59,7 @@ var lexemeName = map[lexeme]string{
 	NEXT:       "NEXT",
 	CONST:      "CONST",
 	OTHERWISE:  "OTHERWISE",
+	ELSE:       "ELSE",
 }
 
 func (t lexeme) String() string {
@@ -75,6 +76,7 @@ var keywords = map[string]lexeme{
 	"const":     CONST,
 	"counter":   COUNTER,
 	"def":       DEF,
+	"else":      ELSE,
 	"gauge":     GAUGE,
 	"hidden":    HIDDEN,
 	"next":      NEXT,
