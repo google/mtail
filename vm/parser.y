@@ -116,10 +116,14 @@ stmt
   ;
 
 conditional_statement
-  : cond compound_statement
+  : cond compound_statement ELSE compound_statement
   {
-      if $1 != nil && $2 != nil {
-          $$ = &condNode{$1, []node{$2}}
+    $$ = &condNode{$1, $2, $4}
+  }
+  | cond compound_statement
+  {
+      if $1 != nil {
+          $$ = &condNode{$1, $2, nil}
       } else {
           $$ = $2
       }

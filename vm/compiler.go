@@ -87,9 +87,7 @@ func (c *compiler) compile(untypedNode node) {
 		pc := len(c.prog) - 1
 		// Set matched flag false for children
 		c.emit(instr{setmatched, false})
-		for _, child := range n.children {
-			c.compile(child)
-		}
+		c.compile(n.truthNode)
 		// Re-set matched flag to true for rest of current block
 		c.emit(instr{setmatched, true})
 		// Rewrite jump target to jump to instruction after block.

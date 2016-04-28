@@ -81,8 +81,8 @@ var lexerTests = []lexerTest{
 			token{NL, "\n", position{"keywords", 9, 5, -1}},
 			token{OTHERWISE, "otherwise", position{"keywords", 9, 0, 8}},
 			token{NL, "\n", position{"keywords", 10, 9, -1}},
-			token{ELSE, "else", position{"keywords", 10, 0, 5}},
-			token{NL, "\n", position{"keywords", 11, 6, -1}},
+			token{ELSE, "else", position{"keywords", 10, 0, 3}},
+			token{NL, "\n", position{"keywords", 11, 4, -1}},
 			token{EOF, "", position{"keywords", 11, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\n", []token{
