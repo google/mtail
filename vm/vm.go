@@ -28,6 +28,7 @@ const (
 	cmp                      // Compare two values on the stack and set the match register.
 	jnm                      // Jump if no match.
 	jm                       // Jump if match.
+	jmp                      // Unconditional jump
 	inc                      // Increment a variable value
 	strptime                 // Parse into the timestamp register
 	timestamp                // Return value of timestamp register onto TOS.
@@ -61,6 +62,7 @@ var opNames = map[opcode]string{
 	cmp:        "cmp",
 	jnm:        "jnm",
 	jm:         "jm",
+	jmp:        "jmp",
 	inc:        "inc",
 	strptime:   "strptime",
 	timestamp:  "timestamp",
@@ -239,6 +241,9 @@ func (v *VM) execute(t *thread, i instr) {
 		if t.match {
 			t.pc = i.opnd.(int)
 		}
+
+	case jmp:
+		t.pc = i.opnd.(int)
 
 	case inc:
 		// increment a counter

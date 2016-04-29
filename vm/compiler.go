@@ -95,9 +95,13 @@ func (c *compiler) compile(untypedNode node) {
 		c.prog[pc].opnd = len(c.prog)
 		// Now also emit the else clause, and a jump.
 		if n.elseNode != nil {
-			c.emit(instr{op: jm})
+			c.emit(instr{op: jmp})
+			// Rewrite jump again to avoid this else-skipper just emitted.
+			c.prog[pc].opnd = len(c.prog)
+			// Now get the PC of the else-skipper just emitted.
 			pc = len(c.prog) - 1
 			c.compile(n.elseNode)
+			// Rewrite else-skipper to the next PC.
 			c.prog[pc].opnd = len(c.prog)
 		}
 
