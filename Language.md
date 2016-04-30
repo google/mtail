@@ -67,6 +67,10 @@ variable > 0 {
 
 In the above program, ACTION1 is taken on each line input if that line matches the word `foo`, and ACTION2 is taken on each line if when that line is read, the variable `variable` is greater than 0.
 
+The action statements myust be wrapped in curly braces, i.e. `{}`.  mtail programs have no single-line statement conditionals like C.
+
+## Single definition of constants
+
 To re-use regular expressions, you can assign them to a `const` identifier:
 
 ```
@@ -80,7 +84,22 @@ const PREFIX /^\w+\W+\d+ /
   ACTION2
 }
 ```
+
 In this example, ACTION1 is done for every line that starts with the prefix regex, and ACTION2 is done for the subset of those lines that also contain 'foo'.
+
+## Else Clauses
+
+When a conditional expression does not match, action can be taken as well:
+
+```
+/foo/ {
+  ACTION1
+} else {
+  ACTION2
+}
+```
+
+Else clauses can be nested. There is no ambiguity with the dangling-else problem, as mtail programs must wrap all block statements in `{}`.
 
 ## Incrementing a Counter
 
@@ -97,7 +116,21 @@ This program instructs mtail to increment the `line_count` counter variable on e
 
 The `otherwise` keyword can be used as a conditional statement. It matches if no preceding conditional in the current scope has matched. This functions like the "default" clause in a switch statement in a C-like language.
 
-Coming soon: an `else` keyword to allow chaining of mutually-exclusive conditionals. (https://github.com/google/mtail/issues/18)
+```
+/foo/ {
+  /foo1/ {
+     ACTION1
+  }
+  /foo2/ {
+     ACTION2
+  }
+  otherwise {
+     ACTION3
+  }
+}
+```
+
+In this example, ACTION3 will be executed if neither `/foo1/` or `/foo2/` match on the input, but `/foo/` does.
 
 ## Capture Groups
 
