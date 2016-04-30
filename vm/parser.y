@@ -43,7 +43,7 @@ import (
 // Types
 %token COUNTER GAUGE TIMER
 // Reserved words
-%token AS BY CONST HIDDEN DEF NEXT OTHERWISE
+%token AS BY CONST HIDDEN DEF NEXT OTHERWISE ELSE
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -116,10 +116,14 @@ stmt
   ;
 
 conditional_statement
-  : cond compound_statement
+  : cond compound_statement ELSE compound_statement
   {
-      if $1 != nil && $2 != nil {
-          $$ = &condNode{$1, []node{$2}}
+    $$ = &condNode{$1, $2, $4}
+  }
+  | cond compound_statement
+  {
+      if $1 != nil {
+          $$ = &condNode{$1, $2, nil}
       } else {
           $$ = $2
       }

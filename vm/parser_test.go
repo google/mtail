@@ -217,6 +217,10 @@ foo = 3.14
 		otherwise {
 			line_count["misc"] += 10
 		}`},
+	{"simple else clause",
+		"/foo/ {} else {}"},
+	{"nested else clause",
+		"/foo/ { / bar/ {}  } else { /quux/ {} else {} }"},
 }
 
 func TestParserRoundTrip(t *testing.T) {

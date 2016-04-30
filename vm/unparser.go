@@ -66,8 +66,12 @@ func (u *Unparser) unparse(n node) {
 		u.emit(" {")
 		u.newline()
 		u.indent()
-		for _, child := range v.children {
-			u.unparse(child)
+		u.unparse(v.truthNode)
+		if v.elseNode != nil {
+			u.outdent()
+			u.emit("} else {")
+			u.indent()
+			u.unparse(v.elseNode)
 		}
 		u.outdent()
 		u.emit("}")

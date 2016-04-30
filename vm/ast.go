@@ -22,8 +22,9 @@ type exprlistNode struct {
 }
 
 type condNode struct {
-	cond     node
-	children []node
+	cond      node
+	truthNode node
+	elseNode  node
 }
 
 type regexNode struct {
