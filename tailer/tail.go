@@ -319,6 +319,7 @@ func (t *Tailer) run() {
 			if t.isWatching(e.Pathname) {
 				t.handleLogCreate(e.Pathname)
 			}
+		case watcher.DeleteEvent:
 		default:
 			glog.Infof("Unexpected event %#v", e)
 		}
