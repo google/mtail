@@ -320,7 +320,7 @@ func (t *Tailer) run() {
 				t.handleLogCreate(e.Pathname)
 			}
 		default:
-			glog.Infof("Unexpected event %q", e)
+			glog.Infof("Unexpected event %#v", e)
 		}
 	}
 	glog.Infof("Shutting down tailer.")
