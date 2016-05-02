@@ -260,7 +260,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 	}
 	err = t.startNewFile(f, seenBefore)
 	if err != nil {
-		glog.Info(err)
+		glog.Error(err)
 	}
 }
 

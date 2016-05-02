@@ -102,7 +102,9 @@ func (m *Mtail) StartTailing() error {
 	}
 	for _, fd := range m.o.LogFds {
 		f := os.NewFile(uintptr(fd), strconv.Itoa(fd))
-		m.t.TailFile(f)
+		if e := m.t.TailFile(f); e != nil {
+			glog.Error(e)
+		}
 	}
 	return nil
 }
