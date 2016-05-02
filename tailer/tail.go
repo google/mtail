@@ -118,7 +118,8 @@ func (t *Tailer) Tail(pathname string) {
 	}
 }
 
-// TailFile registers a file descriptor to be tailed.
+// TailFile registers a file handle to be tailed.  There is no filesystem to
+// watch, so no watches are registered.
 func (t *Tailer) TailFile(f afero.File) error {
 	logCount.Add(1)
 	return t.startNewFile(f, false)
