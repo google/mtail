@@ -344,6 +344,7 @@ func (t *Tailer) readForever(f afero.File) {
 			glog.Infof("%s: %s", err, f.Name())
 			return
 		}
+		// TODO(jaq): nonblocking read, handle eagain, and do a little sleep if so, so the read can be interrupted
 	}
 }
 
