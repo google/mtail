@@ -262,7 +262,7 @@ func (m *Mtail) Close() {
 		if m.t != nil {
 			m.t.Close()
 		} else {
-			glog.Info("Closing lines channel.")
+			glog.Info("No tailer, closing lines channel.")
 			close(m.lines)
 		}
 		if m.l != nil {

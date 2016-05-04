@@ -205,17 +205,18 @@ func (t *Tailer) handleLogCreate(pathname string) {
 			return
 		}
 		if inode(s1) != inode(s2) {
+			glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
 			logRotations.Add(pathname, 1)
 			// flush the old log, pathname is still an index into t.files with the old inode.
 			t.handleLogUpdate(pathname)
 			fd.Close()
 			err := t.w.Remove(pathname)
 			if err != nil {
-				glog.Info("Failed removing watches on", pathname)
+				glog.Infof("Failed removing watches on %s: %s", pathname, err)
 			}
 			t.openLogPath(pathname, true)
 		} else {
-			glog.Infof("Path %s already being watched, and inode not changed.",
+			glog.V(1).Infof("Path %s already being watched, and inode not changed.",
 				pathname)
 		}
 	} else {
@@ -230,7 +231,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 	if !t.isWatching(d) {
 		err := t.w.Add(d)
 		if err != nil {
-			glog.Infof("Adding a create watch failed on %q: %s", d, err)
+			glog.Infof("Failed to create new watch on directory %q: %s", d, err)
 		}
 		t.addWatched(d)
 	}
