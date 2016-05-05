@@ -49,6 +49,8 @@ type Tailer struct {
 	filesLock   sync.Mutex            // protects `files'
 	partials    map[string]string     // Accumulator for the currently read line for each pathname.
 
+	shutdown bool
+
 	fs afero.Fs // mockable filesystem interface
 }
 
@@ -118,7 +120,8 @@ func (t *Tailer) Tail(pathname string) {
 	}
 }
 
-// TailFile registers a file descriptor to be tailed.
+// TailFile registers a file handle to be tailed.  There is no filesystem to
+// watch, so no watches are registered, and no file paths are opened.
 func (t *Tailer) TailFile(f afero.File) error {
 	logCount.Add(1)
 	return t.startNewFile(f, false)
@@ -147,7 +150,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 func (t *Tailer) read(f afero.File, partialIn string) (partialOut string, err error) {
 	partial := partialIn
 	b := make([]byte, 0, 4096)
-	for {
+	for !t.shutdown {
 		n, err := f.Read(b[:cap(b)])
 		b = b[:n]
 		if err != nil {
@@ -168,6 +171,7 @@ func (t *Tailer) read(f afero.File, partialIn string) (partialOut string, err er
 			}
 		}
 	}
+	return partial, fmt.Errorf("reader shutdown requested")
 }
 
 // inode returns the inode number of a file, or 0 if the file has no underlying Sys implementation.
@@ -201,17 +205,18 @@ func (t *Tailer) handleLogCreate(pathname string) {
 			return
 		}
 		if inode(s1) != inode(s2) {
+			glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
 			logRotations.Add(pathname, 1)
 			// flush the old log, pathname is still an index into t.files with the old inode.
 			t.handleLogUpdate(pathname)
 			fd.Close()
 			err := t.w.Remove(pathname)
 			if err != nil {
-				glog.Info("Failed removing watches on", pathname)
+				glog.Infof("Failed removing watches on %s: %s", pathname, err)
 			}
 			t.openLogPath(pathname, true)
 		} else {
-			glog.Infof("Path %s already being watched, and inode not changed.",
+			glog.V(1).Infof("Path %s already being watched, and inode not changed.",
 				pathname)
 		}
 	} else {
@@ -220,15 +225,13 @@ func (t *Tailer) handleLogCreate(pathname string) {
 	}
 }
 
-// openLogPath opens a new log file at pathname, and optionally seeks to the
-// start or end of the file. Rotated logs should read from the start, but logs
-// opened for the first time read from the end.
+// openLogPath opens a log file named by pathname.
 func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 	d := path.Dir(pathname)
 	if !t.isWatching(d) {
 		err := t.w.Add(d)
 		if err != nil {
-			glog.Infof("Adding a create watch failed on %q: %s", d, err)
+			glog.Infof("Failed to create new watch on directory %q: %s", d, err)
 		}
 		t.addWatched(d)
 	}
@@ -260,10 +263,13 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 	}
 	err = t.startNewFile(f, seenBefore)
 	if err != nil {
-		glog.Info(err)
+		glog.Error(err)
 	}
 }
 
+// startNewFile optionally seeks to the start or end of the file, then starts
+// the consumption of log lines. Rotated logs should read from the start, but
+// logs opened for the first time read from the end.
 func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	fi, err := f.Stat()
 	if err != nil {
@@ -319,28 +325,32 @@ func (t *Tailer) run() {
 			if t.isWatching(e.Pathname) {
 				t.handleLogCreate(e.Pathname)
 			}
+		case watcher.DeleteEvent:
 		default:
-			glog.Infof("Unexpected event %q", e)
+			glog.Infof("Unexpected event %#v", e)
 		}
 	}
 	glog.Infof("Shutting down tailer.")
 	close(t.lines)
 }
 
+// readForever handles non-logfile inputs by reading from the File until it is closed.
 func (t *Tailer) readForever(f afero.File) {
 	var err error
 	partial := ""
-	for {
+	for !t.shutdown {
 		partial, err = t.read(f, partial)
 		// We want to exit at EOF, because the FD has been closed.
 		if err != nil {
 			glog.Infof("%s: %s", err, f.Name())
 			return
 		}
+		// TODO(jaq): nonblocking read, handle eagain, and do a little sleep if so, so the read can be interrupted
 	}
 }
 
 // Close signals termination to the watcher.
 func (t *Tailer) Close() {
+	t.shutdown = true
 	t.w.Close()
 }

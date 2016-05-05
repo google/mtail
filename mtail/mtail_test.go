@@ -243,3 +243,62 @@ func TestHandleNewLogIgnored(t *testing.T) {
 		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
 	}
 }
+
+func TestHandleSoftLinkChange(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
+
+	logFilepath := path.Join(workdir, "log")
+	pathnames := []string{logFilepath}
+	m := startMtail(t, pathnames, "")
+	defer m.Close()
+
+	trueLog1, err := os.Create(logFilepath + ".true1")
+	if err != nil {
+		t.Errorf("could not create log file: %s", err)
+	}
+	defer trueLog1.Close()
+	err = os.Symlink(logFilepath+".true1", logFilepath)
+	if err != nil {
+		t.Errorf("could not create symlink: %s", err)
+	}
+	inputLines := []string{"hi1", "hi2", "hi3"}
+	for _, x := range inputLines {
+		trueLog1.WriteString(x + "\n")
+		trueLog1.Sync()
+	}
+	if vm.LineCount.String() != "3" {
+		t.Errorf("line count not increased: received %s", vm.LineCount.String())
+	}
+	trueLog2, err := os.Create(logFilepath + ".true2")
+	if err != nil {
+		t.Errorf("could not create log file: %s", err)
+	}
+	defer trueLog2.Close()
+	err = os.Remove(logFilepath)
+	if err != nil {
+		t.Errorf("could not delete symlink: %s", err)
+	}
+	err = os.Symlink(logFilepath+".true2", logFilepath)
+	if err != nil {
+		t.Errorf("could not create symlink: %s", err)
+	}
+	for _, x := range inputLines {
+		trueLog2.WriteString(x + "\n")
+		trueLog2.Sync()
+	}
+	if vm.LineCount.String() != "6" {
+		t.Errorf("line count not increased: received %s", vm.LineCount.String())
+	}
+	_, err = os.Stat(logFilepath + ".true1")
+	if err != nil {
+		t.Errorf("stat failed on %s: %s", logFilepath+".true1", err)
+	}
+	_, err = os.Stat(logFilepath + ".true2")
+	if err != nil {
+		t.Errorf("stat failed on %s: %s", logFilepath+".true2", err)
+	}
+}
