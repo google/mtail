@@ -67,7 +67,7 @@ variable > 0 {
 
 In the above program, ACTION1 is taken on each line input if that line matches the word `foo`, and ACTION2 is taken on each line if when that line is read, the variable `variable` is greater than 0.
 
-The action statements myust be wrapped in curly braces, i.e. `{}`.  mtail programs have no single-line statement conditionals like C.
+The action statements must be wrapped in curly braces, i.e. `{}`.  mtail programs have no single-line statement conditionals like C.
 
 ## Single definition of constants
 
