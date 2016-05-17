@@ -221,6 +221,10 @@ foo = 3.14
 		"/foo/ {} else {}"},
 	{"nested else clause",
 		"/foo/ { / bar/ {}  } else { /quux/ {} else {} }"},
+	{"mod operator",
+		`/foo/ {
+  3 % 1
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {

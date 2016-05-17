@@ -331,6 +331,16 @@ counter bar
 			instr{inc, nil},
 		},
 	},
+	{"mod",
+		`
+3 % 1
+`,
+		[]instr{
+			instr{push, 3},
+			instr{push, 1},
+			instr{mod, nil},
+		},
+	},
 }
 
 func TestCompile(t *testing.T) {

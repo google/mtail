@@ -57,7 +57,7 @@ import (
 %token <floatVal> FLOATLITERAL
 // Operators, in order of precedence
 %token <op> INC
-%token <op> DIV MUL MINUS PLUS POW
+%token <op> DIV MOD MUL MINUS PLUS POW
 %token <op> SHL SHR
 %token <op> LT GT LE GE EQ NE
 %token <op> AND OR XOR NOT
@@ -251,6 +251,10 @@ multiplicative_expr
   | multiplicative_expr DIV unary_expr
   {
     $$ = &binaryExprNode{$1, $3, '/'}
+  }
+  | multiplicative_expr MOD unary_expr
+  {
+    $$ = &binaryExprNode{$1, $3, '%'}
   }
   | multiplicative_expr POW unary_expr
   {

@@ -114,6 +114,8 @@ func (u *Unparser) unparse(n node) {
 			u.emit(" = ")
 		case ADD_ASSIGN:
 			u.emit(" += ")
+		case MOD:
+			u.emit(" % ")
 		}
 		u.unparse(v.rhs)
 
