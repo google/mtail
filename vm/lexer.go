@@ -352,6 +352,9 @@ func lexProg(l *lexer) stateFn {
 	case r == '/':
 		l.accept()
 		l.emit(DIV)
+	case r == '%':
+		l.accept()
+		l.emit(MOD)
 	case r == '&':
 		l.accept()
 		l.emit(AND)

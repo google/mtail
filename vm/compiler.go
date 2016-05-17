@@ -150,6 +150,8 @@ func (c *compiler) compile(untypedNode node) {
 			c.emit(instr{op: mul})
 		case '/':
 			c.emit(instr{op: div})
+		case '%':
+			c.emit(instr{op: mod})
 		case AND:
 			c.emit(instr{op: and})
 		case OR:

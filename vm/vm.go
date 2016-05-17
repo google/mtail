@@ -41,6 +41,7 @@ const (
 	sub                      // Subtract top value from second top value on stack, and push to stack.
 	mul                      // Multiply top values on stack and push to stack
 	div                      // Divide top value into second top on stack, and push
+	mod                      // Integer divide top value into second top on stack, and push remainder
 	pow                      // Put second TOS to power of TOS, and push.
 	and                      // Bitwise AND the 2 at top of stack, and push result
 	or                       // Bitwise OR the 2 at top of stack, and push result
@@ -75,6 +76,7 @@ var opNames = map[opcode]string{
 	sub:        "sub",
 	mul:        "mul",
 	div:        "div",
+	mod:        "mod",
 	pow:        "pow",
 	shl:        "shl",
 	shr:        "shr",
@@ -392,6 +394,18 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("%s", err)
 		}
 		t.Push(a / b)
+
+	case mod:
+		// Modulo of two values at TOS, push remainder
+		b, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		a, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(a % b)
 
 	case pow:
 		b, err := t.PopInt()
