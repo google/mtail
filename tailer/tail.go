@@ -49,8 +49,6 @@ type Tailer struct {
 	filesLock   sync.Mutex            // protects `files'
 	partials    map[string]string     // Accumulator for the currently read line for each pathname.
 
-	shutdown bool
-
 	fs afero.Fs // mockable filesystem interface
 }
 
@@ -150,7 +148,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 func (t *Tailer) read(f afero.File, partialIn string) (partialOut string, err error) {
 	partial := partialIn
 	b := make([]byte, 0, 4096)
-	for !t.shutdown {
+	for {
 		n, err := f.Read(b[:cap(b)])
 		b = b[:n]
 		if err != nil {
@@ -338,7 +336,7 @@ func (t *Tailer) run() {
 func (t *Tailer) readForever(f afero.File) {
 	var err error
 	partial := ""
-	for !t.shutdown {
+	for {
 		partial, err = t.read(f, partial)
 		// We want to exit at EOF, because the FD has been closed.
 		if err != nil {
@@ -351,6 +349,5 @@ func (t *Tailer) readForever(f afero.File) {
 
 // Close signals termination to the watcher.
 func (t *Tailer) Close() {
-	t.shutdown = true
 	t.w.Close()
 }
