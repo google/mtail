@@ -27,13 +27,12 @@ go:
   - 1.5
   - 1.4
 
-# Allow tip to fail, and only wait for 1.4 to succeed before reporting build
-# status.
+# Allow tip to fail, and only wait for mature versions to succeed before
+# reporting build status.
 matrix:
   fast_finish: true
   allow_failures:
     - go: tip
-    - go: 1.5
     - go: 1.6
 
 
