@@ -208,10 +208,13 @@ func (t *Tailer) handleLogCreate(pathname string) {
 			// flush the old log, pathname is still an index into t.files with the old inode.
 			t.handleLogUpdate(pathname)
 			fd.Close()
-			err := t.w.Remove(pathname)
-			if err != nil {
-				glog.Infof("Failed removing watches on %s: %s", pathname, err)
-			}
+			go func() {
+				// Run in goroutine as Remove may block waiting on event processing.
+				err := t.w.Remove(pathname)
+				if err != nil {
+					glog.Infof("Failed removing watches on %s: %s", pathname, err)
+				}
+			}()
 			t.openLogPath(pathname, true)
 		} else {
 			glog.V(1).Infof("Path %s already being watched, and inode not changed.",
