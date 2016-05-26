@@ -63,23 +63,23 @@ emgen/emgen: emgen/emgen.go
 
 .PHONY: test
 test: $(GOFILES) $(GOTESTFILES) mtail
-	go test -v -timeout 60s ./... $(EXTRA_TEST_ARGS)
+	go test -v -timeout 60s ./...
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOTESTFILES) mtail
-	go test -v -timeout 5m -race ./... $(EXTRA_TEST_ARGS)
+	go test -v -timeout 5m -race ./...
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES) mtail
-	go test -v -timeout 10s -test.short ./... $(EXTRA_TEST_ARGS)
+	go test -v -timeout 10s -test.short ./...
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES)
-	go test -bench=. -timeout 60s -run=XXX ./... $(EXTRA_TEST_ARGS)
+	go test -bench=. -timeout 60s -run=XXX ./...
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOTESTFILES)
-	go test -bench=. -run=XXX --record_benchmark ./... $(EXTRA_TEST_ARGS)
+	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: coverage
 coverage: gover.coverprofile
