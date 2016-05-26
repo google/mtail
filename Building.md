@@ -12,6 +12,8 @@ mtail uses `make` to build.  Type `make` at the commandline to install all the d
 
 Run the unit tests with `make test`, which invokes `gotest`.
 
+The resulting binary will be in `$GOPATH/bin`.
+
 ## Contributing
 
 Please use `gofmt` to format your code before committing.  Emacs' go-mode has a lovely [gofmt-before-save](http://golang.org/misc/emacs/go-mode.el) function.
