@@ -270,8 +270,18 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		trueLog1.WriteString(x + "\n")
 		trueLog1.Sync()
 	}
-	if vm.LineCount.String() != "3" {
-		t.Errorf("line count not increased: received %s", vm.LineCount.String())
+	check3 := func() (bool, error) {
+		if vm.LineCount.String() != "3" {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err := doOrTimeout(check3, 1*time.Second, 10*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Errorf("line count not matched: received %s, expected 3", vm.LineCount.String())
 	}
 	trueLog2, err := os.Create(logFilepath + ".true2")
 	if err != nil {
@@ -290,8 +300,22 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		trueLog2.WriteString(x + "\n")
 		trueLog2.Sync()
 	}
-	if vm.LineCount.String() != "6" {
-		t.Errorf("line count not increased: received %s", vm.LineCount.String())
+	check6 := func() (bool, error) {
+		if vm.LineCount.String() != "6" {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err = doOrTimeout(check6, 100*time.Millisecond, 10*time.Millisecond)
+	if err != nil {
+		buf := make([]byte, 1<<16)
+		count := runtime.Stack(buf, true)
+		fmt.Println(string(buf[:count]))
+		t.Fatal(err)
+
+	}
+	if !ok {
+		t.Errorf("line count not matched: received %s, expected 6", vm.LineCount.String())
 	}
 	_, err = os.Stat(logFilepath + ".true1")
 	if err != nil {

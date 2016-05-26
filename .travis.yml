@@ -27,6 +27,12 @@ go:
   - 1.5
   - 1.4
 
+# GOMAXPROCS=1 forces scheduling race bugs.
+env:
+  - GOMAXPROCS=1
+  - GOMAXPROCS=2
+  - GOMAXPROCS=4
+
 # Allow tip to fail, and only wait for mature versions to succeed before
 # reporting build status.
 matrix:
