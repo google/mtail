@@ -42,12 +42,13 @@ var (
 type Tailer struct {
 	w watcher.Watcher
 
-	watched     map[string]struct{}   // Names of logs being watched.
-	watchedLock sync.RWMutex          // protects `watched'
-	lines       chan<- string         // Logfile lines being emitted.
-	files       map[string]afero.File // File handles for each pathname.
-	filesLock   sync.Mutex            // protects `files'
-	partials    map[string]string     // Accumulator for the currently read line for each pathname.
+	watched      map[string]struct{}   // Names of logs being watched.
+	watchedLock  sync.RWMutex          // protects `watched'
+	lines        chan<- string         // Logfile lines being emitted.
+	files        map[string]afero.File // File handles for each pathname.
+	filesLock    sync.Mutex            // protects `files'
+	partials     map[string]string     // Accumulator for the currently read line for each pathname.
+	partialsLock sync.Mutex            // protects 'partials'
 
 	fs afero.Fs // mockable filesystem interface
 }
@@ -136,7 +137,9 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 		return
 	}
 	var err error
+	t.partialsLock.Lock()
 	t.partials[pathname], err = t.read(fd, t.partials[pathname])
+	t.partialsLock.Unlock()
 	if err != nil && err != io.EOF {
 		glog.Info(err)
 	}
@@ -214,8 +217,9 @@ func (t *Tailer) handleLogCreate(pathname string) {
 				if err != nil {
 					glog.Infof("Failed removing watches on %s: %s", pathname, err)
 				}
+				// openLogPath readds the file to the watcher, so must be strictly after the Remove succeeds.
+				t.openLogPath(pathname, true)
 			}()
-			t.openLogPath(pathname, true)
 		} else {
 			glog.V(1).Infof("Path %s already being watched, and inode not changed.",
 				pathname)
@@ -291,7 +295,9 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		}
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
+		t.partialsLock.Lock()
 		t.partials[f.Name()], err = t.read(f, "")
+		t.partialsLock.Unlock()
 		if err != nil {
 			if err == io.EOF {
 				// Don't worry about EOF on first read, that's expected.
