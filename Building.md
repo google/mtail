@@ -17,3 +17,20 @@ The resulting binary will be in `$GOPATH/bin`.
 ## Contributing
 
 Please use `gofmt` to format your code before committing.  Emacs' go-mode has a lovely [gofmt-before-save](http://golang.org/misc/emacs/go-mode.el) function.
+
+## Troubleshooting
+
+If `make` gives you the following error:
+
+```
+../github.com/google/mtail/vm/lexer.go:28: too many errors
+```
+
+Then run `make` in that dependency and run `make` again like such:
+
+```
+cd ../github.com/google/mtail
+make
+cd -
+make
+```
