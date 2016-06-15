@@ -312,7 +312,9 @@ primary_expr
     if sym, ok := mtaillex.(*parser).s.lookupSym($1, IDSymbol); ok {
       $$ = &idNode{$1, sym}
     } else {
-      mtaillex.Error(fmt.Sprintf("Identifier '%s' not declared.", $1))
+      mtaillex.Error(fmt.Sprintf("Identifier '%s' not declared.\n\tTry " +
+                                 "adding `counter %s' to the top of " +
+                                 "the program.", $1, $1))
     }
   }
   | CAPREF
@@ -322,7 +324,9 @@ primary_expr
     } else {
       mtaillex.Error(fmt.Sprintf("Capture group $%s not defined " +
                                  "by prior regular expression in " +
-                                 "this or an outer scope",  $1))
+                                 "this or an outer scope.\n\tTry " +
+                                 "using `(?P<%s>...)' to name the " +
+                                 "capture group.", $1, $1))
       // TODO(jaq) force a parse error
     }
   }
@@ -398,7 +402,7 @@ pattern_expr
     if s, ok := mtaillex.(*parser).res[$3]; ok {
       $$ = $1 + s
     } else {
-      mtaillex.Error(fmt.Sprintf("Constant '%s' not defined.", $3))
+      mtaillex.Error(fmt.Sprintf("Constant '%s' not defined.\n\tTry adding `const %s /.../' earlier in the program.", $3, $3))
     }
   }
   ;
@@ -526,7 +530,7 @@ decoration_statement
     if sym, ok := mtaillex.(*parser).s.lookupSym($1, DefSymbol); ok {
       $$ = &decoNode{$1, []node{$2}, sym.binding.(*defNode)}
     } else {
-      mtaillex.Error(fmt.Sprintf("Decorator %s not defined", $1))
+      mtaillex.Error(fmt.Sprintf("Decorator %s not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", $1, $1))
       // TODO(jaq): force a parse error.
     }
   }
