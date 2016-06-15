@@ -337,6 +337,9 @@ func TestInstrs(t *testing.T) {
 		v.t.matches = make(map[int][]string, 0)
 		v.input = "aaaab"
 		v.execute(v.t, tc.i)
+		if v.terminate {
+			t.Fatalf("Execution failed, see info log.")
+		}
 
 		diff := pretty.Compare(tc.expectedStack, v.t.stack)
 		if len(diff) > 0 {
