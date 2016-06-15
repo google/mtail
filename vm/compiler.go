@@ -180,12 +180,11 @@ func (c *compiler) compile(untypedNode node) {
 		c.compile(n.index)
 		c.compile(n.lhs)
 
-	case *numericExprNode:
-		if n.isint {
-			c.emit(instr{push, n.i})
-		} else {
-			c.emit(instr{push, n.f})
-		}
+	case *intConstNode:
+		c.emit(instr{push, n.i})
+
+	case *floatConstNode:
+		c.emit(instr{push, n.f})
 
 	case *stringNode:
 		c.str = append(c.str, n.text)

@@ -75,10 +75,11 @@ type declNode struct {
 	sym          *symbol
 }
 
-type numericExprNode struct {
-	isint bool
-	i     int64
-	f     float64
+type intConstNode struct {
+	i int64
+}
+type floatConstNode struct {
+	f float64
 }
 
 type defNode struct {

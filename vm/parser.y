@@ -338,11 +338,11 @@ primary_expr
   }
   | INTLITERAL
   {
-    $$ = &numericExprNode{true, $1, 0}
+    $$ = &intConstNode{$1}
   }
   | FLOATLITERAL
   {
-    $$ = &numericExprNode{false, 0, $1}
+    $$ = &floatConstNode{$1}
   }
   ;
 
