@@ -119,11 +119,11 @@ conditional_statement
   }
   | cond compound_statement
   {
-      if $1 != nil {
-          $$ = &condNode{$1, $2, nil}
-      } else {
-          $$ = $2
-      }
+    if $1 != nil {
+      $$ = &condNode{$1, $2, nil}
+    } else {
+      $$ = $2
+    }
   }
   ;
 
@@ -145,9 +145,7 @@ compound_statement
 
 expr
   : assign_expr
-  {
-    $$ = $1
-  }
+  { $$ = $1 }
   ;
 
 assign_expr
