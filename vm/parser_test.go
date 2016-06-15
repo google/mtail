@@ -300,17 +300,17 @@ var InvalidPrograms = []InvalidProgram{
 
 	{"undefined named capture group",
 		"/blurgh/ { $undef++\n }\n",
-		[]string{"undefined named capture group:1:12-17: Capture group $undef not defined by prior regular expression in this or an outer scope"}},
+		[]string{"undefined named capture group:1:12-17: Capture group $undef not defined by prior regular expression in this or an outer scope.\n\tTry using `(?P<undef>...)' to name the capture group."}},
 
 	{"out of bounds capref",
 		"/(blyurg)/ { $2++ \n}\n",
 		[]string{"out of bounds capref:1:14-15: Capture group $2 not defined by prior regular expression " +
-			"in this or an outer scope"},
+			"in this or an outer scope.\n\tTry using `(?P<2>...)' to name the capture group."},
 	},
 
 	{"undefined decorator",
 		"@foo {}\n",
-		[]string{"undefined decorator:1:7: Decorator foo not defined"}},
+		[]string{"undefined decorator:1:7: Decorator foo not defined.\n\tTry adding a definition `def foo {}' earlier in the program."}},
 
 	{"unterminated const regex",
 		"const X /(?P<foo>",
@@ -319,7 +319,7 @@ var InvalidPrograms = []InvalidProgram{
 
 	{"undefined const regex",
 		"/foo / + X + / bar/ {}\n",
-		[]string{"undefined const regex:1:10: Constant 'X' not defined."}},
+		[]string{"undefined const regex:1:10: Constant 'X' not defined.\n\tTry adding `const X /.../' earlier in the program."}},
 }
 
 func TestInvalidPrograms(t *testing.T) {

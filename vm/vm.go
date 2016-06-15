@@ -157,6 +157,8 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof("Runtime error: "+format+"\n", args...)
 	glog.Infof("VM stack:\n%s", debug.Stack())
 	glog.Infof("Dumping vm state")
+	glog.Infof("Name: %s", v.name)
+	glog.Infof("Input: %q", v.input)
 	glog.Infof("Regexes:")
 	for i, re := range v.re {
 		glog.Infof("\t%4d %v", i, re)
@@ -166,14 +168,21 @@ func (v *VM) errorf(format string, args ...interface{}) {
 		glog.Infof("\t%4d %q", i, s)
 	}
 	glog.Infof("Thread:")
-	glog.Infof("\tPC %v", v.t.pc)
+	glog.Infof("\tPC %v", v.t.pc-1)
 	glog.Infof("\tMatch %v", v.t.match)
+	glog.Infof("\tMatched %v", v.t.matched)
 	glog.Infof("\tMatches %v", v.t.matches)
 	glog.Infof("\tTimestamp %v", v.t.time)
 	glog.Infof("\tStack %v", v.t.stack)
 	glog.Infof("Program:")
+	var pc rune
 	for i, instr := range v.prog {
-		glog.Infof("\t%4d %8s %d", i, opNames[instr.op], instr.opnd)
+		if i == v.t.pc-1 {
+			pc = '*'
+		} else {
+			pc = ' '
+		}
+		glog.Infof(" %c\t%4d %12s %v", pc, i, opNames[instr.op], instr.opnd)
 	}
 	v.terminate = true
 }
@@ -536,7 +545,8 @@ func (v *VM) execute(t *thread, i instr) {
 		t.match = !t.matched
 
 	default:
-		v.errorf("illegal instruction: %q", i.op)
+		v.errorf("illegal instruction: %d", i.op)
+		v.terminate = true
 	}
 }
 
@@ -611,7 +621,7 @@ func (v *VM) DumpByteCode(name string) {
 
 	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
 	for n, i := range v.prog {
-		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, opNames[i.op], i.opnd)
+		fmt.Fprintf(w, "\t%d\t%s\t%v\n", n, opNames[i.op], i.opnd)
 	}
 	w.Flush()
 }

@@ -4,7 +4,7 @@
 package vm
 
 import (
-	"regexp"
+	"regexp/syntax"
 
 	"github.com/google/mtail/metrics"
 )
@@ -30,11 +30,7 @@ type condNode struct {
 type regexNode struct {
 	pattern string
 	addr    int
-	re      *regexp.Regexp
-}
-
-type stringNode struct {
-	text string
+	re_ast  *syntax.Regexp
 }
 
 type idNode struct {
@@ -75,10 +71,15 @@ type declNode struct {
 	sym          *symbol
 }
 
-type numericExprNode struct {
-	isint bool
-	i     int64
-	f     float64
+type stringConstNode struct {
+	text string
+}
+
+type intConstNode struct {
+	i int64
+}
+type floatConstNode struct {
+	f float64
 }
 
 type defNode struct {

@@ -106,17 +106,14 @@ func (c *compiler) compile(untypedNode node) {
 		}
 
 	case *regexNode:
-		if n.re == nil {
-			re, err := regexp.Compile(n.pattern)
-			if err != nil {
-				c.errorf("%s", err)
-				return
-			}
-			c.re = append(c.re, re)
-			n.re = re
-			// Store the location of this regular expression in the regexNode
-			n.addr = len(c.re) - 1
+		re, err := regexp.Compile(n.pattern)
+		if err != nil {
+			c.errorf("%s", err)
+			return
 		}
+		c.re = append(c.re, re)
+		// Store the location of this regular expression in the regexNode
+		n.addr = len(c.re) - 1
 		c.emit(instr{match, n.addr})
 		c.emit(instr{op: jnm})
 
@@ -183,16 +180,15 @@ func (c *compiler) compile(untypedNode node) {
 		c.compile(n.index)
 		c.compile(n.lhs)
 
-	case *numericExprNode:
-		if n.isint {
-			c.emit(instr{push, n.i})
-		} else {
-			c.emit(instr{push, n.f})
-		}
-
-	case *stringNode:
+	case *stringConstNode:
 		c.str = append(c.str, n.text)
 		c.emit(instr{str, len(c.str) - 1})
+
+	case *intConstNode:
+		c.emit(instr{push, n.i})
+
+	case *floatConstNode:
+		c.emit(instr{push, n.f})
 
 	case *idNode:
 		c.emit(instr{mload, n.sym.addr})
@@ -202,8 +198,9 @@ func (c *compiler) compile(untypedNode node) {
 	case *caprefNode:
 		rn := n.sym.binding.(*regexNode)
 		// rn.addr contains the index of the regular expression object,
-		// which correlates to storage on the re heap
+		// which correlates to storage on the re slice
 		c.emit(instr{push, rn.addr})
+		// n.sym.addr is the capture group offset
 		c.emit(instr{capref, n.sym.addr})
 
 	case *builtinNode:
@@ -239,6 +236,6 @@ func (c *compiler) compile(untypedNode node) {
 		c.emit(instr{op: jnm})
 
 	default:
-		c.errorf("undefined node type %T (%q)6", untypedNode, untypedNode)
+		c.errorf("undefined node type %T (%q)", untypedNode, untypedNode)
 	}
 }

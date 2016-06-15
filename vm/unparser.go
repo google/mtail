@@ -119,9 +119,6 @@ func (u *Unparser) unparse(n node) {
 		}
 		u.unparse(v.rhs)
 
-	case *stringNode:
-		u.emit("\"" + v.text + "\"")
-
 	case *idNode:
 		u.emit(v.name)
 
@@ -165,12 +162,15 @@ func (u *Unparser) unparse(n node) {
 			u.unparse(v.lhs)
 		}
 
-	case *numericExprNode:
-		if v.isint {
-			u.emit(strconv.FormatInt(v.i, 10))
-		} else {
-			u.emit(strconv.FormatFloat(v.f, 'g', -1, 64))
-		}
+	case *stringConstNode:
+		u.emit("\"" + v.text + "\"")
+
+	case *intConstNode:
+		u.emit(strconv.FormatInt(v.i, 10))
+
+	case *floatConstNode:
+		u.emit(strconv.FormatFloat(v.f, 'g', -1, 64))
+
 	case *defNode:
 		u.emit(fmt.Sprintf("def %s {", v.name))
 		u.newline()

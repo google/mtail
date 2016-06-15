@@ -17,6 +17,7 @@ GOFILES=\
 	tailer/tail.go\
 	vm/ast.go\
 	vm/compiler.go\
+	vm/driver.go\
 	vm/lexer.go\
 	vm/loader.go\
 	vm/parser.go\
