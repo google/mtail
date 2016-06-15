@@ -6,7 +6,7 @@ package vm
 
 import (
     "fmt"
-    "regexp"
+    "regexp/syntax"
 
     "github.com/google/mtail/metrics"
 )
@@ -348,21 +348,21 @@ primary_expr
 cond
   : pattern_expr
   {
-    if re, err := regexp.Compile($1); err != nil {
+    if re, err := syntax.Parse($1, syntax.Perl); err != nil {
       mtaillex.(*parser).ErrorP(fmt.Sprintf(err.Error()), mtaillex.(*parser).pos)
       // TODO(jaq): force a parse error
     } else {
-      $$ = &regexNode{pattern: $1}
+      $$ = &regexNode{pattern: $1, re_ast: re}
       // We can reserve storage for these capturing groups, storing them in
       // the current scope, so that future CAPTUREGROUPs can retrieve their
       // value.  At parse time, we can warn about nonexistent names.
-      for i := 1; i < re.NumSubexp() + 1; i++ {
+      for i := 1; i <= re.MaxCap(); i++ {
         sym := mtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
                                             CaprefSymbol, $$,
                                             mtaillex.(*parser).pos)
         sym.addr = i - 1
       }
-      for i, capref := range re.SubexpNames() {
+      for i, capref := range re.CapNames() {
         if capref != "" {
           sym := mtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$,
                                               mtaillex.(*parser).pos)

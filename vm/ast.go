@@ -3,7 +3,11 @@
 
 package vm
 
-import "github.com/google/mtail/metrics"
+import (
+	"regexp/syntax"
+
+	"github.com/google/mtail/metrics"
+)
 
 type node interface {
 }
@@ -26,6 +30,7 @@ type condNode struct {
 type regexNode struct {
 	pattern string
 	addr    int
+	re_ast  *syntax.Regexp
 }
 
 type stringNode struct {
