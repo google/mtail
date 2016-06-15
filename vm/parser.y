@@ -360,14 +360,14 @@ cond
       // value.  At parse time, we can warn about nonexistent names.
       for i := 1; i <= re.MaxCap(); i++ {
         sym := mtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
-                                            CaprefSymbol, $$,
-                                            mtaillex.(*parser).pos)
+                                           CaprefSymbol, $$,
+                                           mtaillex.(*parser).pos)
         sym.addr = i - 1
       }
       for i, capref := range re.CapNames() {
         if capref != "" {
           sym := mtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$,
-                                              mtaillex.(*parser).pos)
+                                             mtaillex.(*parser).pos)
           sym.addr = i
         }
       }
