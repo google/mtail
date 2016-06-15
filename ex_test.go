@@ -81,7 +81,7 @@ func TestExamplePrograms(t *testing.T) {
 
 		g, err := os.Open(tc.goldenfile)
 		if err != nil {
-			t.Fatalf("%s: could not open json file: %s", tc.goldenfile, err)
+			t.Fatalf("%s: could not open golden file: %s", tc.goldenfile, err)
 		}
 		defer g.Close()
 
