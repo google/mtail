@@ -455,7 +455,6 @@ declarator
   | ID
   {
     $$ = &declNode{name: $1}
-
   }
   | STRING
   {
