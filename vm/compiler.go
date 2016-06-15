@@ -237,6 +237,6 @@ func (c *compiler) compile(untypedNode node) {
 		c.emit(instr{op: jnm})
 
 	default:
-		c.errorf("undefined node type %T (%q)6", untypedNode, untypedNode)
+		c.errorf("undefined node type %T (%q)", untypedNode, untypedNode)
 	}
 }
