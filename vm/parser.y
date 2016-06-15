@@ -330,7 +330,7 @@ primary_expr
   }
   | STRING
   {
-    $$ = &stringNode{$1}
+    $$ = &stringConstNode{$1}
   }
   | LPAREN expr RPAREN
   {

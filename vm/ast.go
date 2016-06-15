@@ -33,10 +33,6 @@ type regexNode struct {
 	re_ast  *syntax.Regexp
 }
 
-type stringNode struct {
-	text string
-}
-
 type idNode struct {
 	name string
 	sym  *symbol
@@ -73,6 +69,10 @@ type declNode struct {
 	exportedName string
 	m            *metrics.Metric
 	sym          *symbol
+}
+
+type stringConstNode struct {
+	text string
 }
 
 type intConstNode struct {

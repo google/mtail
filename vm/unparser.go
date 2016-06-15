@@ -119,9 +119,6 @@ func (u *Unparser) unparse(n node) {
 		}
 		u.unparse(v.rhs)
 
-	case *stringNode:
-		u.emit("\"" + v.text + "\"")
-
 	case *idNode:
 		u.emit(v.name)
 
@@ -164,6 +161,9 @@ func (u *Unparser) unparse(n node) {
 			u.emit(" ~")
 			u.unparse(v.lhs)
 		}
+
+	case *stringConstNode:
+		u.emit("\"" + v.text + "\"")
 
 	case *intConstNode:
 		u.emit(strconv.FormatInt(v.i, 10))

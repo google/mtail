@@ -180,15 +180,15 @@ func (c *compiler) compile(untypedNode node) {
 		c.compile(n.index)
 		c.compile(n.lhs)
 
+	case *stringConstNode:
+		c.str = append(c.str, n.text)
+		c.emit(instr{str, len(c.str) - 1})
+
 	case *intConstNode:
 		c.emit(instr{push, n.i})
 
 	case *floatConstNode:
 		c.emit(instr{push, n.f})
-
-	case *stringNode:
-		c.str = append(c.str, n.text)
-		c.emit(instr{str, len(c.str) - 1})
 
 	case *idNode:
 		c.emit(instr{mload, n.sym.addr})
