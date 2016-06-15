@@ -106,17 +106,14 @@ func (c *compiler) compile(untypedNode node) {
 		}
 
 	case *regexNode:
-		if n.re == nil {
-			re, err := regexp.Compile(n.pattern)
-			if err != nil {
-				c.errorf("%s", err)
-				return
-			}
-			c.re = append(c.re, re)
-			n.re = re
-			// Store the location of this regular expression in the regexNode
-			n.addr = len(c.re) - 1
+		re, err := regexp.Compile(n.pattern)
+		if err != nil {
+			c.errorf("%s", err)
+			return
 		}
+		c.re = append(c.re, re)
+		// Store the location of this regular expression in the regexNode
+		n.addr = len(c.re) - 1
 		c.emit(instr{match, n.addr})
 		c.emit(instr{op: jnm})
 
