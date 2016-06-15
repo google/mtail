@@ -5,11 +5,8 @@
 package vm
 
 import (
-    "io"
-    "flag"
     "fmt"
     "regexp"
-    "strconv"
 
     "github.com/google/mtail/metrics"
 )
@@ -73,23 +70,23 @@ import (
 start
   : { mtaillex.(*parser).startScope() } stmt_list
   {
-      $2.(*stmtlistNode).s = mtaillex.(*parser).s
-      mtaillex.(*parser).endScope()
-      mtaillex.(*parser).root = $2
+    $2.(*stmtlistNode).s = mtaillex.(*parser).s
+    mtaillex.(*parser).endScope()
+    mtaillex.(*parser).root = $2
   }
   ;
 
 stmt_list
   : /* empty */
   {
-      $$ = &stmtlistNode{}
+    $$ = &stmtlistNode{}
   }
   | stmt_list stmt
   {
-      $$ = $1
-      if ($2 != nil) {
-        $$.(*stmtlistNode).children = append($$.(*stmtlistNode).children, $2)
-      }
+    $$ = $1
+    if ($2 != nil) {
+      $$.(*stmtlistNode).children = append($$.(*stmtlistNode).children, $2)
+    }
   }
   ;
 
@@ -156,7 +153,7 @@ expr
 assign_expr
   : bitwise_expr
   {
-     $$ = $1
+   $$ = $1
   }
   | unary_expr ASSIGN bitwise_expr
   {
@@ -212,7 +209,7 @@ relop
 
 shift_expr
   : additive_expr
-   { $$ = $1 }
+  { $$ = $1 }
   | shift_expr shift_op additive_expr
   {
     $$ = &binaryExprNode{$1, $3, $2}
@@ -289,8 +286,8 @@ arg_expr_list
   }
   | arg_expr_list COMMA assign_expr
   {
-     $$ = $1
-     $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
+    $$ = $1
+    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
   }
   ;
 
@@ -324,8 +321,8 @@ primary_expr
       $$ = &caprefNode{$1, sym}
     } else {
       mtaillex.Error(fmt.Sprintf("Capture group $%s not defined " +
-                                  "by prior regular expression in " +
-                                  "this or an outer scope",  $1))
+                                 "by prior regular expression in " +
+                                 "this or an outer scope",  $1))
       // TODO(jaq) force a parse error
     }
   }
@@ -515,11 +512,11 @@ as_spec
   ;
 
 definition
-: DEF ID compound_statement
+  : DEF ID compound_statement
   {
-      $$ = &defNode{name: $2, children: []node{$3}}
-      d := $$.(*defNode)
-      d.sym = mtaillex.(*parser).s.addSym(d.name, DefSymbol, d, mtaillex.(*parser).t.pos)
+    $$ = &defNode{name: $2, children: []node{$3}}
+    d := $$.(*defNode)
+    d.sym = mtaillex.(*parser).s.addSym(d.name, DefSymbol, d, mtaillex.(*parser).t.pos)
   }
   ;
 
@@ -536,79 +533,8 @@ decoration_statement
   ;
 
 opt_nl
-  :
+  : /* empty */
   | NL
   ;
 
 %%
-const EOF = 0
-
-type parser struct {
-    name   string
-    root   node
-    errors ErrorList
-    l      *lexer
-    t      token             // Most recently lexed token.
-    pos position             // Maybe contains the position of the start of a node.
-    s      *scope
-    res    map[string]string // Mapping of regex constants to patterns.
-    ms     *metrics.Store     // List of metrics exported by this program.
-}
-
-func newParser(name string, input io.Reader, ms *metrics.Store) *parser {
-    mtailDebug = *mtailDebugFlag
-    return &parser{name: name, l: newLexer(name, input), res: make(map[string]string), ms: ms}
-}
-
-func (p *parser) ErrorP(s string, pos position) {
-    p.errors.Add(pos, s)
-}
-
-func (p *parser) Error(s string) {
-    p.errors.Add(p.t.pos, s)
-}
-
-func (p *parser) Lex(lval *mtailSymType) int {
-    p.t = p.l.nextToken()
-    switch p.t.kind {
-    case INVALID:
-      p.Error(p.t.text)
-      return EOF
-    case INTLITERAL:
-      var err error
-      lval.intVal, err = strconv.ParseInt(p.t.text, 10, 64)
-      if err != nil {
-        p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
-        return INVALID
-      }
-    case FLOATLITERAL:
-      var err error
-      lval.floatVal, err = strconv.ParseFloat(p.t.text, 64)
-      if err != nil {
-        p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
-        return INVALID
-      }
-    case LT, GT, LE, GE, NE, EQ, SHL, SHR, AND, OR, XOR, NOT, INC, DIV, MUL, MINUS, PLUS, ASSIGN, ADD_ASSIGN, POW:
-      lval.op = int(p.t.kind)
-    default:
-      lval.text = p.t.text
-    }
-    return int(p.t.kind)
-}
-
-func (p *parser) startScope() {
-    s := &scope{p.s, map[string][]*symbol{}}
-    p.s = s
-}
-
-func (p *parser) endScope() {
-    if p.s != nil && p.s.parent != nil {
-        p.s = p.s.parent
-    }
-}
-
-func (p *parser) inRegex() {
-    p.l.in_regex = true
-}
-
-var mtailDebugFlag = flag.Int("mtailDebug", 0, "Set parser debug level.")
