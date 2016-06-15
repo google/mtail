@@ -199,8 +199,9 @@ func (c *compiler) compile(untypedNode node) {
 	case *caprefNode:
 		rn := n.sym.binding.(*regexNode)
 		// rn.addr contains the index of the regular expression object,
-		// which correlates to storage on the re heap
+		// which correlates to storage on the re slice
 		c.emit(instr{push, rn.addr})
+		// n.sym.addr is the capture group offset
 		c.emit(instr{capref, n.sym.addr})
 
 	case *builtinNode:
