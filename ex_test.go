@@ -22,7 +22,7 @@ var (
 var exampleProgramTests = []struct {
 	programfile string // Example program file.
 	logfile     string // Sample log input.
-	jsonfile    string // Expected metrics after processing.
+	goldenfile  string // Expected metrics after processing.
 }{
 	{
 		"examples/rsyncd.mtail",
@@ -79,14 +79,14 @@ func TestExamplePrograms(t *testing.T) {
 			continue
 		}
 
-		j, err := os.Open(tc.jsonfile)
+		g, err := os.Open(tc.goldenfile)
 		if err != nil {
-			t.Fatalf("%s: could not open json file: %s", tc.jsonfile, err)
+			t.Fatalf("%s: could not open json file: %s", tc.goldenfile, err)
 		}
-		defer j.Close()
+		defer g.Close()
 
 		golden_store := metrics.NewStore()
-		testdata.ReadTestData(j, tc.programfile, golden_store)
+		testdata.ReadTestData(g, tc.programfile, golden_store)
 
 		mtail.Close()
 
