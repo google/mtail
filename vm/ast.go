@@ -78,6 +78,7 @@ type stringConstNode struct {
 type intConstNode struct {
 	i int64
 }
+
 type floatConstNode struct {
 	f float64
 }

@@ -151,7 +151,7 @@ expr
 assign_expr
   : bitwise_expr
   {
-   $$ = $1
+    $$ = $1
   }
   | unary_expr ASSIGN bitwise_expr
   {

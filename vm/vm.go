@@ -56,6 +56,14 @@ const (
 	strtol                   // Convert a string to a number, given a base.
 	setmatched               // Set "matched" flag
 	otherwise                // Only match if "matched" flag is false.
+
+	// Floating point ops
+	fadd
+	fsub
+	fmul
+	fdiv
+	fmod
+	fpow
 )
 
 var opNames = map[opcode]string{
@@ -91,6 +99,12 @@ var opNames = map[opcode]string{
 	strtol:     "strtol",
 	setmatched: "setmatched",
 	otherwise:  "otherwise",
+	fadd:       "fadd",
+	fsub:       "fsub",
+	fmul:       "fmul",
+	fdiv:       "fdiv",
+	fmod:       "fmod",
+	fpow:       "fpow",
 }
 
 var builtin = map[string]opcode{
@@ -543,6 +557,30 @@ func (v *VM) execute(t *thread, i instr) {
 	case otherwise:
 		// Only match if the matched flag is false.
 		t.match = !t.matched
+
+	case fadd, fsub, fmul, fdiv, fmod, fpow:
+		b, ok := t.Pop().(float64)
+		if !ok {
+			v.errorf("Popped value b (%v) is not a float64", b)
+		}
+		a, ok := t.Pop().(float64)
+		if !ok {
+			v.errorf("Popped value a (%v) is not a float64", b)
+		}
+		switch i.op {
+		case fadd:
+			t.Push(a + b)
+		case fsub:
+			t.Push(a - b)
+		case fmul:
+			t.Push(a * b)
+		case fdiv:
+			t.Push(a / b)
+		case fmod:
+			t.Push(math.Mod(a, b))
+		case fpow:
+			t.Push(math.Pow(a, b))
+		}
 
 	default:
 		v.errorf("illegal instruction: %d", i.op)
