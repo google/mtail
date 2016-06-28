@@ -18,13 +18,13 @@ counter apache_http_recieved_bytes_total by server_port, handler, request_method
 /(?P<connection_status>conn=.) / + # %X - Connection status when response is completed
 /(?P<time_us>\d+) / + # %D - The time taken to serve the request, in microseconds.
 /(?P<sent_bytes>\d+) / + # %O - Bytes sent, including headers.
-/(?P<recived_bytes>\d+) / + # %I - Bytes received, including request and headers.
+/(?P<received_bytes>\d+) / + # %I - Bytes received, including request and headers.
 /(?P<keepalives>\d+)/ + # %k - Number of keepalive requests handled on this connection.
 /$/ {
   apache_http_requests_total[$server_port][$handler][$request_method][$request_status][$request_protocol]++
   apache_http_requests_time_microseconds_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $time_us
   apache_http_sent_bytes_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $sent_bytes
-  apache_http_recieved_bytes_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $recived_bytes
+  apache_http_recieved_bytes_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $received_bytes
 
   ### Connection status when response is completed:
   # X = Connection aborted before the response completed.
