@@ -56,7 +56,7 @@ func TestLogWatcher(t *testing.T) {
 			t.Errorf("Wrong event type: %q", e)
 		}
 	case <-time.After(10 * time.Millisecond):
-		t.Errorf("didn't receive create message")
+		t.Errorf("didn't receive create message before timeout")
 	}
 	f.WriteString("hi")
 	f.Close()
@@ -71,12 +71,12 @@ func TestLogWatcher(t *testing.T) {
 			t.Errorf("Wrong event type: %q", e)
 		}
 	case <-time.After(10 * time.Millisecond):
-		t.Errorf("didn't receive update message")
+		t.Errorf("didn't receive update message before timeout")
 	}
 	os.Chmod(filepath.Join(workdir, "logfile"), os.ModePerm)
 	select {
 	case e := <-w.Events():
-		t.Errorf("no event expected, got %q", e)
+		t.Errorf("no event expected, got %#v", e)
 	case <-time.After(10 * time.Millisecond):
 	}
 	os.Remove(filepath.Join(workdir, "logfile"))
@@ -91,7 +91,7 @@ func TestLogWatcher(t *testing.T) {
 			t.Errorf("Wrong event type: %q", e)
 		}
 	case <-time.After(10 * time.Millisecond):
-		t.Errorf("didn't receive delete message")
+		t.Errorf("didn't receive delete message before timeout")
 	}
 }
 
