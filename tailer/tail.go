@@ -183,7 +183,7 @@ func inode(f os.FileInfo) uint64 {
 	}
 	switch s := s.(type) {
 	case *syscall.Stat_t:
-		return s.Ino
+		return uint64(s.Ino)
 	default:
 		return 0
 	}
