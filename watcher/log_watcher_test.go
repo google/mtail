@@ -114,7 +114,6 @@ func TestNewLogWatcherError(t *testing.T) {
 	if err == nil {
 		t.Errorf("didn't fail as expected")
 	}
-	//t.Logf("expected error: %s", err)
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
 		t.Fatalf("couldn't reset rlimit: %s", err)
 	}
@@ -154,9 +153,8 @@ func TestLogWatcherAddError(t *testing.T) {
 	if err == nil {
 		t.Errorf("didn't fail to add file")
 	}
-	//t.Logf("error: %s", err)
 	if err := os.Chmod(filename, 0777); err != nil {
-		t.Fatalf("coulnd't reset file perms: %s", err)
+		t.Fatalf("couldn't reset file perms: %s", err)
 	}
 }
 
@@ -169,7 +167,7 @@ func TestWatcherErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't create a watcher")
 	}
-	w.Errors <- errors.New("just a test, not really an error")
+	w.Errors <- errors.New("Injected error for test")
 	if err := w.Close(); err != nil {
 		t.Fatalf("watcher close failed: %q", err)
 	}
