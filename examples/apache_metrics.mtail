@@ -7,7 +7,7 @@ counter apache_http_requests_total by server_port, handler, request_method, requ
 counter apache_http_connections_total by server_port, handler, request_method, request_status, request_protocol, connection_status
 counter apache_http_requests_time_microseconds_total by server_port, handler, request_method, request_status, request_protocol
 counter apache_http_sent_bytes_total by server_port, handler, request_method, request_status, request_protocol
-counter apache_http_recieved_bytes_total by server_port, handler, request_method, request_status, request_protocol
+counter apache_http_received_bytes_total by server_port, handler, request_method, request_status, request_protocol
 
 /^/ +
 /(?P<server_port>\S+) / + # %v:%p - The canonical ServerName of the server serving the request. : The canonical port of the server serving the request.
@@ -24,7 +24,7 @@ counter apache_http_recieved_bytes_total by server_port, handler, request_method
   apache_http_requests_total[$server_port][$handler][$request_method][$request_status][$request_protocol]++
   apache_http_requests_time_microseconds_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $time_us
   apache_http_sent_bytes_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $sent_bytes
-  apache_http_recieved_bytes_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $received_bytes
+  apache_http_received_bytes_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $received_bytes
 
   ### Connection status when response is completed:
   # X = Connection aborted before the response completed.
