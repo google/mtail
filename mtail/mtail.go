@@ -102,6 +102,10 @@ func (m *Mtail) StartTailing() error {
 	}
 	for _, fd := range m.o.LogFds {
 		f := os.NewFile(uintptr(fd), strconv.Itoa(fd))
+		if f == nil {
+			glog.Error("Attempt to reopen fd %q returned nil", fd)
+			continue
+		}
 		if e := m.t.TailFile(f); e != nil {
 			glog.Error(e)
 		}
