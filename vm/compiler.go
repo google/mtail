@@ -40,7 +40,7 @@ func Compile(name string, input io.Reader, ms *metrics.Store, compileOnly bool, 
 		return nil, p.errors
 	}
 	c := &compiler{name: name, symtab: p.s}
-	c.compile(p.root)
+	Walk(c, p.root)
 	if len(c.errors) > 0 {
 		return nil, c.errors
 	}
@@ -61,26 +61,18 @@ func (c *compiler) emit(i instr) {
 	c.prog = append(c.prog, i)
 }
 
-func (c *compiler) compile(untypedNode node) {
+func (c *compiler) VisitBefore(untypedNode node) Visitor {
 	switch n := untypedNode.(type) {
-	case *stmtlistNode:
-		for _, child := range n.children {
-			c.compile(child)
-		}
-
-	case *exprlistNode:
-		for _, child := range n.children {
-			c.compile(child)
-		}
 
 	case *declNode:
 		// Build the list of addressable metrics for this program, and set the symbol's address.
 		n.sym.addr = len(c.m)
 		c.m = append(c.m, n.sym.binding.(*metrics.Metric))
+		return nil
 
 	case *condNode:
 		if n.cond != nil {
-			c.compile(n.cond)
+			Walk(c, n.cond)
 		}
 		// Save PC of previous jump instruction emitted by the n.cond
 		// compilation.  (See regexNode and relNode cases, which will emit a
@@ -88,7 +80,7 @@ func (c *compiler) compile(untypedNode node) {
 		pc := len(c.prog) - 1
 		// Set matched flag false for children.
 		c.emit(instr{setmatched, false})
-		c.compile(n.truthNode)
+		Walk(c, n.truthNode)
 		// Re-set matched flag to true for rest of current block.
 		c.emit(instr{setmatched, true})
 		// Rewrite n.cond's jump target to jump to instruction after block.
@@ -100,16 +92,17 @@ func (c *compiler) compile(untypedNode node) {
 			c.prog[pc].opnd = len(c.prog)
 			// Now get the PC of the else-skipper just emitted.
 			pc = len(c.prog) - 1
-			c.compile(n.elseNode)
+			Walk(c, n.elseNode)
 			// Rewrite else-skipper to the next PC.
 			c.prog[pc].opnd = len(c.prog)
 		}
+		return nil
 
 	case *regexNode:
 		re, err := regexp.Compile(n.pattern)
 		if err != nil {
 			c.errorf("%s", err)
-			return
+			return nil
 		}
 		c.re = append(c.re, re)
 		// Store the location of this regular expression in the regexNode
@@ -118,8 +111,8 @@ func (c *compiler) compile(untypedNode node) {
 		c.emit(instr{op: jnm})
 
 	case *binaryExprNode:
-		c.compile(n.lhs)
-		c.compile(n.rhs)
+		Walk(c, n.lhs)
+		Walk(c, n.rhs)
 		switch n.op {
 		case LT:
 			c.emit(instr{cmp, -1})
@@ -166,19 +159,22 @@ func (c *compiler) compile(untypedNode node) {
 		case POW:
 			c.emit(instr{op: pow})
 		}
+		return nil
 
 	case *unaryExprNode:
-		c.compile(n.lhs)
+		Walk(c, n.lhs)
 		switch n.op {
 		case INC:
 			c.emit(instr{op: inc})
 		case NOT:
 			c.emit(instr{op: not})
 		}
+		return nil
 
 	case *indexedExprNode:
-		c.compile(n.index)
-		c.compile(n.lhs)
+		Walk(c, n.index)
+		Walk(c, n.lhs)
+		return nil
 
 	case *stringConstNode:
 		c.str = append(c.str, n.text)
@@ -205,37 +201,38 @@ func (c *compiler) compile(untypedNode node) {
 
 	case *builtinNode:
 		if n.args != nil {
-			c.compile(n.args)
+			Walk(c, n.args)
 			c.emit(instr{builtin[n.name], len(n.args.(*exprlistNode).children)})
 		} else {
 			c.emit(instr{op: builtin[n.name]})
 		}
+		return nil
 
 	case *defNode:
 		// Do nothing, defs are inlined.
+		return nil
 
 	case *decoNode:
 		// Put the current block on the stack
 		c.decos = append(c.decos, n)
 		// then iterate over the decorator's nodes
-		for _, child := range n.def.children {
-			c.compile(child)
-		}
-		// Pop the block off
+		walknodelist(c, n.def.children)
 		c.decos = c.decos[:len(c.decos)-1]
+		return nil
 
 	case *nextNode:
 		// Visit the 'next' block on the decorated block stack
 		deco := c.decos[len(c.decos)-1]
-		for _, child := range deco.children {
-			c.compile(child)
-		}
+		walknodelist(c, deco.children)
+		return nil
 
 	case *otherwiseNode:
 		c.emit(instr{op: otherwise})
 		c.emit(instr{op: jnm})
-
-	default:
-		c.errorf("undefined node type %T (%q)", untypedNode, untypedNode)
 	}
+
+	return c
+}
+
+func (c *compiler) VisitAfter(n node) {
 }
