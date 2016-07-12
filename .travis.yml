@@ -25,7 +25,6 @@ go:
   - tip
   - 1.6
   - 1.5
-  - 1.4
 
 # GOMAXPROCS=1 forces scheduling race bugs.
 env:
@@ -39,7 +38,6 @@ matrix:
   fast_finish: true
   allow_failures:
     - go: tip
-    - go: 1.6
 
 
 # Not using sudo, can use containers.
