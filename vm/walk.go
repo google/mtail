@@ -54,9 +54,9 @@ func Walk(v Visitor, node node) {
 	case *unaryExprNode:
 		Walk(v, n.lhs)
 
-	case indexedExprNode:
-		Walk(v, n.lhs)
+	case *indexedExprNode:
 		Walk(v, n.index)
+		Walk(v, n.lhs)
 
 	case *defNode:
 		walknodelist(v, n.children)
