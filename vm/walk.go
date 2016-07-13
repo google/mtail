@@ -65,7 +65,7 @@ func Walk(v Visitor, node node) {
 		walknodelist(v, n.children)
 
 	case *regexNode, *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *nextNode, *otherwiseNode:
-		// These nodes are terminals, have no children.
+		// These nodes are terminals, thus have no children to walk.
 
 	default:
 		panic(fmt.Sprintf("Walk: unexpected node type %T: %v", n, n))
