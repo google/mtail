@@ -15,6 +15,12 @@ import (
 	"github.com/google/mtail/metrics"
 )
 
+// Options contains all the parameters that affect the behaviour of the compiler.
+type Options struct {
+	CompileOnly          bool // Do not start the program after compilation.
+	SyslogUseCurrentYear bool // Use the current year if no year is present in the log file timestamp.
+}
+
 type compiler struct {
 	name string // Name of the program.
 
@@ -32,7 +38,7 @@ type compiler struct {
 // Compile compiles a program from the input into a virtual machine or a list
 // of compile errors.  It takes the program's name and the metric store as
 // additional arguments to build the virtual machine.
-func Compile(name string, input io.Reader, ms *metrics.Store, compileOnly bool, syslogUseCurrentYear bool) (*VM, error) {
+func Compile(name string, input io.Reader, ms *metrics.Store, o *Options) (*VM, error) {
 	name = filepath.Base(name)
 	p := newParser(name, input, ms)
 	r := mtailParse(p)
@@ -48,11 +54,11 @@ func Compile(name string, input io.Reader, ms *metrics.Store, compileOnly bool, 
 		return nil, err
 	}
 
-	if compileOnly {
+	if o.CompileOnly {
 		return nil, nil
 	}
 
-	vm := New(name, c.re, c.str, c.m, c.prog, syslogUseCurrentYear)
+	vm := New(name, c.re, c.str, c.m, c.prog, o.SyslogUseCurrentYear)
 	return vm, nil
 }
 

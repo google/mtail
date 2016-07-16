@@ -344,9 +344,10 @@ counter bar
 }
 
 func TestCompile(t *testing.T) {
+	o := &Options{CompileOnly: false, SyslogUseCurrentYear: true}
 	for _, tc := range programs {
 		m := metrics.NewStore()
-		v, err := Compile(tc.name, strings.NewReader(tc.source), m, false, true)
+		v, err := Compile(tc.name, strings.NewReader(tc.source), m, o)
 		if err != nil {
 			t.Errorf("Compile errors: %q", err)
 			continue
