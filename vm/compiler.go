@@ -44,6 +44,10 @@ func Compile(name string, input io.Reader, ms *metrics.Store, compileOnly bool, 
 	if len(c.errors) > 0 {
 		return nil, c.errors
 	}
+	if err := Check(p.root); err != nil {
+		return nil, err
+	}
+
 	if compileOnly {
 		return nil, nil
 	}
