@@ -1,5 +1,5 @@
-mtail (0.0+git20160704.35c4023-1) UNRELEASED; urgency=medium
+mtail (0.0+git20160704.35c4023-1) unstable; urgency=medium
 
   * Initial release. (Closes: #830785)
 
- -- Martín Ferrari <tincho@debian.org>  Mon, 11 Jul 2016 14:42:56 +0100
+ -- Martín Ferrari <tincho@debian.org>  Mon, 18 Jul 2016 00:09:49 +0000
