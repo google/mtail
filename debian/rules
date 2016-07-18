@@ -23,7 +23,9 @@ override_dh_auto_build:
 
 override_dh_auto_test:
 	GOPATH=$(BUILDDIR) go test -v -timeout 60s $(DH_GOPKG)
+ifeq ($(DEB_HOST_ARCH_CPU),amd64)
 	GOPATH=$(BUILDDIR) go test -v -timeout 5m -race $(DH_GOPKG)
+endif
 
 override_dh_auto_install:
 
