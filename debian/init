@@ -97,17 +97,3 @@ do_stop_cmd()
     $HELPER $HELPER_ARGS --running || return 0
     return 2
 }
-
-do_reload()
-{
-    log_daemon_msg "Reloading $DESC configuration files" "$NAME"
-    $HELPER $HELPER_ARGS --running || return 1
-    helper_pid=$(cat $PIDFILE)
-    if [ -z "$helper_pid" ]; then
-        log_failure_msg "Unable to find PID"
-        return 1
-    fi
-    start-stop-daemon --stop --signal 1 --quiet \
-        --ppid "$helper_pid" --exec "$DAEMON"
-    log_end_msg $?
-}
