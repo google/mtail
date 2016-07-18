@@ -1,0 +1,6 @@
+version=3
+
+opts="filenamemangle=s/(?:.*\/)?v?([^\/]+)\.tar\.gz/prometheus-alertmanager-$1.tar.gz/,\
+dversionmangle=s/\+ds\d*$//,uversionmangle=s/rc/~rc/" \
+        https://github.com/prometheus/alertmanager/tags \
+        (?:.*/)?v?(\d[\d\.]*(?:rc\d*)?)\.tar\.gz

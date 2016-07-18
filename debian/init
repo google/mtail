@@ -1,0 +1,113 @@
+#!/bin/sh
+# kFreeBSD do not accept scripts as interpreters, using #!/bin/sh and sourcing.
+if [ true != "$INIT_D_SCRIPT_SOURCED" ] ; then
+    set "$0" "$@"; INIT_D_SCRIPT_SOURCED=true . /lib/init/init-d-script
+fi
+### BEGIN INIT INFO
+# Provides:          mtail
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Extract monitoring data from logs
+# Description:       mtail is a tool for extracting metrics from application
+#                    logs to be exported into a timeseries database or
+#                    timeseries calculator for alerting and dashboarding.
+#                    It aims to fill a niche between applications that do not
+#                    export their own internal state, and existing monitoring
+#                    systems, without patching those applications or rewriting
+#                    the same framework for custom extraction glue code.
+#                    Metrics are exported for scraping by a collector as JSON
+#                    or Prometheus format over HTTP, or can be periodically
+#                    sent to a collectd, StatsD, or Graphite collector socket.
+### END INIT INFO
+
+# Author: Martín Ferrari <tincho@debian.org>
+
+DESC="monitoring data extractor from application logs"
+DAEMON=/usr/bin/mtail
+NAME=mtail
+USER=mtail
+PIDFILE=/var/run/mtail/mtail.pid
+LOGFILE=/var/log/mtail/mtail.log
+
+HELPER=/usr/bin/daemon
+HELPER_ARGS="--name=$NAME --output=$LOGFILE --pidfile=$PIDFILE --user=$USER"
+
+# Defaults.
+ENABLED=0
+LOGS=
+PORT=
+COLLECTD_SOCKETPATH=
+GRAPHITE_HOST_PORT=
+STATSD_HOSTPORT=
+METRIC_PUSH_INTERVAL=
+EXTRA_ARGS=
+
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+if [ -z "$ENABLED" -o "$ENABLED" = "0" -o "$ENABLED" = "no" ] ; then
+    echo "$NAME disabled, see /etc/default/$NAME"
+    exit 0
+fi
+
+ARGS="-progs /etc/mtail -logtostderr"
+[ -n "$LOGS" ] && ARGS="${ARGS} -logs $LOGS"
+[ -n "$PORT" ] && ARGS="${ARGS} -port $PORT"
+[ -n "$COLLECTD_SOCKETPATH" ] && \
+    ARGS="${ARGS} -collectd_socketpath $COLLECTD_SOCKETPATH"
+[ -n "$GRAPHITE_HOSTPORT" ] && \
+    ARGS="${ARGS} -graphite_host_port $GRAPHITE_HOSTPORT"
+[ -n "$STATSD_HOSTPORT" ] && ARGS="${ARGS} -statsd_hostport $STATSD_HOSTPORT"
+[ -n "$METRIC_PUSH_INTERVAL" ] && \
+    ARGS="${ARGS} -metric_push_interval_seconds $METRIC_PUSH_INTERVAL"
+[ -n "$EXTRA_ARGS" ] && ARGS="${ARGS} $EXTRA_ARGS"
+
+do_start_prepare()
+{
+    mkdir -p `dirname $PIDFILE` || true
+    chown -R $USER: `dirname $LOGFILE`
+    chown -R $USER: `dirname $PIDFILE`
+}
+
+do_start_cmd()
+{
+    # Return
+    #   0 if daemon has been started
+    #   1 if daemon was already running
+    #   2 if daemon could not be started
+    $HELPER $HELPER_ARGS --running && return 1
+    $HELPER $HELPER_ARGS -- $DAEMON $ARGS || return 2
+    return 0
+}
+
+do_stop_cmd()
+{
+    # Return
+    #   0 if daemon has been stopped
+    #   1 if daemon was already stopped
+    #   2 if daemon could not be stopped
+    #   other if a failure occurred
+    $HELPER $HELPER_ARGS --running || return 1
+    $HELPER $HELPER_ARGS --stop || return 2
+    # wait for the process to really terminate
+    for n in 1 2 3 4 5; do
+        sleep $n
+        $HELPER $HELPER_ARGS --running || break
+    done
+    $HELPER $HELPER_ARGS --running || return 0
+    return 2
+}
+
+do_reload()
+{
+    log_daemon_msg "Reloading $DESC configuration files" "$NAME"
+    $HELPER $HELPER_ARGS --running || return 1
+    helper_pid=$(cat $PIDFILE)
+    if [ -z "$helper_pid" ]; then
+        log_failure_msg "Unable to find PID"
+        return 1
+    fi
+    start-stop-daemon --stop --signal 1 --quiet \
+        --ppid "$helper_pid" --exec "$DAEMON"
+    log_end_msg $?
+}

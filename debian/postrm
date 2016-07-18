@@ -1,0 +1,14 @@
+#!/bin/sh
+# postrm script for mtail
+# Script executed after the package is removed.
+
+set -e
+
+case "$1" in
+  purge)
+        rm -rf /var/log/mtail/ /var/run/mtail/
+	# We do NOT remove the system user.
+	;;
+esac
+
+#DEBHELPER#

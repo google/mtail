@@ -1,0 +1,27 @@
+# Set to 1 to start Mtail at boot.
+ENABLED=0
+
+## Log processing.
+
+# List of files to monitor (mandatory).
+#LOGS=/var/log/daemon.log,/var/log/mail.info
+
+## Metrics exporting.
+
+# HTTP port to listen on. (default "3903")
+#PORT=3903
+
+# Path to collectd unixsock to write metrics to.
+#COLLECTD_SOCKETPATH=
+
+# Host:port to graphite carbon server to write metrics to.
+#GRAPHITE_HOSTPORT=
+
+# Host:port to statsd server to write metrics to.
+#STATSD_HOSTPORT=
+
+# Interval between metric pushes, in seconds (default 60)
+#METRIC_PUSH_INTERVAL=
+
+# Extra command-line arguments to pass to the server.
+#EXTRA_ARGS=""
