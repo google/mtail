@@ -42,36 +42,36 @@ func (u *Unparser) newline() {
 	u.line = ""
 }
 
-func (u *Unparser) unparse(n node) {
+func (u *Unparser) VisitBefore(n node) Visitor {
 	switch v := n.(type) {
 	case *stmtlistNode:
 		for _, child := range v.children {
-			u.unparse(child)
+			Walk(u, child)
 			u.newline()
 		}
 
 	case *exprlistNode:
 		if len(v.children) > 0 {
-			u.unparse(v.children[0])
+			Walk(u, v.children[0])
 			for _, child := range v.children[1:] {
 				u.emit(", ")
-				u.unparse(child)
+				Walk(u, child)
 			}
 		}
 
 	case *condNode:
 		if v.cond != nil {
-			u.unparse(v.cond)
+			Walk(u, v.cond)
 		}
 		u.emit(" {")
 		u.newline()
 		u.indent()
-		u.unparse(v.truthNode)
+		Walk(u, v.truthNode)
 		if v.elseNode != nil {
 			u.outdent()
 			u.emit("} else {")
 			u.indent()
-			u.unparse(v.elseNode)
+			Walk(u, v.elseNode)
 		}
 		u.outdent()
 		u.emit("}")
@@ -80,7 +80,7 @@ func (u *Unparser) unparse(n node) {
 		u.emit("/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/")
 
 	case *binaryExprNode:
-		u.unparse(v.lhs)
+		Walk(u, v.lhs)
 		switch v.op {
 		case LT:
 			u.emit(" < ")
@@ -117,7 +117,7 @@ func (u *Unparser) unparse(n node) {
 		case MOD:
 			u.emit(" % ")
 		}
-		u.unparse(v.rhs)
+		Walk(u, v.rhs)
 
 	case *idNode:
 		u.emit(v.name)
@@ -128,14 +128,14 @@ func (u *Unparser) unparse(n node) {
 	case *builtinNode:
 		u.emit(v.name + "(")
 		if v.args != nil {
-			u.unparse(v.args)
+			Walk(u, v.args)
 		}
 		u.emit(")")
 
 	case *indexedExprNode:
-		u.unparse(v.lhs)
+		Walk(u, v.lhs)
 		u.emit("[")
-		u.unparse(v.index)
+		Walk(u, v.index)
 		u.emit("]")
 
 	case *declNode:
@@ -155,11 +155,11 @@ func (u *Unparser) unparse(n node) {
 	case *unaryExprNode:
 		switch v.op {
 		case INC:
-			u.unparse(v.lhs)
+			Walk(u, v.lhs)
 			u.emit("++")
 		case NOT:
 			u.emit(" ~")
-			u.unparse(v.lhs)
+			Walk(u, v.lhs)
 		}
 
 	case *stringConstNode:
@@ -176,7 +176,7 @@ func (u *Unparser) unparse(n node) {
 		u.newline()
 		u.indent()
 		for _, child := range v.children {
-			u.unparse(child)
+			Walk(u, child)
 		}
 		u.outdent()
 		u.emit("}")
@@ -186,7 +186,7 @@ func (u *Unparser) unparse(n node) {
 		u.newline()
 		u.indent()
 		for _, child := range v.children {
-			u.unparse(child)
+			Walk(u, child)
 		}
 		u.outdent()
 		u.emit("}")
@@ -200,10 +200,14 @@ func (u *Unparser) unparse(n node) {
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}
+
+	return nil
 }
+
+func (u *Unparser) VisitAfter(n node) {}
 
 // Unparse begins the unparsing of the syntax tree, returning the program text as a single string.
 func (u *Unparser) Unparse(n node) string {
-	u.unparse(n)
+	Walk(u, n)
 	return u.output
 }
