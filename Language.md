@@ -162,7 +162,7 @@ A regular expression that extracts the timestamp in boring old syslog format loo
 }
 ```
 
-Buyer beware!  The format string used by mtail is the same as the [golang format string](http://golang.org/src/pkg/time/format.go), which is completely unlike that used by C's strptime.  The format string must always be the 2nd of January 2006 at 3:04:05 PM.  See the documentation for the **ANSIC** format in the above link for more details.
+Buyer beware!  The format string used by mtail is the same as the [Go time.Parse() format string](http://golang.org/src/pkg/time/format.go), which is completely unlike that used by C's strptime.  The format string must always be the 2nd of January 2006 at 3:04:05 PM.  See the documentation for the **ANSIC** format in the above link for more details.
 
 ## Nested Actions
 
@@ -187,3 +187,71 @@ counter bar
 ```
 
 This will result in both foo and bar counters being timestamped with the current log line's parsed time, once they match a line.
+
+# Builtin functions
+
+A few builtin functions exist for manipulating the virtual machine state.  They
+are:
+
+1. `timestamp()`, a function of no arguments, which returns the current
+   timestamp.
+1.  `len(x)`, a function of one string argument, which returns the length of
+    the string argument.
+1. `settime(x)`, a function of one integer argument, which sets the current
+   timestamp
+1.  `strptime(x, y)`, a function of two string arguments, which parses the
+    timestamp in the string `x` with the parse format string in `y`, and sets
+    the current timestamp.  The parse format string must follow [Go's
+    time.Parse() format string](http://golang.org/src/pkg/time/format.go)
+1. `tolower(x)`, a function of one string argument, which lowercases the
+   string.
+
+As described in Nested Actions, the current timestamp refers to mtail's idea of
+the time associated with the current log line.  This timestamp is used when the
+variables are exported to the upstream collector.  This defaults to the time
+that the log line arrives in mtail, and can be changed with the `settime()` or
+`strptime()` builtins.
+
+User defined functions are not supported, but read on to Decorated Actions for
+how to factor out common matching pattern/action behaviour.
+
+# Decorated actions
+
+Decorated actions are an inversion of nested actions.  They allow the program
+to define repetetive functions that perform the same extraction across many
+different actions.
+
+For example, most log file formats start with a timestamp prefix.  To reduce
+dupliation of work, decorators can be used to factor out the common work of
+extracting the timestamp.  For example, to define a decorator, use the `def`
+keyword:
+
+```
+def syslog {
+  /(?P<date>\w+\s+\d+\s+\d+:\d+:\d+)/ {
+    strptime($date, "Jan  2 15:04:05")
+    next
+  }
+}
+```
+
+The decorator definition starts and ends in a curly-braced block, and looks
+like a normal pattern/action as above.  The new part is the `next` keyword,
+which indicates to mtail where to jump into the *decorated* block.
+
+To use a decorator:
+
+```
+@syslog {
+    /some event/ {
+      variable++
+    }
+}
+```
+
+The `@` notation, familiar to Python programmers, denotes that this block is
+"wrapped" by the `syslog` decorator.  The syslog decorator will be called on
+each line first, which extracts the timestamp of the log line.  Then, `next`
+causes the wrapped block to execute, so then mtail matches the line against the
+pattern `some event`, and if it does match, increments `variable`.
+
