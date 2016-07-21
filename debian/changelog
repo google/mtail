@@ -1,8 +1,9 @@
-mtail (0.0+git20160704.35c4023-2) UNRELEASED; urgency=medium
+mtail (0.0+git20160716.f911b02-1) UNRELEASED; urgency=medium
 
   * Don't run race tests on any arch except amd64. Closes: #831724.
+  * New upstream snapshot.
 
- -- Martín Ferrari <tincho@debian.org>  Mon, 18 Jul 2016 19:39:18 +0100
+ -- Martín Ferrari <tincho@debian.org>  Tue, 19 Jul 2016 02:43:41 +0000
 
 mtail (0.0+git20160704.35c4023-1) unstable; urgency=medium
 
