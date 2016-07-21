@@ -18,6 +18,7 @@ Homepage: https://github.com/google/mtail/
 Package: mtail
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, adduser, daemon,
+Conflicts: monkeytail
 Built-Using: ${misc:Built-Using}
 Description: Extract monitoring data from logs for collection in a timeseries database
  Mtail is a tool for extracting metrics from application logs to be exported
