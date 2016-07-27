@@ -101,6 +101,10 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("compile failed for %s:\n%s", name, errs)
 	}
+	if v == nil {
+		glog.Warning("No program returned, but no errors.")
+		return nil
+	}
 	if l.dumpBytecode {
 		v.DumpByteCode(name)
 	}
