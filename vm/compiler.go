@@ -21,20 +21,6 @@ type Options struct {
 	SyslogUseCurrentYear bool // Use the current year if no year is present in the log file timestamp.
 }
 
-type compiler struct {
-	name string // Name of the program.
-
-	errors ErrorList         // Compile errors.
-	prog   []instr           // The emitted program.
-	str    []string          // Static strings.
-	re     []*regexp.Regexp  // Static regular expressions.
-	m      []*metrics.Metric // Metrics accessible to this program.
-
-	decos []*decoNode // Decorator stack to unwind
-
-	symtab *scope
-}
-
 // Compile compiles a program from the input into a virtual machine or a list
 // of compile errors.  It takes the program's name and the metric store as
 // additional arguments to build the virtual machine.
@@ -48,18 +34,47 @@ func Compile(name string, input io.Reader, ms *metrics.Store, o *Options) (*VM, 
 	if err := Check(p.root); err != nil {
 		return nil, err
 	}
-	c := &compiler{name: name, symtab: p.s}
-	Walk(c, p.root)
-	if len(c.errors) > 0 {
-		return nil, c.errors
+	obj, err := CodeGen(name, p.s, p.root)
+	if err != nil {
+		return nil, err
 	}
 
 	if o.CompileOnly {
 		return nil, nil
 	}
 
-	vm := New(name, c.re, c.str, c.m, c.prog, o.SyslogUseCurrentYear)
+	vm := New(name, obj.re, obj.str, obj.m, obj.prog, o.SyslogUseCurrentYear)
 	return vm, nil
+}
+
+// CodeGen is the function that compiles the program to bytecode and data.
+func CodeGen(name string, symtab *scope, ast node) (*object, error) {
+	c := &compiler{name: name, symtab: symtab}
+	Walk(c, ast)
+	if len(c.errors) > 0 {
+		return nil, c.errors
+	}
+	return &c.obj, nil
+}
+
+// object describes a built object of data and bytecode
+type object struct {
+	prog []instr           // The emitted program.
+	str  []string          // Static strings.
+	re   []*regexp.Regexp  // Static regular expressions.
+	m    []*metrics.Metric // Metrics accessible to this program.
+}
+
+// compiler is data for the code generator.
+type compiler struct {
+	name string // Name of the program.
+
+	errors ErrorList // Compile errors.
+	obj    object    // The object to return
+
+	decos []*decoNode // Decorator stack to unwind
+
+	symtab *scope
 }
 
 func (c *compiler) errorf(format string, args ...interface{}) {
@@ -68,7 +83,7 @@ func (c *compiler) errorf(format string, args ...interface{}) {
 }
 
 func (c *compiler) emit(i instr) {
-	c.prog = append(c.prog, i)
+	c.obj.prog = append(c.obj.prog, i)
 }
 
 func (c *compiler) VisitBefore(node node) Visitor {
@@ -76,8 +91,8 @@ func (c *compiler) VisitBefore(node node) Visitor {
 
 	case *declNode:
 		// Build the list of addressable metrics for this program, and set the symbol's address.
-		n.sym.addr = len(c.m)
-		c.m = append(c.m, n.sym.binding.(*metrics.Metric))
+		n.sym.addr = len(c.obj.m)
+		c.obj.m = append(c.obj.m, n.sym.binding.(*metrics.Metric))
 		return nil
 
 	case *condNode:
@@ -87,24 +102,24 @@ func (c *compiler) VisitBefore(node node) Visitor {
 		// Save PC of previous jump instruction emitted by the n.cond
 		// compilation.  (See regexNode and relNode cases, which will emit a
 		// jump as the last instr.)  This jump will skip over the truthNode.
-		pc := len(c.prog) - 1
+		pc := len(c.obj.prog) - 1
 		// Set matched flag false for children.
 		c.emit(instr{setmatched, false})
 		Walk(c, n.truthNode)
 		// Re-set matched flag to true for rest of current block.
 		c.emit(instr{setmatched, true})
 		// Rewrite n.cond's jump target to jump to instruction after block.
-		c.prog[pc].opnd = len(c.prog)
+		c.obj.prog[pc].opnd = len(c.obj.prog)
 		// Now also emit the else clause, and a jump.
 		if n.elseNode != nil {
 			c.emit(instr{op: jmp})
 			// Rewrite jump again to avoid this else-skipper just emitted.
-			c.prog[pc].opnd = len(c.prog)
+			c.obj.prog[pc].opnd = len(c.obj.prog)
 			// Now get the PC of the else-skipper just emitted.
-			pc = len(c.prog) - 1
+			pc = len(c.obj.prog) - 1
 			Walk(c, n.elseNode)
 			// Rewrite else-skipper to the next PC.
-			c.prog[pc].opnd = len(c.prog)
+			c.obj.prog[pc].opnd = len(c.obj.prog)
 		}
 		return nil
 
@@ -114,15 +129,15 @@ func (c *compiler) VisitBefore(node node) Visitor {
 			c.errorf("%s", err)
 			return nil
 		}
-		c.re = append(c.re, re)
+		c.obj.re = append(c.obj.re, re)
 		// Store the location of this regular expression in the regexNode
-		n.addr = len(c.re) - 1
+		n.addr = len(c.obj.re) - 1
 		c.emit(instr{match, n.addr})
 		c.emit(instr{op: jnm})
 
 	case *stringConstNode:
-		c.str = append(c.str, n.text)
-		c.emit(instr{str, len(c.str) - 1})
+		c.obj.str = append(c.obj.str, n.text)
+		c.emit(instr{str, len(c.obj.str) - 1})
 
 	case *intConstNode:
 		c.emit(instr{push, n.i})
