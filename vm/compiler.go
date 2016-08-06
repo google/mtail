@@ -42,7 +42,7 @@ func Compile(name string, input io.Reader, ms *metrics.Store, o *Options) (*VM, 
 		return nil, nil
 	}
 
-	vm := New(name, obj.re, obj.str, obj.m, obj.prog, o.SyslogUseCurrentYear)
+	vm := New(name, obj, o.SyslogUseCurrentYear)
 	return vm, nil
 }
 

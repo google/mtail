@@ -625,13 +625,13 @@ func (v *VM) Run(lines <-chan string, shutdown chan<- struct{}) {
 
 // New creates a new virtual machine with the given name, and compiler
 // artifacts for executable and data segments.
-func New(name string, re []*regexp.Regexp, str []string, m []*metrics.Metric, prog []instr, syslogUseCurrentYear bool) *VM {
+func New(name string, obj *object, syslogUseCurrentYear bool) *VM {
 	return &VM{
 		name:                 name,
-		re:                   re,
-		str:                  str,
-		m:                    m,
-		prog:                 prog,
+		re:                   obj.re,
+		str:                  obj.str,
+		m:                    obj.m,
+		prog:                 obj.prog,
 		timeMemos:            make(map[string]time.Time, 0),
 		syslogUseCurrentYear: syslogUseCurrentYear,
 	}

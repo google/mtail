@@ -369,8 +369,8 @@ func TestInstrs(t *testing.T) {
 		m = append(m,
 			metrics.NewMetric("foo", "test", metrics.Counter),
 			metrics.NewMetric("bar", "test", metrics.Counter))
-
-		v := New(tc.name, tc.re, tc.str, m, []instr{tc.i}, true)
+		obj := &object{re: tc.re, str: tc.str, m: m, prog: []instr{tc.i}}
+		v := New(tc.name, obj, true)
 		v.t = new(thread)
 		v.t.stack = make([]interface{}, 0)
 		for _, item := range tc.reversedStack {
