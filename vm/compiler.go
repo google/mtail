@@ -45,13 +45,13 @@ func Compile(name string, input io.Reader, ms *metrics.Store, o *Options) (*VM, 
 	if r != 0 || p == nil || p.errors != nil {
 		return nil, p.errors
 	}
+	if err := Check(p.root); err != nil {
+		return nil, err
+	}
 	c := &compiler{name: name, symtab: p.s}
 	Walk(c, p.root)
 	if len(c.errors) > 0 {
 		return nil, c.errors
-	}
-	if err := Check(p.root); err != nil {
-		return nil, err
 	}
 
 	if o.CompileOnly {
