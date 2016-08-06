@@ -6,6 +6,9 @@ package vm
 // checker holds data for a semantic checker
 type checker struct {
 	errors ErrorList
+
+	// The enclosing scope for looking up symbols
+	currentScope *scope
 }
 
 // Check performs a semantic check of the ast node, and returns a boolean
@@ -20,8 +23,17 @@ func Check(node node) error {
 }
 
 func (c *checker) VisitBefore(node node) Visitor {
+	switch n := node.(type) {
+	case *stmtlistNode:
+		c.currentScope = n.s
+	}
 	return c
 }
 
 func (c *checker) VisitAfter(node node) {
+	switch n := node.(type) {
+	case *stmtlistNode:
+		// Reset the enclosing scope.
+		c.currentScope = n.s
+	}
 }
