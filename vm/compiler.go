@@ -25,15 +25,17 @@ type Options struct {
 // additional arguments to build the virtual machine.
 func Compile(name string, input io.Reader, ms *metrics.Store, o *Options) (*VM, error) {
 	name = filepath.Base(name)
-	p := newParser(name, input, ms)
-	r := mtailParse(p)
-	if r != 0 || p == nil || p.errors != nil {
-		return nil, p.errors
-	}
-	if err := Check(p.root); err != nil {
+
+	ast, symtab, err := Parse(name, input, ms)
+	if err != nil {
 		return nil, err
 	}
-	obj, err := CodeGen(name, p.s, p.root)
+
+	if err := Check(ast); err != nil {
+		return nil, err
+	}
+
+	obj, err := CodeGen(name, symtab, ast)
 	if err != nil {
 		return nil, err
 	}

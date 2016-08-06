@@ -12,6 +12,15 @@ import (
 	"github.com/google/mtail/metrics"
 )
 
+func Parse(name string, input io.Reader, ms *metrics.Store) (node, *scope, error) {
+	p := newParser(name, input, ms)
+	r := mtailParse(p)
+	if r != 0 || p == nil || p.errors != nil {
+		return nil, nil, p.errors
+	}
+	return p.root, p.s, nil
+}
+
 const EOF = 0
 
 type parser struct {
