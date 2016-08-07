@@ -31,7 +31,7 @@ func CodeGen(name string, ast node) (*object, error) {
 }
 
 func (c *codegen) errorf(format string, args ...interface{}) {
-	e := fmt.Sprintf(format, args...)
+	e := "Internal compiler error: " + fmt.Sprintf(format, args...)
 	c.errors.Add(position{filename: c.name}, e)
 }
 
