@@ -24,31 +24,31 @@ var exampleProgramTests = []struct {
 	logfile     string // Sample log input.
 	goldenfile  string // Expected metrics after processing.
 }{
-	{
-		"examples/rsyncd.mtail",
-		"testdata/rsyncd.log",
-		"testdata/rsyncd.golden",
-	},
-	{
-		"examples/sftp.mtail",
-		"testdata/sftp_chroot.log",
-		"testdata/sftp_chroot.golden",
-	},
+	// {
+	// 	"examples/rsyncd.mtail",
+	// 	"testdata/rsyncd.log",
+	// 	"testdata/rsyncd.golden",
+	// },
+	// {
+	// 	"examples/sftp.mtail",
+	// 	"testdata/sftp_chroot.log",
+	// 	"testdata/sftp_chroot.golden",
+	// },
 	{
 		"examples/dhcpd.mtail",
 		"testdata/anonymised_dhcpd_log",
 		"testdata/anonymised_dhcpd_log.golden",
 	},
-	{
-		"examples/ntpd.mtail",
-		"testdata/ntp4",
-		"testdata/ntp4.golden",
-	},
-	{
-		"examples/ntpd.mtail",
-		"testdata/xntp3_peerstats",
-		"testdata/xntp3_peerstats.golden",
-	},
+	// {
+	// 	"examples/ntpd.mtail",
+	// 	"testdata/ntp4",
+	// 	"testdata/ntp4.golden",
+	// },
+	// {
+	// 	"examples/ntpd.mtail",
+	// 	"testdata/xntp3_peerstats",
+	// 	"testdata/xntp3_peerstats.golden",
+	// },
 	{
 		"examples/otherwise.mtail",
 		"testdata/otherwise.log",

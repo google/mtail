@@ -263,13 +263,13 @@ func TestParserRoundTrip(t *testing.T) {
 	}
 }
 
-type InvalidProgram struct {
+type parserInvalidProgram struct {
 	name    string
 	program string
 	errors  []string
 }
 
-var InvalidPrograms = []InvalidProgram{
+var parserInvalidPrograms = []parserInvalidProgram{
 	{"unknown character",
 		"?\n",
 		[]string{"unknown character:1:1: Unexpected input: '?'"}},
@@ -298,16 +298,6 @@ var InvalidPrograms = []InvalidProgram{
 		" \"foo }\n",
 		[]string{"unterminated string:1:2-7: Unterminated quoted string: \"\\\"foo }\""}},
 
-	{"undefined named capture group",
-		"/blurgh/ { $undef++\n }\n",
-		[]string{"undefined named capture group:1:12-17: Capture group $undef not defined by prior regular expression in this or an outer scope.\n\tTry using `(?P<undef>...)' to name the capture group."}},
-
-	{"out of bounds capref",
-		"/(blyurg)/ { $2++ \n}\n",
-		[]string{"out of bounds capref:1:14-15: Capture group $2 not defined by prior regular expression " +
-			"in this or an outer scope.\n\tTry using `(?P<2>...)' to name the capture group."},
-	},
-
 	{"undefined decorator",
 		"@foo {}\n",
 		[]string{"undefined decorator:1:7: Decorator foo not defined.\n\tTry adding a definition `def foo {}' earlier in the program."}},
@@ -322,8 +312,8 @@ var InvalidPrograms = []InvalidProgram{
 		[]string{"undefined const regex:1:10: Constant 'X' not defined.\n\tTry adding `const X /.../' earlier in the program."}},
 }
 
-func TestInvalidPrograms(t *testing.T) {
-	for _, tc := range InvalidPrograms {
+func TestParseInvalidPrograms(t *testing.T) {
+	for _, tc := range parserInvalidPrograms {
 		p := newParser(tc.name, strings.NewReader(tc.program), metrics.NewStore())
 		mtailParse(p)
 

@@ -22,6 +22,8 @@ func (p *ErrorList) Add(pos position, msg string) {
 	*p = append(*p, &compileError{pos, msg})
 }
 
+//
+
 // ErrorList implements the error interface.
 func (p ErrorList) Error() string {
 	switch len(p) {

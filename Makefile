@@ -39,6 +39,7 @@ GOTESTFILES=\
 	tailer/tail_test.go\
 	testdata/reader.go\
 	testdata/reader_test.go\
+	vm/checker_test.go\
 	vm/compiler_test.go\
 	vm/lexer_test.go\
 	vm/parser_test.go\

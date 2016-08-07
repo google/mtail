@@ -3,6 +3,8 @@
 
 package vm
 
+import "github.com/golang/glog"
+
 type symtype int
 
 // symtype enumerates the types of symbols found in the program text.
@@ -22,19 +24,39 @@ type symbol struct {
 	addr    int         // Address offset in another structure
 }
 
-type scope struct {
-	parent *scope
-	symtab map[string][]*symbol
+type scope map[string][]*symbol
+
+type SymbolTable []*scope
+
+func (s *SymbolTable) ScopeStart() (scope *scope) {
+	scope := &scope{map[string][]*symbol{}}
+	s = append(s, scope)
+	return
 }
 
-func (s *scope) lookupSym(name string, kind symtype) (*symbol, bool) {
-	r, ok := s.symtab[name]
-	if !ok && s.parent != nil {
-		return s.parent.lookupSym(name, kind)
-	} else if ok {
+func (s *SymbolTable) ScopeEnd() {
+	s = s[:len(s)-1]
+}
+
+func (s *SymbolTable) CurrentScope() *scope {
+	return s[len(s)-1]
+}
+
+func (s *SymbolTable) Lookup(name string, kind symtype) (*symbol, bool) {
+	glog.Infof("looking up %s", name)
+	if r, ok := s.symtab[name]; ok {
 		return r[kind], ok
 	}
-	return nil, ok
+	if s.parent != nil {
+		glog.Info("going to parent")
+		return s.parent.lookupSym(name, kind)
+	}
+	return nil, false
+}
+
+func (s *SymbolTable) Add(name string, kind symtype, loc position) (sym *symbol) {
+	sym := &symbol{name, kind, nil, loc, 0}
+
 }
 
 func (s *scope) addSym(name string, kind symtype, binding interface{}, loc position) *symbol {

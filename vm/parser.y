@@ -70,7 +70,7 @@ import (
 start
   : { mtaillex.(*parser).startScope() } stmt_list
   {
-    $2.(*stmtlistNode).s = mtaillex.(*parser).s
+    $2.(*stmtlistNode).s = mtaillex.(*parser).currentScope()
     mtaillex.(*parser).endScope()
     mtaillex.(*parser).root = $2
   }
@@ -138,7 +138,7 @@ compound_statement
   : LCURLY { mtaillex.(*parser).startScope() } stmt_list RCURLY
   {
     $$ = $3
-    $$.(*stmtlistNode).s = mtaillex.(*parser).s
+    $$.(*stmtlistNode).s = mtaillex.(*parser).symtab.currentScope()
     mtaillex.(*parser).endScope()
   }
   ;
@@ -317,16 +317,7 @@ primary_expr
   }
   | CAPREF
   {
-    if sym, ok := mtaillex.(*parser).s.lookupSym($1, CaprefSymbol); ok {
-      $$ = &caprefNode{$1, sym}
-    } else {
-      mtaillex.Error(fmt.Sprintf("Capture group $%s not defined " +
-                                 "by prior regular expression in " +
-                                 "this or an outer scope.\n\tTry " +
-                                 "using `(?P<%s>...)' to name the " +
-                                 "capture group.", $1, $1))
-      // TODO(jaq) force a parse error
-    }
+    $$ = &caprefNode{$1, nil}
   }
   | STRING
   {

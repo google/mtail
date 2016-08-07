@@ -104,6 +104,10 @@ func (c *codegen) VisitBefore(node node) Visitor {
 		c.emit(instr{dload, len(m.Keys)})
 
 	case *caprefNode:
+		if n.sym == nil {
+			c.errorf("No symbol defined for this capref: %s, aborting compilation.", n.name)
+			return nil
+		}
 		rn := n.sym.binding.(*regexNode)
 		// rn.addr contains the index of the regular expression object,
 		// which correlates to storage on the re slice

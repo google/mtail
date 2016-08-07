@@ -9,6 +9,7 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 )
 
@@ -30,7 +31,7 @@ type parser struct {
 	l      *lexer
 	t      token    // Most recently lexed token.
 	pos    position // Maybe contains the position of the start of a node.
-	s      *scope
+	symtab SymbolTable
 	res    map[string]string // Mapping of regex constants to patterns.
 	ms     *metrics.Store    // List of metrics exported by this program.
 }
@@ -77,14 +78,16 @@ func (p *parser) Lex(lval *mtailSymType) int {
 }
 
 func (p *parser) startScope() {
-	s := &scope{p.s, map[string][]*symbol{}}
-	p.s = s
+	p.symtab.ScopeStart()
 }
 
 func (p *parser) endScope() {
-	if p.s != nil && p.s.parent != nil {
-		p.s = p.s.parent
-	}
+	glog.Info("ending scope")
+	p.symtab.ScopeEnd()
+}
+
+func (p *parser) currentScope() *scope {
+	return p.symtab.CurrentScope()
 }
 
 func (p *parser) inRegex() {
