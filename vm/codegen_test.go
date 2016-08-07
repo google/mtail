@@ -4,7 +4,6 @@
 package vm
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -12,12 +11,7 @@ import (
 	"github.com/kylelemons/godebug/pretty"
 )
 
-// debug print for instructions
-func (i instr) String() string {
-	return fmt.Sprintf("{%s %d}", opNames[i.op], i.opnd)
-}
-
-var programs = []struct {
+var testCodeGenPrograms = []struct {
 	name   string
 	source string
 	prog   []instr // expected bytecode
@@ -344,15 +338,22 @@ counter bar
 }
 
 func TestCodegen(t *testing.T) {
-	o := &Options{CompileOnly: false, SyslogUseCurrentYear: true}
-	for _, tc := range programs {
+	for _, tc := range testCodeGenPrograms {
 		m := metrics.NewStore()
-		v, err := Compile(tc.name, strings.NewReader(tc.source), m, o)
+		ast, err := Parse(tc.name, strings.NewReader(tc.source), m)
 		if err != nil {
-			t.Errorf("Compile errors: %q", err)
+			t.Fatalf("Unexpected parse failure in %q: %s", tc.name, err)
+		}
+		err = Check(ast)
+		if err != nil {
+			t.Fatalf("Unexpected check failure in %q: %s", tc.name, err)
+		}
+		obj, err := CodeGen(tc.name, ast)
+		if err != nil {
+			t.Errorf("Compile errors for %q:\n%q", tc.name, err)
 			continue
 		}
-		diff := pretty.Compare(tc.prog, v.prog)
+		diff := pretty.Compare(tc.prog, obj.prog)
 		if len(diff) > 0 {
 			t.Errorf("%s: VM prog doesn't match.\n%s", tc.name, diff)
 		}

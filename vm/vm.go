@@ -121,6 +121,11 @@ type instr struct {
 	opnd interface{}
 }
 
+// debug print for instructions
+func (i instr) String() string {
+	return fmt.Sprintf("{%s %d}", opNames[i.op], i.opnd)
+}
+
 type thread struct {
 	pc      int              // Program counter.
 	match   bool             // Match register.

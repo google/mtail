@@ -3,7 +3,11 @@
 
 package vm
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/golang/glog"
+)
 
 // checker holds data for a semantic checker
 type checker struct {
@@ -38,10 +42,22 @@ func (c *checker) VisitBefore(node node) Visitor {
 			return nil
 		}
 
+	case *declNode:
+		glog.Infof("Checking this decl: %q", n.name)
+
+		if sym, ok := c.symtab.Lookup(n.name, IDSymbol); ok {
+			glog.Infof("Found this guy: %v", sym)
+		} else {
+			c.errors.Add(position{}, fmt.Sprintf("No metric for %q found", n.name))
+			return nil
+		}
+
+	case *defNode:
+
 	case *decoNode:
 		if sym, ok := c.symtab.Lookup(n.name, DefSymbol); ok {
 			if sym.binding == nil {
-				c.errors.Add(position{}, fmt.Sprintf("Decorator %q not defined.", n.name))
+				c.errors.Add(position{}, fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.name))
 				return nil
 			}
 			n.def = sym.binding.(*defNode)
@@ -55,6 +71,7 @@ func (c *checker) VisitBefore(node node) Visitor {
 			n.sym = sym
 		} else {
 			c.errors.Add(position{}, fmt.Sprintf("Identifier `%s' not declared.\n\tTry adding `counter %s' to the top of the program.", n.name, n.name))
+			return nil
 		}
 
 	}

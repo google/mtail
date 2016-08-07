@@ -409,7 +409,7 @@ declaration
     d.m = metrics.NewMetric(n, mtaillex.(*parser).name, d.kind, d.keys...)
     d.sym = mtaillex.(*parser).symtab.Add(d.name, IDSymbol,
                                           mtaillex.(*parser).t.pos)
-    d.sym.binding = d.m
+     (*d.sym).binding = d.m
     if !$1 {
        mtaillex.(*parser).ms.Add(d.m)
     }
@@ -507,7 +507,7 @@ definition
     d := $$.(*defNode)
     d.sym = mtaillex.(*parser).symtab.Add(d.name, DefSymbol,
                                           mtaillex.(*parser).t.pos)
-    d.sym.binding = d
+    (*d.sym).binding = d
   }
   ;
 
