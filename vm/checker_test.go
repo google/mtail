@@ -27,6 +27,15 @@ var checkerInvalidPrograms = []checkerInvalidProgram{
 		[]string{":1:1: Capture group `$2' was not defined by a regular expression " +
 			"in this or outer scopes.\n\tTry using `(?P<2>...)' to name the capture group."},
 	},
+
+	{"undefined decorator",
+		"@foo {}\n",
+		[]string{":1:1: Decorator `foo' not defined.\n\tTry adding a definition `def foo {}' earlier in the program."}},
+
+	{"undefined identifier",
+		"// { x++ \n}\n",
+		[]string{":1:1: Identifier `x' not declared.\n\tTry adding `counter x' to the top of the program."},
+	},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

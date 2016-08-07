@@ -103,7 +103,7 @@ func (c *codegen) VisitBefore(node node) Visitor {
 		c.emit(instr{push, n.f})
 
 	case *idNode:
-		if n.sym == nil {
+		if n.sym == nil || n.sym.binding == nil {
 			c.errorf("No metric bound to identifier %q", n.name)
 			return nil
 		}

@@ -298,10 +298,6 @@ var parserInvalidPrograms = []parserInvalidProgram{
 		" \"foo }\n",
 		[]string{"unterminated string:1:2-7: Unterminated quoted string: \"\\\"foo }\""}},
 
-	{"undefined decorator",
-		"@foo {}\n",
-		[]string{"undefined decorator:1:7: Decorator foo not defined.\n\tTry adding a definition `def foo {}' earlier in the program."}},
-
 	{"unterminated const regex",
 		"const X /(?P<foo>",
 		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",

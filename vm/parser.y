@@ -138,7 +138,7 @@ compound_statement
   : LCURLY { mtaillex.(*parser).startScope() } stmt_list RCURLY
   {
     $$ = $3
-    $$.(*stmtlistNode).s = mtaillex.(*parser).symtab.currentScope()
+    $$.(*stmtlistNode).s = mtaillex.(*parser).symtab.CurrentScope()
     mtaillex.(*parser).endScope()
   }
   ;
@@ -307,13 +307,7 @@ postfix_expr
 primary_expr
   : ID
   {
-    if sym, ok := mtaillex.(*parser).s.lookupSym($1, IDSymbol); ok {
-      $$ = &idNode{$1, sym}
-    } else {
-      mtaillex.Error(fmt.Sprintf("Identifier '%s' not declared.\n\tTry " +
-                                 "adding `counter %s' to the top of " +
-                                 "the program.", $1, $1))
-    }
+    $$ = &idNode{$1, nil}
   }
   | CAPREF
   {
@@ -350,15 +344,17 @@ cond
       // the current scope, so that future CAPTUREGROUPs can retrieve their
       // value.  At parse time, we can warn about nonexistent names.
       for i := 1; i <= re.MaxCap(); i++ {
-        sym := mtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
-                                           CaprefSymbol, $$,
+        sym := mtaillex.(*parser).symtab.Add(fmt.Sprintf("%d", i),
+                                                CaprefSymbol,
                                            mtaillex.(*parser).pos)
+        sym.binding = $$
         sym.addr = i - 1
       }
       for i, capref := range re.CapNames() {
         if capref != "" {
-          sym := mtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$,
+          sym := mtaillex.(*parser).symtab.Add(capref, CaprefSymbol,
                                              mtaillex.(*parser).pos)
+          sym.binding = $$
           sym.addr = i
         }
       }
@@ -411,8 +407,9 @@ declaration
         n = d.name
    	}
     d.m = metrics.NewMetric(n, mtaillex.(*parser).name, d.kind, d.keys...)
-    d.sym = mtaillex.(*parser).s.addSym(d.name, IDSymbol, d.m,
+    d.sym = mtaillex.(*parser).symtab.Add(d.name, IDSymbol,
                                           mtaillex.(*parser).t.pos)
+    d.sym.binding = d.m
     if !$1 {
        mtaillex.(*parser).ms.Add(d.m)
     }
@@ -508,19 +505,16 @@ definition
   {
     $$ = &defNode{name: $2, children: []node{$3}}
     d := $$.(*defNode)
-    d.sym = mtaillex.(*parser).s.addSym(d.name, DefSymbol, d, mtaillex.(*parser).t.pos)
+    d.sym = mtaillex.(*parser).symtab.Add(d.name, DefSymbol,
+                                          mtaillex.(*parser).t.pos)
+    d.sym.binding = d
   }
   ;
 
 decoration_statement
   : DECO compound_statement
   {
-    if sym, ok := mtaillex.(*parser).s.lookupSym($1, DefSymbol); ok {
-      $$ = &decoNode{$1, []node{$2}, sym.binding.(*defNode)}
-    } else {
-      mtaillex.Error(fmt.Sprintf("Decorator %s not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", $1, $1))
-      // TODO(jaq): force a parse error.
-    }
+    $$ = &decoNode{$1, []node{$2}, nil}
   }
   ;
 
