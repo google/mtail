@@ -10,14 +10,16 @@ import (
 )
 
 func TestLookupSymbol(t *testing.T) {
-	s := &symbol{"foo", IDSymbol, nil, position{"-", 1, 1, 1, 3}, 0}
+	// s := &symbol{"foo", IDSymbol, nil, position{"-", 1, 1, 3}, 0}
 
-	sc := &scope{map[string][]*symbol{}}
+	// sc := &scope{}
 
 	// Construct a dodgy symbol table
-	tab := &SymbolTable{&scope{map[string][]*symbol{}}}
-	tab = append(tab, &scope)
-	tab[0]["foo"] = s
+	tab := &SymbolTable{}
+	tab.EnterScope(nil)
+	s := tab.Add("foo", IDSymbol, position{"-", 1, 1, 3})
+	// *tab = append(*tab, sc)
+	// (*(*tab)[0])["foo"][IDSymbol] = s
 
 	r, ok := tab.Lookup("foo", IDSymbol)
 	if !ok {
@@ -27,4 +29,26 @@ func TestLookupSymbol(t *testing.T) {
 	if len(diff) > 0 {
 		t.Errorf("didn't get back the right symbol\n%s", diff)
 	}
+
+	r, ok = tab.Lookup("bar", IDSymbol)
+	if ok {
+		t.Errorf("Shold not have found bar.")
+	}
+	r, ok = tab.Lookup("foo", CaprefSymbol)
+	if ok {
+		t.Errorf("Should not have found foo: %v", r)
+	}
+
+	tab.EnterScope(nil)
+	s1 := tab.Add("foo", IDSymbol, position{"-", 2, 1, 3})
+
+	r, ok = tab.Lookup("foo", IDSymbol)
+	if !ok {
+		t.Errorf("Couldn't find symbol.")
+	}
+	diff = pretty.Compare(s1, r)
+	if len(diff) > 0 {
+		t.Errorf("didn't get back the right symbol\n%s", diff)
+	}
+
 }

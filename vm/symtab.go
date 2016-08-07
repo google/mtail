@@ -28,42 +28,43 @@ type scope map[string][]*symbol
 
 type SymbolTable []*scope
 
-func (s *SymbolTable) ScopeStart() (scope *scope) {
-	scope := &scope{map[string][]*symbol{}}
-	s = append(s, scope)
-	return
+func (s *SymbolTable) EnterScope(sc *scope) *scope {
+	if sc == nil {
+		sc = &scope{}
+	}
+	*s = append(*s, sc)
+	return sc
 }
 
-func (s *SymbolTable) ScopeEnd() {
-	s = s[:len(s)-1]
+func (s *SymbolTable) ExitScope() {
+	if len(*s) > 1 {
+		*s = (*s)[:len(*s)-1]
+	}
 }
 
 func (s *SymbolTable) CurrentScope() *scope {
-	return s[len(s)-1]
+	return (*s)[len(*s)-1]
 }
 
 func (s *SymbolTable) Lookup(name string, kind symtype) (*symbol, bool) {
 	glog.Infof("looking up %s", name)
-	if r, ok := s.symtab[name]; ok {
-		return r[kind], ok
-	}
-	if s.parent != nil {
-		glog.Info("going to parent")
-		return s.parent.lookupSym(name, kind)
+	for i := len(*s) - 1; i >= 0; i-- {
+		glog.Infof("i := %v", i)
+
+		if r, ok := (*(*s)[i])[name]; ok && r[kind] != nil {
+			glog.Infof("found: %v", r[kind])
+			return r[kind], ok
+		}
 	}
 	return nil, false
 }
 
 func (s *SymbolTable) Add(name string, kind symtype, loc position) (sym *symbol) {
-	sym := &symbol{name, kind, nil, loc, 0}
-
-}
-
-func (s *scope) addSym(name string, kind symtype, binding interface{}, loc position) *symbol {
-	sym := &symbol{name, kind, binding, loc, 0}
-	if _, ok := s.symtab[name]; !ok {
-		s.symtab[name] = make([]*symbol, endSymbol)
+	sym = &symbol{name, kind, nil, loc, 0}
+	cs := s.CurrentScope()
+	if _, ok := (*cs)[name]; !ok {
+		(*cs)[name] = make([]*symbol, endSymbol)
 	}
-	s.symtab[name][kind] = sym
+	(*cs)[name][kind] = sym
 	return sym
 }
