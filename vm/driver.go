@@ -9,7 +9,6 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 )
 
@@ -78,12 +77,11 @@ func (p *parser) Lex(lval *mtailSymType) int {
 }
 
 func (p *parser) startScope() {
-	p.symtab.ScopeStart()
+	p.symtab.EnterScope(nil)
 }
 
 func (p *parser) endScope() {
-	glog.Info("ending scope")
-	p.symtab.ScopeEnd()
+	p.symtab.ExitScope()
 }
 
 func (p *parser) currentScope() *scope {

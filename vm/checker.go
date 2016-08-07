@@ -13,8 +13,8 @@ import (
 type checker struct {
 	errors ErrorList
 
-	// scopes is a stack of enclosing scopes for looking up symbols
-	scopes []*scope
+	// symtab contains the current scope search path
+	symtab SymbolTable
 }
 
 // Check performs a semantic check of the ast node, and returns a boolean
@@ -28,21 +28,17 @@ func Check(node node) error {
 	return nil
 }
 
-func (c *checker) currentScope() *scope {
-	return c.scopes[len(c.scopes)-1]
-}
-
 func (c *checker) VisitBefore(node node) Visitor {
 	switch n := node.(type) {
 	case *stmtlistNode:
-		glog.Info("Adding current scope")
-		c.scopes = append(c.scopes, n.s)
+		c.symtab.EnterScope(n.s)
 	case *caprefNode:
-		if sym, ok := c.currentScope().LookupSym(n.name, CaprefSymbol); ok {
+		if sym, ok := c.symtab.Lookup(n.name, CaprefSymbol); ok {
 			glog.Info("Found sym %v", sym)
 			n.sym = sym
 		} else {
 			c.errors.Add(position{}, fmt.Sprintf("Capture group `$%s' was not defined by a regular expression in this or outer scopes.\n\tTry using `(?P<%s>...)' to name the capture group.", n.name, n.name))
+			return nil
 		}
 	}
 	return c
@@ -51,10 +47,6 @@ func (c *checker) VisitBefore(node node) Visitor {
 func (c *checker) VisitAfter(node node) {
 	switch node.(type) {
 	case *stmtlistNode:
-		// Reset the enclosing scope.
-		if len(c.scopes) > 1 {
-			glog.Info("Resetting enclosing scope")
-			c.scopes = c.scopes[:len(c.scopes)-1]
-		}
+		c.symtab.ExitScope()
 	}
 }
