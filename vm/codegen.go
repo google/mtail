@@ -18,13 +18,11 @@ type codegen struct {
 	obj    object    // The object to return
 
 	decos []*decoNode // Decorator stack to unwind
-
-	symtab *scope
 }
 
 // CodeGen is the function that compiles the program to bytecode and data.
-func CodeGen(name string, symtab *scope, ast node) (*object, error) {
-	c := &codegen{name: name, symtab: symtab}
+func CodeGen(name string, ast node) (*object, error) {
+	c := &codegen{name: name}
 	Walk(c, ast)
 	if len(c.errors) > 0 {
 		return nil, c.errors

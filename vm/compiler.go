@@ -26,7 +26,7 @@ type Options struct {
 func Compile(name string, input io.Reader, ms *metrics.Store, o *Options) (*VM, error) {
 	name = filepath.Base(name)
 
-	ast, symtab, err := Parse(name, input, ms)
+	ast, err := Parse(name, input, ms)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func Compile(name string, input io.Reader, ms *metrics.Store, o *Options) (*VM, 
 		return nil, err
 	}
 
-	obj, err := CodeGen(name, symtab, ast)
+	obj, err := CodeGen(name, ast)
 	if err != nil {
 		return nil, err
 	}
