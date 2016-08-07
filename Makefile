@@ -40,9 +40,10 @@ GOTESTFILES=\
 	testdata/reader.go\
 	testdata/reader_test.go\
 	vm/checker_test.go\
-	vm/compiler_test.go\
+	vm/codegen_test.go\
 	vm/lexer_test.go\
 	vm/parser_test.go\
+	vm/symtab_test.go\
 	vm/vm_test.go\
 	watcher/fake_watcher_test.go\
 	watcher/log_watcher_test.go\

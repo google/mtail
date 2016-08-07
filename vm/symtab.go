@@ -3,8 +3,6 @@
 
 package vm
 
-import "github.com/golang/glog"
-
 type symtype int
 
 // symtype enumerates the types of symbols found in the program text.
@@ -47,12 +45,8 @@ func (s *SymbolTable) CurrentScope() *scope {
 }
 
 func (s *SymbolTable) Lookup(name string, kind symtype) (*symbol, bool) {
-	glog.Infof("looking up %s", name)
 	for i := len(*s) - 1; i >= 0; i-- {
-		glog.Infof("i := %v", i)
-
 		if r, ok := (*(*s)[i])[name]; ok && r[kind] != nil {
-			glog.Infof("found: %v", r[kind])
 			return r[kind], ok
 		}
 	}

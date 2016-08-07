@@ -3,11 +3,7 @@
 
 package vm
 
-import (
-	"fmt"
-
-	"github.com/golang/glog"
-)
+import "fmt"
 
 // checker holds data for a semantic checker
 type checker struct {
@@ -36,7 +32,6 @@ func (c *checker) VisitBefore(node node) Visitor {
 
 	case *caprefNode:
 		if sym, ok := c.symtab.Lookup(n.name, CaprefSymbol); ok {
-			glog.Info("Found sym %v", sym)
 			n.sym = sym
 		} else {
 			c.errors.Add(position{}, fmt.Sprintf("Capture group `$%s' was not defined by a regular expression in this or outer scopes.\n\tTry using `(?P<%s>...)' to name the capture group.", n.name, n.name))

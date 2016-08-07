@@ -343,7 +343,7 @@ counter bar
 	},
 }
 
-func TestCompile(t *testing.T) {
+func TestCodegen(t *testing.T) {
 	o := &Options{CompileOnly: false, SyslogUseCurrentYear: true}
 	for _, tc := range programs {
 		m := metrics.NewStore()
