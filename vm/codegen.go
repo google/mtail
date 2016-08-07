@@ -31,7 +31,7 @@ func CodeGen(name string, ast node) (*object, error) {
 }
 
 func (c *codegen) errorf(format string, args ...interface{}) {
-	e := "Internal compiler error: " + fmt.Sprintf(format, args...)
+	e := "Internal compiler error, aborting compilation: " + fmt.Sprintf(format, args...)
 	c.errors.Add(position{filename: c.name}, e)
 }
 
@@ -45,6 +45,10 @@ func (c *codegen) VisitBefore(node node) Visitor {
 	case *declNode:
 		// Build the list of addressable metrics for this program, and set the symbol's address.
 		n.sym.addr = len(c.obj.m)
+		if n.sym.binding == nil {
+			c.errorf("No storage bound to metric declared as %q", n.name)
+			return nil
+		}
 		c.obj.m = append(c.obj.m, n.sym.binding.(*metrics.Metric))
 		return nil
 
@@ -99,13 +103,17 @@ func (c *codegen) VisitBefore(node node) Visitor {
 		c.emit(instr{push, n.f})
 
 	case *idNode:
+		if n.sym == nil {
+			c.errorf("No metric bound to identifier %q", n.name)
+			return nil
+		}
 		c.emit(instr{mload, n.sym.addr})
 		m := n.sym.binding.(*metrics.Metric)
 		c.emit(instr{dload, len(m.Keys)})
 
 	case *caprefNode:
-		if n.sym == nil {
-			c.errorf("No symbol defined for this capref: %s, aborting compilation.", n.name)
+		if n.sym == nil || n.sym.binding == nil {
+			c.errorf("No regular expression bound to capref %q", n.name)
 			return nil
 		}
 		rn := n.sym.binding.(*regexNode)
@@ -122,6 +130,10 @@ func (c *codegen) VisitBefore(node node) Visitor {
 	case *decoNode:
 		// Put the current block on the stack
 		c.decos = append(c.decos, n)
+		if n.def == nil {
+			c.errorf("No definition found for decorator %q", n.name)
+			return nil
+		}
 		// then iterate over the decorator's nodes
 		walknodelist(c, n.def.children)
 		c.decos = c.decos[:len(c.decos)-1]
