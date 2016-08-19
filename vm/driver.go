@@ -29,7 +29,8 @@ type parser struct {
 	errors ErrorList
 	l      *lexer
 	t      token    // Most recently lexed token.
-	pos    position // Maybe contains the position of the start of a node.
+	pos    position // Maybe contains the position of the start of a node when the parser is doing preprocessor concatenation.
+	endPos position // Maybe contains the position of the end of a node when the parser is doing preprocessor concatenation.
 	symtab SymbolTable
 	res    map[string]string // Mapping of regex constants to patterns.
 	ms     *metrics.Store    // List of metrics exported by this program.
@@ -40,12 +41,12 @@ func newParser(name string, input io.Reader, ms *metrics.Store) *parser {
 	return &parser{name: name, l: newLexer(name, input), res: make(map[string]string), ms: ms}
 }
 
-func (p *parser) ErrorP(s string, pos position) {
+func (p *parser) ErrorP(s string, pos *position) {
 	p.errors.Add(pos, s)
 }
 
 func (p *parser) Error(s string) {
-	p.errors.Add(p.t.pos, s)
+	p.errors.Add(&p.t.pos, s)
 }
 
 func (p *parser) Lex(lval *mtailSymType) int {

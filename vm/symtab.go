@@ -18,7 +18,7 @@ type symbol struct {
 	name    string      // Symbol name
 	kind    symtype     // Type
 	binding interface{} // Binding to storage allocated
-	loc     position    // Source file position
+	loc     *position   // Source file position
 	addr    int         // Address offset in another structure
 }
 
@@ -53,7 +53,7 @@ func (s *SymbolTable) Lookup(name string, kind symtype) (*symbol, bool) {
 	return nil, false
 }
 
-func (s *SymbolTable) Add(name string, kind symtype, loc position) (sym *symbol) {
+func (s *SymbolTable) Add(name string, kind symtype, loc *position) (sym *symbol) {
 	sym = &symbol{name, kind, nil, loc, 0}
 	cs := s.CurrentScope()
 	if _, ok := (*cs)[name]; !ok {

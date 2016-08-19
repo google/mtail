@@ -334,7 +334,9 @@ primary_expr
 cond
   : pattern_expr
   {
-    $$ = &regexNode{pos: mtaillex.(*parser).t.pos, pattern: $1}
+    // pos, endPos were stashed during the concatenation of the regex.
+    pos := MergePosition(&mtaillex.(*parser).pos, &mtaillex.(*parser).endPos)
+    $$ = &regexNode{pos: *pos, pattern: $1}
   }
   | rel_expr
   {
@@ -347,15 +349,17 @@ cond
   ;
 
 pattern_expr
-  : DIV { mtaillex.(*parser).inRegex() } REGEX DIV
+: { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DIV { mtaillex.(*parser).inRegex() } REGEX DIV
   {
-    // Stash the start of the pattern_expr in a state variable.
-    // We know it's the start because pattern_expr is left associative.
-    mtaillex.(*parser).pos = mtaillex.(*parser).t.pos
-    $$ = $3
+    // Before the first DIV, stash the start of the pattern_expr in a state
+    // variable.  We know it's the start because pattern_expr is left
+    // associative.  Then, store the end position after the second DIV.
+    mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
+    $$ = $4
   }
   | pattern_expr PLUS opt_nl DIV { mtaillex.(*parser).inRegex() } REGEX DIV
   {
+    mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
     $$ = $1 + $6
   }
   | pattern_expr PLUS ID
@@ -384,7 +388,7 @@ declaration
    	}
     d.m = metrics.NewMetric(n, mtaillex.(*parser).name, d.kind, d.keys...)
     d.sym = mtaillex.(*parser).symtab.Add(d.name, IDSymbol,
-                                          mtaillex.(*parser).t.pos)
+                                          &mtaillex.(*parser).t.pos)
     (*d.sym).binding = d.m
     if !$1 {
       // TODO(jaq): move to checker.
@@ -478,20 +482,20 @@ as_spec
   ;
 
 definition
-  : DEF ID compound_statement
+  : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DEF ID compound_statement
   {
-    $$ = &defNode{pos: mtaillex.(*parser).t.pos, name: $2, children: []node{$3}}
+    $$ = &defNode{pos: mtaillex.(*parser).pos, name: $3, children: []node{$4}}
     d := $$.(*defNode)
     d.sym = mtaillex.(*parser).symtab.Add(d.name, DefSymbol,
-                                          mtaillex.(*parser).t.pos)
+                                          &mtaillex.(*parser).pos)
     (*d.sym).binding = d
   }
   ;
 
 decoration_statement
-  : DECO compound_statement
+  : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DECO compound_statement
   {
-    $$ = &decoNode{mtaillex.(*parser).t.pos, $1, []node{$2}, nil}
+    $$ = &decoNode{mtaillex.(*parser).pos, $2, []node{$3}, nil}
   }
   ;
 

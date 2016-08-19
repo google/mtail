@@ -30,9 +30,9 @@ func CodeGen(name string, ast node) (*object, error) {
 	return &c.obj, nil
 }
 
-func (c *codegen) errorf(format string, args ...interface{}) {
+func (c *codegen) errorf(pos *position, format string, args ...interface{}) {
 	e := "Internal compiler error, aborting compilation: " + fmt.Sprintf(format, args...)
-	c.errors.Add(position{filename: c.name}, e)
+	c.errors.Add(pos, e)
 }
 
 func (c *codegen) emit(i instr) {
@@ -46,7 +46,7 @@ func (c *codegen) VisitBefore(node node) Visitor {
 		// Build the list of addressable metrics for this program, and set the symbol's address.
 		n.sym.addr = len(c.obj.m)
 		if n.sym.binding == nil {
-			c.errorf("No storage bound to metric declared as %q", n.name)
+			c.errorf(n.Pos(), "No storage bound to metric declared as %q", n.name)
 			return nil
 		}
 		c.obj.m = append(c.obj.m, n.sym.binding.(*metrics.Metric))
@@ -83,7 +83,7 @@ func (c *codegen) VisitBefore(node node) Visitor {
 	case *regexNode:
 		re, err := regexp.Compile(n.pattern)
 		if err != nil {
-			c.errorf("%s", err)
+			c.errorf(n.Pos(), "%s", err)
 			return nil
 		}
 		c.obj.re = append(c.obj.re, re)
@@ -104,7 +104,7 @@ func (c *codegen) VisitBefore(node node) Visitor {
 
 	case *idNode:
 		if n.sym == nil || n.sym.binding == nil {
-			c.errorf("No metric bound to identifier %q", n.name)
+			c.errorf(n.Pos(), "No metric bound to identifier %q", n.name)
 			return nil
 		}
 		c.emit(instr{mload, n.sym.addr})
@@ -113,7 +113,7 @@ func (c *codegen) VisitBefore(node node) Visitor {
 
 	case *caprefNode:
 		if n.sym == nil || n.sym.binding == nil {
-			c.errorf("No regular expression bound to capref %q", n.name)
+			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.name)
 			return nil
 		}
 		rn := n.sym.binding.(*regexNode)
@@ -131,7 +131,7 @@ func (c *codegen) VisitBefore(node node) Visitor {
 		// Put the current block on the stack
 		c.decos = append(c.decos, n)
 		if n.def == nil {
-			c.errorf("No definition found for decorator %q", n.name)
+			c.errorf(n.Pos(), "No definition found for decorator %q", n.name)
 			return nil
 		}
 		// then iterate over the decorator's nodes

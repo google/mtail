@@ -18,8 +18,8 @@ func (e compileError) Error() string {
 type ErrorList []*compileError
 
 // Add appends an error at a position to the list of errors.
-func (p *ErrorList) Add(pos position, msg string) {
-	*p = append(*p, &compileError{pos, msg})
+func (p *ErrorList) Add(pos *position, msg string) {
+	*p = append(*p, &compileError{*pos, msg})
 }
 
 //

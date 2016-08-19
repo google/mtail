@@ -20,34 +20,34 @@ type checkerInvalidProgram struct {
 var checkerInvalidPrograms = []checkerInvalidProgram{
 	{"undefined named capture group",
 		"/blurgh/ { $undef++\n }\n",
-		[]string{":1:1: Capture group `$undef' was not defined by a regular expression in this or outer scopes.\n\tTry using `(?P<undef>...)' to name the capture group."}},
+		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression in this or outer scopes.\n\tTry using `(?P<undef>...)' to name the capture group."}},
 
 	{"out of bounds capref",
 		"/(blyurg)/ { $2++ \n}\n",
-		[]string{":1:1: Capture group `$2' was not defined by a regular expression " +
+		[]string{"out of bounds capref:1:14-15: Capture group `$2' was not defined by a regular expression " +
 			"in this or outer scopes.\n\tTry using `(?P<2>...)' to name the capture group."},
 	},
 
 	{"undefined decorator",
 		"@foo {}\n",
-		[]string{":1:1: Decorator `foo' not defined.\n\tTry adding a definition `def foo {}' earlier in the program."}},
+		[]string{"undefined decorator:1:1-4: Decorator `foo' not defined.\n\tTry adding a definition `def foo {}' earlier in the program."}},
 
 	{"undefined identifier",
 		"// { x++ \n}\n",
-		[]string{":1:1: Identifier `x' not declared.\n\tTry adding `counter x' to the top of the program."},
+		[]string{"undefined identifier:1:6: Identifier `x' not declared.\n\tTry adding `counter x' to the top of the program."},
 	},
 
 	{"invalid regex",
 		"/foo(/ {}\n",
-		[]string{":1:1: error parsing regexp: missing closing ): `foo(`"}},
+		[]string{"invalid regex:1:1-6: error parsing regexp: missing closing ): `foo(`"}},
 
 	{"invalid regex 2",
 		"/blurg(?P<x.)/ {}\n",
-		[]string{":1:1: error parsing regexp: invalid named capture: `(?P<x.)`"}},
+		[]string{"invalid regex 2:1:1-14: error parsing regexp: invalid named capture: `(?P<x.)`"}},
 
 	{"invalid regex 3",
 		"/blurg(?P<x>[[:alph:]])/ {}\n",
-		[]string{":1:1: error parsing regexp: invalid character class range: `[:alph:]`"}},
+		[]string{"invalid regex 3:1:1-24: error parsing regexp: invalid character class range: `[:alph:]`"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

@@ -17,7 +17,7 @@ func TestLookupSymbol(t *testing.T) {
 	// Construct a dodgy symbol table
 	tab := &SymbolTable{}
 	tab.EnterScope(nil)
-	s := tab.Add("foo", IDSymbol, position{"-", 1, 1, 3})
+	s := tab.Add("foo", IDSymbol, &position{"-", 1, 1, 3})
 	// *tab = append(*tab, sc)
 	// (*(*tab)[0])["foo"][IDSymbol] = s
 
@@ -40,7 +40,7 @@ func TestLookupSymbol(t *testing.T) {
 	}
 
 	tab.EnterScope(nil)
-	s1 := tab.Add("foo", IDSymbol, position{"-", 2, 1, 3})
+	s1 := tab.Add("foo", IDSymbol, &position{"-", 2, 1, 3})
 
 	r, ok = tab.Lookup("foo", IDSymbol)
 	if !ok {

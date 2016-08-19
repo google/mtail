@@ -29,11 +29,11 @@ func MergePosition(a, b *position) *position {
 		return a
 	}
 	if a.filename != b.filename {
-		return nil
+		return a
 	}
 	// TODO(jaq): handle multi-line positions
 	if a.line != b.line {
-		return nil
+		return a
 	}
 	r := *a
 	if b.startcol < r.startcol {
