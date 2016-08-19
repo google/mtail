@@ -21,7 +21,7 @@ func (p position) String() string {
 	return r
 }
 
-func MergePosition(a, b *position) (r *position) {
+func MergePosition(a, b *position) *position {
 	if a == nil {
 		return b
 	}
@@ -31,21 +31,18 @@ func MergePosition(a, b *position) (r *position) {
 	if a.filename != b.filename {
 		return nil
 	}
-
-	*r = *a
-	if b.line < r.line {
-		r.line = b.line
-		r.startcol = b.startcol
-	} else if b.line == r.line && b.startcol < r.startcol {
+	// TODO(jaq): handle multi-line positions
+	if a.line != b.line {
+		return nil
+	}
+	r := *a
+	if b.startcol < r.startcol {
 		r.startcol = b.startcol
 	}
-	if b.line > r.line {
-		r.line = b.line
-		r.endcol = b.endcol
-	} else if b.line == r.line && b.endcol > r.endcol {
+	if b.endcol > r.endcol {
 		r.endcol = b.endcol
 	}
-	return r
+	return &r
 }
 
 // mergepositionlist is a helper that merges the positions of all the nodes in a list
