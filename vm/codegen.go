@@ -142,7 +142,7 @@ func (c *codegen) VisitBefore(node node) Visitor {
 	case *nextNode:
 		// Visit the 'next' block on the decorated block stack
 		deco := c.decos[len(c.decos)-1]
-		walknodelist(c, deco.children)
+		Walk(c, deco.block)
 		return nil
 
 	case *otherwiseNode:

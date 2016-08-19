@@ -495,7 +495,7 @@ definition
 decoration_statement
   : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DECO compound_statement
   {
-    $$ = &decoNode{mtaillex.(*parser).pos, $2, []node{$3}, nil}
+    $$ = &decoNode{mtaillex.(*parser).pos, $2, $3, nil}
   }
   ;
 

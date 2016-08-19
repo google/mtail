@@ -183,9 +183,7 @@ func (u *Unparser) VisitBefore(n node) Visitor {
 		u.emit(fmt.Sprintf("@%s {", v.name))
 		u.newline()
 		u.indent()
-		for _, child := range v.children {
-			Walk(u, child)
-		}
+		Walk(u, v.block)
 		u.outdent()
 		u.emit("}")
 

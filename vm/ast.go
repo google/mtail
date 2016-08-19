@@ -161,14 +161,14 @@ func (n *defNode) Pos() *position {
 }
 
 type decoNode struct {
-	pos      position
-	name     string
-	children []node
-	def      *defNode
+	pos   position
+	name  string
+	block node
+	def   *defNode
 }
 
 func (n *decoNode) Pos() *position {
-	return MergePosition(&n.pos, mergepositionlist(n.children))
+	return MergePosition(&n.pos, n.block.Pos())
 }
 
 type nextNode struct {
