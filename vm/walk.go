@@ -59,7 +59,7 @@ func Walk(v Visitor, node node) {
 		Walk(v, n.lhs)
 
 	case *defNode:
-		walknodelist(v, n.children)
+		Walk(v, n.children)
 
 	case *decoNode:
 		walknodelist(v, n.children)

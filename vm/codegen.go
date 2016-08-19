@@ -135,7 +135,7 @@ func (c *codegen) VisitBefore(node node) Visitor {
 			return nil
 		}
 		// then iterate over the decorator's nodes
-		walknodelist(c, n.def.children)
+		Walk(c, n.def.children)
 		c.decos = c.decos[:len(c.decos)-1]
 		return nil
 

@@ -484,7 +484,7 @@ as_spec
 definition
   : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DEF ID compound_statement
   {
-    $$ = &defNode{pos: mtaillex.(*parser).pos, name: $3, children: []node{$4}}
+    $$ = &defNode{pos: mtaillex.(*parser).pos, name: $3, children: $4}
     d := $$.(*defNode)
     d.sym = mtaillex.(*parser).symtab.Add(d.name, DefSymbol,
                                           &mtaillex.(*parser).pos)

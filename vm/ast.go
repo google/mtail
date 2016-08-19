@@ -152,12 +152,12 @@ func (n *floatConstNode) Pos() *position {
 type defNode struct {
 	pos      position
 	name     string
-	children []node
+	children node
 	sym      *symbol
 }
 
 func (n *defNode) Pos() *position {
-	return MergePosition(&n.pos, mergepositionlist(n.children))
+	return MergePosition(&n.pos, n.children.Pos())
 }
 
 type decoNode struct {
