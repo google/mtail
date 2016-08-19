@@ -110,6 +110,33 @@ func (p position) String() string {
 	return r
 }
 
+func MergePosition(a, b *position) (r *position) {
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+	if a.filename != b.filename {
+		return nil
+	}
+
+	*r = *a
+	if b.line < r.line {
+		r.line = b.line
+		r.startcol = b.startcol
+	} else if b.line == r.line && b.startcol < r.startcol {
+		r.startcol = b.startcol
+	}
+	if b.line > r.line {
+		r.line = b.line
+		r.endcol = b.endcol
+	} else if b.line == r.line && b.endcol > r.endcol {
+		r.endcol = b.endcol
+	}
+	return r
+}
+
 // token describes a lexed token from the input, containing its type, the
 // original text of the token, and its position in the input.
 type token struct {

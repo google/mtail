@@ -102,7 +102,7 @@ stmt
   { $$ = $1 }
   | NEXT
   {
-    $$ = &nextNode{}
+    $$ = &nextNode{mtaillex.(*parser).t.pos}
   }
   | CONST ID pattern_expr
   {
@@ -263,15 +263,15 @@ unary_expr
   }
   | NOT postfix_expr
   {
-    $$ = &unaryExprNode{$2, $1}
+    $$ = &unaryExprNode{mtaillex.(*parser).t.pos, $2, $1}
   }
   | BUILTIN LPAREN RPAREN
   {
-    $$ = &builtinNode{name: $1}
+    $$ = &builtinNode{mtaillex.(*parser).t.pos, $1, nil}
   }
   | BUILTIN LPAREN arg_expr_list RPAREN
   {
-    $$ = &builtinNode{$1, $3}
+    $$ = &builtinNode{mtaillex.(*parser).t.pos, $1, $3}
   }
   ;
 
@@ -295,7 +295,7 @@ postfix_expr
   }
   | postfix_expr INC
   {
-    $$ = &unaryExprNode{$1, $2}
+    $$ = &unaryExprNode{mtaillex.(*parser).t.pos, $1, $2}
   }
   | postfix_expr LSQUARE expr RSQUARE
   {
@@ -306,15 +306,15 @@ postfix_expr
 primary_expr
   : ID
   {
-    $$ = &idNode{$1, nil}
+    $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
   }
   | CAPREF
   {
-    $$ = &caprefNode{$1, nil}
+    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, nil}
   }
   | STRING
   {
-    $$ = &stringConstNode{$1}
+    $$ = &stringConstNode{mtaillex.(*parser).t.pos, $1}
   }
   | LPAREN expr RPAREN
   {
@@ -322,11 +322,11 @@ primary_expr
   }
   | INTLITERAL
   {
-    $$ = &intConstNode{$1}
+    $$ = &intConstNode{mtaillex.(*parser).t.pos, $1}
   }
   | FLOATLITERAL
   {
-    $$ = &floatConstNode{$1}
+    $$ = &floatConstNode{mtaillex.(*parser).t.pos, $1}
   }
   ;
 
@@ -334,7 +334,7 @@ primary_expr
 cond
   : pattern_expr
   {
-    $$ = &regexNode{pattern: $1}
+    $$ = &regexNode{pos: mtaillex.(*parser).t.pos, pattern: $1}
   }
   | rel_expr
   {
@@ -342,7 +342,7 @@ cond
   }
   | OTHERWISE
   {
-    $$ = &otherwiseNode{}
+    $$ = &otherwiseNode{mtaillex.(*parser).t.pos}
   }
   ;
 
@@ -416,11 +416,11 @@ declarator
   }
   | ID
   {
-    $$ = &declNode{name: $1}
+    $$ = &declNode{pos: mtaillex.(*parser).t.pos, name: $1}
   }
   | STRING
   {
-    $$ = &declNode{name: $1}
+    $$ = &declNode{pos: mtaillex.(*parser).t.pos, name: $1}
   }
   ;
 
@@ -479,7 +479,7 @@ as_spec
 definition
   : DEF ID compound_statement
   {
-    $$ = &defNode{name: $2, children: []node{$3}}
+    $$ = &defNode{pos: mtaillex.(*parser).t.pos, name: $2, children: []node{$3}}
     d := $$.(*defNode)
     d.sym = mtaillex.(*parser).symtab.Add(d.name, DefSymbol,
                                           mtaillex.(*parser).t.pos)
@@ -490,7 +490,7 @@ definition
 decoration_statement
   : DECO compound_statement
   {
-    $$ = &decoNode{$1, []node{$2}, nil}
+    $$ = &decoNode{mtaillex.(*parser).t.pos, $1, []node{$2}, nil}
   }
   ;
 
