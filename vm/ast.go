@@ -13,17 +13,6 @@ type node interface {
 	Pos() *position // Returns the position of the node from the original source
 }
 
-// mergepositionlist is a helper that merges the positions of all the nodes in a list
-func mergepositionlist(l []node) *position {
-	if len(l) == 0 {
-		return nil
-	}
-	if len(l) == 1 {
-		return l[0].Pos()
-	}
-	return MergePosition(l[0].Pos(), mergepositionlist(l[1:]))
-}
-
 type stmtlistNode struct {
 	s        *scope
 	children []node
