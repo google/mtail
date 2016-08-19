@@ -100,38 +100,51 @@ func TestExamplePrograms(t *testing.T) {
 	}
 }
 
-func benchmarkProgram(b *testing.B, programfile string, logfile string) {
-	w := watcher.NewFakeWatcher()
-	o := mtail.Options{Progs: programfile, W: w}
-	mtail, err := mtail.New(o)
-	if err != nil {
-		b.Fatalf("Failed to create mtail: %s", err)
-	}
-
-	var lines int64
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		count, err := mtail.OneShot(logfile, false)
-		if err != nil {
-			b.Errorf("OneShot log parse failed: %s", err)
-		}
-		lines += count
-	}
-	b.StopTimer()
-	mtail.Close()
-	if err != nil {
-		b.Fatalf("strconv.ParseInt failed: %s", err)
-		return
-	}
-	b.SetBytes(lines)
+var benchmarks = []struct {
+	programfile string
+	logfile     string
+}{
+	{"examples/rsyncd.mtail", "testdata/rsyncd.log"},
+	{"examples/sftp.mtail", "testdata/sftp_chroot.log"},
+	{"examples/dhcpd.mtail", "testdata/anonymised_dhcpd_log"},
 }
 
-func BenchmarkRsyncdProgram(b *testing.B) {
-	benchmarkProgram(b, "examples/rsyncd.mtail", "testdata/rsyncd.log")
+func BenchmarkProgram(b *testing.B) {
+	for _, bm := range benchmarks {
+		b.Run(bm.programfile, func(b *testing.B) {
+			w := watcher.NewFakeWatcher()
+			o := mtail.Options{Progs: bm.programfile, W: w}
+			mtail, err := mtail.New(o)
+			if err != nil {
+				b.Fatalf("Failed to create mtail: %s", err)
+			}
+
+			var lines int64
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				count, err := mtail.OneShot(bm.logfile, false)
+				if err != nil {
+					b.Errorf("OneShot log parse failed: %s", err)
+				}
+				lines += count
+			}
+			b.StopTimer()
+			mtail.Close()
+			if err != nil {
+				b.Fatalf("strconv.ParseInt failed: %s", err)
+				return
+			}
+			b.SetBytes(lines)
+		})
+	}
 }
-func BenchmarkSftpProgram(b *testing.B) {
-	benchmarkProgram(b, "examples/sftp.mtail", "testdata/sftp_chroot.log")
-}
-func BenchmarkDhcpdProgram(b *testing.B) {
-	benchmarkProgram(b, "examples/dhcpd.mtail", "testdata/anonymised_dhcpd_log")
-}
+
+// func BenchmarkRsyncdProgram(b *testing.B) {
+// 	benchmarkProgram(b, "examples/rsyncd.mtail", "testdata/rsyncd.log")
+// }
+// func BenchmarkSftpProgram(b *testing.B) {
+// 	benchmarkProgram(b, "examples/sftp.mtail", "testdata/sftp_chroot.log")
+// }
+// func BenchmarkDhcpdProgram(b *testing.B) {
+// 	benchmarkProgram(b, "examples/dhcpd.mtail", "testdata/anonymised_dhcpd_log")
+// }
