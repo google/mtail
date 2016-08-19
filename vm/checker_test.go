@@ -36,6 +36,18 @@ var checkerInvalidPrograms = []checkerInvalidProgram{
 		"// { x++ \n}\n",
 		[]string{":1:1: Identifier `x' not declared.\n\tTry adding `counter x' to the top of the program."},
 	},
+
+	{"invalid regex",
+		"/foo(/ {}\n",
+		[]string{":1:1: error parsing regexp: missing closing ): `foo(`"}},
+
+	{"invalid regex 2",
+		"/blurg(?P<x.)/ {}\n",
+		[]string{":1:1: error parsing regexp: invalid named capture: `(?P<x.)`"}},
+
+	{"invalid regex 3",
+		"/blurg(?P<x>[[:alph:]])/ {}\n",
+		[]string{":1:1: error parsing regexp: invalid character class range: `[:alph:]`"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

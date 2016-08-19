@@ -6,7 +6,6 @@ package vm
 
 import (
     "fmt"
-    "regexp/syntax"
 
     "github.com/google/mtail/metrics"
 )
@@ -335,30 +334,7 @@ primary_expr
 cond
   : pattern_expr
   {
-    if re, err := syntax.Parse($1, syntax.Perl); err != nil {
-      mtaillex.(*parser).ErrorP(fmt.Sprintf(err.Error()), mtaillex.(*parser).pos)
-      // TODO(jaq): force a parse error
-    } else {
-      $$ = &regexNode{pattern: $1, re_ast: re}
-      // We can reserve storage for these capturing groups, storing them in
-      // the current scope, so that future CAPTUREGROUPs can retrieve their
-      // value.  At parse time, we can warn about nonexistent names.
-      for i := 1; i <= re.MaxCap(); i++ {
-        sym := mtaillex.(*parser).symtab.Add(fmt.Sprintf("%d", i),
-                                                CaprefSymbol,
-                                           mtaillex.(*parser).pos)
-        sym.binding = $$
-        sym.addr = i - 1
-      }
-      for i, capref := range re.CapNames() {
-        if capref != "" {
-          sym := mtaillex.(*parser).symtab.Add(capref, CaprefSymbol,
-                                             mtaillex.(*parser).pos)
-          sym.binding = $$
-          sym.addr = i
-        }
-      }
-    }
+    $$ = &regexNode{pattern: $1}
   }
   | rel_expr
   {
@@ -402,16 +378,16 @@ declaration
 
     var n string
     if d.exportedName != "" {
-        n = d.exportedName
+      n = d.exportedName
 	} else {
-        n = d.name
+      n = d.name
    	}
     d.m = metrics.NewMetric(n, mtaillex.(*parser).name, d.kind, d.keys...)
     d.sym = mtaillex.(*parser).symtab.Add(d.name, IDSymbol,
                                           mtaillex.(*parser).t.pos)
-     (*d.sym).binding = d.m
+    (*d.sym).binding = d.m
     if !$1 {
-       mtaillex.(*parser).ms.Add(d.m)
+      mtaillex.(*parser).ms.Add(d.m)
     }
   }
   ;

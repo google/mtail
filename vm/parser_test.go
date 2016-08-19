@@ -279,21 +279,6 @@ var parserInvalidPrograms = []parserInvalidProgram{
 		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\"",
 			"unterminated regex:1:2-4: syntax error"}},
 
-	{"invalid regex",
-		"/foo(/\n",
-		[]string{"invalid regex:1:6: error parsing regexp: missing closing ): `foo(`",
-			"invalid regex:2:7: syntax error"}},
-
-	{"invalid regex 2",
-		"/blurg(?P<x.)/\n",
-		[]string{"invalid regex 2:1:14: error parsing regexp: invalid named capture: `(?P<x.)`",
-			"invalid regex 2:2:15: syntax error"}},
-
-	{"invalid regex 3",
-		"/blurg(?P<x>[[:alph:]])/\n",
-		[]string{"invalid regex 3:1:24: error parsing regexp: invalid character class range: `[:alph:]`",
-			"invalid regex 3:2:25: syntax error"}},
-
 	{"unterminated string",
 		" \"foo }\n",
 		[]string{"unterminated string:1:2-7: Unterminated quoted string: \"\\\"foo }\""}},

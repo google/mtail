@@ -5,6 +5,7 @@ package vm
 
 import (
 	"fmt"
+	"regexp/syntax"
 
 	"github.com/golang/glog"
 )
@@ -74,6 +75,29 @@ func (c *checker) VisitBefore(node node) Visitor {
 			return nil
 		}
 
+	case *regexNode:
+		if re, err := syntax.Parse(n.pattern, syntax.Perl); err != nil {
+			c.errors.Add(position{}, fmt.Sprintf(err.Error()))
+			return nil
+		} else {
+			n.re_ast = re
+			// We can reserve storage for these capturing groups, storing them in
+			// the current scope, so that future CAPTUREGROUPs can retrieve their
+			// value.  At parse time, we can warn about nonexistent names.
+			for i := 1; i <= re.MaxCap(); i++ {
+				sym := c.symtab.Add(fmt.Sprintf("%d", i),
+					CaprefSymbol, position{})
+				sym.binding = n
+				sym.addr = i - 1
+			}
+			for i, capref := range re.CapNames() {
+				if capref != "" {
+					sym := c.symtab.Add(capref, CaprefSymbol, position{})
+					sym.binding = n
+					sym.addr = i
+				}
+			}
+		}
 	}
 	return c
 }
