@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/mtail/metrics"
@@ -24,16 +25,16 @@ var exampleProgramTests = []struct {
 	logfile     string // Sample log input.
 	goldenfile  string // Expected metrics after processing.
 }{
-	// {
-	// 	"examples/rsyncd.mtail",
-	// 	"testdata/rsyncd.log",
-	// 	"testdata/rsyncd.golden",
-	// },
-	// {
-	// 	"examples/sftp.mtail",
-	// 	"testdata/sftp_chroot.log",
-	// 	"testdata/sftp_chroot.golden",
-	// },
+	{
+		"examples/rsyncd.mtail",
+		"testdata/rsyncd.log",
+		"testdata/rsyncd.golden",
+	},
+	{
+		"examples/sftp.mtail",
+		"testdata/sftp_chroot.log",
+		"testdata/sftp_chroot.golden",
+	},
 	{
 		"examples/dhcpd.mtail",
 		"testdata/anonymised_dhcpd_log",
@@ -100,18 +101,10 @@ func TestExamplePrograms(t *testing.T) {
 	}
 }
 
-var benchmarks = []struct {
-	programfile string
-	logfile     string
-}{
-	{"examples/rsyncd.mtail", "testdata/rsyncd.log"},
-	{"examples/sftp.mtail", "testdata/sftp_chroot.log"},
-	{"examples/dhcpd.mtail", "testdata/anonymised_dhcpd_log"},
-}
-
 func BenchmarkProgram(b *testing.B) {
-	for _, bm := range benchmarks {
-		b.Run(bm.programfile, func(b *testing.B) {
+	for _, bm := range exampleProgramTests {
+		name := filepath.Base(bm.logfile)
+		b.Run(name, func(b *testing.B) {
 			w := watcher.NewFakeWatcher()
 			o := mtail.Options{Progs: bm.programfile, W: w}
 			mtail, err := mtail.New(o)
@@ -138,13 +131,3 @@ func BenchmarkProgram(b *testing.B) {
 		})
 	}
 }
-
-// func BenchmarkRsyncdProgram(b *testing.B) {
-// 	benchmarkProgram(b, "examples/rsyncd.mtail", "testdata/rsyncd.log")
-// }
-// func BenchmarkSftpProgram(b *testing.B) {
-// 	benchmarkProgram(b, "examples/sftp.mtail", "testdata/sftp_chroot.log")
-// }
-// func BenchmarkDhcpdProgram(b *testing.B) {
-// 	benchmarkProgram(b, "examples/dhcpd.mtail", "testdata/anonymised_dhcpd_log")
-// }
