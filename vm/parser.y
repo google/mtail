@@ -387,6 +387,7 @@ declaration
                                           mtaillex.(*parser).t.pos)
     (*d.sym).binding = d.m
     if !$1 {
+      // TODO(jaq): move to checker.
       mtaillex.(*parser).ms.Add(d.m)
     }
   }
