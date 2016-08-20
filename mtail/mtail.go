@@ -24,7 +24,7 @@ import (
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
-	"github.com/spf13/afero"
+	"github.com/jaqx0r/afero"
 )
 
 // Mtail contains the state of the main program object.
