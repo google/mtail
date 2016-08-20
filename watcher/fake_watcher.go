@@ -70,8 +70,9 @@ func (w *FakeWatcher) InjectCreate(name string) {
 // InjectUpdate lets a test inject a fake update event.
 func (w *FakeWatcher) InjectUpdate(name string) {
 	w.RLock()
-	defer w.RUnlock()
-	if w.watches[name] {
+	watched := w.watches[name]
+	w.RUnlock()
+	if watched {
 		w.events <- UpdateEvent{name}
 	} else {
 		glog.Warningf("can't update: not watching %s", name)
