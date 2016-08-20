@@ -1,5 +1,7 @@
 // Copyright 2016 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
+
+// Only build with go1.7 or above because b.Run did not exist before.
 // +build go1.7
 
 package main
