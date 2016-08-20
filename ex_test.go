@@ -4,9 +4,7 @@
 package main
 
 import (
-	"flag"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/google/mtail/metrics"
@@ -14,10 +12,6 @@ import (
 	"github.com/google/mtail/testdata"
 	"github.com/google/mtail/watcher"
 	"github.com/kylelemons/godebug/pretty"
-)
-
-var (
-	recordBenchmark = flag.Bool("record_benchmark", false, "Record the benchmark results to 'benchmark_results.csv'.")
 )
 
 var exampleProgramTests = []struct {
@@ -98,36 +92,5 @@ func TestExamplePrograms(t *testing.T) {
 
 			t.Errorf("Store metrics: %#v", store.Metrics)
 		}
-	}
-}
-
-func BenchmarkProgram(b *testing.B) {
-	for _, bm := range exampleProgramTests {
-		name := filepath.Base(bm.logfile)
-		b.Run(name, func(b *testing.B) {
-			w := watcher.NewFakeWatcher()
-			o := mtail.Options{Progs: bm.programfile, W: w}
-			mtail, err := mtail.New(o)
-			if err != nil {
-				b.Fatalf("Failed to create mtail: %s", err)
-			}
-
-			var lines int64
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				count, err := mtail.OneShot(bm.logfile, false)
-				if err != nil {
-					b.Errorf("OneShot log parse failed: %s", err)
-				}
-				lines += count
-			}
-			b.StopTimer()
-			mtail.Close()
-			if err != nil {
-				b.Fatalf("strconv.ParseInt failed: %s", err)
-				return
-			}
-			b.SetBytes(lines)
-		})
 	}
 }
