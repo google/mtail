@@ -56,6 +56,10 @@ CLEANFILES+=\
 
 all: mtail
 
+.PHONY: clean
+clean:
+	rm -f $(CLEANFILES) .build-dep-stamp .cov-dep-stamp .dep-stamp
+
 .PHONY: mtail
 mtail: $(GOFILES) install_deps
 	go install
