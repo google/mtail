@@ -59,8 +59,8 @@ all: mtail
 mtail: $(GOFILES) install_deps
 	go install
 
-vm/parser.go: vm/parser.y
-	cd vm && go generate
+vm/parser.go: vm/parser.y install_build_deps
+	go generate -x ./vm
 
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
@@ -101,6 +101,13 @@ coverage.html: gover.coverprofile
 
 .PHONY: testall
 testall: testrace bench
+
+.PHONY: install_build_deps
+install_build_deps: .build-dep-stamp
+
+.build-dep-stamp:
+	go get golang.org/x/tools/cmd/goyacc
+	touch $@
 
 .PHONY: install_deps
 install_deps: .dep-stamp

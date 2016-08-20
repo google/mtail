@@ -24,7 +24,7 @@ import (
     kind metrics.Kind
 }
 
-%type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement
+%type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement 
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr
 %type <n> declaration declarator definition decoration_statement
 %type <kind> type_spec
@@ -495,7 +495,7 @@ definition
 decoration_statement
   : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DECO compound_statement
   {
-    $$ = &decoNode{mtaillex.(*parser).pos, $2, $3, nil}
+    $$ = &decoNode{mtaillex.(*parser).pos, $2, $3, nil} 
   }
   ;
 

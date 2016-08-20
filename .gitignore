@@ -17,3 +17,4 @@ foo.log
 *.coverprofile
 /exporter/exporter.test
 /.dep-stamp
+/.build-dep-stamp
