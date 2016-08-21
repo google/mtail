@@ -381,7 +381,7 @@ declaration
     d.kind = $2
     d.hidden = $1
     d.sym = mtaillex.(*parser).symtab.Add(d.name, IDSymbol,
-                                          &mtaillex.(*parser).t.pos)
+                                          &d.pos)
   }
   ;
 
