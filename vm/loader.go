@@ -96,7 +96,12 @@ func (l *Loader) LoadProg(programPath string) error {
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	o := &Options{CompileOnly: l.compileOnly, SyslogUseCurrentYear: l.syslogUseCurrentYear}
-	v, errs := Compile(name, input, l.ms, o)
+	v, errs := Compile(name, input, o)
+	for _, m := range v.m {
+		if !m.Hidden {
+			l.ms.Add(m)
+		}
+	}
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("compile failed for %s:\n%s", name, errs)

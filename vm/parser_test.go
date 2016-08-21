@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/mtail/metrics"
 	"github.com/kylelemons/godebug/pretty"
 )
 
@@ -229,7 +228,7 @@ foo = 3.14
 
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range mtailPrograms {
-		p := newParser(tc.name, strings.NewReader(tc.program), metrics.NewStore())
+		p := newParser(tc.name, strings.NewReader(tc.program))
 		r := mtailParse(p)
 
 		if r != 0 || p.root == nil || len(p.errors) > 0 {
@@ -243,7 +242,7 @@ func TestParserRoundTrip(t *testing.T) {
 		u := Unparser{}
 		output := u.Unparse(p.root)
 
-		p2 := newParser(tc.name+" 2", strings.NewReader(output), metrics.NewStore())
+		p2 := newParser(tc.name+" 2", strings.NewReader(output))
 		r = mtailParse(p2)
 		if r != 0 || p2.root == nil || len(p2.errors) > 0 {
 			t.Errorf("2nd pass parse errors:\n")
@@ -295,7 +294,7 @@ var parserInvalidPrograms = []parserInvalidProgram{
 
 func TestParseInvalidPrograms(t *testing.T) {
 	for _, tc := range parserInvalidPrograms {
-		p := newParser(tc.name, strings.NewReader(tc.program), metrics.NewStore())
+		p := newParser(tc.name, strings.NewReader(tc.program))
 		mtailParse(p)
 
 		diff := pretty.Compare(

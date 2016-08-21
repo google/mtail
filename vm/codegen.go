@@ -43,13 +43,18 @@ func (c *codegen) VisitBefore(node node) Visitor {
 	switch n := node.(type) {
 
 	case *declNode:
-		// Build the list of addressable metrics for this program, and set the symbol's address.
-		n.sym.addr = len(c.obj.m)
-		if n.sym.binding == nil {
-			c.errorf(n.Pos(), "No storage bound to metric declared as %q", n.name)
-			return nil
+
+		var name string
+		if n.exportedName != "" {
+			name = n.exportedName
+		} else {
+			name = n.name
 		}
-		c.obj.m = append(c.obj.m, n.sym.binding.(*metrics.Metric))
+		m := metrics.NewMetric(name, c.name, n.kind, n.keys...)
+		m.Hidden = n.hidden
+		(*n.sym).binding = m
+		n.sym.addr = len(c.obj.m)
+		c.obj.m = append(c.obj.m, m)
 		return nil
 
 	case *condNode:

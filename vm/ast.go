@@ -115,7 +115,6 @@ type declNode struct {
 	keys         []string
 	kind         metrics.Kind
 	exportedName string
-	m            *metrics.Metric
 	sym          *symbol
 }
 

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/mtail/metrics"
 	"github.com/kylelemons/godebug/pretty"
 )
 
@@ -339,8 +338,7 @@ counter bar
 
 func TestCodegen(t *testing.T) {
 	for _, tc := range testCodeGenPrograms {
-		m := metrics.NewStore()
-		ast, err := Parse(tc.name, strings.NewReader(tc.source), m)
+		ast, err := Parse(tc.name, strings.NewReader(tc.source))
 		if err != nil {
 			t.Fatalf("Unexpected parse failure in %q: %s", tc.name, err)
 		}

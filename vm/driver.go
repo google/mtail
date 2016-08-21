@@ -8,12 +8,10 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-
-	"github.com/google/mtail/metrics"
 )
 
-func Parse(name string, input io.Reader, ms *metrics.Store) (node, error) {
-	p := newParser(name, input, ms)
+func Parse(name string, input io.Reader) (node, error) {
+	p := newParser(name, input)
 	r := mtailParse(p)
 	if r != 0 || p == nil || p.errors != nil {
 		return nil, p.errors
@@ -33,12 +31,11 @@ type parser struct {
 	endPos position // Maybe contains the position of the end of a node when the parser is doing preprocessor concatenation.
 	symtab SymbolTable
 	res    map[string]string // Mapping of regex constants to patterns.
-	ms     *metrics.Store    // List of metrics exported by this program.
 }
 
-func newParser(name string, input io.Reader, ms *metrics.Store) *parser {
+func newParser(name string, input io.Reader) *parser {
 	mtailDebug = *mtailDebugFlag
-	return &parser{name: name, l: newLexer(name, input), res: make(map[string]string), ms: ms}
+	return &parser{name: name, l: newLexer(name, input), res: make(map[string]string)}
 }
 
 func (p *parser) ErrorP(s string, pos *position) {

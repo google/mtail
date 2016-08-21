@@ -23,10 +23,10 @@ type Options struct {
 // Compile compiles a program from the input into a virtual machine or a list
 // of compile errors.  It takes the program's name and the metric store as
 // additional arguments to build the virtual machine.
-func Compile(name string, input io.Reader, ms *metrics.Store, o *Options) (*VM, error) {
+func Compile(name string, input io.Reader, o *Options) (*VM, error) {
 	name = filepath.Base(name)
 
-	ast, err := Parse(name, input, ms)
+	ast, err := Parse(name, input)
 	if err != nil {
 		return nil, err
 	}

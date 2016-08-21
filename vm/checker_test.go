@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/mtail/metrics"
 	"github.com/kylelemons/godebug/pretty"
 )
 
@@ -52,7 +51,7 @@ var checkerInvalidPrograms = []checkerInvalidProgram{
 
 func TestCheckInvalidPrograms(t *testing.T) {
 	for _, tc := range checkerInvalidPrograms {
-		ast, err := Parse(tc.name, strings.NewReader(tc.program), metrics.NewStore())
+		ast, err := Parse(tc.name, strings.NewReader(tc.program))
 		if err != nil {
 			t.Fatal(err)
 		}
