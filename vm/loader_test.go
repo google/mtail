@@ -9,8 +9,8 @@ import (
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/watcher"
-	"github.com/jaqx0r/afero"
 	"github.com/kylelemons/godebug/pretty"
+	"github.com/spf13/afero"
 )
 
 func TestNewLoader(t *testing.T) {

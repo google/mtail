@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
-	"github.com/jaqx0r/afero"
+	"github.com/spf13/afero"
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/watcher"
