@@ -379,6 +379,7 @@ declaration
     $$ = $3
     d := $$.(*declNode)
     d.kind = $2
+    d.hidden = $1
 
     var n string
     if d.exportedName != "" {
@@ -390,7 +391,7 @@ declaration
     d.sym = mtaillex.(*parser).symtab.Add(d.name, IDSymbol,
                                           &mtaillex.(*parser).t.pos)
     (*d.sym).binding = d.m
-    if !$1 {
+    if !d.hidden {
       // TODO(jaq): move to checker.
       mtaillex.(*parser).ms.Add(d.m)
     }

@@ -111,6 +111,7 @@ func (n *indexedExprNode) Pos() *position {
 type declNode struct {
 	pos          position
 	name         string
+	hidden       bool
 	keys         []string
 	kind         metrics.Kind
 	exportedName string
