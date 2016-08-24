@@ -60,22 +60,21 @@ all: mtail
 clean:
 	rm -f $(CLEANFILES) .build-dep-stamp .cov-dep-stamp .dep-stamp
 
-.PHONY: mtail
-mtail: $(GOFILES) install_deps
+install: $(GOFILES) .dep-stamp
 	go install
 
-vm/parser.go: vm/parser.y install_build_deps
+vm/parser.go: vm/parser.y .dep-stamp
 	go generate -x ./vm
 
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
 
 .PHONY: test
-test: $(GOFILES) $(GOTESTFILES) mtail
+test: $(GOFILES) $(GOTESTFILES)
 	go test -v -timeout 60s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOTESTFILES) mtail
+testrace: $(GOFILES) $(GOTESTFILES)
 	go test -v -timeout 5m -race ./...
 
 .PHONY: smoke
@@ -107,18 +106,14 @@ coverage.html: gover.coverprofile
 .PHONY: testall
 testall: testrace bench
 
-.PHONY: install_build_deps
-install_build_deps: .build-dep-stamp
-
-.build-dep-stamp:
-	go get golang.org/x/tools/cmd/goyacc
-	touch $@
-
 .PHONY: install_deps
 install_deps: .dep-stamp
 
-.dep-stamp: vm/parser.go
-	go get -t -v ./...
+.dep-stamp:
+	go get -u golang.org/x/tools/cmd/goyacc
+	# Install all dependencies, ensuring they're updated
+	go get -u -v $(go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
+	go get -u -v $(go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
 	touch $@
 
 .PHONY: install_coverage_deps
