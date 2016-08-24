@@ -18,3 +18,4 @@ foo.log
 /exporter/exporter.test
 /.dep-stamp
 /.build-dep-stamp
+/.gen-dep-stamp

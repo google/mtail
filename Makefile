@@ -69,12 +69,12 @@ vm/parser.go: vm/parser.y .gen-dep-stamp
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
 
-.PHONY: test
-test: $(GOFILES) $(GOTESTFILES)
+.PHONY: test 
+test: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 60s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOTESTFILES)
+testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 5m -race ./...
 
 .PHONY: smoke
@@ -109,10 +109,13 @@ testall: testrace bench
 .PHONY: install_deps
 install_deps: .dep-stamp
 
+IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
+TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
+
 .dep-stamp:
 	# Install all dependencies, ensuring they're updated
-	go get -u -v $(go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
-	go get -u -v $(go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
+	go get -u -v $(IMPORTS)
+	go get -u -v $(TESTIMPORTS)
 	touch $@
 
 .PHONY: install_gen_deps
