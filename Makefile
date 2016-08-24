@@ -58,12 +58,12 @@ all: mtail
 
 .PHONY: clean
 clean:
-	rm -f $(CLEANFILES) .build-dep-stamp .cov-dep-stamp .dep-stamp
+	rm -f $(CLEANFILES) .*dep-stamp
 
 install: $(GOFILES) .dep-stamp
 	go install
 
-vm/parser.go: vm/parser.y .dep-stamp
+vm/parser.go: vm/parser.y .gen-dep-stamp
 	go generate -x ./vm
 
 emgen/emgen: emgen/emgen.go
@@ -110,10 +110,16 @@ testall: testrace bench
 install_deps: .dep-stamp
 
 .dep-stamp:
-	go get -u golang.org/x/tools/cmd/goyacc
 	# Install all dependencies, ensuring they're updated
 	go get -u -v $(go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
 	go get -u -v $(go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
+	touch $@
+
+.PHONY: install_gen_deps
+install_gen_deps: .gen-dep-stamp
+
+.gen-dep-stamp:
+	go get -u golang.org/x/tools/cmd/goyacc
 	touch $@
 
 .PHONY: install_coverage_deps
