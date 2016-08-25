@@ -21,5 +21,3 @@ type casting
 parse tree/ast testing, s-expressions to render expected?
 
 mapping between progs and logs to reduce wasted processing
-
-subbenchmark now supported in standard library.
