@@ -16,9 +16,11 @@ script: make testrace
 
 # If the full suite passes, run again to collect coverage, merge all of the
 # packages reports, and send to coveralls.io.
+# Run the benchmarks, if applicable.
 after_success:
  - make coverage
  - goveralls -coverprofile=gover.coverprofile -service=travis-ci
+ - make bench
 
 # Run tests at these Go versions.
 go:
