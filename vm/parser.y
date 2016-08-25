@@ -67,11 +67,9 @@ import (
 %%
 
 start
-  : { mtaillex.(*parser).startScope() } stmt_list
+  : stmt_list
   {
-    $2.(*stmtlistNode).s = mtaillex.(*parser).currentScope()
-    mtaillex.(*parser).endScope()
-    mtaillex.(*parser).root = $2
+    mtaillex.(*parser).root = $1
   }
   ;
 
@@ -134,11 +132,9 @@ expression_statement
   ;
 
 compound_statement
-  : LCURLY { mtaillex.(*parser).startScope() } stmt_list RCURLY
+  : LCURLY stmt_list RCURLY
   {
-    $$ = $3
-    $$.(*stmtlistNode).s = mtaillex.(*parser).symtab.CurrentScope()
-    mtaillex.(*parser).endScope()
+    $$ = $2
   }
   ;
 

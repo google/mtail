@@ -31,7 +31,8 @@ func (c *checker) VisitBefore(node node) Visitor {
 	switch n := node.(type) {
 
 	case *stmtlistNode:
-		c.symtab.EnterScope(n.s)
+		c.symtab.EnterScope(nil)
+		n.s = c.symtab.CurrentScope()
 
 	case *caprefNode:
 		if sym, ok := c.symtab.Lookup(n.name, CaprefSymbol); ok {
