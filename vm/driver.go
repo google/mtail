@@ -74,18 +74,6 @@ func (p *parser) Lex(lval *mtailSymType) int {
 	return int(p.t.kind)
 }
 
-func (p *parser) startScope() {
-	p.symtab.EnterScope(nil)
-}
-
-func (p *parser) endScope() {
-	p.symtab.ExitScope()
-}
-
-func (p *parser) currentScope() *scope {
-	return p.symtab.CurrentScope()
-}
-
 func (p *parser) inRegex() {
 	p.l.in_regex = true
 }
