@@ -54,6 +54,8 @@ func (c *checker) VisitBefore(node node) Visitor {
 		}
 
 	case *defNode:
+		n.sym = c.symtab.Add(n.name, DefSymbol, &n.pos)
+		(*n.sym).binding = n
 
 	case *decoNode:
 		if sym, ok := c.symtab.Lookup(n.name, DefSymbol); ok {

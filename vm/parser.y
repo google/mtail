@@ -473,10 +473,6 @@ definition
   : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DEF ID compound_statement
   {
     $$ = &defNode{pos: mtaillex.(*parser).pos, name: $3, block: $4}
-    d := $$.(*defNode)
-    d.sym = mtaillex.(*parser).symtab.Add(d.name, DefSymbol,
-                                          &mtaillex.(*parser).pos)
-    (*d.sym).binding = d
   }
   ;
 
