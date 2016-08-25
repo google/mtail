@@ -47,6 +47,10 @@ var checkerInvalidPrograms = []checkerInvalidProgram{
 	{"invalid regex 3",
 		"/blurg(?P<x>[[:alph:]])/ {}\n",
 		[]string{"invalid regex 3:1:1-24: error parsing regexp: invalid character class range: `[:alph:]`"}},
+
+	{"duplicate declaration",
+		"counter foo\ncounter foo\n",
+		[]string{"duplicate declaration:2:9-11: Declaration of `foo' shadows the previous at duplicate declaration:1:9-11"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

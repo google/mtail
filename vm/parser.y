@@ -380,8 +380,6 @@ declaration
     d := $$.(*declNode)
     d.kind = $2
     d.hidden = $1
-    d.sym = mtaillex.(*parser).symtab.Add(d.name, IDSymbol,
-                                          &d.pos)
   }
   ;
 

@@ -6,8 +6,6 @@ package vm
 import (
 	"fmt"
 	"regexp/syntax"
-
-	"github.com/golang/glog"
 )
 
 // checker holds data for a semantic checker
@@ -44,14 +42,11 @@ func (c *checker) VisitBefore(node node) Visitor {
 		}
 
 	case *declNode:
-		glog.Infof("Checking this decl: %q", n.name)
-
 		if sym, ok := c.symtab.Lookup(n.name, IDSymbol); ok {
-			glog.Infof("Found this guy: %v", sym)
-		} else {
-			c.errors.Add(n.Pos(), fmt.Sprintf("No metric for %q found", n.name))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Declaration of `%s' shadows the previous at %s", n.name, sym.loc))
 			return nil
 		}
+		n.sym = c.symtab.Add(n.name, IDSymbol, &n.pos)
 
 	case *defNode:
 		n.sym = c.symtab.Add(n.name, DefSymbol, &n.pos)
