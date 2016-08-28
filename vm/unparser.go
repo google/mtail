@@ -155,11 +155,11 @@ func (u *Unparser) VisitBefore(n node) Visitor {
 	case *unaryExprNode:
 		switch v.op {
 		case INC:
-			Walk(u, v.lhs)
+			Walk(u, v.expr)
 			u.emit("++")
 		case NOT:
 			u.emit(" ~")
-			Walk(u, v.lhs)
+			Walk(u, v.expr)
 		}
 
 	case *stringConstNode:

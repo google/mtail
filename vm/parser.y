@@ -150,11 +150,11 @@ assign_expr
   }
   | unary_expr ASSIGN bitwise_expr
   {
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   | unary_expr ADD_ASSIGN bitwise_expr
   {
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   ;
 
@@ -163,7 +163,7 @@ bitwise_expr
   { $$ = $1 }
   | bitwise_expr bitwise_op rel_expr
   {
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   ;
 
@@ -181,7 +181,7 @@ rel_expr
   { $$ = $1 }
   | rel_expr relop shift_expr
   { 
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   ;
 
@@ -205,7 +205,7 @@ shift_expr
   { $$ = $1 }
   | shift_expr shift_op additive_expr
   {
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   ;
 
@@ -221,11 +221,11 @@ additive_expr
   { $$ = $1 }
   | additive_expr PLUS multiplicative_expr
   {
-    $$ = &binaryExprNode{$1, $3, '+'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: '+'}
   }
   | additive_expr MINUS multiplicative_expr
   {
-    $$ = &binaryExprNode{$1, $3, '-'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: '-'}
   }
   ;
 
@@ -236,19 +236,19 @@ multiplicative_expr
   }
   | multiplicative_expr MUL unary_expr
   {
-    $$ = &binaryExprNode{$1, $3, '*'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: '*'}
   }
   | multiplicative_expr DIV unary_expr
   {
-    $$ = &binaryExprNode{$1, $3, '/'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: '/'}
   }
   | multiplicative_expr MOD unary_expr
   {
-    $$ = &binaryExprNode{$1, $3, '%'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: '%'}
   }
   | multiplicative_expr POW unary_expr
   {
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   ;
 
@@ -259,15 +259,15 @@ unary_expr
   }
   | NOT postfix_expr
   {
-    $$ = &unaryExprNode{mtaillex.(*parser).t.pos, $2, $1}
+    $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $2, op: $1}
   }
   | BUILTIN LPAREN RPAREN
   {
-    $$ = &builtinNode{mtaillex.(*parser).t.pos, $1, nil}
+    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: nil}
   }
   | BUILTIN LPAREN arg_expr_list RPAREN
   {
-    $$ = &builtinNode{mtaillex.(*parser).t.pos, $1, $3}
+    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
   }
   ;
 
@@ -291,11 +291,11 @@ postfix_expr
   }
   | postfix_expr INC
   {
-    $$ = &unaryExprNode{mtaillex.(*parser).t.pos, $1, $2}
+    $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $1, op: $2}
   }
   | postfix_expr LSQUARE expr RSQUARE
   {
-    $$ = &indexedExprNode{$1, $3}
+    $$ = &indexedExprNode{lhs: $1, index: $3}
   }
   ;
 
