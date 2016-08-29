@@ -22,6 +22,7 @@ type stmtlistNode struct {
 func (n *stmtlistNode) Pos() *position {
 	return mergepositionlist(n.children)
 }
+
 func (n *stmtlistNode) Type() Type {
 	return String
 }
@@ -33,6 +34,7 @@ type exprlistNode struct {
 func (n *exprlistNode) Pos() *position {
 	return mergepositionlist(n.children)
 }
+
 func (n *exprlistNode) Type() Type {
 	return String
 }
@@ -46,6 +48,7 @@ type condNode struct {
 func (n *condNode) Pos() *position {
 	return mergepositionlist([]node{n.cond, n.truthNode, n.elseNode})
 }
+
 func (n *condNode) Type() Type {
 	return None
 }
@@ -60,6 +63,7 @@ type regexNode struct {
 func (n *regexNode) Pos() *position {
 	return &n.pos
 }
+
 func (n *regexNode) Type() Type {
 	return String
 }
@@ -73,8 +77,12 @@ type idNode struct {
 func (n *idNode) Pos() *position {
 	return &n.pos
 }
+
 func (n *idNode) Type() Type {
-	return String
+	if n.sym != nil {
+		return n.sym.typ
+	}
+	return Int
 }
 
 type caprefNode struct {
@@ -86,8 +94,12 @@ type caprefNode struct {
 func (n *caprefNode) Pos() *position {
 	return &n.pos
 }
+
 func (n *caprefNode) Type() Type {
-	return None
+	if n.sym != nil {
+		return n.sym.typ
+	}
+	return Int
 }
 
 type builtinNode struct {
@@ -101,7 +113,7 @@ func (n *builtinNode) Pos() *position {
 }
 
 func (n *builtinNode) Type() Type {
-	return None
+	return Int
 }
 
 type binaryExprNode struct {
@@ -160,7 +172,10 @@ func (n *declNode) Pos() *position {
 }
 
 func (n *declNode) Type() Type {
-	return None
+	if n.sym != nil {
+		return n.sym.typ
+	}
+	return Int
 }
 
 type stringConstNode struct {
@@ -211,7 +226,10 @@ func (n *defNode) Pos() *position {
 }
 
 func (n *defNode) Type() Type {
-	return None
+	if n.sym != nil {
+		return n.sym.typ
+	}
+	return Int
 }
 
 type decoNode struct {

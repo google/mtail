@@ -101,8 +101,32 @@ func (c *checker) VisitBefore(node node) Visitor {
 }
 
 func (c *checker) VisitAfter(node node) {
-	switch node.(type) {
+	switch n := node.(type) {
 	case *stmtlistNode:
 		c.symtab.ExitScope()
+
+	case *binaryExprNode:
+		var rType Type
+		Tl := n.lhs.Type()
+		Tr := n.rhs.Type()
+		switch n.op {
+		// case DIV, MOD, MUL, MINUS, PLUS, POW:
+		// 	// Numeric
+		// case SHL, SHR:
+		// 	//  integer
+		// case LT, GT, LE, GE, EQ, NE:
+		// 	// comparable
+		// case AND, OR, XOR, NOT:
+		// case ADD_ASSIGN, ASSIGN:
+		default:
+			if Tl != Tr {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%s) and rhs (%s) for op %s", Tl, Tr, n.op))
+			}
+			rType = Tl
+		}
+		n.typ = rType
+
+	case *unaryExprNode:
+		n.typ = n.expr.Type()
 	}
 }

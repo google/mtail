@@ -20,6 +20,7 @@ type symbol struct {
 	binding interface{} // Binding to storage allocated
 	loc     *position   // Source file position
 	addr    int         // Address offset in another structure
+	typ     Type        // Type of this symbol
 }
 
 type scope map[string][]*symbol
@@ -54,7 +55,7 @@ func (s *SymbolTable) Lookup(name string, kind symtype) (*symbol, bool) {
 }
 
 func (s *SymbolTable) Add(name string, kind symtype, loc *position) (sym *symbol) {
-	sym = &symbol{name, kind, nil, loc, 0}
+	sym = &symbol{name, kind, nil, loc, 0, Int}
 	cs := s.CurrentScope()
 	if _, ok := (*cs)[name]; !ok {
 		(*cs)[name] = make([]*symbol, endSymbol)
