@@ -97,11 +97,6 @@ func (l *Loader) LoadProg(programPath string) error {
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	o := &Options{CompileOnly: l.compileOnly, SyslogUseCurrentYear: l.syslogUseCurrentYear}
 	v, errs := Compile(name, input, o)
-	for _, m := range v.m {
-		if !m.Hidden {
-			l.ms.Add(m)
-		}
-	}
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("compile failed for %s:\n%s", name, errs)
@@ -109,6 +104,11 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	if v == nil {
 		glog.Warning("No program returned, but no errors.")
 		return nil
+	}
+	for _, m := range v.m {
+		if !m.Hidden {
+			l.ms.Add(m)
+		}
 	}
 	if l.dumpBytecode {
 		v.DumpByteCode(name)
