@@ -50,6 +50,10 @@ func (c *checker) VisitBefore(node node) Visitor {
 		n.sym = c.symtab.Add(n.name, IDSymbol, &n.pos)
 
 	case *defNode:
+		if sym, ok := c.symtab.Lookup(n.name, DefSymbol); ok {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Definition of decorator `%s' shadows the previous at %s", n.name, sym.loc))
+			return nil
+		}
 		n.sym = c.symtab.Add(n.name, DefSymbol, &n.pos)
 		(*n.sym).binding = n
 
