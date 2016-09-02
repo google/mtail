@@ -154,7 +154,7 @@ assign_expr
   }
   | unary_expr ADD_ASSIGN bitwise_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: &binaryExprNode{lhs: $1, rhs: $3, op: '+'}, op: ASSIGN}
+    $$ = &binaryExprNode{lhs: $1, rhs: &binaryExprNode{lhs: $1, rhs: $3, op: PLUS}, op: ASSIGN}
   }
   ;
 
@@ -221,11 +221,11 @@ additive_expr
   { $$ = $1 }
   | additive_expr PLUS multiplicative_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: '+'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: PLUS}
   }
   | additive_expr MINUS multiplicative_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: '-'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: MINUS}
   }
   ;
 
@@ -236,15 +236,15 @@ multiplicative_expr
   }
   | multiplicative_expr MUL unary_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: '*'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: MUL}
   }
   | multiplicative_expr DIV unary_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: '/'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: DIV}
   }
   | multiplicative_expr MOD unary_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: '%'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: MOD}
   }
   | multiplicative_expr POW unary_expr
   {

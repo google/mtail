@@ -193,15 +193,15 @@ func (c *codegen) VisitAfter(node node) {
 		case NE:
 			c.emit(instr{cmp, 0})
 			c.emit(instr{op: jm})
-		case '+':
+		case PLUS:
 			c.emit(instr{op: add})
-		case '-':
+		case MINUS:
 			c.emit(instr{op: sub})
-		case '*':
+		case MUL:
 			c.emit(instr{op: mul})
-		case '/':
+		case DIV:
 			c.emit(instr{op: div})
-		case '%':
+		case MOD:
 			c.emit(instr{op: mod})
 		case AND:
 			c.emit(instr{op: and})

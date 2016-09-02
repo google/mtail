@@ -106,8 +106,14 @@ func (u *Unparser) VisitBefore(n node) Visitor {
 			u.emit(" ^ ")
 		case NOT:
 			u.emit(" ~ ")
-		case '+', '-', '*', '/':
-			u.emit(fmt.Sprintf(" %c ", v.op))
+		case PLUS:
+			u.emit(" + ")
+		case MINUS:
+			u.emit(" - ")
+		case MUL:
+			u.emit(" * ")
+		case DIV:
+			u.emit(" / ")
 		case POW:
 			u.emit(" ** ")
 		case ASSIGN:
