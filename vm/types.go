@@ -6,7 +6,8 @@ package vm
 type Type int
 
 const (
-	None Type = iota
+	Untyped Type = iota // Untyped indicates no type has been determined
+	None
 	String
 	Int
 	Float
