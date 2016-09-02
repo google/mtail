@@ -110,14 +110,24 @@ func (c *checker) VisitAfter(node node) {
 		Tl := n.lhs.Type()
 		Tr := n.rhs.Type()
 		switch n.op {
-		// case DIV, MOD, MUL, MINUS, PLUS, POW:
-		// 	// Numeric
-		// case SHL, SHR:
+		//case DIV, MOD, MUL, MINUS, PLUS, POW:
+		// Numeric
+		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+		// Tl <= Tr , Tr <= Tl
+		// ⇒ O ⊢ e : lub(Tl, Tr)
+		// case SHL, SHR, AND, OR, XOR, NOT:
 		// 	//  integer
+		// O ⊢ e1 :Int, O ⊢ e2 : Int
+		// ⇒ O ⊢ e : Int
 		// case LT, GT, LE, GE, EQ, NE:
 		// 	// comparable
-		// case AND, OR, XOR, NOT:
+		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+		// Tl <= Tr , Tr <= Tl
+		// ⇒ O ⊢ e : lub(Tl, Tr)
 		// case ADD_ASSIGN, ASSIGN:
+		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+		// Tl <= Tr
+		// ⇒ O ⊢ e : Tl
 		default:
 			if Tl != Tr {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%s) and rhs (%s) for op %s", Tl, Tr, n.op))
