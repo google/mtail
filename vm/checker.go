@@ -124,7 +124,7 @@ func (c *checker) VisitAfter(node node) {
 		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 		// Tl <= Tr , Tr <= Tl
 		// ⇒ O ⊢ e : lub(Tl, Tr)
-		// case ADD_ASSIGN, ASSIGN:
+		// case ASSIGN:
 		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 		// Tl <= Tr
 		// ⇒ O ⊢ e : Tl

@@ -211,8 +211,6 @@ func (c *codegen) VisitAfter(node node) {
 			c.emit(instr{op: xor})
 		case ASSIGN:
 			c.emit(instr{op: set})
-		case ADD_ASSIGN:
-			c.emit(instr{inc, 1})
 		case SHL:
 			c.emit(instr{op: shl})
 		case SHR:

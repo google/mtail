@@ -112,8 +112,6 @@ func (u *Unparser) VisitBefore(n node) Visitor {
 			u.emit(" ** ")
 		case ASSIGN:
 			u.emit(" = ")
-		case ADD_ASSIGN:
-			u.emit(" += ")
 		case MOD:
 			u.emit(" % ")
 		}
