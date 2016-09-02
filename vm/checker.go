@@ -141,6 +141,12 @@ func (c *checker) VisitAfter(node node) {
 		n.typ = rType
 
 	case *unaryExprNode:
-		n.typ = n.expr.Type()
+		switch n.op {
+		case NOT:
+			n.typ = Int
+		default:
+			n.typ = n.expr.Type()
+		}
+
 	}
 }
