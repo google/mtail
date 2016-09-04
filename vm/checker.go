@@ -15,8 +15,9 @@ type checker struct {
 	errors ErrorList
 }
 
-// Check performs a semantic check of the AST rooted at node, and returns a boolean
-// indicating OK; if ok is not true, then error is a list of errors found.
+// Check performs a semantic check of the ast node, and returns a list of
+// errors found, or nil if the program is semantically valid.  At the
+// completion of Check, the symbol table and type annotation is also complete.
 func Check(node astNode) error {
 	c := &checker{}
 	Walk(c, node)
