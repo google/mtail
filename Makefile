@@ -78,20 +78,20 @@ testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 5m -race ./...
 
 .PHONY: smoke
-smoke: $(GOFILES) $(GOTESTFILES) mtail
+smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 10s -test.short ./...
 
 .PHONY: bench
-bench: $(GOFILES) $(GOTESTFILES)
+bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -timeout 60s -run=XXX ./...
 
 .PHONY: recbench
-recbench: $(GOFILES) $(GOTESTFILES)
+recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: coverage
 coverage: gover.coverprofile
-gover.coverprofile: $(GOFILES) $(GOTESTFILES)
+gover.coverprofile: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	for package in exporter metrics mtail tailer vm watcher; do\
 		go test -covermode=count -coverprofile=$$package.coverprofile ./$$package;\
     done

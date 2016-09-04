@@ -52,7 +52,7 @@ func Walk(v Visitor, node node) {
 		Walk(v, n.rhs)
 
 	case *unaryExprNode:
-		Walk(v, n.lhs)
+		Walk(v, n.expr)
 
 	case *indexedExprNode:
 		Walk(v, n.index)
