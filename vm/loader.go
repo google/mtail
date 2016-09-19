@@ -64,7 +64,10 @@ func (l *Loader) LoadProgs(programPath string) error {
 			if fi.IsDir() {
 				continue
 			}
-			l.LoadProg(path.Join(programPath, fi.Name()))
+			err = l.LoadProg(path.Join(programPath, fi.Name()))
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	default:
