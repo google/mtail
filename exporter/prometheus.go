@@ -54,7 +54,7 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 func metricToPrometheus(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
 	var s []string
 	for k, v := range l.Labels {
-		s = append(s, fmt.Sprintf("%s=\"%s\"", k, v))
+		s = append(s, fmt.Sprintf("%s=%q", k, v))
 	}
 	sort.Strings(s)
 	s = append(s, fmt.Sprintf("prog=\"%s\"", m.Program))
