@@ -13,12 +13,14 @@ import (
 )
 
 const (
-	collectdFormat = "PUTVAL \"%s/mtail-%s/%s-%s\" interval=%d %d:%d\n"
+	collectdFormat = "PUTVAL \"%s/%smtail-%s/%s-%s\" interval=%d %d:%d\n"
 )
 
 var (
 	collectdSocketPath = flag.String("collectd_socketpath", "",
 		"Path to collectd unixsock to write metrics to.")
+	collectdPrefix = flag.String("collectd_prefix", "",
+		"Prefix to use for collectd metrics.")
 
 	collectdExportTotal   = expvar.NewInt("collectd_export_total")
 	collectdExportSuccess = expvar.NewInt("collectd_export_success")
@@ -29,6 +31,7 @@ func metricToCollectd(hostname string, m *metrics.Metric, l *metrics.LabelSet) s
 	defer m.RUnlock()
 	return fmt.Sprintf(collectdFormat,
 		hostname,
+		*collectdPrefix,
 		m.Program,
 		kindToCollectdType(m.Kind),
 		formatLabels(m.Name, l.Labels, "-", "-"),
