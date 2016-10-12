@@ -3,11 +3,12 @@
 
 # Parser for a metrics-friendly apache log format
 # LogFormat "%v:%p %R %m %>s %H conn=%X %D %O %I %k" metrics
-counter apache_http_requests_total by server_port, handler, request_method, request_status, request_protocol
 counter apache_http_connections_total by server_port, handler, request_method, request_status, request_protocol, connection_status
-counter apache_http_requests_time_microseconds_total by server_port, handler, request_method, request_status, request_protocol
-counter apache_http_sent_bytes_total by server_port, handler, request_method, request_status, request_protocol
 counter apache_http_received_bytes_total by server_port, handler, request_method, request_status, request_protocol
+counter apache_http_request_time_microseconds by le, server_port, handler, request_method, request_status, request_protocol
+counter apache_http_request_time_microseconds_sum by server_port, handler, request_method, request_status, request_protocol
+counter apache_http_request_time_microseconds_count by server_port, handler, request_method, request_status, request_protocol
+counter apache_http_sent_bytes_total by server_port, handler, request_method, request_status, request_protocol
 
 /^/ +
 /(?P<server_port>\S+) / + # %v:%p - The canonical ServerName of the server serving the request. : The canonical port of the server serving the request.
@@ -21,8 +22,44 @@ counter apache_http_received_bytes_total by server_port, handler, request_method
 /(?P<received_bytes>\d+) / + # %I - Bytes received, including request and headers.
 /(?P<keepalives>\d+)/ + # %k - Number of keepalive requests handled on this connection.
 /$/ {
-  apache_http_requests_total[$server_port][$handler][$request_method][$request_status][$request_protocol]++
-  apache_http_requests_time_microseconds_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $time_us
+  ###
+  # HTTP Requests with histogram buckets.
+  #
+  apache_http_request_time_microseconds_count[$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  apache_http_request_time_microseconds_sum[$server_port][$handler][$request_method][$request_status][$request_protocol] += $time_us
+
+  # 10ms bucket.
+  time_us < 10000 {
+    apache_http_request_time_microseconds["10000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  }
+
+  # 50ms bucket.
+  time_us < 50000 {
+    apache_http_request_time_microseconds["50000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  }
+
+  # 100ms bucket.
+  time_us < 100000 {
+    apache_http_request_time_microseconds["100000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  }
+
+  # 1s bucket.
+  time_us < 1000000 {
+    apache_http_request_time_microseconds["1000000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  }
+
+  # 10s bucket.
+  time_us < 10000000 {
+    apache_http_request_time_microseconds["10000000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  }
+
+  # 60s bucket.
+  time_us < 60000000 {
+    apache_http_request_time_microseconds["60000000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  }
+
+  ###
+  # Sent/Received bytes.
   apache_http_sent_bytes_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $sent_bytes
   apache_http_received_bytes_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $received_bytes
 
