@@ -3,23 +3,24 @@
 
 package vm
 
-type symtype int
+type SymbolClass int
 
 // symtype enumerates the types of symbols found in the program text.
 const (
-	IDSymbol     symtype = iota // Identifiers
-	CaprefSymbol                // Capture group references
-	DefSymbol                   // Definitions
+	IDSymbol     SymbolClass = iota // Identifiers
+	CaprefSymbol                    // Capture group references
+	DefSymbol                       // Definitions
 
 	endSymbol
 )
 
 type symbol struct {
 	name    string      // Symbol name
-	kind    symtype     // Type
+	class   SymbolClass // Type
 	binding interface{} // Binding to storage allocated
 	loc     *position   // Source file position
 	addr    int         // Address offset in another structure
+	typ     Type        // Type of this symbol
 }
 
 type scope map[string][]*symbol
@@ -44,21 +45,21 @@ func (s *SymbolTable) CurrentScope() *scope {
 	return (*s)[len(*s)-1]
 }
 
-func (s *SymbolTable) Lookup(name string, kind symtype) (*symbol, bool) {
+func (s *SymbolTable) Lookup(name string, class SymbolClass) (*symbol, bool) {
 	for i := len(*s) - 1; i >= 0; i-- {
-		if r, ok := (*(*s)[i])[name]; ok && r[kind] != nil {
-			return r[kind], ok
+		if r, ok := (*(*s)[i])[name]; ok && r[class] != nil {
+			return r[class], ok
 		}
 	}
 	return nil, false
 }
 
-func (s *SymbolTable) Add(name string, kind symtype, loc *position) (sym *symbol) {
-	sym = &symbol{name, kind, nil, loc, 0}
+func (s *SymbolTable) Add(name string, class SymbolClass, loc *position) (sym *symbol) {
+	sym = &symbol{name, class, nil, loc, 0, Int}
 	cs := s.CurrentScope()
 	if _, ok := (*cs)[name]; !ok {
 		(*cs)[name] = make([]*symbol, endSymbol)
 	}
-	(*cs)[name][kind] = sym
+	(*cs)[name][class] = sym
 	return sym
 }

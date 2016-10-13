@@ -200,11 +200,13 @@ var mtailPrograms = []validProgram{
   $1 ^ 15
   ~ 1
 }`},
+
 	{"floats",
 		`gauge foo
 /foo/ {
 foo = 3.14
 }`},
+
 	{"simple otherwise action",
 		"otherwise {}\n"},
 
@@ -216,10 +218,13 @@ foo = 3.14
 		otherwise {
 			line_count["misc"] += 10
 		}`},
+
 	{"simple else clause",
 		"/foo/ {} else {}"},
+
 	{"nested else clause",
 		"/foo/ { / bar/ {}  } else { /quux/ {} else {} }"},
+
 	{"mod operator",
 		`/foo/ {
   3 % 1

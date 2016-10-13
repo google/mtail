@@ -106,14 +106,18 @@ func (u *Unparser) VisitBefore(n node) Visitor {
 			u.emit(" ^ ")
 		case NOT:
 			u.emit(" ~ ")
-		case '+', '-', '*', '/':
-			u.emit(fmt.Sprintf(" %c ", v.op))
+		case PLUS:
+			u.emit(" + ")
+		case MINUS:
+			u.emit(" - ")
+		case MUL:
+			u.emit(" * ")
+		case DIV:
+			u.emit(" / ")
 		case POW:
 			u.emit(" ** ")
 		case ASSIGN:
 			u.emit(" = ")
-		case ADD_ASSIGN:
-			u.emit(" += ")
 		case MOD:
 			u.emit(" % ")
 		}
@@ -155,11 +159,11 @@ func (u *Unparser) VisitBefore(n node) Visitor {
 	case *unaryExprNode:
 		switch v.op {
 		case INC:
-			Walk(u, v.lhs)
+			Walk(u, v.expr)
 			u.emit("++")
 		case NOT:
 			u.emit(" ~")
-			Walk(u, v.lhs)
+			Walk(u, v.expr)
 		}
 
 	case *stringConstNode:

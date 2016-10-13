@@ -50,6 +50,10 @@ func (c *checker) VisitBefore(node node) Visitor {
 		n.sym = c.symtab.Add(n.name, IDSymbol, &n.pos)
 
 	case *defNode:
+		if sym, ok := c.symtab.Lookup(n.name, DefSymbol); ok {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Definition of decorator `%s' shadows the previous at %s", n.name, sym.loc))
+			return nil
+		}
 		n.sym = c.symtab.Add(n.name, DefSymbol, &n.pos)
 		(*n.sym).binding = n
 
@@ -101,8 +105,48 @@ func (c *checker) VisitBefore(node node) Visitor {
 }
 
 func (c *checker) VisitAfter(node node) {
-	switch node.(type) {
+	switch n := node.(type) {
 	case *stmtlistNode:
 		c.symtab.ExitScope()
+
+	case *binaryExprNode:
+		var rType Type
+		Tl := n.lhs.Type()
+		Tr := n.rhs.Type()
+		switch n.op {
+		//case DIV, MOD, MUL, MINUS, PLUS, POW:
+		// Numeric
+		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+		// Tl <= Tr , Tr <= Tl
+		// ⇒ O ⊢ e : lub(Tl, Tr)
+		// case SHL, SHR, AND, OR, XOR, NOT:
+		// 	//  integer
+		// O ⊢ e1 :Int, O ⊢ e2 : Int
+		// ⇒ O ⊢ e : Int
+		// case LT, GT, LE, GE, EQ, NE:
+		// 	// comparable
+		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+		// Tl <= Tr , Tr <= Tl
+		// ⇒ O ⊢ e : lub(Tl, Tr)
+		// case ASSIGN:
+		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+		// Tl <= Tr
+		// ⇒ O ⊢ e : Tl
+		default:
+			if Tl != Tr {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%s) and rhs (%s) for op %s", Tl, Tr, n.op))
+			}
+			rType = Tl
+		}
+		n.typ = rType
+
+	case *unaryExprNode:
+		switch n.op {
+		case NOT:
+			n.typ = Int
+		default:
+			n.typ = n.expr.Type()
+		}
+
 	}
 }
