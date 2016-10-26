@@ -60,7 +60,7 @@ all: mtail
 clean:
 	rm -f $(CLEANFILES) .*dep-stamp
 
-install: $(GOFILES) .dep-stamp
+install mtail: $(GOFILES) .dep-stamp
 	go install
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
