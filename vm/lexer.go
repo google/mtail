@@ -94,22 +94,6 @@ var builtins = []string{
 	"tolower",
 }
 
-// A position is the location in the source program that a token appears.
-type position struct {
-	filename string
-	line     int // Line in the source for this token.
-	startcol int // Starting and ending columns in the source for this token.
-	endcol   int
-}
-
-func (p position) String() string {
-	r := fmt.Sprintf("%s:%d:%d", p.filename, p.line+1, p.startcol+1)
-	if p.endcol > p.startcol {
-		r += fmt.Sprintf("-%d", p.endcol+1)
-	}
-	return r
-}
-
 // token describes a lexed token from the input, containing its type, the
 // original text of the token, and its position in the input.
 type token struct {

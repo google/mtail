@@ -68,6 +68,7 @@ type Metric struct {
 	Name        string // Name
 	Program     string // Instantiating program
 	Kind        Kind
+	Hidden      bool          `json:",omitempty"`
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
 }

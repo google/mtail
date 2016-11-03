@@ -4,20 +4,13 @@
 package vm
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/google/mtail/metrics"
 	"github.com/kylelemons/godebug/pretty"
 )
 
-// debug print for instructions
-func (i instr) String() string {
-	return fmt.Sprintf("{%s %d}", opNames[i.op], i.opnd)
-}
-
-var programs = []struct {
+var testCodeGenPrograms = []struct {
 	name   string
 	source string
 	prog   []instr // expected bytecode
@@ -83,13 +76,16 @@ var programs = []struct {
 			"}\n",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 14},
+			instr{jnm, 17},
 			instr{setmatched, false},
+			instr{mload, 0},
+			instr{dload, 0},
 			instr{mload, 0},
 			instr{dload, 0},
 			instr{push, 0},
 			instr{capref, 0},
-			instr{inc, 1},
+			instr{add, nil},
+			instr{set, nil},
 			instr{mload, 1},
 			instr{dload, 0},
 			instr{push, 0},
@@ -343,15 +339,22 @@ counter bar
 	},
 }
 
-func TestCompile(t *testing.T) {
-	for _, tc := range programs {
-		m := metrics.NewStore()
-		v, err := Compile(tc.name, strings.NewReader(tc.source), m, false, true)
+func TestCodegen(t *testing.T) {
+	for _, tc := range testCodeGenPrograms {
+		ast, err := Parse(tc.name, strings.NewReader(tc.source))
 		if err != nil {
-			t.Errorf("Compile errors: %q", err)
+			t.Fatalf("Unexpected parse failure in %q: %s", tc.name, err)
+		}
+		err = Check(ast)
+		if err != nil {
+			t.Fatalf("Unexpected check failure in %q: %s", tc.name, err)
+		}
+		obj, err := CodeGen(tc.name, ast)
+		if err != nil {
+			t.Errorf("Compile errors for %q:\n%q", tc.name, err)
 			continue
 		}
-		diff := pretty.Compare(tc.prog, v.prog)
+		diff := pretty.Compare(tc.prog, obj.prog)
 		if len(diff) > 0 {
 			t.Errorf("%s: VM prog doesn't match.\n%s", tc.name, diff)
 		}

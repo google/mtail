@@ -72,6 +72,20 @@ foo{prog="test",instance="gunstar"} 1
 foo{prog="test",instance="gunstar"} 1
 `,
 	},
+	{"quotes",
+		[]*metrics.Metric{
+			&metrics.Metric{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Counter,
+				Keys:        []string{"a"},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"str\"bang\"blah"}, Value: &metrics.Datum{Value: 1}}},
+			},
+		},
+		`# TYPE foo counter
+foo{a="str\"bang\"blah",prog="test",instance="gunstar"} 1
+`,
+	},
 }
 
 func TestHandlePrometheus(t *testing.T) {

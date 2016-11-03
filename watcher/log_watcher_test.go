@@ -17,8 +17,13 @@ import (
 	"github.com/kylelemons/godebug/pretty"
 )
 
+// This test requires disk access, and cannot be injected without internal
+// knowledge of the fsnotify code. Make the wait deadlines long.
+const deadline = 1 * time.Second
+
 func TestLogWatcher(t *testing.T) {
 	if testing.Short() {
+		// This test is slow due to disk access.
 		t.Skip("skipping log watcher test in short mode")
 	}
 
@@ -55,7 +60,7 @@ func TestLogWatcher(t *testing.T) {
 		default:
 			t.Errorf("Wrong event type: %q", e)
 		}
-	case <-time.After(10 * time.Millisecond):
+	case <-time.After(deadline):
 		t.Errorf("didn't receive create message before timeout")
 	}
 	f.WriteString("hi")
@@ -70,14 +75,14 @@ func TestLogWatcher(t *testing.T) {
 		default:
 			t.Errorf("Wrong event type: %q", e)
 		}
-	case <-time.After(10 * time.Millisecond):
+	case <-time.After(deadline):
 		t.Errorf("didn't receive update message before timeout")
 	}
 	os.Chmod(filepath.Join(workdir, "logfile"), os.ModePerm)
 	select {
 	case e := <-w.Events():
 		t.Errorf("no event expected, got %#v", e)
-	case <-time.After(10 * time.Millisecond):
+	case <-time.After(deadline):
 	}
 	os.Remove(filepath.Join(workdir, "logfile"))
 	select {
@@ -90,7 +95,7 @@ func TestLogWatcher(t *testing.T) {
 		default:
 			t.Errorf("Wrong event type: %q", e)
 		}
-	case <-time.After(10 * time.Millisecond):
+	case <-time.After(deadline):
 		t.Errorf("didn't receive delete message before timeout")
 	}
 }

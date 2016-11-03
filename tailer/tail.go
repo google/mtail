@@ -27,7 +27,7 @@ import (
 
 	"github.com/google/mtail/watcher"
 
-	"github.com/spf13/afero"
+	"github.com/jaqx0r/afero"
 )
 
 var (
@@ -165,14 +165,13 @@ func (t *Tailer) read(f afero.File, partialIn string) (partialOut string, err er
 			case rune != '\n':
 				partial += string(rune)
 			default:
-				// send off line for processing
+				// send off line for processing, blocks if not ready
 				t.lines <- partial
 				// reset accumulator
 				partial = ""
 			}
 		}
 	}
-	return partial, fmt.Errorf("reader shutdown requested")
 }
 
 // inode returns the inode number of a file, or 0 if the file has no underlying Sys implementation.

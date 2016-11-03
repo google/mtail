@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/mtail/metrics"
 	"github.com/kylelemons/godebug/pretty"
 )
 
@@ -201,11 +200,13 @@ var mtailPrograms = []validProgram{
   $1 ^ 15
   ~ 1
 }`},
+
 	{"floats",
 		`gauge foo
 /foo/ {
 foo = 3.14
 }`},
+
 	{"simple otherwise action",
 		"otherwise {}\n"},
 
@@ -217,10 +218,13 @@ foo = 3.14
 		otherwise {
 			line_count["misc"] += 10
 		}`},
+
 	{"simple else clause",
 		"/foo/ {} else {}"},
+
 	{"nested else clause",
 		"/foo/ { / bar/ {}  } else { /quux/ {} else {} }"},
+
 	{"mod operator",
 		`/foo/ {
   3 % 1
@@ -229,7 +233,7 @@ foo = 3.14
 
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range mtailPrograms {
-		p := newParser(tc.name, strings.NewReader(tc.program), metrics.NewStore())
+		p := newParser(tc.name, strings.NewReader(tc.program))
 		r := mtailParse(p)
 
 		if r != 0 || p.root == nil || len(p.errors) > 0 {
@@ -243,7 +247,7 @@ func TestParserRoundTrip(t *testing.T) {
 		u := Unparser{}
 		output := u.Unparse(p.root)
 
-		p2 := newParser(tc.name+" 2", strings.NewReader(output), metrics.NewStore())
+		p2 := newParser(tc.name+" 2", strings.NewReader(output))
 		r = mtailParse(p2)
 		if r != 0 || p2.root == nil || len(p2.errors) > 0 {
 			t.Errorf("2nd pass parse errors:\n")
@@ -263,13 +267,13 @@ func TestParserRoundTrip(t *testing.T) {
 	}
 }
 
-type InvalidProgram struct {
+type parserInvalidProgram struct {
 	name    string
 	program string
 	errors  []string
 }
 
-var InvalidPrograms = []InvalidProgram{
+var parserInvalidPrograms = []parserInvalidProgram{
 	{"unknown character",
 		"?\n",
 		[]string{"unknown character:1:1: Unexpected input: '?'"}},
@@ -279,38 +283,9 @@ var InvalidPrograms = []InvalidProgram{
 		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\"",
 			"unterminated regex:1:2-4: syntax error"}},
 
-	{"invalid regex",
-		"/foo(/\n",
-		[]string{"invalid regex:1:6: error parsing regexp: missing closing ): `foo(`",
-			"invalid regex:2:7: syntax error"}},
-
-	{"invalid regex 2",
-		"/blurg(?P<x.)/\n",
-		[]string{"invalid regex 2:1:14: error parsing regexp: invalid named capture: `(?P<x.)`",
-			"invalid regex 2:2:15: syntax error"}},
-
-	{"invalid regex 3",
-		"/blurg(?P<x>[[:alph:]])/\n",
-		[]string{"invalid regex 3:1:24: error parsing regexp: invalid character class range: `[:alph:]`",
-			"invalid regex 3:2:25: syntax error"}},
-
 	{"unterminated string",
 		" \"foo }\n",
 		[]string{"unterminated string:1:2-7: Unterminated quoted string: \"\\\"foo }\""}},
-
-	{"undefined named capture group",
-		"/blurgh/ { $undef++\n }\n",
-		[]string{"undefined named capture group:1:12-17: Capture group $undef not defined by prior regular expression in this or an outer scope.\n\tTry using `(?P<undef>...)' to name the capture group."}},
-
-	{"out of bounds capref",
-		"/(blyurg)/ { $2++ \n}\n",
-		[]string{"out of bounds capref:1:14-15: Capture group $2 not defined by prior regular expression " +
-			"in this or an outer scope.\n\tTry using `(?P<2>...)' to name the capture group."},
-	},
-
-	{"undefined decorator",
-		"@foo {}\n",
-		[]string{"undefined decorator:1:7: Decorator foo not defined.\n\tTry adding a definition `def foo {}' earlier in the program."}},
 
 	{"unterminated const regex",
 		"const X /(?P<foo>",
@@ -322,9 +297,9 @@ var InvalidPrograms = []InvalidProgram{
 		[]string{"undefined const regex:1:10: Constant 'X' not defined.\n\tTry adding `const X /.../' earlier in the program."}},
 }
 
-func TestInvalidPrograms(t *testing.T) {
-	for _, tc := range InvalidPrograms {
-		p := newParser(tc.name, strings.NewReader(tc.program), metrics.NewStore())
+func TestParseInvalidPrograms(t *testing.T) {
+	for _, tc := range parserInvalidPrograms {
+		p := newParser(tc.name, strings.NewReader(tc.program))
 		mtailParse(p)
 
 		diff := pretty.Compare(

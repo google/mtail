@@ -6,7 +6,6 @@ package vm
 
 import (
     "fmt"
-    "regexp/syntax"
 
     "github.com/google/mtail/metrics"
 )
@@ -25,7 +24,7 @@ import (
     kind metrics.Kind
 }
 
-%type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement
+%type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement 
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr
 %type <n> declaration declarator definition decoration_statement
 %type <kind> type_spec
@@ -68,11 +67,9 @@ import (
 %%
 
 start
-  : { mtaillex.(*parser).startScope() } stmt_list
+  : stmt_list
   {
-    $2.(*stmtlistNode).s = mtaillex.(*parser).s
-    mtaillex.(*parser).endScope()
-    mtaillex.(*parser).root = $2
+    mtaillex.(*parser).root = $1
   }
   ;
 
@@ -103,7 +100,7 @@ stmt
   { $$ = $1 }
   | NEXT
   {
-    $$ = &nextNode{}
+    $$ = &nextNode{mtaillex.(*parser).t.pos}
   }
   | CONST ID pattern_expr
   {
@@ -135,11 +132,9 @@ expression_statement
   ;
 
 compound_statement
-  : LCURLY { mtaillex.(*parser).startScope() } stmt_list RCURLY
+  : LCURLY stmt_list RCURLY
   {
-    $$ = $3
-    $$.(*stmtlistNode).s = mtaillex.(*parser).s
-    mtaillex.(*parser).endScope()
+    $$ = $2
   }
   ;
 
@@ -155,11 +150,11 @@ assign_expr
   }
   | unary_expr ASSIGN bitwise_expr
   {
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   | unary_expr ADD_ASSIGN bitwise_expr
   {
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: &binaryExprNode{lhs: $1, rhs: $3, op: PLUS}, op: ASSIGN}
   }
   ;
 
@@ -168,7 +163,7 @@ bitwise_expr
   { $$ = $1 }
   | bitwise_expr bitwise_op rel_expr
   {
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   ;
 
@@ -186,7 +181,7 @@ rel_expr
   { $$ = $1 }
   | rel_expr relop shift_expr
   { 
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   ;
 
@@ -210,7 +205,7 @@ shift_expr
   { $$ = $1 }
   | shift_expr shift_op additive_expr
   {
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   ;
 
@@ -226,11 +221,11 @@ additive_expr
   { $$ = $1 }
   | additive_expr PLUS multiplicative_expr
   {
-    $$ = &binaryExprNode{$1, $3, '+'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: PLUS}
   }
   | additive_expr MINUS multiplicative_expr
   {
-    $$ = &binaryExprNode{$1, $3, '-'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: MINUS}
   }
   ;
 
@@ -241,19 +236,19 @@ multiplicative_expr
   }
   | multiplicative_expr MUL unary_expr
   {
-    $$ = &binaryExprNode{$1, $3, '*'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: MUL}
   }
   | multiplicative_expr DIV unary_expr
   {
-    $$ = &binaryExprNode{$1, $3, '/'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: DIV}
   }
   | multiplicative_expr MOD unary_expr
   {
-    $$ = &binaryExprNode{$1, $3, '%'}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: MOD}
   }
   | multiplicative_expr POW unary_expr
   {
-    $$ = &binaryExprNode{$1, $3, $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   ;
 
@@ -264,15 +259,15 @@ unary_expr
   }
   | NOT postfix_expr
   {
-    $$ = &unaryExprNode{$2, $1}
+    $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $2, op: $1}
   }
   | BUILTIN LPAREN RPAREN
   {
-    $$ = &builtinNode{name: $1}
+    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: nil}
   }
   | BUILTIN LPAREN arg_expr_list RPAREN
   {
-    $$ = &builtinNode{$1, $3}
+    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
   }
   ;
 
@@ -296,41 +291,26 @@ postfix_expr
   }
   | postfix_expr INC
   {
-    $$ = &unaryExprNode{$1, $2}
+    $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $1, op: $2}
   }
   | postfix_expr LSQUARE expr RSQUARE
   {
-    $$ = &indexedExprNode{$1, $3}
+    $$ = &indexedExprNode{lhs: $1, index: $3}
   }
   ;
 
 primary_expr
   : ID
   {
-    if sym, ok := mtaillex.(*parser).s.lookupSym($1, IDSymbol); ok {
-      $$ = &idNode{$1, sym}
-    } else {
-      mtaillex.Error(fmt.Sprintf("Identifier '%s' not declared.\n\tTry " +
-                                 "adding `counter %s' to the top of " +
-                                 "the program.", $1, $1))
-    }
+    $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
   }
   | CAPREF
   {
-    if sym, ok := mtaillex.(*parser).s.lookupSym($1, CaprefSymbol); ok {
-      $$ = &caprefNode{$1, sym}
-    } else {
-      mtaillex.Error(fmt.Sprintf("Capture group $%s not defined " +
-                                 "by prior regular expression in " +
-                                 "this or an outer scope.\n\tTry " +
-                                 "using `(?P<%s>...)' to name the " +
-                                 "capture group.", $1, $1))
-      // TODO(jaq) force a parse error
-    }
+    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, nil}
   }
   | STRING
   {
-    $$ = &stringConstNode{$1}
+    $$ = &stringConstNode{mtaillex.(*parser).t.pos, $1}
   }
   | LPAREN expr RPAREN
   {
@@ -338,11 +318,11 @@ primary_expr
   }
   | INTLITERAL
   {
-    $$ = &intConstNode{$1}
+    $$ = &intConstNode{mtaillex.(*parser).t.pos, $1}
   }
   | FLOATLITERAL
   {
-    $$ = &floatConstNode{$1}
+    $$ = &floatConstNode{mtaillex.(*parser).t.pos, $1}
   }
   ;
 
@@ -350,28 +330,9 @@ primary_expr
 cond
   : pattern_expr
   {
-    if re, err := syntax.Parse($1, syntax.Perl); err != nil {
-      mtaillex.(*parser).ErrorP(fmt.Sprintf(err.Error()), mtaillex.(*parser).pos)
-      // TODO(jaq): force a parse error
-    } else {
-      $$ = &regexNode{pattern: $1, re_ast: re}
-      // We can reserve storage for these capturing groups, storing them in
-      // the current scope, so that future CAPTUREGROUPs can retrieve their
-      // value.  At parse time, we can warn about nonexistent names.
-      for i := 1; i <= re.MaxCap(); i++ {
-        sym := mtaillex.(*parser).s.addSym(fmt.Sprintf("%d", i),
-                                           CaprefSymbol, $$,
-                                           mtaillex.(*parser).pos)
-        sym.addr = i - 1
-      }
-      for i, capref := range re.CapNames() {
-        if capref != "" {
-          sym := mtaillex.(*parser).s.addSym(capref, CaprefSymbol, $$,
-                                             mtaillex.(*parser).pos)
-          sym.addr = i
-        }
-      }
-    }
+    // pos, endPos were stashed during the concatenation of the regex.
+    pos := MergePosition(&mtaillex.(*parser).pos, &mtaillex.(*parser).endPos)
+    $$ = &regexNode{pos: *pos, pattern: $1}
   }
   | rel_expr
   {
@@ -379,20 +340,22 @@ cond
   }
   | OTHERWISE
   {
-    $$ = &otherwiseNode{}
+    $$ = &otherwiseNode{mtaillex.(*parser).t.pos}
   }
   ;
 
 pattern_expr
-  : DIV { mtaillex.(*parser).inRegex() } REGEX DIV
+: { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DIV { mtaillex.(*parser).inRegex() } REGEX DIV
   {
-    // Stash the start of the pattern_expr in a state variable.
-    // We know it's the start because pattern_expr is left associative.
-    mtaillex.(*parser).pos = mtaillex.(*parser).t.pos
-    $$ = $3
+    // Before the first DIV, stash the start of the pattern_expr in a state
+    // variable.  We know it's the start because pattern_expr is left
+    // associative.  Then, store the end position after the second DIV.
+    mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
+    $$ = $4
   }
   | pattern_expr PLUS opt_nl DIV { mtaillex.(*parser).inRegex() } REGEX DIV
   {
+    mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
     $$ = $1 + $6
   }
   | pattern_expr PLUS ID
@@ -412,19 +375,7 @@ declaration
     $$ = $3
     d := $$.(*declNode)
     d.kind = $2
-
-    var n string
-    if d.exportedName != "" {
-        n = d.exportedName
-	} else {
-        n = d.name
-   	}
-    d.m = metrics.NewMetric(n, mtaillex.(*parser).name, d.kind, d.keys...)
-    d.sym = mtaillex.(*parser).s.addSym(d.name, IDSymbol, d.m,
-                                          mtaillex.(*parser).t.pos)
-    if !$1 {
-       mtaillex.(*parser).ms.Add(d.m)
-    }
+    d.hidden = $1
   }
   ;
 
@@ -452,11 +403,11 @@ declarator
   }
   | ID
   {
-    $$ = &declNode{name: $1}
+    $$ = &declNode{pos: mtaillex.(*parser).t.pos, name: $1}
   }
   | STRING
   {
-    $$ = &declNode{name: $1}
+    $$ = &declNode{pos: mtaillex.(*parser).t.pos, name: $1}
   }
   ;
 
@@ -513,23 +464,16 @@ as_spec
   ;
 
 definition
-  : DEF ID compound_statement
+  : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DEF ID compound_statement
   {
-    $$ = &defNode{name: $2, children: []node{$3}}
-    d := $$.(*defNode)
-    d.sym = mtaillex.(*parser).s.addSym(d.name, DefSymbol, d, mtaillex.(*parser).t.pos)
+    $$ = &defNode{pos: mtaillex.(*parser).pos, name: $3, block: $4}
   }
   ;
 
 decoration_statement
-  : DECO compound_statement
+  : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DECO compound_statement
   {
-    if sym, ok := mtaillex.(*parser).s.lookupSym($1, DefSymbol); ok {
-      $$ = &decoNode{$1, []node{$2}, sym.binding.(*defNode)}
-    } else {
-      mtaillex.Error(fmt.Sprintf("Decorator %s not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", $1, $1))
-      // TODO(jaq): force a parse error.
-    }
+    $$ = &decoNode{mtaillex.(*parser).pos, $2, $3, nil} 
   }
   ;
 

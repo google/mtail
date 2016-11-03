@@ -8,9 +8,16 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-
-	"github.com/google/mtail/metrics"
 )
+
+func Parse(name string, input io.Reader) (node, error) {
+	p := newParser(name, input)
+	r := mtailParse(p)
+	if r != 0 || p == nil || p.errors != nil {
+		return nil, p.errors
+	}
+	return p.root, nil
+}
 
 const EOF = 0
 
@@ -20,23 +27,23 @@ type parser struct {
 	errors ErrorList
 	l      *lexer
 	t      token    // Most recently lexed token.
-	pos    position // Maybe contains the position of the start of a node.
-	s      *scope
+	pos    position // Maybe contains the position of the start of a node when the parser is doing preprocessor concatenation.
+	endPos position // Maybe contains the position of the end of a node when the parser is doing preprocessor concatenation.
+	symtab SymbolTable
 	res    map[string]string // Mapping of regex constants to patterns.
-	ms     *metrics.Store    // List of metrics exported by this program.
 }
 
-func newParser(name string, input io.Reader, ms *metrics.Store) *parser {
+func newParser(name string, input io.Reader) *parser {
 	mtailDebug = *mtailDebugFlag
-	return &parser{name: name, l: newLexer(name, input), res: make(map[string]string), ms: ms}
+	return &parser{name: name, l: newLexer(name, input), res: make(map[string]string)}
 }
 
-func (p *parser) ErrorP(s string, pos position) {
+func (p *parser) ErrorP(s string, pos *position) {
 	p.errors.Add(pos, s)
 }
 
 func (p *parser) Error(s string) {
-	p.errors.Add(p.t.pos, s)
+	p.errors.Add(&p.t.pos, s)
 }
 
 func (p *parser) Lex(lval *mtailSymType) int {
@@ -65,17 +72,6 @@ func (p *parser) Lex(lval *mtailSymType) int {
 		lval.text = p.t.text
 	}
 	return int(p.t.kind)
-}
-
-func (p *parser) startScope() {
-	s := &scope{p.s, map[string][]*symbol{}}
-	p.s = s
-}
-
-func (p *parser) endScope() {
-	if p.s != nil && p.s.parent != nil {
-		p.s = p.s.parent
-	}
 }
 
 func (p *parser) inRegex() {

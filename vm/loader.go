@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
-	"github.com/spf13/afero"
+	"github.com/jaqx0r/afero"
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/watcher"
@@ -64,7 +64,10 @@ func (l *Loader) LoadProgs(programPath string) error {
 			if fi.IsDir() {
 				continue
 			}
-			l.LoadProg(path.Join(programPath, fi.Name()))
+			err = l.LoadProg(path.Join(programPath, fi.Name()))
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	default:
@@ -95,10 +98,20 @@ func (l *Loader) LoadProg(programPath string) error {
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
-	v, errs := Compile(name, input, l.ms, l.compileOnly, l.syslogUseCurrentYear)
+	o := &Options{CompileOnly: l.compileOnly, SyslogUseCurrentYear: l.syslogUseCurrentYear}
+	v, errs := Compile(name, input, o)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("compile failed for %s:\n%s", name, errs)
+	}
+	if v == nil {
+		glog.Warning("No program returned, but no errors.")
+		return nil
+	}
+	for _, m := range v.m {
+		if !m.Hidden {
+			l.ms.Add(m)
+		}
 	}
 	if l.dumpBytecode {
 		v.DumpByteCode(name)

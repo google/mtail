@@ -3,45 +3,63 @@
 
 package vm
 
-type symtype int
+type SymbolClass int
 
 // symtype enumerates the types of symbols found in the program text.
 const (
-	IDSymbol     symtype = iota // Identifiers
-	CaprefSymbol                // Capture group references
-	DefSymbol                   // Definitions
+	IDSymbol     SymbolClass = iota // Identifiers
+	CaprefSymbol                    // Capture group references
+	DefSymbol                       // Definitions
 
 	endSymbol
 )
 
 type symbol struct {
 	name    string      // Symbol name
-	kind    symtype     // Type
+	class   SymbolClass // Type
 	binding interface{} // Binding to storage allocated
-	loc     position    // Source file position
+	loc     *position   // Source file position
 	addr    int         // Address offset in another structure
+	typ     Type        // Type of this symbol
 }
 
-type scope struct {
-	parent *scope
-	symtab map[string][]*symbol
-}
+type scope map[string][]*symbol
 
-func (s *scope) lookupSym(name string, kind symtype) (*symbol, bool) {
-	r, ok := s.symtab[name]
-	if !ok && s.parent != nil {
-		return s.parent.lookupSym(name, kind)
-	} else if ok {
-		return r[kind], ok
+type SymbolTable []*scope
+
+func (s *SymbolTable) EnterScope(sc *scope) *scope {
+	if sc == nil {
+		sc = &scope{}
 	}
-	return nil, ok
+	*s = append(*s, sc)
+	return sc
 }
 
-func (s *scope) addSym(name string, kind symtype, binding interface{}, loc position) *symbol {
-	sym := &symbol{name, kind, binding, loc, 0}
-	if _, ok := s.symtab[name]; !ok {
-		s.symtab[name] = make([]*symbol, endSymbol)
+func (s *SymbolTable) ExitScope() {
+	if len(*s) > 1 {
+		*s = (*s)[:len(*s)-1]
 	}
-	s.symtab[name][kind] = sym
+}
+
+func (s *SymbolTable) CurrentScope() *scope {
+	return (*s)[len(*s)-1]
+}
+
+func (s *SymbolTable) Lookup(name string, class SymbolClass) (*symbol, bool) {
+	for i := len(*s) - 1; i >= 0; i-- {
+		if r, ok := (*(*s)[i])[name]; ok && r[class] != nil {
+			return r[class], ok
+		}
+	}
+	return nil, false
+}
+
+func (s *SymbolTable) Add(name string, class SymbolClass, loc *position) (sym *symbol) {
+	sym = &symbol{name, class, nil, loc, 0, Int}
+	cs := s.CurrentScope()
+	if _, ok := (*cs)[name]; !ok {
+		(*cs)[name] = make([]*symbol, endSymbol)
+	}
+	(*cs)[name][class] = sym
 	return sym
 }

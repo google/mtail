@@ -31,6 +31,7 @@ GOFILES=\
 
 GOTESTFILES=\
 	ex_test.go\
+	bench_test.go\
 	exporter/export_test.go\
 	exporter/json_test.go\
 	exporter/prometheus_test.go\
@@ -39,9 +40,11 @@ GOTESTFILES=\
 	tailer/tail_test.go\
 	testdata/reader.go\
 	testdata/reader_test.go\
-	vm/compiler_test.go\
+	vm/checker_test.go\
+	vm/codegen_test.go\
 	vm/lexer_test.go\
 	vm/parser_test.go\
+	vm/symtab_test.go\
 	vm/vm_test.go\
 	watcher/fake_watcher_test.go\
 	watcher/log_watcher_test.go\
@@ -53,39 +56,42 @@ CLEANFILES+=\
 
 all: mtail
 
-.PHONY: mtail
-mtail: $(GOFILES) install_deps
+.PHONY: clean
+clean:
+	rm -f $(CLEANFILES) .*dep-stamp
+
+install mtail: $(GOFILES) .dep-stamp
 	go install
 
-vm/parser.go: vm/parser.y
-	cd vm && go generate
+vm/parser.go: vm/parser.y .gen-dep-stamp
+	go generate -x ./vm
 
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
 
-.PHONY: test
-test: $(GOFILES) $(GOTESTFILES) mtail
+.PHONY: test 
+test: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 60s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOTESTFILES) mtail
+testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 5m -race ./...
 
 .PHONY: smoke
-smoke: $(GOFILES) $(GOTESTFILES) mtail
+smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 10s -test.short ./...
 
 .PHONY: bench
-bench: $(GOFILES) $(GOTESTFILES)
+bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -timeout 60s -run=XXX ./...
 
 .PHONY: recbench
-recbench: $(GOFILES) $(GOTESTFILES)
+recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: coverage
 coverage: gover.coverprofile
-gover.coverprofile: $(GOFILES) $(GOTESTFILES)
+gover.coverprofile: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	for package in exporter metrics mtail tailer vm watcher; do\
 		go test -covermode=count -coverprofile=$$package.coverprofile ./$$package;\
     done
@@ -103,8 +109,20 @@ testall: testrace bench
 .PHONY: install_deps
 install_deps: .dep-stamp
 
-.dep-stamp: vm/parser.go
-	go get -t -v ./...
+IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
+TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
+
+.dep-stamp:
+	# Install all dependencies, ensuring they're updated
+	go get -u -v $(IMPORTS)
+	go get -u -v $(TESTIMPORTS)
+	touch $@
+
+.PHONY: install_gen_deps
+install_gen_deps: .gen-dep-stamp
+
+.gen-dep-stamp:
+	go get -u golang.org/x/tools/cmd/goyacc
 	touch $@
 
 .PHONY: install_coverage_deps

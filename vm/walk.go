@@ -52,17 +52,17 @@ func Walk(v Visitor, node node) {
 		Walk(v, n.rhs)
 
 	case *unaryExprNode:
-		Walk(v, n.lhs)
+		Walk(v, n.expr)
 
 	case *indexedExprNode:
 		Walk(v, n.index)
 		Walk(v, n.lhs)
 
 	case *defNode:
-		walknodelist(v, n.children)
+		Walk(v, n.block)
 
 	case *decoNode:
-		walknodelist(v, n.children)
+		Walk(v, n.block)
 
 	case *regexNode, *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *nextNode, *otherwiseNode:
 		// These nodes are terminals, thus have no children to walk.
