@@ -1,0 +1,61 @@
+Author: Jamie Wilkinson <jaq@spacepants.org>
+Date:   Fri May 1 18:20:38 2015 -0700
+Description: Point the afero import back to spf13/afero now the fixes are
+ merged.
+
+--- a/mtail/mtail.go
++++ b/mtail/mtail.go
+@@ -24,7 +24,7 @@
+ 	"github.com/google/mtail/tailer"
+ 	"github.com/google/mtail/vm"
+ 	"github.com/google/mtail/watcher"
+-	"github.com/jaqx0r/afero"
++	"github.com/spf13/afero"
+ )
+ 
+ // Mtail contains the state of the main program object.
+--- a/tailer/tail.go
++++ b/tailer/tail.go
+@@ -27,7 +27,7 @@
+ 
+ 	"github.com/google/mtail/watcher"
+ 
+-	"github.com/jaqx0r/afero"
++	"github.com/spf13/afero"
+ )
+ 
+ var (
+--- a/tailer/tail_test.go
++++ b/tailer/tail_test.go
+@@ -13,7 +13,7 @@
+ 	"github.com/google/mtail/watcher"
+ 	"github.com/kylelemons/godebug/pretty"
+ 
+-	"github.com/jaqx0r/afero"
++	"github.com/spf13/afero"
+ )
+ 
+ func makeTestTail(t *testing.T) (*Tailer, chan string, *watcher.FakeWatcher, afero.Fs) {
+--- a/vm/loader.go
++++ b/vm/loader.go
+@@ -21,7 +21,7 @@
+ 	"sync"
+ 
+ 	"github.com/golang/glog"
+-	"github.com/jaqx0r/afero"
++	"github.com/spf13/afero"
+ 
+ 	"github.com/google/mtail/metrics"
+ 	"github.com/google/mtail/watcher"
+--- a/vm/loader_test.go
++++ b/vm/loader_test.go
+@@ -9,8 +9,8 @@
+ 
+ 	"github.com/google/mtail/metrics"
+ 	"github.com/google/mtail/watcher"
+-	"github.com/jaqx0r/afero"
+ 	"github.com/kylelemons/godebug/pretty"
++	"github.com/spf13/afero"
+ )
+ 
+ func TestNewLoader(t *testing.T) {

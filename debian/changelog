@@ -3,6 +3,7 @@ mtail (0.0+git20161027.a7b3e3c-1) UNRELEASED; urgency=medium
   * New upstream release.
   * Remove unneeded and incorrect watch file.
   * Refresh debian/rules.
+  * Patch the code to use spf13's version of afero.
 
  -- Martín Ferrari <tincho@debian.org>  Thu, 03 Nov 2016 19:36:13 +0100
 
