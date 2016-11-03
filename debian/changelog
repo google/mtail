@@ -1,4 +1,4 @@
-mtail (0.0+git20161027.a7b3e3c-1) UNRELEASED; urgency=medium
+mtail (0.0+git20161027.a7b3e3c-1) unstable; urgency=medium
 
   * New upstream release.
   * Remove unneeded and incorrect watch file.
@@ -6,7 +6,7 @@ mtail (0.0+git20161027.a7b3e3c-1) UNRELEASED; urgency=medium
   * Patch the code to use spf13's version of afero.
   * Add golang-golang-x-tools as dependency, for goyacc.
 
- -- Martín Ferrari <tincho@debian.org>  Thu, 03 Nov 2016 19:36:13 +0100
+ -- Martín Ferrari <tincho@debian.org>  Thu, 03 Nov 2016 21:06:17 +0000
 
 mtail (0.0+git20160716.f911b02-1) unstable; urgency=medium
 
