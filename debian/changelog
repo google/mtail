@@ -1,6 +1,7 @@
 mtail (0.0+git20160716.f911b02-2) UNRELEASED; urgency=medium
 
   * Remove unneeded and incorrect watch file.
+  * Refresh debian/rules.
 
  -- Martín Ferrari <tincho@debian.org>  Thu, 03 Nov 2016 19:15:03 +0100
 
