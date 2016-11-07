@@ -13,7 +13,7 @@ import (
 	"github.com/google/mtail/watcher"
 	"github.com/kylelemons/godebug/pretty"
 
-	"github.com/jaqx0r/afero"
+	"github.com/spf13/afero"
 )
 
 func makeTestTail(t *testing.T) (*Tailer, chan string, *watcher.FakeWatcher, afero.Fs) {
