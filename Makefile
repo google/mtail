@@ -69,8 +69,8 @@ vm/parser.go: vm/parser.y .gen-dep-stamp
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
 
-.PHONY: test 
-test: $(GOFILES) $(GOTESTFILES) .dep-stamp
+.PHONY: test check 
+check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 60s ./...
 
 .PHONY: testrace
