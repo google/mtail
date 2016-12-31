@@ -122,7 +122,7 @@ TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | un
 install_gen_deps: .gen-dep-stamp
 
 .gen-dep-stamp:
-	go get -u golang.org/x/tools/cmd/goyacc
+	go get golang.org/x/tools/cmd/goyacc
 	touch $@
 
 .PHONY: install_coverage_deps
