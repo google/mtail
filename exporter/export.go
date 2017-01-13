@@ -101,7 +101,7 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 		for l := range lc {
 			line := f(e.hostname, m, l)
 			n, err := fmt.Fprint(c, line)
-			glog.Infof("Sent %d bytes\n", n)
+			glog.V(2).Infof("Sent %d bytes\n", n)
 			if err == nil {
 				exportSuccess.Add(1)
 			} else {
@@ -116,7 +116,7 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 // TODO(jaq) rename to PushMetrics.
 func (e *Exporter) WriteMetrics() {
 	for _, target := range e.pushTargets {
-		glog.Infof("pushing to %s", target.addr)
+		glog.V(2).Infof("pushing to %s", target.addr)
 		conn, err := net.Dial(target.net, target.addr)
 		if err != nil {
 			glog.Infof("pusher dial error: %s", err)
