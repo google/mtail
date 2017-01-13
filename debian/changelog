@@ -1,3 +1,11 @@
+mtail (0.0+git20161231.ae129e9-1) UNRELEASED; urgency=medium
+
+  * New upstream snapshot.
+  * Remove now unneeded patch.
+  * Switch to golang-go, as this does not seem to work under gccgo.
+
+ -- Martín Ferrari <tincho@debian.org>  Fri, 13 Jan 2017 19:45:22 -0300
+
 mtail (0.0+git20161027.a7b3e3c-1) unstable; urgency=medium
 
   * New upstream release.
