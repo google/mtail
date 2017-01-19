@@ -39,7 +39,7 @@ import (
 // Types
 %token COUNTER GAUGE TIMER
 // Reserved words
-%token AS BY CONST HIDDEN DEF NEXT OTHERWISE ELSE
+%token AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
