@@ -197,6 +197,11 @@ func (u *Unparser) VisitBefore(n node) Visitor {
 	case *otherwiseNode:
 		u.emit("otherwise")
 
+	case *delNode:
+		u.emit("del ")
+		Walk(u, v.n)
+		u.newline()
+
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}

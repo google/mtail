@@ -107,6 +107,10 @@ stmt
     // Store the regex for concatenation
     mtaillex.(*parser).res[$2] = $3
   }
+  | DEL postfix_expr
+  {
+    $$ = &delNode{mtaillex.(*parser).t.pos, $2}
+  }
   ;
 
 conditional_statement

@@ -270,3 +270,16 @@ func (n *otherwiseNode) Pos() *position {
 func (n *otherwiseNode) Type() Type {
 	return None
 }
+
+type delNode struct {
+	pos position
+	n   node
+}
+
+func (d *delNode) Pos() *position {
+	return &d.pos
+}
+
+func (d *delNode) Type() Type {
+	return None
+}
