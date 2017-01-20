@@ -50,12 +50,13 @@ const (
 	shl                      // Shift TOS left, push result
 	shr                      // Shift TOS right, push result
 	mload                    // Load metric at operand onto top of stack
-	dload                    // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
+	dload                    // Pop `operand` keys and metric off stack, and push datum at metric[key,...] onto stack.
 	tolower                  // Convert the string at the top of the stack to lowercase.
 	length                   // Compute the length of a string.
 	strtol                   // Convert a string to a number, given a base.
 	setmatched               // Set "matched" flag
 	otherwise                // Only match if "matched" flag is false.
+	del                      //  Pop `operand` keys and metric off stack, and remove the datum at metric[key,...] from memory
 
 	// Floating point ops
 	fadd
