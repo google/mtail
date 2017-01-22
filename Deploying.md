@@ -29,7 +29,9 @@ mtail --progs /etc/mtail --logs /var/log/syslog,/var/log/ntp/peerstats
 
 ### Pull based collection
 
-Point your collection tool at `localhost:3903/json` or `localhost:3903/csv` for either JSON or CSV format.
+Point your collection tool at `localhost:3903/json` for JSON format metrics.
+
+Prometheus can be directed to the /metrics endpoint for Prometheus text-based format.
 
 ### Push based collection
 
