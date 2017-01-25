@@ -19,4 +19,3 @@ foo.log
 /.dep-stamp
 /.build-dep-stamp
 /.gen-dep-stamp
-vendor/*/
