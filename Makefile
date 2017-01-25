@@ -58,12 +58,12 @@ all: mtail
 
 .PHONY: clean
 clean:
-	rm -f $(CLEANFILES)
+	rm -f $(CLEANFILES) .*dep-stamp
 
-install mtail: $(GOFILES) 
+install mtail: $(GOFILES)
 	go install
 
-vm/parser.go: vm/parser.y
+vm/parser.go: vm/parser.y .gen-dep-stamp
 	go generate -x ./vm
 
 emgen/emgen: emgen/emgen.go
