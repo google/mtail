@@ -530,10 +530,23 @@ func (v *VM) execute(t *thread, i instr) {
 		//fmt.Printf("Keys: %v\n", keys)
 		d, err := m.GetDatum(keys...)
 		if err != nil {
-			v.errorf("GetDatum failed: %s", err)
+			v.errorf("dload (GetDatum) failed: %s", err)
 		}
 		//fmt.Printf("Found %v\n", d)
 		t.Push(d)
+
+	case del:
+		m := t.Pop().(*metrics.Metric)
+		index := i.opnd.(int)
+		keys := make([]string, index)
+		for j := 0; j < index; j++ {
+			s := t.Pop().(string)
+			keys[j] = s
+		}
+		err := m.RemoveDatum(keys...)
+		if err != nil {
+			v.errorf("del (RemoveDatum) failed: %s", err)
+		}
 
 	case tolower:
 		// Lowercase a string from TOS, and push result back.
