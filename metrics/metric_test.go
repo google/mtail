@@ -215,3 +215,23 @@ func TestTimer(t *testing.T) {
 		t.Errorf("value not 1")
 	}
 }
+
+func TestRemoveMetricLabelValue(t *testing.T) {
+	m := NewMetric("test", "prog", Counter, "a", "b", "c")
+	_, e := m.GetDatum("a", "a", "a")
+	if e != nil {
+		t.Errorf("Getdatum failed: %s", e)
+	}
+	lv := m.findLabelValueOrNil([]string{"a", "a", "a"})
+	if lv == nil {
+		t.Errorf("coidln't find labelvalue")
+	}
+	e = m.RemoveDatum("a", "a", "a")
+	if e != nil {
+		t.Errorf("couldn't remove datum: %s", e)
+	}
+	lv = m.findLabelValueOrNil([]string{"a", "a", "a"})
+	if lv != nil {
+		t.Errorf("label value still exists")
+	}
+}
