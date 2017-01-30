@@ -204,6 +204,7 @@ func (v *VM) errorf(format string, args ...interface{}) {
 		}
 		glog.Infof(" %c %4d %12s %v", pc, i, opNames[instr.op], instr.opnd)
 	}
+	v.terminate = true
 }
 
 func (t *thread) PopInt() (int64, error) {
@@ -624,7 +625,6 @@ func (v *VM) processLine(input string) {
 		t.pc++
 		v.execute(t, i)
 		if v.terminate {
-			v.terminate = false
 			return
 		}
 	}
