@@ -5,3 +5,4 @@ counter connection-time_total 1181011 2011-02-23T05:54:10Z
 counter transfers_total {operation=send,module=module} 2 2011-02-23T05:50:32Z
 counter transfers_total {operation=send,module=repo} 25 2011-02-23T05:51:14Z
 gauge foo {label=}
+counter bar

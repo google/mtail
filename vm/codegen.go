@@ -6,6 +6,7 @@ package vm
 import (
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/google/mtail/metrics"
 )
@@ -51,6 +52,18 @@ func (c *codegen) VisitBefore(node node) Visitor {
 			name = n.name
 		}
 		m := metrics.NewMetric(name, c.name, n.kind, n.keys...)
+		// Scalar counters can be initialized to zero.  Dimensioned counters we
+		// don't know the values of the labels yet.  Gauges and Timers we can't
+		// assume start at zero.
+		if len(n.keys) == 0 && n.kind == metrics.Counter {
+			d, err := m.GetDatum()
+			if err != nil {
+				c.errorf(n.Pos(), "%s", err)
+				return nil
+			}
+			// Initialize to zero at the zero time.
+			d.Set(0, time.Unix(0, 0))
+		}
 		m.Hidden = n.hidden
 		(*n.sym).binding = m
 		n.sym.addr = len(c.obj.m)

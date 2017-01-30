@@ -60,6 +60,14 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 				kind = metrics.Timer
 			}
 			m = metrics.NewMetric(match[2], prog, kind, keys...)
+			if kind == metrics.Counter && len(keys) == 0 {
+				d, err := m.GetDatum()
+				if err != nil {
+					glog.Fatal(err)
+				}
+				// Initialize to zero at the zero time.
+				d.Set(0, time.Unix(0, 0))
+			}
 			glog.V(2).Infof("making a new %v\n", m)
 			store.Add(m)
 		} else {
