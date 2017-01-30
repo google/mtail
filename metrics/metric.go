@@ -112,6 +112,25 @@ func (m *Metric) GetDatum(labelvalues ...string) (d *Datum, err error) {
 	return d, nil
 }
 
+func (m *Metric) RemoveDatum(labelvalues ...string) error {
+	if len(labelvalues) != len(m.Keys) {
+		return fmt.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
+	}
+	m.Lock()
+	defer m.Unlock()
+Loop:
+	for i, lv := range m.LabelValues {
+		for j := 0; j < len(lv.Labels); j++ {
+			if lv.Labels[j] != labelvalues[j] {
+				continue Loop
+			}
+		}
+		// remove from the slice
+		m.LabelValues = append(m.LabelValues[:i], m.LabelValues[i+1:]...)
+	}
+	return nil
+}
+
 // LabelSet is an object that maps the keys of a Metric to the labels naming a
 // Datum, for use when enumerating Datums from a Metric.
 type LabelSet struct {

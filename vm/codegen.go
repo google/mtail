@@ -153,6 +153,12 @@ func (c *codegen) VisitBefore(node node) Visitor {
 	case *otherwiseNode:
 		c.emit(instr{op: otherwise})
 		c.emit(instr{op: jnm})
+
+	case *delNode:
+		Walk(c, n.n)
+		// overwdrite the dload instruction
+		pc := len(c.obj.prog) - 1
+		c.obj.prog[pc].op = del
 	}
 
 	return c

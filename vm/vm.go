@@ -50,12 +50,13 @@ const (
 	shl                      // Shift TOS left, push result
 	shr                      // Shift TOS right, push result
 	mload                    // Load metric at operand onto top of stack
-	dload                    // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
+	dload                    // Pop `operand` keys and metric off stack, and push datum at metric[key,...] onto stack.
 	tolower                  // Convert the string at the top of the stack to lowercase.
 	length                   // Compute the length of a string.
 	strtol                   // Convert a string to a number, given a base.
 	setmatched               // Set "matched" flag
 	otherwise                // Only match if "matched" flag is false.
+	del                      //  Pop `operand` keys and metric off stack, and remove the datum at metric[key,...] from memory
 
 	// Floating point ops
 	fadd
@@ -529,10 +530,23 @@ func (v *VM) execute(t *thread, i instr) {
 		//fmt.Printf("Keys: %v\n", keys)
 		d, err := m.GetDatum(keys...)
 		if err != nil {
-			v.errorf("GetDatum failed: %s", err)
+			v.errorf("dload (GetDatum) failed: %s", err)
 		}
 		//fmt.Printf("Found %v\n", d)
 		t.Push(d)
+
+	case del:
+		m := t.Pop().(*metrics.Metric)
+		index := i.opnd.(int)
+		keys := make([]string, index)
+		for j := 0; j < index; j++ {
+			s := t.Pop().(string)
+			keys[j] = s
+		}
+		err := m.RemoveDatum(keys...)
+		if err != nil {
+			v.errorf("del (RemoveDatum) failed: %s", err)
+		}
 
 	case tolower:
 		// Lowercase a string from TOS, and push result back.

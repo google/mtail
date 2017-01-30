@@ -229,6 +229,12 @@ foo = 3.14
 		`/foo/ {
   3 % 1
 }`},
+
+	{"delete",
+		`counter foo by bar
+/foo/ {
+  del foo[$1]
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -254,6 +260,7 @@ func TestParserRoundTrip(t *testing.T) {
 			for _, e := range p2.errors {
 				t.Errorf("\t%s\n", e)
 			}
+			t.Errorf("2nd pass input was:\n%s", output)
 			continue
 		}
 
