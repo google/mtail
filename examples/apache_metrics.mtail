@@ -28,60 +28,67 @@ counter apache_http_sent_bytes_total by server_port, handler, request_method, re
   apache_http_request_time_microseconds_count[$server_port][$handler][$request_method][$request_status][$request_protocol]++
   apache_http_request_time_microseconds_sum[$server_port][$handler][$request_method][$request_status][$request_protocol] += $time_us
 
+  # These statements "fall through", so the histogram is cumulative.  The
+  # collecting system can compute the percentile bands by taking the ratio of
+  # each bucket value over the final bucket.
+
   # 5ms bucket.
-  time_us < 5000 {
+  $time_us < 5000 {
     apache_http_request_time_microseconds["5000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
   }
 
   # 10ms bucket.
-  time_us < 10000 {
+  $time_us < 10000 {
     apache_http_request_time_microseconds["10000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
   }
 
   # 25ms bucket.
-  time_us < 25000 {
+  $time_us < 25000 {
     apache_http_request_time_microseconds["25000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
   }
 
   # 50ms bucket.
-  time_us < 50000 {
+  $time_us < 50000 {
     apache_http_request_time_microseconds["50000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
   }
 
   # 100ms bucket.
-  time_us < 100000 {
+  $time_us < 100000 {
     apache_http_request_time_microseconds["100000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
   }
 
   # 250ms bucket.
-  time_us < 250000 {
+  $time_us < 250000 {
     apache_http_request_time_microseconds["250000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
   }
 
   # 500ms bucket.
-  time_us < 500000 {
+  $time_us < 500000 {
     apache_http_request_time_microseconds["500000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
   }
 
   # 1s bucket.
-  time_us < 1000000 {
+  $time_us < 1000000 {
     apache_http_request_time_microseconds["1000000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
   }
 
   # 2.5s bucket.
-  time_us < 2500000 {
+  $time_us < 2500000 {
     apache_http_request_time_microseconds["2500000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
   }
 
   # 5s bucket.
-  time_us < 5000000 {
+  $time_us < 5000000 {
     apache_http_request_time_microseconds["5000000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
   }
 
   # 10s bucket.
-  time_us < 10000000 {
+  $time_us < 10000000 {
     apache_http_request_time_microseconds["10000000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
   }
+
+  # "inf" bucket, also the total number of requests.
+  apache_http_request_time_microseconds["inf"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
 
   ###
   # Sent/Received bytes.
