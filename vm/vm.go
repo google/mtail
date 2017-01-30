@@ -181,19 +181,19 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof("Input: %q", v.input)
 	glog.Infof("Regexes:")
 	for i, re := range v.re {
-		glog.Infof("\t%4d %v", i, re)
+		glog.Infof(" %4d %v", i, re)
 	}
 	glog.Infof("Strings:")
 	for i, s := range v.str {
-		glog.Infof("\t%4d %q", i, s)
+		glog.Infof(" %4d %q", i, s)
 	}
 	glog.Infof("Thread:")
-	glog.Infof("\tPC %v", v.t.pc-1)
-	glog.Infof("\tMatch %v", v.t.match)
-	glog.Infof("\tMatched %v", v.t.matched)
-	glog.Infof("\tMatches %v", v.t.matches)
-	glog.Infof("\tTimestamp %v", v.t.time)
-	glog.Infof("\tStack %v", v.t.stack)
+	glog.Infof(" PC %v", v.t.pc-1)
+	glog.Infof(" Match %v", v.t.match)
+	glog.Infof(" Matched %v", v.t.matched)
+	glog.Infof(" Matches %v", v.t.matches)
+	glog.Infof(" Timestamp %v", v.t.time)
+	glog.Infof(" Stack %v", v.t.stack)
 	glog.Infof("Program:")
 	var pc rune
 	for i, instr := range v.prog {
@@ -202,7 +202,7 @@ func (v *VM) errorf(format string, args ...interface{}) {
 		} else {
 			pc = ' '
 		}
-		glog.Infof(" %c\t%4d %12s %v", pc, i, opNames[instr.op], instr.opnd)
+		glog.Infof(" %c %4d %12s %v", pc, i, opNames[instr.op], instr.opnd)
 	}
 	v.terminate = true
 }
