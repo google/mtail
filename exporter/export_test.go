@@ -71,6 +71,14 @@ func TestMetricToCollectd(t *testing.T) {
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
+
+	*collectdPrefix = "prefix"
+	r = FakeSocketWrite(metricToCollectd, timingMetric)
+	expected = []string{"PUTVAL \"gunstar/prefixmtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
+	diff = pretty.Compare(r, expected)
+	if len(diff) > 0 {
+		t.Errorf("prefixed string didn't match:\n%s", diff)
+	}
 }
 
 func TestMetricToGraphite(t *testing.T) {
@@ -101,6 +109,16 @@ func TestMetricToGraphite(t *testing.T) {
 	diff = pretty.Compare(r, expected)
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
+	}
+
+	*graphitePrefix = "prefix"
+	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
+	expected = []string{
+		"prefixprog.bar.l.quux 37 1343124840\n",
+		"prefixprog.bar.l.snuh 37 1343124840\n"}
+	diff = pretty.Compare(r, expected)
+	if len(diff) > 0 {
+		t.Errorf("prefixed string didn't match:\n%s", diff)
 	}
 }
 
@@ -139,5 +157,12 @@ func TestMetricToStatsd(t *testing.T) {
 	expected = []string{"prog.foo:37|ms"}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
+	}
+
+	*statsdPrefix = "prefix"
+	r = FakeSocketWrite(metricToStatsd, timingMetric)
+	expected = []string{"prefixprog.foo:37|ms"}
+	if !reflect.DeepEqual(expected, r) {
+		t.Errorf("prefixed string didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
 }
