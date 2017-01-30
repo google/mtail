@@ -14,6 +14,8 @@ import (
 var (
 	statsdHostPort = flag.String("statsd_hostport", "",
 		"Host:port to statsd server to write metrics to.")
+	statsdPrefix = flag.String("statsd_prefix", "",
+		"Prefix to use for statsd metrics.")
 
 	statsdExportTotal   = expvar.NewInt("statsd_export_total")
 	statsdExportSuccess = expvar.NewInt("statsd_export_success")
@@ -31,7 +33,8 @@ func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) str
 	case metrics.Timer:
 		t = "ms" // StatsD Timer
 	}
-	return fmt.Sprintf("%s.%s:%d|%s",
+	return fmt.Sprintf("%s%s.%s:%d|%s",
+		*statsdPrefix,
 		m.Program,
 		formatLabels(m.Name, l.Labels, ".", "."),
 		l.Datum.Get(), t)
