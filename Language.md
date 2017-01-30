@@ -194,7 +194,8 @@ A few builtin functions exist for manipulating the virtual machine state.  They
 are:
 
 1. `timestamp()`, a function of no arguments, which returns the current
-   timestamp.
+   timestamp.  This is undefined if neither `settime` or `strptime` have been
+   called previously.
 1.  `len(x)`, a function of one string argument, which returns the length of
     the string argument.
 1. `settime(x)`, a function of one integer argument, which sets the current
@@ -255,3 +256,25 @@ each line first, which extracts the timestamp of the log line.  Then, `next`
 causes the wrapped block to execute, so then mtail matches the line against the
 pattern `some event`, and if it does match, increments `variable`.
 
+# Metric Storage Management
+
+mtail performs no implicit garbage collection in the metric storage.  The
+program can hint to the virtual machine that a specific datum in a dimensioned
+metric is no longer going to be used with the `del` keyword.
+
+```
+gauge duration by session
+hidden session_start by session
+
+/end/ {
+  duration[$session] = timestamp() - session_start[$session]
+  
+  del session_start[$session]
+}
+```
+
+In this example, a hidden metric is used to record some internal state.  It
+will grow unbounded as the number of sessions increases.  If the programmer
+knows that the `/end/` pattern is the last time a session will be observed,
+then the datum at `$session` will be freed, which keeps mtail memory usage
+under control and will improve search time for finding dimensioned metrics.
