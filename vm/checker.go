@@ -77,6 +77,9 @@ func (c *checker) VisitBefore(node node) Visitor {
 			return nil
 		}
 
+	case *delNode:
+		Walk(c, n.n)
+
 	case *regexNode:
 		if re, err := syntax.Parse(n.pattern, syntax.Perl); err != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf(err.Error()))

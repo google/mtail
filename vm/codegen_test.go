@@ -337,6 +337,15 @@ counter bar
 			instr{mod, nil},
 		},
 	},
+	{"del", `
+counter a by b
+del a["string"]
+`,
+		[]instr{
+			instr{str, 0},
+			instr{mload, 0},
+			instr{del, 1}},
+	},
 }
 
 func TestCodegen(t *testing.T) {

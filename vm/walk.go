@@ -64,7 +64,7 @@ func Walk(v Visitor, node node) {
 	case *decoNode:
 		Walk(v, n.block)
 
-	case *regexNode, *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *nextNode, *otherwiseNode:
+	case *regexNode, *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *nextNode, *otherwiseNode, *delNode:
 		// These nodes are terminals, thus have no children to walk.
 
 	default:
