@@ -2,11 +2,14 @@
 # This file is available under the Apache license.
 
 counter bytes_total by operation
+# total connections, and total connection time can be used to compute the
+# average connection time.
 counter connections_total
 counter connection_time_total as "connection-time_total"
+# See which modules are popular.
 counter transfers_total by operation, module
-# Use this gauge to measure duration between start and end time
-# per connection.
+# Use this gauge to measure duration between start and end time per connection.
+# It is never used externally, so mark as `hidden'.
 hidden gauge connection_time by pid
 
 /^(?P<date>\d+\/\d+\/\d+ \d+:\d+:\d+) \[(?P<pid>\d+)\] / {
@@ -18,20 +21,26 @@ hidden gauge connection_time by pid
     transfers_total[$operation][$module]++
   }
 
-  # Connection
+  # Connection starts
   /connect from \S+ \(\d+\.\d+\.\d+\.\d+\)/ {
     connections_total++
+
+    # Record the start time of the connection, using the log timestamp.
     connection_time[$pid] = timestamp()
   }
 
-  # Connection summary
+  # Connection summary when session closed
   /sent (?P<sent>\d+) bytes  received (?P<received>\d+) bytes  total size \d+/ {
+    # Sum total bytes across all sessions for this process
     bytes_total["sent"] += $sent
-
     bytes_total["received"] += $received
-
+    
+    # Count total time spent with connections open, according to the log timestamp.
     connection_time_total += timestamp() - connection_time[$pid]
 
+    # Delete the datum referenced in this dimensional metric.  We assume that
+    # this will never happen again, and hint to the VM that we can garbage
+    # collect the memory used.
     del connection_time[$pid]
   }
 }
