@@ -25,7 +25,6 @@ after_success:
 # Run tests at these Go versions.
 go:
   - tip
-  - 1.8
   - 1.7
   - 1.6
   - 1.5
