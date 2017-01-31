@@ -84,6 +84,7 @@ This can be used around any blocks later in the program.
 /bar/ {
 }
 } # end @syslog decorator
+```
 
 ## Conditional structures
 
