@@ -6,11 +6,11 @@ mtail is intended to run one per machine, and serve as monitoring glue for multi
 
 mtail is configured through commandline flags.
 
-The `--help` flag will print a list of flags for configuring mtail.
+The `--help` flag will print a list of flags for configuring `mtail`.
 
 (Flags may be prefixed with either `-` or `--`)
 
-Basic flags necessary to start mtail:
+Basic flags necessary to start `mtail`:
 
   * `--logs` is a comma separated list of filenames to extract from.
   * `--progs` is a directory path containing [mtail programs](Language). Programs must have the `.mtail` suffix.

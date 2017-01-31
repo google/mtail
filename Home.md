@@ -5,7 +5,7 @@ mtail is a tool for extracting metrics from application logs to be exported into
 
 It aims to fill a niche between applications that do not export their own internal state, and existing monitoring systems, without patching those applications or rewriting the same framework for custom extraction glue code.
 
-The extraction is controlled by mtail programs which define patterns and actions:
+The extraction is controlled by `mtail` programs which define patterns and actions:
 
     # simple line counter
     counter line_count

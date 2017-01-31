@@ -19,7 +19,7 @@ mtail also is a passive exporter (i.e. pull, or scrape based) by:
 
 # Logs Analysis
 
-While mtail does a form of logs analysis, it does _not_ do any copying,
+While `mtail` does a form of logs analysis, it does _not_ do any copying,
 indexing, or searching of log files for data mining applications.  It is only
 intended for real- or near-time monitoring data for the purposes of performance
 measurement and alerting.

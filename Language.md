@@ -69,7 +69,7 @@ variable > 0 {
 
 In the above program, ACTION1 is taken on each line input if that line matches the word `foo`, and ACTION2 is taken on each line if when that line is read, the variable `variable` is greater than 0.
 
-The action statements must be wrapped in curly braces, i.e. `{}`.  mtail programs have no single-line statement conditionals like C.
+The action statements must be wrapped in curly braces, i.e. `{}`.  `mtail` programs have no single-line statement conditionals like C.
 
 ## Single definition of constants
 
@@ -101,18 +101,18 @@ When a conditional expression does not match, action can be taken as well:
 }
 ```
 
-Else clauses can be nested. There is no ambiguity with the dangling-else problem, as mtail programs must wrap all block statements in `{}`.
+Else clauses can be nested. There is no ambiguity with the dangling-else problem, as `mtail` programs must wrap all block statements in `{}`.
 
 ## Incrementing a Counter
 
-The simplest mtail program merely counts lines read:
+The simplest `mtail` program merely counts lines read:
 ```
 /$/ {
   line_count++
 }
 ```
 
-This program instructs mtail to increment the `line_count` counter variable on every line received (specifically anytime an end-of-line is matched.)
+This program instructs `mtail` to increment the `line_count` counter variable on every line received (specifically anytime an end-of-line is matched.)
 
 ## Advanced conditionals
 
@@ -164,7 +164,7 @@ A regular expression that extracts the timestamp in boring old syslog format loo
 }
 ```
 
-Buyer beware!  The format string used by mtail is the same as the [Go time.Parse() format string](http://golang.org/src/pkg/time/format.go), which is completely unlike that used by C's strptime.  The format string must always be the 2nd of January 2006 at 3:04:05 PM.  See the documentation for the **ANSIC** format in the above link for more details.
+Buyer beware!  The format string used by `mtail` is the same as the [Go time.Parse() format string](http://golang.org/src/pkg/time/format.go), which is completely unlike that used by C's strptime.  The format string must always be the 2nd of January 2006 at 3:04:05 PM.  See the documentation for the **ANSIC** format in the above link for more details.
 
 ## Nested Actions
 
@@ -209,10 +209,10 @@ are:
 1. `tolower(x)`, a function of one string argument, which lowercases the
    string.
 
-As described in Nested Actions, the current timestamp refers to mtail's idea of
+As described in Nested Actions, the current timestamp refers to `mtail`'s idea of
 the time associated with the current log line.  This timestamp is used when the
 variables are exported to the upstream collector.  This defaults to the time
-that the log line arrives in mtail, and can be changed with the `settime()` or
+that the log line arrives in `mtail`, and can be changed with the `settime()` or
 `strptime()` builtins.
 
 User defined functions are not supported, but read on to Decorated Actions for
@@ -240,7 +240,7 @@ def syslog {
 
 The decorator definition starts and ends in a curly-braced block, and looks
 like a normal pattern/action as above.  The new part is the `next` keyword,
-which indicates to mtail where to jump into the *decorated* block.
+which indicates to `mtail` where to jump into the *decorated* block.
 
 To use a decorator:
 
@@ -255,7 +255,7 @@ To use a decorator:
 The `@` notation, familiar to Python programmers, denotes that this block is
 "wrapped" by the `syslog` decorator.  The syslog decorator will be called on
 each line first, which extracts the timestamp of the log line.  Then, `next`
-causes the wrapped block to execute, so then mtail matches the line against the
+causes the wrapped block to execute, so then `mtail` matches the line against the
 pattern `some event`, and if it does match, increments `variable`.
 
 # Metric Storage Management
@@ -278,5 +278,5 @@ hidden session_start by session
 In this example, a hidden metric is used to record some internal state.  It
 will grow unbounded as the number of sessions increases.  If the programmer
 knows that the `/end/` pattern is the last time a session will be observed,
-then the datum at `$session` will be freed, which keeps mtail memory usage
+then the datum at `$session` will be freed, which keeps `mtail` memory usage
 under control and will improve search time for finding dimensioned metrics.
