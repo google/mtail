@@ -86,6 +86,10 @@ This can be used around any blocks later in the program.
 } # end @syslog decorator
 ```
 
+Both the foo and bar pattern actions will have the syslog timestamp parsed from
+them before being called.
+
+
 ## Conditional structures
 
 The `/pattern/ { action }` idiom is the normal conditional control flow structure in `mtail` programs.
