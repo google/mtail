@@ -1,12 +1,14 @@
 # Introduction
 
-As mtail is designed to tail log files and apply regular expressions to new log lines to extract data, the language naturally follows this pattern-action style.
+As `mtail` is designed to tail log files and apply regular expressions to new log lines to extract data, the language naturally follows this pattern-action style.
 
 It resembles another, more famous pattern-action language, that of AWK.
 
+This page errs on the side of a language specification and reference.  See the [[Programming Guide]] for a gentler introduction to writing `mtail` programs.
+
 # Details
 
-mtail runs all programs on every line received by the log tailing subsystem.  The rough model of this looks like:
+`mtail` runs all programs on every line received by the log tailing subsystem.  The rough model of this looks like:
 
 ```
 for line in lines:
