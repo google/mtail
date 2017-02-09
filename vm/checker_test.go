@@ -60,7 +60,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 		}
 		err = Check(ast)
 		if err == nil {
-			t.Errorf("Error should not be nil for invalid program %q", tc.name)
+			t.Errorf("Error should not be nil for invalid program %q: %s", tc.name, err)
 			continue
 		}
 
