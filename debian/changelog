@@ -1,3 +1,10 @@
+mtail (0.0+git20161231.ae129e9-1~bpo8+1) jessie-backports; urgency=medium
+
+  * Rebuild for jessie-backports.
+  * Require go 1.4, for `go generate` support.
+
+ -- Martín Ferrari <tincho@debian.org>  Mon, 13 Feb 2017 16:26:20 +0000
+
 mtail (0.0+git20161231.ae129e9-1) unstable; urgency=medium
 
   * New upstream snapshot.
