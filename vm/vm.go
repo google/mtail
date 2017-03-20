@@ -222,7 +222,7 @@ func (t *thread) PopInt() (int64, error) {
 		return r, nil
 	case time.Time:
 		return n.Unix(), nil
-	case *metrics.Datum:
+	case *metrics.IntDatum:
 		return n.Value, nil
 	}
 	return 0, fmt.Errorf("unexpected numeric type %T %q", val, val)

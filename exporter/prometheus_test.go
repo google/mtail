@@ -28,7 +28,7 @@ var handlePrometheusTests = []struct {
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.Datum{Value: 1}}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.IntDatum{Value: 1}}}},
 		},
 		`# TYPE foo counter
 foo{prog="test",instance="gunstar"} 1
@@ -41,7 +41,7 @@ foo{prog="test",instance="gunstar"} 1
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a", "b"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: &metrics.Datum{Value: 1}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: &metrics.IntDatum{Value: 1}}},
 			},
 		},
 		`# TYPE foo counter
@@ -54,7 +54,7 @@ foo{a="1",b="2",prog="test",instance="gunstar"} 1
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Gauge,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.Datum{Value: 1}}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.IntDatum{Value: 1}}}},
 		},
 		`# TYPE foo gauge
 foo{prog="test",instance="gunstar"} 1
@@ -66,7 +66,7 @@ foo{prog="test",instance="gunstar"} 1
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Timer,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.Datum{Value: 1}}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.IntDatum{Value: 1}}}},
 		},
 		`# TYPE foo gauge
 foo{prog="test",instance="gunstar"} 1
@@ -79,7 +79,7 @@ foo{prog="test",instance="gunstar"} 1
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"str\"bang\"blah"}, Value: &metrics.Datum{Value: 1}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"str\"bang\"blah"}, Value: &metrics.IntDatum{Value: 1}}},
 			},
 		},
 		`# TYPE foo counter

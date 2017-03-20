@@ -28,7 +28,7 @@ var handleJSONTests = []struct {
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.Datum{Value: 1}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.IntDatum{Value: 1}}},
 			},
 		},
 		`[
@@ -54,7 +54,7 @@ var handleJSONTests = []struct {
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a", "b"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: &metrics.Datum{Value: 1}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: &metrics.IntDatum{Value: 1}}},
 			},
 		},
 		`[

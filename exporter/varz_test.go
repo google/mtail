@@ -28,7 +28,7 @@ var handleVarzTests = []struct {
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.Datum{Value: 1, Time: 1397586900}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.IntDatum{Value: 1, Time: 1397586900}}},
 			},
 		},
 		`foo{prog=test,instance=gunstar} 1
@@ -41,7 +41,7 @@ var handleVarzTests = []struct {
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a", "b"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: &metrics.Datum{Value: 1, Time: 1397586900}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: &metrics.IntDatum{Value: 1, Time: 1397586900}}},
 			},
 		},
 		`foo{a=1,b=2,prog=test,instance=gunstar} 1

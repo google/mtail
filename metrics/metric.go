@@ -11,13 +11,21 @@ import (
 	"time"
 )
 
+// // Counter is a monotonically nondecreasing metric.
+// type Counter interface {
+// 	IncBy(delta int64, ts time.Time)
+// }
+
+// // Gauge is a non-monotonic metric.
+// type Gauge interface {
+// 	Set(value int64, ts time.Time)
+// }
+
 // Kind enumerates the types of metrics supported.
 type Kind int
 
 const (
 	_ Kind = iota
-	// Counter is a Kind that is nondecreasing, typically only
-	// incrementable.
 	Counter
 	// Gauge is a Kind that can take on any value, and may be set
 	// discontinuously from its previous value.
@@ -56,7 +64,7 @@ type Settable interface {
 // strings.
 type LabelValue struct {
 	Labels []string `json:",omitempty"`
-	Value  *Datum
+	Value  *IntDatum
 }
 
 // Metric is an object that describes a metric, with its name, the creator and
@@ -97,7 +105,7 @@ Loop:
 
 // GetDatum returns the datum named by a sequence of string label values from a
 // Metric.
-func (m *Metric) GetDatum(labelvalues ...string) (d *Datum, err error) {
+func (m *Metric) GetDatum(labelvalues ...string) (d *IntDatum, err error) {
 	if len(labelvalues) != len(m.Keys) {
 		return nil, fmt.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
 	}
@@ -106,7 +114,7 @@ func (m *Metric) GetDatum(labelvalues ...string) (d *Datum, err error) {
 	if lv := m.findLabelValueOrNil(labelvalues); lv != nil {
 		d = lv.Value
 	} else {
-		d = &Datum{}
+		d = &IntDatum{}
 		m.LabelValues = append(m.LabelValues, &LabelValue{labelvalues, d})
 	}
 	return d, nil
@@ -135,7 +143,7 @@ Loop:
 // Datum, for use when enumerating Datums from a Metric.
 type LabelSet struct {
 	Labels map[string]string
-	Datum  *Datum
+	Datum  *IntDatum
 }
 
 func zip(keys []string, values []string) map[string]string {
