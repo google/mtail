@@ -12,23 +12,11 @@ import (
 
 // Datum describes a LabelSet's or LabelValue's value at a given timestamp.
 type intDatum struct {
+	datum
 	value int64
-	time  int64 // nanoseconds since unix epoch
 }
 
 func (*intDatum) Type() Type { return Int }
-
-func (d *intDatum) stamp(timestamp time.Time) {
-	if timestamp.IsZero() {
-		atomic.StoreInt64(&d.time, time.Now().UTC().UnixNano())
-	} else {
-		atomic.StoreInt64(&d.time, timestamp.UnixNano())
-	}
-}
-
-func (d *intDatum) Time() string {
-	return fmt.Sprintf("%d", atomic.LoadInt64(&d.time)/1e9)
-}
 
 // Set implements the Settable interface for a Datum.
 func (d *intDatum) Set(value int64, timestamp time.Time) {

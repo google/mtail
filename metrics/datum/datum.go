@@ -5,6 +5,7 @@ package datum
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 )
 
@@ -23,6 +24,22 @@ type Datum interface {
 	Value() string
 
 	Time() string
+}
+
+type datum struct {
+	time int64 // nanoseconds since unix epoch
+}
+
+func (d *datum) stamp(timestamp time.Time) {
+	if timestamp.IsZero() {
+		atomic.StoreInt64(&d.time, time.Now().UTC().UnixNano())
+	} else {
+		atomic.StoreInt64(&d.time, timestamp.UnixNano())
+	}
+}
+
+func (d *datum) Time() string {
+	return fmt.Sprintf("%d", atomic.LoadInt64(&d.time)/1e9)
 }
 
 func NewInt() Datum {
