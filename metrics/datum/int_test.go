@@ -4,11 +4,8 @@
 package datum
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
-
-	"github.com/kylelemons/godebug/pretty"
 )
 
 func BenchmarkIncrementScalarInt(b *testing.B) {
@@ -16,17 +13,5 @@ func BenchmarkIncrementScalarInt(b *testing.B) {
 	ts := time.Now().UTC()
 	for i := 0; i < b.N; i++ {
 		d.IncBy(1, ts)
-	}
-}
-
-func TestIntMarshalJSON(t *testing.T) {
-	d := MakeInt(37, time.Unix(42, 12))
-	b, err := json.Marshal(d)
-	if err != nil {
-		t.Errorf("Marshal failed: %v", err)
-	}
-	expected := `{"Value":37,"Time":42000000012}`
-	if diff := pretty.Compare(expected, string(b)); len(diff) > 0 {
-		t.Errorf("JSON didn't match:\n%s", diff)
 	}
 }
