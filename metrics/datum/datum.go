@@ -30,6 +30,8 @@ type datum struct {
 	time int64 // nanoseconds since unix epoch
 }
 
+var zeroTime time.Time
+
 func (d *datum) stamp(timestamp time.Time) {
 	if timestamp.IsZero() {
 		atomic.StoreInt64(&d.time, time.Now().UTC().UnixNano())
@@ -43,11 +45,11 @@ func (d *datum) Time() string {
 }
 
 func NewInt() Datum {
-	return MakeInt(0, time.Unix(0, 0))
+	return MakeInt(0, zeroTime)
 }
 
 func NewFloat() Datum {
-	return MakeFloat(0., time.Unix(0, 0))
+	return MakeFloat(0., zeroTime)
 }
 
 func MakeInt(v int64, ts time.Time) Datum {
