@@ -52,7 +52,7 @@ func (c *codegen) VisitBefore(node node) Visitor {
 		} else {
 			name = n.name
 		}
-		m := metrics.NewMetric(name, c.name, n.kind, n.keys...)
+		m := metrics.NewMetric(name, c.name, n.kind, metrics.Int, n.keys...)
 		// Scalar counters can be initialized to zero.  Dimensioned counters we
 		// don't know the values of the labels yet.  Gauges and Timers we can't
 		// assume start at zero.

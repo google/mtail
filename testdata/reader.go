@@ -63,7 +63,7 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 			case "timer":
 				kind = metrics.Timer
 			}
-			m = metrics.NewMetric(match[2], prog, kind, keys...)
+			m = metrics.NewMetric(match[2], prog, kind, metrics.Int, keys...)
 			if kind == metrics.Counter && len(keys) == 0 {
 				d, err := m.GetDatum()
 				if err != nil {

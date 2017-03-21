@@ -39,6 +39,11 @@ const (
 	Timer
 )
 
+const (
+	Int   = datum.Int
+	Float = datum.Float
+)
+
 func (m Kind) String() string {
 	switch m {
 	case Counter:
@@ -79,14 +84,15 @@ type Metric struct {
 	Name        string // Name
 	Program     string // Instantiating program
 	Kind        Kind
+	Type        datum.Type
 	Hidden      bool          `json:",omitempty"`
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).
-func NewMetric(name string, prog string, kind Kind, keys ...string) *Metric {
-	m := &Metric{Name: name, Program: prog, Kind: kind,
+func NewMetric(name string, prog string, kind Kind, typ datum.Type, keys ...string) *Metric {
+	m := &Metric{Name: name, Program: prog, Kind: kind, Type: typ,
 		Keys:        make([]string, len(keys), len(keys)),
 		LabelValues: make([]*LabelValue, 0)}
 	copy(m.Keys, keys)
@@ -117,7 +123,12 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	if lv := m.findLabelValueOrNil(labelvalues); lv != nil {
 		d = lv.Value
 	} else {
-		d = datum.NewInt()
+		switch m.Type {
+		case datum.Int:
+			d = datum.NewInt()
+		case datum.Float:
+			d = datum.NewFloat()
+		}
 		m.LabelValues = append(m.LabelValues, &LabelValue{labelvalues, d})
 	}
 	return d, nil

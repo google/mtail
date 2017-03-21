@@ -16,7 +16,7 @@ import (
 )
 
 func TestScalarMetric(t *testing.T) {
-	v := NewMetric("test", "prog", Counter)
+	v := NewMetric("test", "prog", Counter, Int)
 	d, _ := v.GetDatum()
 	datum.IncIntBy(d, 1, time.Now().UTC())
 	lv := v.findLabelValueOrNil([]string{})
@@ -34,21 +34,21 @@ func TestScalarMetric(t *testing.T) {
 }
 
 func TestDimensionedMetric(t *testing.T) {
-	v := NewMetric("test", "prog", Counter, "foo")
+	v := NewMetric("test", "prog", Counter, Int, "foo")
 	d, _ := v.GetDatum("a")
 	datum.IncIntBy(d, 1, time.Now().UTC())
 	if v.findLabelValueOrNil([]string{"a"}).Value.Value() != "1" {
 		t.Errorf("fail")
 	}
 
-	v = NewMetric("test", "prog", Counter, "foo", "bar")
+	v = NewMetric("test", "prog", Counter, Int, "foo", "bar")
 	d, _ = v.GetDatum("a", "b")
 	datum.IncIntBy(d, 1, time.Now().UTC())
 	if v.findLabelValueOrNil([]string{"a", "b"}).Value.Value() != "1" {
 		t.Errorf("fail")
 	}
 
-	v = NewMetric("test", "prog", Counter, "foo", "bar", "quux")
+	v = NewMetric("test", "prog", Counter, Int, "foo", "bar", "quux")
 	d, _ = v.GetDatum("a", "b", "c")
 	datum.IncIntBy(d, 1, time.Now().UTC())
 	if v.findLabelValueOrNil([]string{"a", "b", "c"}).Value.Value() != "1" {
@@ -71,7 +71,7 @@ var labelSetTests = []struct {
 }
 
 func TestEmitLabelSet(t *testing.T) {
-	m := NewMetric("test", "prog", Gauge, "foo", "bar", "quux")
+	m := NewMetric("test", "prog", Gauge, Int, "foo", "bar", "quux")
 	c := make(chan *LabelSet)
 
 	ts := time.Now().UTC()
@@ -97,7 +97,7 @@ func TestEmitLabelSet(t *testing.T) {
 }
 
 func TestFindLabelValueOrNil(t *testing.T) {
-	m0 := NewMetric("foo", "prog", Counter)
+	m0 := NewMetric("foo", "prog", Counter, Int)
 	if r0 := m0.findLabelValueOrNil([]string{}); r0 != nil {
 		t.Errorf("m0 should be nil: %v", r0)
 	}
@@ -108,7 +108,7 @@ func TestFindLabelValueOrNil(t *testing.T) {
 	if r1 := m0.findLabelValueOrNil([]string{}); r1 == nil {
 		t.Errorf("m0 should not be nil: %v", r1)
 	}
-	m1 := NewMetric("bar", "prog", Counter, "a")
+	m1 := NewMetric("bar", "prog", Counter, Int, "a")
 	d1, err1 := m1.GetDatum("1")
 	if err1 != nil {
 		t.Errorf("err1 %v: %v\n", d1, err1)
@@ -144,7 +144,7 @@ func timeGenerator(rand *rand.Rand) time.Time {
 func TestMetricJSONRoundTrip(t *testing.T) {
 	rand := rand.New(rand.NewSource(0))
 	f := func(name, prog string, kind Kind, keys []string, val, ti, tns int64) bool {
-		m := NewMetric(name, prog, kind, keys...)
+		m := NewMetric(name, prog, kind, Int, keys...)
 		var labels []string
 		for _ = range keys {
 			if l, ok := quick.Value(reflect.TypeOf(name), rand); ok {
@@ -188,8 +188,8 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 }
 
 func TestTimer(t *testing.T) {
-	m := NewMetric("test", "prog", Timer)
-	n := NewMetric("test", "prog", Timer)
+	m := NewMetric("test", "prog", Timer, Int)
+	n := NewMetric("test", "prog", Timer, Int)
 	diff := pretty.Compare(m, n)
 	if len(diff) > 0 {
 		t.Errorf("Identical metrics not the same:\n%s", diff)
@@ -210,7 +210,7 @@ func TestTimer(t *testing.T) {
 }
 
 func TestRemoveMetricLabelValue(t *testing.T) {
-	m := NewMetric("test", "prog", Counter, "a", "b", "c")
+	m := NewMetric("test", "prog", Counter, Int, "a", "b", "c")
 	_, e := m.GetDatum("a", "a", "a")
 	if e != nil {
 		t.Errorf("Getdatum failed: %s", e)

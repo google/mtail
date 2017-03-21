@@ -32,7 +32,7 @@ func TestMetricToCollectd(t *testing.T) {
 	}
 	ms := metrics.NewStore()
 
-	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
+	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter, metrics.Int)
 	d, _ := scalarMetric.GetDatum()
 	datum.SetInt(d, 37, ts)
 	ms.Add(scalarMetric)
@@ -44,7 +44,7 @@ func TestMetricToCollectd(t *testing.T) {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
-	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "label")
+	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "label")
 	d, _ = dimensionedMetric.GetDatum("quux")
 	datum.SetInt(d, 37, ts)
 	d, _ = dimensionedMetric.GetDatum("snuh")
@@ -61,7 +61,7 @@ func TestMetricToCollectd(t *testing.T) {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
-	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer)
+	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer, metrics.Int)
 	d, _ = timingMetric.GetDatum()
 	datum.SetInt(d, 123, ts)
 	ms.Add(timingMetric)
@@ -88,7 +88,7 @@ func TestMetricToGraphite(t *testing.T) {
 		t.Errorf("time parse error: %s", terr)
 	}
 
-	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
+	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter, metrics.Int)
 	d, _ := scalarMetric.GetDatum()
 	datum.SetInt(d, 37, ts)
 	r := FakeSocketWrite(metricToGraphite, scalarMetric)
@@ -98,7 +98,7 @@ func TestMetricToGraphite(t *testing.T) {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
-	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "l")
+	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "l")
 	d, _ = dimensionedMetric.GetDatum("quux")
 	datum.SetInt(d, 37, ts)
 	d, _ = dimensionedMetric.GetDatum("snuh")
@@ -129,7 +129,7 @@ func TestMetricToStatsd(t *testing.T) {
 		t.Errorf("time parse error: %s", terr)
 	}
 
-	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
+	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter, metrics.Int)
 	d, _ := scalarMetric.GetDatum()
 	datum.SetInt(d, 37, ts)
 	r := FakeSocketWrite(metricToStatsd, scalarMetric)
@@ -138,7 +138,7 @@ func TestMetricToStatsd(t *testing.T) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
 
-	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "l")
+	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "l")
 	d, _ = dimensionedMetric.GetDatum("quux")
 	datum.SetInt(d, 37, ts)
 	d, _ = dimensionedMetric.GetDatum("snuh")
@@ -151,7 +151,7 @@ func TestMetricToStatsd(t *testing.T) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
 
-	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer)
+	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer, metrics.Int)
 	d, _ = timingMetric.GetDatum()
 	datum.SetInt(d, 37, ts)
 	r = FakeSocketWrite(metricToStatsd, timingMetric)

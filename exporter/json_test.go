@@ -38,6 +38,7 @@ var handleJSONTests = []struct {
     "Name": "foo",
     "Program": "test",
     "Kind": 1,
+    "Type": 0,
     "LabelValues": [
       {
         "Value": {
@@ -64,6 +65,7 @@ var handleJSONTests = []struct {
     "Name": "foo",
     "Program": "test",
     "Kind": 1,
+    "Type": 0,
     "Keys": [
       "a",
       "b"
