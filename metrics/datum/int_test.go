@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func BenchmarkIncrementScalar(b *testing.B) {
+func BenchmarkIncrementScalarInt(b *testing.B) {
 	d := &intDatum{}
 	ts := time.Now().UTC()
 	for i := 0; i < b.N; i++ {
