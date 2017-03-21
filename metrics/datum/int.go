@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Datum describes a LabelSet's or LabelValue's value at a given timestamp.
+// intDatum describes an integer value at a given timestamp.
 type intDatum struct {
 	datum
 	value int64
