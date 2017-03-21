@@ -228,30 +228,3 @@ func TestRemoveMetricLabelValue(t *testing.T) {
 		t.Errorf("label value still exists")
 	}
 }
-
-var datumJSONTests = []struct {
-	datum    datum.Datum
-	expected string
-}{
-	{
-		datum.MakeInt(37, time.Unix(42, 12)),
-		`{"Value":37,"Time":42000000012}`,
-	},
-	{
-		datum.MakeFloat(37.0, time.Unix(42, 12)),
-		`{"Value":37,"Time":42000000012}`,
-	},
-}
-
-func TestMarshalJSON(t *testing.T) {
-	// This is not a round trip test because only the LabelValue knows how to unmarshal a Datum.
-	for i, tc := range datumJSONTests {
-		b, err := json.Marshal(tc.datum)
-		if err != nil {
-			t.Errorf("%d: Marshal failed: %v", i, err)
-		}
-		if diff := pretty.Compare(tc.expected, string(b)); len(diff) > 0 {
-			t.Errorf("%d: JSON didn't match:\n%s", i, diff)
-		}
-	}
-}

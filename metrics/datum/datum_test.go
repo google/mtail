@@ -4,8 +4,11 @@
 package datum
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/kylelemons/godebug/pretty"
 )
 
 func TestDatumSetAndValue(t *testing.T) {
@@ -18,5 +21,32 @@ func TestDatumSetAndValue(t *testing.T) {
 	}
 	if r := d.Time(); r != "37" {
 		t.Errorf("d Time not correct, got %v", r)
+	}
+}
+
+var datumJSONTests = []struct {
+	datum    Datum
+	expected string
+}{
+	{
+		MakeInt(37, time.Unix(42, 12)),
+		`{"Value":37,"Time":42000000012}`,
+	},
+	{
+		MakeFloat(37.0, time.Unix(42, 12)),
+		`{"Value":37,"Time":42000000012}`,
+	},
+}
+
+func TestMarshalJSON(t *testing.T) {
+	// This is not a round trip test because only the LabelValue knows how to unmarshal a Datum.
+	for i, tc := range datumJSONTests {
+		b, err := json.Marshal(tc.datum)
+		if err != nil {
+			t.Errorf("%d: Marshal failed: %v", i, err)
+		}
+		if diff := pretty.Compare(tc.expected, string(b)); len(diff) > 0 {
+			t.Errorf("%d: JSON didn't match:\n%s", i, diff)
+		}
 	}
 }

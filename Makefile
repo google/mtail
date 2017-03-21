@@ -37,7 +37,6 @@ GOTESTFILES=\
 	exporter/json_test.go\
 	exporter/prometheus_test.go\
 	exporter/varz_test.go\
-	metrics/datum/float_test.go\
 	metrics/datum/int_test.go\
 	metrics/metric_test.go\
 	mtail/mtail_test.go\
