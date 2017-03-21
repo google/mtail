@@ -6,9 +6,12 @@
 package metrics
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/google/mtail/metrics/datum"
 )
 
 // // Counter is a monotonically nondecreasing metric.
@@ -64,7 +67,7 @@ type Settable interface {
 // strings.
 type LabelValue struct {
 	Labels []string `json:",omitempty"`
-	Value  *IntDatum
+	Value  datum.Datum
 }
 
 // Metric is an object that describes a metric, with its name, the creator and
@@ -105,7 +108,7 @@ Loop:
 
 // GetDatum returns the datum named by a sequence of string label values from a
 // Metric.
-func (m *Metric) GetDatum(labelvalues ...string) (d *IntDatum, err error) {
+func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	if len(labelvalues) != len(m.Keys) {
 		return nil, fmt.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
 	}
@@ -114,7 +117,7 @@ func (m *Metric) GetDatum(labelvalues ...string) (d *IntDatum, err error) {
 	if lv := m.findLabelValueOrNil(labelvalues); lv != nil {
 		d = lv.Value
 	} else {
-		d = &IntDatum{}
+		d = datum.NewInt()
 		m.LabelValues = append(m.LabelValues, &LabelValue{labelvalues, d})
 	}
 	return d, nil
@@ -143,7 +146,7 @@ Loop:
 // Datum, for use when enumerating Datums from a Metric.
 type LabelSet struct {
 	Labels map[string]string
-	Datum  *IntDatum
+	Datum  datum.Datum
 }
 
 func zip(keys []string, values []string) map[string]string {
@@ -167,6 +170,41 @@ func (m *Metric) EmitLabelSets(c chan *LabelSet) {
 
 func (lv *LabelValue) String() string {
 	return fmt.Sprintf("%v", *lv)
+}
+
+func (lv *LabelValue) UnmarshalJSON(b []byte) error {
+	var obj map[string]*json.RawMessage
+	err := json.Unmarshal(b, &obj)
+	if err != nil {
+		return err
+	}
+
+	var labels []string
+	if _, ok := obj["Labels"]; ok {
+		err = json.Unmarshal(*obj["Labels"], &labels)
+		if err != nil {
+			return err
+		}
+		lv.Labels = labels
+	}
+
+	var valObj map[string]*json.RawMessage
+	err = json.Unmarshal(*obj["Value"], &valObj)
+	if err != nil {
+		return err
+	}
+	var t int64
+	err = json.Unmarshal(*valObj["Time"], &t)
+	if err != nil {
+		return err
+	}
+	var i int64
+	err = json.Unmarshal(*valObj["Value"], &i)
+	if err != nil {
+		return err
+	}
+	lv.Value = datum.MakeInt(i, time.Unix(t/1e9, t%1e9))
+	return nil
 }
 
 func (m *Metric) String() string {

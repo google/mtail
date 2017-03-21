@@ -11,21 +11,14 @@ import (
 	"testing/quick"
 	"time"
 
+	"github.com/google/mtail/metrics/datum"
 	"github.com/kylelemons/godebug/pretty"
 )
-
-func BenchmarkIncrementScalar(b *testing.B) {
-	d := &IntDatum{}
-	ts := time.Now().UTC()
-	for i := 0; i < b.N; i++ {
-		d.IncBy(1, ts)
-	}
-}
 
 func TestScalarMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter)
 	d, _ := v.GetDatum()
-	d.IncBy(1, time.Now().UTC())
+	datum.IncIntBy(d, 1, time.Now().UTC())
 	lv := v.findLabelValueOrNil([]string{})
 	if lv == nil {
 		t.Errorf("couldn't find labelvalue")
@@ -34,7 +27,7 @@ func TestScalarMetric(t *testing.T) {
 	if newD == nil {
 		t.Errorf("new_d is nil")
 	}
-	if newD.Value != 1 {
+	if newD.Value() != "1" {
 		t.Errorf("value not 1")
 	}
 	// TODO: try setting datum with labels on scalar
@@ -43,22 +36,22 @@ func TestScalarMetric(t *testing.T) {
 func TestDimensionedMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, "foo")
 	d, _ := v.GetDatum("a")
-	d.IncBy(1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a"}).Value.Value != 1 {
+	datum.IncIntBy(d, 1, time.Now().UTC())
+	if v.findLabelValueOrNil([]string{"a"}).Value.Value() != "1" {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar")
 	d, _ = v.GetDatum("a", "b")
-	d.IncBy(1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a", "b"}).Value.Value != 1 {
+	datum.IncIntBy(d, 1, time.Now().UTC())
+	if v.findLabelValueOrNil([]string{"a", "b"}).Value.Value() != "1" {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, "foo", "bar", "quux")
 	d, _ = v.GetDatum("a", "b", "c")
-	d.IncBy(1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a", "b", "c"}).Value.Value != 1 {
+	datum.IncIntBy(d, 1, time.Now().UTC())
+	if v.findLabelValueOrNil([]string{"a", "b", "c"}).Value.Value() != "1" {
 		t.Errorf("fail")
 	}
 }
@@ -86,7 +79,7 @@ func TestEmitLabelSet(t *testing.T) {
 	var expectedLabels []map[string]string
 	for _, tc := range labelSetTests {
 		d, _ := m.GetDatum(tc.values...)
-		d.Set(37, ts)
+		datum.SetInt(d, 37, ts)
 		expectedLabels = append(expectedLabels, tc.expectedLabels)
 	}
 
@@ -162,7 +155,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 			}
 		}
 		d, _ := m.GetDatum(labels...)
-		d.Set(val, timeGenerator(rand))
+		datum.SetInt(d, val, timeGenerator(rand))
 
 		j, e := json.Marshal(m)
 		if e != nil {
@@ -178,7 +171,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 		}
 
 		// pretty.Compare uses the opposite order to xUnit for comparisons.
-		diff := pretty.Compare(r, m)
+		diff := pretty.Compare(m, r)
 		if len(diff) > 0 {
 			t.Errorf("Round trip wasn't stable:\n%s", diff)
 			return false
@@ -202,7 +195,7 @@ func TestTimer(t *testing.T) {
 		t.Errorf("Identical metrics not the same:\n%s", diff)
 	}
 	d, _ := m.GetDatum()
-	d.IncBy(1, time.Now().UTC())
+	datum.IncIntBy(d, 1, time.Now().UTC())
 	lv := m.findLabelValueOrNil([]string{})
 	if lv == nil {
 		t.Errorf("couldn't find labelvalue")
@@ -211,7 +204,7 @@ func TestTimer(t *testing.T) {
 	if newD == nil {
 		t.Errorf("new_d is nil")
 	}
-	if newD.Value != 1 {
+	if newD.Value() != "1" {
 		t.Errorf("value not 1")
 	}
 }

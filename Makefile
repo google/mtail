@@ -10,7 +10,8 @@ GOFILES=\
 	exporter/statsd.go\
 	exporter/varz.go\
 	main.go\
-	metrics/datum.go\
+	metrics/datum/datum.go\
+	metrics/datum/int.go\
 	metrics/metric.go\
 	metrics/store.go\
 	mtail/mtail.go\
@@ -36,6 +37,8 @@ GOTESTFILES=\
 	exporter/json_test.go\
 	exporter/prometheus_test.go\
 	exporter/varz_test.go\
+	metrics/datum/int_test.go\
+	metrics/metric_test.go\
 	mtail/mtail_test.go\
 	tailer/tail_test.go\
 	testdata/reader.go\

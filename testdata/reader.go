@@ -14,6 +14,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/metrics/datum"
 )
 
 var var_re = regexp.MustCompile(`^(counter|gauge|timer) ([^ ]+)(?: {([^}]+)})?(?: (\d+))?(?: (.+))?`)
@@ -69,7 +70,7 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 					glog.Fatal(err)
 				}
 				// Initialize to zero at the zero time.
-				d.Set(0, time.Unix(0, 0))
+				datum.SetInt(d, 0, time.Unix(0, 0))
 			}
 			glog.V(2).Infof("making a new %v\n", m)
 			store.Add(m)
@@ -97,7 +98,7 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 				}
 
 				glog.V(2).Infof("setting %v with vals %v to %v at %v\n", d, vals, val, timestamp)
-				d.Set(val, timestamp)
+				datum.SetInt(d, val, timestamp)
 			}
 
 		}

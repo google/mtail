@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/metrics/datum"
 	"github.com/kylelemons/godebug/pretty"
 )
 
@@ -28,7 +30,7 @@ var handleJSONTests = []struct {
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.IntDatum{Value: 1}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 			},
 		},
 		`[
@@ -54,7 +56,7 @@ var handleJSONTests = []struct {
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a", "b"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: &metrics.IntDatum{Value: 1}}},
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 			},
 		},
 		`[
@@ -103,7 +105,7 @@ func TestHandleJSON(t *testing.T) {
 		if err != nil {
 			t.Errorf("test case %s: failed to read response: %s", tc.name, err)
 		}
-		diff := pretty.Compare(string(b), tc.expected)
+		diff := pretty.Compare(tc.expected, string(b))
 		if len(diff) > 0 {
 			t.Errorf("test case %s: response not expected:\n%s", tc.name, diff)
 		}

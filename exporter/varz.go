@@ -17,7 +17,7 @@ var (
 	exportVarzTotal = expvar.NewInt("exporter_varz_total")
 )
 
-const varzFormat = "%s{%s} %d\n"
+const varzFormat = "%s{%s} %s\n"
 
 // HandleVarz exports the metrics in Varz format via HTTP.
 func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
@@ -50,5 +50,5 @@ func metricToVarz(hostname string, m *metrics.Metric, l *metrics.LabelSet) strin
 	return fmt.Sprintf(varzFormat,
 		m.Name,
 		strings.Join(s, ","),
-		l.Datum.Get())
+		l.Datum.Value())
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/metrics/datum"
 )
 
 // compiler is data for the code generator.
@@ -62,7 +63,7 @@ func (c *codegen) VisitBefore(node node) Visitor {
 				return nil
 			}
 			// Initialize to zero at the zero time.
-			d.Set(0, time.Unix(0, 0))
+			datum.SetInt(d, 0, time.Unix(0, 0))
 		}
 		m.Hidden = n.hidden
 		(*n.sym).binding = m

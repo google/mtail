@@ -33,9 +33,9 @@ func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) str
 	case metrics.Timer:
 		t = "ms" // StatsD Timer
 	}
-	return fmt.Sprintf("%s%s.%s:%d|%s",
+	return fmt.Sprintf("%s%s.%s:%s|%s",
 		*statsdPrefix,
 		m.Program,
 		formatLabels(m.Name, l.Labels, ".", "."),
-		l.Datum.Get(), t)
+		l.Datum.Value(), t)
 }

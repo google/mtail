@@ -19,6 +19,7 @@ import (
 	"github.com/golang/glog"
 
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/metrics/datum"
 )
 
 type opcode int
@@ -222,8 +223,8 @@ func (t *thread) PopInt() (int64, error) {
 		return r, nil
 	case time.Time:
 		return n.Unix(), nil
-	case *metrics.IntDatum:
-		return n.Value, nil
+	case datum.Datum:
+		return datum.GetInt(n), nil
 	}
 	return 0, fmt.Errorf("unexpected numeric type %T %q", val, val)
 }
@@ -296,7 +297,7 @@ func (v *VM) execute(t *thread, i instr) {
 			if err != nil {
 				v.errorf("GetDatum failed: %s", err)
 			}
-			d.IncBy(delta, t.time)
+			datum.IncIntBy(d, delta, t.time)
 		default:
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
@@ -317,7 +318,7 @@ func (v *VM) execute(t *thread, i instr) {
 			if err != nil {
 				v.errorf("GetDatum failed: %s", err)
 			}
-			d.Set(value, t.time)
+			datum.SetInt(d, value, t.time)
 		default:
 			v.errorf("Unexpected type to set: %T %q", n, n)
 		}

@@ -18,7 +18,7 @@ var (
 )
 
 const (
-	prometheusFormat = "%s{%s} %d\n"
+	prometheusFormat = "%s{%s} %s\n"
 )
 
 func noHyphens(s string) string {
@@ -62,7 +62,7 @@ func metricToPrometheus(hostname string, m *metrics.Metric, l *metrics.LabelSet)
 	return fmt.Sprintf(prometheusFormat,
 		noHyphens(m.Name),
 		strings.Join(s, ","),
-		l.Datum.Get())
+		l.Datum.Value())
 }
 
 func kindToPrometheusType(kind metrics.Kind) string {

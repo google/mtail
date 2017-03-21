@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	collectdFormat = "PUTVAL \"%s/%smtail-%s/%s-%s\" interval=%d %d:%d\n"
+	collectdFormat = "PUTVAL \"%s/%smtail-%s/%s-%s\" interval=%d %s:%s\n"
 )
 
 var (
@@ -36,8 +36,8 @@ func metricToCollectd(hostname string, m *metrics.Metric, l *metrics.LabelSet) s
 		kindToCollectdType(m.Kind),
 		formatLabels(m.Name, l.Labels, "-", "-"),
 		*pushInterval,
-		l.Datum.Time/1e9,
-		l.Datum.Get())
+		l.Datum.Time(),
+		l.Datum.Value())
 }
 
 func kindToCollectdType(kind metrics.Kind) string {

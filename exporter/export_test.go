@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/metrics/datum"
 	"github.com/kylelemons/godebug/pretty"
 )
 
@@ -33,21 +34,21 @@ func TestMetricToCollectd(t *testing.T) {
 
 	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
 	d, _ := scalarMetric.GetDatum()
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	ms.Add(scalarMetric)
 
 	r := FakeSocketWrite(metricToCollectd, scalarMetric)
 	expected := []string{"PUTVAL \"gunstar/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
-	diff := pretty.Compare(r, expected)
+	diff := pretty.Compare(expected, r)
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
 	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "label")
 	d, _ = dimensionedMetric.GetDatum("quux")
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	d, _ = dimensionedMetric.GetDatum("snuh")
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	ms.ClearMetrics()
 	ms.Add(dimensionedMetric)
 
@@ -55,19 +56,19 @@ func TestMetricToCollectd(t *testing.T) {
 	expected = []string{
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
-	diff = pretty.Compare(r, expected)
+	diff = pretty.Compare(expected, r)
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
 	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer)
 	d, _ = timingMetric.GetDatum()
-	d.Set(123, ts)
+	datum.SetInt(d, 123, ts)
 	ms.Add(timingMetric)
 
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/mtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
-	diff = pretty.Compare(r, expected)
+	diff = pretty.Compare(expected, r)
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
@@ -75,7 +76,7 @@ func TestMetricToCollectd(t *testing.T) {
 	*collectdPrefix = "prefix"
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/prefixmtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
-	diff = pretty.Compare(r, expected)
+	diff = pretty.Compare(expected, r)
 	if len(diff) > 0 {
 		t.Errorf("prefixed string didn't match:\n%s", diff)
 	}
@@ -89,24 +90,24 @@ func TestMetricToGraphite(t *testing.T) {
 
 	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
 	d, _ := scalarMetric.GetDatum()
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	r := FakeSocketWrite(metricToGraphite, scalarMetric)
 	expected := []string{"prog.foo 37 1343124840\n"}
-	diff := pretty.Compare(r, expected)
+	diff := pretty.Compare(expected, r)
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
 	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "l")
 	d, _ = dimensionedMetric.GetDatum("quux")
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	d, _ = dimensionedMetric.GetDatum("snuh")
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
 	expected = []string{
 		"prog.bar.l.quux 37 1343124840\n",
 		"prog.bar.l.snuh 37 1343124840\n"}
-	diff = pretty.Compare(r, expected)
+	diff = pretty.Compare(expected, r)
 	if len(diff) > 0 {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
@@ -116,7 +117,7 @@ func TestMetricToGraphite(t *testing.T) {
 	expected = []string{
 		"prefixprog.bar.l.quux 37 1343124840\n",
 		"prefixprog.bar.l.snuh 37 1343124840\n"}
-	diff = pretty.Compare(r, expected)
+	diff = pretty.Compare(expected, r)
 	if len(diff) > 0 {
 		t.Errorf("prefixed string didn't match:\n%s", diff)
 	}
@@ -130,7 +131,7 @@ func TestMetricToStatsd(t *testing.T) {
 
 	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
 	d, _ := scalarMetric.GetDatum()
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	r := FakeSocketWrite(metricToStatsd, scalarMetric)
 	expected := []string{"prog.foo:37|c"}
 	if !reflect.DeepEqual(expected, r) {
@@ -139,9 +140,9 @@ func TestMetricToStatsd(t *testing.T) {
 
 	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "l")
 	d, _ = dimensionedMetric.GetDatum("quux")
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	d, _ = dimensionedMetric.GetDatum("snuh")
-	d.Set(42, ts)
+	datum.SetInt(d, 42, ts)
 	r = FakeSocketWrite(metricToStatsd, dimensionedMetric)
 	expected = []string{
 		"prog.bar.l.quux:37|g",
@@ -152,7 +153,7 @@ func TestMetricToStatsd(t *testing.T) {
 
 	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer)
 	d, _ = timingMetric.GetDatum()
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	r = FakeSocketWrite(metricToStatsd, timingMetric)
 	expected = []string{"prog.foo:37|ms"}
 	if !reflect.DeepEqual(expected, r) {
