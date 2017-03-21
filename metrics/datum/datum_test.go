@@ -22,6 +22,16 @@ func TestDatumSetAndValue(t *testing.T) {
 	if r := d.Time(); r != "37" {
 		t.Errorf("d Time not correct, got %v", r)
 	}
+	d = MakeFloat(1.2, time.Unix(37, 42))
+	if r := GetFloat(d); r != 1.2 {
+		t.Errorf("d ditn't return 12, got %v", r)
+	}
+	if r := d.Value(); r != "1.2" {
+		t.Errorf("d value is not 12, got %v", r)
+	}
+	if r := d.Time(); r != "37" {
+		t.Errorf("d Time not correct, got %v", r)
+	}
 }
 
 var datumJSONTests = []struct {
@@ -33,8 +43,8 @@ var datumJSONTests = []struct {
 		`{"Value":37,"Time":42000000012}`,
 	},
 	{
-		MakeFloat(37.0, time.Unix(42, 12)),
-		`{"Value":37,"Time":42000000012}`,
+		MakeFloat(37.1, time.Unix(42, 12)),
+		`{"Value":37.1,"Time":42000000012}`,
 	},
 }
 
