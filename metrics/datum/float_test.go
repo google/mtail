@@ -11,15 +11,7 @@ import (
 	"github.com/kylelemons/godebug/pretty"
 )
 
-func BenchmarkIncrementScalarInt(b *testing.B) {
-	d := &intDatum{}
-	ts := time.Now().UTC()
-	for i := 0; i < b.N; i++ {
-		d.IncBy(1, ts)
-	}
-}
-
-func TestIntMarshalJSON(t *testing.T) {
+func TestFloatMarshalJSON(t *testing.T) {
 	d := MakeInt(37, time.Unix(42, 12))
 	b, err := json.Marshal(d)
 	if err != nil {

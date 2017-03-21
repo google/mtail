@@ -46,8 +46,18 @@ func NewInt() Datum {
 	return MakeInt(0, time.Unix(0, 0))
 }
 
+func NewFloat() Datum {
+	return MakeFloat(0., time.Unix(0, 0))
+}
+
 func MakeInt(v int64, ts time.Time) Datum {
 	d := &intDatum{}
+	d.Set(v, ts)
+	return d
+}
+
+func MakeFloat(v float64, ts time.Time) Datum {
+	d := &floatDatum{}
 	d.Set(v, ts)
 	return d
 }
@@ -61,12 +71,30 @@ func GetInt(d Datum) int64 {
 	}
 }
 
+func GetFloat(d Datum) float64 {
+	switch d := d.(type) {
+	case *floatDatum:
+		return d.Get()
+	default:
+		panic(fmt.Sprintf("%v is not a Float", d))
+	}
+}
+
 func SetInt(d Datum, v int64, ts time.Time) {
 	switch d := d.(type) {
 	case *intDatum:
 		d.Set(v, ts)
 	default:
 		panic(fmt.Sprintf("%v is not an Int", d))
+	}
+}
+
+func SetFloat(d Datum, v float64, ts time.Time) {
+	switch d := d.(type) {
+	case *floatDatum:
+		d.Set(v, ts)
+	default:
+		panic(fmt.Sprintf("%v is not a Float", d))
 	}
 }
 
