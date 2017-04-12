@@ -84,13 +84,13 @@ var testCodeGenPrograms = []struct {
 			instr{dload, 0},
 			instr{push, 0},
 			instr{capref, 0},
-			instr{add, nil},
-			instr{set, nil},
+			instr{iadd, nil},
+			instr{iset, nil},
 			instr{mload, 1},
 			instr{dload, 0},
 			instr{push, 0},
 			instr{capref, 0},
-			instr{set, nil},
+			instr{iset, nil},
 			instr{setmatched, true}}},
 	{"cond expr gt",
 		"counter foo\n" +
@@ -267,7 +267,7 @@ a ** b
 			instr{dload, 0},
 			instr{mload, 1},
 			instr{dload, 0},
-			instr{pow, nil}}},
+			instr{ipow, nil}}},
 	{"indexed expr", `
 counter a by b
 a["string"]++
@@ -334,7 +334,7 @@ counter bar
 		[]instr{
 			instr{push, 3},
 			instr{push, 1},
-			instr{mod, nil},
+			instr{imod, nil},
 		},
 	},
 	{"del", `

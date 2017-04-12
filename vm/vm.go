@@ -37,13 +37,13 @@ const (
 	push                     // Push operand onto stack
 	capref                   // Push capture group reference at operand onto stack
 	str                      // Push string constant at operand onto stack
-	set                      // Set a variable value
-	add                      // Add top values on stack and push to stack
-	sub                      // Subtract top value from second top value on stack, and push to stack.
-	mul                      // Multiply top values on stack and push to stack
-	div                      // Divide top value into second top on stack, and push
-	mod                      // Integer divide top value into second top on stack, and push remainder
-	pow                      // Put second TOS to power of TOS, and push.
+	iset                     // Set a variable value
+	iadd                     // Add top values on stack and push to stack
+	isub                     // Subtract top value from second top value on stack, and push to stack.
+	imul                     // Multiply top values on stack and push to stack
+	idiv                     // Divide top value into second top on stack, and push
+	imod                     // Integer divide top value into second top on stack, and push remainder
+	ipow                     // Put second TOS to power of TOS, and push.
 	and                      // Bitwise AND the 2 at top of stack, and push result
 	or                       // Bitwise OR the 2 at top of stack, and push result
 	xor                      // Bitwise XOR the 2 at top of stack, and push result
@@ -81,13 +81,13 @@ var opNames = map[opcode]string{
 	push:       "push",
 	capref:     "capref",
 	str:        "str",
-	set:        "set",
-	add:        "add",
-	sub:        "sub",
-	mul:        "mul",
-	div:        "div",
-	mod:        "mod",
-	pow:        "pow",
+	iset:       "iset",
+	iadd:       "iadd",
+	isub:       "isub",
+	imul:       "imul",
+	idiv:       "idiv",
+	imod:       "imod",
+	ipow:       "ipow",
 	shl:        "shl",
 	shr:        "shr",
 	and:        "and",
@@ -303,7 +303,7 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
 
-	case set:
+	case iset:
 		// Set a datum
 		value, err := t.PopInt()
 		if err != nil {
@@ -402,7 +402,7 @@ func (v *VM) execute(t *thread, i instr) {
 			t.Push(math.Pow(a, b))
 		}
 
-	case add, sub, mul, div, mod, pow, shl, shr, and, or, xor:
+	case iadd, isub, imul, idiv, imod, ipow, shl, shr, and, or, xor:
 		// Op two values at TOS, and push result onto stack
 		b, err := t.PopInt()
 		if err != nil {
@@ -413,18 +413,18 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("%s", err)
 		}
 		switch i.op {
-		case add:
+		case iadd:
 			t.Push(a + b)
-		case sub:
+		case isub:
 			t.Push(a - b)
-		case mul:
+		case imul:
 			t.Push(a * b)
-		case div:
+		case idiv:
 			// Integer division
 			t.Push(a / b)
-		case mod:
+		case imod:
 			t.Push(a % b)
-		case pow:
+		case ipow:
 			// TODO(jaq): replace with type coercion
 			t.Push(int64(math.Pow(float64(a), float64(b))))
 		case shl:
