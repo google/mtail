@@ -402,7 +402,7 @@ func (v *VM) execute(t *thread, i instr) {
 			t.Push(math.Pow(a, b))
 		}
 
-	case add, sub, mul, div, mod, pow:
+	case add, sub, mul, div, mod, pow, shl, shr, and, or, xor:
 		// Op two values at TOS, and push result onto stack
 		b, err := t.PopInt()
 		if err != nil {
