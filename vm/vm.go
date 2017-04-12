@@ -377,8 +377,8 @@ func (v *VM) execute(t *thread, i instr) {
 		// Push a value onto the stack
 		t.Push(i.opnd)
 
-	case add:
-		// Add two values at TOS, and push result onto stack
+	case add, sub, mul, div, mod, pow:
+		// Op two values at TOS, and push result onto stack
 		b, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
@@ -387,66 +387,22 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		t.Push(a + b)
-
-	case sub:
-		// Subtract two values at TOS, push result onto stack
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
+		switch i.op {
+		case add:
+			t.Push(a + b)
+		case sub:
+			t.Push(a - b)
+		case mul:
+			t.Push(a * b)
+		case div:
+			// Integer division
+			t.Push(a / b)
+		case mod:
+			t.Push(a % b)
+		case pow:
+			// TODO(jaq): replace with type coercion
+			t.Push(int64(math.Pow(float64(a), float64(b))))
 		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a - b)
-
-	case mul:
-		// Multiply two values at TOS, push result
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a * b)
-
-	case div:
-		// Divide two values at TOS, push result
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a / b)
-
-	case mod:
-		// Modulo of two values at TOS, push remainder
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a % b)
-
-	case pow:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(int64(math.Pow(float64(a), float64(b))))
 
 	case shl:
 		b, err := t.PopInt()
