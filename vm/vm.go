@@ -278,7 +278,7 @@ func (v *VM) execute(t *thread, i instr) {
 		t.pc = i.opnd.(int)
 
 	case inc:
-		// increment a counter
+		// Increment a datum
 		var delta int64 = 1
 		// If opnd is non-nil, the delta is on the stack.
 		if i.opnd != nil {
@@ -288,10 +288,11 @@ func (v *VM) execute(t *thread, i instr) {
 				v.errorf("%s", err)
 			}
 		}
+		// TODO(jaq): the stack should only have the incrementable, not the offset
 		switch n := t.Pop().(type) {
 		case metrics.Incrementable:
 			n.IncBy(delta, t.time)
-		case int:
+		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
 			if err != nil {
@@ -303,16 +304,16 @@ func (v *VM) execute(t *thread, i instr) {
 		}
 
 	case set:
-		// Set a gauge
+		// Set a datum
 		value, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
 		}
-
+		// TODO(jaq): the stack should only have the incrementable, not the offset
 		switch n := t.Pop().(type) {
 		case metrics.Settable:
 			n.Set(value, t.time)
-		case int:
+		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
 			if err != nil {
@@ -377,6 +378,30 @@ func (v *VM) execute(t *thread, i instr) {
 		// Push a value onto the stack
 		t.Push(i.opnd)
 
+	case fadd, fsub, fmul, fdiv, fmod, fpow:
+		b, ok := t.Pop().(float64)
+		if !ok {
+			v.errorf("Popped value b (%v) is not a float64", b)
+		}
+		a, ok := t.Pop().(float64)
+		if !ok {
+			v.errorf("Popped value a (%v) is not a float64", b)
+		}
+		switch i.op {
+		case fadd:
+			t.Push(a + b)
+		case fsub:
+			t.Push(a - b)
+		case fmul:
+			t.Push(a * b)
+		case fdiv:
+			t.Push(a / b)
+		case fmod:
+			t.Push(math.Mod(a, b))
+		case fpow:
+			t.Push(math.Pow(a, b))
+		}
+
 	case add, sub, mul, div, mod, pow:
 		// Op two values at TOS, and push result onto stack
 		b, err := t.PopInt()
@@ -402,62 +427,17 @@ func (v *VM) execute(t *thread, i instr) {
 		case pow:
 			// TODO(jaq): replace with type coercion
 			t.Push(int64(math.Pow(float64(a), float64(b))))
+		case shl:
+			t.Push(a << uint(b))
+		case shr:
+			t.Push(a >> uint(b))
+		case and:
+			t.Push(a & b)
+		case or:
+			t.Push(a | b)
+		case xor:
+			t.Push(a ^ b)
 		}
-
-	case shl:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a << uint(b))
-
-	case shr:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a >> uint(b))
-
-	case and:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a & b)
-
-	case or:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a | b)
-
-	case xor:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a ^ b)
 
 	case not:
 		a, err := t.PopInt()
@@ -533,30 +513,6 @@ func (v *VM) execute(t *thread, i instr) {
 	case otherwise:
 		// Only match if the matched flag is false.
 		t.match = !t.matched
-
-	case fadd, fsub, fmul, fdiv, fmod, fpow:
-		b, ok := t.Pop().(float64)
-		if !ok {
-			v.errorf("Popped value b (%v) is not a float64", b)
-		}
-		a, ok := t.Pop().(float64)
-		if !ok {
-			v.errorf("Popped value a (%v) is not a float64", b)
-		}
-		switch i.op {
-		case fadd:
-			t.Push(a + b)
-		case fsub:
-			t.Push(a - b)
-		case fmul:
-			t.Push(a * b)
-		case fdiv:
-			t.Push(a / b)
-		case fmod:
-			t.Push(math.Mod(a, b))
-		case fpow:
-			t.Push(math.Pow(a, b))
-		}
 
 	default:
 		v.errorf("illegal instruction: %d", i.op)
