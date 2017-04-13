@@ -37,13 +37,13 @@ const (
 	push                     // Push operand onto stack
 	capref                   // Push capture group reference at operand onto stack
 	str                      // Push string constant at operand onto stack
-	set                      // Set a variable value
-	add                      // Add top values on stack and push to stack
-	sub                      // Subtract top value from second top value on stack, and push to stack.
-	mul                      // Multiply top values on stack and push to stack
-	div                      // Divide top value into second top on stack, and push
-	mod                      // Integer divide top value into second top on stack, and push remainder
-	pow                      // Put second TOS to power of TOS, and push.
+	iset                     // Set a variable value
+	iadd                     // Add top values on stack and push to stack
+	isub                     // Subtract top value from second top value on stack, and push to stack.
+	imul                     // Multiply top values on stack and push to stack
+	idiv                     // Divide top value into second top on stack, and push
+	imod                     // Integer divide top value into second top on stack, and push remainder
+	ipow                     // Put second TOS to power of TOS, and push.
 	and                      // Bitwise AND the 2 at top of stack, and push result
 	or                       // Bitwise OR the 2 at top of stack, and push result
 	xor                      // Bitwise XOR the 2 at top of stack, and push result
@@ -81,13 +81,13 @@ var opNames = map[opcode]string{
 	push:       "push",
 	capref:     "capref",
 	str:        "str",
-	set:        "set",
-	add:        "add",
-	sub:        "sub",
-	mul:        "mul",
-	div:        "div",
-	mod:        "mod",
-	pow:        "pow",
+	iset:       "iset",
+	iadd:       "iadd",
+	isub:       "isub",
+	imul:       "imul",
+	idiv:       "idiv",
+	imod:       "imod",
+	ipow:       "ipow",
 	shl:        "shl",
 	shr:        "shr",
 	and:        "and",
@@ -278,7 +278,7 @@ func (v *VM) execute(t *thread, i instr) {
 		t.pc = i.opnd.(int)
 
 	case inc:
-		// increment a counter
+		// Increment a datum
 		var delta int64 = 1
 		// If opnd is non-nil, the delta is on the stack.
 		if i.opnd != nil {
@@ -288,10 +288,11 @@ func (v *VM) execute(t *thread, i instr) {
 				v.errorf("%s", err)
 			}
 		}
+		// TODO(jaq): the stack should only have the incrementable, not the offset
 		switch n := t.Pop().(type) {
 		case metrics.Incrementable:
 			n.IncBy(delta, t.time)
-		case int:
+		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
 			if err != nil {
@@ -302,17 +303,17 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
 
-	case set:
-		// Set a gauge
+	case iset:
+		// Set a datum
 		value, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
 		}
-
+		// TODO(jaq): the stack should only have the incrementable, not the offset
 		switch n := t.Pop().(type) {
 		case metrics.Settable:
 			n.Set(value, t.time)
-		case int:
+		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
 			if err != nil {
@@ -377,20 +378,32 @@ func (v *VM) execute(t *thread, i instr) {
 		// Push a value onto the stack
 		t.Push(i.opnd)
 
-	case add:
-		// Add two values at TOS, and push result onto stack
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
+	case fadd, fsub, fmul, fdiv, fmod, fpow:
+		b, ok := t.Pop().(float64)
+		if !ok {
+			v.errorf("Popped value b (%v) is not a float64", b)
 		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
+		a, ok := t.Pop().(float64)
+		if !ok {
+			v.errorf("Popped value a (%v) is not a float64", b)
 		}
-		t.Push(a + b)
+		switch i.op {
+		case fadd:
+			t.Push(a + b)
+		case fsub:
+			t.Push(a - b)
+		case fmul:
+			t.Push(a * b)
+		case fdiv:
+			t.Push(a / b)
+		case fmod:
+			t.Push(math.Mod(a, b))
+		case fpow:
+			t.Push(math.Pow(a, b))
+		}
 
-	case sub:
-		// Subtract two values at TOS, push result onto stack
+	case iadd, isub, imul, idiv, imod, ipow, shl, shr, and, or, xor:
+		// Op two values at TOS, and push result onto stack
 		b, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
@@ -399,109 +412,32 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		t.Push(a - b)
-
-	case mul:
-		// Multiply two values at TOS, push result
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
+		switch i.op {
+		case iadd:
+			t.Push(a + b)
+		case isub:
+			t.Push(a - b)
+		case imul:
+			t.Push(a * b)
+		case idiv:
+			// Integer division
+			t.Push(a / b)
+		case imod:
+			t.Push(a % b)
+		case ipow:
+			// TODO(jaq): replace with type coercion
+			t.Push(int64(math.Pow(float64(a), float64(b))))
+		case shl:
+			t.Push(a << uint(b))
+		case shr:
+			t.Push(a >> uint(b))
+		case and:
+			t.Push(a & b)
+		case or:
+			t.Push(a | b)
+		case xor:
+			t.Push(a ^ b)
 		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a * b)
-
-	case div:
-		// Divide two values at TOS, push result
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a / b)
-
-	case mod:
-		// Modulo of two values at TOS, push remainder
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a % b)
-
-	case pow:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(int64(math.Pow(float64(a), float64(b))))
-
-	case shl:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a << uint(b))
-
-	case shr:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a >> uint(b))
-
-	case and:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a & b)
-
-	case or:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a | b)
-
-	case xor:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a ^ b)
 
 	case not:
 		a, err := t.PopInt()
@@ -577,30 +513,6 @@ func (v *VM) execute(t *thread, i instr) {
 	case otherwise:
 		// Only match if the matched flag is false.
 		t.match = !t.matched
-
-	case fadd, fsub, fmul, fdiv, fmod, fpow:
-		b, ok := t.Pop().(float64)
-		if !ok {
-			v.errorf("Popped value b (%v) is not a float64", b)
-		}
-		a, ok := t.Pop().(float64)
-		if !ok {
-			v.errorf("Popped value a (%v) is not a float64", b)
-		}
-		switch i.op {
-		case fadd:
-			t.Push(a + b)
-		case fsub:
-			t.Push(a - b)
-		case fmul:
-			t.Push(a * b)
-		case fdiv:
-			t.Push(a / b)
-		case fmod:
-			t.Push(math.Mod(a, b))
-		case fpow:
-			t.Push(math.Pow(a, b))
-		}
 
 	default:
 		v.errorf("illegal instruction: %d", i.op)
