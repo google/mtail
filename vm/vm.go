@@ -218,7 +218,7 @@ func (t *thread) PopInt() (int64, error) {
 	case string:
 		r, err := strconv.ParseInt(n, 10, 64)
 		if err != nil {
-			return 0, fmt.Errorf("conversion of %q to numeric failed: %s", val, err)
+			return 0, fmt.Errorf("conversion of %q to int failed: %s", val, err)
 		}
 		return r, nil
 	case time.Time:
@@ -226,7 +226,26 @@ func (t *thread) PopInt() (int64, error) {
 	case datum.Datum:
 		return datum.GetInt(n), nil
 	}
-	return 0, fmt.Errorf("unexpected numeric type %T %q", val, val)
+	return 0, fmt.Errorf("unexpected int type %T %q", val, val)
+}
+
+func (t *thread) PopFloat() (float64, error) {
+	val := t.Pop()
+	switch n := val.(type) {
+	case float64:
+		return n, nil
+	case int:
+		return float64(n), nil
+	case string:
+		r, err := strconv.ParseFloat(n, 64)
+		if err != nil {
+			return 0, fmt.Errorf("conversion of %q to float failed: %s", val, err)
+		}
+		return r, nil
+	case datum.Datum:
+		return datum.GetFloat(n), nil
+	}
+	return 0, fmt.Errorf("unexpected float type %T %q", val, val)
 }
 
 // Execute performs an instruction cycle in the VM -- acting on the current
@@ -379,13 +398,13 @@ func (v *VM) execute(t *thread, i instr) {
 		t.Push(i.opnd)
 
 	case fadd, fsub, fmul, fdiv, fmod, fpow:
-		b, ok := t.Pop().(float64)
-		if !ok {
-			v.errorf("Popped value b (%v) is not a float64", b)
+		b, err := t.PopFloat()
+		if err != nil {
+			v.errorf("%s", err)
 		}
-		a, ok := t.Pop().(float64)
-		if !ok {
-			v.errorf("Popped value a (%v) is not a float64", b)
+		a, err := t.PopFloat()
+		if err != nil {
+			v.errorf("%s", err)
 		}
 		switch i.op {
 		case fadd:
