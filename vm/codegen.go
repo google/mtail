@@ -45,7 +45,6 @@ func (c *codegen) VisitBefore(node node) Visitor {
 	switch n := node.(type) {
 
 	case *declNode:
-
 		var name string
 		if n.exportedName != "" {
 			name = n.exportedName
@@ -178,6 +177,21 @@ func (c *codegen) VisitBefore(node node) Visitor {
 	return c
 }
 
+var typedOperators = map[int]map[Type]opcode{
+	PLUS: {Int: iadd,
+		Float: fadd},
+	MINUS: {Int: isub,
+		Float: fsub},
+	MUL: {Int: imul,
+		Float: fmul},
+	DIV: {Int: idiv,
+		Float: fdiv},
+	MOD: {Int: imod,
+		Float: fmod},
+	POW: {Int: ipow,
+		Float: fpow},
+}
+
 func (c *codegen) VisitAfter(node node) {
 	switch n := node.(type) {
 	case *builtinNode:
@@ -213,16 +227,13 @@ func (c *codegen) VisitAfter(node node) {
 		case NE:
 			c.emit(instr{cmp, 0})
 			c.emit(instr{op: jm})
-		case PLUS:
-			c.emit(instr{op: iadd})
-		case MINUS:
-			c.emit(instr{op: isub})
-		case MUL:
-			c.emit(instr{op: imul})
-		case DIV:
-			c.emit(instr{op: idiv})
-		case MOD:
-			c.emit(instr{op: imod})
+		case PLUS, MINUS, MUL, DIV, MOD, POW:
+			switch n.Type() {
+			case Int, Float:
+				c.emit(instr{op: typedOperators[n.op][n.Type()]})
+			default:
+				c.errorf(n.Pos(), "Invalid type for binary expression: %q", n.Type())
+			}
 		case AND:
 			c.emit(instr{op: and})
 		case OR:
@@ -235,8 +246,6 @@ func (c *codegen) VisitAfter(node node) {
 			c.emit(instr{op: shl})
 		case SHR:
 			c.emit(instr{op: shr})
-		case POW:
-			c.emit(instr{op: ipow})
 		}
 	}
 }
