@@ -190,6 +190,8 @@ var typedOperators = map[int]map[Type]opcode{
 		Float: fmod},
 	POW: {Int: ipow,
 		Float: fpow},
+	ASSIGN: {Int: iset,
+		Float: fset},
 }
 
 func (c *codegen) VisitAfter(node node) {
@@ -227,7 +229,7 @@ func (c *codegen) VisitAfter(node node) {
 		case NE:
 			c.emit(instr{cmp, 0})
 			c.emit(instr{op: jm})
-		case PLUS, MINUS, MUL, DIV, MOD, POW:
+		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
 			switch n.Type() {
 			case Int, Float:
 				c.emit(instr{op: typedOperators[n.op][n.Type()]})
@@ -240,8 +242,6 @@ func (c *codegen) VisitAfter(node node) {
 			c.emit(instr{op: or})
 		case XOR:
 			c.emit(instr{op: xor})
-		case ASSIGN:
-			c.emit(instr{op: iset})
 		case SHL:
 			c.emit(instr{op: shl})
 		case SHR:

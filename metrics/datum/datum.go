@@ -96,7 +96,7 @@ func SetFloat(d Datum, v float64, ts time.Time) {
 	case *floatDatum:
 		d.Set(v, ts)
 	default:
-		panic(fmt.Sprintf("%v is not a Float", d))
+		panic(fmt.Sprintf("datum %v is not a Float", d))
 	}
 }
 

@@ -66,6 +66,7 @@ const (
 	fdiv
 	fmod
 	fpow
+	fset // Floating point assignment
 )
 
 var opNames = map[opcode]string{
@@ -107,6 +108,7 @@ var opNames = map[opcode]string{
 	fdiv:       "fdiv",
 	fmod:       "fmod",
 	fpow:       "fpow",
+	fset:       "fset",
 }
 
 var builtin = map[string]opcode{
@@ -328,7 +330,7 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		// TODO(jaq): the stack should only have the incrementable, not the offset
+		// TODO(jaq): the stack should only have the settable, not the offset
 		switch n := t.Pop().(type) {
 		case metrics.Settable:
 			n.Set(value, t.time)
@@ -339,6 +341,27 @@ func (v *VM) execute(t *thread, i instr) {
 				v.errorf("GetDatum failed: %s", err)
 			}
 			datum.SetInt(d, value, t.time)
+		default:
+			v.errorf("Unexpected type to set: %T %q", n, n)
+		}
+
+	case fset:
+		// Set a datum
+		value, err := t.PopFloat()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		// TODO(jaq): the stack should only have the settable, not the offset
+		switch n := t.Pop().(type) {
+		case metrics.Settable:
+			//n.Set(value, t.time)
+		case int: // offset into metric
+			m := v.m[n]
+			d, err := m.GetDatum()
+			if err != nil {
+				v.errorf("GetDatum failed: %s", err)
+			}
+			datum.SetFloat(d, value, t.time)
 		default:
 			v.errorf("Unexpected type to set: %T %q", n, n)
 		}
