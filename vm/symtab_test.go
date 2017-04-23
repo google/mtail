@@ -32,7 +32,7 @@ func TestLookupSymbol(t *testing.T) {
 
 	r, ok = tab.Lookup("bar", IDSymbol)
 	if ok {
-		t.Errorf("Shold not have found bar.")
+		t.Errorf("Should not have found bar.")
 	}
 	r, ok = tab.Lookup("foo", CaprefSymbol)
 	if ok {

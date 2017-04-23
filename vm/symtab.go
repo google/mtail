@@ -5,7 +5,7 @@ package vm
 
 type SymbolClass int
 
-// symtype enumerates the types of symbols found in the program text.
+// SymbolClass enumerates the classes of symbols found in the program text.
 const (
 	IDSymbol     SymbolClass = iota // Identifiers
 	CaprefSymbol                    // Capture group references
