@@ -137,7 +137,7 @@ func (c *checker) VisitAfter(node node) {
 		// ⇒ O ⊢ e : Tl
 		default:
 			if Tl != Tr {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%s) and rhs (%s) for op %s", Tl, Tr, n.op))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%v) and rhs (%v) for op %d", Tl, Tr, n.op))
 			}
 			rType = Tl
 		}
