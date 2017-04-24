@@ -221,5 +221,6 @@ func (lv *LabelValue) UnmarshalJSON(b []byte) error {
 func (m *Metric) String() string {
 	m.RLock()
 	defer m.RUnlock()
-	return fmt.Sprintf("%v", *m)
+	// TODO(jaq): print more than just the metric's name
+	return fmt.Sprintf("%v", m.Name)
 }
