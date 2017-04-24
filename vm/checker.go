@@ -18,7 +18,7 @@ type checker struct {
 
 // Check performs a semantic check of the ast node, and returns a boolean
 // indicating OK; if ok is not true, then error is a list of errors found.
-func Check(node node) error {
+func Check(node astNode) error {
 	c := &checker{}
 	Walk(c, node)
 	if len(c.errors) > 0 {
@@ -27,7 +27,7 @@ func Check(node node) error {
 	return nil
 }
 
-func (c *checker) VisitBefore(node node) Visitor {
+func (c *checker) VisitBefore(node astNode) Visitor {
 	switch n := node.(type) {
 
 	case *stmtlistNode:
@@ -107,7 +107,7 @@ func (c *checker) VisitBefore(node node) Visitor {
 	return c
 }
 
-func (c *checker) VisitAfter(node node) {
+func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *stmtlistNode:
 		c.symtab.ExitScope()

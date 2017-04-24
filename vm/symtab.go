@@ -14,6 +14,7 @@ const (
 	endSymbol
 )
 
+// symbol is an entry in the symbol table within a certain scope.
 type symbol struct {
 	name    string      // Symbol name
 	class   SymbolClass // Type
@@ -23,8 +24,16 @@ type symbol struct {
 	typ     Type        // Type of this symbol
 }
 
+// scope maps an object name to a list of symbols with that name.  Objects with
+// the same SymbolClass cannot exist at the same scope.  Objects with different
+// SymbolClass may exist at the same scope.
 type scope map[string][]*symbol
 
+// SymbolTable is a stack of scopes.  As new scopes are entered, they are
+// pushed onto the end of the stack.  As scopes are exited, they are removed
+// from the stack.  References to each scope are held by the AST nodes that are
+// contained within them, for speed of access when performing a lookup, and
+// preventing garbage collection until the AST is no longer referenced.
 type SymbolTable []*scope
 
 func (s *SymbolTable) EnterScope(sc *scope) *scope {

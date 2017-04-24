@@ -23,7 +23,7 @@ type codegen struct {
 }
 
 // CodeGen is the function that compiles the program to bytecode and data.
-func CodeGen(name string, ast node) (*object, error) {
+func CodeGen(name string, ast astNode) (*object, error) {
 	c := &codegen{name: name}
 	Walk(c, ast)
 	if len(c.errors) > 0 {
@@ -41,7 +41,7 @@ func (c *codegen) emit(i instr) {
 	c.obj.prog = append(c.obj.prog, i)
 }
 
-func (c *codegen) VisitBefore(node node) Visitor {
+func (c *codegen) VisitBefore(node astNode) Visitor {
 	switch n := node.(type) {
 
 	case *declNode:
@@ -194,7 +194,7 @@ var typedOperators = map[int]map[Type]opcode{
 		Float: fset},
 }
 
-func (c *codegen) VisitAfter(node node) {
+func (c *codegen) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *builtinNode:
 		if n.args != nil {

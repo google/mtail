@@ -46,7 +46,7 @@ func MergePosition(a, b *position) *position {
 }
 
 // mergepositionlist is a helper that merges the positions of all the nodes in a list
-func mergepositionlist(l []node) *position {
+func mergepositionlist(l []astNode) *position {
 	if len(l) == 0 {
 		return nil
 	}

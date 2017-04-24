@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-func Parse(name string, input io.Reader) (node, error) {
+func Parse(name string, input io.Reader) (astNode, error) {
 	p := newParser(name, input)
 	r := mtailParse(p)
 	if r != 0 || p == nil || p.errors != nil {
@@ -23,7 +23,7 @@ const EOF = 0
 
 type parser struct {
 	name   string
-	root   node
+	root   astNode
 	errors ErrorList
 	l      *lexer
 	t      token    // Most recently lexed token.

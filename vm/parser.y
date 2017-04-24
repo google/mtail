@@ -20,7 +20,7 @@ import (
     text string
     texts []string
     flag bool
-    n node
+    n astNode
     kind metrics.Kind
 }
 
