@@ -15,7 +15,7 @@ type astNode interface {
 }
 
 type stmtlistNode struct {
-	s        *scope
+	s        *scope // Pointer to the local scope for this enclosing block
 	children []astNode
 }
 
