@@ -43,11 +43,11 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		}
 
 	case *declNode:
-		if sym, ok := c.symtab.Lookup(n.name, IDSymbol); ok {
+		if sym, ok := c.symtab.Lookup(n.name, VarSymbol); ok {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Declaration of `%s' shadows the previous at %s", n.name, sym.loc))
 			return nil
 		}
-		n.sym = c.symtab.Add(n.name, IDSymbol, &n.pos)
+		n.sym = c.symtab.Add(n.name, VarSymbol, &n.pos)
 
 	case *defNode:
 		if sym, ok := c.symtab.Lookup(n.name, DefSymbol); ok {
@@ -70,7 +70,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		}
 
 	case *idNode:
-		if sym, ok := c.symtab.Lookup(n.name, IDSymbol); ok {
+		if sym, ok := c.symtab.Lookup(n.name, VarSymbol); ok {
 			n.sym = sym
 		} else {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\tTry adding `counter %s' to the top of the program.", n.name, n.name))

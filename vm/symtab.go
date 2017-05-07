@@ -7,7 +7,7 @@ type SymbolClass int
 
 // SymbolClass enumerates the classes of symbols found in the program text.
 const (
-	IDSymbol     SymbolClass = iota // Identifiers
+	VarSymbol    SymbolClass = iota // Variables
 	CaprefSymbol                    // Capture group references
 	DefSymbol                       // Definitions
 
