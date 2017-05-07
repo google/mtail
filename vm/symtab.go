@@ -17,11 +17,11 @@ const (
 // symbol is an entry in the symbol table within a certain scope.
 type symbol struct {
 	name    string      // Symbol name
-	class   SymbolClass // Type
-	binding interface{} // Binding to storage allocated
-	loc     *position   // Source file position
+	class   SymbolClass // Symbol class, of program object
+	binding interface{} // Binding to storage allocated in runtime
+	loc     *position   // Source file position of definition
 	addr    int         // Address offset in another structure
-	typ     Type        // Type of this symbol
+	typ     Type        // Symbol type
 }
 
 // scope maps an object name to a list of symbols with that name.  Objects with
