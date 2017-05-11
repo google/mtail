@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
 type lexerTest struct {
@@ -214,8 +214,7 @@ func TestLex(t *testing.T) {
 	for _, tc := range lexerTests {
 		t.Logf("Starting %s", tc.name)
 		tokens := collect(&tc)
-		diff := pretty.Compare(tc.tokens, tokens)
-		if len(diff) > 0 {
+		if diff := deep.Equal(tc.tokens, tokens); diff != nil {
 			t.Errorf("%s tokens didn't match:\n%s:", tc.name, diff)
 		}
 	}

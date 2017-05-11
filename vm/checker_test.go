@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
 type checkerInvalidProgram struct {
@@ -66,10 +66,10 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			continue
 		}
 
-		diff := pretty.Compare(
+		diff := deep.Equal(
 			strings.Join(tc.errors, "\n"),        // want
 			strings.TrimRight(err.Error(), "\n")) // got
-		if len(diff) > 0 {
+		if diff != nil {
 			t.Errorf("Incorrect error for %q\n%s", tc.name, diff)
 		}
 	}

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/google/mtail/metrics"
-	"github.com/kylelemons/godebug/pretty"
 )
 
 var instructions = []struct {
@@ -391,14 +391,13 @@ func TestInstrs(t *testing.T) {
 			t.Fatalf("Execution failed, see info log.")
 		}
 
-		diff := pretty.Compare(tc.expectedStack, v.t.stack)
-		if len(diff) > 0 {
+		if diff := deep.Equal(tc.expectedStack, v.t.stack); diff != nil {
 			t.Errorf("%s: unexpected virtual machine stack state.\n%s", tc.name, diff)
 		}
 		// patch in the thread stack because otherwise the test table is huge
 		tc.expectedThread.stack = tc.expectedStack
 
-		if diff = pretty.Compare(v.t, &tc.expectedThread); len(diff) > 0 {
+		if diff := deep.Equal(v.t, &tc.expectedThread); diff != nil {
 			t.Errorf("%s: unexpected virtual machine thread state.\n%s", tc.name, diff)
 		}
 	}

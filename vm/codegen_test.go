@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
 var testCodeGenPrograms = []struct {
@@ -364,8 +364,7 @@ func TestCodegen(t *testing.T) {
 			t.Errorf("Compile errors for %q:\n%q", tc.name, err)
 			continue
 		}
-		diff := pretty.Compare(tc.prog, obj.prog)
-		if len(diff) > 0 {
+		if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
 			t.Errorf("%s: VM prog doesn't match.\n%s", tc.name, diff)
 		}
 	}

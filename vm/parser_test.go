@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
 type validProgram struct {
@@ -268,8 +268,7 @@ func TestParserRoundTrip(t *testing.T) {
 		u = Unparser{}
 		output2 := u.Unparse(p2.root)
 
-		diff := pretty.Compare(output2, output)
-		if len(diff) > 0 {
+		if diff := deep.Equal(output2, output); diff != nil {
 			t.Errorf("Round trip failed to generate same output.\n%s", diff)
 		}
 	}
@@ -311,10 +310,10 @@ func TestParseInvalidPrograms(t *testing.T) {
 		p := newParser(tc.name, strings.NewReader(tc.program))
 		mtailParse(p)
 
-		diff := pretty.Compare(
+		diff := deep.Equal(
 			strings.Join(tc.errors, "\n"),             // want
 			strings.TrimRight(p.errors.Error(), "\n")) // got
-		if len(diff) > 0 {
+		if diff != nil {
 			t.Errorf("Incorrect error for '%s'\n%s", tc.name, diff)
 		}
 	}
