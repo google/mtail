@@ -56,7 +56,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Definition of decorator `%s' shadows the previous at %s", n.name, sym.Pos))
 			return nil
 		}
-		n.sym = NewSymbol(n.name, DefSymbol, &n.pos)
+		n.sym = NewSymbol(n.name, DecoSymbol, &n.pos)
 		(*n.sym).Binding = n
 		if c.scope.Insert(n.sym) != nil {
 			c.errors.Add(&n.pos, fmt.Sprintf("%s already defined", n.sym.Name))

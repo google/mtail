@@ -9,7 +9,7 @@ type SymbolKind int
 const (
 	VarSymbol    SymbolKind = iota // Variables
 	CaprefSymbol                   // Capture group references
-	DefSymbol                      // Definitions
+	DecoSymbol                     // Decorators
 
 	endSymbol
 )
