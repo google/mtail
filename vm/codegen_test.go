@@ -207,14 +207,14 @@ var testCodeGenPrograms = []struct {
 	{"deco",
 		"counter foo\n" +
 			"counter bar\n" +
-			"def foo {\n" +
+			"def fooWrap {\n" +
 			"  /.*/ {\n" +
 			"    foo++\n" +
 			"    next\n" +
 			"  }\n" +
 			"}\n" +
 			"" +
-			"@foo { bar++\n }\n",
+			"@fooWrap { bar++\n }\n",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 10},
@@ -350,6 +350,7 @@ del a["string"]
 
 func TestCodegen(t *testing.T) {
 	for _, tc := range testCodeGenPrograms {
+		t.Logf("Starting %s", tc.name)
 		ast, err := Parse(tc.name, strings.NewReader(tc.source))
 		if err != nil {
 			t.Fatalf("Unexpected parse failure in %q: %s", tc.name, err)

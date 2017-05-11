@@ -65,8 +65,8 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			datum.SetInt(d, 0, time.Unix(0, 0))
 		}
 		m.Hidden = n.hidden
-		(*n.sym).binding = m
-		n.sym.addr = len(c.obj.m)
+		(*n.sym).Binding = m
+		n.sym.Addr = len(c.obj.m)
 		c.obj.m = append(c.obj.m, m)
 		return nil
 
@@ -121,25 +121,25 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		c.emit(instr{push, n.f})
 
 	case *idNode:
-		if n.sym == nil || n.sym.binding == nil {
+		if n.sym == nil || n.sym.Binding == nil {
 			c.errorf(n.Pos(), "No metric bound to identifier %q", n.name)
 			return nil
 		}
-		c.emit(instr{mload, n.sym.addr})
-		m := n.sym.binding.(*metrics.Metric)
+		c.emit(instr{mload, n.sym.Addr})
+		m := n.sym.Binding.(*metrics.Metric)
 		c.emit(instr{dload, len(m.Keys)})
 
 	case *caprefNode:
-		if n.sym == nil || n.sym.binding == nil {
+		if n.sym == nil || n.sym.Binding == nil {
 			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.name)
 			return nil
 		}
-		rn := n.sym.binding.(*regexNode)
+		rn := n.sym.Binding.(*regexNode)
 		// rn.addr contains the index of the regular expression object,
 		// which correlates to storage on the re slice
 		c.emit(instr{push, rn.addr})
 		// n.sym.addr is the capture group offset
-		c.emit(instr{capref, n.sym.addr})
+		c.emit(instr{capref, n.sym.Addr})
 
 	case *defNode:
 		// Do nothing, defs are inlined.

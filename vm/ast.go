@@ -15,7 +15,7 @@ type astNode interface {
 }
 
 type stmtlistNode struct {
-	s        *scope // Pointer to the local scope for this enclosing block
+	s        *Scope // Pointer to the local scope for this enclosing block
 	children []astNode
 }
 
@@ -72,7 +72,7 @@ func (n *regexNode) Type() Type {
 type idNode struct {
 	pos  position
 	name string
-	sym  *symbol
+	sym  *Symbol
 }
 
 func (n *idNode) Pos() *position {
@@ -81,7 +81,7 @@ func (n *idNode) Pos() *position {
 
 func (n *idNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.typ
+		return n.sym.Type
 	}
 	return Int
 }
@@ -89,7 +89,7 @@ func (n *idNode) Type() Type {
 type caprefNode struct {
 	pos  position
 	name string
-	sym  *symbol
+	sym  *Symbol
 }
 
 func (n *caprefNode) Pos() *position {
@@ -98,7 +98,7 @@ func (n *caprefNode) Pos() *position {
 
 func (n *caprefNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.typ
+		return n.sym.Type
 	}
 	return Int
 }
@@ -165,7 +165,7 @@ type declNode struct {
 	keys         []string
 	kind         metrics.Kind
 	exportedName string
-	sym          *symbol
+	sym          *Symbol
 }
 
 func (n *declNode) Pos() *position {
@@ -174,7 +174,7 @@ func (n *declNode) Pos() *position {
 
 func (n *declNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.typ
+		return n.sym.Type
 	}
 	return Int
 }
@@ -219,7 +219,7 @@ type defNode struct {
 	pos   position
 	name  string
 	block astNode
-	sym   *symbol
+	sym   *Symbol
 }
 
 func (n *defNode) Pos() *position {
@@ -228,7 +228,7 @@ func (n *defNode) Pos() *position {
 
 func (n *defNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.typ
+		return n.sym.Type
 	}
 	return Int
 }
