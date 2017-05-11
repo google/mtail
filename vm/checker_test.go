@@ -50,11 +50,12 @@ var checkerInvalidPrograms = []checkerInvalidProgram{
 
 	{"duplicate declaration",
 		"counter foo\ncounter foo\n",
-		[]string{"duplicate declaration:2:9-11: Declaration of `foo' shadows the previous at duplicate declaration:1:9-11"}},
+		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
 	for _, tc := range checkerInvalidPrograms {
+		t.Logf("Starting %s", tc.name)
 		ast, err := Parse(tc.name, strings.NewReader(tc.program))
 		if err != nil {
 			t.Fatal(err)

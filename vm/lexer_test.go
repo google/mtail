@@ -211,11 +211,12 @@ func collect(t *lexerTest) (tokens []token) {
 }
 
 func TestLex(t *testing.T) {
-	for _, test := range lexerTests {
-		tokens := collect(&test)
-		diff := pretty.Compare(test.tokens, tokens)
+	for _, tc := range lexerTests {
+		t.Logf("Starting %s", tc.name)
+		tokens := collect(&tc)
+		diff := pretty.Compare(tc.tokens, tokens)
 		if len(diff) > 0 {
-			t.Errorf("%s tokens didn't match:\n%s:", test.name, diff)
+			t.Errorf("%s tokens didn't match:\n%s:", tc.name, diff)
 		}
 	}
 }

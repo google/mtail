@@ -42,28 +42,30 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		}
 
 	case *declNode:
-		if sym := c.scope.Lookup(n.name); sym != nil {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Declaration of `%s' shadows the previous at %s", n.name, sym.Pos))
+		n.sym = NewSymbol(n.name, VarSymbol, &n.pos)
+		if alt := c.scope.Insert(n.sym); alt != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
 		}
-		n.sym = NewSymbol(n.name, VarSymbol, &n.pos)
-		if c.scope.Insert(n.sym) != nil {
-			c.errors.Add(&n.pos, fmt.Sprintf("%s already defined", n.sym.Name))
+
+	case *idNode:
+		if sym := c.scope.Lookup(n.name); sym != nil && sym.Kind == VarSymbol {
+			n.sym = sym
+		} else {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\tTry adding `counter %s' to the top of the program.", n.name, n.name))
+			return nil
 		}
 
 	case *defNode:
-		if sym := c.scope.Lookup(n.name); sym != nil {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Definition of decorator `%s' shadows the previous at %s", n.name, sym.Pos))
-			return nil
-		}
 		n.sym = NewSymbol(n.name, DecoSymbol, &n.pos)
 		(*n.sym).Binding = n
-		if c.scope.Insert(n.sym) != nil {
-			c.errors.Add(&n.pos, fmt.Sprintf("%s already defined", n.sym.Name))
+		if alt := c.scope.Insert(n.sym); alt != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `%s' previously declared at %s", n.name, alt.Pos))
+			return nil
 		}
 
 	case *decoNode:
-		if sym := c.scope.Lookup(n.name); sym != nil {
+		if sym := c.scope.Lookup(n.name); sym != nil && sym.Kind == DecoSymbol {
 			if sym.Binding == nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.name))
 				return nil
@@ -71,14 +73,6 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			n.def = sym.Binding.(*defNode)
 		} else {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.name, n.name))
-			return nil
-		}
-
-	case *idNode:
-		if sym := c.scope.Lookup(n.name); sym != nil {
-			n.sym = sym
-		} else {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\tTry adding `counter %s' to the top of the program.", n.name, n.name))
 			return nil
 		}
 
@@ -98,8 +92,9 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 				sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
 				sym.Binding = n
 				sym.Addr = i - 1
-				if c.scope.Insert(sym) != nil {
-					c.errors.Add(n.Pos(), fmt.Sprintf("%s already defined", sym.Name))
+				if alt := c.scope.Insert(sym); alt != nil {
+					c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously delcared at %s", sym.Name, alt.Pos))
+					return nil
 				}
 			}
 			for i, capref := range re.CapNames() {
@@ -107,8 +102,9 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 					sym := NewSymbol(capref, CaprefSymbol, n.Pos())
 					sym.Binding = n
 					sym.Addr = i
-					if c.scope.Insert(sym) != nil {
-						c.errors.Add(n.Pos(), fmt.Sprintf("%s already defined", sym.Name))
+					if alt := c.scope.Insert(sym); alt != nil {
+						c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously delcared at %s", sym.Name, alt.Pos))
+						return nil
 					}
 				}
 			}
