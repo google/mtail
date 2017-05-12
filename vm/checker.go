@@ -35,7 +35,13 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 
 	case *caprefNode:
 		if sym := c.scope.Lookup(n.name); sym == nil || sym.Kind != CaprefSymbol {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Capture group `$%s' was not defined by a regular expression in this or outer scopes.\n\tTry using `(?P<%s>...)' to name the capture group.", n.name, n.name))
+			msg := fmt.Sprintf("Capture group `$%s' was not defined by a regular expression visible to this scope.", n.name)
+			if n.isNamed {
+				msg = fmt.Sprintf("%s\n\tTry using `(?P<%s>...)' to name the capture group.", msg, n.name)
+			} else {
+				msg = fmt.Sprintf("%s\n\tCheck that there are at least %s pairs of parentheses.", msg, n.name)
+			}
+			c.errors.Add(n.Pos(), msg)
 			return nil
 		} else {
 			n.sym = sym

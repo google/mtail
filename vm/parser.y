@@ -46,7 +46,7 @@ import (
 // references, identifiers, decorators, and numerical constants.
 %token <text> REGEX
 %token <text> STRING
-%token <text> CAPREF
+%token <text> CAPREF CAPREF_NAMED
 %token <text> ID
 %token <text> DECO
 %token <intVal> INTLITERAL
@@ -310,7 +310,11 @@ primary_expr
   }
   | CAPREF
   {
-    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, nil}
+    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, false, nil}
+  }
+  | CAPREF_NAMED
+  {
+    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, true, nil}
   }
   | STRING
   {

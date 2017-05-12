@@ -17,12 +17,12 @@ var checkerInvalidPrograms = []struct {
 }{
 	{"undefined named capture group",
 		"/blurgh/ { $undef++\n }\n",
-		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression in this or outer scopes.\n\tTry using `(?P<undef>...)' to name the capture group."}},
+		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression visible to this scope.\n\tTry using `(?P<undef>...)' to name the capture group."}},
 
 	{"out of bounds capref",
 		"/(blyurg)/ { $2++ \n}\n",
 		[]string{"out of bounds capref:1:14-15: Capture group `$2' was not defined by a regular expression " +
-			"in this or outer scopes.\n\tTry using `(?P<2>...)' to name the capture group."},
+			"visible to this scope.\n\tCheck that there are at least 2 pairs of parentheses."},
 	},
 
 	{"undefined decorator",

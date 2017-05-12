@@ -87,9 +87,10 @@ func (n *idNode) Type() Type {
 }
 
 type caprefNode struct {
-	pos  position
-	name string
-	sym  *Symbol
+	pos     position
+	name    string
+	isNamed bool // true if the capref is a named reference, not positional
+	sym     *Symbol
 }
 
 func (n *caprefNode) Pos() *position {

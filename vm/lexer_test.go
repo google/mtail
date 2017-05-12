@@ -131,9 +131,10 @@ var lexerTests = []lexerTest{
 		token{REGEX, `foo\d/`, position{"regex with escape and special char", 0, 1, 7}},
 		token{DIV, "/", position{"regex with escape and special char", 0, 8, 8}},
 		token{EOF, "", position{"regex with escape and special char", 0, 9, 9}}}},
-	{"capref", "$foo", []token{
-		token{CAPREF, "foo", position{"capref", 0, 0, 3}},
-		token{EOF, "", position{"capref", 0, 4, 4}}}},
+	{"capref", "$foo $1", []token{
+		token{CAPREF_NAMED, "foo", position{"capref", 0, 0, 3}},
+		token{CAPREF, "1", position{"capref", 0, 5, 6}},
+		token{EOF, "", position{"capref", 0, 7, 7}}}},
 	{"numerical capref", "$1", []token{
 		token{CAPREF, "1", position{"numerical capref", 0, 0, 1}},
 		token{EOF, "", position{"numerical capref", 0, 2, 2}}}},
