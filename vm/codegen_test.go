@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
 var testCodeGenPrograms = []struct {
@@ -207,14 +207,14 @@ var testCodeGenPrograms = []struct {
 	{"deco",
 		"counter foo\n" +
 			"counter bar\n" +
-			"def foo {\n" +
+			"def fooWrap {\n" +
 			"  /.*/ {\n" +
 			"    foo++\n" +
 			"    next\n" +
 			"  }\n" +
 			"}\n" +
 			"" +
-			"@foo { bar++\n }\n",
+			"@fooWrap { bar++\n }\n",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 10},
@@ -350,6 +350,7 @@ del a["string"]
 
 func TestCodegen(t *testing.T) {
 	for _, tc := range testCodeGenPrograms {
+		t.Logf("Starting %s", tc.name)
 		ast, err := Parse(tc.name, strings.NewReader(tc.source))
 		if err != nil {
 			t.Fatalf("Unexpected parse failure in %q: %s", tc.name, err)
@@ -363,8 +364,7 @@ func TestCodegen(t *testing.T) {
 			t.Errorf("Compile errors for %q:\n%q", tc.name, err)
 			continue
 		}
-		diff := pretty.Compare(tc.prog, obj.prog)
-		if len(diff) > 0 {
+		if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
 			t.Errorf("%s: VM prog doesn't match.\n%s", tc.name, diff)
 		}
 	}

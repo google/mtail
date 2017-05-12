@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
-	"github.com/kylelemons/godebug/pretty"
 )
 
 var handleJSONTests = []struct {
@@ -89,6 +89,7 @@ var handleJSONTests = []struct {
 
 func TestHandleJSON(t *testing.T) {
 	for _, tc := range handleJSONTests {
+		t.Logf("Starting %s", tc.name)
 		ms := metrics.NewStore()
 		for _, metric := range tc.metrics {
 			ms.Add(metric)
@@ -107,8 +108,8 @@ func TestHandleJSON(t *testing.T) {
 		if err != nil {
 			t.Errorf("test case %s: failed to read response: %s", tc.name, err)
 		}
-		diff := pretty.Compare(tc.expected, string(b))
-		if len(diff) > 0 {
+		diff := deep.Equal(tc.expected, string(b))
+		if diff != nil {
 			t.Errorf("test case %s: response not expected:\n%s", tc.name, diff)
 		}
 	}

@@ -11,8 +11,8 @@ import (
 	"testing/quick"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/google/mtail/metrics/datum"
-	"github.com/kylelemons/godebug/pretty"
 )
 
 func TestScalarMetric(t *testing.T) {
@@ -90,8 +90,8 @@ func TestEmitLabelSet(t *testing.T) {
 		labels = append(labels, ls.Labels)
 	}
 
-	diff := pretty.Compare(labels, expectedLabels)
-	if len(diff) > 0 {
+	diff := deep.Equal(labels, expectedLabels)
+	if diff != nil {
 		t.Errorf("Labels don't match:\n%s", diff)
 	}
 }
@@ -145,7 +145,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 	rand := rand.New(rand.NewSource(0))
 	f := func(name, prog string, kind Kind, keys []string, val, ti, tns int64) bool {
 		m := NewMetric(name, prog, kind, Int, keys...)
-		var labels []string
+		labels := make([]string, 0)
 		for _ = range keys {
 			if l, ok := quick.Value(reflect.TypeOf(name), rand); ok {
 				labels = append(labels, l.String())
@@ -163,16 +163,14 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 			return false
 		}
 
-		r := &Metric{}
+		r := newMetric(0)
 		e = json.Unmarshal(j, &r)
 		if e != nil {
 			t.Errorf("json.Unmarshal failed: %s\n", e)
 			return false
 		}
 
-		// pretty.Compare uses the opposite order to xUnit for comparisons.
-		diff := pretty.Compare(m, r)
-		if len(diff) > 0 {
+		if diff := deep.Equal(m, r); diff != nil {
 			t.Errorf("Round trip wasn't stable:\n%s", diff)
 			return false
 		}
@@ -190,8 +188,8 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 func TestTimer(t *testing.T) {
 	m := NewMetric("test", "prog", Timer, Int)
 	n := NewMetric("test", "prog", Timer, Int)
-	diff := pretty.Compare(m, n)
-	if len(diff) > 0 {
+	diff := deep.Equal(m, n)
+	if diff != nil {
 		t.Errorf("Identical metrics not the same:\n%s", diff)
 	}
 	d, _ := m.GetDatum()

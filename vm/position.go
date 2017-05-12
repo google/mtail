@@ -50,8 +50,10 @@ func mergepositionlist(l []astNode) *position {
 	if len(l) == 0 {
 		return nil
 	}
-	if len(l) == 1 {
+	if len(l) == 1 && l[0] != nil {
 		return l[0].Pos()
+	} else {
+		return nil
 	}
 	return MergePosition(l[0].Pos(), mergepositionlist(l[1:]))
 }

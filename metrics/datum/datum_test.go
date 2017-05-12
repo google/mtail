@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
 func TestDatumSetAndValue(t *testing.T) {
@@ -55,7 +55,7 @@ func TestMarshalJSON(t *testing.T) {
 		if err != nil {
 			t.Errorf("%d: Marshal failed: %v", i, err)
 		}
-		if diff := pretty.Compare(tc.expected, string(b)); len(diff) > 0 {
+		if diff := deep.Equal(tc.expected, string(b)); len(diff) > 0 {
 			t.Errorf("%d: JSON didn't match:\n%s", i, diff)
 		}
 	}

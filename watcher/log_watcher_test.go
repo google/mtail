@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
 // This test requires disk access, and cannot be injected without internal
@@ -176,8 +176,8 @@ func TestWatcherErrors(t *testing.T) {
 	if err := w.Close(); err != nil {
 		t.Fatalf("watcher close failed: %q", err)
 	}
-	diff := pretty.Compare(strconv.FormatInt(orig+1, 10), expvar.Get("log_watcher_error_count").String())
-	if len(diff) > 0 {
+	diff := deep.Equal(strconv.FormatInt(orig+1, 10), expvar.Get("log_watcher_error_count").String())
+	if diff != nil {
 		t.Errorf("log watcher error count doens't match:\n%s", diff)
 	}
 }

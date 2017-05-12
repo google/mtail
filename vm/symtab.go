@@ -3,72 +3,61 @@
 
 package vm
 
-type SymbolClass int
+type SymbolKind int
 
-// SymbolClass enumerates the classes of symbols found in the program text.
+// SymbolKind enumerates the kinds of symbols found in the program text.
 const (
-	VarSymbol    SymbolClass = iota // Variables
-	CaprefSymbol                    // Capture group references
-	DefSymbol                       // Definitions
+	VarSymbol    SymbolKind = iota // Variables
+	CaprefSymbol                   // Capture group references
+	DecoSymbol                     // Decorators
 
 	endSymbol
 )
 
-// symbol is an entry in the symbol table within a certain scope.
-type symbol struct {
-	name    string      // Symbol name
-	class   SymbolClass // Symbol class, of program object
-	binding interface{} // Binding to storage allocated in runtime
-	loc     *position   // Source file position of definition
-	addr    int         // Address offset in another structure
-	typ     Type        // Symbol type
+// Symbol describes a named program object.
+type Symbol struct {
+	Name    string      // identifier name
+	Kind    SymbolKind  // kind of program object
+	Type    Type        // object's type
+	Pos     *position   // Source file position of definition
+	Binding interface{} // binding to storage allocated in runtime
+	Addr    int         // Address offset in another structure, object specific
 }
 
-// scope maps an object name to a list of symbols with that name.  Objects with
-// the same SymbolClass cannot exist at the same scope.  Objects with different
-// SymbolClass may exist at the same scope.
-type scope map[string][]*symbol
+// NewSymbol creates a record of a given symbol kind, named name, found at loc
+func NewSymbol(name string, kind SymbolKind, pos *position) (sym *Symbol) {
+	return &Symbol{name, kind, Int, pos, nil, 0}
+}
 
-// SymbolTable is a stack of scopes.  As new scopes are entered, they are
-// pushed onto the end of the stack.  As scopes are exited, they are removed
-// from the stack.  References to each scope are held by the AST nodes that are
-// contained within them, for speed of access when performing a lookup, and
-// preventing garbage collection until the AST is no longer referenced.
-type SymbolTable []*scope
+// Scope maintains a record of the identifiers declared in the current program
+// scope, and a link to the parent scope.
+type Scope struct {
+	Parent  *Scope
+	Symbols map[string]*Symbol
+}
 
-func (s *SymbolTable) EnterScope(sc *scope) *scope {
-	if sc == nil {
-		sc = &scope{}
+// NewScope creates a new scope within the parent scope
+func NewScope(parent *Scope) *Scope {
+	return &Scope{parent, make(map[string]*Symbol)}
+}
+
+// Insert attempts to insert a symbol into the scope.  If the scope already
+// contains an object alt with the same name, the scope is unchanged and the
+// function returns alt.  Otherwise the symbol is inserted, and returns nil.
+func (s *Scope) Insert(sym *Symbol) (alt *Symbol) {
+	if alt = s.Symbols[sym.Name]; alt == nil {
+		s.Symbols[sym.Name] = sym
 	}
-	*s = append(*s, sc)
-	return sc
+	return
 }
 
-func (s *SymbolTable) ExitScope() {
-	if len(*s) > 1 {
-		*s = (*s)[:len(*s)-1]
-	}
-}
-
-func (s *SymbolTable) CurrentScope() *scope {
-	return (*s)[len(*s)-1]
-}
-
-func (s *SymbolTable) Lookup(name string, class SymbolClass) (*symbol, bool) {
-	for i := len(*s) - 1; i >= 0; i-- {
-		if r, ok := (*(*s)[i])[name]; ok && r[class] != nil {
-			return r[class], ok
+// lookup returns the symbol with the given name if it is found in this or any
+// parent scope, otherwise nil.
+func (s *Scope) Lookup(name string) *Symbol {
+	for scope := s; scope != nil; scope = scope.Parent {
+		if sym := scope.Symbols[name]; sym != nil {
+			return sym
 		}
 	}
-	return nil, false
-}
-
-func (s *SymbolTable) Add(name string, class SymbolClass, loc *position) (sym *symbol) {
-	sym = &symbol{name, class, nil, loc, 0, Int}
-	cs := s.CurrentScope()
-	if _, ok := (*cs)[name]; !ok {
-		(*cs)[name] = make([]*symbol, endSymbol)
-	}
-	(*cs)[name][class] = sym
-	return sym
+	return nil
 }

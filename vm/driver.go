@@ -26,10 +26,9 @@ type parser struct {
 	root   astNode
 	errors ErrorList
 	l      *lexer
-	t      token    // Most recently lexed token.
-	pos    position // Maybe contains the position of the start of a node when the parser is doing preprocessor concatenation.
-	endPos position // Maybe contains the position of the end of a node when the parser is doing preprocessor concatenation.
-	symtab SymbolTable
+	t      token             // Most recently lexed token.
+	pos    position          // Maybe contains the position of the start of a node when the parser is doing preprocessor concatenation.
+	endPos position          // Maybe contains the position of the end of a node when the parser is doing preprocessor concatenation.
 	res    map[string]string // Mapping of regex constants to patterns.
 }
 
