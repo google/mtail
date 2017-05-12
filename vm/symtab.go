@@ -67,6 +67,8 @@ func (s *Scope) Lookup(name string) *Symbol {
 	return nil
 }
 
+// String prints the current scope and all parents to a string, recursing up to
+// the root scope.  This method is only used for debugging.
 func (s *Scope) String() string {
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "scope %p {", s)
