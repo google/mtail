@@ -92,11 +92,19 @@ type Metric struct {
 
 // NewMetric returns a new empty metric of dimension len(keys).
 func NewMetric(name string, prog string, kind Kind, typ datum.Type, keys ...string) *Metric {
-	m := &Metric{Name: name, Program: prog, Kind: kind, Type: typ,
-		Keys:        make([]string, len(keys), len(keys)),
-		LabelValues: make([]*LabelValue, 0)}
+	m := newMetric(len(keys))
+	m.Name = name
+	m.Program = prog
+	m.Kind = kind
+	m.Type = typ
 	copy(m.Keys, keys)
 	return m
+}
+
+// newMetric returns a new empty Metric
+func newMetric(len int) *Metric {
+	return &Metric{Keys: make([]string, len, len),
+		LabelValues: make([]*LabelValue, 0)}
 }
 
 func (m *Metric) findLabelValueOrNil(labelvalues []string) *LabelValue {
@@ -113,7 +121,7 @@ Loop:
 }
 
 // GetDatum returns the datum named by a sequence of string label values from a
-// Metric.
+// Metric.  If the sequence of label values does not yet exist, it is created.
 func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	if len(labelvalues) != len(m.Keys) {
 		return nil, fmt.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
@@ -190,14 +198,14 @@ func (lv *LabelValue) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	var labels []string
+	labels := make([]string, 0)
 	if _, ok := obj["Labels"]; ok {
 		err = json.Unmarshal(*obj["Labels"], &labels)
 		if err != nil {
 			return err
 		}
-		lv.Labels = labels
 	}
+	lv.Labels = labels
 
 	var valObj map[string]*json.RawMessage
 	err = json.Unmarshal(*obj["Value"], &valObj)

@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
-	"github.com/kylelemons/godebug/pretty"
 )
 
 var expectedMetrics = []metrics.Metric{
@@ -77,8 +77,8 @@ func TestReadTestData(t *testing.T) {
 	defer f.Close()
 	store := metrics.NewStore()
 	ReadTestData(f, "reader_test", store)
-	diff := pretty.Compare(expectedMetrics, store.Metrics)
-	if len(diff) > 0 {
+	diff := deep.Equal(expectedMetrics, store.Metrics)
+	if diff != nil {
 		t.Errorf("metrics don't match: %s\n", diff)
 	}
 }
