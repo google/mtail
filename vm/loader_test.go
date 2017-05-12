@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/watcher"
 	"github.com/spf13/afero"
-	"github.com/kylelemons/godebug/pretty"
 )
 
 func TestNewLoader(t *testing.T) {
@@ -112,6 +112,7 @@ var testProgram = "/$/ {}\n"
 
 func TestProcessEvents(t *testing.T) {
 	for _, tt := range testProcessEvents {
+		t.Logf("Starting %s", tt.name)
 		w := watcher.NewFakeWatcher()
 		w.Add(".")
 		store := metrics.NewStore()
@@ -159,13 +160,13 @@ func TestProcessEvents(t *testing.T) {
 		w.Close()
 		<-l.watcherDone
 		l.handleMu.RLock()
-		var programs []string
+		programs := make([]string, 0)
 		for program := range l.handles {
 			programs = append(programs, program)
 		}
 		l.handleMu.RUnlock()
 		l.handleMu.RLock()
-		if diff := pretty.Compare(tt.expectedPrograms, programs); len(diff) > 0 {
+		if diff := deep.Equal(tt.expectedPrograms, programs); diff != nil {
 			t.Errorf("%q: loaded programs don't match.\nl.handles: %+#v\n%s", tt.name, l.handles, diff)
 		}
 		l.handleMu.RUnlock()

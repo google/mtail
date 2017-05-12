@@ -7,11 +7,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
 	"github.com/google/mtail/testdata"
 	"github.com/google/mtail/watcher"
-	"github.com/kylelemons/godebug/pretty"
 )
 
 var exampleProgramTests = []struct {
@@ -85,9 +85,9 @@ func TestExamplePrograms(t *testing.T) {
 
 		mtail.Close()
 
-		diff := pretty.Compare(golden_store, store)
+		diff := deep.Equal(golden_store, store)
 
-		if len(diff) > 0 {
+		if diff != nil {
 			t.Errorf("%s: metrics don't match:\n%s", tc.programfile, diff)
 
 			t.Errorf("Store metrics: %#v", store.Metrics)

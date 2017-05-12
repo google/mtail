@@ -69,7 +69,7 @@ func GetInt(d Datum) int64 {
 	case *intDatum:
 		return d.Get()
 	default:
-		panic(fmt.Sprintf("%v is not an Int", d))
+		panic(fmt.Sprintf("datum %v is not an Int", d))
 	}
 }
 
@@ -78,7 +78,7 @@ func GetFloat(d Datum) float64 {
 	case *floatDatum:
 		return d.Get()
 	default:
-		panic(fmt.Sprintf("%v is not a Float", d))
+		panic(fmt.Sprintf("datum %v is not a Float", d))
 	}
 }
 
@@ -87,7 +87,7 @@ func SetInt(d Datum, v int64, ts time.Time) {
 	case *intDatum:
 		d.Set(v, ts)
 	default:
-		panic(fmt.Sprintf("%v is not an Int", d))
+		panic(fmt.Sprintf("datum %v is not an Int", d))
 	}
 }
 
@@ -96,7 +96,7 @@ func SetFloat(d Datum, v float64, ts time.Time) {
 	case *floatDatum:
 		d.Set(v, ts)
 	default:
-		panic(fmt.Sprintf("%v is not a Float", d))
+		panic(fmt.Sprintf("datum %v is not a Float", d))
 	}
 }
 
@@ -105,6 +105,6 @@ func IncIntBy(d Datum, v int64, ts time.Time) {
 	case *intDatum:
 		d.IncBy(v, ts)
 	default:
-		panic(fmt.Sprintf("%v is not an Int", d))
+		panic(fmt.Sprintf("datum %v is not an Int", d))
 	}
 }

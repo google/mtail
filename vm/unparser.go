@@ -42,7 +42,7 @@ func (u *Unparser) newline() {
 	u.line = ""
 }
 
-func (u *Unparser) VisitBefore(n node) Visitor {
+func (u *Unparser) VisitBefore(n astNode) Visitor {
 	switch v := n.(type) {
 	case *stmtlistNode:
 		for _, child := range v.children {
@@ -209,10 +209,10 @@ func (u *Unparser) VisitBefore(n node) Visitor {
 	return nil
 }
 
-func (u *Unparser) VisitAfter(n node) {}
+func (u *Unparser) VisitAfter(n astNode) {}
 
 // Unparse begins the unparsing of the syntax tree, returning the program text as a single string.
-func (u *Unparser) Unparse(n node) string {
+func (u *Unparser) Unparse(n astNode) string {
 	Walk(u, n)
 	return u.output
 }

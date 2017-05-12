@@ -7,24 +7,22 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
-type checkerInvalidProgram struct {
+var checkerInvalidPrograms = []struct {
 	name    string
 	program string
 	errors  []string
-}
-
-var checkerInvalidPrograms = []checkerInvalidProgram{
+}{
 	{"undefined named capture group",
 		"/blurgh/ { $undef++\n }\n",
-		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression in this or outer scopes.\n\tTry using `(?P<undef>...)' to name the capture group."}},
+		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression visible to this scope.\n\tTry using `(?P<undef>...)' to name the capture group."}},
 
 	{"out of bounds capref",
 		"/(blyurg)/ { $2++ \n}\n",
 		[]string{"out of bounds capref:1:14-15: Capture group `$2' was not defined by a regular expression " +
-			"in this or outer scopes.\n\tTry using `(?P<2>...)' to name the capture group."},
+			"visible to this scope.\n\tCheck that there are at least 2 pairs of parentheses."},
 	},
 
 	{"undefined decorator",
@@ -50,11 +48,12 @@ var checkerInvalidPrograms = []checkerInvalidProgram{
 
 	{"duplicate declaration",
 		"counter foo\ncounter foo\n",
-		[]string{"duplicate declaration:2:9-11: Declaration of `foo' shadows the previous at duplicate declaration:1:9-11"}},
+		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
 	for _, tc := range checkerInvalidPrograms {
+		t.Logf("Starting %s", tc.name)
 		ast, err := Parse(tc.name, strings.NewReader(tc.program))
 		if err != nil {
 			t.Fatal(err)
@@ -65,11 +64,56 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			continue
 		}
 
-		diff := pretty.Compare(
+		diff := deep.Equal(
 			strings.Join(tc.errors, "\n"),        // want
 			strings.TrimRight(err.Error(), "\n")) // got
-		if len(diff) > 0 {
+		if diff != nil {
 			t.Errorf("Incorrect error for %q\n%s", tc.name, diff)
+		}
+	}
+}
+
+var checkerValidPrograms = []struct {
+	name    string
+	program string
+}{
+	{"capture group",
+		`counter foo
+/(.*)/ {
+  foo += $1
+}
+`,
+	},
+	{"shadowed positionals",
+		`counter foo
+/(.*)/ {
+  foo += $1
+  /bar(\d+)/ {
+   foo += $1
+  }
+}
+`},
+	{"sibling positionals",
+		`counter foo
+/(.*)/ {
+  foo += $1
+}
+/bar(\d+)/ {
+   foo += $1
+}
+`},
+}
+
+func TestCheckValidPrograms(t *testing.T) {
+	for _, tc := range checkerValidPrograms {
+		t.Logf("Starting %s", tc.name)
+		ast, err := Parse(tc.name, strings.NewReader(tc.program))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = Check(ast)
+		if err != nil {
+			t.Errorf("Checker failed for valid program %q:\n%s", tc.name, err)
 		}
 	}
 }

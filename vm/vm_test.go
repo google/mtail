@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/google/mtail/metrics"
-	"github.com/kylelemons/godebug/pretty"
 )
 
 var instructions = []struct {
@@ -48,7 +48,7 @@ var instructions = []struct {
 		thread{pc: 0, matches: map[int][]string{}},
 	},
 	{"set int",
-		instr{iset, 2},
+		instr{iset, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1, 2}, // set metric 1 "bar"
@@ -56,7 +56,7 @@ var instructions = []struct {
 		thread{pc: 0, matches: map[int][]string{}},
 	},
 	{"set str",
-		instr{iset, 2},
+		instr{iset, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1, "2"},
@@ -359,6 +359,13 @@ var instructions = []struct {
 		[]interface{}{2.0, 2.0},
 		[]interface{}{4.0},
 		thread{pc: 0, matches: map[int][]string{}}},
+	{"fset",
+		instr{fset, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{2, 2.0}, // quux set to 2.
+		[]interface{}{},
+		thread{pc: 0, matches: map[int][]string{}}},
 }
 
 // TestInstrs tests that each instruction behaves as expected through one
@@ -368,7 +375,8 @@ func TestInstrs(t *testing.T) {
 		var m []*metrics.Metric
 		m = append(m,
 			metrics.NewMetric("foo", "test", metrics.Counter, metrics.Int),
-			metrics.NewMetric("bar", "test", metrics.Counter, metrics.Int))
+			metrics.NewMetric("bar", "test", metrics.Counter, metrics.Int),
+			metrics.NewMetric("quux", "test", metrics.Gauge, metrics.Float))
 		obj := &object{re: tc.re, str: tc.str, m: m, prog: []instr{tc.i}}
 		v := New(tc.name, obj, true)
 		v.t = new(thread)
@@ -383,14 +391,13 @@ func TestInstrs(t *testing.T) {
 			t.Fatalf("Execution failed, see info log.")
 		}
 
-		diff := pretty.Compare(tc.expectedStack, v.t.stack)
-		if len(diff) > 0 {
+		if diff := deep.Equal(tc.expectedStack, v.t.stack); diff != nil {
 			t.Errorf("%s: unexpected virtual machine stack state.\n%s", tc.name, diff)
 		}
 		// patch in the thread stack because otherwise the test table is huge
 		tc.expectedThread.stack = tc.expectedStack
 
-		if diff = pretty.Compare(v.t, &tc.expectedThread); len(diff) > 0 {
+		if diff := deep.Equal(v.t, &tc.expectedThread); diff != nil {
 			t.Errorf("%s: unexpected virtual machine thread state.\n%s", tc.name, diff)
 		}
 	}

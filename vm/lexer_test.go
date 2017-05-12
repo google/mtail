@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
 type lexerTest struct {
@@ -131,9 +131,10 @@ var lexerTests = []lexerTest{
 		token{REGEX, `foo\d/`, position{"regex with escape and special char", 0, 1, 7}},
 		token{DIV, "/", position{"regex with escape and special char", 0, 8, 8}},
 		token{EOF, "", position{"regex with escape and special char", 0, 9, 9}}}},
-	{"capref", "$foo", []token{
-		token{CAPREF, "foo", position{"capref", 0, 0, 3}},
-		token{EOF, "", position{"capref", 0, 4, 4}}}},
+	{"capref", "$foo $1", []token{
+		token{CAPREF_NAMED, "foo", position{"capref", 0, 0, 3}},
+		token{CAPREF, "1", position{"capref", 0, 5, 6}},
+		token{EOF, "", position{"capref", 0, 7, 7}}}},
 	{"numerical capref", "$1", []token{
 		token{CAPREF, "1", position{"numerical capref", 0, 0, 1}},
 		token{EOF, "", position{"numerical capref", 0, 2, 2}}}},
@@ -211,11 +212,11 @@ func collect(t *lexerTest) (tokens []token) {
 }
 
 func TestLex(t *testing.T) {
-	for _, test := range lexerTests {
-		tokens := collect(&test)
-		diff := pretty.Compare(test.tokens, tokens)
-		if len(diff) > 0 {
-			t.Errorf("%s tokens didn't match:\n%s:", test.name, diff)
+	for _, tc := range lexerTests {
+		t.Logf("Starting %s", tc.name)
+		tokens := collect(&tc)
+		if diff := deep.Equal(tc.tokens, tokens); diff != nil {
+			t.Errorf("%s tokens didn't match:\n%s:", tc.name, diff)
 		}
 	}
 }

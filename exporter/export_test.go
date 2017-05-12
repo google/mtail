@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
-	"github.com/kylelemons/godebug/pretty"
 )
 
 func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
@@ -39,8 +39,8 @@ func TestMetricToCollectd(t *testing.T) {
 
 	r := FakeSocketWrite(metricToCollectd, scalarMetric)
 	expected := []string{"PUTVAL \"gunstar/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
-	diff := pretty.Compare(expected, r)
-	if len(diff) > 0 {
+	diff := deep.Equal(expected, r)
+	if diff != nil {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
@@ -56,8 +56,8 @@ func TestMetricToCollectd(t *testing.T) {
 	expected = []string{
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
-	diff = pretty.Compare(expected, r)
-	if len(diff) > 0 {
+	diff = deep.Equal(expected, r)
+	if diff != nil {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
@@ -68,16 +68,16 @@ func TestMetricToCollectd(t *testing.T) {
 
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/mtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
-	diff = pretty.Compare(expected, r)
-	if len(diff) > 0 {
+	diff = deep.Equal(expected, r)
+	if diff != nil {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
 	*collectdPrefix = "prefix"
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/prefixmtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
-	diff = pretty.Compare(expected, r)
-	if len(diff) > 0 {
+	diff = deep.Equal(expected, r)
+	if diff != nil {
 		t.Errorf("prefixed string didn't match:\n%s", diff)
 	}
 }
@@ -93,8 +93,8 @@ func TestMetricToGraphite(t *testing.T) {
 	datum.SetInt(d, 37, ts)
 	r := FakeSocketWrite(metricToGraphite, scalarMetric)
 	expected := []string{"prog.foo 37 1343124840\n"}
-	diff := pretty.Compare(expected, r)
-	if len(diff) > 0 {
+	diff := deep.Equal(expected, r)
+	if diff != nil {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
@@ -107,8 +107,8 @@ func TestMetricToGraphite(t *testing.T) {
 	expected = []string{
 		"prog.bar.l.quux 37 1343124840\n",
 		"prog.bar.l.snuh 37 1343124840\n"}
-	diff = pretty.Compare(expected, r)
-	if len(diff) > 0 {
+	diff = deep.Equal(expected, r)
+	if diff != nil {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
@@ -117,8 +117,8 @@ func TestMetricToGraphite(t *testing.T) {
 	expected = []string{
 		"prefixprog.bar.l.quux 37 1343124840\n",
 		"prefixprog.bar.l.snuh 37 1343124840\n"}
-	diff = pretty.Compare(expected, r)
-	if len(diff) > 0 {
+	diff = deep.Equal(expected, r)
+	if diff != nil {
 		t.Errorf("prefixed string didn't match:\n%s", diff)
 	}
 }

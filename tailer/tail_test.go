@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/golang/glog"
 	"github.com/google/mtail/watcher"
-	"github.com/kylelemons/godebug/pretty"
 
 	"github.com/spf13/afero"
 )
@@ -88,8 +88,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	<-done
 
 	expected := []string{"a", "b", "c", "d"}
-	diff := pretty.Compare(result, expected)
-	if len(diff) > 0 {
+	if diff := deep.Equal(result, expected); diff != nil {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
@@ -150,8 +149,8 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	<-done
 
 	expected := []string{"ab"}
-	diff := pretty.Compare(result, expected)
-	if len(diff) > 0 {
+	diff := deep.Equal(result, expected)
+	if diff != nil {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 

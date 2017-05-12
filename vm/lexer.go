@@ -451,17 +451,25 @@ Loop:
 // capture groups in the preceeding regular expression.
 func lexCapref(l *lexer) stateFn {
 	l.skip() // Skip the leading $
+	named := false
 Loop:
 	for {
 		switch r := l.next(); {
 		case isAlnum(r) || r == '_':
 			l.accept()
+			if !isDigit(r) {
+				named = true
+			}
 		default:
 			l.backup()
 			break Loop
 		}
 	}
-	l.emit(CAPREF)
+	if named {
+		l.emit(CAPREF_NAMED)
+	} else {
+		l.emit(CAPREF)
+	}
 	return lexProg
 }
 

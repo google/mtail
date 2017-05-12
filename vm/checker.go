@@ -10,15 +10,14 @@ import (
 
 // checker holds data for a semantic checker
 type checker struct {
-	errors ErrorList
+	scope *Scope // the current scope
 
-	// symtab contains the current scope search path
-	symtab SymbolTable
+	errors ErrorList
 }
 
-// Check performs a semantic check of the ast node, and returns a boolean
+// Check performs a semantic check of the AST rooted at node, and returns a boolean
 // indicating OK; if ok is not true, then error is a list of errors found.
-func Check(node node) error {
+func Check(node astNode) error {
 	c := &checker{}
 	Walk(c, node)
 	if len(c.errors) > 0 {
@@ -27,53 +26,63 @@ func Check(node node) error {
 	return nil
 }
 
-func (c *checker) VisitBefore(node node) Visitor {
+func (c *checker) VisitBefore(node astNode) Visitor {
 	switch n := node.(type) {
 
 	case *stmtlistNode:
-		c.symtab.EnterScope(nil)
-		n.s = c.symtab.CurrentScope()
+		n.s = NewScope(c.scope)
+		c.scope = n.s
+
+	case *condNode:
+		n.s = NewScope(c.scope)
+		c.scope = n.s
 
 	case *caprefNode:
-		if sym, ok := c.symtab.Lookup(n.name, CaprefSymbol); ok {
-			n.sym = sym
-		} else {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Capture group `$%s' was not defined by a regular expression in this or outer scopes.\n\tTry using `(?P<%s>...)' to name the capture group.", n.name, n.name))
+		if sym := c.scope.Lookup(n.name); sym == nil || sym.Kind != CaprefSymbol {
+			msg := fmt.Sprintf("Capture group `$%s' was not defined by a regular expression visible to this scope.", n.name)
+			if n.isNamed {
+				msg = fmt.Sprintf("%s\n\tTry using `(?P<%s>...)' to name the capture group.", msg, n.name)
+			} else {
+				msg = fmt.Sprintf("%s\n\tCheck that there are at least %s pairs of parentheses.", msg, n.name)
+			}
+			c.errors.Add(n.Pos(), msg)
 			return nil
+		} else {
+			n.sym = sym
 		}
 
 	case *declNode:
-		if sym, ok := c.symtab.Lookup(n.name, IDSymbol); ok {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Declaration of `%s' shadows the previous at %s", n.name, sym.loc))
-			return nil
-		}
-		n.sym = c.symtab.Add(n.name, IDSymbol, &n.pos)
-
-	case *defNode:
-		if sym, ok := c.symtab.Lookup(n.name, DefSymbol); ok {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Definition of decorator `%s' shadows the previous at %s", n.name, sym.loc))
-			return nil
-		}
-		n.sym = c.symtab.Add(n.name, DefSymbol, &n.pos)
-		(*n.sym).binding = n
-
-	case *decoNode:
-		if sym, ok := c.symtab.Lookup(n.name, DefSymbol); ok {
-			if sym.binding == nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.name))
-				return nil
-			}
-			n.def = sym.binding.(*defNode)
-		} else {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.name, n.name))
+		n.sym = NewSymbol(n.name, VarSymbol, &n.pos)
+		if alt := c.scope.Insert(n.sym); alt != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
 		}
 
 	case *idNode:
-		if sym, ok := c.symtab.Lookup(n.name, IDSymbol); ok {
+		if sym := c.scope.Lookup(n.name); sym != nil && sym.Kind == VarSymbol {
 			n.sym = sym
 		} else {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\tTry adding `counter %s' to the top of the program.", n.name, n.name))
+			return nil
+		}
+
+	case *defNode:
+		n.sym = NewSymbol(n.name, DecoSymbol, &n.pos)
+		(*n.sym).Binding = n
+		if alt := c.scope.Insert(n.sym); alt != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `%s' previously declared at %s", n.name, alt.Pos))
+			return nil
+		}
+
+	case *decoNode:
+		if sym := c.scope.Lookup(n.name); sym != nil && sym.Kind == DecoSymbol {
+			if sym.Binding == nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.name))
+				return nil
+			}
+			n.def = sym.Binding.(*defNode)
+		} else {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.name, n.name))
 			return nil
 		}
 
@@ -90,16 +99,23 @@ func (c *checker) VisitBefore(node node) Visitor {
 			// the current scope, so that future CAPTUREGROUPs can retrieve their
 			// value.  At parse time, we can warn about nonexistent names.
 			for i := 1; i <= re.MaxCap(); i++ {
-				sym := c.symtab.Add(fmt.Sprintf("%d", i),
-					CaprefSymbol, n.Pos())
-				sym.binding = n
-				sym.addr = i - 1
+				sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
+				sym.Binding = n
+				sym.Addr = i - 1
+				if alt := c.scope.Insert(sym); alt != nil {
+					c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
+					return nil
+				}
 			}
 			for i, capref := range re.CapNames() {
 				if capref != "" {
-					sym := c.symtab.Add(capref, CaprefSymbol, n.Pos())
-					sym.binding = n
-					sym.addr = i
+					sym := NewSymbol(capref, CaprefSymbol, n.Pos())
+					sym.Binding = n
+					sym.Addr = i
+					if alt := c.scope.Insert(sym); alt != nil {
+						c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
+						return nil
+					}
 				}
 			}
 		}
@@ -107,10 +123,13 @@ func (c *checker) VisitBefore(node node) Visitor {
 	return c
 }
 
-func (c *checker) VisitAfter(node node) {
+func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *stmtlistNode:
-		c.symtab.ExitScope()
+		c.scope = n.s.Parent
+
+	case *condNode:
+		c.scope = n.s.Parent
 
 	case *binaryExprNode:
 		var rType Type

@@ -20,7 +20,7 @@ import (
     text string
     texts []string
     flag bool
-    n node
+    n astNode
     kind metrics.Kind
 }
 
@@ -46,7 +46,7 @@ import (
 // references, identifiers, decorators, and numerical constants.
 %token <text> REGEX
 %token <text> STRING
-%token <text> CAPREF
+%token <text> CAPREF CAPREF_NAMED
 %token <text> ID
 %token <text> DECO
 %token <intVal> INTLITERAL
@@ -116,12 +116,12 @@ stmt
 conditional_statement
   : cond compound_statement ELSE compound_statement
   {
-    $$ = &condNode{$1, $2, $4}
+    $$ = &condNode{$1, $2, $4, nil}
   }
   | cond compound_statement
   {
     if $1 != nil {
-      $$ = &condNode{$1, $2, nil}
+      $$ = &condNode{$1, $2, nil, nil}
     } else {
       $$ = $2
     }
@@ -310,7 +310,11 @@ primary_expr
   }
   | CAPREF
   {
-    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, nil}
+    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, false, nil}
+  }
+  | CAPREF_NAMED
+  {
+    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, true, nil}
   }
   | STRING
   {
