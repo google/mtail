@@ -3,6 +3,11 @@
 
 package vm
 
+import (
+	"bytes"
+	"fmt"
+)
+
 type SymbolKind int
 
 // SymbolKind enumerates the kinds of symbols found in the program text.
@@ -60,4 +65,22 @@ func (s *Scope) Lookup(name string) *Symbol {
 		}
 	}
 	return nil
+}
+
+func (s *Scope) String() string {
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "scope %p {", s)
+	if s != nil {
+		fmt.Fprintln(&buf)
+		if len(s.Symbols) > 0 {
+			for _, sym := range s.Symbols {
+				fmt.Fprintf(&buf, "\t%s %s\n", sym.Kind, sym.Name)
+			}
+		}
+		if s.Parent != nil {
+			fmt.Fprintf(&buf, "%s", s.Parent.String())
+		}
+	}
+	fmt.Fprintf(&buf, "}\n")
+	return buf.String()
 }

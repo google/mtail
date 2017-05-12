@@ -10,13 +10,11 @@ import (
 	"github.com/go-test/deep"
 )
 
-type checkerInvalidProgram struct {
+var checkerInvalidPrograms = []struct {
 	name    string
 	program string
 	errors  []string
-}
-
-var checkerInvalidPrograms = []checkerInvalidProgram{
+}{
 	{"undefined named capture group",
 		"/blurgh/ { $undef++\n }\n",
 		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression in this or outer scopes.\n\tTry using `(?P<undef>...)' to name the capture group."}},
@@ -71,6 +69,33 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			strings.TrimRight(err.Error(), "\n")) // got
 		if diff != nil {
 			t.Errorf("Incorrect error for %q\n%s", tc.name, diff)
+		}
+	}
+}
+
+var checkerValidPrograms = []struct {
+	name    string
+	program string
+}{
+	{"capture group",
+		`counter foo
+/(.*)/ {
+  foo += $1
+}
+`,
+	},
+}
+
+func TestCheckValidPrograms(t *testing.T) {
+	for _, tc := range checkerValidPrograms {
+		t.Logf("Starting %s", tc.name)
+		ast, err := Parse(tc.name, strings.NewReader(tc.program))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = Check(ast)
+		if err != nil {
+			t.Errorf("Checker failed for valid program %q:\n%s", tc.name, err)
 		}
 	}
 }

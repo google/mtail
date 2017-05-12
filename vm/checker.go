@@ -93,7 +93,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 				sym.Binding = n
 				sym.Addr = i - 1
 				if alt := c.scope.Insert(sym); alt != nil {
-					c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously delcared at %s", sym.Name, alt.Pos))
+					c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
 					return nil
 				}
 			}
@@ -103,7 +103,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 					sym.Binding = n
 					sym.Addr = i
 					if alt := c.scope.Insert(sym); alt != nil {
-						c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously delcared at %s", sym.Name, alt.Pos))
+						c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
 						return nil
 					}
 				}
