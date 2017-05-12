@@ -33,6 +33,10 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		n.s = NewScope(c.scope)
 		c.scope = n.s
 
+	case *condNode:
+		n.s = NewScope(c.scope)
+		c.scope = n.s
+
 	case *caprefNode:
 		if sym := c.scope.Lookup(n.name); sym == nil || sym.Kind != CaprefSymbol {
 			msg := fmt.Sprintf("Capture group `$%s' was not defined by a regular expression visible to this scope.", n.name)
@@ -122,6 +126,9 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *stmtlistNode:
+		c.scope = n.s.Parent
+
+	case *condNode:
 		c.scope = n.s.Parent
 
 	case *binaryExprNode:

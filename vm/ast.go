@@ -43,6 +43,7 @@ type condNode struct {
 	cond      astNode
 	truthNode astNode
 	elseNode  astNode
+	s         *Scope // a conditional expression can cause new variables to be defined
 }
 
 func (n *condNode) Pos() *position {

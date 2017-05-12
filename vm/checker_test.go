@@ -84,6 +84,24 @@ var checkerValidPrograms = []struct {
 }
 `,
 	},
+	{"shadowed positionals",
+		`counter foo
+/(.*)/ {
+  foo += $1
+  /bar(\d+)/ {
+   foo += $1
+  }
+}
+`},
+	{"sibling positionals",
+		`counter foo
+/(.*)/ {
+  foo += $1
+}
+/bar(\d+)/ {
+   foo += $1
+}
+`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

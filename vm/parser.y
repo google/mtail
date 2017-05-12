@@ -116,12 +116,12 @@ stmt
 conditional_statement
   : cond compound_statement ELSE compound_statement
   {
-    $$ = &condNode{$1, $2, $4}
+    $$ = &condNode{$1, $2, $4, nil}
   }
   | cond compound_statement
   {
     if $1 != nil {
-      $$ = &condNode{$1, $2, nil}
+      $$ = &condNode{$1, $2, nil, nil}
     } else {
       $$ = $2
     }
