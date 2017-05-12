@@ -95,9 +95,10 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			return nil
 		} else {
 			n.re_ast = re
-			// We can reserve storage for these capturing groups, storing them in
-			// the current scope, so that future CAPTUREGROUPs can retrieve their
-			// value.  At parse time, we can warn about nonexistent names.
+			// We can reserve the names of the capturing groups as declarations
+			// of those symbols, so that future CAPREF tokens parsed can
+			// retrieve their value.  By recording them in the symbol table, we
+			// can warn the user about unknown capture group references.
 			for i := 1; i <= re.MaxCap(); i++ {
 				sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
 				sym.Binding = n
