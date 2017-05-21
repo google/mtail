@@ -41,6 +41,11 @@ func (c *codegen) emit(i instr) {
 	c.obj.prog = append(c.obj.prog, i)
 }
 
+var kindMap = map[Type]datum.Type{
+	Int:   metrics.Int,
+	Float: metrics.Float,
+}
+
 func (c *codegen) VisitBefore(node astNode) Visitor {
 	switch n := node.(type) {
 
@@ -51,7 +56,12 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		} else {
 			name = n.name
 		}
-		m := metrics.NewMetric(name, c.name, n.kind, metrics.Int, n.keys...)
+		kind, ok := kindMap[n.Type()]
+		if !ok {
+			c.errorf(n.Pos(), "Unable to determine type for metric %q", name)
+			return nil
+		}
+		m := metrics.NewMetric(name, c.name, n.kind, kind, n.keys...)
 		// Scalar counters can be initialized to zero.  Dimensioned counters we
 		// don't know the values of the labels yet.  Gauges and Timers we can't
 		// assume start at zero.
