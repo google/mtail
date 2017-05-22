@@ -3,12 +3,35 @@
 
 package vm
 
-type Type int
+type Type interface {
+	isType()
+}
 
-const (
-	Untyped Type = iota // Untyped indicates no type has been determined
-	None
-	String
-	Int
-	Float
+var nextVariableId int
+
+type TypeVariable struct {
+	Id       int
+	Instance *Type
+}
+
+func (*TypeVariable) isType() {}
+
+func NewTypeVariable() Type {
+	id := nextVariableId
+	nextVariableId += 1
+	return &TypeVariable{Id: id}
+}
+
+type TypeOperator struct {
+	name string
+}
+
+func (*TypeOperator) isType() {}
+
+// Builtin types
+var (
+	Int    = &TypeOperator{"Int"}
+	Float  = &TypeOperator{"Float"}
+	String = &TypeOperator{"String"}
+	None   = &TypeOperator{"None"}
 )
