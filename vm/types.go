@@ -3,6 +3,8 @@
 
 package vm
 
+import "fmt"
+
 type Type interface {
 	isType()
 }
@@ -22,11 +24,23 @@ func NewTypeVariable() Type {
 	return &TypeVariable{Id: id}
 }
 
+func (t *TypeVariable) String() string {
+	if t.Instance != nil {
+		return t.Instance.String()
+	}
+	return fmt.Sprintf("typeVar%d", t.Id)
+
+}
+
 type TypeOperator struct {
-	name string
+	Name string
 }
 
 func (*TypeOperator) isType() {}
+
+func (t *TypeOperator) String() string {
+	return t.Name
+}
 
 // Builtin types
 var (
