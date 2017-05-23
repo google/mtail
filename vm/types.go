@@ -72,6 +72,7 @@ var (
 // least upper bound of both types, the smallest type that is capable of
 // representing both parameters, and stores the root exemplar of that type if
 // either type is currently a free variable.
+// TODO(jaq): separate type unification from computation of least upper bound to use in checker.VisitAfter
 func Unify(a, b Type) Type {
 	a1, b1 := a.Root(), b.Root()
 	switch a2 := a1.(type) {
