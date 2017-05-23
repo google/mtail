@@ -3,11 +3,18 @@
 
 package vm
 
-import "fmt"
+import (
+	"fmt"
+	"reflect"
+)
 
 type Type interface {
 	Root() Type
 	String() string
+}
+
+func Equals(t1, t2 Type) bool {
+	return reflect.DeepEqual(t1, t2)
 }
 
 var nextVariableId int
@@ -63,7 +70,8 @@ var (
 
 // Unify computes type unification of both parameter Types.  It computes the
 // least upper bound of both types, the smallest type that is capable of
-// representing both parameters.
+// representing both parameters, and stores the root exemplar of that type if
+// either type is currently a free variable.
 func Unify(a, b Type) Type {
 	a1, b1 := a.Root(), b.Root()
 	switch a2 := a1.(type) {

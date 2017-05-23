@@ -138,27 +138,38 @@ func (c *checker) VisitAfter(node astNode) {
 		Tl := n.lhs.Type()
 		Tr := n.rhs.Type()
 		switch n.op {
-		//case DIV, MOD, MUL, MINUS, PLUS, POW:
-		// Numeric
-		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
-		// Tl <= Tr , Tr <= Tl
-		// ⇒ O ⊢ e : lub(Tl, Tr)
-		// case SHL, SHR, AND, OR, XOR, NOT:
-		// 	//  integer
-		// O ⊢ e1 :Int, O ⊢ e2 : Int
-		// ⇒ O ⊢ e : Int
-		// case LT, GT, LE, GE, EQ, NE:
-		// 	// comparable
-		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
-		// Tl <= Tr , Tr <= Tl
-		// ⇒ O ⊢ e : lub(Tl, Tr)
-		// case ASSIGN:
-		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
-		// Tl <= Tr
-		// ⇒ O ⊢ e : Tl
+		case DIV, MOD, MUL, MINUS, PLUS, POW:
+			// Numeric
+			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+			// Tl <= Tr , Tr <= Tl
+			// ⇒ O ⊢ e : lub(Tl, Tr)
+			rType = Unify(Tl, Tr)
+		case SHL, SHR, AND, OR, XOR, NOT:
+			// bitwise
+			// O ⊢ e1 :Int, O ⊢ e2 : Int
+			// ⇒ O ⊢ e : Int
+			if Equals(Tl, Int) && Equals(Tr, Int) {
+
+				rType = Int
+			} else {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, Tl, Tr))
+				return
+			}
+		case LT, GT, LE, GE, EQ, NE:
+			// comparable
+			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+			// Tl <= Tr , Tr <= Tl
+			// ⇒ O ⊢ e : lub(Tl, Tr)
+			rType = Unify(Tl, Tr)
+		case ASSIGN:
+			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+			// Tl <= Tr
+			// ⇒ O ⊢ e : Tl
+			rType = Tl
 		default:
 			if Tl != Tr {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%v) and rhs (%v) for op %d", Tl, Tr, n.op))
+				return
 			}
 			rType = Tl
 		}
