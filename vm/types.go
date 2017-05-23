@@ -26,7 +26,7 @@ func NewTypeVariable() Type {
 
 func (t *TypeVariable) String() string {
 	if t.Instance != nil {
-		return t.Instance.String()
+		return fmt.Sprintf("%s", t.Instance)
 	}
 	return fmt.Sprintf("typeVar%d", t.Id)
 
@@ -49,3 +49,16 @@ var (
 	String = &TypeOperator{"String"}
 	None   = &TypeOperator{"None"}
 )
+
+// Unify computes type unification of both parameter Types.  It computes the
+// least upper bound of both types, the smallest type that is capable of
+// representing both parameters.
+func Unify(a, b Type) Type {
+	if a1, ok := a.(*TypeVariable); ok {
+		if a != b {
+			a1.Instance = &b
+			return b
+		}
+	}
+	return None
+}
