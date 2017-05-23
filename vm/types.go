@@ -6,7 +6,8 @@ package vm
 import "fmt"
 
 type Type interface {
-	isType()
+	Root() Type
+	String() string
 }
 
 var nextVariableId int
@@ -16,17 +17,25 @@ type TypeVariable struct {
 	Instance *Type
 }
 
-func (*TypeVariable) isType() {}
-
 func NewTypeVariable() Type {
 	id := nextVariableId
 	nextVariableId += 1
 	return &TypeVariable{Id: id}
 }
 
+func (t *TypeVariable) Root() Type {
+	if t.Instance == nil {
+		return t
+	} else {
+		r := (*t.Instance).Root()
+		t.Instance = &r
+		return r
+	}
+}
+
 func (t *TypeVariable) String() string {
 	if t.Instance != nil {
-		return fmt.Sprintf("%s", t.Instance)
+		return (*t.Instance).String()
 	}
 	return fmt.Sprintf("typeVar%d", t.Id)
 
@@ -36,7 +45,9 @@ type TypeOperator struct {
 	Name string
 }
 
-func (*TypeOperator) isType() {}
+func (t *TypeOperator) Root() Type {
+	return t
+}
 
 func (t *TypeOperator) String() string {
 	return t.Name
@@ -54,10 +65,27 @@ var (
 // least upper bound of both types, the smallest type that is capable of
 // representing both parameters.
 func Unify(a, b Type) Type {
-	if a1, ok := a.(*TypeVariable); ok {
-		if a != b {
-			a1.Instance = &b
-			return b
+	a1, b1 := a.Root(), b.Root()
+	switch a2 := a1.(type) {
+	case *TypeVariable:
+		switch b2 := b1.(type) {
+		case *TypeVariable:
+			if a2.Id == b2.Id {
+				return a2
+			}
+		case *TypeOperator:
+			a2.Instance = &b1
+			return b1
+		}
+	case *TypeOperator:
+		switch b2 := b1.(type) {
+		case *TypeVariable:
+			return Unify(b, a)
+		case *TypeOperator:
+			if a2.Name != b2.Name {
+				return None
+			}
+			return a2
 		}
 	}
 	return None

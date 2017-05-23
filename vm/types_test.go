@@ -3,14 +3,18 @@
 
 package vm
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/go-test/deep"
+)
 
 var typeUnificationTests = []struct {
 	a, b     Type
 	expected Type
 }{
+	// The unification of None with None is still None.
 	{
-		// The unification of the basic None is still None.
 		None, None,
 		None,
 	},
@@ -31,7 +35,7 @@ var typeUnificationTests = []struct {
 		String, None,
 		None,
 	},
-	// The unification of a type T with itself is itself.
+	// The unification of a type T with itself is T.
 	{
 		String, String,
 		String,
@@ -45,10 +49,10 @@ var typeUnificationTests = []struct {
 		Float,
 	},
 	{
-		&TypeVariable{}, &TypeVariable{},
-		&TypeVariable{},
+		&TypeVariable{Id: 0}, &TypeVariable{Id: 0},
+		&TypeVariable{Id: 0},
 	},
-	// The unification of any known type with a type variable is the known type.
+	// The unification of any type operator with a type variable is the type operator
 	{
 		&TypeVariable{}, None,
 		None,
@@ -113,8 +117,8 @@ var typeUnificationTests = []struct {
 func TestTypeUnification(t *testing.T) {
 	for i, tc := range typeUnificationTests {
 		result := Unify(tc.a, tc.b)
-		if result != tc.expected {
-			t.Errorf("Result type not expected for %d: inputs %+v and %+v: expected: %+v, received %+v", i, tc.a, tc.b, tc.expected, result)
+		if diff := deep.Equal(result, tc.expected); len(diff) > 0 {
+			t.Errorf("Result type not expected for %d: inputs %+v and %+v:\n%s", i, tc.a, tc.b, diff)
 		}
 	}
 }
