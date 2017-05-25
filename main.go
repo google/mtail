@@ -23,6 +23,8 @@ var (
 	oneShot        = flag.Bool("one_shot", false, "Run on logs until EOF and exit.")
 	oneShotMetrics = flag.Bool("one_shot_metrics", false, "Dump metrics to stdout after one shot mode.")
 	compileOnly    = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
+	dumpAst        = flag.Bool("dump_ast", false, "Dump AST of programs after parse.")
+	dumpTypes      = flag.Bool("dump_types", false, "Dump AST with types after typecheck.")
 	dumpBytecode   = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
@@ -60,6 +62,8 @@ func main() {
 		OneShot:              *oneShot,
 		OneShotMetrics:       *oneShotMetrics,
 		CompileOnly:          *compileOnly,
+		DumpAst:              *dumpAst,
+		DumpTypes:            *dumpTypes,
 		DumpBytecode:         *dumpBytecode,
 		SyslogUseCurrentYear: *syslogUseCurrentYear,
 	}

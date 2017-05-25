@@ -13,9 +13,10 @@ import (
 
 // Unparser is for converting program syntax trees back to program text.
 type Unparser struct {
-	pos    int
-	output string
-	line   string
+	pos       int
+	output    string
+	line      string
+	emitTypes bool
 }
 
 func (u *Unparser) indent() {
@@ -43,6 +44,9 @@ func (u *Unparser) newline() {
 }
 
 func (u *Unparser) VisitBefore(n astNode) Visitor {
+	if u.emitTypes {
+		u.emit(fmt.Sprintf("<%s> ", n.Type()))
+	}
 	switch v := n.(type) {
 	case *stmtlistNode:
 		for _, child := range v.children {

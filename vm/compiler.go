@@ -18,6 +18,8 @@ import (
 type Options struct {
 	CompileOnly          bool // Do not start the program after compilation.
 	SyslogUseCurrentYear bool // Use the current year if no year is present in the log file timestamp.
+	EmitAst              bool // Print the AST after parse
+	EmitAstTypes         bool // Print the AST with types after typechecking
 }
 
 // Compile compiles a program from the input into a virtual machine or a list
@@ -30,9 +32,18 @@ func Compile(name string, input io.Reader, o *Options) (*VM, error) {
 	if err != nil {
 		return nil, err
 	}
+	if o.EmitAst {
+		u := Unparser{}
+		u.Unparse(ast)
+	}
 
 	if err := Check(ast); err != nil {
 		return nil, err
+	}
+	if o.EmitAstTypes {
+		u := Unparser{}
+		u.emitTypes = true
+		u.Unparse(ast)
 	}
 
 	obj, err := CodeGen(name, ast)
