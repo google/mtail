@@ -62,10 +62,10 @@ func (t *TypeOperator) String() string {
 
 // Builtin types
 var (
+	None   = &TypeOperator{"None"}
 	Int    = &TypeOperator{"Int"}
 	Float  = &TypeOperator{"Float"}
 	String = &TypeOperator{"String"}
-	None   = &TypeOperator{"None"}
 )
 
 // Unify computes type unification of both parameter Types.  It computes the
