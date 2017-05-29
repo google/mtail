@@ -45,7 +45,7 @@ func (u *Unparser) newline() {
 
 func (u *Unparser) VisitBefore(n astNode) Visitor {
 	if u.emitTypes {
-		u.emit(fmt.Sprintf("<%s> ", n.Type()))
+		u.emit(fmt.Sprintf("<%s>(", n.Type()))
 	}
 	switch v := n.(type) {
 	case *stmtlistNode:
@@ -209,11 +209,14 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}
-
+	if u.emitTypes {
+		u.emit(")")
+	}
 	return nil
 }
 
-func (u *Unparser) VisitAfter(n astNode) {}
+func (u *Unparser) VisitAfter(n astNode) {
+}
 
 // Unparse begins the unparsing of the syntax tree, returning the program text as a single string.
 func (u *Unparser) Unparse(n astNode) string {
