@@ -35,24 +35,26 @@ func main() {
 	if *progs == "" {
 		glog.Exitf("No mtail program directory specified; use -progs")
 	}
-	if *logs == "" && *logFds == "" {
-		glog.Exitf("No logs specified to tail; use -logs or -logfds")
-	}
 	var logPathnames []string
-	for _, pathname := range strings.Split(*logs, ",") {
-		if pathname != "" {
-			logPathnames = append(logPathnames, pathname)
-		}
-	}
 	var logDescriptors []int
-	for _, fdStr := range strings.Split(*logFds, ",") {
-		fdNum, err := strconv.Atoi(fdStr)
-		if err == nil {
-			logDescriptors = append(logDescriptors, fdNum)
+	if !(*dumpBytecode || *dumpAst || *dumpTypes || *compileOnly) {
+		if *logs == "" && *logFds == "" {
+			glog.Exitf("No logs specified to tail; use -logs or -logfds")
 		}
-	}
-	if len(logPathnames) == 0 && len(logDescriptors) == 0 {
-		glog.Exit("No logs to tail.")
+		for _, pathname := range strings.Split(*logs, ",") {
+			if pathname != "" {
+				logPathnames = append(logPathnames, pathname)
+			}
+		}
+		for _, fdStr := range strings.Split(*logFds, ",") {
+			fdNum, err := strconv.Atoi(fdStr)
+			if err == nil {
+				logDescriptors = append(logDescriptors, fdNum)
+			}
+		}
+		if len(logPathnames) == 0 && len(logDescriptors) == 0 {
+			glog.Exit("No logs to tail.")
+		}
 	}
 	o := mtail.Options{
 		Progs:                *progs,
