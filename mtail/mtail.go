@@ -280,6 +280,9 @@ func (m *Mtail) Close() {
 
 // Run starts Mtail in the configuration supplied in Options at creation.
 func (m *Mtail) Run() {
+	if m.o.CompileOnly {
+		return
+	}
 	if m.o.OneShot {
 		m.RunOneShot()
 	} else {
