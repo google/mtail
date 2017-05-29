@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 )
 
@@ -34,7 +35,7 @@ func Compile(name string, input io.Reader, o *Options) (*VM, error) {
 	}
 	if o.EmitAst {
 		u := Unparser{}
-		u.Unparse(ast)
+		glog.Infof("%s AST:\n%s", name, u.Unparse(ast))
 	}
 
 	if err := Check(ast); err != nil {
@@ -43,7 +44,7 @@ func Compile(name string, input io.Reader, o *Options) (*VM, error) {
 	if o.EmitAstTypes {
 		u := Unparser{}
 		u.emitTypes = true
-		u.Unparse(ast)
+		glog.Infof("%s AST with Types:\n%s", name, u.Unparse(ast))
 	}
 
 	obj, err := CodeGen(name, ast)
