@@ -34,18 +34,18 @@ func Compile(name string, input io.Reader, o *Options) (*VM, error) {
 		return nil, err
 	}
 	if o.EmitAst {
-		u := Unparser{}
-		glog.Infof("%s AST:\n%s", name, u.Unparse(ast))
+		s := Sexp{}
+		glog.Infof("%s AST:\n%s", name, s.Dump(ast))
 	}
 
 	if err := Check(ast); err != nil {
 		return nil, err
 	}
-	if o.EmitAstTypes {
-		u := Unparser{}
-		u.emitTypes = true
-		glog.Infof("%s AST with Types:\n%s", name, u.Unparse(ast))
-	}
+	// if o.EmitAstTypes {
+	// 	u := Unparser{}
+	// 	u.emitTypes = true
+	// 	glog.Infof("%s AST with Types:\n%s", name, u.Unparse(ast))
+	// }
 
 	obj, err := CodeGen(name, ast)
 	if err != nil {
