@@ -104,9 +104,6 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("compile failed for %s:\n%s", name, errs)
 	}
-	if l.compileOnly {
-		return nil
-	}
 	if v == nil {
 		return fmt.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
 	}
@@ -117,6 +114,9 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	}
 	if l.dumpBytecode {
 		v.DumpByteCode(name)
+	}
+	if l.compileOnly {
+		return nil
 	}
 	ProgLoads.Add(name, 1)
 	glog.Infof("Loaded program %s", name)
