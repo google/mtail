@@ -117,3 +117,29 @@ func TestCheckValidPrograms(t *testing.T) {
 		}
 	}
 }
+
+var checkerTypeExpressionTests = []struct {
+	expr     node
+	expected Type
+}{
+	{&binaryExprNode{lhs: &intConstNode{position{}, 1},
+		rhs: &intConstNode{position{}, 1},
+		op:  '+'},
+		Base{Int},
+	},
+}
+
+func TestCheckTypeExpressions(t *testing.T) {
+	for i, tc := range checkerTypeExpressionTests {
+		err := Check(tc.expr)
+		if err != nil {
+			t.Errorf("Error should not be nil for test %d: %s", i, err)
+			continue
+		}
+
+		diff := deep.Equal(tc.expected, tc.expr.typ)
+		if len(diff) > 0 {
+			t.Errorf("Unspected return for input %d:\n%s", i, diff)
+		}
+	}
+}
