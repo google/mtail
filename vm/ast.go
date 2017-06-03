@@ -24,7 +24,7 @@ func (n *stmtlistNode) Pos() *position {
 }
 
 func (n *stmtlistNode) Type() Type {
-	return String
+	return None
 }
 
 type exprlistNode struct {
@@ -36,7 +36,7 @@ func (n *exprlistNode) Pos() *position {
 }
 
 func (n *exprlistNode) Type() Type {
-	return String
+	return None
 }
 
 type condNode struct {
@@ -67,7 +67,7 @@ func (n *regexNode) Pos() *position {
 }
 
 func (n *regexNode) Type() Type {
-	return String
+	return None
 }
 
 type idNode struct {
@@ -84,7 +84,7 @@ func (n *idNode) Type() Type {
 	if n.sym != nil {
 		return n.sym.Type
 	}
-	return Int
+	return None // Bugs
 }
 
 type caprefNode struct {

@@ -115,7 +115,7 @@ func (m *Mtail) StartTailing() error {
 
 // InitLoader constructs a new program loader and performs the inital load of program files in the program directory.
 func (m *Mtail) InitLoader() error {
-	o := vm.LoaderOptions{Store: m.store, Lines: m.lines, CompileOnly: m.o.CompileOnly, DumpBytecode: m.o.DumpBytecode, SyslogUseCurrentYear: m.o.SyslogUseCurrentYear, W: m.o.W, FS: m.o.FS}
+	o := vm.LoaderOptions{Store: m.store, Lines: m.lines, CompileOnly: m.o.CompileOnly, DumpAst: m.o.DumpAst, DumpAstTypes: m.o.DumpTypes, DumpBytecode: m.o.DumpBytecode, SyslogUseCurrentYear: m.o.SyslogUseCurrentYear, W: m.o.W, FS: m.o.FS}
 	var err error
 	m.l, err = vm.NewLoader(o)
 	if err != nil {
@@ -144,6 +144,8 @@ type Options struct {
 	OneShot              bool
 	OneShotMetrics       bool
 	CompileOnly          bool
+	DumpAst              bool
+	DumpTypes            bool
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
 
@@ -278,6 +280,9 @@ func (m *Mtail) Close() {
 
 // Run starts Mtail in the configuration supplied in Options at creation.
 func (m *Mtail) Run() {
+	if m.o.CompileOnly {
+		return
+	}
 	if m.o.OneShot {
 		m.RunOneShot()
 	} else {
