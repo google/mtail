@@ -106,7 +106,7 @@ func Unify(a, b Type) Type {
 // string within that capture group.
 func inferCaprefType(c *caprefNode) Type {
 	if c.sym == nil {
-		return Untyped
+		return NewTypeVariable()
 	}
 	group := getCaptureGroup(c.sym.Binding.(*syntax.Regexp), c.sym.Addr)
 	if group == nil {
