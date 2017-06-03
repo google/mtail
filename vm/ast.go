@@ -102,7 +102,7 @@ func (n *caprefNode) Type() Type {
 	if n.sym != nil {
 		return n.sym.Type
 	}
-	return inferCaprefType(n)
+	return None // sym not defined due to undefined capref error
 }
 
 type builtinNode struct {

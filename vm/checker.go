@@ -96,14 +96,14 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			return nil
 		} else {
 			n.re_ast = re
-			// We can reserve the names of the capturing groups as declarations
+			// We reserve the names of the capturing groups as declarations
 			// of those symbols, so that future CAPREF tokens parsed can
 			// retrieve their value.  By recording them in the symbol table, we
 			// can warn the user about unknown capture group references.
 			for i := 1; i <= re.MaxCap(); i++ {
 				sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
 				sym.Binding = n
-				sym.Addr = i - 1
+				sym.Addr = i
 				if alt := c.scope.Insert(sym); alt != nil {
 					c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
 					return nil
@@ -183,5 +183,7 @@ func (c *checker) VisitAfter(node astNode) {
 			n.typ = n.expr.Type()
 		}
 
+	case *caprefNode:
+		n.sym.Type = inferCaprefType(n)
 	}
 }

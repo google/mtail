@@ -70,7 +70,7 @@ var testCodeGenPrograms = []struct {
 			instr{setmatched, true}}},
 	{"inc by and set",
 		"counter foo\ncounter bar\n" +
-			"/(.*)/ {\n" +
+			"/([0-9]+)/ {\n" +
 			"foo += $1\n" +
 			"bar = $1\n" +
 			"}\n",

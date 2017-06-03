@@ -105,10 +105,7 @@ func Unify(a, b Type) Type {
 // inferCaprefType determines a type for capture group references, based on the
 // string within that capture group.
 func inferCaprefType(c *caprefNode) Type {
-	if c.sym == nil {
-		return NewTypeVariable()
-	}
-	group := getCaptureGroup(c.sym.Binding.(*syntax.Regexp), c.sym.Addr)
+	group := getCaptureGroup(c.sym.Binding.(*regexNode).re_ast, c.sym.Addr)
 	if group == nil {
 		return None
 	}
@@ -118,7 +115,9 @@ func inferCaprefType(c *caprefNode) Type {
 	case groupOnlyMatches(group, "+-0123456789.eE"):
 		return Float
 	}
-	return String
+	// TODO: String.  Current behaviour of mtail before types is assume all
+	// matches are usable in arithmetic expressions.
+	return Int
 }
 
 // getCaptureGroup returns the Regexp node of the capturing group numbered cap
