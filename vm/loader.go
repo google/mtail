@@ -66,7 +66,7 @@ func (l *Loader) LoadProgs(programPath string) error {
 			}
 			err = l.LoadProg(path.Join(programPath, fi.Name()))
 			if err != nil {
-				return err
+				glog.Warning(err)
 			}
 		}
 		return nil
@@ -98,14 +98,11 @@ func (l *Loader) LoadProg(programPath string) error {
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
-	o := &Options{CompileOnly: l.compileOnly, SyslogUseCurrentYear: l.syslogUseCurrentYear}
+	o := &Options{CompileOnly: l.compileOnly, EmitAst: l.dumpAst, EmitAstTypes: l.dumpAstTypes, SyslogUseCurrentYear: l.syslogUseCurrentYear}
 	v, errs := Compile(name, input, o)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("compile failed for %s:\n%s", name, errs)
-	}
-	if l.compileOnly {
-		return nil
 	}
 	if v == nil {
 		return fmt.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
@@ -117,6 +114,9 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	}
 	if l.dumpBytecode {
 		v.DumpByteCode(name)
+	}
+	if l.compileOnly {
+		return nil
 	}
 	ProgLoads.Add(name, 1)
 	glog.Infof("Loaded program %s", name)
@@ -149,6 +149,8 @@ type Loader struct {
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
 	compileOnly          bool // Only compile programs and report errors, do not load VMs.
+	dumpAst              bool // print the AST after parse
+	dumpAstTypes         bool // print the AST after type check
 	dumpBytecode         bool // Instructs the loader to dump to stdout the compiled program after compilation.
 	syslogUseCurrentYear bool // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
 }
@@ -162,6 +164,8 @@ type LoaderOptions struct {
 	FS    afero.Fs        // Not required, will use afero.OsFs if zero.
 
 	CompileOnly          bool
+	DumpAst              bool // print the AST after type check
+	DumpAstTypes         bool // Instructs the loader to dump to stdout the compiled program after compilation.
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
 }
@@ -193,6 +197,8 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		watcherDone:          make(chan struct{}),
 		VMsDone:              make(chan struct{}),
 		compileOnly:          o.CompileOnly,
+		dumpAst:              o.DumpAst,
+		dumpAstTypes:         o.DumpAstTypes,
 		dumpBytecode:         o.DumpBytecode,
 		syslogUseCurrentYear: o.SyslogUseCurrentYear}
 

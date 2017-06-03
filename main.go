@@ -23,6 +23,8 @@ var (
 	oneShot        = flag.Bool("one_shot", false, "Run on logs until EOF and exit.")
 	oneShotMetrics = flag.Bool("one_shot_metrics", false, "Dump metrics to stdout after one shot mode.")
 	compileOnly    = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
+	dumpAst        = flag.Bool("dump_ast", false, "Dump AST of programs after parse.")
+	dumpTypes      = flag.Bool("dump_types", false, "Dump AST with types after typecheck.")
 	dumpBytecode   = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
@@ -33,24 +35,26 @@ func main() {
 	if *progs == "" {
 		glog.Exitf("No mtail program directory specified; use -progs")
 	}
-	if *logs == "" && *logFds == "" {
-		glog.Exitf("No logs specified to tail; use -logs or -logfds")
-	}
 	var logPathnames []string
-	for _, pathname := range strings.Split(*logs, ",") {
-		if pathname != "" {
-			logPathnames = append(logPathnames, pathname)
-		}
-	}
 	var logDescriptors []int
-	for _, fdStr := range strings.Split(*logFds, ",") {
-		fdNum, err := strconv.Atoi(fdStr)
-		if err == nil {
-			logDescriptors = append(logDescriptors, fdNum)
+	if !(*dumpBytecode || *dumpAst || *dumpTypes || *compileOnly) {
+		if *logs == "" && *logFds == "" {
+			glog.Exitf("No logs specified to tail; use -logs or -logfds")
 		}
-	}
-	if len(logPathnames) == 0 && len(logDescriptors) == 0 {
-		glog.Exit("No logs to tail.")
+		for _, pathname := range strings.Split(*logs, ",") {
+			if pathname != "" {
+				logPathnames = append(logPathnames, pathname)
+			}
+		}
+		for _, fdStr := range strings.Split(*logFds, ",") {
+			fdNum, err := strconv.Atoi(fdStr)
+			if err == nil {
+				logDescriptors = append(logDescriptors, fdNum)
+			}
+		}
+		if len(logPathnames) == 0 && len(logDescriptors) == 0 {
+			glog.Exit("No logs to tail.")
+		}
 	}
 	o := mtail.Options{
 		Progs:                *progs,
@@ -60,6 +64,8 @@ func main() {
 		OneShot:              *oneShot,
 		OneShotMetrics:       *oneShotMetrics,
 		CompileOnly:          *compileOnly,
+		DumpAst:              *dumpAst,
+		DumpTypes:            *dumpTypes,
 		DumpBytecode:         *dumpBytecode,
 		SyslogUseCurrentYear: *syslogUseCurrentYear,
 	}
@@ -67,5 +73,7 @@ func main() {
 	if err != nil {
 		glog.Fatalf("couldn't start: %s", err)
 	}
-	m.Run()
+	if !*oneShot {
+		m.Run()
+	}
 }

@@ -76,7 +76,7 @@ func (s *Scope) String() string {
 		fmt.Fprintln(&buf)
 		if len(s.Symbols) > 0 {
 			for _, sym := range s.Symbols {
-				fmt.Fprintf(&buf, "\t%s %s\n", sym.Kind, sym.Name)
+				fmt.Fprintf(&buf, "\t%#v %s\n", sym.Kind, sym.Name)
 			}
 		}
 		if s.Parent != nil {

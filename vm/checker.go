@@ -15,8 +15,9 @@ type checker struct {
 	errors ErrorList
 }
 
-// Check performs a semantic check of the AST rooted at node, and returns a boolean
-// indicating OK; if ok is not true, then error is a list of errors found.
+// Check performs a semantic check of the ast node, and returns a list of
+// errors found, or nil if the program is semantically valid.  At the
+// completion of Check, the symbol table and type annotation is also complete.
 func Check(node astNode) error {
 	c := &checker{}
 	Walk(c, node)
@@ -95,9 +96,10 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			return nil
 		} else {
 			n.re_ast = re
-			// We can reserve storage for these capturing groups, storing them in
-			// the current scope, so that future CAPTUREGROUPs can retrieve their
-			// value.  At parse time, we can warn about nonexistent names.
+			// We can reserve the names of the capturing groups as declarations
+			// of those symbols, so that future CAPREF tokens parsed can
+			// retrieve their value.  By recording them in the symbol table, we
+			// can warn the user about unknown capture group references.
 			for i := 1; i <= re.MaxCap(); i++ {
 				sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
 				sym.Binding = n
@@ -136,27 +138,38 @@ func (c *checker) VisitAfter(node astNode) {
 		Tl := n.lhs.Type()
 		Tr := n.rhs.Type()
 		switch n.op {
-		//case DIV, MOD, MUL, MINUS, PLUS, POW:
-		// Numeric
-		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
-		// Tl <= Tr , Tr <= Tl
-		// ⇒ O ⊢ e : lub(Tl, Tr)
-		// case SHL, SHR, AND, OR, XOR, NOT:
-		// 	//  integer
-		// O ⊢ e1 :Int, O ⊢ e2 : Int
-		// ⇒ O ⊢ e : Int
-		// case LT, GT, LE, GE, EQ, NE:
-		// 	// comparable
-		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
-		// Tl <= Tr , Tr <= Tl
-		// ⇒ O ⊢ e : lub(Tl, Tr)
-		// case ASSIGN:
-		// O ⊢ e1 : Tl, O ⊢ e2 : Tr
-		// Tl <= Tr
-		// ⇒ O ⊢ e : Tl
+		case DIV, MOD, MUL, MINUS, PLUS, POW:
+			// Numeric
+			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+			// Tl <= Tr , Tr <= Tl
+			// ⇒ O ⊢ e : lub(Tl, Tr)
+			rType = Unify(Tl, Tr)
+		case SHL, SHR, AND, OR, XOR, NOT:
+			// bitwise
+			// O ⊢ e1 :Int, O ⊢ e2 : Int
+			// ⇒ O ⊢ e : Int
+			if Equals(Tl, Int) && Equals(Tr, Int) {
+
+				rType = Int
+			} else {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, Tl, Tr))
+				return
+			}
+		case LT, GT, LE, GE, EQ, NE:
+			// comparable
+			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+			// Tl <= Tr , Tr <= Tl
+			// ⇒ O ⊢ e : lub(Tl, Tr)
+			rType = Unify(Tl, Tr)
+		case ASSIGN:
+			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+			// Tl <= Tr
+			// ⇒ O ⊢ e : Tl
+			rType = Tl
 		default:
 			if Tl != Tr {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%v) and rhs (%v) for op %d", Tl, Tr, n.op))
+				return
 			}
 			rType = Tl
 		}
