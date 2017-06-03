@@ -66,7 +66,7 @@ func (l *Loader) LoadProgs(programPath string) error {
 			}
 			err = l.LoadProg(path.Join(programPath, fi.Name()))
 			if err != nil {
-				return err
+				glog.Warning(err)
 			}
 		}
 		return nil

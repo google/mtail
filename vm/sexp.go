@@ -214,13 +214,13 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}
-	return s
-}
-
-func (s *Sexp) VisitAfter(n astNode) {
 	s.outdent()
 	s.newline()
 	s.emit(")")
+	return nil
+}
+
+func (s *Sexp) VisitAfter(n astNode) {
 }
 
 // Dump begins the dumping of the syntax tree, returning the s-expression as a single string

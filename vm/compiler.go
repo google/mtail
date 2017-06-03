@@ -52,10 +52,6 @@ func Compile(name string, input io.Reader, o *Options) (*VM, error) {
 		return nil, err
 	}
 
-	if o.CompileOnly {
-		return nil, nil
-	}
-
 	vm := New(name, obj, o.SyslogUseCurrentYear)
 	return vm, nil
 }

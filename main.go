@@ -73,5 +73,7 @@ func main() {
 	if err != nil {
 		glog.Fatalf("couldn't start: %s", err)
 	}
-	m.Run()
+	if !*oneShot {
+		m.Run()
+	}
 }
