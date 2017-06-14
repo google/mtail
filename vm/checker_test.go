@@ -119,13 +119,13 @@ func TestCheckValidPrograms(t *testing.T) {
 }
 
 var checkerTypeExpressionTests = []struct {
-	expr     node
+	expr     astNode
 	expected Type
 }{
 	{&binaryExprNode{lhs: &intConstNode{position{}, 1},
 		rhs: &intConstNode{position{}, 1},
 		op:  '+'},
-		Base{Int},
+		Int,
 	},
 }
 
@@ -137,7 +137,7 @@ func TestCheckTypeExpressions(t *testing.T) {
 			continue
 		}
 
-		diff := deep.Equal(tc.expected, tc.expr.typ)
+		diff := deep.Equal(tc.expected, tc.expr.Type())
 		if len(diff) > 0 {
 			t.Errorf("Unspected return for input %d:\n%s", i, diff)
 		}
