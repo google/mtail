@@ -149,7 +149,6 @@ func (c *checker) VisitAfter(node astNode) {
 			// O ⊢ e1 :Int, O ⊢ e2 : Int
 			// ⇒ O ⊢ e : Int
 			if Equals(Tl, Int) && Equals(Tr, Int) {
-
 				rType = Int
 			} else {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, Tl, Tr))

@@ -70,11 +70,10 @@ var (
 	String = &TypeOperator{"String"}
 )
 
-// Unify computes type unification of both parameter Types.  It computes the
+// Unify performs type unification of both parameter Types.  It returns the
 // least upper bound of both types, the smallest type that is capable of
-// representing both parameters, and stores the root exemplar of that type if
-// either type is currently a free variable.
-// TODO(jaq): separate type unification from computation of least upper bound to use in checker.VisitAfter
+// representing both parameters.  If either type is a type variable, then that
+// variable is unified with the LUB.
 func Unify(a, b Type) Type {
 	a1, b1 := a.Root(), b.Root()
 	switch a2 := a1.(type) {
