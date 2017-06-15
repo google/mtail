@@ -54,6 +54,11 @@ var exampleProgramTests = []struct {
 		"testdata/else.log",
 		"testdata/else.golden",
 	},
+	{
+		"examples/types.mtail",
+		"testdata/types.log",
+		"testdata/types.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
