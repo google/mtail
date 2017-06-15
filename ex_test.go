@@ -64,6 +64,9 @@ func TestExamplePrograms(t *testing.T) {
 		w := watcher.NewFakeWatcher()
 		store := metrics.NewStore()
 		o := mtail.Options{Progs: tc.programfile, W: w, Store: store}
+		o.DumpAst = true
+		o.DumpTypes = true
+		o.DumpBytecode = true
 		mtail, err := mtail.New(o)
 		if err != nil {
 			t.Fatalf("create mtail failed: %s", err)
@@ -88,9 +91,9 @@ func TestExamplePrograms(t *testing.T) {
 		diff := deep.Equal(golden_store, store)
 
 		if diff != nil {
-			t.Errorf("%s: metrics don't match:\n%s", tc.programfile, diff)
+			t.Errorf("%s: metrics don't match:\n%v", tc.programfile, diff)
 
-			t.Errorf("Store metrics: %#v", store.Metrics)
+			t.Errorf("Store metrics: %s", store.Metrics)
 		}
 	}
 }

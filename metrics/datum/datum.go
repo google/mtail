@@ -16,6 +16,16 @@ const (
 	Float
 )
 
+func (t Type) String() string {
+	switch t {
+	case Int:
+		return "Int"
+	case Float:
+		return "Float"
+	}
+	return "?"
+}
+
 // Datum
 type Datum interface {
 	// Type returns the Datum type.

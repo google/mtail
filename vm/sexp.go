@@ -15,6 +15,8 @@ import (
 type Sexp struct {
 	output string // Accumulator for the result
 
+	emitTypes bool
+
 	col  int // column to indent current line to
 	line string
 }
@@ -47,77 +49,50 @@ func (s *Sexp) newline() {
 }
 
 func (s *Sexp) VisitBefore(n astNode) Visitor {
-	s.emit("(")
+	s.emit(fmt.Sprintf("( ;;%T ", n))
+	if s.emitTypes {
+		s.emit(fmt.Sprintf("<%s> ", n.Type()))
+	}
+	s.emit(fmt.Sprintf("@ %s", n.Pos()))
 	s.newline()
 	s.indent()
 	switch v := n.(type) {
-	case *stmtlistNode:
-		for _, child := range v.children {
-			Walk(s, child)
-			s.newline()
-		}
-
-	case *exprlistNode:
-		if len(v.children) > 0 {
-			Walk(s, v.children[0])
-			for _, child := range v.children[1:] {
-				s.emit(", ")
-				Walk(s, child)
-			}
-		}
-
-	case *condNode:
-		if v.cond != nil {
-			Walk(s, v.cond)
-		}
-		s.emit(" {")
-		s.newline()
-		s.indent()
-		Walk(s, v.truthNode)
-		if v.elseNode != nil {
-			s.outdent()
-			s.emit("} else {")
-			s.indent()
-			Walk(s, v.elseNode)
-		}
-		s.outdent()
-		s.emit("}")
 
 	case *regexNode:
-		s.emit("/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/")
+		s.emit("\"" + v.pattern + "\"")
 
 	case *binaryExprNode:
 		switch v.op {
 		case LT:
 			s.emit("<")
 		case GT:
-			s.emit("> ")
+			s.emit(">")
 		case LE:
-			s.emit("<= ")
+			s.emit("<=")
 		case GE:
-			s.emit(">= ")
+			s.emit(">=")
 		case EQ:
-			s.emit("== ")
+			s.emit("==")
 		case NE:
-			s.emit("!= ")
+			s.emit("!=")
 		case SHL:
-			s.emit("<< ")
+			s.emit("<<")
 		case SHR:
-			s.emit(">> ")
+			s.emit(">>")
 		case AND:
-			s.emit("& ")
+			s.emit("&")
 		case OR:
-			s.emit("| ")
+			s.emit("|")
 		case XOR:
-			s.emit("^ ")
+			s.emit("^")
 		case NOT:
-			s.emit("~ ")
+			s.emit("~")
 		case PLUS:
-			s.emit("+ ")
+			s.emit("+")
 		case MINUS:
-			s.emit("- ")
+			s.emit("-")
 		case MUL:
-			s.emit("* ")
+			s.emit("*")
 		case DIV:
 			s.emit("/")
 		case POW:
@@ -127,27 +102,18 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 		case MOD:
 			s.emit("%")
 		}
-		Walk(s, v.lhs)
-		Walk(s, v.rhs)
+		s.newline()
+		s.indent()
 
 	case *idNode:
-		s.emit(v.name)
+		s.emit("\"" + v.name + "\"")
 
 	case *caprefNode:
-		s.emit("$" + v.name)
+		s.emit("\"" + v.name + "\"")
 
 	case *builtinNode:
-		s.emit(v.name + "(")
-		if v.args != nil {
-			Walk(s, v.args)
-		}
-		s.emit(")")
-
-	case *indexedExprNode:
-		Walk(s, v.lhs)
-		s.emit("[")
-		Walk(s, v.index)
-		s.emit("]")
+		s.emit("\"" + v.name + "\"")
+		s.newline()
 
 	case *declNode:
 		switch v.kind {
@@ -168,11 +134,9 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	case *unaryExprNode:
 		switch v.op {
 		case INC:
-			Walk(s, v.expr)
 			s.emit("++")
 		case NOT:
-			s.emit(" ~")
-			Walk(s, v.expr)
+			s.emit("~")
 		}
 
 	case *stringConstNode:
@@ -184,43 +148,29 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	case *floatConstNode:
 		s.emit(strconv.FormatFloat(v.f, 'g', -1, 64))
 
-	case *defNode:
-		s.emit(fmt.Sprintf("def %s {", v.name))
-		s.newline()
-		s.indent()
-		Walk(s, v.block)
-		s.outdent()
-		s.emit("}")
-
-	case *decoNode:
-		s.emit(fmt.Sprintf("@%s {", v.name))
-		s.newline()
-		s.indent()
-		Walk(s, v.block)
-		s.outdent()
-		s.emit("}")
-
 	case *nextNode:
 		s.emit("next")
-
 	case *otherwiseNode:
 		s.emit("otherwise")
-
 	case *delNode:
-		s.emit("del ")
-		Walk(s, v.n)
-		s.newline()
+		s.emit("del")
+
+	case *indexedExprNode, *stmtlistNode, *exprlistNode, *condNode, *defNode, *decoNode: // normal walk
 
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}
-	s.outdent()
-	s.newline()
-	s.emit(")")
-	return nil
+	return s
 }
 
-func (s *Sexp) VisitAfter(n astNode) {
+func (s *Sexp) VisitAfter(node astNode) {
+	switch node.(type) {
+	case *binaryExprNode:
+		s.outdent()
+	}
+	s.outdent()
+	s.emit(")")
+	s.newline()
 }
 
 // Dump begins the dumping of the syntax tree, returning the s-expression as a single string
