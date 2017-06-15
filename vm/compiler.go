@@ -41,11 +41,11 @@ func Compile(name string, input io.Reader, o *Options) (*VM, error) {
 	if err := Check(ast); err != nil {
 		return nil, err
 	}
-	// if o.EmitAstTypes {
-	// 	u := Unparser{}
-	// 	u.emitTypes = true
-	// 	glog.Infof("%s AST with Types:\n%s", name, u.Unparse(ast))
-	// }
+	if o.EmitAstTypes {
+		s := Sexp{}
+		s.emitTypes = true
+		glog.Infof("%s AST with Types:\n%s", name, s.Dump(ast))
+	}
 
 	obj, err := CodeGen(name, ast)
 	if err != nil {
