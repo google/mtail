@@ -75,6 +75,10 @@ type LabelValue struct {
 	Value  datum.Datum
 }
 
+func (lv *LabelValue) String() string {
+	return fmt.Sprintf("LabelValue: %s %s", lv.Labels, lv.Value)
+}
+
 // Metric is an object that describes a metric, with its name, the creator and
 // owner program name, its Kind, a sequence of Keys that may be used to
 // add dimension to the metric, and a list of LabelValues that contain data for
@@ -185,10 +189,6 @@ func (m *Metric) EmitLabelSets(c chan *LabelSet) {
 		c <- ls
 	}
 	close(c)
-}
-
-func (lv *LabelValue) String() string {
-	return fmt.Sprintf("%v", *lv)
 }
 
 func (lv *LabelValue) UnmarshalJSON(b []byte) error {
