@@ -145,7 +145,7 @@ var groupOnlyMatchesTests = []struct {
 		"0123456789",
 		false,
 	},
-	{`(\d+\.d+)`,
+	{`(\d+\.\d+)`,
 		"0123456789.eE+-",
 		true,
 	},
