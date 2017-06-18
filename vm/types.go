@@ -92,10 +92,15 @@ func Unify(a, b Type) Type {
 		case *TypeVariable:
 			return Unify(b, a)
 		case *TypeOperator:
-			if a2.Name != b2.Name {
-				return None
+			if Equals(a2, b2) {
+				return a2
 			}
-			return a2
+			// least upper bound
+			if (Equals(a2, Float) && Equals(b2, Int)) ||
+				(Equals(b2, Float) && Equals(a2, Int)) {
+				return Float
+			}
+			return None
 		}
 	}
 	return None

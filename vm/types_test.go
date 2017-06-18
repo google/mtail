@@ -86,15 +86,15 @@ var typeUnificationTests = []struct {
 		String, &TypeVariable{},
 		String,
 	},
-	// // The unification of Int and Float is Float.
-	// {
-	// 	Int, Float,
-	// 	Float,
-	// },
-	// {
-	// 	Float, Int,
-	// 	Float,
-	// },
+	// The unification of Int and Float is Float.
+	{
+		Int, Float,
+		Float,
+	},
+	{
+		Float, Int,
+		Float,
+	},
 	// // The unification of Int and String is String.
 	// {
 	// 	Int, String,
@@ -144,6 +144,10 @@ var groupOnlyMatchesTests = []struct {
 	{`(\+|-)?\d+(\.\d+)?`,
 		"0123456789",
 		false,
+	},
+	{`(\d+\.d+)`,
+		"0123456789.eE+-",
+		true,
 	},
 	{`(\+|-)?\d+(\.\d+)?`,
 		"0123456789.eE+-",
