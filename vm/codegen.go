@@ -72,7 +72,11 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 				return nil
 			}
 			// Initialize to zero at the zero time.
-			datum.SetInt(d, 0, time.Unix(0, 0))
+			if kind == metrics.Int {
+				datum.SetInt(d, 0, time.Unix(0, 0))
+			} else {
+				datum.SetFloat(d, 0, time.Unix(0, 0))
+			}
 		}
 		m.Hidden = n.hidden
 		(*n.sym).Binding = m
