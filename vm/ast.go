@@ -82,7 +82,7 @@ func (n *idNode) Pos() *position {
 
 func (n *idNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type
+		return n.sym.Type.Root()
 	}
 	return None // Bugs
 }
@@ -100,7 +100,7 @@ func (n *caprefNode) Pos() *position {
 
 func (n *caprefNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type
+		return n.sym.Type.Root()
 	}
 	return None // sym not defined due to undefined capref error
 }
@@ -176,7 +176,7 @@ func (n *declNode) Pos() *position {
 
 func (n *declNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type
+		return n.sym.Type.Root()
 	}
 	return Undef
 }
@@ -230,7 +230,7 @@ func (n *defNode) Pos() *position {
 
 func (n *defNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type
+		return n.sym.Type.Root()
 	}
 	return Int
 }
