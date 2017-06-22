@@ -1,4 +1,4 @@
-counter should_be_int
+gauge should_be_int
 gauge should_be_float
 
 # To make ex_test.go happy

@@ -1,2 +1,2 @@
-counter should_be_int 37 2017-06-15T18:03:14Z
-counter should_be_float 12.8 2017-06-15T18:03:14Z
+gauge should_be_int 37 2017-06-15T18:03:14Z
+gauge should_be_float 12.8 2017-06-15T18:03:14Z
