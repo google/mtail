@@ -116,8 +116,8 @@ func Unify(a, b Type) Type {
 	return None
 }
 
-// inferCaprefType determines a type for capture group references, based on the
-// string within that capture group.
+// inferCaprefType determines a type for a capturing group, based on contents
+// of that capture group.
 func inferCaprefType(re *syntax.Regexp, cap int) Type {
 	group := getCaptureGroup(re, cap)
 	if group == nil {
