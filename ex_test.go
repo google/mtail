@@ -69,8 +69,7 @@ func TestExamplePrograms(t *testing.T) {
 		w := watcher.NewFakeWatcher()
 		store := metrics.NewStore()
 		o := mtail.Options{Progs: tc.programfile, W: w, Store: store}
-		o.DumpAst = true
-		o.DumpTypes = true
+		o.DumpAstTypes = true
 		o.DumpBytecode = true
 		mtail, err := mtail.New(o)
 		if err != nil {

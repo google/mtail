@@ -24,7 +24,7 @@ var (
 	oneShotMetrics = flag.Bool("one_shot_metrics", false, "Dump metrics to stdout after one shot mode.")
 	compileOnly    = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
 	dumpAst        = flag.Bool("dump_ast", false, "Dump AST of programs after parse.")
-	dumpTypes      = flag.Bool("dump_types", false, "Dump AST with types after typecheck.")
+	dumpAstTypes   = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck.")
 	dumpBytecode   = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
@@ -37,7 +37,7 @@ func main() {
 	}
 	var logPathnames []string
 	var logDescriptors []int
-	if !(*dumpBytecode || *dumpAst || *dumpTypes || *compileOnly) {
+	if !(*dumpBytecode || *dumpAst || *dumpAstTypes || *compileOnly) {
 		if *logs == "" && *logFds == "" {
 			glog.Exitf("No logs specified to tail; use -logs or -logfds")
 		}
@@ -65,7 +65,7 @@ func main() {
 		OneShotMetrics:       *oneShotMetrics,
 		CompileOnly:          *compileOnly,
 		DumpAst:              *dumpAst,
-		DumpTypes:            *dumpTypes,
+		DumpAstTypes:         *dumpAstTypes,
 		DumpBytecode:         *dumpBytecode,
 		SyslogUseCurrentYear: *syslogUseCurrentYear,
 	}

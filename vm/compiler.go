@@ -44,7 +44,7 @@ func Compile(name string, input io.Reader, o *Options) (*VM, error) {
 	if o.EmitAstTypes {
 		s := Sexp{}
 		s.emitTypes = true
-		glog.Infof("%s AST with Types:\n%s", name, s.Dump(ast))
+		glog.Infof("%s AST with Type Annotation:\n%s", name, s.Dump(ast))
 	}
 
 	obj, err := CodeGen(name, ast)
