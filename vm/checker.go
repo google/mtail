@@ -60,6 +60,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
 		}
+		n.sym.Type = NewTypeVariable()
 
 	case *idNode:
 		if n.sym == nil {
@@ -106,6 +107,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			// can warn the user about unknown capture group references.
 			for i := 1; i <= re.MaxCap(); i++ {
 				sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
+				sym.Type = inferCaprefType(re, i)
 				sym.Binding = n
 				sym.Addr = i
 				if alt := c.scope.Insert(sym); alt != nil {
@@ -116,6 +118,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			for i, capref := range re.CapNames() {
 				if capref != "" {
 					sym := NewSymbol(capref, CaprefSymbol, n.Pos())
+					sym.Type = inferCaprefType(re, i)
 					sym.Binding = n
 					sym.Addr = i
 					if alt := c.scope.Insert(sym); alt != nil {
@@ -184,11 +187,6 @@ func (c *checker) VisitAfter(node astNode) {
 			n.typ = Int
 		default:
 			n.typ = n.expr.Type()
-		}
-
-	case *caprefNode:
-		if n.sym.Type == None {
-			n.sym.Type = inferCaprefType(n)
 		}
 	}
 }

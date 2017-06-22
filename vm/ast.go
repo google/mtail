@@ -178,7 +178,7 @@ func (n *declNode) Type() Type {
 	if n.sym != nil {
 		return n.sym.Type
 	}
-	return Int
+	return Undef
 }
 
 type stringConstNode struct {
