@@ -361,7 +361,7 @@ func TestCodegen(t *testing.T) {
 		}
 		obj, err := CodeGen(tc.name, ast)
 		if err != nil {
-			t.Errorf("Compile errors for %q:\n%q", tc.name, err)
+			t.Errorf("Compile errors for %q:\n%s", tc.name, err)
 			continue
 		}
 		if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
