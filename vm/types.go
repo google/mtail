@@ -100,6 +100,12 @@ func Unify(a, b Type) Type {
 				(Equals(b2, Float) && Equals(a2, Int)) {
 				return Float
 			}
+			if (Equals(a2, String) && Equals(b2, Int)) ||
+				(Equals(b2, String) && Equals(a2, Int)) ||
+				(Equals(a2, String) && Equals(b2, Float)) ||
+				(Equals(b2, String) && Equals(a2, Float)) {
+				return String
+			}
 			return None
 		}
 	}

@@ -86,7 +86,7 @@ var typeUnificationTests = []struct {
 		String, &TypeVariable{},
 		String,
 	},
-	// The unification of Int and Float is Float.
+	// The lub of Int and Float is Float.
 	{
 		Int, Float,
 		Float,
@@ -95,24 +95,24 @@ var typeUnificationTests = []struct {
 		Float, Int,
 		Float,
 	},
-	// // The unification of Int and String is String.
-	// {
-	// 	Int, String,
-	// 	String,
-	// },
-	// {
-	// 	String, Int,
-	// 	String,
-	// },
-	// // The unification of Float and String is String.
-	// {
-	// 	Float, String,
-	// 	String,
-	// },
-	// {
-	// 	String, Float,
-	// 	String,
-	// },
+	// The lub of Int and String is String.
+	{
+		Int, String,
+		String,
+	},
+	{
+		String, Int,
+		String,
+	},
+	// The lub of Float and String is String.
+	{
+		Float, String,
+		String,
+	},
+	{
+		String, Float,
+		String,
+	},
 }
 
 func TestTypeUnification(t *testing.T) {
