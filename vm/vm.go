@@ -351,10 +351,10 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		// TODO(jaq): the stack should only have the settable, not the offset
+		// TODO(jaq): the stack should only have the settable, not the offset, unfortunately used by test
 		switch n := t.Pop().(type) {
-		case metrics.Settable:
-			//n.Set(value, t.time)
+		case datum.Datum:
+			datum.SetFloat(n, value, t.time)
 		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
@@ -633,7 +633,7 @@ func (v *VM) DumpByteCode(name string) {
 
 	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
 	for n, i := range v.prog {
-		fmt.Fprintf(w, "\t%d\t%s\t%v\n", n, opNames[i.op], i.opnd)
+		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, opNames[i.op], i.opnd)
 	}
 	w.Flush()
 }
