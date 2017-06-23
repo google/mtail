@@ -96,8 +96,8 @@ func TestExamplePrograms(t *testing.T) {
 
 		if diff != nil {
 			t.Errorf("%s: metrics don't match:\n%v", tc.programfile, diff)
-			t.Errorf("Golden metrics: %#v", golden_store.Metrics)
-			t.Errorf("Program metrics: %#v", store.Metrics)
+			t.Errorf(" Golden metrics: %s", golden_store.Metrics)
+			t.Errorf("Program metrics: %s", store.Metrics)
 		}
 	}
 }
