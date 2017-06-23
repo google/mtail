@@ -56,11 +56,10 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		} else {
 			name = n.name
 		}
-		kind, ok := kindMap[n.Type()]
-		if !ok {
-			c.errorf(n.Pos(), "Unable to determine type for metric %q", name)
-			return nil
-		}
+		// If the Type is not in the map, then default to metrics.Int.  This is
+		// a hack for metrics that no type can be inferred, retaining
+		// historical behaviour.
+		kind := kindMap[n.Type()]
 		m := metrics.NewMetric(name, c.name, n.kind, kind, n.keys...)
 		// Scalar counters can be initialized to zero.  Dimensioned counters we
 		// don't know the values of the labels yet.  Gauges and Timers we can't
