@@ -6,9 +6,9 @@
 package vm
 
 import (
+	"bytes"
 	"fmt"
 	"math"
-	"os"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -611,29 +611,31 @@ func New(name string, obj *object, syslogUseCurrentYear bool) *VM {
 	}
 }
 
-// DumpByteCode emits the program disassembly and data to standard out.
-func (v *VM) DumpByteCode(name string) {
-	fmt.Printf("Prog %s\n", name)
-	fmt.Println("Metrics")
+// DumpByteCode emits the program disassembly and program objects to string.
+func (v *VM) DumpByteCode(name string) string {
+	b := new(bytes.Buffer)
+	fmt.Fprintf(b, "Prog %s\n", name)
+	fmt.Fprintln(b, "Metrics")
 	for i, m := range v.m {
 		if m.Program == v.name {
-			fmt.Printf(" %8d %s\n", i, m)
+			fmt.Fprintf(b, " %8d %s\n", i, m)
 		}
 	}
-	fmt.Println("REs")
+	fmt.Fprintln(b, "REs")
 	for i, re := range v.re {
-		fmt.Printf(" %8d /%s/\n", i, re)
+		fmt.Fprintf(b, " %8d /%s/\n", i, re)
 	}
-	fmt.Println("Strings")
+	fmt.Fprintln(b, "Strings")
 	for i, str := range v.str {
-		fmt.Printf(" %8d \"%s\"\n", i, str)
+		fmt.Fprintf(b, " %8d \"%s\"\n", i, str)
 	}
 	w := new(tabwriter.Writer)
-	w.Init(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight)
+	w.Init(b, 0, 0, 1, ' ', tabwriter.AlignRight)
 
 	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
 	for n, i := range v.prog {
 		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, opNames[i.op], i.opnd)
 	}
 	w.Flush()
+	return b.String()
 }
