@@ -85,9 +85,13 @@ func Unify(a, b Type) Type {
 		case *TypeVariable:
 			if a2.Id == b2.Id {
 				return a2
+			} else {
+				glog.Infof("Making %q type %q", a2, b1)
+				a2.Instance = &b1
+				return a2
 			}
 		case *TypeOperator:
-			glog.Infof("Making a2 (%q) of type %q", a2, b1)
+			glog.Infof("Making %q type %q", a2, b1)
 			a2.Instance = &b1
 			return b1
 		}
