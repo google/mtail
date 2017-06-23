@@ -124,8 +124,18 @@ var checkerTypeExpressionTests = []struct {
 }{
 	{&binaryExprNode{lhs: &intConstNode{position{}, 1},
 		rhs: &intConstNode{position{}, 1},
-		op:  '+'},
+		op:  PLUS},
 		Int,
+	},
+	{&binaryExprNode{lhs: &intConstNode{position{}, 1},
+		rhs: &floatConstNode{position{}, 1.0},
+		op:  PLUS},
+		Float,
+	},
+	{&binaryExprNode{lhs: &idNode{pos: position{}, sym: &Symbol{Name: "i", Kind: VarSymbol, Type: NewTypeVariable()}},
+		rhs: &caprefNode{pos: position{}, sym: &Symbol{Kind: CaprefSymbol, Type: Float}},
+		op:  ASSIGN},
+		Float,
 	},
 }
 

@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"regexp/syntax"
 	"strings"
+
+	"github.com/golang/glog"
 )
 
 type Type interface {
@@ -64,6 +66,7 @@ func (t *TypeOperator) String() string {
 
 // Builtin types
 var (
+	Undef  = &TypeOperator{"Undef"}
 	None   = &TypeOperator{"None"}
 	Int    = &TypeOperator{"Int"}
 	Float  = &TypeOperator{"Float"}
@@ -82,8 +85,13 @@ func Unify(a, b Type) Type {
 		case *TypeVariable:
 			if a2.Id == b2.Id {
 				return a2
+			} else {
+				glog.Infof("Making %q type %q", a2, b1)
+				a2.Instance = &b1
+				return a2
 			}
 		case *TypeOperator:
+			glog.Infof("Making %q type %q", a2, b1)
 			a2.Instance = &b1
 			return b1
 		}
@@ -92,19 +100,30 @@ func Unify(a, b Type) Type {
 		case *TypeVariable:
 			return Unify(b, a)
 		case *TypeOperator:
-			if a2.Name != b2.Name {
-				return None
+			if Equals(a2, b2) {
+				return a2
 			}
-			return a2
+			// least upper bound
+			if (Equals(a2, Float) && Equals(b2, Int)) ||
+				(Equals(b2, Float) && Equals(a2, Int)) {
+				return Float
+			}
+			if (Equals(a2, String) && Equals(b2, Int)) ||
+				(Equals(b2, String) && Equals(a2, Int)) ||
+				(Equals(a2, String) && Equals(b2, Float)) ||
+				(Equals(b2, String) && Equals(a2, Float)) {
+				return String
+			}
+			return None
 		}
 	}
 	return None
 }
 
-// inferCaprefType determines a type for capture group references, based on the
-// string within that capture group.
-func inferCaprefType(c *caprefNode) Type {
-	group := getCaptureGroup(c.sym.Binding.(*regexNode).re_ast, c.sym.Addr)
+// inferCaprefType determines a type for a capturing group, based on contents
+// of that capture group.
+func inferCaprefType(re *syntax.Regexp, cap int) Type {
+	group := getCaptureGroup(re, cap)
 	if group == nil {
 		return None
 	}

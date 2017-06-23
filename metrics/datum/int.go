@@ -36,7 +36,7 @@ func (d *intDatum) Get() int64 {
 }
 
 func (d *intDatum) String() string {
-	return fmt.Sprintf("%v@%d", atomic.LoadInt64(&d.value), atomic.LoadInt64(&d.time))
+	return fmt.Sprintf("%d@%d", atomic.LoadInt64(&d.value), atomic.LoadInt64(&d.time))
 }
 
 func (d *intDatum) Value() string {

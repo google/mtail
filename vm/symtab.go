@@ -31,7 +31,7 @@ type Symbol struct {
 
 // NewSymbol creates a record of a given symbol kind, named name, found at loc
 func NewSymbol(name string, kind SymbolKind, pos *position) (sym *Symbol) {
-	return &Symbol{name, kind, Int, pos, nil, 0}
+	return &Symbol{name, kind, Undef, pos, nil, 0}
 }
 
 // Scope maintains a record of the identifiers declared in the current program

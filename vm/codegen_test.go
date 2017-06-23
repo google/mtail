@@ -258,16 +258,20 @@ var testCodeGenPrograms = []struct {
 			instr{push, 20},
 			instr{shr, nil}}},
 	{"pow", `
-counter a
-counter b
-a ** b
+/(\d+) (\d+)/ {
+$1 ** $2
+}
 `,
 		[]instr{
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{mload, 1},
-			instr{dload, 0},
-			instr{ipow, nil}}},
+			instr{match, 0},
+			instr{jnm, 7},
+			instr{setmatched, false},
+			instr{push, 0},
+			instr{capref, 0},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{ipow, nil},
+			instr{setmatched, true}}},
 	{"indexed expr", `
 counter a by b
 a["string"]++
@@ -361,7 +365,10 @@ func TestCodegen(t *testing.T) {
 		}
 		obj, err := CodeGen(tc.name, ast)
 		if err != nil {
-			t.Errorf("Compile errors for %q:\n%q", tc.name, err)
+			t.Errorf("Compile errors for %q:\n%s", tc.name, err)
+			s := Sexp{}
+			s.emitTypes = true
+			t.Logf("AST:\n%s", s.Dump(ast))
 			continue
 		}
 		if diff := deep.Equal(tc.prog, obj.prog); diff != nil {

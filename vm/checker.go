@@ -39,17 +39,19 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		c.scope = n.s
 
 	case *caprefNode:
-		if sym := c.scope.Lookup(n.name); sym == nil || sym.Kind != CaprefSymbol {
-			msg := fmt.Sprintf("Capture group `$%s' was not defined by a regular expression visible to this scope.", n.name)
-			if n.isNamed {
-				msg = fmt.Sprintf("%s\n\tTry using `(?P<%s>...)' to name the capture group.", msg, n.name)
+		if n.sym == nil {
+			if sym := c.scope.Lookup(n.name); sym == nil || sym.Kind != CaprefSymbol {
+				msg := fmt.Sprintf("Capture group `$%s' was not defined by a regular expression visible to this scope.", n.name)
+				if n.isNamed {
+					msg = fmt.Sprintf("%s\n\tTry using `(?P<%s>...)' to name the capture group.", msg, n.name)
+				} else {
+					msg = fmt.Sprintf("%s\n\tCheck that there are at least %s pairs of parentheses.", msg, n.name)
+				}
+				c.errors.Add(n.Pos(), msg)
+				return nil
 			} else {
-				msg = fmt.Sprintf("%s\n\tCheck that there are at least %s pairs of parentheses.", msg, n.name)
+				n.sym = sym
 			}
-			c.errors.Add(n.Pos(), msg)
-			return nil
-		} else {
-			n.sym = sym
 		}
 
 	case *declNode:
@@ -58,13 +60,16 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
 		}
+		n.sym.Type = NewTypeVariable()
 
 	case *idNode:
-		if sym := c.scope.Lookup(n.name); sym != nil && sym.Kind == VarSymbol {
-			n.sym = sym
-		} else {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\tTry adding `counter %s' to the top of the program.", n.name, n.name))
-			return nil
+		if n.sym == nil {
+			if sym := c.scope.Lookup(n.name); sym != nil && sym.Kind == VarSymbol {
+				n.sym = sym
+			} else {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\tTry adding `counter %s' to the top of the program.", n.name, n.name))
+				return nil
+			}
 		}
 
 	case *defNode:
@@ -102,6 +107,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			// can warn the user about unknown capture group references.
 			for i := 1; i <= re.MaxCap(); i++ {
 				sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
+				sym.Type = inferCaprefType(re, i)
 				sym.Binding = n
 				sym.Addr = i
 				if alt := c.scope.Insert(sym); alt != nil {
@@ -112,6 +118,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			for i, capref := range re.CapNames() {
 				if capref != "" {
 					sym := NewSymbol(capref, CaprefSymbol, n.Pos())
+					sym.Type = inferCaprefType(re, i)
 					sym.Binding = n
 					sym.Addr = i
 					if alt := c.scope.Insert(sym); alt != nil {
@@ -164,10 +171,10 @@ func (c *checker) VisitAfter(node astNode) {
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr
 			// ⇒ O ⊢ e : Tl
-			rType = Tl
+			rType = Unify(Tl, Tr)
 		default:
 			if Tl != Tr {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%v) and rhs (%v) for op %d", Tl, Tr, n.op))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%v) and rhs (%v) for op %q", Tl, Tr, n.op))
 				return
 			}
 			rType = Tl
@@ -181,8 +188,5 @@ func (c *checker) VisitAfter(node astNode) {
 		default:
 			n.typ = n.expr.Type()
 		}
-
-	case *caprefNode:
-		n.sym.Type = inferCaprefType(n)
 	}
 }
