@@ -95,6 +95,18 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 			}
 		} else {
 			m = metrics.NewMetric(match[2], prog, kind, typ, keys...)
+			if kind == metrics.Counter && len(keys) == 0 {
+				d, err := m.GetDatum()
+				if err != nil {
+					glog.Fatal(err)
+				}
+				// Initialize to zero at the zero time.
+				if typ == metrics.Int {
+					datum.SetInt(d, 0, time.Unix(0, 0))
+				} else {
+					datum.SetFloat(d, 0, time.Unix(0, 0))
+				}
+			}
 			glog.V(2).Infof("making a new %v\n", m)
 			store.Add(m)
 		}
@@ -114,20 +126,6 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 				glog.V(2).Infof("setting %v with vals %v to %v at %v\n", d, vals, fval, timestamp)
 				datum.SetFloat(d, fval, timestamp)
 			}
-		} else {
-			if kind == metrics.Counter && len(keys) == 0 {
-				d, err := m.GetDatum()
-				if err != nil {
-					glog.Fatal(err)
-				}
-				// Initialize to zero at the zero time.
-				if typ == metrics.Int {
-					datum.SetInt(d, 0, time.Unix(0, 0))
-				} else {
-					datum.SetFloat(d, 0, time.Unix(0, 0))
-				}
-			}
-			glog.V(2).Infof("making a new %v\n", m)
 		}
 		glog.V(2).Infof("Metric is now %s", m)
 	}
