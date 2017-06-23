@@ -309,10 +309,10 @@ func (v *VM) execute(t *thread, i instr) {
 				v.errorf("%s", err)
 			}
 		}
-		// TODO(jaq): the stack should only have the incrementable, not the offset
+		// TODO(jaq): the stack should only have the datum, not the offset
 		switch n := t.Pop().(type) {
-		case metrics.Incrementable:
-			n.IncBy(delta, t.time)
+		case datum.Datum:
+			datum.IncIntBy(n, delta, t.time)
 		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
@@ -330,10 +330,10 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		// TODO(jaq): the stack should only have the settable, not the offset
+		// TODO(jaq): the stack should only have the datum, not the offset
 		switch n := t.Pop().(type) {
-		case metrics.Settable:
-			n.Set(value, t.time)
+		case datum.Datum:
+			datum.SetInt(n, value, t.time)
 		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
@@ -351,7 +351,7 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		// TODO(jaq): the stack should only have the settable, not the offset, unfortunately used by test
+		// TODO(jaq): the stack should only have the datum, not the offset, unfortunately used by test
 		switch n := t.Pop().(type) {
 		case datum.Datum:
 			datum.SetFloat(n, value, t.time)

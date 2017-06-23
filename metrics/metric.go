@@ -56,18 +56,6 @@ func (m Kind) String() string {
 	return "Unknown"
 }
 
-// Incrementable describes an interface for Counter Kinds, that must be
-// nondecreasing.
-type Incrementable interface {
-	IncBy(delta int64, ts time.Time)
-}
-
-// Settable describes an interface for Gauge Kinds, that can be set to
-// any value discontinuously from its previous.
-type Settable interface {
-	Set(value int64, ts time.Time)
-}
-
 // LabelValue is an object that names a Datum value with a list of label
 // strings.
 type LabelValue struct {
