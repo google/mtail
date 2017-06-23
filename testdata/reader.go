@@ -41,7 +41,8 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 		if len(match) == 0 {
 			continue
 		}
-		var keys, vals []string
+		keys := make([]string, 0)
+		vals := make([]string, 0)
 		if match[3] != "" {
 			for _, pair := range strings.Split(match[3], ",") {
 				glog.V(2).Infof("pair: %s\n", pair)
