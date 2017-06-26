@@ -82,9 +82,9 @@ counter num_peerstats by peer
   # Unix epoch in MJD is 40587.
   settime(($days - 40587) * 86400 + $seconds)
 
-  #peer_offset[$peer] = $offset
-  #peer_delay[$peer] = $delay
-  #peer_dispersion[$peer] = $dispersion
+  peer_offset[$peer] = $offset
+  peer_delay[$peer] = $delay
+  peer_dispersion[$peer] = $dispersion
   # http://www.cis.udel.edu/~mills/ntp/html/decode.html#peer
   # bits 0-4
   peer_status[$peer] = (strtol($status, 16) >> (16 - 5)) & ((2 ** 5) - 1)
