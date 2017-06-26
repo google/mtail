@@ -350,6 +350,37 @@ del a["string"]
 			instr{mload, 0},
 			instr{del, 1}},
 	},
+	{"types", `
+gauge i
+gauge f
+/(\d+)/ {
+ i = $1
+}
+/(\d+\.\d+)/ {
+ f = $1
+}
+`,
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 9},
+			instr{setmatched, false},
+			instr{mload, 0},
+			instr{dload, 0},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{iset, nil},
+			instr{setmatched, true},
+			instr{match, 0},
+			instr{jnm, 18},
+			instr{setmatched, false},
+			instr{mload, 1},
+			instr{dload, 0},
+			instr{push, 1},
+			instr{capref, 1},
+			instr{fset, nil},
+			instr{setmatched, true},
+		},
+	},
 }
 
 func TestCodegen(t *testing.T) {
@@ -373,6 +404,7 @@ func TestCodegen(t *testing.T) {
 		}
 		if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
 			t.Errorf("%s: VM prog doesn't match.\n%s", tc.name, diff)
+			t.Logf("Expected:\n%s\nReceived:\n%s", tc.prog, obj.prog)
 		}
 	}
 }
