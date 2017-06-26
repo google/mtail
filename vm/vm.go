@@ -182,14 +182,6 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof("Dumping vm state")
 	glog.Infof("Name: %s", v.name)
 	glog.Infof("Input: %q", v.input)
-	glog.Infof("Regexes:")
-	for i, re := range v.re {
-		glog.Infof(" %4d %v", i, re)
-	}
-	glog.Infof("Strings:")
-	for i, s := range v.str {
-		glog.Infof(" %4d %q", i, s)
-	}
 	glog.Infof("Thread:")
 	glog.Infof(" PC %v", v.t.pc-1)
 	glog.Infof(" Match %v", v.t.match)
@@ -197,16 +189,7 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof(" Matches %v", v.t.matches)
 	glog.Infof(" Timestamp %v", v.t.time)
 	glog.Infof(" Stack %v", v.t.stack)
-	glog.Infof("Program:")
-	var pc rune
-	for i, instr := range v.prog {
-		if i == v.t.pc-1 {
-			pc = '*'
-		} else {
-			pc = ' '
-		}
-		glog.Infof(" %c %4d %12s %v", pc, i, opNames[instr.op], instr.opnd)
-	}
+	glog.Infof(v.DumpByteCode(v.name))
 	v.terminate = true
 }
 
@@ -615,14 +598,14 @@ func New(name string, obj *object, syslogUseCurrentYear bool) *VM {
 // DumpByteCode emits the program disassembly and program objects to string.
 func (v *VM) DumpByteCode(name string) string {
 	b := new(bytes.Buffer)
-	fmt.Fprintf(b, "Prog %s\n", name)
+	fmt.Fprintf(b, "Prog: %s\n", name)
 	fmt.Fprintln(b, "Metrics")
 	for i, m := range v.m {
 		if m.Program == v.name {
 			fmt.Fprintf(b, " %8d %s\n", i, m)
 		}
 	}
-	fmt.Fprintln(b, "REs")
+	fmt.Fprintln(b, "Regexps")
 	for i, re := range v.re {
 		fmt.Fprintf(b, " %8d /%s/\n", i, re)
 	}
