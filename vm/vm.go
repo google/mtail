@@ -177,7 +177,7 @@ func (t *thread) Pop() (value interface{}) {
 
 // Log a runtime error and terminate the program
 func (v *VM) errorf(format string, args ...interface{}) {
-	glog.Infof("Runtime error: "+format+"\n", args...)
+	glog.Infof(v.name+": Runtime error: "+format+"\n", args...)
 	glog.Infof("VM stack:\n%s", debug.Stack())
 	glog.Infof("Dumping vm state")
 	glog.Infof("Name: %s", v.name)
