@@ -151,6 +151,39 @@ Numeric capture groups address subexpressions in the match result as you might e
 
 Named capture groups can be referred to by their name as indicated in the regular expression using the `?P<name>` notation, as popularised by the Python regular expression library.
 
+## Numerical capture groups and Metric type information
+
+By limiting the pattern of a capturing group to only numeric characters, the programmer can hint to mtail about the type of an expression.  For example, in the regular expression
+
+`/(\d+)/`
+
+the first capture group can only match digits, and so the compiler will infer that this is an integer match.
+
+`/(\d+\.\d+)/`
+
+looks like it matches floating point numbers, and so the compiler will infer that this is of type float.
+
+The compiler performs type inference on the expressions that use the capture groups, and the metrics they are ultimately assigned to, and will assign a type (either integer or floating point) to the metrics exported.
+
+Thus in a program like:
+
+```
+gauge i
+gauge f
+
+/(\d+)/ {
+  i = $1
+}
+
+/(\d+\.\d+)/ {
+  i = $1
+}
+```
+
+the metric `i` will be of type Int and the metric `f` will be of type Float.
+
+
+
 ## Timestamps
 
 It is also useful to timestamp a metric with the time the application thought an event occurred.  Logs typically prefix the log line with a timestamp string, which can be extracted and then parsed into a timestamp internally, with the `strptime` builtin function.
