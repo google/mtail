@@ -113,7 +113,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		}
 	}
 	if l.dumpBytecode {
-		v.DumpByteCode(name)
+		glog.Info("Dumping program objects and bytecode\n", v.DumpByteCode(name))
 	}
 	if l.compileOnly {
 		return nil

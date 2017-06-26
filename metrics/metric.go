@@ -56,23 +56,15 @@ func (m Kind) String() string {
 	return "Unknown"
 }
 
-// Incrementable describes an interface for Counter Kinds, that must be
-// nondecreasing.
-type Incrementable interface {
-	IncBy(delta int64, ts time.Time)
-}
-
-// Settable describes an interface for Gauge Kinds, that can be set to
-// any value discontinuously from its previous.
-type Settable interface {
-	Set(value int64, ts time.Time)
-}
-
 // LabelValue is an object that names a Datum value with a list of label
 // strings.
 type LabelValue struct {
 	Labels []string `json:",omitempty"`
 	Value  datum.Datum
+}
+
+func (lv *LabelValue) String() string {
+	return fmt.Sprintf("LabelValue: %s %s", lv.Labels, lv.Value)
 }
 
 // Metric is an object that describes a metric, with its name, the creator and
@@ -185,10 +177,6 @@ func (m *Metric) EmitLabelSets(c chan *LabelSet) {
 		c <- ls
 	}
 	close(c)
-}
-
-func (lv *LabelValue) String() string {
-	return fmt.Sprintf("%v", *lv)
 }
 
 func (lv *LabelValue) UnmarshalJSON(b []byte) error {

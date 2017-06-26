@@ -258,16 +258,20 @@ var testCodeGenPrograms = []struct {
 			instr{push, 20},
 			instr{shr, nil}}},
 	{"pow", `
-counter a
-counter b
-a ** b
+/(\d+) (\d+)/ {
+$1 ** $2
+}
 `,
 		[]instr{
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{mload, 1},
-			instr{dload, 0},
-			instr{ipow, nil}}},
+			instr{match, 0},
+			instr{jnm, 7},
+			instr{setmatched, false},
+			instr{push, 0},
+			instr{capref, 0},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{ipow, nil},
+			instr{setmatched, true}}},
 	{"indexed expr", `
 counter a by b
 a["string"]++
@@ -346,6 +350,37 @@ del a["string"]
 			instr{mload, 0},
 			instr{del, 1}},
 	},
+	{"types", `
+gauge i
+gauge f
+/(\d+)/ {
+ i = $1
+}
+/(\d+\.\d+)/ {
+ f = $1
+}
+`,
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 9},
+			instr{setmatched, false},
+			instr{mload, 0},
+			instr{dload, 0},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{iset, nil},
+			instr{setmatched, true},
+			instr{match, 0},
+			instr{jnm, 18},
+			instr{setmatched, false},
+			instr{mload, 1},
+			instr{dload, 0},
+			instr{push, 1},
+			instr{capref, 1},
+			instr{fset, nil},
+			instr{setmatched, true},
+		},
+	},
 }
 
 func TestCodegen(t *testing.T) {
@@ -361,11 +396,15 @@ func TestCodegen(t *testing.T) {
 		}
 		obj, err := CodeGen(tc.name, ast)
 		if err != nil {
-			t.Errorf("Compile errors for %q:\n%q", tc.name, err)
+			t.Errorf("Compile errors for %q:\n%s", tc.name, err)
+			s := Sexp{}
+			s.emitTypes = true
+			t.Logf("AST:\n%s", s.Dump(ast))
 			continue
 		}
 		if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
 			t.Errorf("%s: VM prog doesn't match.\n%s", tc.name, diff)
+			t.Logf("Expected:\n%s\nReceived:\n%s", tc.prog, obj.prog)
 		}
 	}
 }

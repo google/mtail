@@ -6,9 +6,9 @@
 package vm
 
 import (
+	"bytes"
 	"fmt"
 	"math"
-	"os"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -127,7 +127,7 @@ type instr struct {
 
 // debug print for instructions
 func (i instr) String() string {
-	return fmt.Sprintf("{%s %d}", opNames[i.op], i.opnd)
+	return fmt.Sprintf("{%s %v}", opNames[i.op], i.opnd)
 }
 
 type thread struct {
@@ -309,10 +309,10 @@ func (v *VM) execute(t *thread, i instr) {
 				v.errorf("%s", err)
 			}
 		}
-		// TODO(jaq): the stack should only have the incrementable, not the offset
+		// TODO(jaq): the stack should only have the datum, not the offset
 		switch n := t.Pop().(type) {
-		case metrics.Incrementable:
-			n.IncBy(delta, t.time)
+		case datum.Datum:
+			datum.IncIntBy(n, delta, t.time)
 		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
@@ -330,10 +330,10 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		// TODO(jaq): the stack should only have the settable, not the offset
+		// TODO(jaq): the stack should only have the datum, not the offset
 		switch n := t.Pop().(type) {
-		case metrics.Settable:
-			n.Set(value, t.time)
+		case datum.Datum:
+			datum.SetInt(n, value, t.time)
 		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
@@ -351,10 +351,10 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		// TODO(jaq): the stack should only have the settable, not the offset
+		// TODO(jaq): the stack should only have the datum, not the offset, unfortunately used by test
 		switch n := t.Pop().(type) {
-		case metrics.Settable:
-			//n.Set(value, t.time)
+		case datum.Datum:
+			datum.SetFloat(n, value, t.time)
 		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
@@ -611,29 +611,31 @@ func New(name string, obj *object, syslogUseCurrentYear bool) *VM {
 	}
 }
 
-// DumpByteCode emits the program disassembly and data to standard out.
-func (v *VM) DumpByteCode(name string) {
-	fmt.Printf("Prog %s\n", name)
-	fmt.Println("Metrics")
+// DumpByteCode emits the program disassembly and program objects to string.
+func (v *VM) DumpByteCode(name string) string {
+	b := new(bytes.Buffer)
+	fmt.Fprintf(b, "Prog %s\n", name)
+	fmt.Fprintln(b, "Metrics")
 	for i, m := range v.m {
 		if m.Program == v.name {
-			fmt.Printf(" %8d %s\n", i, m)
+			fmt.Fprintf(b, " %8d %s\n", i, m)
 		}
 	}
-	fmt.Println("REs")
+	fmt.Fprintln(b, "REs")
 	for i, re := range v.re {
-		fmt.Printf(" %8d /%s/\n", i, re)
+		fmt.Fprintf(b, " %8d /%s/\n", i, re)
 	}
-	fmt.Println("Strings")
+	fmt.Fprintln(b, "Strings")
 	for i, str := range v.str {
-		fmt.Printf(" %8d \"%s\"\n", i, str)
+		fmt.Fprintf(b, " %8d \"%s\"\n", i, str)
 	}
 	w := new(tabwriter.Writer)
-	w.Init(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight)
+	w.Init(b, 0, 0, 1, ' ', tabwriter.AlignRight)
 
 	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
 	for n, i := range v.prog {
-		fmt.Fprintf(w, "\t%d\t%s\t%v\n", n, opNames[i.op], i.opnd)
+		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, opNames[i.op], i.opnd)
 	}
 	w.Flush()
+	return b.String()
 }

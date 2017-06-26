@@ -54,6 +54,11 @@ var exampleProgramTests = []struct {
 	// 	"testdata/else.log",
 	// 	"testdata/else.golden",
 	// },
+	{
+		"examples/types.mtail",
+		"testdata/types.log",
+		"testdata/types.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -64,8 +69,7 @@ func TestExamplePrograms(t *testing.T) {
 		w := watcher.NewFakeWatcher()
 		store := metrics.NewStore()
 		o := mtail.Options{Progs: tc.programfile, W: w, Store: store}
-		o.DumpAst = true
-		o.DumpTypes = true
+		o.DumpAstTypes = true
 		o.DumpBytecode = true
 		mtail, err := mtail.New(o)
 		if err != nil {
@@ -92,8 +96,8 @@ func TestExamplePrograms(t *testing.T) {
 
 		if diff != nil {
 			t.Errorf("%s: metrics don't match:\n%v", tc.programfile, diff)
-
-			t.Errorf("Store metrics: %s", store.Metrics)
+			t.Errorf(" Golden metrics: %s", golden_store.Metrics)
+			t.Errorf("Program metrics: %s", store.Metrics)
 		}
 	}
 }
