@@ -127,7 +127,7 @@ type instr struct {
 
 // debug print for instructions
 func (i instr) String() string {
-	return fmt.Sprintf("{%s %d}", opNames[i.op], i.opnd)
+	return fmt.Sprintf("{%s %v}", opNames[i.op], i.opnd)
 }
 
 type thread struct {
