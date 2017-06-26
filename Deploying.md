@@ -35,7 +35,7 @@ Prometheus can be directed to the /metrics endpoint for Prometheus text-based fo
 
 ### Push based collection
 
-Use the `collectd_socketpath` or `graphite_hostport` flags to enable pushing to a collectd or graphite instance.
+Use the `collectd_socketpath` or `graphite_host_port` flags to enable pushing to a collectd or graphite instance.
 
 Configure collectd on the same machine to use the unixsock plugin, and set `collectd_socketpath` to that unix socket.
 
@@ -43,10 +43,10 @@ Configure collectd on the same machine to use the unixsock plugin, and set `coll
 mtail --progs /etc/mtail --logs /var/log/syslog,/var/log/rsyncd.log --collectd_socketpath=/var/run/collectd-unixsock
 ```
 
-Set `graphite_hostport` to be the host:port of the carbon server.
+Set `graphite_host_port` to be the host:port of the carbon server.
 
 ```
-mtail --progs /etc/mtail --logs /var/log/syslog,/var/log/rsyncd.log --graphite_hostport=localhost:9999
+mtail --progs /etc/mtail --logs /var/log/syslog,/var/log/rsyncd.log --graphite_host_port=localhost:9999
 ```
 
 Likewise, set `statsd_hostport` to the host:port of the statsd server.

@@ -211,6 +211,8 @@ gauge average
 }
 ```
 
+However this doesn't take into aaccount the likely situation that the matches arrive irregularly (the time interval between them is not constant.)  Unfortunately the formula for this requires the exp() function (`e^N`) as described here: http://stackoverflow.com/questions/1023860/exponential-moving-average-sampled-at-varying-times .  I recommend you defer this computation to the collection system
+
 ## Histograms
 
 Histograms are preferred over averages in many monitoring howtos, blogs, talks,
