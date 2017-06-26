@@ -153,6 +153,10 @@ var groupOnlyMatchesTests = []struct {
 		"0123456789.eE+-",
 		true,
 	},
+	{`(?P<offset>-?\d+\.\d+)`,
+		"0123456789.eE+-",
+		true,
+	},
 }
 
 func TestGroupOnlyMatches(t *testing.T) {
