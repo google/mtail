@@ -558,7 +558,6 @@ func (v *VM) execute(t *thread, i instr) {
 
 	default:
 		v.errorf("illegal instruction: %d", i.op)
-		v.terminate = true
 	}
 }
 
@@ -580,6 +579,8 @@ func (v *VM) processLine(input string) {
 		t.pc++
 		v.execute(t, i)
 		if v.terminate {
+			// Terminate only stops this invocation on this line of input; reset the terminate flag.
+			v.terminate = false
 			return
 		}
 	}
