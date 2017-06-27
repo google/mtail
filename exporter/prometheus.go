@@ -54,6 +54,7 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 func metricToPrometheus(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
 	var s []string
 	for k, v := range l.Labels {
+		// Prometheus quotes the value of each label=value pair.
 		s = append(s, fmt.Sprintf("%s=%q", k, v))
 	}
 	sort.Strings(s)
