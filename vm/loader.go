@@ -129,8 +129,14 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		<-handle.done
 	}
 	l.handles[name] = &vmHandle{make(chan string), make(chan struct{})}
-	go v.Run(l.handles[name].lines, l.handles[name].done)
+	nameCode := nameToCode(name)
+	glog.Infof("Program %s has thread ID %x", name, nameCode)
+	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done)
 	return nil
+}
+
+func nameToCode(name string) uint32 {
+	return uint32(uint32(name[0])<<24 | uint32(name[1])<<16 | uint32(name[2])<<8 | uint32(name[3]))
 }
 
 // Loader handles the lifecycle of programs and virtual machines, by watching

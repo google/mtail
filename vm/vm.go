@@ -572,7 +572,7 @@ func (v *VM) processLine(input string) {
 // Run executes the virtual machine on each line of input received.  When the
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
-func (v *VM) Run(lines <-chan string, shutdown chan<- struct{}) {
+func (v *VM) Run(_ uint32, lines <-chan string, shutdown chan<- struct{}) {
 	glog.Infof("Starting program %s", v.name)
 	defer close(shutdown)
 	for line := range lines {
