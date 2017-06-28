@@ -26,16 +26,18 @@ func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-type", "text/plain")
 
-	for _, m := range e.store.Metrics {
-		m.RLock()
-		exportVarzTotal.Add(1)
-		lc := make(chan *metrics.LabelSet)
-		go m.EmitLabelSets(lc)
-		for l := range lc {
-			line := metricToVarz(e.hostname, m, l)
-			fmt.Fprint(w, line)
+	for _, ml := range e.store.Metrics {
+		for _, m := range ml {
+			m.RLock()
+			exportVarzTotal.Add(1)
+			lc := make(chan *metrics.LabelSet)
+			go m.EmitLabelSets(lc)
+			for l := range lc {
+				line := metricToVarz(e.hostname, m, l)
+				fmt.Fprint(w, line)
+			}
+			m.RUnlock()
 		}
-		m.RUnlock()
 	}
 }
 

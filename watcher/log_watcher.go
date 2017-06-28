@@ -6,8 +6,8 @@ package watcher
 import (
 	"expvar"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/golang/glog"
-	"gopkg.in/fsnotify.v1"
 )
 
 var (

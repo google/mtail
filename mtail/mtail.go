@@ -235,7 +235,7 @@ func (m *Mtail) Serve() {
 			glog.Exit(err)
 		}
 	}()
-	m.shutdownHandler()
+	m.WaitForShutdown()
 }
 
 func (m *Mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
@@ -248,8 +248,8 @@ func (m *Mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
 	close(m.webquit)
 }
 
-// shutdownHandler handles external shutdown request events.
-func (m *Mtail) shutdownHandler() {
+// WaitForShutdown handles shutdown requests from the system or the UI.
+func (m *Mtail) WaitForShutdown() {
 	n := make(chan os.Signal)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
 	select {
@@ -266,7 +266,10 @@ func (m *Mtail) Close() {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		if m.t != nil {
-			m.t.Close()
+			err := m.t.Close()
+			if err != nil {
+				glog.Infof("tailer close failed: %s", err)
+			}
 		} else {
 			glog.Info("No tailer, closing lines channel.")
 			close(m.lines)
