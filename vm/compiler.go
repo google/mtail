@@ -2,7 +2,7 @@
 // This file is available under the Apache license.
 
 // Build the parser:
-//go:generate goyacc -v y.output -o parser.go -p mtail parser.y
+//go:generate $GOPATH/bin/goyacc -v y.output -o parser.go -p mtail parser.y
 
 package vm
 
