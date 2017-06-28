@@ -30,7 +30,6 @@ var (
 
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 
-	debugMutexProfileFraction = flag.Int("debug_mutex_profile_fraction", 0, "If non-zero, the fraction denominator of mutex contention events reported to the profiler.  See runtime.SetMutexProfileFraction() documentation.")
 )
 
 func main() {
@@ -59,7 +58,6 @@ func main() {
 			glog.Exit("No logs to tail.")
 		}
 	}
-	runtime.SetMutexProfileFraction(*debugMutexProfileFraction)
 	o := mtail.Options{
 		Progs:                *progs,
 		LogPaths:             logPathnames,
