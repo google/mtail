@@ -266,7 +266,10 @@ func (m *Mtail) Close() {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		if m.t != nil {
-			m.t.Close()
+			err := m.t.Close()
+			if err != nil {
+				glog.Infof("tailer close failed: %s", err)
+			}
 		} else {
 			glog.Info("No tailer, closing lines channel.")
 			close(m.lines)
