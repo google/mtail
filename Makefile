@@ -68,7 +68,7 @@ version := $(shell git describe --tags)
 revision := $(shell git rev-parse HEAD)
 
 install mtail: $(GOFILES) .dep-stamp
-	go install -ldflags "-X main.version=${version} -X main.revision=${revision}"
+	go install -ldflags "-X main.Version=${version} -X main.Revision=${revision}"
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
 	go generate -x ./vm

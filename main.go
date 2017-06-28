@@ -5,6 +5,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -34,12 +36,22 @@ var (
 var (
 	// Externally supplied by the linker
 	Version   string
+	Revision  string
 	GoVersion = runtime.Version()
 )
 
+func buildInfo() string {
+	return fmt.Sprintf("mtail version %s git revision %s go version %s", Version, Revision, GoVersion)
+}
+
 func main() {
-	glog.Infof("Mtail version %s go version %s", Version, GoVersion)
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "%s\n", buildInfo())
+		fmt.Fprintf(os.Stderr, "\nUsage:\n")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
+	glog.Info(buildInfo())
 	if *progs == "" {
 		glog.Exitf("No mtail program directory specified; use -progs")
 	}
