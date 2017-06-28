@@ -64,8 +64,10 @@ all: mtail
 clean:
 	rm -f $(CLEANFILES) .*dep-stamp
 
+tags := $(shell git describe --tags)
+
 install mtail: $(GOFILES) .dep-stamp
-	go install
+	go install  -ldflags "-X main.version=${tags}"
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
 	go generate -x ./vm

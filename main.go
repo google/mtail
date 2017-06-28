@@ -29,10 +29,16 @@ var (
 	dumpBytecode   = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
 
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
+)
 
+var (
+	// Externally supplied by the linker
+	Version   string
+	GoVersion = runtime.Version()
 )
 
 func main() {
+	glog.Infof("Mtail version %s go version %s", Version, GoVersion)
 	flag.Parse()
 	if *progs == "" {
 		glog.Exitf("No mtail program directory specified; use -progs")
