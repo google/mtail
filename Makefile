@@ -90,7 +90,7 @@ smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -bench=. -timeout 60s -run=XXX ./...
+	go test -bench=. -benchtime=10s -run=XXX ./...
 
 .PHONY: bench_cpu
 bench_cpu:
