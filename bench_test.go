@@ -25,6 +25,8 @@ func BenchmarkProgram(b *testing.B) {
 		prog := filepath.Base(bm.programfile)
 		log := filepath.Base(bm.logfile)
 		b.Run(prog+"+"+log, func(b *testing.B) {
+			b.ReportAllocs()
+
 			w := watcher.NewFakeWatcher()
 			o := mtail.Options{Progs: bm.programfile, W: w}
 			mtail, err := mtail.New(o)
