@@ -235,7 +235,7 @@ func (m *Mtail) Serve() {
 			glog.Exit(err)
 		}
 	}()
-	m.shutdownHandler()
+	m.WaitForShutdown()
 }
 
 func (m *Mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
@@ -248,8 +248,8 @@ func (m *Mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
 	close(m.webquit)
 }
 
-// shutdownHandler handles external shutdown request events.
-func (m *Mtail) shutdownHandler() {
+// WaitForShutdown handles shutdown requests from the system or the UI.
+func (m *Mtail) WaitForShutdown() {
 	n := make(chan os.Signal)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
 	select {
