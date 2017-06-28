@@ -356,6 +356,6 @@ func (t *Tailer) readForever(f afero.File) {
 }
 
 // Close signals termination to the watcher.
-func (t *Tailer) Close() {
-	t.w.Close()
+func (t *Tailer) Close() error {
+	return t.w.Close()
 }
