@@ -1,5 +1,6 @@
 # Syslog decorator
-def syslog {/(?P<date>(?P<legacy_date>\w+\s+\d+\s+\d+:\d+:\d+)|(?P<rfc3339_date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+[+-]\d{2}:\d{2}))/ +
+def syslog {
+  /^(?P<date>(?P<legacy_date>\w+\s+\d+\s+\d+:\d+:\d+)|(?P<rfc3339_date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+[+-]\d{2}:\d{2}))/ +
   /\s+(?:\w+@)?(?P<hostname>[\w\.-]+)\s+(?P<application>[\w\.-]+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)/ {
     len($legacy_date) > 0 {
       strptime($2, "Jan _2 15:04:05")
@@ -78,7 +79,7 @@ gauge peer_delay by peer
 gauge peer_dispersion by peer
 counter num_peerstats by peer
 # TODO(jaq) seconds is int, not float
-/(?P<days>\d+) (?P<seconds>\d+)\.\d+ (?P<peer>\d+\.\d+\.\d+\.\d+) (?P<status>[0-9a-f]+) (?P<offset>-?\d+\.\d+) (?P<delay>\d+\.\d+) (?P<dispersion>\d+\.\d+)/ {
+/^(?P<days>\d+) (?P<seconds>\d+)\.\d+ (?P<peer>\d+\.\d+\.\d+\.\d+) (?P<status>[0-9a-f]+) (?P<offset>-?\d+\.\d+) (?P<delay>\d+\.\d+) (?P<dispersion>\d+\.\d+)/ {
   # Unix epoch in MJD is 40587.
   settime(($days - 40587) * 86400 + $seconds)
 
