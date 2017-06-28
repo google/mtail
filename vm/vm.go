@@ -553,7 +553,7 @@ func (v *VM) processLine(input string) {
 	v.t = t
 	v.input = input
 	t.stack = make([]interface{}, 0)
-	t.matches = make(map[int][]string, 0)
+	t.matches = make(map[int][]string, len(v.re))
 	for {
 		if t.pc >= len(v.prog) {
 			return
