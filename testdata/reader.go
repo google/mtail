@@ -23,9 +23,9 @@ var var_re = regexp.MustCompile(`^(counter|gauge|timer) ([^ ]+)(?: {([^}]+)})?(?
 func FindMetricOrNil(store *metrics.Store, name string) *metrics.Metric {
 	store.RLock()
 	defer store.RUnlock()
-	for _, m := range store.Metrics {
-		if m.Name == name {
-			return m
+	for n, ml := range store.Metrics {
+		if n == name {
+			return ml[0]
 		}
 	}
 	return nil

@@ -92,20 +92,22 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 	e.store.RLock()
 	defer e.store.RUnlock()
 
-	for _, m := range e.store.Metrics {
-		m.RLock()
-		defer m.RUnlock()
-		exportTotal.Add(1)
-		lc := make(chan *metrics.LabelSet)
-		go m.EmitLabelSets(lc)
-		for l := range lc {
-			line := f(e.hostname, m, l)
-			n, err := fmt.Fprint(c, line)
-			glog.V(2).Infof("Sent %d bytes\n", n)
-			if err == nil {
-				exportSuccess.Add(1)
-			} else {
-				return fmt.Errorf("write error: %s\n", err)
+	for _, ml := range e.store.Metrics {
+		for _, m := range ml {
+			m.RLock()
+			defer m.RUnlock()
+			exportTotal.Add(1)
+			lc := make(chan *metrics.LabelSet)
+			go m.EmitLabelSets(lc)
+			for l := range lc {
+				line := f(e.hostname, m, l)
+				n, err := fmt.Fprint(c, line)
+				glog.V(2).Infof("Sent %d bytes\n", n)
+				if err == nil {
+					exportSuccess.Add(1)
+				} else {
+					return fmt.Errorf("write error: %s\n", err)
+				}
 			}
 		}
 	}

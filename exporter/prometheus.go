@@ -33,21 +33,28 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Add("Content-type", "text/plain; version=0.0.4")
 
-	for _, m := range e.store.Metrics {
-		m.RLock()
-		metricExportTotal.Add(1)
+	for _, ml := range e.store.Metrics {
+		emittype := true
+		for _, m := range ml {
+			m.RLock()
+			metricExportTotal.Add(1)
 
-		fmt.Fprintf(w,
-			"# TYPE %s %s\n",
-			noHyphens(m.Name),
-			kindToPrometheusType(m.Kind))
-		lc := make(chan *metrics.LabelSet)
-		go m.EmitLabelSets(lc)
-		for l := range lc {
-			line := metricToPrometheus(e.hostname, m, l)
-			fmt.Fprint(w, line)
+			if emittype {
+				fmt.Fprintf(w,
+					"# TYPE %s %s\n",
+					noHyphens(m.Name),
+					kindToPrometheusType(m.Kind))
+				emittype = false
+			}
+
+			lc := make(chan *metrics.LabelSet)
+			go m.EmitLabelSets(lc)
+			for l := range lc {
+				line := metricToPrometheus(e.hostname, m, l)
+				fmt.Fprint(w, line)
+			}
+			m.RUnlock()
 		}
-		m.RUnlock()
 	}
 }
 
