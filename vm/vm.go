@@ -233,6 +233,127 @@ func (t *thread) PopFloat() (float64, error) {
 	return 0, fmt.Errorf("unexpected float type %T %q", val, val)
 }
 
+func compareInt(a, b int64, opnd int) (bool, error) {
+	switch opnd {
+	case -1:
+		return a < b, nil
+	case 0:
+		return a == b, nil
+	case 1:
+		return a > b, nil
+	default:
+		return false, fmt.Errorf("unexpected operator type %q", opnd)
+	}
+}
+
+func compareFloat(a, b float64, opnd int) (bool, error) {
+	switch opnd {
+	case -1:
+		return a < b, nil
+	case 0:
+		return a == b, nil
+	case 1:
+		return a > b, nil
+	default:
+		return false, fmt.Errorf("unexpected operator type %q", opnd)
+	}
+}
+
+func compareString(a, b string, opnd int) (bool, error) {
+	switch opnd {
+	case -1:
+		return a < b, nil
+	case 0:
+		return a == b, nil
+	case 1:
+		return a > b, nil
+	default:
+		return false, fmt.Errorf("unexpected operator type %q", opnd)
+	}
+}
+
+func compare(a, b interface{}, opnd int) (bool, error) {
+	lxF, lxIsFloat := a.(float64)
+	rxF, rxIsFloat := b.(float64)
+
+	var n int
+	var lxI, rxI int64
+	var lxIsInt, rxIsInt bool
+
+	if n, lxIsInt = a.(int); lxIsInt {
+		lxI = int64(n)
+	} else {
+		lxI, lxIsInt = a.(int64)
+	}
+
+	if n, rxIsInt = b.(int); rxIsInt {
+		rxI = int64(n)
+	} else {
+		rxI, rxIsInt = b.(int64)
+	}
+
+	lxS, lxIsStr := a.(string)
+	rxS, rxIsStr := b.(string)
+
+	if lxIsFloat {
+		if rxIsFloat {
+			return compareFloat(lxF, rxF, opnd)
+		}
+
+		if rxIsInt {
+			return compareFloat(lxF, float64(rxI), opnd)
+		}
+
+		if rxIsStr {
+			rx, err := strconv.ParseFloat(rxS, 64)
+			if err != nil {
+				return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+			}
+
+			return compareFloat(lxF, rx, opnd)
+		}
+
+		return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+	}
+
+	if lxIsInt {
+		if rxIsFloat {
+			return compareFloat(float64(lxI), rxF, opnd)
+		}
+
+		if rxIsInt {
+			return compareInt(lxI, rxI, opnd)
+		}
+
+		if rxIsStr {
+			rx, err := strconv.ParseFloat(rxS, 64)
+			if err != nil {
+				return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+			}
+
+			return compareFloat(lxF, rx, opnd)
+		}
+
+		return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+	}
+
+	if lxIsStr {
+		if lx, err := strconv.ParseFloat(lxS, 64); err == nil {
+			return compare(lx, b, opnd)
+		}
+
+		if lx, err := strconv.ParseInt(lxS, 10, 32); err == nil {
+			return compare(lx, b, opnd)
+		}
+
+		if rxIsStr {
+			return compareString(lxS, rxS, opnd)
+		}
+	}
+
+	return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+}
+
 // Execute performs an instruction cycle in the VM -- acting on the current
 // instruction, and returns a boolean indicating if the current thread should
 // terminate.
@@ -250,23 +371,15 @@ func (v *VM) execute(t *thread, i instr) {
 		// Compare two elements on the stack.
 		// Set the match register based on the truthiness of the comparison.
 		// Operand contains the expected result.
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
+		b := t.Pop()
+		a := t.Pop()
+
+		match, err := compare(a, b, i.opnd.(int))
 		if err != nil {
 			v.errorf("%s", err)
 		}
 
-		switch i.opnd {
-		case -1:
-			t.match = a < b
-		case 0:
-			t.match = a == b
-		case 1:
-			t.match = a > b
-		}
+		t.match = match
 
 	case jnm:
 		if !t.match {
