@@ -33,7 +33,7 @@ func removeTempDir(t *testing.T, workdir string) {
 	}
 }
 
-func startMtail(t *testing.T, logPathnames []string, progPathname string) *Mtail {
+func startMtailServer(t *testing.T, logPathnames []string, progPathname string) *MtailServer {
 	o := Options{LogPaths: logPathnames}
 	m, err := New(o)
 	if err != nil {
@@ -86,7 +86,7 @@ func TestHandleLogUpdates(t *testing.T) {
 	}
 	defer logFile.Close()
 	pathnames := []string{logFilepath}
-	m := startMtail(t, pathnames, "")
+	m := startMtailServer(t, pathnames, "")
 	defer m.Close()
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
@@ -129,7 +129,7 @@ func TestHandleLogRotation(t *testing.T) {
 	// Create a logger
 	hup := make(chan bool, 1)
 	pathnames := []string{logFilepath}
-	m := startMtail(t, pathnames, "")
+	m := startMtailServer(t, pathnames, "")
 	defer m.Close()
 
 	go func() {
@@ -186,7 +186,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	// Start up mtail
 	logFilepath := path.Join(workdir, "log")
 	pathnames := []string{logFilepath}
-	m := startMtail(t, pathnames, "")
+	m := startMtailServer(t, pathnames, "")
 	defer m.Close()
 
 	// touch log file
@@ -227,7 +227,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	// Start mtail
 	logFilepath := path.Join(workdir, "log")
 	pathnames := []string{logFilepath}
-	m := startMtail(t, pathnames, "")
+	m := startMtailServer(t, pathnames, "")
 	defer m.Close()
 
 	// touch log file
@@ -253,7 +253,7 @@ func TestHandleSoftLinkChange(t *testing.T) {
 
 	logFilepath := path.Join(workdir, "log")
 	pathnames := []string{logFilepath}
-	m := startMtail(t, pathnames, "")
+	m := startMtailServer(t, pathnames, "")
 	defer m.Close()
 
 	trueLog1, err := os.Create(logFilepath + ".true1")
