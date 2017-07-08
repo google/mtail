@@ -44,8 +44,8 @@ const (
 )
 
 // LoadProgs loads all programs in a directory and starts watching the
-// directory for filesystem changes.  The total number of program errors is
-// returned.
+// directory for filesystem changes.  Any compile errors are stored for later retrieival.
+// This function returns an error if an internal error occurs.
 func (l *Loader) LoadProgs(programPath string) error {
 	l.w.Add(programPath)
 
@@ -69,10 +69,13 @@ func (l *Loader) LoadProgs(programPath string) error {
 				glog.Warning(err)
 			}
 		}
-		return nil
 	default:
-		return l.LoadProg(programPath)
+		err = l.LoadProg(programPath)
+		if err != nil {
+			glog.Warning(err)
+		}
 	}
+	return nil
 }
 
 // LoadProg loads or reloads a program from the path specified.  The name of
@@ -89,7 +92,10 @@ func (l *Loader) LoadProg(programPath string) error {
 		return fmt.Errorf("Failed to read program %q: %s", programPath, err)
 	}
 	defer f.Close()
-	return l.CompileAndRun(name, f)
+	l.programErrorMu.Lock()
+	defer l.programErrorMu.Unlock()
+	l.programErrors[name] = l.CompileAndRun(name, f)
+	return nil
 }
 
 // CompileAndRun compiles a program read from the input, starting execution if
@@ -151,6 +157,9 @@ type Loader struct {
 	handles  map[string]*vmHandle // map of program names to virtual machines
 	handleMu sync.RWMutex         // guards accesses to handles
 
+	programErrors  map[string]error // errors from the last compile attempt of the program
+	programErrorMu sync.RWMutex     // guards access to programErrors
+
 	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
@@ -200,6 +209,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		ms:                   o.Store,
 		fs:                   fs,
 		handles:              make(map[string]*vmHandle),
+		programErrors:        make(map[string]error),
 		watcherDone:          make(chan struct{}),
 		VMsDone:              make(chan struct{}),
 		compileOnly:          o.CompileOnly,
