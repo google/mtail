@@ -88,7 +88,7 @@ counter apache_http_sent_bytes_total by server_port, handler, request_method, re
   }
 
   # "inf" bucket, also the total number of requests.
-  apache_http_request_time_microseconds["inf"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  apache_http_request_time_microseconds["+Inf"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
 
   ###
   # Sent/Received bytes.

@@ -112,7 +112,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 			return err
 		}
 		if errors == nil {
-			_, err = fmt.Fprintf(w, "<p>No errors</p>\n")
+			_, err = fmt.Fprintf(w, "<p>No compile errors</p>\n")
 			if err != nil {
 				return err
 			}
