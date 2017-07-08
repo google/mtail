@@ -4,6 +4,7 @@
 package vm
 
 import (
+	"reflect"
 	"regexp"
 	"testing"
 	"time"
@@ -397,8 +398,11 @@ func TestInstrs(t *testing.T) {
 		// patch in the thread stack because otherwise the test table is huge
 		tc.expectedThread.stack = tc.expectedStack
 
-		if diff := deep.Equal(v.t, &tc.expectedThread); diff != nil {
-			t.Errorf("%s: unexpected virtual machine thread state.\n%s", tc.name, diff)
+		if !reflect.DeepEqual(v.t, &tc.expectedThread) {
+			t.Errorf("%s: unexpected virtual machine thread state.\n", tc.name)
+			t.Errorf("\t%v", *v.t)
+			t.Errorf("\t%v", tc.expectedThread)
 		}
+
 	}
 }
