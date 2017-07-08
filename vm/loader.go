@@ -98,6 +98,34 @@ func (l *Loader) LoadProg(programPath string) error {
 	return nil
 }
 
+// WriteStatusHTML writes the current state of the loader as HTML to the given writer w.
+func (l *Loader) WriteStatusHTML(w io.Writer) error {
+	_, err := fmt.Fprintf(w, `<h2 id="errors">Program Loader</h2>`)
+	if err != nil {
+		return err
+	}
+	l.programErrorMu.RLock()
+	defer l.programErrorMu.RUnlock()
+	for name, errors := range l.programErrors {
+		_, err = fmt.Fprintf(w, "<b>%s</b>\n", name)
+		if err != nil {
+			return err
+		}
+		if errors == nil {
+			_, err = fmt.Fprintf(w, "<p>No errors</p>\n")
+			if err != nil {
+				return err
+			}
+		} else {
+			_, err = fmt.Fprintf(w, "<pre>%s</pre>\n", errors)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // CompileAndRun compiles a program read from the input, starting execution if
 // it succeeds.  If an existing virtual machine of the same name already
 // exists, the previous virtual machine is terminated and the new loaded over

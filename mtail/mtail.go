@@ -133,6 +133,11 @@ func (m *MtailServer) InitLoader() error {
 func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>, <a href="/varz">varz</a>`))
+
+	err := m.l.WriteStatusHTML(w)
+	if err != nil {
+		glog.Warning("Error while writing loader status: %s", err)
+	}
 }
 
 // Options contains all the parameters necessary for constructing a new MtailServer.
