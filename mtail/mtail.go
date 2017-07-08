@@ -131,8 +131,12 @@ func (m *MtailServer) InitLoader() error {
 }
 
 func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-type", "text/html")
 	w.WriteHeader(200)
-	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>, <a href="/varz">varz</a>`))
+	fmt.Fprintf(w, "<title>mtail on :%s</title>", m.o.Port)
+	fmt.Fprintf(w, "<h1>mtail on :%s</h1>", m.o.Port)
+	fmt.Fprintf(w, `<p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>, <a href="/varz">varz</a></p>`)
+	fmt.Fprintf(w, `<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a></p>`)
 
 	err := m.l.WriteStatusHTML(w)
 	if err != nil {
