@@ -122,6 +122,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 				return err
 			}
 		}
+		_, err = fmt.Fprintf(w, "<p>Total load errors: %v; successes: %v</p>", ProgLoadErrors.Get(name), ProgLoads.Get(name))
 	}
 	return nil
 }
@@ -139,6 +140,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		return fmt.Errorf("compile failed for %s:\n%s", name, errs)
 	}
 	if v == nil {
+		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
 	}
 	for _, m := range v.m {
