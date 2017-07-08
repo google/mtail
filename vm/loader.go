@@ -13,6 +13,7 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
@@ -98,31 +99,46 @@ func (l *Loader) LoadProg(programPath string) error {
 	return nil
 }
 
+const loaderTemplate = `
+<h2 id="loader">Program Loader</h2>
+{{range $name, $errors := $.Errors}}
+<b>{{$name}}</b>
+{{if $errors}}
+<pre>{{$errors}}</pre>
+{{else}}
+<p>No compile errors</p>
+{{end}}
+<p>Total load errors {{index $.Loaderrors $name}}; successes: {{index $.Loadsuccess $name}}</p>
+{{end}}
+`
+
 // WriteStatusHTML writes the current state of the loader as HTML to the given writer w.
 func (l *Loader) WriteStatusHTML(w io.Writer) error {
-	_, err := fmt.Fprintf(w, `<h2 id="errors">Program Loader</h2>`)
+	t, err := template.New("loader").Parse(loaderTemplate)
 	if err != nil {
 		return err
 	}
 	l.programErrorMu.RLock()
 	defer l.programErrorMu.RUnlock()
-	for name, errors := range l.programErrors {
-		_, err = fmt.Fprintf(w, "<b>%s</b>\n", name)
-		if err != nil {
-			return err
+	data := struct {
+		Errors      map[string]error
+		Loaderrors  map[string]string
+		Loadsuccess map[string]string
+	}{
+		l.programErrors,
+		make(map[string]string),
+		make(map[string]string),
+	}
+	for name, _ := range l.programErrors {
+		if ProgLoadErrors.Get(name) != nil {
+			data.Loaderrors[name] = ProgLoadErrors.Get(name).String()
 		}
-		if errors == nil {
-			_, err = fmt.Fprintf(w, "<p>No compile errors</p>\n")
-			if err != nil {
-				return err
-			}
-		} else {
-			_, err = fmt.Fprintf(w, "<pre>%s</pre>\n", errors)
-			if err != nil {
-				return err
-			}
+		if ProgLoads.Get(name) != nil {
+			data.Loadsuccess[name] = ProgLoads.Get(name).String()
 		}
-		_, err = fmt.Fprintf(w, "<p>Total load errors: %v; successes: %v</p>", ProgLoadErrors.Get(name), ProgLoads.Get(name))
+	}
+	if err := t.Execute(w, data); err != nil {
+		return err
 	}
 	return nil
 }
