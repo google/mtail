@@ -36,15 +36,27 @@ const MATCH_IP /(?P<ip>/ + IP + /)/
 
 ## Parse the log line timestamp
 
-`mtail` requires a timestamp to attribute to each event.  It assumes that the
-log files being processed have stamped each line of input with a timestamp.
-Use the `strptime` function with
+`mtail` attributes a timestamp to each event.
+
+If no timestamp exists in the log and none explicitly parsed by the mtail program, then mtail will use the current system time as the time of the event.
+
+Many log files include the timestamp of the event as reported by the logging program.  To parse the timestamp, use the  `strptime` function with
 a [Go time.Parse layout string](https://golang.org/pkg/time/#Parse).
 
 ```
 /^(?P<date>\w+\s+\d+\s+\d+:\d+:\d+)\s+[\w\.-]+\s+sftp-server/ {
     strptime($date, "Jan _2 15:04:05")
 ```
+
+N.B.  If no timestamp parsing is done, then the reported timestamp of the event
+may add some latency to the mearusrement of when the event really occurred.
+Between your program logging the event, and mtail reading it, there are many
+moving parts: the log writer, some system calls perhaps, some disk IO, some
+more system calls, some more disk IO, and then mtail's virtual machine
+execution.  While normally negligible, it is worth stating in case users notice
+offsets in time between what mtail reports and the event really occurring.  For
+this reason, it's recommended to always use the log file's timestamp if one is
+available.
 
 ## Common timestamp parsing
 
