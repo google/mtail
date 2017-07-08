@@ -161,7 +161,7 @@ var instructions = []struct {
 		[]string{},
 		[]interface{}{1, 2.0},
 		[]interface{}{},
-		thread{pc: 0, match: true, matches: map[int][]string{}}},
+		thread{pc: 0, match: false, matches: map[int][]string{}}},
 	{"jnm",
 		instr{jnm, 37},
 		[]*regexp.Regexp{},
