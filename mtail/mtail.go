@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"os"
@@ -130,21 +131,40 @@ func (m *MtailServer) InitLoader() error {
 	return nil
 }
 
+const statusTemplate = `
+<html>
+<head>
+<title>mtail on :{{.Port}}</title>
+</head>
+<body>
+<h1>mtail on :{{.Port}}</h1>
+<p>Build: {{.BuildInfo}}</p>
+<p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
+<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a></p>
+`
 
-var statusTemplate = template.Must(
 func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	t, err := template.New("status").Parse(statusTemplate)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		Port      string
+		BuildInfo string
+	}{
+		m.o.Port,
+		m.o.BuildInfo,
+	}
 	w.Header().Add("Content-type", "text/html")
 	w.WriteHeader(http.StatusFound)
-	fmt.Fprintf(w, "<title>mtail on :%s</title>", m.o.Port)
-	fmt.Fprintf(w, "<h1>mtail on :%s</h1>", m.o.Port)
-	fmt.Fprintf(w, "<p>Build: %s</p>", m.o.BuildInfo)
-
-	fmt.Fprintf(w, `<p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>`)
-	fmt.Fprintf(w, `<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a></p>`)
-
-	err := m.l.WriteStatusHTML(w)
+	if err := t.Execute(w, data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	err = m.l.WriteStatusHTML(w)
 	if err != nil {
-		glog.Warning("Error while writing loader status: %s", err)
+		glog.Warningf("Error while writing loader status: %s", err)
 	}
 }
 
