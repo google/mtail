@@ -27,8 +27,8 @@ import (
 	"github.com/spf13/afero"
 )
 
-// Mtail contains the state of the main program object.
-type Mtail struct {
+// MtailServer contains the state of the main program object.
+type MtailServer struct {
 	lines chan string    // Channel of lines from tailer to VM engine.
 	store *metrics.Store // Metrics storage.
 
@@ -43,7 +43,7 @@ type Mtail struct {
 }
 
 // OneShot reads the contents of a log file into the lines channel from start to finish, terminating the program at the end.
-func (m *Mtail) OneShot(logfile string, print bool) (count int64, err error) {
+func (m *MtailServer) OneShot(logfile string, print bool) (count int64, err error) {
 	glog.Infof("Oneshot %q", logfile)
 	l, err := os.Open(logfile)
 	if err != nil {
@@ -89,7 +89,7 @@ Loop:
 
 // StartTailing constructs a new Tailer and commences sending log lines into
 // the lines channel.
-func (m *Mtail) StartTailing() error {
+func (m *MtailServer) StartTailing() error {
 	o := tailer.Options{Lines: m.lines, W: m.o.W, FS: m.o.FS}
 	var err error
 	m.t, err = tailer.New(o)
@@ -114,7 +114,7 @@ func (m *Mtail) StartTailing() error {
 }
 
 // InitLoader constructs a new program loader and performs the inital load of program files in the program directory.
-func (m *Mtail) InitLoader() error {
+func (m *MtailServer) InitLoader() error {
 	o := vm.LoaderOptions{Store: m.store, Lines: m.lines, CompileOnly: m.o.CompileOnly, DumpAst: m.o.DumpAst, DumpAstTypes: m.o.DumpAstTypes, DumpBytecode: m.o.DumpBytecode, SyslogUseCurrentYear: m.o.SyslogUseCurrentYear, W: m.o.W, FS: m.o.FS}
 	var err error
 	m.l, err = vm.NewLoader(o)
@@ -130,12 +130,23 @@ func (m *Mtail) InitLoader() error {
 	return nil
 }
 
-func (m *Mtail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-type", "text/html")
 	w.WriteHeader(200)
-	w.Write([]byte(`<a href="/json">json</a>, <a href="/metrics">prometheus metrics</a>, <a href="/varz">varz</a>`))
+	fmt.Fprintf(w, "<title>mtail on :%s</title>", m.o.Port)
+	fmt.Fprintf(w, "<h1>mtail on :%s</h1>", m.o.Port)
+	fmt.Fprintf(w, "<p>Build: %s</p>", m.o.BuildInfo)
+
+	fmt.Fprintf(w, `<p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>`)
+	fmt.Fprintf(w, `<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a></p>`)
+
+	err := m.l.WriteStatusHTML(w)
+	if err != nil {
+		glog.Warning("Error while writing loader status: %s", err)
+	}
 }
 
-// Options contains all the parameters necessary for constructing a new Mtail.
+// Options contains all the parameters necessary for constructing a new MtailServer.
 type Options struct {
 	Progs                string
 	LogPaths             []string
@@ -149,19 +160,21 @@ type Options struct {
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
 
+	BuildInfo string
+
 	Store *metrics.Store
 
 	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 }
 
-// New creates an Mtail from the supplied Options.
-func New(o Options) (*Mtail, error) {
+// New creates an MtailServer from the supplied Options.
+func New(o Options) (*MtailServer, error) {
 	store := o.Store
 	if store == nil {
 		store = metrics.NewStore()
 	}
-	m := &Mtail{
+	m := &MtailServer{
 		lines:   make(chan string),
 		store:   store,
 		webquit: make(chan struct{}),
@@ -182,7 +195,7 @@ func New(o Options) (*Mtail, error) {
 
 // WriteMetrics dumps the current state of the metrics store in JSON format to
 // the io.Writer.
-func (m *Mtail) WriteMetrics(w io.Writer) error {
+func (m *MtailServer) WriteMetrics(w io.Writer) error {
 	m.store.RLock()
 	b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
 	m.store.RUnlock()
@@ -194,7 +207,7 @@ func (m *Mtail) WriteMetrics(w io.Writer) error {
 }
 
 // RunOneShot performs the work of the one_shot commandline flag; after compiling programs mtail will read all of the log files in full, once, dump the metric results at the end, and then exit.
-func (m *Mtail) RunOneShot() {
+func (m *MtailServer) RunOneShot() {
 	fmt.Println("Oneshot results:")
 	for _, pathname := range m.o.LogPaths {
 		_, err := m.OneShot(pathname, true)
@@ -215,7 +228,7 @@ func (m *Mtail) RunOneShot() {
 // files for changes and sends any new lines found into the lines channel for
 // pick up by the virtual machines.  It will continue to do so until it is
 // signalled to exit.
-func (m *Mtail) Serve() {
+func (m *MtailServer) Serve() {
 	err := m.StartTailing()
 	if err != nil {
 		glog.Exitf("tailing failed: %s", err)
@@ -238,7 +251,7 @@ func (m *Mtail) Serve() {
 	m.WaitForShutdown()
 }
 
-func (m *Mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
+func (m *MtailServer) handleQuit(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Header().Add("Allow", "POST")
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -249,7 +262,7 @@ func (m *Mtail) handleQuit(w http.ResponseWriter, r *http.Request) {
 }
 
 // WaitForShutdown handles shutdown requests from the system or the UI.
-func (m *Mtail) WaitForShutdown() {
+func (m *MtailServer) WaitForShutdown() {
 	n := make(chan os.Signal)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
 	select {
@@ -262,7 +275,7 @@ func (m *Mtail) WaitForShutdown() {
 }
 
 // Close handles the graceful shutdown of this mtail instance, ensuring that it only occurs once.
-func (m *Mtail) Close() {
+func (m *MtailServer) Close() {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		if m.t != nil {
@@ -281,8 +294,8 @@ func (m *Mtail) Close() {
 	})
 }
 
-// Run starts Mtail in the configuration supplied in Options at creation.
-func (m *Mtail) Run() {
+// Run starts MtailServer in the configuration supplied in Options at creation.
+func (m *MtailServer) Run() {
 	if m.o.CompileOnly {
 		return
 	}

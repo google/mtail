@@ -88,6 +88,7 @@ func main() {
 		DumpAstTypes:         *dumpAstTypes,
 		DumpBytecode:         *dumpBytecode,
 		SyslogUseCurrentYear: *syslogUseCurrentYear,
+		BuildInfo:            buildInfo(),
 	}
 	m, err := mtail.New(o)
 	if err != nil {
