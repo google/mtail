@@ -130,9 +130,11 @@ func (m *MtailServer) InitLoader() error {
 	return nil
 }
 
+
+var statusTemplate = template.Must(
 func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-type", "text/html")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusFound)
 	fmt.Fprintf(w, "<title>mtail on :%s</title>", m.o.Port)
 	fmt.Fprintf(w, "<h1>mtail on :%s</h1>", m.o.Port)
 	fmt.Fprintf(w, "<p>Build: %s</p>", m.o.BuildInfo)
