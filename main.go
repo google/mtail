@@ -17,9 +17,21 @@ import (
 	_ "net/http/pprof"
 )
 
+type seqStringFlag []string
+
+func (f *seqStringFlag) String() string {
+	return fmt.Sprint(*f)
+}
+
+func (f *seqStringFlag) Set(value string) error {
+	*f = append(*f, value)
+	return nil
+}
+
+var logs seqStringFlag
+
 var (
 	port   = flag.String("port", "3903", "HTTP port to listen on.")
-	logs   = flag.String("logs", "", "List of files to monitor.")
 	logFds = flag.String("logfds", "", "List of file descriptors to monitor.")
 	progs  = flag.String("progs", "", "Directory containing programs")
 
@@ -45,6 +57,8 @@ func buildInfo() string {
 }
 
 func main() {
+	flag.Var(&logs, "logs", "List of files to monitor.  This flag may be specified multiple times.")
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s\n", buildInfo())
 		fmt.Fprintf(os.Stderr, "\nUsage:\n")
@@ -58,10 +72,10 @@ func main() {
 	var logPathnames []string
 	var logDescriptors []int
 	if !(*dumpBytecode || *dumpAst || *dumpAstTypes || *compileOnly) {
-		if *logs == "" && *logFds == "" {
+		if len(logs) == 0 && *logFds == "" {
 			glog.Exitf("No logs specified to tail; use -logs or -logfds")
 		}
-		for _, pathname := range strings.Split(*logs, ",") {
+		for _, pathname := range logs {
 			if pathname != "" {
 				logPathnames = append(logPathnames, pathname)
 			}
