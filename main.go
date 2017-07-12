@@ -17,21 +17,39 @@ import (
 	_ "net/http/pprof"
 )
 
+type seqStringFlag []string
+
+func (f *seqStringFlag) String() string {
+	return fmt.Sprint(*f)
+}
+
+func (f *seqStringFlag) Set(value string) error {
+	for _, v := range strings.Split(value, ",") {
+		*f = append(*f, v)
+	}
+	return nil
+}
+
+var logs seqStringFlag
+
 var (
 	port   = flag.String("port", "3903", "HTTP port to listen on.")
-	logs   = flag.String("logs", "", "List of files to monitor.")
-	logFds = flag.String("logfds", "", "List of file descriptors to monitor.")
-	progs  = flag.String("progs", "", "Directory containing programs")
+	logFds = flag.String("logfds", "", "List of file descriptor numbers to monitor, comma separated.")
+	progs  = flag.String("progs", "", "Name of the directory containing mtail programs")
 
-	oneShot        = flag.Bool("one_shot", false, "Run on logs until EOF and exit.")
-	oneShotMetrics = flag.Bool("one_shot_metrics", false, "Dump metrics to stdout after one shot mode.")
+	oneShot        = flag.Bool("one_shot", false, "Run the contents of the provided logs until EOF and exit.")
+	oneShotMetrics = flag.Bool("one_shot_metrics", false, "Dump metrics (to stdout) after one shot mode.")
 	compileOnly    = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
-	dumpAst        = flag.Bool("dump_ast", false, "Dump AST of programs after parse.")
-	dumpAstTypes   = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck.")
-	dumpBytecode   = flag.Bool("dump_bytecode", false, "Dump bytecode of programs and exit.")
+	dumpAst        = flag.Bool("dump_ast", false, "Dump AST of programs after parse (to INFO log).")
+	dumpAstTypes   = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck (to INFO log).")
+	dumpBytecode   = flag.Bool("dump_bytecode", false, "Dump bytecode of programs (to INFO log).")
 
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 )
+
+func init() {
+	flag.Var(&logs, "logs", "List of log files to monitor, separated by commas.  This flag may be specified multiple times.")
+}
 
 var (
 	// Externally supplied by the linker
@@ -58,10 +76,10 @@ func main() {
 	var logPathnames []string
 	var logDescriptors []int
 	if !(*dumpBytecode || *dumpAst || *dumpAstTypes || *compileOnly) {
-		if *logs == "" && *logFds == "" {
+		if len(logs) == 0 && *logFds == "" {
 			glog.Exitf("No logs specified to tail; use -logs or -logfds")
 		}
-		for _, pathname := range strings.Split(*logs, ",") {
+		for _, pathname := range logs {
 			if pathname != "" {
 				logPathnames = append(logPathnames, pathname)
 			}
