@@ -3,19 +3,23 @@
 
 # Parser for a metrics-friendly apache log format
 # LogFormat "%v:%p %R %m %>s %H conn=%X %D %O %I %k" metrics
-counter apache_http_connections_total by server_port, handler, request_method, request_status, request_protocol, connection_status
-counter apache_http_received_bytes_total by server_port, handler, request_method, request_status, request_protocol
-counter apache_http_request_time_microseconds by le, server_port, handler, request_method, request_status, request_protocol
-counter apache_http_request_time_microseconds_sum by server_port, handler, request_method, request_status, request_protocol
-counter apache_http_request_time_microseconds_count by server_port, handler, request_method, request_status, request_protocol
-counter apache_http_sent_bytes_total by server_port, handler, request_method, request_status, request_protocol
+counter http_connections_aborted_total by server_port, handler, method, code, protocol, connection_status
+counter http_connections_closed_total by server_port, handler, method, code, protocol, connection_status
+
+counter http_request_size_bytes_total by server_port, handler, method, code, protocol
+counter http_response_size_bytes_total by server_port, handler, method, code, protocol
+
+counter http_request_duration_seconds_bucket by le, server_port, handler, method, code, protocol
+counter http_request_duration_seconds_sum by server_port, handler, method, code, protocol
+counter http_request_duration_seconds_count by server_port, handler, method, code, protocol
+
 
 /^/ +
 /(?P<server_port>\S+) / + # %v:%p - The canonical ServerName of the server serving the request. : The canonical port of the server serving the request.
 /(?P<handler>\S+) / + # %R - The handler generating the response (if any).
-/(?P<request_method>[A-Z]+) / + # %m - The request method.
-/(?P<request_status>\d{3}) / + # %>s - Status.
-/(?P<request_protocol>\S+) / + # %H - The request protocol.
+/(?P<method>[A-Z]+) / + # %m - The request method.
+/(?P<code>\d{3}) / + # %>s - Status code.
+/(?P<protocol>\S+) / + # %H - The request protocol.
 /(?P<connection_status>conn=.) / + # %X - Connection status when response is completed
 /(?P<time_us>\d+) / + # %D - The time taken to serve the request, in microseconds.
 /(?P<sent_bytes>\d+) / + # %O - Bytes sent, including headers.
@@ -25,8 +29,8 @@ counter apache_http_sent_bytes_total by server_port, handler, request_method, re
   ###
   # HTTP Requests with histogram buckets.
   #
-  apache_http_request_time_microseconds_count[$server_port][$handler][$request_method][$request_status][$request_protocol]++
-  apache_http_request_time_microseconds_sum[$server_port][$handler][$request_method][$request_status][$request_protocol] += $time_us
+  http_request_duration_seconds_count[$server_port][$handler][$method][$code][$protocol]++
+  http_request_duration_seconds_sum[$server_port][$handler][$method][$code][$protocol] += $time_us * 0.0000001
 
   # These statements "fall through", so the histogram is cumulative.  The
   # collecting system can compute the percentile bands by taking the ratio of
@@ -34,76 +38,81 @@ counter apache_http_sent_bytes_total by server_port, handler, request_method, re
 
   # 5ms bucket.
   $time_us <= 5000 {
-    apache_http_request_time_microseconds["5000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+    http_request_duration_seconds_bucket["0.005"][$server_port][$handler][$method][$code][$protocol]++
   }
 
   # 10ms bucket.
   $time_us <= 10000 {
-    apache_http_request_time_microseconds["10000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+    http_request_duration_seconds_bucket["0.01"][$server_port][$handler][$method][$code][$protocol]++
   }
 
   # 25ms bucket.
   $time_us <= 25000 {
-    apache_http_request_time_microseconds["25000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+    http_request_duration_seconds_bucket["0.025"][$server_port][$handler][$method][$code][$protocol]++
   }
 
   # 50ms bucket.
   $time_us <= 50000 {
-    apache_http_request_time_microseconds["50000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+    http_request_duration_seconds_bucket["0.05"][$server_port][$handler][$method][$code][$protocol]++
   }
 
   # 100ms bucket.
   $time_us <= 100000 {
-    apache_http_request_time_microseconds["100000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+    http_request_duration_seconds_bucket["0.1"][$server_port][$handler][$method][$code][$protocol]++
   }
 
   # 250ms bucket.
   $time_us <= 250000 {
-    apache_http_request_time_microseconds["250000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+    http_request_duration_seconds_bucket["0.25"][$server_port][$handler][$method][$code][$protocol]++
   }
 
   # 500ms bucket.
   $time_us <= 500000 {
-    apache_http_request_time_microseconds["500000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+    http_request_duration_seconds_bucket["0.5"][$server_port][$handler][$method][$code][$protocol]++
   }
 
   # 1s bucket.
   $time_us <= 1000000 {
-    apache_http_request_time_microseconds["1000000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+    http_request_duration_seconds_bucket["1"][$server_port][$handler][$method][$code][$protocol]++
   }
 
   # 2.5s bucket.
   $time_us <= 2500000 {
-    apache_http_request_time_microseconds["2500000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+    http_request_duration_seconds_bucket["2.5"][$server_port][$handler][$method][$code][$protocol]++
   }
 
   # 5s bucket.
   $time_us <= 5000000 {
-    apache_http_request_time_microseconds["5000000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+    http_request_duration_seconds_bucket["5"][$server_port][$handler][$method][$code][$protocol]++
   }
 
   # 10s bucket.
   $time_us <= 10000000 {
-    apache_http_request_time_microseconds["10000000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+    http_request_duration_seconds_bucket["10"][$server_port][$handler][$method][$code][$protocol]++
+  }
+
+  # 15s bucket.
+  $time_us <= 15000000 {
+    http_request_duration_seconds_bucket["15"][$server_port][$handler][$method][$code][$protocol]++
   }
 
   # "inf" bucket, also the total number of requests.
-  apache_http_request_time_microseconds["+Inf"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  http_request_duration_seconds_bucket["+Inf"][$server_port][$handler][$method][$code][$protocol]++
 
   ###
   # Sent/Received bytes.
-  apache_http_sent_bytes_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $sent_bytes
-  apache_http_received_bytes_total[$server_port][$handler][$request_method][$request_status][$request_protocol] += $received_bytes
+  http_response_size_bytes_total[$server_port][$handler][$method][$code][$protocol] += $sent_bytes
+  http_request_size_bytes_total[$server_port][$handler][$method][$code][$protocol] += $received_bytes
 
   ### Connection status when response is completed:
   # X = Connection aborted before the response completed.
   # + = Connection may be kept alive after the response is sent.
   # - = Connection will be closed after the response is sent.
   / conn=X / {
-    apache_http_connections_total[$server_port][$handler][$request_method][$request_status][$request_protocol]["aborted"]++
+    http_connections_aborted_total[$server_port][$handler][$method][$code][$protocol]++
   }
   # Will not include all closed connections. :-(
   / conn=- / {
-    apache_http_connections_total[$server_port][$handler][$request_method][$request_status][$request_protocol]["closed"]++
+    http_connections_closed_total[$server_port][$handler][$method][$code][$protocol]++
   }
 }
