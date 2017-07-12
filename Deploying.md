@@ -12,7 +12,7 @@ The `--help` flag will print a list of flags for configuring `mtail`.
 
 Basic flags necessary to start `mtail`:
 
-  * `--logs` is a comma separated list of filenames to extract from.
+  * `--logs` is a comma separated list of filenames to extract from, but can also be used multiple times.
   * `--progs` is a directory path containing [mtail programs](Language). Programs must have the `.mtail` suffix.
 
 mtail runs an HTTP server on port 3903, which can be changed with the `--port` flag.
@@ -22,7 +22,7 @@ mtail runs an HTTP server on port 3903, which can be changed with the `--port` f
 ## Launching mtail
 
 ```
-mtail --progs /etc/mtail --logs /var/log/syslog,/var/log/ntp/peerstats
+mtail --progs /etc/mtail --logs /var/log/syslog --logs /var/log/ntp/peerstats
 ```
 
 ## Getting the Metrics Out
@@ -52,3 +52,7 @@ mtail --progs /etc/mtail --logs /var/log/syslog,/var/log/rsyncd.log --graphite_h
 Likewise, set `statsd_hostport` to the host:port of the statsd server.
 
 Additionally, the flag `metric_push_interval_seconds` can be used to configure the push frequency.  It defaults to 60, i.e. a push every minute.
+
+## Troubleshooting
+
+Lots of state is logged to the log file, by default in `/tmp/mtail.INFO`.  See [[Troubleshooting]] for more information.
