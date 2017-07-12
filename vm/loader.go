@@ -102,7 +102,7 @@ func (l *Loader) LoadProg(programPath string) error {
 const loaderTemplate = `
 <h2 id="loader">Program Loader</h2>
 {{range $name, $errors := $.Errors}}
-<b>{{$name}}</b>
+<p><b>{{$name}}</b></p>
 {{if $errors}}
 <pre>{{$errors}}</pre>
 {{else}}

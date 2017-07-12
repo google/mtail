@@ -14,6 +14,7 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
+	"html/template"
 	"io"
 	"os"
 	"path"
@@ -358,4 +359,29 @@ func (t *Tailer) readForever(f afero.File) {
 // Close signals termination to the watcher.
 func (t *Tailer) Close() error {
 	return t.w.Close()
+}
+
+const tailerTemplate = `
+<h2 id="tailer">Log Tailer</h2>
+{{range $name, $val := $.Watched}}
+<p><b>{{$name}}</b></p>
+{{end}}
+`
+
+func (t *Tailer) WriteStatusHTML(w io.Writer) error {
+	tpl, err := template.New("tailer").Parse(tailerTemplate)
+	if err != nil {
+		return err
+	}
+	t.watchedLock.RLock()
+	defer t.watchedLock.RUnlock()
+	data := struct {
+		Watched map[string]struct{}
+	}{
+		t.watched,
+	}
+	if err := tpl.Execute(w, data); err != nil {
+		return err
+	}
+	return nil
 }
