@@ -174,3 +174,29 @@ func TestProcessEvents(t *testing.T) {
 
 	}
 }
+
+var testProgFiles = []string{
+	"test.wrongext",
+	"test.mtail",
+	".test",
+}
+
+func TestLoadProg(t *testing.T) {
+	w := watcher.NewFakeWatcher()
+	store := metrics.NewStore()
+	inLines := make(chan string)
+	fs := afero.NewMemMapFs()
+	o := LoaderOptions{store, inLines, w, fs, false, false, false, false, true}
+	l, err := NewLoader(o)
+	if err != nil {
+		t.Fatalf("couldn't create loader: %s", err)
+	}
+
+	for _, f := range testProgFiles {
+		afero.WriteFile(fs, f, []byte(testProgram), 0644)
+		err = l.LoadProg(f)
+		if err != nil {
+			t.Fatalf("couldn't load file: %s error: %s", f, err)
+		}
+	}
+}
