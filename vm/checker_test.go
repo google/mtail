@@ -150,6 +150,10 @@ func TestCheckTypeExpressions(t *testing.T) {
 			continue
 		}
 
+		defaultCompareUnexportedFields := deep.CompareUnexportedFields
+		deep.CompareUnexportedFields = true
+		defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+
 		diff := deep.Equal(tc.expected, tc.expr.Type())
 		if len(diff) > 0 {
 			t.Errorf("Unspected return for input %d:\n%s", i, diff)

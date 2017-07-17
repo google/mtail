@@ -45,7 +45,7 @@ var testCodeGenPrograms = []struct {
 			instr{jnm, 11},
 			instr{setmatched, false},
 			instr{push, 0},
-			instr{capref, 0},
+			instr{capref, 1},
 			instr{str, 0},
 			instr{strptime, 2},
 			instr{mload, 0},
@@ -83,13 +83,13 @@ var testCodeGenPrograms = []struct {
 			instr{mload, 0},
 			instr{dload, 0},
 			instr{push, 0},
-			instr{capref, 0},
+			instr{capref, 1},
 			instr{iadd, nil},
 			instr{iset, nil},
 			instr{mload, 1},
 			instr{dload, 0},
 			instr{push, 0},
-			instr{capref, 0},
+			instr{capref, 1},
 			instr{iset, nil},
 			instr{setmatched, true}}},
 	{"cond expr gt",
@@ -194,7 +194,7 @@ var testCodeGenPrograms = []struct {
 			instr{jnm, 14},
 			instr{setmatched, false},
 			instr{push, 0},
-			instr{capref, 0},
+			instr{capref, 1},
 			instr{push, 1},
 			instr{cmp, 1},
 			instr{jm, 13},
@@ -264,12 +264,12 @@ $1 ** $2
 `,
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 7},
+			instr{jnm, 9},
 			instr{setmatched, false},
 			instr{push, 0},
-			instr{capref, 0},
-			instr{push, 0},
 			instr{capref, 1},
+			instr{push, 0},
+			instr{capref, 2},
 			instr{ipow, nil},
 			instr{setmatched, true}}},
 	{"indexed expr", `
@@ -370,7 +370,7 @@ gauge f
 			instr{capref, 1},
 			instr{iset, nil},
 			instr{setmatched, true},
-			instr{match, 0},
+			instr{match, 1},
 			instr{jnm, 18},
 			instr{setmatched, false},
 			instr{mload, 1},
@@ -402,6 +402,11 @@ func TestCodegen(t *testing.T) {
 			t.Logf("AST:\n%s", s.Dump(ast))
 			continue
 		}
+
+		defaultCompareUnexportedFields := deep.CompareUnexportedFields
+		deep.CompareUnexportedFields = true
+		defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+
 		if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
 			t.Errorf("%s: VM prog doesn't match.\n%s", tc.name, diff)
 			t.Logf("Expected:\n%s\nReceived:\n%s", tc.prog, obj.prog)

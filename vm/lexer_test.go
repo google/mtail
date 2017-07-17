@@ -139,7 +139,7 @@ var lexerTests = []lexerTest{
 		token{CAPREF, "1", position{"numerical capref", 0, 0, 1}},
 		token{EOF, "", position{"numerical capref", 0, 2, 2}}}},
 	{"capref with trailing punc", "$foo,", []token{
-		token{CAPREF, "foo", position{"capref with trailing punc", 0, 0, 3}},
+		token{CAPREF_NAMED, "foo", position{"capref with trailing punc", 0, 0, 3}},
 		token{COMMA, ",", position{"capref with trailing punc", 0, 4, 4}},
 		token{EOF, "", position{"capref with trailing punc", 0, 5, 5}}}},
 	{"quoted string", `"asdf"`, []token{
@@ -163,7 +163,7 @@ var lexerTests = []lexerTest{
 			token{NL, "\n", position{"large program", 1, 29, -1}},
 			token{BUILTIN, "strptime", position{"large program", 1, 2, 9}},
 			token{LPAREN, "(", position{"large program", 1, 10, 10}},
-			token{CAPREF, "date", position{"large program", 1, 11, 15}},
+			token{CAPREF_NAMED, "date", position{"large program", 1, 11, 15}},
 			token{COMMA, ",", position{"large program", 1, 16, 16}},
 			token{STRING, "%Y/%m/%d %H:%M:%S", position{"large program", 1, 18, 36}},
 			token{RPAREN, ")", position{"large program", 1, 37, 37}},
@@ -215,6 +215,11 @@ func TestLex(t *testing.T) {
 	for _, tc := range lexerTests {
 		t.Logf("Starting %s", tc.name)
 		tokens := collect(&tc)
+
+		defaultCompareUnexportedFields := deep.CompareUnexportedFields
+		deep.CompareUnexportedFields = true
+		defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+
 		if diff := deep.Equal(tc.tokens, tokens); diff != nil {
 			t.Errorf("%s tokens didn't match:\n%s:", tc.name, diff)
 		}
