@@ -66,7 +66,6 @@ func metricToPrometheus(hostname string, m *metrics.Metric, l *metrics.LabelSet)
 	}
 	sort.Strings(s)
 	s = append(s, fmt.Sprintf("prog=\"%s\"", m.Program))
-	s = append(s, fmt.Sprintf("instance=\"%s\"", hostname))
 	return fmt.Sprintf(prometheusFormat,
 		noHyphens(m.Name),
 		strings.Join(s, ","),
