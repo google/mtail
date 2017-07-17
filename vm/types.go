@@ -66,11 +66,12 @@ func (t *TypeOperator) String() string {
 
 // Builtin types
 var (
-	Undef  = &TypeOperator{"Undef"}
-	None   = &TypeOperator{"None"}
-	Int    = &TypeOperator{"Int"}
-	Float  = &TypeOperator{"Float"}
-	String = &TypeOperator{"String"}
+	Undef   = &TypeOperator{"Undef"}
+	None    = &TypeOperator{"None"}
+	Int     = &TypeOperator{"Int"}
+	Float   = &TypeOperator{"Float"}
+	String  = &TypeOperator{"String"}
+	Buckets = &TypeOperator{"Buckets"}
 )
 
 // Unify performs type unification of both parameter Types.  It returns the

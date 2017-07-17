@@ -51,6 +51,7 @@ var lexemeName = map[lexeme]string{
 	COUNTER:    "COUNTER",
 	GAUGE:      "GAUGE",
 	TIMER:      "TIMER",
+	HISTOGRAM:  "HISTOGRAM",
 	AS:         "AS",
 	BY:         "BY",
 	HIDDEN:     "HIDDEN",
@@ -61,6 +62,7 @@ var lexemeName = map[lexeme]string{
 	OTHERWISE:  "OTHERWISE",
 	ELSE:       "ELSE",
 	DEL:        "DEL",
+	WITH:       "WITH",
 }
 
 func (t lexeme) String() string {
@@ -80,10 +82,12 @@ var keywords = map[string]lexeme{
 	"del":       DEL,
 	"else":      ELSE,
 	"gauge":     GAUGE,
+	"histogram": HISTOGRAM,
 	"hidden":    HIDDEN,
 	"next":      NEXT,
 	"otherwise": OTHERWISE,
 	"timer":     TIMER,
+	"with":      WITH,
 }
 
 // List of builtin functions.  Keep this list sorted!

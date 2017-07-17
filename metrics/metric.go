@@ -37,11 +37,15 @@ const (
 	// intervals, such as latency and durations.  It enables certain behaviour
 	// in exporters that handle time intervals such as StatsD.
 	Timer
+	// Histogram is a Kind that observes a value and stores the value
+	// in a bucket.
+	Histogram
 )
 
 const (
-	Int   = datum.Int
-	Float = datum.Float
+	Int     = datum.Int
+	Float   = datum.Float
+	Buckets = datum.Buckets
 )
 
 func (m Kind) String() string {
@@ -52,6 +56,8 @@ func (m Kind) String() string {
 		return "Gauge"
 	case Timer:
 		return "Timer"
+	case Histogram:
+		return "Histogram"
 	}
 	return "Unknown"
 }
@@ -80,6 +86,7 @@ type Metric struct {
 	Hidden      bool          `json:",omitempty"`
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
+	Buckets     []datum.Range
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).
@@ -89,6 +96,7 @@ func NewMetric(name string, prog string, kind Kind, typ datum.Type, keys ...stri
 	m.Program = prog
 	m.Kind = kind
 	m.Type = typ
+	m.Buckets = make([]datum.Range, 0)
 	copy(m.Keys, keys)
 	return m
 }
@@ -128,6 +136,8 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 			d = datum.NewInt()
 		case datum.Float:
 			d = datum.NewFloat()
+		case datum.Buckets:
+			d = datum.NewBuckets(m.Buckets)
 		}
 		m.LabelValues = append(m.LabelValues, &LabelValue{labelvalues, d})
 	}

@@ -14,6 +14,7 @@ type Type int
 const (
 	Int Type = iota
 	Float
+	Buckets
 )
 
 func (t Type) String() string {
@@ -22,6 +23,8 @@ func (t Type) String() string {
 		return "Int"
 	case Float:
 		return "Float"
+	case Buckets:
+		return "Buckets"
 	}
 	return "?"
 }
@@ -62,6 +65,10 @@ func NewFloat() Datum {
 	return MakeFloat(0., zeroTime)
 }
 
+func NewBuckets(buckets []Range) Datum {
+	return MakeBuckets(0., buckets, zeroTime)
+}
+
 func MakeInt(v int64, ts time.Time) Datum {
 	d := &intDatum{}
 	d.Set(v, ts)
@@ -70,6 +77,17 @@ func MakeInt(v int64, ts time.Time) Datum {
 
 func MakeFloat(v float64, ts time.Time) Datum {
 	d := &floatDatum{}
+	d.Set(v, ts)
+	return d
+}
+
+func MakeBuckets(v float64, buckets []Range, ts time.Time) Datum {
+	d := &BucketsDatum{}
+
+	for _, r := range buckets {
+		d.AddBucket(r)
+	}
+
 	d.Set(v, ts)
 	return d
 }
@@ -96,6 +114,8 @@ func SetInt(d Datum, v int64, ts time.Time) {
 	switch d := d.(type) {
 	case *intDatum:
 		d.Set(v, ts)
+	case *BucketsDatum:
+		d.Set(float64(v), ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
 	}
@@ -105,6 +125,8 @@ func SetFloat(d Datum, v float64, ts time.Time) {
 	switch d := d.(type) {
 	case *floatDatum:
 		d.Set(v, ts)
+	case *BucketsDatum:
+		d.Set(float64(v), ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not a Float", d))
 	}

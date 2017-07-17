@@ -16,6 +16,7 @@ import (
 {
     intVal int64
     floatVal float64
+    floats []float64
     op int
     text string
     texts []string
@@ -27,19 +28,20 @@ import (
 %type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement 
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr
 %type <n> declaration declarator definition decoration_statement
-%type <kind> type_spec
+%type <kind> type_spec hist_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
 %type <op> relop shift_op bitwise_op
 %type <text> pattern_expr
+%type <floats> with_spec with_buckets_list
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
 // Types
-%token COUNTER GAUGE TIMER
+%token COUNTER GAUGE TIMER HISTOGRAM
 // Reserved words
-%token AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE
+%token AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE WITH
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -385,6 +387,14 @@ declaration
     d.kind = $2
     d.hidden = $1
   }
+  | hide_spec hist_spec declarator with_spec
+  {
+    $$ = $3
+    d := $$.(*declNode)
+    d.kind = $2
+    d.hidden = $1
+    d.buckets = $4
+  }
   ;
 
 hide_spec
@@ -432,6 +442,12 @@ type_spec
   {
     $$ = metrics.Timer
   }
+
+hist_spec
+  : HISTOGRAM
+  {
+    $$ = metrics.Histogram
+  }
   ;
 
 by_spec
@@ -470,6 +486,24 @@ as_spec
     $$ = $2
   }
   ;
+
+with_spec
+  : WITH with_buckets_list
+  {
+    $$ = $2
+  }
+
+with_buckets_list
+  : FLOATLITERAL
+  {
+    $$ = make([]float64, 0)
+    $$ = append($$, $1)
+  }
+  | with_buckets_list COMMA FLOATLITERAL
+  {
+    $$ = $1
+    $$ = append($$, $3)
+  }
 
 definition
   : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DEF ID compound_statement

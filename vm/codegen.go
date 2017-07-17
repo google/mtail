@@ -42,8 +42,9 @@ func (c *codegen) emit(i instr) {
 }
 
 var kindMap = map[Type]datum.Type{
-	Int:   metrics.Int,
-	Float: metrics.Float,
+	Int:     metrics.Int,
+	Float:   metrics.Float,
+	Buckets: metrics.Buckets,
 }
 
 func (c *codegen) VisitBefore(node astNode) Visitor {
@@ -77,6 +78,35 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 				datum.SetFloat(d, 0, time.Unix(0, 0))
 			}
 		}
+
+		if n.kind == metrics.Histogram {
+			if len(n.buckets) < 2 {
+				c.errorf(n.Pos(), "a histogram need at least two boundaries")
+				return nil
+			}
+			if n.buckets[0] >= n.buckets[1] {
+				c.errorf(n.Pos(), "buckets boundaries must be sorted")
+				return nil
+			}
+
+			ranges := make([]datum.Range, 0)
+			ranges = append(ranges, datum.Range{n.buckets[0], n.buckets[1]})
+
+			for _, max := range n.buckets[2:] {
+				min := ranges[len(ranges)-1].Max
+				if max <= min {
+					c.errorf(n.Pos(), "buckets boundaries must be sorted")
+					return nil
+				}
+
+				ranges = append(ranges, datum.Range{min, max})
+			}
+
+			for _, r := range ranges {
+				m.Buckets = append(m.Buckets, r)
+			}
+		}
+
 		m.Hidden = n.hidden
 		(*n.sym).Binding = m
 		n.sym.Addr = len(c.obj.m)

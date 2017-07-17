@@ -165,6 +165,7 @@ type declNode struct {
 	name         string
 	hidden       bool
 	keys         []string
+	buckets      []float64
 	kind         metrics.Kind
 	exportedName string
 	sym          *Symbol
@@ -175,7 +176,9 @@ func (n *declNode) Pos() *position {
 }
 
 func (n *declNode) Type() Type {
-	if n.sym != nil {
+	if n.kind == metrics.Histogram {
+		return Buckets
+	} else if n.sym != nil {
 		return n.sym.Type.Root()
 	}
 	return Undef

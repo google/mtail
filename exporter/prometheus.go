@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/metrics/datum"
 )
 
 var (
@@ -58,6 +60,10 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+func prometheusMetricLine(name, value string, labels ...string) string {
+	return fmt.Sprintf(prometheusFormat, noHyphens(name), strings.Join(labels, ","), value)
+}
+
 func metricToPrometheus(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
 	var s []string
 	for k, v := range l.Labels {
@@ -67,10 +73,40 @@ func metricToPrometheus(hostname string, m *metrics.Metric, l *metrics.LabelSet)
 	sort.Strings(s)
 	s = append(s, fmt.Sprintf("prog=\"%s\"", m.Program))
 	s = append(s, fmt.Sprintf("instance=\"%s\"", hostname))
-	return fmt.Sprintf(prometheusFormat,
-		noHyphens(m.Name),
-		strings.Join(s, ","),
-		l.Datum.Value())
+
+	switch m.Kind {
+	case metrics.Histogram:
+		lines := []string{}
+
+		b, ok := l.Datum.(*datum.BucketsDatum)
+		if !ok {
+			return ""
+		}
+
+		lines = append(lines, prometheusMetricLine(
+			m.Name+"_count",
+			strconv.FormatUint(b.Count(), 10),
+			s...,
+		))
+
+		lines = append(lines, prometheusMetricLine(
+			m.Name+"_sum",
+			strconv.FormatFloat(b.Sum(), 'g', -1, 64),
+			s...,
+		))
+
+		for r, c := range b.Buckets() {
+			lines = append(lines, prometheusMetricLine(
+				m.Name+"_bucket",
+				strconv.FormatUint(c, 10),
+				append(s, fmt.Sprintf("le=\"%f\"", r.Max))...,
+			))
+		}
+
+		return strings.Join(lines, "")
+	default:
+		return prometheusMetricLine(m.Name, l.Datum.Value(), s...)
+	}
 }
 
 func kindToPrometheusType(kind metrics.Kind) string {
