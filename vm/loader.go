@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/golang/glog"
@@ -83,6 +84,10 @@ func (l *Loader) LoadProgs(programPath string) error {
 // the program is the basename of the file.
 func (l *Loader) LoadProg(programPath string) error {
 	name := filepath.Base(programPath)
+	if strings.HasPrefix(name, ".") {
+		glog.Infof("Skipping %s because it is a hidden file.", programPath)
+		return nil
+	}
 	if filepath.Ext(name) != fileExt {
 		glog.Infof("Skipping %s due to file extension.", programPath)
 		return nil
