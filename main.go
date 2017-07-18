@@ -30,12 +30,29 @@ func (f *seqStringFlag) Set(value string) error {
 	return nil
 }
 
+type seqIntFlag []int
+
+func (f *seqIntFlag) String() string {
+	return fmt.Sprint(*f)
+}
+
+func (f *seqIntFlag) Set(value string) error {
+	for _, v := range strings.Split(value, ",") {
+		val, err := strconv.Atoi(v)
+		if err != nil {
+			return err
+		}
+		*f = append(*f, val)
+	}
+	return nil
+}
+
 var logs seqStringFlag
+var logFds seqIntFlag
 
 var (
-	port   = flag.String("port", "3903", "HTTP port to listen on.")
-	logFds = flag.String("logfds", "", "List of file descriptor numbers to monitor, comma separated.")
-	progs  = flag.String("progs", "", "Name of the directory containing mtail programs")
+	port  = flag.String("port", "3903", "HTTP port to listen on.")
+	progs = flag.String("progs", "", "Name of the directory containing mtail programs")
 
 	oneShot        = flag.Bool("one_shot", false, "Run the contents of the provided logs until EOF and exit.")
 	oneShotMetrics = flag.Bool("one_shot_metrics", false, "Dump metrics (to stdout) after one shot mode.")
@@ -49,6 +66,7 @@ var (
 
 func init() {
 	flag.Var(&logs, "logs", "List of log files to monitor, separated by commas.  This flag may be specified multiple times.")
+	flag.Var(&logFds, "logfds", "List of file descriptor numbers to monitor, separated by commas.  This flag may be specified multiple times.")
 }
 
 var (
@@ -73,31 +91,15 @@ func main() {
 	if *progs == "" {
 		glog.Exitf("No mtail program directory specified; use -progs")
 	}
-	var logPathnames []string
-	var logDescriptors []int
 	if !(*dumpBytecode || *dumpAst || *dumpAstTypes || *compileOnly) {
-		if len(logs) == 0 && *logFds == "" {
+		if len(logs) == 0 && len(logFds) == 0 {
 			glog.Exitf("No logs specified to tail; use -logs or -logfds")
-		}
-		for _, pathname := range logs {
-			if pathname != "" {
-				logPathnames = append(logPathnames, pathname)
-			}
-		}
-		for _, fdStr := range strings.Split(*logFds, ",") {
-			fdNum, err := strconv.Atoi(fdStr)
-			if err == nil {
-				logDescriptors = append(logDescriptors, fdNum)
-			}
-		}
-		if len(logPathnames) == 0 && len(logDescriptors) == 0 {
-			glog.Exit("No logs to tail.")
 		}
 	}
 	o := mtail.Options{
 		Progs:                *progs,
-		LogPaths:             logPathnames,
-		LogFds:               logDescriptors,
+		LogPathPatterns:      logs,
+		LogFds:               logFds,
 		Port:                 *port,
 		OneShot:              *oneShot,
 		OneShotMetrics:       *oneShotMetrics,
