@@ -39,7 +39,10 @@ func TestTail(t *testing.T) {
 	defer f.Close()
 	defer w.Close()
 
-	ta.Tail(logfile)
+	err = ta.TailPath(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// Tail also causes the log to be read, so no need to inject an event.
 
 	if _, ok := ta.files[logfile]; !ok {
@@ -72,7 +75,10 @@ func TestHandleLogUpdate(t *testing.T) {
 		close(done)
 	}()
 
-	ta.Tail(logfile)
+	err = ta.TailPath(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = f.WriteString("a\nb\nc\nd\n")
 	if err != nil {
@@ -119,7 +125,10 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 		close(done)
 	}()
 
-	ta.Tail(logfile)
+	err = ta.TailPath(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = f.WriteString("a")
 	if err != nil {

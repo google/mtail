@@ -106,18 +106,32 @@ func (t *Tailer) isWatching(path string) bool {
 	return ok
 }
 
-// Tail registers a file path to be tailed.
-func (t *Tailer) Tail(pathname string) {
+// Tail registers a pattern to be tailed.  If pattern is a plain
+// file then it is watched for updates and opened.  If pattern is a glob, then
+// all paths that match the glob are opened and watched, and the directories
+// containing those matches, if any, are watched.
+func (t *Tailer) Tail(pattern string) error {
+	_, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// TailPath registers a filesystem pathname to be tailed.
+func (t *Tailer) TailPath(pathname string) error {
 	fullpath, err := filepath.Abs(pathname)
 	if err != nil {
 		glog.Infof("Failed to find absolute path for %q: %s\n", pathname, err)
-		return
+		// TODO: errors.Wrap.
+		return err
 	}
 	if !t.isWatching(fullpath) {
 		t.addWatched(fullpath)
 		logCount.Add(1)
 		t.openLogPath(fullpath, false)
 	}
+	return nil
 }
 
 // TailFile registers a file handle to be tailed.  There is no filesystem to
