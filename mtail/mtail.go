@@ -99,7 +99,8 @@ func (m *MtailServer) StartTailing() error {
 	}
 
 	for _, pattern := range m.o.LogPathPatterns {
-		if err = m.t.TailPath(pattern); err != nil {
+		glog.V(1).Infof("Tail pattern %q", pattern)
+		if err = m.t.Tail(pattern); err != nil {
 			glog.Error(err)
 		}
 	}

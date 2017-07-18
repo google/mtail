@@ -32,9 +32,9 @@ import (
 )
 
 var (
-	logCount     = expvar.NewInt("log_count")
-	logErrors    = expvar.NewMap("log_errors_total")
-	logRotations = expvar.NewMap("log_rotations_total")
+	LogCount     = expvar.NewInt("log_count")
+	LogErrors    = expvar.NewMap("log_errors_total")
+	LogRotations = expvar.NewMap("log_rotations_total")
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
@@ -115,8 +115,12 @@ func (t *Tailer) Tail(pattern string) error {
 	if err != nil {
 		return err
 	}
+	glog.V(1).Infof("glob matches: %v", matches)
 	for _, pathname := range matches {
-		t.TailPath(pathname)
+		err := t.TailPath(pathname)
+		if err != nil {
+			glog.Infof("Error attempting to tail %q: %s", pathname, err)
+		}
 	}
 	return nil
 }
@@ -131,7 +135,7 @@ func (t *Tailer) TailPath(pathname string) error {
 	}
 	if !t.isWatching(fullpath) {
 		t.addWatched(fullpath)
-		logCount.Add(1)
+		LogCount.Add(1)
 		t.openLogPath(fullpath, false)
 	}
 	return nil
@@ -140,7 +144,7 @@ func (t *Tailer) TailPath(pathname string) error {
 // TailFile registers a file handle to be tailed.  There is no filesystem to
 // watch, so no watches are registered, and no file paths are opened.
 func (t *Tailer) TailFile(f afero.File) error {
-	logCount.Add(1)
+	LogCount.Add(1)
 	return t.startNewFile(f, false)
 }
 
@@ -224,7 +228,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 		}
 		if inode(s1) != inode(s2) {
 			glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
-			logRotations.Add(pathname, 1)
+			LogRotations.Add(pathname, 1)
 			// flush the old log, pathname is still an index into t.files with the old inode.
 			t.handleLogUpdate(pathname)
 			fd.Close()
@@ -273,7 +277,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 			return
 		}
 		glog.Infof("Failed to open %q for reading: %s", pathname, err)
-		logErrors.Add(pathname, 1)
+		LogErrors.Add(pathname, 1)
 		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
 		if seenBefore {
 			retries = retries - 1
@@ -296,7 +300,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	fi, err := f.Stat()
 	if err != nil {
 		// Stat failed, log error and return.
-		logErrors.Add(f.Name(), 1)
+		LogErrors.Add(f.Name(), 1)
 		return fmt.Errorf("Failed to stat %q: %s", f.Name(), err)
 	}
 	switch m := fi.Mode(); {

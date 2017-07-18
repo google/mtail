@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/glog"
+	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
 )
 
@@ -324,5 +326,58 @@ func TestHandleSoftLinkChange(t *testing.T) {
 	_, err = os.Stat(logFilepath + ".true2")
 	if err != nil {
 		t.Errorf("stat failed on %s: %s", logFilepath+".true2", err)
+	}
+}
+
+func TestGlob(t *testing.T) {
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
+
+	globTests := []struct {
+		name     string
+		expected bool
+	}{
+		{
+			path.Join(workdir, "log1"),
+			true,
+		},
+		{
+			path.Join(workdir, "log2"),
+			true,
+		},
+		{
+			path.Join(workdir, "1log"),
+			false,
+		},
+	}
+	count := 0
+	for _, tt := range globTests {
+		log, err := os.Create(tt.name)
+		if err != nil {
+			t.Errorf("could not create log file: %s", err)
+			continue
+		}
+		defer log.Close()
+		if tt.expected {
+			count += 1
+		}
+		log.WriteString("\n")
+		log.Sync()
+	}
+	m := startMtailServer(t, []string{path.Join(workdir, "log*")}, "")
+	defer m.Close()
+	check := func() (bool, error) {
+		if tailer.LogCount.String() != fmt.Sprintf("%d", count) {
+			glog.V(1).Infof("tailer is %q, count is %d", tailer.LogCount.String(), count)
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err := doOrTimeout(check, 10*time.Second, 100*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Errorf("Log count not matching\n\texpecteed: %s\n\t: received: %s", count, tailer.LogCount.String())
 	}
 }
