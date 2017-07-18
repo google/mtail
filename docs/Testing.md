@@ -26,4 +26,4 @@ mtail --one_shot --progs ./progs --logs testdata/foo.log
 
 # Troubleshooting
 
-For more information about debugging mtail programs, see the tips under [Troubleshooting](Troubleshooting.md)
+For more information about debugging mtail programs, see the tips under [Troubleshooting](Troubleshooting)

@@ -55,4 +55,4 @@ Additionally, the flag `metric_push_interval_seconds` can be used to configure t
 
 ## Troubleshooting
 
-Lots of state is logged to the log file, by default in `/tmp/mtail.INFO`.  See [Troubleshooting](Troubleshooting.md) for more information.
+Lots of state is logged to the log file, by default in `/tmp/mtail.INFO`.  See [Troubleshooting](Troubleshooting) for more information.

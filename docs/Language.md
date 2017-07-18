@@ -4,7 +4,7 @@ As `mtail` is designed to tail log files and apply regular expressions to new lo
 
 It resembles another, more famous pattern-action language, that of AWK.
 
-This page errs on the side of a language specification and reference.  See the [Programming Guide](Programming-Guide.md) for a gentler introduction to writing `mtail` programs.
+This page errs on the side of a language specification and reference.  See the [Programming Guide](Programming-Guide) for a gentler introduction to writing `mtail` programs.
 
 # Details
 
