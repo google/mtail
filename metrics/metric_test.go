@@ -15,6 +15,25 @@ import (
 	"github.com/google/mtail/metrics/datum"
 )
 
+func TestKindType(t *testing.T) {
+	v := Kind(0)
+	if s := v.String(); s != "Unknown" {
+		t.Errorf("Kind.String() returned %q not Unknown", s)
+	}
+	v = Counter
+	if s := v.String(); s != "Counter" {
+		t.Errorf("Kind.String() returned %q not Counter", s)
+	}
+	v = Gauge
+	if s := v.String(); s != "Gauge" {
+		t.Errorf("Kind.String() returned %q not Gauge", s)
+	}
+	v = Timer
+	if s := v.String(); s != "Timer" {
+		t.Errorf("Kind.String() returned %q not Timer", s)
+	}
+}
+
 func TestScalarMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, Int)
 	d, _ := v.GetDatum()

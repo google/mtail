@@ -33,7 +33,7 @@ var handlePrometheusTests = []struct {
 				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
 		`# TYPE foo counter
-foo{prog="test",instance="gunstar"} 1
+foo{prog="test"} 1
 `,
 	},
 	{"dimensioned",
@@ -47,7 +47,7 @@ foo{prog="test",instance="gunstar"} 1
 			},
 		},
 		`# TYPE foo counter
-foo{a="1",b="2",prog="test",instance="gunstar"} 1
+foo{a="1",b="2",prog="test"} 1
 `,
 	},
 	{"gauge",
@@ -59,7 +59,7 @@ foo{a="1",b="2",prog="test",instance="gunstar"} 1
 				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
 		`# TYPE foo gauge
-foo{prog="test",instance="gunstar"} 1
+foo{prog="test"} 1
 `,
 	},
 	{"timer",
@@ -71,7 +71,7 @@ foo{prog="test",instance="gunstar"} 1
 				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
 		`# TYPE foo gauge
-foo{prog="test",instance="gunstar"} 1
+foo{prog="test"} 1
 `,
 	},
 	{"quotes",
@@ -85,7 +85,7 @@ foo{prog="test",instance="gunstar"} 1
 			},
 		},
 		`# TYPE foo counter
-foo{a="str\"bang\"blah",prog="test",instance="gunstar"} 1
+foo{a="str\"bang\"blah",prog="test"} 1
 `,
 	},
 }
