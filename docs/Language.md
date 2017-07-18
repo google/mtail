@@ -4,7 +4,7 @@ As `mtail` is designed to tail log files and apply regular expressions to new lo
 
 It resembles another, more famous pattern-action language, that of AWK.
 
-This page errs on the side of a language specification and reference.  See the [[Programming Guide]] for a gentler introduction to writing `mtail` programs.
+This page errs on the side of a language specification and reference.  See the [Programming Guide](Programming-Guide.md) for a gentler introduction to writing `mtail` programs.
 
 # Details
 
@@ -197,7 +197,7 @@ A regular expression that extracts the timestamp in boring old syslog format loo
 }
 ```
 
-Buyer beware!  The format string used by `mtail` is the same as the [Go time.Parse() format string](http://golang.org/src/pkg/time/format.go), which is completely unlike that used by C's strptime.  The format string must always be the 2nd of January 2006 at 3:04:05 PM.  See the documentation for the **ANSIC** format in the above link for more details.
+Buyer beware!  The format string used by `mtail` is the same as the [Go time.Parse() format string](http://godoc.org/time#Parse), which is completely unlike that used by C's strptime.  The format string must always be the 2nd of January 2006 at 3:04:05 PM.  See the documentation for the **ANSIC** format in the above link for more details.
 
 ## Nested Actions
 
