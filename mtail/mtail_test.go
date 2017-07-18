@@ -51,6 +51,7 @@ func startMtailServer(t *testing.T, logPathnames []string, progPathname string) 
 	}
 
 	vm.LineCount.Set(0)
+	tailer.LogCount.Set(0)
 
 	m.StartTailing()
 	return m
@@ -366,6 +367,62 @@ func TestGlob(t *testing.T) {
 	}
 	m := startMtailServer(t, []string{path.Join(workdir, "log*")}, "")
 	defer m.Close()
+	check := func() (bool, error) {
+		if tailer.LogCount.String() != fmt.Sprintf("%d", count) {
+			glog.V(1).Infof("tailer is %q, count is %d", tailer.LogCount.String(), count)
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err := doOrTimeout(check, 10*time.Second, 100*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Errorf("Log count not matching\n\texpecteed: %s\n\t: received: %s", count, tailer.LogCount.String())
+	}
+}
+
+func TestGlobAfterStart(t *testing.T) {
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
+
+	globTests := []struct {
+		name     string
+		expected bool
+	}{
+		{
+			path.Join(workdir, "log1"),
+			true,
+		},
+		{
+			path.Join(workdir, "log2"),
+			true,
+		},
+		{
+			path.Join(workdir, "1log"),
+			false,
+		},
+	}
+	m := startMtailServer(t, []string{path.Join(workdir, "log*")}, "")
+	defer m.Close()
+	glog.Infof("Pausing for mtail startup.")
+	time.Sleep(100 * time.Millisecond)
+	count := 0
+	for _, tt := range globTests {
+		log, err := os.Create(tt.name)
+		if err != nil {
+			t.Errorf("could not create log file: %s", err)
+			continue
+		}
+		defer log.Close()
+		if tt.expected {
+			count += 1
+		}
+		log.WriteString("\n")
+		log.Sync()
+	}
+	glog.Infof("count is %d", count)
 	check := func() (bool, error) {
 		if tailer.LogCount.String() != fmt.Sprintf("%d", count) {
 			glog.V(1).Infof("tailer is %q, count is %d", tailer.LogCount.String(), count)
