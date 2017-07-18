@@ -34,7 +34,7 @@ func removeTempDir(t *testing.T, workdir string) {
 }
 
 func startMtailServer(t *testing.T, logPathnames []string, progPathname string) *MtailServer {
-	o := Options{LogPaths: logPathnames}
+	o := Options{LogPathPatterns: logPathnames}
 	m, err := New(o)
 	if err != nil {
 		t.Fatalf("couldn't create mtail: %s", err)
