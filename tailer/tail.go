@@ -286,6 +286,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
 		if os.IsNotExist(err) {
+			glog.V(1).Infof("Pathname %q doesn't eist (yet?)", pathname)
 			return
 		}
 		glog.Infof("Failed to open %q for reading: %s", pathname, err)

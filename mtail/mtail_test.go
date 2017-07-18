@@ -191,6 +191,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	pathnames := []string{logFilepath}
 	m := startMtailServer(t, pathnames, "")
 	defer m.Close()
+	time.Sleep(10 * time.Millisecond)
 
 	// touch log file
 	logFile, err := os.Create(logFilepath)
@@ -198,16 +199,9 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		t.Errorf("could not touch log file: %s", err)
 	}
 	defer logFile.Close()
-	inputLines := []string{"hi", "hi2", "hi3"}
-	for _, x := range inputLines {
-		// write to log file
-		logFile.WriteString(x + "\n")
-		logFile.Sync()
-	}
-	// check log line count increase
-	expected := fmt.Sprintf("%d", len(inputLines))
+	expected := "1"
 	check := func() (bool, error) {
-		if vm.LineCount.String() != expected {
+		if tailer.LogCount.String() != expected {
 			return false, nil
 		}
 		return true, nil
@@ -217,7 +211,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
+		t.Errorf("Log count not increased\n\texpected: %s\n\treceived: %s", expected, tailer.LogCount.String())
 	}
 }
 
@@ -242,8 +236,8 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	}
 	defer logFile.Close()
 	expected := "0"
-	if vm.LineCount.String() != expected {
-		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
+	if tailer.LogCount.String() != expected {
+		t.Errorf("Log count not increased\n\texpected: %s\n\treceived: %s", expected, tailer.LogCount.String())
 	}
 }
 
@@ -274,7 +268,10 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		trueLog1.Sync()
 	}
 	check3 := func() (bool, error) {
-		if vm.LineCount.String() != "3" {
+		if tailer.LogCount.String() != "1" {
+			return false, nil
+		}
+		if tailer.LogRotations.Get(logFilepath) != nil {
 			return false, nil
 		}
 		return true, nil
@@ -284,7 +281,8 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("line count not matched: received %s, expected 3", vm.LineCount.String())
+		t.Errorf("log count: received %s, expected 1", tailer.LogCount.String())
+		t.Errorf("log rotatins: received %s, expected 0", tailer.LogRotations.String())
 	}
 	trueLog2, err := os.Create(logFilepath + ".true2")
 	if err != nil {
@@ -304,7 +302,13 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		trueLog2.Sync()
 	}
 	check6 := func() (bool, error) {
-		if vm.LineCount.String() != "6" {
+		if tailer.LogCount.String() != "1" {
+			return false, nil
+		}
+		if tailer.LogRotations.Get(logFilepath) == nil {
+			return false, nil
+		}
+		if tailer.LogRotations.Get(logFilepath).String() != "1" {
 			return false, nil
 		}
 		return true, nil
@@ -313,12 +317,13 @@ func TestHandleSoftLinkChange(t *testing.T) {
 	if err != nil {
 		buf := make([]byte, 1<<16)
 		count := runtime.Stack(buf, true)
-		fmt.Println(string(buf[:count]))
+		t.Log("Timed out: Dumping goroutine stack")
+		t.Log(string(buf[:count]))
 		t.Fatal(err)
-
 	}
 	if !ok {
-		t.Errorf("line count not matched: received %s, expected 6", vm.LineCount.String())
+		t.Errorf("log count: received %s, expected 1", tailer.LogCount.String())
+		t.Errorf("log rotatins: received %s, expected 0", tailer.LogRotations.String())
 	}
 	_, err = os.Stat(logFilepath + ".true1")
 	if err != nil {
@@ -331,6 +336,10 @@ func TestHandleSoftLinkChange(t *testing.T) {
 }
 
 func TestGlob(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+
 	workdir := makeTempDir(t)
 	defer removeTempDir(t, workdir)
 
@@ -384,6 +393,10 @@ func TestGlob(t *testing.T) {
 }
 
 func TestGlobAfterStart(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+
 	workdir := makeTempDir(t)
 	defer removeTempDir(t, workdir)
 
