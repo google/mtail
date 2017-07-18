@@ -14,7 +14,7 @@ internal state, and existing monitoring systems, without patching those
 applications or rewriting the same framework for custom extraction glue code.
 
 The extraction is controlled
-by [mtail programs](https://github.com/google/mtail/wiki/Programming-Guide)
+by [mtail programs](docs/Programming-Guide)
 which define patterns and actions:
 
     # simple line counter
@@ -27,9 +27,9 @@ Metrics are exported for scraping by a collector as JSON or Prometheus format
 over HTTP, or can be periodically sent to a collectd, StatsD, or Graphite
 collector socket.
 
-See [the Wiki](https://github.com/google/mtail/wiki/Home) for more details.
+See [the docs](docs/) for more details.
 Start with
-the [programming guide](https://github.com/google/mtail/wiki/Programming-Guide)
+the [programming guide](docs/Programming-Guide)
 if you want to learn how to write mtail programs.
 
 Mailing list: https://groups.google.com/forum/#!forum/mtail-users
@@ -37,7 +37,7 @@ Mailing list: https://groups.google.com/forum/#!forum/mtail-users
 ### Installation
 
 `mtail` uses a Makefile.  To build `mtail`, type `make` at the commandline.
-See the [Build instructions](https://github.com/google/mtail/wiki/Building) for
+See the [Build instructions](docs/Building) for
 more details.
 
 ### Deployment
