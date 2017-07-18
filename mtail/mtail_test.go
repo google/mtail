@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/glog"
+	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
 )
 
@@ -34,7 +36,7 @@ func removeTempDir(t *testing.T, workdir string) {
 }
 
 func startMtailServer(t *testing.T, logPathnames []string, progPathname string) *MtailServer {
-	o := Options{LogPaths: logPathnames}
+	o := Options{LogPathPatterns: logPathnames}
 	m, err := New(o)
 	if err != nil {
 		t.Fatalf("couldn't create mtail: %s", err)
@@ -49,6 +51,7 @@ func startMtailServer(t *testing.T, logPathnames []string, progPathname string) 
 	}
 
 	vm.LineCount.Set(0)
+	tailer.LogCount.Set(0)
 
 	m.StartTailing()
 	return m
@@ -188,6 +191,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	pathnames := []string{logFilepath}
 	m := startMtailServer(t, pathnames, "")
 	defer m.Close()
+	time.Sleep(10 * time.Millisecond)
 
 	// touch log file
 	logFile, err := os.Create(logFilepath)
@@ -195,16 +199,9 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		t.Errorf("could not touch log file: %s", err)
 	}
 	defer logFile.Close()
-	inputLines := []string{"hi", "hi2", "hi3"}
-	for _, x := range inputLines {
-		// write to log file
-		logFile.WriteString(x + "\n")
-		logFile.Sync()
-	}
-	// check log line count increase
-	expected := fmt.Sprintf("%d", len(inputLines))
+	expected := "1"
 	check := func() (bool, error) {
-		if vm.LineCount.String() != expected {
+		if tailer.LogCount.String() != expected {
 			return false, nil
 		}
 		return true, nil
@@ -214,7 +211,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
+		t.Errorf("Log count not increased\n\texpected: %s\n\treceived: %s", expected, tailer.LogCount.String())
 	}
 }
 
@@ -239,8 +236,8 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	}
 	defer logFile.Close()
 	expected := "0"
-	if vm.LineCount.String() != expected {
-		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
+	if tailer.LogCount.String() != expected {
+		t.Errorf("Log count not increased\n\texpected: %s\n\treceived: %s", expected, tailer.LogCount.String())
 	}
 }
 
@@ -271,7 +268,10 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		trueLog1.Sync()
 	}
 	check3 := func() (bool, error) {
-		if vm.LineCount.String() != "3" {
+		if tailer.LogCount.String() != "1" {
+			return false, nil
+		}
+		if tailer.LogRotations.Get(logFilepath) != nil {
 			return false, nil
 		}
 		return true, nil
@@ -281,7 +281,8 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("line count not matched: received %s, expected 3", vm.LineCount.String())
+		t.Errorf("log count: received %s, expected 1", tailer.LogCount.String())
+		t.Errorf("log rotatins: received %s, expected 0", tailer.LogRotations.String())
 	}
 	trueLog2, err := os.Create(logFilepath + ".true2")
 	if err != nil {
@@ -301,7 +302,13 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		trueLog2.Sync()
 	}
 	check6 := func() (bool, error) {
-		if vm.LineCount.String() != "6" {
+		if tailer.LogCount.String() != "1" {
+			return false, nil
+		}
+		if tailer.LogRotations.Get(logFilepath) == nil {
+			return false, nil
+		}
+		if tailer.LogRotations.Get(logFilepath).String() != "1" {
 			return false, nil
 		}
 		return true, nil
@@ -310,12 +317,13 @@ func TestHandleSoftLinkChange(t *testing.T) {
 	if err != nil {
 		buf := make([]byte, 1<<16)
 		count := runtime.Stack(buf, true)
-		fmt.Println(string(buf[:count]))
+		t.Log("Timed out: Dumping goroutine stack")
+		t.Log(string(buf[:count]))
 		t.Fatal(err)
-
 	}
 	if !ok {
-		t.Errorf("line count not matched: received %s, expected 6", vm.LineCount.String())
+		t.Errorf("log count: received %s, expected 1", tailer.LogCount.String())
+		t.Errorf("log rotatins: received %s, expected 0", tailer.LogRotations.String())
 	}
 	_, err = os.Stat(logFilepath + ".true1")
 	if err != nil {
@@ -324,5 +332,122 @@ func TestHandleSoftLinkChange(t *testing.T) {
 	_, err = os.Stat(logFilepath + ".true2")
 	if err != nil {
 		t.Errorf("stat failed on %s: %s", logFilepath+".true2", err)
+	}
+}
+
+func TestGlob(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
+
+	globTests := []struct {
+		name     string
+		expected bool
+	}{
+		{
+			path.Join(workdir, "log1"),
+			true,
+		},
+		{
+			path.Join(workdir, "log2"),
+			true,
+		},
+		{
+			path.Join(workdir, "1log"),
+			false,
+		},
+	}
+	count := 0
+	for _, tt := range globTests {
+		log, err := os.Create(tt.name)
+		if err != nil {
+			t.Errorf("could not create log file: %s", err)
+			continue
+		}
+		defer log.Close()
+		if tt.expected {
+			count += 1
+		}
+		log.WriteString("\n")
+		log.Sync()
+	}
+	m := startMtailServer(t, []string{path.Join(workdir, "log*")}, "")
+	defer m.Close()
+	check := func() (bool, error) {
+		if tailer.LogCount.String() != fmt.Sprintf("%d", count) {
+			glog.V(1).Infof("tailer is %q, count is %d", tailer.LogCount.String(), count)
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err := doOrTimeout(check, 10*time.Second, 100*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Errorf("Log count not matching\n\texpecteed: %s\n\t: received: %s", count, tailer.LogCount.String())
+	}
+}
+
+func TestGlobAfterStart(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
+
+	globTests := []struct {
+		name     string
+		expected bool
+	}{
+		{
+			path.Join(workdir, "log1"),
+			true,
+		},
+		{
+			path.Join(workdir, "log2"),
+			true,
+		},
+		{
+			path.Join(workdir, "1log"),
+			false,
+		},
+	}
+	m := startMtailServer(t, []string{path.Join(workdir, "log*")}, "")
+	defer m.Close()
+	glog.Infof("Pausing for mtail startup.")
+	time.Sleep(100 * time.Millisecond)
+	count := 0
+	for _, tt := range globTests {
+		log, err := os.Create(tt.name)
+		if err != nil {
+			t.Errorf("could not create log file: %s", err)
+			continue
+		}
+		defer log.Close()
+		if tt.expected {
+			count += 1
+		}
+		log.WriteString("\n")
+		log.Sync()
+	}
+	glog.Infof("count is %d", count)
+	check := func() (bool, error) {
+		if tailer.LogCount.String() != fmt.Sprintf("%d", count) {
+			glog.V(1).Infof("tailer is %q, count is %d", tailer.LogCount.String(), count)
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err := doOrTimeout(check, 10*time.Second, 100*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Errorf("Log count not matching\n\texpecteed: %s\n\t: received: %s", count, tailer.LogCount.String())
 	}
 }

@@ -98,8 +98,11 @@ func (m *MtailServer) StartTailing() error {
 		return fmt.Errorf("couldn't create a log tailer: %s", err)
 	}
 
-	for _, pathname := range m.o.LogPaths {
-		m.t.Tail(pathname)
+	for _, pattern := range m.o.LogPathPatterns {
+		glog.V(1).Infof("Tail pattern %q", pattern)
+		if err = m.t.Tail(pattern); err != nil {
+			glog.Error(err)
+		}
 	}
 	for _, fd := range m.o.LogFds {
 		f := os.NewFile(uintptr(fd), strconv.Itoa(fd))
@@ -107,8 +110,8 @@ func (m *MtailServer) StartTailing() error {
 			glog.Errorf("Attempt to reopen fd %q returned nil", fd)
 			continue
 		}
-		if e := m.t.TailFile(f); e != nil {
-			glog.Error(e)
+		if err = m.t.TailFile(f); err != nil {
+			glog.Error(err)
 		}
 	}
 	return nil
@@ -175,7 +178,7 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Options contains all the parameters necessary for constructing a new MtailServer.
 type Options struct {
 	Progs                string
-	LogPaths             []string
+	LogPathPatterns      []string
 	LogFds               []int
 	Port                 string
 	OneShot              bool
@@ -235,7 +238,7 @@ func (m *MtailServer) WriteMetrics(w io.Writer) error {
 // RunOneShot performs the work of the one_shot commandline flag; after compiling programs mtail will read all of the log files in full, once, dump the metric results at the end, and then exit.
 func (m *MtailServer) RunOneShot() {
 	fmt.Println("Oneshot results:")
-	for _, pathname := range m.o.LogPaths {
+	for _, pathname := range m.o.LogPathPatterns {
 		_, err := m.OneShot(pathname, true)
 		if err != nil {
 			glog.Exitf("Failed one shot mode for %q: %s\n", pathname, err)
