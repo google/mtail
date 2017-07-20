@@ -54,6 +54,7 @@ var checkerInvalidPrograms = []struct {
 func TestCheckInvalidPrograms(t *testing.T) {
 	for _, tc := range checkerInvalidPrograms {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ast, err := Parse(tc.name, strings.NewReader(tc.program))
 			if err != nil {
 				t.Fatal(err)
@@ -107,6 +108,7 @@ var checkerValidPrograms = []struct {
 func TestCheckValidPrograms(t *testing.T) {
 	for _, tc := range checkerValidPrograms {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ast, err := Parse(tc.name, strings.NewReader(tc.program))
 			if err != nil {
 				t.Fatal(err)
@@ -148,6 +150,7 @@ var checkerTypeExpressionTests = []struct {
 func TestCheckTypeExpressions(t *testing.T) {
 	for _, tc := range checkerTypeExpressionTests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			err := Check(tc.expr)
 			if err != nil {
 				t.Fatalf("check error: %s", err)
