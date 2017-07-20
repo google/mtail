@@ -8,6 +8,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -24,7 +25,7 @@ func BenchmarkProgram(b *testing.B) {
 	for _, bm := range exampleProgramTests {
 		prog := filepath.Base(bm.programfile)
 		log := filepath.Base(bm.logfile)
-		b.Run(prog+"+"+log, func(b *testing.B) {
+		b.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(b *testing.B) {
 			b.ReportAllocs()
 
 			w := watcher.NewFakeWatcher()
