@@ -188,7 +188,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	}
 	l.handles[name] = &vmHandle{make(chan *tailer.LogLine), make(chan struct{})}
 	nameCode := nameToCode(name)
-	glog.Infof("Program %s has thread ID %x", name, nameCode)
+	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
 	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done)
 	return nil
 }
