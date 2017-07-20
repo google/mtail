@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/watcher"
 )
 
@@ -185,7 +186,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		close(handle.lines)
 		<-handle.done
 	}
-	l.handles[name] = &vmHandle{make(chan string), make(chan struct{})}
+	l.handles[name] = &vmHandle{make(chan *tailer.LogLine), make(chan struct{})}
 	nameCode := nameToCode(name)
 	glog.Infof("Program %s has thread ID %x", name, nameCode)
 	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done)
@@ -225,9 +226,10 @@ type Loader struct {
 // new Loader.
 type LoaderOptions struct {
 	Store *metrics.Store
-	Lines <-chan string
-	W     watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
-	FS    afero.Fs        // Not required, will use afero.OsFs if zero.
+	Lines <-chan *tailer.LogLine
+
+	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
+	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 
 	CompileOnly          bool
 	DumpAst              bool // print the AST after type check
@@ -275,7 +277,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 }
 
 type vmHandle struct {
-	lines chan string
+	lines chan *tailer.LogLine
 	done  chan struct{}
 }
 
@@ -302,12 +304,12 @@ func (l *Loader) processEvents() {
 // processLines provides fanout of the input log lines to each virtual machine
 // running.  Upon close of the incoming lines channel, it also communicates
 // shutdown to the target VMs via channel close.
-func (l *Loader) processLines(lines <-chan string) {
-	for line := range lines {
+func (l *Loader) processLines(lines <-chan *tailer.LogLine) {
+	for logline := range lines {
 		LineCount.Add(1)
 		l.handleMu.RLock()
 		for prog := range l.handles {
-			l.handles[prog].lines <- line
+			l.handles[prog].lines <- logline
 		}
 		l.handleMu.RUnlock()
 	}

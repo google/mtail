@@ -16,10 +16,10 @@ import (
 	"github.com/spf13/afero"
 )
 
-func makeTestTail(t *testing.T) (*Tailer, chan string, *watcher.FakeWatcher, afero.Fs) {
+func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, afero.Fs) {
 	fs := afero.NewMemMapFs()
 	w := watcher.NewFakeWatcher()
-	lines := make(chan string, 1)
+	lines := make(chan *LogLine, 1)
 	o := Options{lines, w, fs}
 	ta, err := New(o)
 	if err != nil {
@@ -63,7 +63,7 @@ func TestHandleLogUpdate(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []string{}
+	result := []*LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	go func() {
@@ -93,7 +93,12 @@ func TestHandleLogUpdate(t *testing.T) {
 	w.Close()
 	<-done
 
-	expected := []string{"a", "b", "c", "d"}
+	expected := []*LogLine{
+		&LogLine{logfile, "a"},
+		&LogLine{logfile, "b"},
+		&LogLine{logfile, "c"},
+		&LogLine{logfile, "d"},
+	}
 	if diff := deep.Equal(result, expected); diff != nil {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
@@ -112,7 +117,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []string{}
+	result := []*LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -157,7 +162,9 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	w.Close()
 	<-done
 
-	expected := []string{"ab"}
+	expected := []*LogLine{
+		&LogLine{logfile, "ab"},
+	}
 	diff := deep.Equal(result, expected)
 	if diff != nil {
 		t.Errorf("result didn't match:\n%s", diff)
@@ -197,7 +204,7 @@ func TestReadPartial(t *testing.T) {
 	f.Seek(-1, os.SEEK_END)
 	p, err = ta.read(f, "ohi")
 	l := <-lines
-	if l != "ohi" {
+	if l.Line != "ohi" {
 		t.Errorf("line emitted not ohi: %q", l)
 	}
 	if p != "" {
@@ -229,7 +236,7 @@ func TestReadPipe(t *testing.T) {
 		t.Fatalf("Didn't write enough bytes: %d", n)
 	}
 	l := <-lines
-	if l != "hi" {
+	if l.Line != "hi" {
 		t.Errorf("line not expected: %q", l)
 	}
 }

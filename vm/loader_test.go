@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/watcher"
 	"github.com/spf13/afero"
 )
@@ -16,7 +17,7 @@ import (
 func TestNewLoader(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
-	inLines := make(chan string)
+	inLines := make(chan *tailer.LogLine)
 	fs := afero.NewMemMapFs()
 	o := LoaderOptions{store, inLines, w, fs, false, false, false, false, true}
 	l, err := NewLoader(o)
@@ -24,7 +25,7 @@ func TestNewLoader(t *testing.T) {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
 	done := make(chan struct{})
-	outLines := make(chan string)
+	outLines := make(chan *tailer.LogLine)
 	handle := &vmHandle{outLines, done}
 	l.handleMu.Lock()
 	l.handles["test"] = handle
@@ -41,7 +42,7 @@ func TestNewLoader(t *testing.T) {
 func TestCompileAndRun(t *testing.T) {
 	var testProgram = "/$/ {}\n"
 	store := metrics.NewStore()
-	lines := make(chan string)
+	lines := make(chan *tailer.LogLine)
 	w := watcher.NewFakeWatcher()
 	fs := afero.NewMemMapFs()
 	o := LoaderOptions{store, lines, w, fs, false, false, false, false, true}
@@ -116,7 +117,7 @@ func TestProcessEvents(t *testing.T) {
 		w := watcher.NewFakeWatcher()
 		w.Add(".")
 		store := metrics.NewStore()
-		lines := make(chan string)
+		lines := make(chan *tailer.LogLine)
 		fs := afero.NewMemMapFs()
 		o := LoaderOptions{store, lines, w, fs, false, false, false, false, true}
 		l, err := NewLoader(o)
@@ -184,7 +185,7 @@ var testProgFiles = []string{
 func TestLoadProg(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
-	inLines := make(chan string)
+	inLines := make(chan *tailer.LogLine)
 	fs := afero.NewMemMapFs()
 	o := LoaderOptions{store, inLines, w, fs, false, false, false, false, true}
 	l, err := NewLoader(o)

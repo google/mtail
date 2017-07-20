@@ -30,8 +30,8 @@ import (
 
 // MtailServer contains the state of the main program object.
 type MtailServer struct {
-	lines chan string    // Channel of lines from tailer to VM engine.
-	store *metrics.Store // Metrics storage.
+	lines chan *tailer.LogLine // Channel of lines from tailer to VM engine.
+	store *metrics.Store       // Metrics storage.
 
 	t *tailer.Tailer     // t tails the watched files and feeds lines to the VMs.
 	l *vm.Loader         // l loads programs and manages the VM lifecycle.
@@ -67,13 +67,13 @@ Loop:
 		switch {
 		case err == io.EOF:
 			if len(line) > 0 {
-				m.lines <- line
+				m.lines <- tailer.NewLogLine(logfile, line)
 			}
 			break Loop
 		case err != nil:
 			return 0, fmt.Errorf("failed to read from %q: %s", logfile, err)
 		default:
-			m.lines <- line
+			m.lines <- tailer.NewLogLine(logfile, line)
 		}
 	}
 	duration := time.Since(start)
@@ -204,7 +204,7 @@ func New(o Options) (*MtailServer, error) {
 		store = metrics.NewStore()
 	}
 	m := &MtailServer{
-		lines:   make(chan string),
+		lines:   make(chan *tailer.LogLine),
 		store:   store,
 		webquit: make(chan struct{}),
 		o:       o}

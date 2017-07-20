@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/tailer"
 )
 
 var instructions = []struct {
@@ -435,7 +436,7 @@ func TestInstrs(t *testing.T) {
 			v.t.Push(item)
 		}
 		v.t.matches = make(map[int][]string, 0)
-		v.input = "aaaab"
+		v.input = tailer.NewLogLine("test", "aaaab")
 		v.execute(v.t, tc.i)
 		if v.terminate {
 			t.Fatalf("Execution failed, see info log.")

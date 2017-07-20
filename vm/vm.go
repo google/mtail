@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
+	"github.com/google/mtail/tailer"
 )
 
 type opcode int
@@ -155,7 +156,7 @@ type VM struct {
 
 	t *thread // Current thread of execution
 
-	input string // Log line input to this round of execution.
+	input *tailer.LogLine // Log line input to this round of execution.
 
 	terminate bool // Flag to stop the VM program.
 
@@ -181,7 +182,7 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof("VM stack:\n%s", debug.Stack())
 	glog.Infof("Dumping vm state")
 	glog.Infof("Name: %s", v.name)
-	glog.Infof("Input: %q", v.input)
+	glog.Infof("Input: %v", v.input)
 	glog.Infof("Thread:")
 	glog.Infof(" PC %v", v.t.pc-1)
 	glog.Infof(" Match %v", v.t.match)
@@ -364,7 +365,7 @@ func (v *VM) execute(t *thread, i instr) {
 		// Store the results in the operandth element of the stack,
 		// where i.opnd == the matched re index
 		index := i.opnd.(int)
-		t.matches[index] = v.re[index].FindStringSubmatch(v.input)
+		t.matches[index] = v.re[index].FindStringSubmatch(v.input.Line)
 		t.match = t.matches[index] != nil
 
 	case cmp:
@@ -660,11 +661,11 @@ func (v *VM) execute(t *thread, i instr) {
 // processLine handles the incoming lines from the input channel, by running a
 // fetch-execute cycle on the VM bytecode with the line as input to the
 // program, until termination.
-func (v *VM) processLine(input string) {
+func (v *VM) processLine(logline *tailer.LogLine) {
 	t := new(thread)
 	t.matched = false
 	v.t = t
-	v.input = input
+	v.input = logline
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, len(v.re))
 	for {
@@ -685,7 +686,7 @@ func (v *VM) processLine(input string) {
 // Run executes the virtual machine on each line of input received.  When the
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
-func (v *VM) Run(_ uint32, lines <-chan string, shutdown chan<- struct{}) {
+func (v *VM) Run(_ uint32, lines <-chan *tailer.LogLine, shutdown chan<- struct{}) {
 	glog.Infof("Starting program %s", v.name)
 	defer close(shutdown)
 	for line := range lines {
