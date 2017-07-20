@@ -382,8 +382,8 @@ gauge f
 		},
 	},
 
-	{"filename", `
-filename()
+	{"getfilename", `
+getfilename()
 `,
 		[]instr{
 			instr{getfilename, nil},

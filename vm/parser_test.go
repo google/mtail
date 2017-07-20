@@ -234,8 +234,8 @@ foo = 3.14
   del foo[$1]
 }`},
 
-	{"filename", `
-filename()
+	{"getfilename", `
+getfilename()
 `},
 }
 
