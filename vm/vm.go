@@ -116,13 +116,13 @@ var opNames = map[opcode]string{
 }
 
 var builtin = map[string]opcode{
-	"timestamp": timestamp,
-	"len":       length,
-	"settime":   settime,
-	"strptime":  strptime,
-	"strtol":    strtol,
-	"tolower":   tolower,
-	"filename":  getfilename,
+	"timestamp":   timestamp,
+	"len":         length,
+	"settime":     settime,
+	"strptime":    strptime,
+	"strtol":      strtol,
+	"tolower":     tolower,
+	"getfilename": getfilename,
 }
 
 type instr struct {
