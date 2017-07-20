@@ -2,7 +2,7 @@
 
 mtail is implemented in [Go](http://golang.org).
 
-You will need to install Go 1.4 or higher.
+You will need to install Go 1.7 or higher.
 
 # Details
 
