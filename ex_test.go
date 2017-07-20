@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -66,38 +67,39 @@ func TestExamplePrograms(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 	for _, tc := range exampleProgramTests {
-		w := watcher.NewFakeWatcher()
-		store := metrics.NewStore()
-		o := mtail.Options{Progs: tc.programfile, W: w, Store: store}
-		o.DumpAstTypes = true
-		o.DumpBytecode = true
-		mtail, err := mtail.New(o)
-		if err != nil {
-			t.Fatalf("create mtail failed: %s", err)
-		}
+		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
+			w := watcher.NewFakeWatcher()
+			store := metrics.NewStore()
+			o := mtail.Options{Progs: tc.programfile, W: w, Store: store}
+			o.DumpAstTypes = true
+			o.DumpBytecode = true
+			mtail, err := mtail.New(o)
+			if err != nil {
+				t.Fatalf("create mtail failed: %s", err)
+			}
 
-		if _, err := mtail.OneShot(tc.logfile, false); err != nil {
-			t.Errorf("Oneshot failed for %s: %s", tc.logfile, err)
-			continue
-		}
+			if _, err := mtail.OneShot(tc.logfile, false); err != nil {
+				t.Fatalf("oneshot failed: %s", tc.logfile, err)
+			}
 
-		g, err := os.Open(tc.goldenfile)
-		if err != nil {
-			t.Fatalf("%s: could not open golden file: %s", tc.goldenfile, err)
-		}
-		defer g.Close()
+			g, err := os.Open(tc.goldenfile)
+			if err != nil {
+				t.Fatalf("could not open golden file: %s", err)
+			}
+			defer g.Close()
 
-		golden_store := metrics.NewStore()
-		testdata.ReadTestData(g, tc.programfile, golden_store)
+			golden_store := metrics.NewStore()
+			testdata.ReadTestData(g, tc.programfile, golden_store)
 
-		mtail.Close()
+			mtail.Close()
 
-		diff := deep.Equal(golden_store, store)
+			diff := deep.Equal(golden_store, store)
 
-		if diff != nil {
-			t.Errorf("%s: metrics don't match:\n%v", tc.programfile, diff)
-			t.Errorf(" Golden metrics: %s", golden_store.Metrics)
-			t.Errorf("Program metrics: %s", store.Metrics)
-		}
+			if diff != nil {
+				t.Errorf("metrics don't match:\n%v", diff)
+				t.Errorf(" Golden metrics: %s", golden_store.Metrics)
+				t.Errorf("Program metrics: %s", store.Metrics)
+			}
+		})
 	}
 }
