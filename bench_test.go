@@ -8,7 +8,7 @@ package main
 
 import (
 	"flag"
-	"path/filepath"
+	"fmt"
 	"testing"
 
 	"github.com/google/mtail/mtail"
@@ -22,9 +22,7 @@ var (
 func BenchmarkProgram(b *testing.B) {
 	// exampleProgramTests live in ex_test.go
 	for _, bm := range exampleProgramTests {
-		prog := filepath.Base(bm.programfile)
-		log := filepath.Base(bm.logfile)
-		b.Run(prog+"+"+log, func(b *testing.B) {
+		b.Run(fmt.Sprintf("%s on %s", bm.programfile, bm.logfile), func(b *testing.B) {
 			b.ReportAllocs()
 
 			w := watcher.NewFakeWatcher()
@@ -46,9 +44,10 @@ func BenchmarkProgram(b *testing.B) {
 			b.StopTimer()
 			mtail.Close()
 			if err != nil {
-				b.Fatalf("strconv.ParseInt failed: %s", err)
+				b.Fatal(err)
 				return
 			}
+			// The bytes recorded is really the number of lines read.
 			b.SetBytes(lines)
 		})
 	}
