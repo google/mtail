@@ -381,6 +381,14 @@ gauge f
 			instr{setmatched, true},
 		},
 	},
+
+	{"filename", `
+filename()
+`,
+		[]instr{
+			instr{getfilename, nil},
+		},
+	},
 }
 
 func TestCodegen(t *testing.T) {

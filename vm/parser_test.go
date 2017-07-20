@@ -233,6 +233,10 @@ foo = 3.14
 /foo/ {
   del foo[$1]
 }`},
+
+	{"filename", `
+filename()
+`},
 }
 
 func TestParserRoundTrip(t *testing.T) {
