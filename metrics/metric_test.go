@@ -5,6 +5,7 @@ package metrics
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -90,28 +91,24 @@ var labelSetTests = []struct {
 }
 
 func TestEmitLabelSet(t *testing.T) {
-	m := NewMetric("test", "prog", Gauge, Int, "foo", "bar", "quux")
-	c := make(chan *LabelSet)
-
 	ts := time.Now().UTC()
-
-	var expectedLabels []map[string]string
 	for _, tc := range labelSetTests {
-		d, _ := m.GetDatum(tc.values...)
-		datum.SetInt(d, 37, ts)
-		expectedLabels = append(expectedLabels, tc.expectedLabels)
-	}
+		t.Run(fmt.Sprintf("%v", tc.values), func(t *testing.T) {
+			m := NewMetric("test", "prog", Gauge, Int, "foo", "bar", "quux")
+			d, _ := m.GetDatum(tc.values...)
+			datum.SetInt(d, 37, ts)
 
-	go m.EmitLabelSets(c)
+			c := make(chan *LabelSet)
 
-	var labels []map[string]string
-	for ls := range c {
-		labels = append(labels, ls.Labels)
-	}
+			go m.EmitLabelSets(c)
 
-	diff := deep.Equal(labels, expectedLabels)
-	if diff != nil {
-		t.Errorf("Labels don't match:\n%s", diff)
+			ls := <-c
+
+			diff := deep.Equal(tc.expectedLabels, ls.Labels)
+			if diff != nil {
+				t.Error(diff)
+			}
+		})
 	}
 }
 

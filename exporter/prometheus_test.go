@@ -92,27 +92,29 @@ foo{a="str\"bang\"blah",prog="test"} 1
 
 func TestHandlePrometheus(t *testing.T) {
 	for _, tc := range handlePrometheusTests {
-		ms := metrics.NewStore()
-		for _, metric := range tc.metrics {
-			ms.Add(metric)
-		}
-		o := Options{ms, "gunstar"}
-		e, err := New(o)
-		if err != nil {
-			t.Fatalf("couldn't make exporter: %s", err)
-		}
-		response := httptest.NewRecorder()
-		e.HandlePrometheusMetrics(response, &http.Request{})
-		if response.Code != 200 {
-			t.Errorf("test case %s: response code not 200: %d", tc.name, response.Code)
-		}
-		b, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			t.Errorf("test case %s: failed to read response: %s", tc.name, err)
-		}
-		diff := deep.Equal(tc.expected, string(b))
-		if diff != nil {
-			t.Errorf("test case %s: response not expected:\n%s", tc.name, diff)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			ms := metrics.NewStore()
+			for _, metric := range tc.metrics {
+				ms.Add(metric)
+			}
+			o := Options{ms, "gunstar"}
+			e, err := New(o)
+			if err != nil {
+				t.Fatalf("couldn't make exporter: %s", err)
+			}
+			response := httptest.NewRecorder()
+			e.HandlePrometheusMetrics(response, &http.Request{})
+			if response.Code != 200 {
+				t.Errorf("response code not 200: %d", response.Code)
+			}
+			b, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				t.Errorf(" failed to read response: %s", err)
+			}
+			diff := deep.Equal(tc.expected, string(b))
+			if diff != nil {
+				t.Error(diff)
+			}
+		})
 	}
 }

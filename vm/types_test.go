@@ -4,6 +4,7 @@
 package vm
 
 import (
+	"fmt"
 	"regexp/syntax"
 	"testing"
 
@@ -116,11 +117,13 @@ var typeUnificationTests = []struct {
 }
 
 func TestTypeUnification(t *testing.T) {
-	for i, tc := range typeUnificationTests {
-		result := Unify(tc.a, tc.b)
-		if diff := deep.Equal(result, tc.expected); len(diff) > 0 {
-			t.Errorf("Result type not expected for %d: inputs %+v and %+v:\n%s", i, tc.a, tc.b, diff)
-		}
+	for _, tc := range typeUnificationTests {
+		t.Run(fmt.Sprintf("%s %s", tc.a, tc.b), func(t *testing.T) {
+			result := Unify(tc.a, tc.b)
+			if diff := deep.Equal(tc.expected, result); len(diff) > 0 {
+				t.Error(diff)
+			}
+		})
 	}
 }
 
