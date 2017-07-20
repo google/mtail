@@ -43,23 +43,23 @@ var (
 type Tailer struct {
 	w watcher.Watcher
 
-	watched    map[string]struct{}   // Names of logs being watched.
-	watchedMu  sync.RWMutex          // protects `watched'
-	lines      chan<- string         // Logfile lines being emitted.
-	files      map[string]afero.File // File handles for each pathname.
-	filesMu    sync.Mutex            // protects `files'
-	partials   map[string]string     // Accumulator for the currently read line for each pathname.
-	partialsMu sync.Mutex            // protects 'partials'
+	lines chan<- *LogLine // Logfile lines being emitted.
 
-	globPatterns   map[string]struct{} // glob patterns to match newly created files in dir paths against
-	globPatternsMu sync.RWMutex        // protects `globPatterns'
+	watched        map[string]struct{}   // Names of logs being watched.
+	watchedMu      sync.RWMutex          // protects `watched'
+	files          map[string]afero.File // File handles for each pathname.
+	filesMu        sync.Mutex            // protects `files'
+	partials       map[string]string     // Accumulator for the currently read line for each pathname.
+	partialsMu     sync.Mutex            // protects 'partials'
+	globPatterns   map[string]struct{}   // glob patterns to match newly created files in dir paths against
+	globPatternsMu sync.RWMutex          // protects `globPatterns'
 
 	fs afero.Fs // mockable filesystem interface
 }
 
 // Options configures a Tailer
 type Options struct {
-	Lines chan<- string
+	Lines chan<- *LogLine
 	W     watcher.Watcher // Not required, will use watcher.LogWatcher if it is zero.
 	FS    afero.Fs        // Not required, will use afero.OsFs if it is zero.
 }
@@ -196,7 +196,7 @@ func (t *Tailer) read(f afero.File, partialIn string) (partialOut string, err er
 				partial += string(rune)
 			default:
 				// send off line for processing, blocks if not ready
-				t.lines <- partial
+				t.lines <- NewLogLine(f.Name(), partial)
 				// reset accumulator
 				partial = ""
 			}

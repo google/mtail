@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
+	"github.com/google/mtail/tailer"
 )
 
 type opcode int
@@ -67,57 +68,61 @@ const (
 	fmod
 	fpow
 	fset // Floating point assignment
+
+	getfilename // Push input.Filename onto the stack.
 )
 
 var opNames = map[opcode]string{
-	match:      "match",
-	cmp:        "cmp",
-	jnm:        "jnm",
-	jm:         "jm",
-	jmp:        "jmp",
-	inc:        "inc",
-	strptime:   "strptime",
-	timestamp:  "timestamp",
-	settime:    "settime",
-	push:       "push",
-	capref:     "capref",
-	str:        "str",
-	iset:       "iset",
-	iadd:       "iadd",
-	isub:       "isub",
-	imul:       "imul",
-	idiv:       "idiv",
-	imod:       "imod",
-	ipow:       "ipow",
-	shl:        "shl",
-	shr:        "shr",
-	and:        "and",
-	or:         "or",
-	xor:        "xor",
-	not:        "not",
-	mload:      "mload",
-	dload:      "dload",
-	tolower:    "tolower",
-	length:     "length",
-	strtol:     "strtol",
-	setmatched: "setmatched",
-	otherwise:  "otherwise",
-	fadd:       "fadd",
-	fsub:       "fsub",
-	fmul:       "fmul",
-	fdiv:       "fdiv",
-	fmod:       "fmod",
-	fpow:       "fpow",
-	fset:       "fset",
+	match:       "match",
+	cmp:         "cmp",
+	jnm:         "jnm",
+	jm:          "jm",
+	jmp:         "jmp",
+	inc:         "inc",
+	strptime:    "strptime",
+	timestamp:   "timestamp",
+	settime:     "settime",
+	push:        "push",
+	capref:      "capref",
+	str:         "str",
+	iset:        "iset",
+	iadd:        "iadd",
+	isub:        "isub",
+	imul:        "imul",
+	idiv:        "idiv",
+	imod:        "imod",
+	ipow:        "ipow",
+	shl:         "shl",
+	shr:         "shr",
+	and:         "and",
+	or:          "or",
+	xor:         "xor",
+	not:         "not",
+	mload:       "mload",
+	dload:       "dload",
+	tolower:     "tolower",
+	length:      "length",
+	strtol:      "strtol",
+	setmatched:  "setmatched",
+	otherwise:   "otherwise",
+	fadd:        "fadd",
+	fsub:        "fsub",
+	fmul:        "fmul",
+	fdiv:        "fdiv",
+	fmod:        "fmod",
+	fpow:        "fpow",
+	fset:        "fset",
+	getfilename: "getfilename",
 }
 
 var builtin = map[string]opcode{
-	"timestamp": timestamp,
-	"len":       length,
-	"settime":   settime,
-	"strptime":  strptime,
-	"strtol":    strtol,
-	"tolower":   tolower,
+	"timestamp":   timestamp,
+	"len":         length,
+	"settime":     settime,
+	"strptime":    strptime,
+	"strtol":      strtol,
+	"tolower":     tolower,
+	"getfilename": getfilename,
 }
 
 type instr struct {
@@ -155,7 +160,7 @@ type VM struct {
 
 	t *thread // Current thread of execution
 
-	input string // Log line input to this round of execution.
+	input *tailer.LogLine // Log line input to this round of execution.
 
 	terminate bool // Flag to stop the VM program.
 
@@ -181,7 +186,7 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof("VM stack:\n%s", debug.Stack())
 	glog.Infof("Dumping vm state")
 	glog.Infof("Name: %s", v.name)
-	glog.Infof("Input: %q", v.input)
+	glog.Infof("Input: %v", v.input)
 	glog.Infof("Thread:")
 	glog.Infof(" PC %v", v.t.pc-1)
 	glog.Infof(" Match %v", v.t.match)
@@ -364,7 +369,7 @@ func (v *VM) execute(t *thread, i instr) {
 		// Store the results in the operandth element of the stack,
 		// where i.opnd == the matched re index
 		index := i.opnd.(int)
-		t.matches[index] = v.re[index].FindStringSubmatch(v.input)
+		t.matches[index] = v.re[index].FindStringSubmatch(v.input.Line)
 		t.match = t.matches[index] != nil
 
 	case cmp:
@@ -652,6 +657,9 @@ func (v *VM) execute(t *thread, i instr) {
 		// Only match if the matched flag is false.
 		t.match = !t.matched
 
+	case getfilename:
+		t.Push(v.input.Filename)
+
 	default:
 		v.errorf("illegal instruction: %d", i.op)
 	}
@@ -660,11 +668,11 @@ func (v *VM) execute(t *thread, i instr) {
 // processLine handles the incoming lines from the input channel, by running a
 // fetch-execute cycle on the VM bytecode with the line as input to the
 // program, until termination.
-func (v *VM) processLine(input string) {
+func (v *VM) processLine(logline *tailer.LogLine) {
 	t := new(thread)
 	t.matched = false
 	v.t = t
-	v.input = input
+	v.input = logline
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, len(v.re))
 	for {
@@ -685,7 +693,7 @@ func (v *VM) processLine(input string) {
 // Run executes the virtual machine on each line of input received.  When the
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
-func (v *VM) Run(_ uint32, lines <-chan string, shutdown chan<- struct{}) {
+func (v *VM) Run(_ uint32, lines <-chan *tailer.LogLine, shutdown chan<- struct{}) {
 	glog.Infof("Starting program %s", v.name)
 	defer close(shutdown)
 	for line := range lines {

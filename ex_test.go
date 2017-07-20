@@ -60,6 +60,11 @@ var exampleProgramTests = []struct {
 		"testdata/types.log",
 		"testdata/types.golden",
 	},
+	{
+		"examples/filename.mtail",
+		"testdata/else.log",
+		"testdata/filename.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -96,9 +101,9 @@ func TestExamplePrograms(t *testing.T) {
 			diff := deep.Equal(golden_store, store)
 
 			if diff != nil {
-				t.Errorf("metrics don't match:\n%v", diff)
-				t.Errorf(" Golden metrics: %s", golden_store.Metrics)
-				t.Errorf("Program metrics: %s", store.Metrics)
+				t.Error(diff)
+				t.Logf(" Golden metrics: %s", golden_store.Metrics)
+				t.Logf("Program metrics: %s", store.Metrics)
 			}
 		})
 	}
