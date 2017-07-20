@@ -94,6 +94,7 @@ func TestEmitLabelSet(t *testing.T) {
 	ts := time.Now().UTC()
 	for _, tc := range labelSetTests {
 		t.Run(fmt.Sprintf("%v", tc.values), func(t *testing.T) {
+			t.Parallel()
 			m := NewMetric("test", "prog", Gauge, Int, "foo", "bar", "quux")
 			d, _ := m.GetDatum(tc.values...)
 			datum.SetInt(d, 37, ts)

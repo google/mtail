@@ -214,6 +214,7 @@ func collect(t *lexerTest) (tokens []token) {
 func TestLex(t *testing.T) {
 	for _, tc := range lexerTests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			tokens := collect(&tc)
 
 			defaultCompareUnexportedFields := deep.CompareUnexportedFields

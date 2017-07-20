@@ -238,6 +238,7 @@ foo = 3.14
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range parserTests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			p := newParser(tc.name, strings.NewReader(tc.program))
 			r := mtailParse(p)
 
@@ -305,6 +306,7 @@ var parserInvalidPrograms = []parserInvalidProgram{
 func TestParseInvalidPrograms(t *testing.T) {
 	for _, tc := range parserInvalidPrograms {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			p := newParser(tc.name, strings.NewReader(tc.program))
 			mtailParse(p)
 

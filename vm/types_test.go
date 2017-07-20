@@ -119,6 +119,7 @@ var typeUnificationTests = []struct {
 func TestTypeUnification(t *testing.T) {
 	for _, tc := range typeUnificationTests {
 		t.Run(fmt.Sprintf("%s %s", tc.a, tc.b), func(t *testing.T) {
+			t.Parallel()
 			result := Unify(tc.a, tc.b)
 			if diff := deep.Equal(tc.expected, result); len(diff) > 0 {
 				t.Error(diff)

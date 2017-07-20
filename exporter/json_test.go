@@ -90,6 +90,7 @@ var handleJSONTests = []struct {
 func TestHandleJSON(t *testing.T) {
 	for _, tc := range handleJSONTests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ms := metrics.NewStore()
 			for _, metric := range tc.metrics {
 				ms.Add(metric)

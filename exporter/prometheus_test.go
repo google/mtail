@@ -93,6 +93,7 @@ foo{a="str\"bang\"blah",prog="test"} 1
 func TestHandlePrometheus(t *testing.T) {
 	for _, tc := range handlePrometheusTests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ms := metrics.NewStore()
 			for _, metric := range tc.metrics {
 				ms.Add(metric)
