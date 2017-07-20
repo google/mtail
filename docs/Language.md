@@ -241,6 +241,8 @@ are:
     time.Parse() format string](http://golang.org/src/pkg/time/format.go)
 1. `tolower(x)`, a function of one string argument, which lowercases the
    string.
+1. `getfilename()`, a function of no arguments, which returns the filename from
+   which the current log line input came.
 
 As described in Nested Actions, the current timestamp refers to `mtail`'s idea of
 the time associated with the current log line.  This timestamp is used when the
