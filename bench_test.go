@@ -44,7 +44,7 @@ func BenchmarkProgram(b *testing.B) {
 			b.StopTimer()
 			mtail.Close()
 			if err != nil {
-				b.Fatalf("strconv.ParseInt failed: %s", err)
+				b.Fatal(err)
 				return
 			}
 			// The bytes recorded is really the number of lines read.

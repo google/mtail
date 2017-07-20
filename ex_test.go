@@ -79,7 +79,7 @@ func TestExamplePrograms(t *testing.T) {
 			}
 
 			if _, err := mtail.OneShot(tc.logfile, false); err != nil {
-				t.Fatalf("oneshot failed: %s", tc.logfile, err)
+				t.Fatalf("oneshot error: %s", err)
 			}
 
 			g, err := os.Open(tc.goldenfile)
