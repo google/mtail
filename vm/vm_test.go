@@ -417,7 +417,16 @@ var instructions = []struct {
 		[]interface{}{2, 2.0}, // quux set to 2.
 		[]interface{}{},
 		thread{pc: 0, matches: map[int][]string{}}},
+	{"getfilename",
+		instr{getfilename, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{},
+		[]interface{}{testFilename},
+		thread{pc: 0, matches: map[int][]string{}}},
 }
+
+const testFilename = "test"
 
 // TestInstrs tests that each instruction behaves as expected through one
 // instruction cycle.
@@ -437,7 +446,7 @@ func TestInstrs(t *testing.T) {
 				v.t.Push(item)
 			}
 			v.t.matches = make(map[int][]string, 0)
-			v.input = tailer.NewLogLine("test", "aaaab")
+			v.input = tailer.NewLogLine(testFilename, "aaaab")
 			v.execute(v.t, tc.i)
 			if v.terminate {
 				t.Fatalf("Execution failed, see info log.")

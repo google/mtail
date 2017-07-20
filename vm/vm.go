@@ -68,48 +68,51 @@ const (
 	fmod
 	fpow
 	fset // Floating point assignment
+
+	getfilename // Push input.Filename onto the stack.
 )
 
 var opNames = map[opcode]string{
-	match:      "match",
-	cmp:        "cmp",
-	jnm:        "jnm",
-	jm:         "jm",
-	jmp:        "jmp",
-	inc:        "inc",
-	strptime:   "strptime",
-	timestamp:  "timestamp",
-	settime:    "settime",
-	push:       "push",
-	capref:     "capref",
-	str:        "str",
-	iset:       "iset",
-	iadd:       "iadd",
-	isub:       "isub",
-	imul:       "imul",
-	idiv:       "idiv",
-	imod:       "imod",
-	ipow:       "ipow",
-	shl:        "shl",
-	shr:        "shr",
-	and:        "and",
-	or:         "or",
-	xor:        "xor",
-	not:        "not",
-	mload:      "mload",
-	dload:      "dload",
-	tolower:    "tolower",
-	length:     "length",
-	strtol:     "strtol",
-	setmatched: "setmatched",
-	otherwise:  "otherwise",
-	fadd:       "fadd",
-	fsub:       "fsub",
-	fmul:       "fmul",
-	fdiv:       "fdiv",
-	fmod:       "fmod",
-	fpow:       "fpow",
-	fset:       "fset",
+	match:       "match",
+	cmp:         "cmp",
+	jnm:         "jnm",
+	jm:          "jm",
+	jmp:         "jmp",
+	inc:         "inc",
+	strptime:    "strptime",
+	timestamp:   "timestamp",
+	settime:     "settime",
+	push:        "push",
+	capref:      "capref",
+	str:         "str",
+	iset:        "iset",
+	iadd:        "iadd",
+	isub:        "isub",
+	imul:        "imul",
+	idiv:        "idiv",
+	imod:        "imod",
+	ipow:        "ipow",
+	shl:         "shl",
+	shr:         "shr",
+	and:         "and",
+	or:          "or",
+	xor:         "xor",
+	not:         "not",
+	mload:       "mload",
+	dload:       "dload",
+	tolower:     "tolower",
+	length:      "length",
+	strtol:      "strtol",
+	setmatched:  "setmatched",
+	otherwise:   "otherwise",
+	fadd:        "fadd",
+	fsub:        "fsub",
+	fmul:        "fmul",
+	fdiv:        "fdiv",
+	fmod:        "fmod",
+	fpow:        "fpow",
+	fset:        "fset",
+	getfilename: "getfilename",
 }
 
 var builtin = map[string]opcode{
@@ -119,6 +122,7 @@ var builtin = map[string]opcode{
 	"strptime":  strptime,
 	"strtol":    strtol,
 	"tolower":   tolower,
+	"filename":  getfilename,
 }
 
 type instr struct {
@@ -652,6 +656,9 @@ func (v *VM) execute(t *thread, i instr) {
 	case otherwise:
 		// Only match if the matched flag is false.
 		t.match = !t.matched
+
+	case getfilename:
+		t.Push(v.input.Filename)
 
 	default:
 		v.errorf("illegal instruction: %d", i.op)
