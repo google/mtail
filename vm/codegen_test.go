@@ -385,31 +385,31 @@ gauge f
 
 func TestCodegen(t *testing.T) {
 	for _, tc := range testCodeGenPrograms {
-		t.Logf("Starting %s", tc.name)
-		ast, err := Parse(tc.name, strings.NewReader(tc.source))
-		if err != nil {
-			t.Fatalf("Unexpected parse failure in %q: %s", tc.name, err)
-		}
-		err = Check(ast)
-		if err != nil {
-			t.Fatalf("Unexpected check failure in %q: %s", tc.name, err)
-		}
-		obj, err := CodeGen(tc.name, ast)
-		if err != nil {
-			t.Errorf("Compile errors for %q:\n%s", tc.name, err)
-			s := Sexp{}
-			s.emitTypes = true
-			t.Logf("AST:\n%s", s.Dump(ast))
-			continue
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			ast, err := Parse(tc.name, strings.NewReader(tc.source))
+			if err != nil {
+				t.Fatalf("Parse error: %s", err)
+			}
+			err = Check(ast)
+			if err != nil {
+				t.Fatalf("Check error: %s", err)
+			}
+			obj, err := CodeGen(tc.name, ast)
+			if err != nil {
+				t.Errorf("Compile errors:\n%s", err)
+				s := Sexp{}
+				s.emitTypes = true
+				t.Fatalf("AST:\n%s", s.Dump(ast))
+			}
 
-		defaultCompareUnexportedFields := deep.CompareUnexportedFields
-		deep.CompareUnexportedFields = true
-		defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+			defaultCompareUnexportedFields := deep.CompareUnexportedFields
+			deep.CompareUnexportedFields = true
+			defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
 
-		if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
-			t.Errorf("%s: VM prog doesn't match.\n%s", tc.name, diff)
-			t.Logf("Expected:\n%s\nReceived:\n%s", tc.prog, obj.prog)
-		}
+			if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
+				t.Error(diff)
+				t.Logf("Expected:\n%s\nReceived:\n%s", tc.prog, obj.prog)
+			}
+		})
 	}
 }

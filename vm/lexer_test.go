@@ -213,15 +213,16 @@ func collect(t *lexerTest) (tokens []token) {
 
 func TestLex(t *testing.T) {
 	for _, tc := range lexerTests {
-		t.Logf("Starting %s", tc.name)
-		tokens := collect(&tc)
+		t.Run(tc.name, func(t *testing.T) {
+			tokens := collect(&tc)
 
-		defaultCompareUnexportedFields := deep.CompareUnexportedFields
-		deep.CompareUnexportedFields = true
-		defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+			defaultCompareUnexportedFields := deep.CompareUnexportedFields
+			deep.CompareUnexportedFields = true
+			defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
 
-		if diff := deep.Equal(tc.tokens, tokens); diff != nil {
-			t.Errorf("%s tokens didn't match:\n%s:", tc.name, diff)
-		}
+			if diff := deep.Equal(tc.tokens, tokens); diff != nil {
+				t.Error(diff)
+			}
+		})
 	}
 }

@@ -53,23 +53,23 @@ var checkerInvalidPrograms = []struct {
 
 func TestCheckInvalidPrograms(t *testing.T) {
 	for _, tc := range checkerInvalidPrograms {
-		t.Logf("Starting %s", tc.name)
-		ast, err := Parse(tc.name, strings.NewReader(tc.program))
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = Check(ast)
-		if err == nil {
-			t.Errorf("Error should not be nil for invalid program %q: %s", tc.name, err)
-			continue
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			ast, err := Parse(tc.name, strings.NewReader(tc.program))
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = Check(ast)
+			if err == nil {
+				t.Fatalf("check error: %s", err)
+			}
 
-		diff := deep.Equal(
-			strings.Join(tc.errors, "\n"),        // want
-			strings.TrimRight(err.Error(), "\n")) // got
-		if diff != nil {
-			t.Errorf("Incorrect error for %q\n%s", tc.name, diff)
-		}
+			diff := deep.Equal(
+				strings.Join(tc.errors, "\n"),        // want
+				strings.TrimRight(err.Error(), "\n")) // got
+			if diff != nil {
+				t.Error(diff)
+			}
+		})
 	}
 }
 
@@ -106,57 +106,61 @@ var checkerValidPrograms = []struct {
 
 func TestCheckValidPrograms(t *testing.T) {
 	for _, tc := range checkerValidPrograms {
-		t.Logf("Starting %s", tc.name)
-		ast, err := Parse(tc.name, strings.NewReader(tc.program))
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = Check(ast)
-		if err != nil {
-			t.Errorf("Checker failed for valid program %q:\n%s", tc.name, err)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			ast, err := Parse(tc.name, strings.NewReader(tc.program))
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = Check(ast)
+			if err != nil {
+				t.Errorf("check failed: %s", err)
+			}
+		})
 	}
 }
 
 var checkerTypeExpressionTests = []struct {
+	name     string
 	expr     astNode
 	expected Type
 }{
-	// Int + Int -> Float
-	{&binaryExprNode{lhs: &intConstNode{position{}, 1},
-		rhs: &intConstNode{position{}, 1},
-		op:  PLUS},
+	{"Int + Int -> Float",
+		&binaryExprNode{lhs: &intConstNode{position{}, 1},
+			rhs: &intConstNode{position{}, 1},
+			op:  PLUS},
 		Int,
 	},
-	// Int + Float -> Float
-	{&binaryExprNode{lhs: &intConstNode{position{}, 1},
-		rhs: &floatConstNode{position{}, 1.0},
-		op:  PLUS},
+
+	{"Int + Float -> Float",
+		&binaryExprNode{lhs: &intConstNode{position{}, 1},
+			rhs: &floatConstNode{position{}, 1.0},
+			op:  PLUS},
 		Float,
 	},
-	// ⍺ + Float -> Float
-	{&binaryExprNode{lhs: &idNode{pos: position{}, sym: &Symbol{Name: "i", Kind: VarSymbol, Type: NewTypeVariable()}},
-		rhs: &caprefNode{pos: position{}, sym: &Symbol{Kind: CaprefSymbol, Type: Float}},
-		op:  ASSIGN},
+	{"⍺ + Float -> Float",
+		&binaryExprNode{lhs: &idNode{pos: position{}, sym: &Symbol{Name: "i", Kind: VarSymbol, Type: NewTypeVariable()}},
+			rhs: &caprefNode{pos: position{}, sym: &Symbol{Kind: CaprefSymbol, Type: Float}},
+			op:  ASSIGN},
 		Float,
 	},
 }
 
 func TestCheckTypeExpressions(t *testing.T) {
-	for i, tc := range checkerTypeExpressionTests {
-		err := Check(tc.expr)
-		if err != nil {
-			t.Errorf("Error should not be nil for test %d: %s", i, err)
-			continue
-		}
+	for _, tc := range checkerTypeExpressionTests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := Check(tc.expr)
+			if err != nil {
+				t.Fatalf("check error: %s", err)
+			}
 
-		defaultCompareUnexportedFields := deep.CompareUnexportedFields
-		deep.CompareUnexportedFields = true
-		defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+			defaultCompareUnexportedFields := deep.CompareUnexportedFields
+			deep.CompareUnexportedFields = true
+			defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
 
-		diff := deep.Equal(tc.expected, tc.expr.Type())
-		if len(diff) > 0 {
-			t.Errorf("Unspected return for input %d:\n%s", i, diff)
-		}
+			diff := deep.Equal(tc.expected, tc.expr.Type())
+			if len(diff) > 0 {
+				t.Error(diff)
+			}
+		})
 	}
 }

@@ -423,36 +423,40 @@ var instructions = []struct {
 // instruction cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		var m []*metrics.Metric
-		m = append(m,
-			metrics.NewMetric("foo", "test", metrics.Counter, metrics.Int),
-			metrics.NewMetric("bar", "test", metrics.Counter, metrics.Int),
-			metrics.NewMetric("quux", "test", metrics.Gauge, metrics.Float))
-		obj := &object{re: tc.re, str: tc.str, m: m, prog: []instr{tc.i}}
-		v := New(tc.name, obj, true)
-		v.t = new(thread)
-		v.t.stack = make([]interface{}, 0)
-		for _, item := range tc.reversedStack {
-			v.t.Push(item)
-		}
-		v.t.matches = make(map[int][]string, 0)
-		v.input = tailer.NewLogLine("test", "aaaab")
-		v.execute(v.t, tc.i)
-		if v.terminate {
-			t.Fatalf("Execution failed, see info log.")
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			var m []*metrics.Metric
+			m = append(m,
+				metrics.NewMetric("foo", "test", metrics.Counter, metrics.Int),
+				metrics.NewMetric("bar", "test", metrics.Counter, metrics.Int),
+				metrics.NewMetric("quux", "test", metrics.Gauge, metrics.Float))
+			obj := &object{re: tc.re, str: tc.str, m: m, prog: []instr{tc.i}}
+			v := New(tc.name, obj, true)
+			v.t = new(thread)
+			v.t.stack = make([]interface{}, 0)
+			for _, item := range tc.reversedStack {
+				v.t.Push(item)
+			}
+			v.t.matches = make(map[int][]string, 0)
+			v.input = tailer.NewLogLine("test", "aaaab")
+			v.execute(v.t, tc.i)
+			if v.terminate {
+				t.Fatalf("Execution failed, see info log.")
+			}
 
-		if diff := deep.Equal(tc.expectedStack, v.t.stack); diff != nil {
-			t.Errorf("%s: unexpected virtual machine stack state.\n%s", tc.name, diff)
-		}
-		// patch in the thread stack because otherwise the test table is huge
-		tc.expectedThread.stack = tc.expectedStack
+			if diff := deep.Equal(tc.expectedStack, v.t.stack); diff != nil {
+				t.Log("unexpected vm stack state")
+				t.Error(diff)
+			}
 
-		if !reflect.DeepEqual(v.t, &tc.expectedThread) {
-			t.Errorf("%s: unexpected virtual machine thread state.\n", tc.name)
-			t.Errorf("\t%v", *v.t)
-			t.Errorf("\t%v", tc.expectedThread)
-		}
+			// patch in the thread stack because otherwise the test table is huge
+			tc.expectedThread.stack = tc.expectedStack
 
+			if !reflect.DeepEqual(v.t, &tc.expectedThread) {
+				t.Errorf("%s: unexpected virtual machine thread state.\n", tc.name)
+				t.Errorf("\t%v", *v.t)
+				t.Errorf("\t%v", tc.expectedThread)
+			}
+
+		})
 	}
 }
