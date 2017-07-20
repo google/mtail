@@ -78,19 +78,19 @@ emgen/emgen: emgen/emgen.go
 
 .PHONY: test check 
 check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 60s ./...
+	go test -v -timeout 60s ./... ./testdata
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 5m -race ./...
+	go test -v -timeout 5m -race ./... ./testdata
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 10s -test.short ./...
+	go test -v -timeout 10s -test.short ./... ./testdata
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -bench=. -timeout=60s -run=XXX ./...
+	go test -bench=. -timeout=60s -run=XXX ./... ./testdata
 
 .PHONY: bench_cpu
 bench_cpu:
@@ -101,7 +101,7 @@ bench_mem:
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -bench=. -run=XXX --record_benchmark ./...
+	go test -bench=. -run=XXX --record_benchmark ./... ./testdata
 
 .PHONY: coverage
 coverage: gover.coverprofile
@@ -123,8 +123,8 @@ testall: testrace bench
 .PHONY: install_deps
 install_deps: .dep-stamp
 
-IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
-TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
+IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... ./testdata | sort | uniq | grep -v mtail)
+TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... ./testdata | sort | uniq | grep -v mtail)
 
 .dep-stamp:
 	# Install all dependencies, ensuring they're updated
