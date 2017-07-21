@@ -28,8 +28,9 @@ var (
 )
 
 type TypeVariable struct {
-	Id       int
-	Instance *Type
+	Id         int
+	Instance   *Type
+	instanceMu sync.RWMutex
 }
 
 func NewTypeVariable() Type {
@@ -41,6 +42,8 @@ func NewTypeVariable() Type {
 }
 
 func (t *TypeVariable) Root() Type {
+	t.instanceMu.Lock()
+	defer t.instanceMu.Unlock()
 	if t.Instance == nil {
 		return t
 	} else {
@@ -51,11 +54,19 @@ func (t *TypeVariable) Root() Type {
 }
 
 func (t *TypeVariable) String() string {
+	t.instanceMu.RLock()
+	defer t.instanceMu.RUnlock()
 	if t.Instance != nil {
 		return (*t.Instance).String()
 	}
 	return fmt.Sprintf("typeVar%d", t.Id)
 
+}
+
+func (t *TypeVariable) SetInstance(t1 *Type) {
+	t.instanceMu.Lock()
+	defer t.instanceMu.Unlock()
+	t.Instance = t1
 }
 
 type TypeOperator struct {
@@ -93,12 +104,12 @@ func Unify(a, b Type) Type {
 				return a2
 			} else {
 				glog.V(2).Infof("Making %q type %q", a2, b1)
-				a2.Instance = &b1
+				a2.SetInstance(&b1)
 				return a2
 			}
 		case *TypeOperator:
 			glog.V(2).Infof("Making %q type %q", a2, b1)
-			a2.Instance = &b1
+			a2.SetInstance(&b1)
 			return b1
 		}
 	case *TypeOperator:
