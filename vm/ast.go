@@ -5,6 +5,7 @@ package vm
 
 import (
 	"regexp/syntax"
+	"sync"
 
 	"github.com/google/mtail/metrics"
 )
@@ -123,6 +124,7 @@ type binaryExprNode struct {
 	lhs, rhs astNode
 	op       int
 	typ      Type
+	typMu    sync.RWMutex
 }
 
 func (n *binaryExprNode) Pos() *position {
@@ -130,14 +132,23 @@ func (n *binaryExprNode) Pos() *position {
 }
 
 func (n *binaryExprNode) Type() Type {
+	n.typMu.RLock()
+	defer n.typMu.RUnlock()
 	return n.typ
 }
 
+func (n *binaryExprNode) SetType(t Type) {
+	n.typMu.Lock()
+	defer n.typMu.Unlock()
+	n.typ = t
+}
+
 type unaryExprNode struct {
-	pos  position // pos is the position of the op
-	expr astNode
-	op   int
-	typ  Type
+	pos   position // pos is the position of the op
+	expr  astNode
+	op    int
+	typ   Type
+	typMu sync.RWMutex
 }
 
 func (n *unaryExprNode) Pos() *position {
@@ -145,7 +156,15 @@ func (n *unaryExprNode) Pos() *position {
 }
 
 func (n *unaryExprNode) Type() Type {
+	n.typMu.Lock()
+	defer n.typMu.Unlock()
 	return n.typ
+}
+
+func (n *unaryExprNode) SetType(t Type) {
+	n.typMu.Lock()
+	defer n.typMu.Unlock()
+	n.typ = t
 }
 
 type indexedExprNode struct {

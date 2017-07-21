@@ -179,14 +179,14 @@ func (c *checker) VisitAfter(node astNode) {
 			}
 			rType = Tl
 		}
-		n.typ = rType
+		n.SetType(rType)
 
 	case *unaryExprNode:
 		switch n.op {
 		case NOT:
-			n.typ = Int
+			n.SetType(Int)
 		default:
-			n.typ = n.expr.Type()
+			n.SetType(n.expr.Type())
 		}
 	}
 }
