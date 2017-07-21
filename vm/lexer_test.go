@@ -214,14 +214,14 @@ func collect(t *lexerTest) (tokens []token) {
 }
 
 func TestLex(t *testing.T) {
+	defaultCompareUnexportedFields := deep.CompareUnexportedFields
+	deep.CompareUnexportedFields = true
+	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+
 	for _, tc := range lexerTests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			tokens := collect(&tc)
-
-			defaultCompareUnexportedFields := deep.CompareUnexportedFields
-			deep.CompareUnexportedFields = true
-			defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
 
 			if diff := deep.Equal(tc.tokens, tokens); diff != nil {
 				t.Error(diff)

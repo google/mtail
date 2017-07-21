@@ -148,6 +148,10 @@ var checkerTypeExpressionTests = []struct {
 }
 
 func TestCheckTypeExpressions(t *testing.T) {
+	defaultCompareUnexportedFields := deep.CompareUnexportedFields
+	deep.CompareUnexportedFields = true
+	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+
 	for _, tc := range checkerTypeExpressionTests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -155,10 +159,6 @@ func TestCheckTypeExpressions(t *testing.T) {
 			if err != nil {
 				t.Fatalf("check error: %s", err)
 			}
-
-			defaultCompareUnexportedFields := deep.CompareUnexportedFields
-			deep.CompareUnexportedFields = true
-			defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
 
 			diff := deep.Equal(tc.expected, tc.expr.Type())
 			if len(diff) > 0 {

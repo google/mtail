@@ -392,6 +392,10 @@ getfilename()
 }
 
 func TestCodegen(t *testing.T) {
+	defaultCompareUnexportedFields := deep.CompareUnexportedFields
+	deep.CompareUnexportedFields = true
+	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+
 	for _, tc := range testCodeGenPrograms {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -410,10 +414,6 @@ func TestCodegen(t *testing.T) {
 				s.emitTypes = true
 				t.Fatalf("AST:\n%s", s.Dump(ast))
 			}
-
-			defaultCompareUnexportedFields := deep.CompareUnexportedFields
-			deep.CompareUnexportedFields = true
-			defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
 
 			if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
 				t.Error(diff)
