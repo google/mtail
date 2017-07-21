@@ -33,7 +33,6 @@ type parser struct {
 }
 
 func newParser(name string, input io.Reader) *parser {
-	mtailDebug = *mtailDebugFlag
 	return &parser{name: name, l: newLexer(name, input), res: make(map[string]string)}
 }
 
@@ -77,4 +76,6 @@ func (p *parser) inRegex() {
 	p.l.in_regex = true
 }
 
-var mtailDebugFlag = flag.Int("mtailDebug", 0, "Set parser debug level.")
+func init() {
+	flag.IntVar(&mtailDebug, "mtailDebug", 0, "Set parser debug level.")
+}
