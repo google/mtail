@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"regexp/syntax"
 	"strings"
+	"sync"
 
 	"github.com/golang/glog"
 )
@@ -21,7 +22,10 @@ func Equals(t1, t2 Type) bool {
 	return reflect.DeepEqual(t1, t2)
 }
 
-var nextVariableId int
+var (
+	nextVariableId   int
+	nextVariableIdMu sync.Mutex
+)
 
 type TypeVariable struct {
 	Id       int
@@ -29,8 +33,10 @@ type TypeVariable struct {
 }
 
 func NewTypeVariable() Type {
+	nextVariableIdMu.Lock()
 	id := nextVariableId
 	nextVariableId += 1
+	nextVariableIdMu.Unlock()
 	return &TypeVariable{Id: id}
 }
 
