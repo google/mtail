@@ -192,10 +192,10 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 
 	// Stop any previous VM.
 	if handle, ok := l.handles[name]; ok {
-		glog.Infof("Stopping program %s", name)
+		glog.Infof("END OF LINE, %s", name)
 		close(handle.lines)
 		<-handle.done
-		glog.Info("Stopped")
+		glog.Infof("Stopped %s", name)
 	}
 
 	l.handles[name] = &vmHandle{make(chan *tailer.LogLine), make(chan struct{})}
@@ -203,7 +203,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
 	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done)
 
-	glog.Infof("Program %s running", name)
+	glog.Infof("Started %s", name)
 
 	return nil
 }
