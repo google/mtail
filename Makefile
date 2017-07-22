@@ -39,6 +39,7 @@ GOTESTFILES=\
 	exporter/varz_test.go\
 	metrics/datum/int_test.go\
 	metrics/metric_test.go\
+	metrics/store_test.go\
 	mtail/mtail_test.go\
 	tailer/tail_test.go\
 	testdata/reader.go\

@@ -165,31 +165,46 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
 	}
-	for _, m := range v.m {
-		if !m.Hidden {
-			l.ms.Add(m)
-		}
-	}
+
 	if l.dumpBytecode {
 		glog.Info("Dumping program objects and bytecode\n", v.DumpByteCode(name))
 	}
-	if l.compileOnly {
-		return nil
+
+	// Load the metrics from the compilation into the global metric storage for export.
+	for _, m := range v.m {
+		if !m.Hidden {
+			err := l.ms.Add(m)
+			if err != nil {
+				return err
+			}
+		}
 	}
+
 	ProgLoads.Add(name, 1)
 	glog.Infof("Loaded program %s", name)
 
+	if l.compileOnly {
+		return nil
+	}
+
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
+
 	// Stop any previous VM.
 	if handle, ok := l.handles[name]; ok {
+		glog.Infof("Stopping program %s", name)
 		close(handle.lines)
 		<-handle.done
+		glog.Info("Stopped")
 	}
+
 	l.handles[name] = &vmHandle{make(chan *tailer.LogLine), make(chan struct{})}
 	nameCode := nameToCode(name)
 	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
 	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done)
+
+	glog.Infof("Program %s running", name)
+
 	return nil
 }
 
