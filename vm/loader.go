@@ -155,7 +155,12 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
-	o := &Options{CompileOnly: l.compileOnly, EmitAst: l.dumpAst, EmitAstTypes: l.dumpAstTypes, SyslogUseCurrentYear: l.syslogUseCurrentYear}
+	o := &Options{
+		CompileOnly:          l.compileOnly,
+		EmitAst:              l.dumpAst,
+		EmitAstTypes:         l.dumpAstTypes,
+		SyslogUseCurrentYear: l.syslogUseCurrentYear,
+	}
 	v, errs := Compile(name, input, o)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
@@ -173,6 +178,9 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	// Load the metrics from the compilation into the global metric storage for export.
 	for _, m := range v.m {
 		if !m.Hidden {
+			if l.omitMetricSource {
+				m.Source = ""
+			}
 			err := l.ms.Add(m)
 			if err != nil {
 				return err
@@ -235,6 +243,7 @@ type Loader struct {
 	dumpAstTypes         bool // print the AST after type check
 	dumpBytecode         bool // Instructs the loader to dump to stdout the compiled program after compilation.
 	syslogUseCurrentYear bool // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
+	omitMetricSource     bool
 }
 
 // LoaderOptions contains the required and optional parameters for creating a
@@ -251,6 +260,7 @@ type LoaderOptions struct {
 	DumpAstTypes         bool // Instructs the loader to dump to stdout the compiled program after compilation.
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
+	OmitMetricSource     bool // Don't put the source in the metric when added to the Store.
 }
 
 // NewLoader creates a new program loader.  It takes a filesystem watcher
@@ -284,7 +294,9 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		dumpAst:              o.DumpAst,
 		dumpAstTypes:         o.DumpAstTypes,
 		dumpBytecode:         o.DumpBytecode,
-		syslogUseCurrentYear: o.SyslogUseCurrentYear}
+		syslogUseCurrentYear: o.SyslogUseCurrentYear,
+		omitMetricSource:     o.OmitMetricSource,
+	}
 
 	go l.processEvents()
 	go l.processLines(o.Lines)

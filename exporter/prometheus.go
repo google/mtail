@@ -44,18 +44,14 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 					"# TYPE %s %s\n",
 					noHyphens(m.Name),
 					kindToPrometheusType(m.Kind))
-				if m.UnlockedSource() != "" {
-					fmt.Fprintf(w, "# HELP %s defined at %s\n", noHyphens(m.Name), m.UnlockedSource())
-				}
 				emittype = false
 			}
 
 			lc := make(chan *metrics.LabelSet)
 			go m.EmitLabelSets(lc)
 			for l := range lc {
-				if m.UnlockedSource() != "" {
-					// HELP can only appear once per name1
-					fmt.Fprintf(w, "# %s defined at %s\n", noHyphens(m.Name), m.UnlockedSource())
+				if m.Source != "" {
+					fmt.Fprintf(w, "# %s defined at %s\n", noHyphens(m.Name), m.Source)
 				}
 				line := metricToPrometheus(e.hostname, m, l)
 				fmt.Fprint(w, line)
@@ -72,7 +68,6 @@ func metricToPrometheus(hostname string, m *metrics.Metric, l *metrics.LabelSet)
 		s = append(s, fmt.Sprintf("%s=%q", k, v))
 	}
 	sort.Strings(s)
-	s = append(s, fmt.Sprintf("prog=\"%s\"", m.Program))
 	return fmt.Sprintf(prometheusFormat,
 		noHyphens(m.Name),
 		strings.Join(s, ","),
