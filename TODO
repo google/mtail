@@ -10,10 +10,6 @@ refactor fs and notify into single interface
 
 no trailing newline in parser test, requires changes to expr stmt
 
-float types for gauges
-
-type checking
-
 type inference?
 
 type casting
@@ -25,4 +21,3 @@ mapping between progs and logs to reduce wasted processing
 precommit/lint mode, compile and print errors to stderr
 
 use type information to effect bytecode generation
-
