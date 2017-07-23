@@ -53,7 +53,7 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 				if m.Source != "" {
 					fmt.Fprintf(w, "# %s defined at %s\n", noHyphens(m.Name), m.Source)
 				}
-				line := metricToPrometheus(e.hostname, m, l)
+				line := metricToPrometheus(e.o, m, l)
 				fmt.Fprint(w, line)
 			}
 			m.RUnlock()
@@ -61,13 +61,16 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func metricToPrometheus(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToPrometheus(options Options, m *metrics.Metric, l *metrics.LabelSet) string {
 	var s []string
 	for k, v := range l.Labels {
 		// Prometheus quotes the value of each label=value pair.
 		s = append(s, fmt.Sprintf("%s=%q", k, v))
 	}
 	sort.Strings(s)
+	if !options.OmitProgLabel {
+		s = append(s, fmt.Sprintf("prog=\"%s\"", m.Program))
+	}
 	return fmt.Sprintf(prometheusFormat,
 		noHyphens(m.Name),
 		strings.Join(s, ","),

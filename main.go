@@ -54,6 +54,7 @@ var (
 	port  = flag.String("port", "3903", "HTTP port to listen on.")
 	progs = flag.String("progs", "", "Name of the directory containing mtail programs")
 
+	// Compiler behaviour flags
 	oneShot        = flag.Bool("one_shot", false, "Run the contents of the provided logs until EOF and exit.")
 	oneShotMetrics = flag.Bool("one_shot_metrics", false, "Dump metrics (to stdout) after one shot mode.")
 	compileOnly    = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
@@ -61,7 +62,9 @@ var (
 	dumpAstTypes   = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck (to INFO log).")
 	dumpBytecode   = flag.Bool("dump_bytecode", false, "Dump bytecode of programs (to INFO log).")
 
+	// Runtime behaviour flags
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
+	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 )
 
 func init() {
@@ -108,6 +111,7 @@ func main() {
 		DumpAstTypes:         *dumpAstTypes,
 		DumpBytecode:         *dumpBytecode,
 		SyslogUseCurrentYear: *syslogUseCurrentYear,
+		OmitProgLabel:        !*emitProgLabel,
 		BuildInfo:            buildInfo(),
 	}
 	m, err := mtail.New(o)

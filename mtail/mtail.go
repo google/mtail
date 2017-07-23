@@ -200,6 +200,7 @@ type Options struct {
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
 	OmitMetricSource     bool
+	OmitProgLabel        bool
 
 	BuildInfo string
 
@@ -226,7 +227,7 @@ func New(o Options) (*MtailServer, error) {
 		return nil, err
 	}
 
-	m.e, err = exporter.New(exporter.Options{Store: m.store})
+	m.e, err = exporter.New(exporter.Options{Store: m.store, OmitProgLabel: o.OmitProgLabel})
 	if err != nil {
 		return nil, err
 	}

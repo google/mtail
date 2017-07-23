@@ -137,7 +137,7 @@ func TestHandlePrometheus(t *testing.T) {
 			for _, metric := range tc.metrics {
 				ms.Add(metric)
 			}
-			o := Options{ms, "gunstar"}
+			o := Options{ms, "gunstar", true}
 			e, err := New(o)
 			if err != nil {
 				t.Fatalf("couldn't make exporter: %s", err)
