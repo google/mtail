@@ -188,5 +188,8 @@ func (c *checker) VisitAfter(node astNode) {
 		default:
 			n.SetType(n.expr.Type())
 		}
+
+	case *indexedExprNode:
+		n.SetType(n.lhs.Type())
 	}
 }

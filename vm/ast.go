@@ -156,8 +156,8 @@ func (n *unaryExprNode) Pos() *position {
 }
 
 func (n *unaryExprNode) Type() Type {
-	n.typMu.Lock()
-	defer n.typMu.Unlock()
+	n.typMu.RLock()
+	defer n.typMu.RUnlock()
 	return n.typ
 }
 
@@ -169,6 +169,8 @@ func (n *unaryExprNode) SetType(t Type) {
 
 type indexedExprNode struct {
 	lhs, index astNode
+	typ        Type
+	typMu      sync.RWMutex
 }
 
 func (n *indexedExprNode) Pos() *position {
@@ -176,7 +178,15 @@ func (n *indexedExprNode) Pos() *position {
 }
 
 func (n *indexedExprNode) Type() Type {
-	return n.lhs.Type()
+	n.typMu.RLock()
+	defer n.typMu.RUnlock()
+	return n.typ
+}
+
+func (n *indexedExprNode) SetType(t Type) {
+	n.typMu.Lock()
+	defer n.typMu.Unlock()
+	n.typ = t
 }
 
 type declNode struct {
