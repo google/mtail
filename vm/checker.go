@@ -191,5 +191,8 @@ func (c *checker) VisitAfter(node astNode) {
 
 	case *indexedExprNode:
 		n.SetType(n.lhs.Type())
+
+	case *builtinNode:
+		n.SetType(Int)
 	}
 }
