@@ -28,15 +28,16 @@ var (
 // Exporter manages the export of metrics to passive and active collectors.
 type Exporter struct {
 	store       *metrics.Store
-	hostname    string
+	o           Options
 	pushTargets []pushOptions
 }
 
 // Options contains the required and optional parameters for constructing an
 // Exporter.
 type Options struct {
-	Store    *metrics.Store
-	Hostname string // Not required, uses os.Hostname if zero.
+	Store         *metrics.Store
+	Hostname      string // Not required, uses os.Hostname if zero.
+	OmitProgLabel bool   // If true, don't emit the prog label that identifies the source program in variable exports.
 }
 
 // New creates a new Exporter.
@@ -52,7 +53,7 @@ func New(o Options) (*Exporter, error) {
 			return nil, fmt.Errorf("Error getting hostname: %s\n", err)
 		}
 	}
-	e := &Exporter{store: o.Store, hostname: hostname}
+	e := &Exporter{store: o.Store, o: o}
 
 	if *collectdSocketPath != "" {
 		o := pushOptions{"unix", *collectdSocketPath, metricToCollectd, collectdExportTotal, collectdExportSuccess}
@@ -100,7 +101,7 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 			lc := make(chan *metrics.LabelSet)
 			go m.EmitLabelSets(lc)
 			for l := range lc {
-				line := f(e.hostname, m, l)
+				line := f(e.o.Hostname, m, l)
 				n, err := fmt.Fprint(c, line)
 				glog.V(2).Infof("Sent %d bytes\n", n)
 				if err == nil {

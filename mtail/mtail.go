@@ -119,7 +119,18 @@ func (m *MtailServer) StartTailing() error {
 
 // InitLoader constructs a new program loader and performs the inital load of program files in the program directory.
 func (m *MtailServer) InitLoader() error {
-	o := vm.LoaderOptions{Store: m.store, Lines: m.lines, CompileOnly: m.o.CompileOnly, DumpAst: m.o.DumpAst, DumpAstTypes: m.o.DumpAstTypes, DumpBytecode: m.o.DumpBytecode, SyslogUseCurrentYear: m.o.SyslogUseCurrentYear, W: m.o.W, FS: m.o.FS}
+	o := vm.LoaderOptions{
+		Store:                m.store,
+		Lines:                m.lines,
+		CompileOnly:          m.o.CompileOnly,
+		DumpAst:              m.o.DumpAst,
+		DumpAstTypes:         m.o.DumpAstTypes,
+		DumpBytecode:         m.o.DumpBytecode,
+		SyslogUseCurrentYear: m.o.SyslogUseCurrentYear,
+		OmitMetricSource:     m.o.OmitMetricSource,
+		W:                    m.o.W,
+		FS:                   m.o.FS,
+	}
 	var err error
 	m.l, err = vm.NewLoader(o)
 	if err != nil {
@@ -188,6 +199,8 @@ type Options struct {
 	DumpAstTypes         bool
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
+	OmitMetricSource     bool
+	OmitProgLabel        bool
 
 	BuildInfo string
 
@@ -214,7 +227,7 @@ func New(o Options) (*MtailServer, error) {
 		return nil, err
 	}
 
-	m.e, err = exporter.New(exporter.Options{Store: m.store})
+	m.e, err = exporter.New(exporter.Options{Store: m.store, OmitProgLabel: o.OmitProgLabel})
 	if err != nil {
 		return nil, err
 	}

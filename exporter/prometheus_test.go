@@ -33,7 +33,7 @@ var handlePrometheusTests = []struct {
 				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
 		`# TYPE foo counter
-foo{prog="test"} 1
+foo{} 1
 `,
 	},
 	{"dimensioned",
@@ -47,7 +47,7 @@ foo{prog="test"} 1
 			},
 		},
 		`# TYPE foo counter
-foo{a="1",b="2",prog="test"} 1
+foo{a="1",b="2"} 1
 `,
 	},
 	{"gauge",
@@ -59,7 +59,7 @@ foo{a="1",b="2",prog="test"} 1
 				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
 		`# TYPE foo gauge
-foo{prog="test"} 1
+foo{} 1
 `,
 	},
 	{"timer",
@@ -71,7 +71,7 @@ foo{prog="test"} 1
 				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
 		`# TYPE foo gauge
-foo{prog="test"} 1
+foo{} 1
 `,
 	},
 	{"quotes",
@@ -85,7 +85,46 @@ foo{prog="test"} 1
 			},
 		},
 		`# TYPE foo counter
-foo{a="str\"bang\"blah",prog="test"} 1
+foo{a="str\"bang\"blah"} 1
+`,
+	},
+	{"help",
+		[]*metrics.Metric{
+			&metrics.Metric{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Counter,
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				Source:      "location.mtail:37",
+			},
+		},
+		`# TYPE foo counter
+# foo defined at location.mtail:37
+foo{} 1
+`,
+	},
+	{"2 help",
+		[]*metrics.Metric{
+			&metrics.Metric{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Counter,
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				Source:      "location.mtail:37",
+			},
+			&metrics.Metric{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Counter,
+				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				Source:      "different.mtail:37",
+			},
+		},
+		`# TYPE foo counter
+# foo defined at location.mtail:37
+foo{} 1
+# foo defined at different.mtail:37
+foo{} 1
 `,
 	},
 }
@@ -98,7 +137,7 @@ func TestHandlePrometheus(t *testing.T) {
 			for _, metric := range tc.metrics {
 				ms.Add(metric)
 			}
-			o := Options{ms, "gunstar"}
+			o := Options{ms, "gunstar", true}
 			e, err := New(o)
 			if err != nil {
 				t.Fatalf("couldn't make exporter: %s", err)

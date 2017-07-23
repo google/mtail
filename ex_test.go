@@ -75,7 +75,7 @@ func TestExamplePrograms(t *testing.T) {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
-			o := mtail.Options{Progs: tc.programfile, W: w, Store: store}
+			o := mtail.Options{Progs: tc.programfile, W: w, Store: store, OmitMetricSource: true}
 			o.DumpAstTypes = true
 			o.DumpBytecode = true
 			mtail, err := mtail.New(o)

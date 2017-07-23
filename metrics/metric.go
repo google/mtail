@@ -80,6 +80,7 @@ type Metric struct {
 	Hidden      bool          `json:",omitempty"`
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
+	Source      string        `json:"-"`
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).
@@ -217,5 +218,11 @@ func (lv *LabelValue) UnmarshalJSON(b []byte) error {
 func (m *Metric) String() string {
 	m.RLock()
 	defer m.RUnlock()
-	return fmt.Sprintf("Metric: name=%s program=%s kind=%s type=%s hidden=%v keys=%v labelvalues=%v", m.Name, m.Program, m.Kind, m.Type, m.Hidden, m.Keys, m.LabelValues)
+	return fmt.Sprintf("Metric: name=%s program=%s kind=%s type=%s hidden=%v keys=%v labelvalues=%v source=%s", m.Name, m.Program, m.Kind, m.Type, m.Hidden, m.Keys, m.LabelValues, m.Source)
+}
+
+func (m *Metric) SetSource(source string) {
+	m.Lock()
+	defer m.Unlock()
+	m.Source = source
 }

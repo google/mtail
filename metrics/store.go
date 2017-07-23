@@ -5,6 +5,7 @@ package metrics
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 )
 
@@ -21,10 +22,17 @@ func NewStore() (s *Store) {
 }
 
 // Add is used to add one metric to the Store.
-func (s *Store) Add(m *Metric) {
+func (s *Store) Add(m *Metric) error {
 	s.Lock()
 	defer s.Unlock()
+	if len(s.Metrics[m.Name]) > 0 {
+		t := s.Metrics[m.Name][0].Kind
+		if m.Kind != t {
+			return fmt.Errorf("Metric %s has different kind %s to existing %s.", m.Name, m.Kind, t)
+		}
+	}
 	s.Metrics[m.Name] = append(s.Metrics[m.Name], m)
+	return nil
 }
 
 // ClearMetrics empties the store of all metrics.

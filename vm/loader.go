@@ -155,7 +155,12 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
-	o := &Options{CompileOnly: l.compileOnly, EmitAst: l.dumpAst, EmitAstTypes: l.dumpAstTypes, SyslogUseCurrentYear: l.syslogUseCurrentYear}
+	o := &Options{
+		CompileOnly:          l.compileOnly,
+		EmitAst:              l.dumpAst,
+		EmitAstTypes:         l.dumpAstTypes,
+		SyslogUseCurrentYear: l.syslogUseCurrentYear,
+	}
 	v, errs := Compile(name, input, o)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
@@ -165,31 +170,49 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
 	}
-	for _, m := range v.m {
-		if !m.Hidden {
-			l.ms.Add(m)
-		}
-	}
+
 	if l.dumpBytecode {
 		glog.Info("Dumping program objects and bytecode\n", v.DumpByteCode(name))
 	}
-	if l.compileOnly {
-		return nil
+
+	// Load the metrics from the compilation into the global metric storage for export.
+	for _, m := range v.m {
+		if !m.Hidden {
+			if l.omitMetricSource {
+				m.Source = ""
+			}
+			err := l.ms.Add(m)
+			if err != nil {
+				return err
+			}
+		}
 	}
+
 	ProgLoads.Add(name, 1)
 	glog.Infof("Loaded program %s", name)
 
+	if l.compileOnly {
+		return nil
+	}
+
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
+
 	// Stop any previous VM.
 	if handle, ok := l.handles[name]; ok {
+		glog.Infof("END OF LINE, %s", name)
 		close(handle.lines)
 		<-handle.done
+		glog.Infof("Stopped %s", name)
 	}
+
 	l.handles[name] = &vmHandle{make(chan *tailer.LogLine), make(chan struct{})}
 	nameCode := nameToCode(name)
 	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
 	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done)
+
+	glog.Infof("Started %s", name)
+
 	return nil
 }
 
@@ -220,6 +243,7 @@ type Loader struct {
 	dumpAstTypes         bool // print the AST after type check
 	dumpBytecode         bool // Instructs the loader to dump to stdout the compiled program after compilation.
 	syslogUseCurrentYear bool // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
+	omitMetricSource     bool
 }
 
 // LoaderOptions contains the required and optional parameters for creating a
@@ -236,6 +260,7 @@ type LoaderOptions struct {
 	DumpAstTypes         bool // Instructs the loader to dump to stdout the compiled program after compilation.
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
+	OmitMetricSource     bool // Don't put the source in the metric when added to the Store.
 }
 
 // NewLoader creates a new program loader.  It takes a filesystem watcher
@@ -269,7 +294,9 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		dumpAst:              o.DumpAst,
 		dumpAstTypes:         o.DumpAstTypes,
 		dumpBytecode:         o.DumpBytecode,
-		syslogUseCurrentYear: o.SyslogUseCurrentYear}
+		syslogUseCurrentYear: o.SyslogUseCurrentYear,
+		omitMetricSource:     o.OmitMetricSource,
+	}
 
 	go l.processEvents()
 	go l.processLines(o.Lines)

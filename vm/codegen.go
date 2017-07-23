@@ -61,6 +61,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		// historical behaviour.
 		kind := kindMap[n.Type()]
 		m := metrics.NewMetric(name, c.name, n.kind, kind, n.keys...)
+		m.SetSource(n.Pos().String())
 		// Scalar counters can be initialized to zero.  Dimensioned counters we
 		// don't know the values of the labels yet.  Gauges and Timers we can't
 		// assume start at zero.
