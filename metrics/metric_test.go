@@ -93,6 +93,7 @@ var labelSetTests = []struct {
 func TestEmitLabelSet(t *testing.T) {
 	ts := time.Now().UTC()
 	for _, tc := range labelSetTests {
+		tc := tc
 		t.Run(fmt.Sprintf("%v", tc.values), func(t *testing.T) {
 			t.Parallel()
 			m := NewMetric("test", "prog", Gauge, Int, "foo", "bar", "quux")

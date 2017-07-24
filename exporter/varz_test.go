@@ -53,6 +53,7 @@ var handleVarzTests = []struct {
 
 func TestHandleVarz(t *testing.T) {
 	for _, tc := range handleVarzTests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ms := metrics.NewStore()

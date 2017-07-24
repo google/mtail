@@ -241,6 +241,7 @@ getfilename()
 
 func TestParserRoundTrip(t *testing.T) {
 	for _, tc := range parserTests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			p := newParser(tc.name, strings.NewReader(tc.program))
@@ -309,6 +310,7 @@ var parserInvalidPrograms = []parserInvalidProgram{
 
 func TestParseInvalidPrograms(t *testing.T) {
 	for _, tc := range parserInvalidPrograms {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			p := newParser(tc.name, strings.NewReader(tc.program))

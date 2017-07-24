@@ -219,6 +219,7 @@ func TestLex(t *testing.T) {
 	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
 
 	for _, tc := range lexerTests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			tokens := collect(&tc)

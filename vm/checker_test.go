@@ -53,6 +53,7 @@ var checkerInvalidPrograms = []struct {
 
 func TestCheckInvalidPrograms(t *testing.T) {
 	for _, tc := range checkerInvalidPrograms {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ast, err := Parse(tc.name, strings.NewReader(tc.program))
@@ -61,7 +62,8 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			}
 			err = Check(ast)
 			if err == nil {
-				t.Fatalf("check error: %s", err)
+				t.Error("check didn't fail")
+				return
 			}
 
 			diff := deep.Equal(
@@ -107,6 +109,7 @@ var checkerValidPrograms = []struct {
 
 func TestCheckValidPrograms(t *testing.T) {
 	for _, tc := range checkerValidPrograms {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ast, err := Parse(tc.name, strings.NewReader(tc.program))
@@ -153,6 +156,7 @@ func TestCheckTypeExpressions(t *testing.T) {
 	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
 
 	for _, tc := range checkerTypeExpressionTests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			err := Check(tc.expr)

@@ -397,6 +397,7 @@ func TestCodegen(t *testing.T) {
 	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
 
 	for _, tc := range testCodeGenPrograms {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ast, err := Parse(tc.name, strings.NewReader(tc.source))

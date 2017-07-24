@@ -431,6 +431,7 @@ const testFilename = "test"
 // instruction cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			var m []*metrics.Metric
