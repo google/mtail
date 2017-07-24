@@ -99,6 +99,10 @@ func main() {
 			glog.Exitf("No logs specified to tail; use -logs or -logfds")
 		}
 	}
+	if _, err := strconv.Atoi(*port); err == nil {
+		// If supplied port is a bare int try prepending ":" for implicit global bind
+		*port = ":" + *port
+	}
 	o := mtail.Options{
 		Progs:                *progs,
 		LogPathPatterns:      logs,
