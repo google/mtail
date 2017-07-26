@@ -5,11 +5,11 @@ package vm
 
 import (
 	"fmt"
-	"reflect"
 	"regexp/syntax"
 	"strings"
 	"sync"
 
+	"github.com/go-test/deep"
 	"github.com/golang/glog"
 )
 
@@ -19,7 +19,7 @@ type Type interface {
 }
 
 func Equals(t1, t2 Type) bool {
-	return reflect.DeepEqual(t1, t2)
+	return deep.Equal(t1, t2) == nil
 }
 
 var (
@@ -71,6 +71,7 @@ func (t *TypeVariable) SetInstance(t1 *Type) {
 
 type TypeOperator struct {
 	Name string
+	Args []Type
 }
 
 func (t *TypeOperator) Root() Type {
@@ -78,17 +79,35 @@ func (t *TypeOperator) Root() Type {
 }
 
 func (t *TypeOperator) String() string {
-	return t.Name
+	s := t.Name
+	for _, a := range t.Args {
+		s += " " + a.String()
+	}
+	return s
+}
+
+func Function(args ...Type) Type {
+	return &TypeOperator{"→", args}
 }
 
 // Builtin types
 var (
-	Undef  = &TypeOperator{"Undef"}
-	None   = &TypeOperator{"None"}
-	Int    = &TypeOperator{"Int"}
-	Float  = &TypeOperator{"Float"}
-	String = &TypeOperator{"String"}
+	Undef  = &TypeOperator{"Undef", []Type{}}
+	None   = &TypeOperator{"None", []Type{}}
+	Int    = &TypeOperator{"Int", []Type{}}
+	Float  = &TypeOperator{"Float", []Type{}}
+	String = &TypeOperator{"String", []Type{}}
 )
+
+var Builtins = map[string]Type{
+	"timestamp":   Function(Int),
+	"len":         Function(String, Int),
+	"settime":     Function(Int, None),
+	"strptime":    Function(String, None),
+	"strtol":      Function(String, Int),
+	"tolower":     Function(String, String),
+	"getfilename": Function(String),
+}
 
 // Unify performs type unification of both parameter Types.  It returns the
 // least upper bound of both types, the smallest type that is capable of
@@ -130,6 +149,14 @@ func Unify(a, b Type) Type {
 				(Equals(a2, String) && Equals(b2, Float)) ||
 				(Equals(b2, String) && Equals(a2, Float)) {
 				return String
+			}
+
+			if len(a2.Args) != len(b2.Args) {
+				// TODO return error: glog.Errorf("Type mismatch: %q vs %q", a2, b2)
+				return None
+			}
+			for i := range a2.Args {
+				Unify(a2.Args[i], b2.Args[i])
 			}
 			return None
 		}

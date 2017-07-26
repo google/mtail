@@ -49,6 +49,23 @@ var checkerInvalidPrograms = []struct {
 	{"duplicate declaration",
 		"counter foo\ncounter foo\n",
 		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11"}},
+
+	{"indexedExpr parameter count",
+		`counter foo by a, b
+	/(\d+)/ {
+	  foo[$1]++
+	}
+	`,
+		[]string{"error"}},
+	{"builtin parameter mismatch",
+		`/(\d+)/ {
+	  strptime()
+	}
+    /(\d+)/ {
+	  timestamp()
+	}
+	`,
+		[]string{"builtin parameter mismatch:2:13: Type mismatch on call to `strptime': expected \"→ String None\" got \"→ typeVar1\""}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
@@ -63,6 +80,9 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			err = Check(ast)
 			if err == nil {
 				t.Error("check didn't fail")
+				s := Sexp{}
+				s.emitTypes = true
+				t.Log(s.Dump(ast))
 				return
 			}
 

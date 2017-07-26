@@ -193,6 +193,20 @@ func (c *checker) VisitAfter(node astNode) {
 		n.SetType(n.lhs.Type())
 
 	case *builtinNode:
-		n.SetType(Int)
+		types := []Type{}
+		if args, ok := n.args.(*exprlistNode); ok {
+			for _, arg := range args.children {
+				types = append(types, arg.Type())
+			}
+		}
+		rType := NewTypeVariable()
+		types = append(types, rType)
+
+		fn := Function(types...)
+		Unify(fn, n.Type())
+		if !Equals(fn, n.Type()) {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch on call to `%s': expected %q got %q", n.name, n.Type(), fn))
+			return
+		}
 	}
 }
