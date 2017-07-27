@@ -52,9 +52,11 @@ var checkerInvalidPrograms = []struct {
 
 	{"indexedExpr parameter count",
 		`counter foo by a, b
-	/(\d+)/ {
-	  foo[$1]++
-	}
+counter bar by a, b
+/(\d+)/ {
+  foo[$1]++
+  bar[$1][0]++
+}
 	`,
 		[]string{"error"}},
 	{"builtin parameter mismatch",

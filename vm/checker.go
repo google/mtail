@@ -6,6 +6,8 @@ package vm
 import (
 	"fmt"
 	"regexp/syntax"
+
+	"github.com/golang/glog"
 )
 
 // checker holds data for a semantic checker
@@ -143,6 +145,7 @@ func (c *checker) VisitAfter(node astNode) {
 	case *binaryExprNode:
 		var rType Type
 		Tl := n.lhs.Type()
+		glog.Infof("rhs is a %#V", n.rhs)
 		Tr := n.rhs.Type()
 		switch n.op {
 		case DIV, MOD, MUL, MINUS, PLUS, POW:
@@ -171,6 +174,7 @@ func (c *checker) VisitAfter(node astNode) {
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr
 			// ⇒ O ⊢ e : Tl
+			glog.Infof("Tl: %v TR: %v", Tl, Tr)
 			rType = Unify(Tl, Tr)
 		default:
 			if Tl != Tr {
