@@ -60,6 +60,7 @@ var lexemeName = map[lexeme]string{
 	CONST:      "CONST",
 	OTHERWISE:  "OTHERWISE",
 	ELSE:       "ELSE",
+	DEL:        "DEL",
 }
 
 func (t lexeme) String() string {
@@ -76,6 +77,7 @@ var keywords = map[string]lexeme{
 	"const":     CONST,
 	"counter":   COUNTER,
 	"def":       DEF,
+	"del":       DEL,
 	"else":      ELSE,
 	"gauge":     GAUGE,
 	"hidden":    HIDDEN,
@@ -86,6 +88,7 @@ var keywords = map[string]lexeme{
 
 // List of builtin functions.  Keep this list sorted!
 var builtins = []string{
+	"getfilename",
 	"len",
 	"settime",
 	"strptime",
@@ -449,17 +452,25 @@ Loop:
 // capture groups in the preceeding regular expression.
 func lexCapref(l *lexer) stateFn {
 	l.skip() // Skip the leading $
+	named := false
 Loop:
 	for {
 		switch r := l.next(); {
 		case isAlnum(r) || r == '_':
 			l.accept()
+			if !isDigit(r) {
+				named = true
+			}
 		default:
 			l.backup()
 			break Loop
 		}
 	}
-	l.emit(CAPREF)
+	if named {
+		l.emit(CAPREF_NAMED)
+	} else {
+		l.emit(CAPREF)
+	}
 	return lexProg
 }
 

@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/google/mtail/metrics"
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/google/mtail/tailer"
 )
 
 var instructions = []struct {
@@ -48,7 +49,7 @@ var instructions = []struct {
 		thread{pc: 0, matches: map[int][]string{}},
 	},
 	{"set int",
-		instr{set, 2},
+		instr{iset, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1, 2}, // set metric 1 "bar"
@@ -56,7 +57,7 @@ var instructions = []struct {
 		thread{pc: 0, matches: map[int][]string{}},
 	},
 	{"set str",
-		instr{set, 2},
+		instr{iset, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1, "2"},
@@ -113,6 +114,55 @@ var instructions = []struct {
 		[]interface{}{2, 2},
 		[]interface{}{},
 		thread{pc: 0, match: false, matches: map[int][]string{}}},
+	{"cmp gt float float",
+		instr{cmp, 1},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"2.0", "1.0"},
+		[]interface{}{},
+		thread{pc: 0, match: true, matches: map[int][]string{}}},
+	{"cmp gt float int",
+		instr{cmp, 1},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"1.0", "2"},
+		[]interface{}{},
+		thread{pc: 0, match: false, matches: map[int][]string{}}},
+	{"cmp gt int float",
+		instr{cmp, 1},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"1", "2.0"},
+		[]interface{}{},
+		thread{pc: 0, match: false, matches: map[int][]string{}}},
+	{"cmp eq string string false",
+		instr{cmp, 0},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"abc", "def"},
+		[]interface{}{},
+		thread{pc: 0, match: false, matches: map[int][]string{}}},
+	{"cmp gt float float",
+		instr{cmp, 1},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{2.0, 1.0},
+		[]interface{}{},
+		thread{pc: 0, match: true, matches: map[int][]string{}}},
+	{"cmp gt float int",
+		instr{cmp, 1},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1.0, 2},
+		[]interface{}{},
+		thread{pc: 0, match: false, matches: map[int][]string{}}},
+	{"cmp gt int float",
+		instr{cmp, 1},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1, 2.0},
+		[]interface{}{},
+		thread{pc: 0, match: false, matches: map[int][]string{}}},
 	{"jnm",
 		instr{jnm, 37},
 		[]*regexp.Regexp{},
@@ -142,43 +192,43 @@ var instructions = []struct {
 		[]interface{}{},
 		thread{pc: 0, time: time.Date(2012, 1, 18, 6, 25, 0, 0, time.UTC),
 			matches: map[int][]string{}}},
-	{"add",
-		instr{add, 0},
+	{"iadd",
+		instr{iadd, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(3)},
 		thread{pc: 0, matches: map[int][]string{}}},
-	{"sub",
-		instr{sub, 0},
+	{"isub",
+		instr{isub, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(1)},
 		thread{pc: 0, matches: map[int][]string{}}},
-	{"mul",
-		instr{mul, 0},
+	{"imul",
+		instr{imul, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(2)},
 		thread{pc: 0, matches: map[int][]string{}}},
-	{"div",
-		instr{div, 0},
+	{"idiv",
+		instr{idiv, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{4, 2},
 		[]interface{}{int64(2)},
 		thread{pc: 0, matches: map[int][]string{}}},
-	{"mod",
-		instr{mod, 0},
+	{"imod",
+		instr{imod, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{4, 2},
 		[]interface{}{int64(0)},
 		thread{pc: 0, matches: map[int][]string{}}},
-	{"mod",
-		instr{mod, 0},
+	{"imod 2",
+		instr{imod, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{3, 2},
@@ -262,7 +312,7 @@ var instructions = []struct {
 		[]interface{}{int64(-1)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"pow",
-		instr{pow, 0},
+		instr{ipow, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 2},
@@ -359,39 +409,61 @@ var instructions = []struct {
 		[]interface{}{2.0, 2.0},
 		[]interface{}{4.0},
 		thread{pc: 0, matches: map[int][]string{}}},
+	{"fset",
+		instr{fset, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{2, 2.0}, // quux set to 2.
+		[]interface{}{},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"getfilename",
+		instr{getfilename, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{},
+		[]interface{}{testFilename},
+		thread{pc: 0, matches: map[int][]string{}}},
 }
+
+const testFilename = "test"
 
 // TestInstrs tests that each instruction behaves as expected through one
 // instruction cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
-		var m []*metrics.Metric
-		m = append(m,
-			metrics.NewMetric("foo", "test", metrics.Counter),
-			metrics.NewMetric("bar", "test", metrics.Counter))
-		obj := &object{re: tc.re, str: tc.str, m: m, prog: []instr{tc.i}}
-		v := New(tc.name, obj, true)
-		v.t = new(thread)
-		v.t.stack = make([]interface{}, 0)
-		for _, item := range tc.reversedStack {
-			v.t.Push(item)
-		}
-		v.t.matches = make(map[int][]string, 0)
-		v.input = "aaaab"
-		v.execute(v.t, tc.i)
-		if v.terminate {
-			t.Fatalf("Execution failed, see info log.")
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			var m []*metrics.Metric
+			m = append(m,
+				metrics.NewMetric("foo", "test", metrics.Counter, metrics.Int),
+				metrics.NewMetric("bar", "test", metrics.Counter, metrics.Int),
+				metrics.NewMetric("quux", "test", metrics.Gauge, metrics.Float))
+			obj := &object{re: tc.re, str: tc.str, m: m, prog: []instr{tc.i}}
+			v := New(tc.name, obj, true)
+			v.t = new(thread)
+			v.t.stack = make([]interface{}, 0)
+			for _, item := range tc.reversedStack {
+				v.t.Push(item)
+			}
+			v.t.matches = make(map[int][]string, 0)
+			v.input = tailer.NewLogLine(testFilename, "aaaab")
+			v.execute(v.t, tc.i)
+			if v.terminate {
+				t.Fatalf("Execution failed, see info log.")
+			}
 
-		diff := pretty.Compare(tc.expectedStack, v.t.stack)
-		if len(diff) > 0 {
-			t.Errorf("%s: unexpected virtual machine stack state.\n%s", tc.name, diff)
-		}
-		// patch in the thread stack because otherwise the test table is huge
-		tc.expectedThread.stack = tc.expectedStack
+			if diff := deep.Equal(tc.expectedStack, v.t.stack); diff != nil {
+				t.Log("unexpected vm stack state")
+				t.Error(diff)
+			}
 
-		if diff = pretty.Compare(v.t, &tc.expectedThread); len(diff) > 0 {
-			t.Errorf("%s: unexpected virtual machine thread state.\n%s", tc.name, diff)
-		}
+			if diff := deep.Equal(&tc.expectedThread, v.t); diff != nil {
+				t.Log("unexpected vm thread state")
+				t.Error(diff)
+				t.Errorf("\t%v", *v.t)
+				t.Errorf("\t%v", tc.expectedThread)
+			}
+
+		})
 	}
 }

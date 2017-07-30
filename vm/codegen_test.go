@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
 var testCodeGenPrograms = []struct {
@@ -45,7 +45,7 @@ var testCodeGenPrograms = []struct {
 			instr{jnm, 11},
 			instr{setmatched, false},
 			instr{push, 0},
-			instr{capref, 0},
+			instr{capref, 1},
 			instr{str, 0},
 			instr{strptime, 2},
 			instr{mload, 0},
@@ -70,7 +70,7 @@ var testCodeGenPrograms = []struct {
 			instr{setmatched, true}}},
 	{"inc by and set",
 		"counter foo\ncounter bar\n" +
-			"/(.*)/ {\n" +
+			"/([0-9]+)/ {\n" +
 			"foo += $1\n" +
 			"bar = $1\n" +
 			"}\n",
@@ -83,14 +83,14 @@ var testCodeGenPrograms = []struct {
 			instr{mload, 0},
 			instr{dload, 0},
 			instr{push, 0},
-			instr{capref, 0},
-			instr{add, nil},
-			instr{set, nil},
+			instr{capref, 1},
+			instr{iadd, nil},
+			instr{iset, nil},
 			instr{mload, 1},
 			instr{dload, 0},
 			instr{push, 0},
-			instr{capref, 0},
-			instr{set, nil},
+			instr{capref, 1},
+			instr{iset, nil},
 			instr{setmatched, true}}},
 	{"cond expr gt",
 		"counter foo\n" +
@@ -194,7 +194,7 @@ var testCodeGenPrograms = []struct {
 			instr{jnm, 14},
 			instr{setmatched, false},
 			instr{push, 0},
-			instr{capref, 0},
+			instr{capref, 1},
 			instr{push, 1},
 			instr{cmp, 1},
 			instr{jm, 13},
@@ -207,14 +207,14 @@ var testCodeGenPrograms = []struct {
 	{"deco",
 		"counter foo\n" +
 			"counter bar\n" +
-			"def foo {\n" +
+			"def fooWrap {\n" +
 			"  /.*/ {\n" +
 			"    foo++\n" +
 			"    next\n" +
 			"  }\n" +
 			"}\n" +
 			"" +
-			"@foo { bar++\n }\n",
+			"@fooWrap { bar++\n }\n",
 		[]instr{
 			instr{match, 0},
 			instr{jnm, 10},
@@ -258,16 +258,20 @@ var testCodeGenPrograms = []struct {
 			instr{push, 20},
 			instr{shr, nil}}},
 	{"pow", `
-counter a
-counter b
-a ** b
+/(\d+) (\d+)/ {
+$1 ** $2
+}
 `,
 		[]instr{
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{mload, 1},
-			instr{dload, 0},
-			instr{pow, nil}}},
+			instr{match, 0},
+			instr{jnm, 9},
+			instr{setmatched, false},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{push, 0},
+			instr{capref, 2},
+			instr{ipow, nil},
+			instr{setmatched, true}}},
 	{"indexed expr", `
 counter a by b
 a["string"]++
@@ -334,29 +338,87 @@ counter bar
 		[]instr{
 			instr{push, 3},
 			instr{push, 1},
-			instr{mod, nil},
+			instr{imod, nil},
+		},
+	},
+	{"del", `
+counter a by b
+del a["string"]
+`,
+		[]instr{
+			instr{str, 0},
+			instr{mload, 0},
+			instr{del, 1}},
+	},
+	{"types", `
+gauge i
+gauge f
+/(\d+)/ {
+ i = $1
+}
+/(\d+\.\d+)/ {
+ f = $1
+}
+`,
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 9},
+			instr{setmatched, false},
+			instr{mload, 0},
+			instr{dload, 0},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{iset, nil},
+			instr{setmatched, true},
+			instr{match, 1},
+			instr{jnm, 18},
+			instr{setmatched, false},
+			instr{mload, 1},
+			instr{dload, 0},
+			instr{push, 1},
+			instr{capref, 1},
+			instr{fset, nil},
+			instr{setmatched, true},
+		},
+	},
+
+	{"getfilename", `
+getfilename()
+`,
+		[]instr{
+			instr{getfilename, nil},
 		},
 	},
 }
 
 func TestCodegen(t *testing.T) {
+	defaultCompareUnexportedFields := deep.CompareUnexportedFields
+	deep.CompareUnexportedFields = true
+	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+
 	for _, tc := range testCodeGenPrograms {
-		ast, err := Parse(tc.name, strings.NewReader(tc.source))
-		if err != nil {
-			t.Fatalf("Unexpected parse failure in %q: %s", tc.name, err)
-		}
-		err = Check(ast)
-		if err != nil {
-			t.Fatalf("Unexpected check failure in %q: %s", tc.name, err)
-		}
-		obj, err := CodeGen(tc.name, ast)
-		if err != nil {
-			t.Errorf("Compile errors for %q:\n%q", tc.name, err)
-			continue
-		}
-		diff := pretty.Compare(tc.prog, obj.prog)
-		if len(diff) > 0 {
-			t.Errorf("%s: VM prog doesn't match.\n%s", tc.name, diff)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ast, err := Parse(tc.name, strings.NewReader(tc.source))
+			if err != nil {
+				t.Fatalf("Parse error: %s", err)
+			}
+			err = Check(ast)
+			if err != nil {
+				t.Fatalf("Check error: %s", err)
+			}
+			obj, err := CodeGen(tc.name, ast)
+			if err != nil {
+				t.Errorf("Compile errors:\n%s", err)
+				s := Sexp{}
+				s.emitTypes = true
+				t.Fatalf("AST:\n%s", s.Dump(ast))
+			}
+
+			if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
+				t.Error(diff)
+				t.Logf("Expected:\n%s\nReceived:\n%s", tc.prog, obj.prog)
+			}
+		})
 	}
 }

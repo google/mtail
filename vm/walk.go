@@ -9,18 +9,18 @@ import "fmt"
 // If the result Visitor v is not nil, Walk visits each of the children of that
 // node with v.  VisitAfter is called on n at the end.
 type Visitor interface {
-	VisitBefore(n node) (v Visitor)
-	VisitAfter(n node)
+	VisitBefore(n astNode) (v Visitor)
+	VisitAfter(n astNode)
 }
 
 // convenience function
-func walknodelist(v Visitor, list []node) {
+func walknodelist(v Visitor, list []astNode) {
 	for _, x := range list {
 		Walk(v, x)
 	}
 }
 
-func Walk(v Visitor, node node) {
+func Walk(v Visitor, node astNode) {
 	// Returning nil from VisitBefore signals to Walk that the Visitor has
 	// handled the children of this node.
 	if v := v.VisitBefore(node); v == nil {
@@ -64,7 +64,7 @@ func Walk(v Visitor, node node) {
 	case *decoNode:
 		Walk(v, n.block)
 
-	case *regexNode, *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *nextNode, *otherwiseNode:
+	case *regexNode, *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *nextNode, *otherwiseNode, *delNode:
 		// These nodes are terminals, thus have no children to walk.
 
 	default:

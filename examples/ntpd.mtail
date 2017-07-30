@@ -1,69 +1,70 @@
 # Syslog decorator
-def syslog {/(?P<date>(?P<legacy_date>\w+\s+\d+\s+\d+:\d+:\d+)|(?P<rfc3339_date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+[+-]\d{2}:\d{2}))/ +
-    /\s+(?:\w+@)?(?P<hostname>[\w\.-]+)\s+(?P<application>[\w\.-]+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)/ {
-        len($legacy_date) > 0 {
-            strptime($2, "Jan _2 15:04:05")
-        }
-        len($rfc3339_date) > 0 {
-            strptime($rfc3339_date, "2006-01-02T03:04:05-0700")
-        }
-        next
+def syslog {
+  /^(?P<date>(?P<legacy_date>\w+\s+\d+\s+\d+:\d+:\d+)|(?P<rfc3339_date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+[+-]\d{2}:\d{2}))/ +
+  /\s+(?:\w+@)?(?P<hostname>[\w\.-]+)\s+(?P<application>[\w\.-]+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)/ {
+    len($legacy_date) > 0 {
+      strptime($2, "Jan _2 15:04:05")
     }
+    len($rfc3339_date) > 0 {
+      strptime($rfc3339_date, "2006-01-02T03:04:05-0700")
+    }
+    next
+  }
 }
 
 @syslog {
-counter int_syscalls
+  counter int_syscalls
 
-/select\(.*\) error: Interrupted system call/ {
-  int_syscalls++
-}
+  /select\(.*\) error: Interrupted system call/ {
+    int_syscalls++
+  }
 
-counter recvbuf_overflows
-gauge last_recvbuf
-/too many recvbufs allocated \((\d+)\)/ {
-  recvbuf_overflows++
-  last_recvbuf = $1
-}
+  counter recvbuf_overflows
+  gauge last_recvbuf
+  /too many recvbufs allocated \((\d+)\)/ {
+    recvbuf_overflows++
+    last_recvbuf = $1
+  }
 
-counter exits
-/ntpd exiting on signal 15/ {
-  exits++
-}
+  counter exits
+  /ntpd exiting on signal 15/ {
+    exits++
+  }
 
-counter starts
-/x?ntpd .* \w+\s+\w+\s+\d+\s+\d+:\d+:\d+\s+\w+\s+\d+\s+\(\d\)/ {
-  starts++
-}
+  counter starts
+  /x?ntpd .* \w+\s+\w+\s+\d+\s+\d+:\d+:\d+\s+\w+\s+\d+\s+\(\d\)/ {
+    starts++
+  }
 
-gauge sync_status
-/kernel time sync (status (change)?|enabled|disabled) (?P<status>\d+)/ {
-   sync_status = $status
-}
+  gauge sync_status
+  /kernel time sync (status (change)?|enabled|disabled) (?P<status>\d+)/ {
+    sync_status = $status
+  }
 
 # PLL status change.
 #
 # Described here: http://obswww.unige.ch/~bartho/xntp_faq/faq3Care.htm#araee
-counter pll_changes
-gauge pll_status
-/kernel pll status change (?P<status>\d+)/ {
-  pll_changes++
-  pll_status = $status
-}
+  counter pll_changes
+  gauge pll_status
+  /kernel pll status change (?P<status>\d+)/ {
+    pll_changes++
+    pll_status = $status
+  }
 
-counter peer_syncs
-/synchronized to (\d+\.\d+\.\d+\.\d+|LOCAL\(\d\)), stratum(=| )(\d+)/ {
-  peer_syncs++
-}
+  counter peer_syncs
+  /synchronized to (\d+\.\d+\.\d+\.\d+|LOCAL\(\d\)), stratum(=| )(\d+)/ {
+    peer_syncs++
+  }
 
-counter driftfile_errors
-/can't open .*drift.*: No such file or directory/ {
-  driftfile_errors++
-}
+  counter driftfile_errors
+  /can't open .*drift.*: No such file or directory/ {
+    driftfile_errors++
+  }
 
-counter sync_lost_total
-/synchronisation lost/ {
-  sync_lost_total++
-}
+  counter sync_lost_total
+  /synchronisation lost/ {
+    sync_lost_total++
+  }
 
 } # end syslog
 
@@ -78,13 +79,13 @@ gauge peer_delay by peer
 gauge peer_dispersion by peer
 counter num_peerstats by peer
 # TODO(jaq) seconds is int, not float
-/(?P<days>\d+) (?P<seconds>\d+)\.\d+ (?P<peer>\d+\.\d+\.\d+\.\d+) (?P<status>[0-9a-f]+) (?P<offset>-?\d+\.\d+) (?P<delay>\d+\.\d+) (?P<dispersion>\d+\.\d+)/ {
+/^(?P<days>\d+) (?P<seconds>\d+)\.\d+ (?P<peer>\d+\.\d+\.\d+\.\d+) (?P<status>[0-9a-f]+) (?P<offset>-?\d+\.\d+) (?P<delay>\d+\.\d+) (?P<dispersion>\d+\.\d+)/ {
   # Unix epoch in MJD is 40587.
   settime(($days - 40587) * 86400 + $seconds)
 
-  #peer_offset[$peer] = $offset
-  #peer_delay[$peer] = $delay
-  #peer_dispersion[$peer] = $dispersion
+  peer_offset[$peer] = $offset
+  peer_delay[$peer] = $delay
+  peer_dispersion[$peer] = $dispersion
   # http://www.cis.udel.edu/~mills/ntp/html/decode.html#peer
   # bits 0-4
   peer_status[$peer] = (strtol($status, 16) >> (16 - 5)) & ((2 ** 5) - 1)

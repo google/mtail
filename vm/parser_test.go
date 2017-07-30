@@ -7,15 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
-type validProgram struct {
+var parserTests = []struct {
 	name    string
 	program string
-}
-
-var mtailPrograms = []validProgram{
+}{
 	{"empty",
 		""},
 
@@ -229,41 +227,53 @@ foo = 3.14
 		`/foo/ {
   3 % 1
 }`},
+
+	{"delete",
+		`counter foo by bar
+/foo/ {
+  del foo[$1]
+}`},
+
+	{"getfilename", `
+getfilename()
+`},
 }
 
 func TestParserRoundTrip(t *testing.T) {
-	for _, tc := range mtailPrograms {
-		p := newParser(tc.name, strings.NewReader(tc.program))
-		r := mtailParse(p)
+	for _, tc := range parserTests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			p := newParser(tc.name, strings.NewReader(tc.program))
+			r := mtailParse(p)
 
-		if r != 0 || p.root == nil || len(p.errors) > 0 {
-			t.Errorf("1st pass parse errors:\n")
-			for _, e := range p.errors {
-				t.Errorf("\t%s\n", e)
+			if r != 0 || p.root == nil || len(p.errors) > 0 {
+				t.Error("1st pass parse errors:\n")
+				for _, e := range p.errors {
+					t.Errorf("\t%s\n", e)
+				}
+				t.Fatal()
 			}
-			continue
-		}
 
-		u := Unparser{}
-		output := u.Unparse(p.root)
+			u := Unparser{}
+			output := u.Unparse(p.root)
 
-		p2 := newParser(tc.name+" 2", strings.NewReader(output))
-		r = mtailParse(p2)
-		if r != 0 || p2.root == nil || len(p2.errors) > 0 {
-			t.Errorf("2nd pass parse errors:\n")
-			for _, e := range p2.errors {
-				t.Errorf("\t%s\n", e)
+			p2 := newParser(tc.name+" 2", strings.NewReader(output))
+			r = mtailParse(p2)
+			if r != 0 || p2.root == nil || len(p2.errors) > 0 {
+				t.Errorf("2nd pass parse errors:\n")
+				for _, e := range p2.errors {
+					t.Errorf("\t%s\n", e)
+				}
+				t.Fatalf("2nd pass input was:\n%s", output)
 			}
-			continue
-		}
 
-		u = Unparser{}
-		output2 := u.Unparse(p2.root)
+			u = Unparser{}
+			output2 := u.Unparse(p2.root)
 
-		diff := pretty.Compare(output2, output)
-		if len(diff) > 0 {
-			t.Errorf("Round trip failed to generate same output.\n%s", diff)
-		}
+			if diff := deep.Equal(output2, output); diff != nil {
+				t.Error(diff)
+			}
+		})
 	}
 }
 
@@ -299,14 +309,17 @@ var parserInvalidPrograms = []parserInvalidProgram{
 
 func TestParseInvalidPrograms(t *testing.T) {
 	for _, tc := range parserInvalidPrograms {
-		p := newParser(tc.name, strings.NewReader(tc.program))
-		mtailParse(p)
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			p := newParser(tc.name, strings.NewReader(tc.program))
+			mtailParse(p)
 
-		diff := pretty.Compare(
-			strings.Join(tc.errors, "\n"),             // want
-			strings.TrimRight(p.errors.Error(), "\n")) // got
-		if len(diff) > 0 {
-			t.Errorf("Incorrect error for '%s'\n%s", tc.name, diff)
-		}
+			diff := deep.Equal(
+				strings.Join(tc.errors, "\n"),             // want
+				strings.TrimRight(p.errors.Error(), "\n")) // got
+			if diff != nil {
+				t.Error(diff)
+			}
+		})
 	}
 }

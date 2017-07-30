@@ -6,49 +6,46 @@ package vm
 import (
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
-func TestLookupSymbol(t *testing.T) {
-	// s := &symbol{"foo", IDSymbol, nil, position{"-", 1, 1, 3}, 0}
+func TestInsertLookup(t *testing.T) {
+	s := NewScope(nil)
 
-	// sc := &scope{}
-
-	// Construct a dodgy symbol table
-	tab := &SymbolTable{}
-	tab.EnterScope(nil)
-	s := tab.Add("foo", IDSymbol, &position{"-", 1, 1, 3})
-	// *tab = append(*tab, sc)
-	// (*(*tab)[0])["foo"][IDSymbol] = s
-
-	r, ok := tab.Lookup("foo", IDSymbol)
-	if !ok {
-		t.Errorf("Couldn't find symbol.")
-	}
-	diff := pretty.Compare(s, r)
-	if len(diff) > 0 {
-		t.Errorf("didn't get back the right symbol\n%s", diff)
+	sym1 := NewSymbol("foo", VarSymbol, nil)
+	if r := s.Insert(sym1); r != nil {
+		t.Errorf("Insert already had sym1: %v", r)
 	}
 
-	r, ok = tab.Lookup("bar", IDSymbol)
-	if ok {
-		t.Errorf("Shold not have found bar.")
+	r1 := s.Lookup("foo")
+	if diff := deep.Equal(r1, sym1); diff != nil {
+		t.Error(diff)
 	}
-	r, ok = tab.Lookup("foo", CaprefSymbol)
-	if ok {
-		t.Errorf("Should not have found foo: %v", r)
+}
+
+func TestNestedScope(t *testing.T) {
+	s := NewScope(nil)
+	s1 := NewScope(s)
+
+	sym1 := NewSymbol("bar", VarSymbol, nil)
+	if r := s.Insert(sym1); r != nil {
+		t.Errorf("Insert already had sym1: %v", r)
 	}
 
-	tab.EnterScope(nil)
-	s1 := tab.Add("foo", IDSymbol, &position{"-", 2, 1, 3})
-
-	r, ok = tab.Lookup("foo", IDSymbol)
-	if !ok {
-		t.Errorf("Couldn't find symbol.")
-	}
-	diff = pretty.Compare(s1, r)
-	if len(diff) > 0 {
-		t.Errorf("didn't get back the right symbol\n%s", diff)
+	sym2 := NewSymbol("foo", VarSymbol, nil)
+	if r1 := s1.Insert(sym2); r1 != nil {
+		t.Errorf("Insert already had sym2: %v", r1)
 	}
 
+	if s1.Lookup("foo") == nil {
+		t.Errorf("foo not found in s1")
+	}
+
+	if s.Lookup("foo") != nil {
+		t.Errorf("foo found in s")
+	}
+
+	if s1.Lookup("bar") == nil {
+		t.Errorf("bar not found from s1")
+	}
 }

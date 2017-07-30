@@ -17,10 +17,7 @@ var (
 
 // HandleJSON exports the metrics in JSON format via HTTP.
 func (e *Exporter) HandleJSON(w http.ResponseWriter, r *http.Request) {
-	e.store.RLock()
-	defer e.store.RUnlock()
-
-	b, err := json.MarshalIndent(e.store.Metrics, "", "  ")
+	b, err := json.MarshalIndent(e.store, "", "  ")
 	if err != nil {
 		exportJSONErrors.Add(1)
 		glog.Info("error marshalling metrics into json:", err.Error())

@@ -7,24 +7,22 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
-type checkerInvalidProgram struct {
+var checkerInvalidPrograms = []struct {
 	name    string
 	program string
 	errors  []string
-}
-
-var checkerInvalidPrograms = []checkerInvalidProgram{
+}{
 	{"undefined named capture group",
 		"/blurgh/ { $undef++\n }\n",
-		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression in this or outer scopes.\n\tTry using `(?P<undef>...)' to name the capture group."}},
+		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression visible to this scope.\n\tTry using `(?P<undef>...)' to name the capture group."}},
 
 	{"out of bounds capref",
 		"/(blyurg)/ { $2++ \n}\n",
 		[]string{"out of bounds capref:1:14-15: Capture group `$2' was not defined by a regular expression " +
-			"in this or outer scopes.\n\tTry using `(?P<2>...)' to name the capture group."},
+			"visible to this scope.\n\tCheck that there are at least 2 pairs of parentheses."},
 	},
 
 	{"undefined decorator",
@@ -50,26 +48,122 @@ var checkerInvalidPrograms = []checkerInvalidProgram{
 
 	{"duplicate declaration",
 		"counter foo\ncounter foo\n",
-		[]string{"duplicate declaration:2:9-11: Declaration of `foo' shadows the previous at duplicate declaration:1:9-11"}},
+		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
 	for _, tc := range checkerInvalidPrograms {
-		ast, err := Parse(tc.name, strings.NewReader(tc.program))
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = Check(ast)
-		if err == nil {
-			t.Errorf("Error should not be nil for invalid program %q", tc.name)
-			continue
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ast, err := Parse(tc.name, strings.NewReader(tc.program))
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = Check(ast)
+			if err == nil {
+				t.Fatalf("check error: %s", err)
+			}
 
-		diff := pretty.Compare(
-			strings.Join(tc.errors, "\n"),        // want
-			strings.TrimRight(err.Error(), "\n")) // got
-		if len(diff) > 0 {
-			t.Errorf("Incorrect error for %q\n%s", tc.name, diff)
-		}
+			diff := deep.Equal(
+				strings.Join(tc.errors, "\n"),        // want
+				strings.TrimRight(err.Error(), "\n")) // got
+			if diff != nil {
+				t.Error(diff)
+			}
+		})
+	}
+}
+
+var checkerValidPrograms = []struct {
+	name    string
+	program string
+}{
+	{"capture group",
+		`counter foo
+/(.*)/ {
+  foo += $1
+}
+`,
+	},
+	{"shadowed positionals",
+		`counter foo
+/(.*)/ {
+  foo += $1
+  /bar(\d+)/ {
+   foo += $1
+  }
+}
+`},
+	{"sibling positionals",
+		`counter foo
+/(.*)/ {
+  foo += $1
+}
+/bar(\d+)/ {
+   foo += $1
+}
+`},
+}
+
+func TestCheckValidPrograms(t *testing.T) {
+	for _, tc := range checkerValidPrograms {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ast, err := Parse(tc.name, strings.NewReader(tc.program))
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = Check(ast)
+			if err != nil {
+				t.Errorf("check failed: %s", err)
+			}
+		})
+	}
+}
+
+var checkerTypeExpressionTests = []struct {
+	name     string
+	expr     astNode
+	expected Type
+}{
+	{"Int + Int -> Float",
+		&binaryExprNode{lhs: &intConstNode{position{}, 1},
+			rhs: &intConstNode{position{}, 1},
+			op:  PLUS},
+		Int,
+	},
+
+	{"Int + Float -> Float",
+		&binaryExprNode{lhs: &intConstNode{position{}, 1},
+			rhs: &floatConstNode{position{}, 1.0},
+			op:  PLUS},
+		Float,
+	},
+	{"⍺ + Float -> Float",
+		&binaryExprNode{lhs: &idNode{pos: position{}, sym: &Symbol{Name: "i", Kind: VarSymbol, Type: NewTypeVariable()}},
+			rhs: &caprefNode{pos: position{}, sym: &Symbol{Kind: CaprefSymbol, Type: Float}},
+			op:  ASSIGN},
+		Float,
+	},
+}
+
+func TestCheckTypeExpressions(t *testing.T) {
+	defaultCompareUnexportedFields := deep.CompareUnexportedFields
+	deep.CompareUnexportedFields = true
+	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+
+	for _, tc := range checkerTypeExpressionTests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := Check(tc.expr)
+			if err != nil {
+				t.Fatalf("check error: %s", err)
+			}
+
+			diff := deep.Equal(tc.expected, tc.expr.Type())
+			if len(diff) > 0 {
+				t.Error(diff)
+			}
+		})
 	}
 }

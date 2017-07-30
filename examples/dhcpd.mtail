@@ -1,6 +1,11 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
+# Define the exported metric names.  The `by' keyword indicates the metric has
+# dimensions.  For example, `request_total' counts the frequency of each
+# request's "command".  The name `command' will be exported as the label name
+# for the metric.  The command provided in the code below will be exported as
+# the label value.
 counter request_total by command
 counter config_file_errors
 counter peer_disconnects
@@ -19,19 +24,26 @@ counter invalid_state_transition
 counter negative_poolreq by pool
 counter lease_conflicts
 
-# Syslog decorator
-def syslog {/(?P<date>(?P<legacy_date>\w+\s+\d+\s+\d+:\d+:\d+)|(?P<rfc3339_date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+[+-]\d{2}:\d{2}))/ +
-    /\s+(?:\w+@)?(?P<hostname>[\w\.-]+)\s+(?P<application>[\w\.-]+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)/ {
-        len($legacy_date) > 0 {
-            strptime($2, "Jan _2 15:04:05")
-        }
-        len($rfc3339_date) > 0 {
-            strptime($rfc3339_date, "2006-01-02T03:04:05-0700")
-        }
-        next
+# The `syslog' decorator defines a procedure.  When a block of mtail code is
+# "decorated", it is called before entering the block.  The block is entered
+# when the keyword `next' is reached.
+def syslog {
+  /^(?P<date>(?P<legacy_date>\w+\s+\d+\s+\d+:\d+:\d+)|(?P<rfc3339_date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+[+-]\d{2}:\d{2}))/ +
+  /\s+(?:\w+@)?(?P<hostname>[\w\.-]+)\s+(?P<application>[\w\.-]+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)/ {
+    # If the legacy_date regexp matched, try this format.
+    len($legacy_date) > 0 {
+      strptime($2, "Jan _2 15:04:05")
     }
+    # If the RFC3339 style matched, parse it this way.
+    len($rfc3339_date) > 0 {
+      strptime($rfc3339_date, "2006-01-02T03:04:05-0700")
+    }
+    # Call into the decorated block
+    next
+  }
 }
 
+# Define some pattern constants for reuse in the patterns below.
 const IP /\d+(\.\d+){3}/
 const MATCH_IP /(?P<ip>/ + IP + /)/
 const MATCH_NETWORK /(?P<network>\d+(\.\d+){1,3}\/\d+)/
@@ -40,13 +52,19 @@ const MATCH_MAC /(?P<mac>([\da-f]{2}:){5}[\da-f]{2})/
 @syslog {
     # Request
     /(balanced|balancing|bootreply|bootrequest|dhcpack|dhcpdecline|dhcpdiscover|dhcpinform|dhcpnak|dhcpoffer|dhcprelease|dhcprequest)/ {
+        # The lowercased name of the command matched in the regex is used to
+        # count the frequency of each command.  An external collector can use
+        # this to compute the rate of each command independently.
         request_total[tolower($1)]++
 
         # DHCP Discover
         /DHCPDISCOVER from / + MATCH_MAC {
+            # Counts the discovery requests per mac address, which can help
+            # identify bad clients on the network.
             dhcpdiscovers[$mac]++
 
             /network / + MATCH_NETWORK + /: no free leases/ {
+                # If the range is full, your clients may be having a bad time.
                 dhcpdiscover_nofree[$network]++
             }
         }
@@ -55,6 +73,8 @@ const MATCH_MAC /(?P<mac>([\da-f]{2}:){5}[\da-f]{2})/
 
     # Config file errors
     /Configuration file errors encountered -- exiting/ {
+        # Counting config parse errors can he useful for detecting bad config
+        # pushes that made it to production.
         config_file_errors++
     }
 

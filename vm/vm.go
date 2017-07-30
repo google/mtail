@@ -6,9 +6,9 @@
 package vm
 
 import (
+	"bytes"
 	"fmt"
 	"math"
-	"os"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -19,6 +19,8 @@ import (
 	"github.com/golang/glog"
 
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/metrics/datum"
+	"github.com/google/mtail/tailer"
 )
 
 type opcode int
@@ -36,13 +38,13 @@ const (
 	push                     // Push operand onto stack
 	capref                   // Push capture group reference at operand onto stack
 	str                      // Push string constant at operand onto stack
-	set                      // Set a variable value
-	add                      // Add top values on stack and push to stack
-	sub                      // Subtract top value from second top value on stack, and push to stack.
-	mul                      // Multiply top values on stack and push to stack
-	div                      // Divide top value into second top on stack, and push
-	mod                      // Integer divide top value into second top on stack, and push remainder
-	pow                      // Put second TOS to power of TOS, and push.
+	iset                     // Set a variable value
+	iadd                     // Add top values on stack and push to stack
+	isub                     // Subtract top value from second top value on stack, and push to stack.
+	imul                     // Multiply top values on stack and push to stack
+	idiv                     // Divide top value into second top on stack, and push
+	imod                     // Integer divide top value into second top on stack, and push remainder
+	ipow                     // Put second TOS to power of TOS, and push.
 	and                      // Bitwise AND the 2 at top of stack, and push result
 	or                       // Bitwise OR the 2 at top of stack, and push result
 	xor                      // Bitwise XOR the 2 at top of stack, and push result
@@ -50,12 +52,13 @@ const (
 	shl                      // Shift TOS left, push result
 	shr                      // Shift TOS right, push result
 	mload                    // Load metric at operand onto top of stack
-	dload                    // Pop operand keys and metric off stack and load datum at metric[key] onto stack.
+	dload                    // Pop `operand` keys and metric off stack, and push datum at metric[key,...] onto stack.
 	tolower                  // Convert the string at the top of the stack to lowercase.
 	length                   // Compute the length of a string.
 	strtol                   // Convert a string to a number, given a base.
 	setmatched               // Set "matched" flag
 	otherwise                // Only match if "matched" flag is false.
+	del                      //  Pop `operand` keys and metric off stack, and remove the datum at metric[key,...] from memory
 
 	// Floating point ops
 	fadd
@@ -64,56 +67,62 @@ const (
 	fdiv
 	fmod
 	fpow
+	fset // Floating point assignment
+
+	getfilename // Push input.Filename onto the stack.
 )
 
 var opNames = map[opcode]string{
-	match:      "match",
-	cmp:        "cmp",
-	jnm:        "jnm",
-	jm:         "jm",
-	jmp:        "jmp",
-	inc:        "inc",
-	strptime:   "strptime",
-	timestamp:  "timestamp",
-	settime:    "settime",
-	push:       "push",
-	capref:     "capref",
-	str:        "str",
-	set:        "set",
-	add:        "add",
-	sub:        "sub",
-	mul:        "mul",
-	div:        "div",
-	mod:        "mod",
-	pow:        "pow",
-	shl:        "shl",
-	shr:        "shr",
-	and:        "and",
-	or:         "or",
-	xor:        "xor",
-	not:        "not",
-	mload:      "mload",
-	dload:      "dload",
-	tolower:    "tolower",
-	length:     "length",
-	strtol:     "strtol",
-	setmatched: "setmatched",
-	otherwise:  "otherwise",
-	fadd:       "fadd",
-	fsub:       "fsub",
-	fmul:       "fmul",
-	fdiv:       "fdiv",
-	fmod:       "fmod",
-	fpow:       "fpow",
+	match:       "match",
+	cmp:         "cmp",
+	jnm:         "jnm",
+	jm:          "jm",
+	jmp:         "jmp",
+	inc:         "inc",
+	strptime:    "strptime",
+	timestamp:   "timestamp",
+	settime:     "settime",
+	push:        "push",
+	capref:      "capref",
+	str:         "str",
+	iset:        "iset",
+	iadd:        "iadd",
+	isub:        "isub",
+	imul:        "imul",
+	idiv:        "idiv",
+	imod:        "imod",
+	ipow:        "ipow",
+	shl:         "shl",
+	shr:         "shr",
+	and:         "and",
+	or:          "or",
+	xor:         "xor",
+	not:         "not",
+	mload:       "mload",
+	dload:       "dload",
+	tolower:     "tolower",
+	length:      "length",
+	strtol:      "strtol",
+	setmatched:  "setmatched",
+	otherwise:   "otherwise",
+	fadd:        "fadd",
+	fsub:        "fsub",
+	fmul:        "fmul",
+	fdiv:        "fdiv",
+	fmod:        "fmod",
+	fpow:        "fpow",
+	fset:        "fset",
+	getfilename: "getfilename",
 }
 
 var builtin = map[string]opcode{
-	"timestamp": timestamp,
-	"len":       length,
-	"settime":   settime,
-	"strptime":  strptime,
-	"strtol":    strtol,
-	"tolower":   tolower,
+	"timestamp":   timestamp,
+	"len":         length,
+	"settime":     settime,
+	"strptime":    strptime,
+	"strtol":      strtol,
+	"tolower":     tolower,
+	"getfilename": getfilename,
 }
 
 type instr struct {
@@ -123,7 +132,7 @@ type instr struct {
 
 // debug print for instructions
 func (i instr) String() string {
-	return fmt.Sprintf("{%s %d}", opNames[i.op], i.opnd)
+	return fmt.Sprintf("{%s %v}", opNames[i.op], i.opnd)
 }
 
 type thread struct {
@@ -151,7 +160,7 @@ type VM struct {
 
 	t *thread // Current thread of execution
 
-	input string // Log line input to this round of execution.
+	input *tailer.LogLine // Log line input to this round of execution.
 
 	terminate bool // Flag to stop the VM program.
 
@@ -173,36 +182,19 @@ func (t *thread) Pop() (value interface{}) {
 
 // Log a runtime error and terminate the program
 func (v *VM) errorf(format string, args ...interface{}) {
-	glog.Infof("Runtime error: "+format+"\n", args...)
+	glog.Infof(v.name+": Runtime error: "+format+"\n", args...)
 	glog.Infof("VM stack:\n%s", debug.Stack())
 	glog.Infof("Dumping vm state")
 	glog.Infof("Name: %s", v.name)
-	glog.Infof("Input: %q", v.input)
-	glog.Infof("Regexes:")
-	for i, re := range v.re {
-		glog.Infof("\t%4d %v", i, re)
-	}
-	glog.Infof("Strings:")
-	for i, s := range v.str {
-		glog.Infof("\t%4d %q", i, s)
-	}
+	glog.Infof("Input: %v", v.input)
 	glog.Infof("Thread:")
-	glog.Infof("\tPC %v", v.t.pc-1)
-	glog.Infof("\tMatch %v", v.t.match)
-	glog.Infof("\tMatched %v", v.t.matched)
-	glog.Infof("\tMatches %v", v.t.matches)
-	glog.Infof("\tTimestamp %v", v.t.time)
-	glog.Infof("\tStack %v", v.t.stack)
-	glog.Infof("Program:")
-	var pc rune
-	for i, instr := range v.prog {
-		if i == v.t.pc-1 {
-			pc = '*'
-		} else {
-			pc = ' '
-		}
-		glog.Infof(" %c\t%4d %12s %v", pc, i, opNames[instr.op], instr.opnd)
-	}
+	glog.Infof(" PC %v", v.t.pc-1)
+	glog.Infof(" Match %v", v.t.match)
+	glog.Infof(" Matched %v", v.t.matched)
+	glog.Infof(" Matches %v", v.t.matches)
+	glog.Infof(" Timestamp %v", v.t.time)
+	glog.Infof(" Stack %v", v.t.stack)
+	glog.Infof(v.DumpByteCode(v.name))
 	v.terminate = true
 }
 
@@ -216,15 +208,155 @@ func (t *thread) PopInt() (int64, error) {
 	case string:
 		r, err := strconv.ParseInt(n, 10, 64)
 		if err != nil {
-			return 0, fmt.Errorf("conversion of %q to numeric failed: %s", val, err)
+			return 0, fmt.Errorf("conversion of %q to int failed: %s", val, err)
 		}
 		return r, nil
 	case time.Time:
 		return n.Unix(), nil
-	case *metrics.Datum:
-		return n.Value, nil
+	case datum.Datum:
+		return datum.GetInt(n), nil
 	}
-	return 0, fmt.Errorf("unexpected numeric type %T %q", val, val)
+	return 0, fmt.Errorf("unexpected int type %T %q", val, val)
+}
+
+func (t *thread) PopFloat() (float64, error) {
+	val := t.Pop()
+	switch n := val.(type) {
+	case float64:
+		return n, nil
+	case int:
+		return float64(n), nil
+	case string:
+		r, err := strconv.ParseFloat(n, 64)
+		if err != nil {
+			return 0, fmt.Errorf("conversion of %q to float failed: %s", val, err)
+		}
+		return r, nil
+	case datum.Datum:
+		return datum.GetFloat(n), nil
+	}
+	return 0, fmt.Errorf("unexpected float type %T %q", val, val)
+}
+
+func compareInt(a, b int64, opnd int) (bool, error) {
+	switch opnd {
+	case -1:
+		return a < b, nil
+	case 0:
+		return a == b, nil
+	case 1:
+		return a > b, nil
+	default:
+		return false, fmt.Errorf("unexpected operator type %q", opnd)
+	}
+}
+
+func compareFloat(a, b float64, opnd int) (bool, error) {
+	switch opnd {
+	case -1:
+		return a < b, nil
+	case 0:
+		return a == b, nil
+	case 1:
+		return a > b, nil
+	default:
+		return false, fmt.Errorf("unexpected operator type %q", opnd)
+	}
+}
+
+func compareString(a, b string, opnd int) (bool, error) {
+	switch opnd {
+	case -1:
+		return a < b, nil
+	case 0:
+		return a == b, nil
+	case 1:
+		return a > b, nil
+	default:
+		return false, fmt.Errorf("unexpected operator type %q", opnd)
+	}
+}
+
+func compare(a, b interface{}, opnd int) (bool, error) {
+	lxF, lxIsFloat := a.(float64)
+	rxF, rxIsFloat := b.(float64)
+
+	var n int
+	var lxI, rxI int64
+	var lxIsInt, rxIsInt bool
+
+	if n, lxIsInt = a.(int); lxIsInt {
+		lxI = int64(n)
+	} else {
+		lxI, lxIsInt = a.(int64)
+	}
+
+	if n, rxIsInt = b.(int); rxIsInt {
+		rxI = int64(n)
+	} else {
+		rxI, rxIsInt = b.(int64)
+	}
+
+	lxS, lxIsStr := a.(string)
+	rxS, rxIsStr := b.(string)
+
+	if lxIsFloat {
+		if rxIsFloat {
+			return compareFloat(lxF, rxF, opnd)
+		}
+
+		if rxIsInt {
+			return compareFloat(lxF, float64(rxI), opnd)
+		}
+
+		if rxIsStr {
+			rx, err := strconv.ParseFloat(rxS, 64)
+			if err != nil {
+				return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+			}
+
+			return compareFloat(lxF, rx, opnd)
+		}
+
+		return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+	}
+
+	if lxIsInt {
+		if rxIsFloat {
+			return compareFloat(float64(lxI), rxF, opnd)
+		}
+
+		if rxIsInt {
+			return compareInt(lxI, rxI, opnd)
+		}
+
+		if rxIsStr {
+			rx, err := strconv.ParseFloat(rxS, 64)
+			if err != nil {
+				return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+			}
+
+			return compareFloat(lxF, rx, opnd)
+		}
+
+		return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+	}
+
+	if lxIsStr {
+		if lx, err := strconv.ParseFloat(lxS, 64); err == nil {
+			return compare(lx, b, opnd)
+		}
+
+		if lx, err := strconv.ParseInt(lxS, 10, 32); err == nil {
+			return compare(lx, b, opnd)
+		}
+
+		if rxIsStr {
+			return compareString(lxS, rxS, opnd)
+		}
+	}
+
+	return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 }
 
 // Execute performs an instruction cycle in the VM -- acting on the current
@@ -237,30 +369,22 @@ func (v *VM) execute(t *thread, i instr) {
 		// Store the results in the operandth element of the stack,
 		// where i.opnd == the matched re index
 		index := i.opnd.(int)
-		t.matches[index] = v.re[index].FindStringSubmatch(v.input)
+		t.matches[index] = v.re[index].FindStringSubmatch(v.input.Line)
 		t.match = t.matches[index] != nil
 
 	case cmp:
 		// Compare two elements on the stack.
 		// Set the match register based on the truthiness of the comparison.
 		// Operand contains the expected result.
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
+		b := t.Pop()
+		a := t.Pop()
+
+		match, err := compare(a, b, i.opnd.(int))
 		if err != nil {
 			v.errorf("%s", err)
 		}
 
-		switch i.opnd {
-		case -1:
-			t.match = a < b
-		case 0:
-			t.match = a == b
-		case 1:
-			t.match = a > b
-		}
+		t.match = match
 
 	case jnm:
 		if !t.match {
@@ -276,7 +400,7 @@ func (v *VM) execute(t *thread, i instr) {
 		t.pc = i.opnd.(int)
 
 	case inc:
-		// increment a counter
+		// Increment a datum
 		var delta int64 = 1
 		// If opnd is non-nil, the delta is on the stack.
 		if i.opnd != nil {
@@ -286,37 +410,59 @@ func (v *VM) execute(t *thread, i instr) {
 				v.errorf("%s", err)
 			}
 		}
+		// TODO(jaq): the stack should only have the datum, not the offset
 		switch n := t.Pop().(type) {
-		case metrics.Incrementable:
-			n.IncBy(delta, t.time)
-		case int:
+		case datum.Datum:
+			datum.IncIntBy(n, delta, t.time)
+		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
 			if err != nil {
 				v.errorf("GetDatum failed: %s", err)
 			}
-			d.IncBy(delta, t.time)
+			datum.IncIntBy(d, delta, t.time)
 		default:
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
 
-	case set:
-		// Set a gauge
+	case iset:
+		// Set a datum
 		value, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
 		}
-
+		// TODO(jaq): the stack should only have the datum, not the offset
 		switch n := t.Pop().(type) {
-		case metrics.Settable:
-			n.Set(value, t.time)
-		case int:
+		case datum.Datum:
+			datum.SetInt(n, value, t.time)
+		case int: // offset into metric
 			m := v.m[n]
 			d, err := m.GetDatum()
 			if err != nil {
 				v.errorf("GetDatum failed: %s", err)
 			}
-			d.Set(value, t.time)
+			datum.SetInt(d, value, t.time)
+		default:
+			v.errorf("Unexpected type to set: %T %q", n, n)
+		}
+
+	case fset:
+		// Set a datum
+		value, err := t.PopFloat()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		// TODO(jaq): the stack should only have the datum, not the offset, unfortunately used by test
+		switch n := t.Pop().(type) {
+		case datum.Datum:
+			datum.SetFloat(n, value, t.time)
+		case int: // offset into metric
+			m := v.m[n]
+			d, err := m.GetDatum()
+			if err != nil {
+				v.errorf("GetDatum failed: %s", err)
+			}
+			datum.SetFloat(d, value, t.time)
 		default:
 			v.errorf("Unexpected type to set: %T %q", n, n)
 		}
@@ -375,20 +521,32 @@ func (v *VM) execute(t *thread, i instr) {
 		// Push a value onto the stack
 		t.Push(i.opnd)
 
-	case add:
-		// Add two values at TOS, and push result onto stack
-		b, err := t.PopInt()
+	case fadd, fsub, fmul, fdiv, fmod, fpow:
+		b, err := t.PopFloat()
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		a, err := t.PopInt()
+		a, err := t.PopFloat()
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		t.Push(a + b)
+		switch i.op {
+		case fadd:
+			t.Push(a + b)
+		case fsub:
+			t.Push(a - b)
+		case fmul:
+			t.Push(a * b)
+		case fdiv:
+			t.Push(a / b)
+		case fmod:
+			t.Push(math.Mod(a, b))
+		case fpow:
+			t.Push(math.Pow(a, b))
+		}
 
-	case sub:
-		// Subtract two values at TOS, push result onto stack
+	case iadd, isub, imul, idiv, imod, ipow, shl, shr, and, or, xor:
+		// Op two values at TOS, and push result onto stack
 		b, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
@@ -397,109 +555,32 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		t.Push(a - b)
-
-	case mul:
-		// Multiply two values at TOS, push result
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
+		switch i.op {
+		case iadd:
+			t.Push(a + b)
+		case isub:
+			t.Push(a - b)
+		case imul:
+			t.Push(a * b)
+		case idiv:
+			// Integer division
+			t.Push(a / b)
+		case imod:
+			t.Push(a % b)
+		case ipow:
+			// TODO(jaq): replace with type coercion
+			t.Push(int64(math.Pow(float64(a), float64(b))))
+		case shl:
+			t.Push(a << uint(b))
+		case shr:
+			t.Push(a >> uint(b))
+		case and:
+			t.Push(a & b)
+		case or:
+			t.Push(a | b)
+		case xor:
+			t.Push(a ^ b)
 		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a * b)
-
-	case div:
-		// Divide two values at TOS, push result
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a / b)
-
-	case mod:
-		// Modulo of two values at TOS, push remainder
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a % b)
-
-	case pow:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(int64(math.Pow(float64(a), float64(b))))
-
-	case shl:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a << uint(b))
-
-	case shr:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a >> uint(b))
-
-	case and:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a & b)
-
-	case or:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a | b)
-
-	case xor:
-		b, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		a, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
-		}
-		t.Push(a ^ b)
 
 	case not:
 		a, err := t.PopInt()
@@ -529,10 +610,23 @@ func (v *VM) execute(t *thread, i instr) {
 		//fmt.Printf("Keys: %v\n", keys)
 		d, err := m.GetDatum(keys...)
 		if err != nil {
-			v.errorf("GetDatum failed: %s", err)
+			v.errorf("dload (GetDatum) failed: %s", err)
 		}
 		//fmt.Printf("Found %v\n", d)
 		t.Push(d)
+
+	case del:
+		m := t.Pop().(*metrics.Metric)
+		index := i.opnd.(int)
+		keys := make([]string, index)
+		for j := 0; j < index; j++ {
+			s := t.Pop().(string)
+			keys[j] = s
+		}
+		err := m.RemoveDatum(keys...)
+		if err != nil {
+			v.errorf("del (RemoveDatum) failed: %s", err)
+		}
 
 	case tolower:
 		// Lowercase a string from TOS, and push result back.
@@ -563,46 +657,24 @@ func (v *VM) execute(t *thread, i instr) {
 		// Only match if the matched flag is false.
 		t.match = !t.matched
 
-	case fadd, fsub, fmul, fdiv, fmod, fpow:
-		b, ok := t.Pop().(float64)
-		if !ok {
-			v.errorf("Popped value b (%v) is not a float64", b)
-		}
-		a, ok := t.Pop().(float64)
-		if !ok {
-			v.errorf("Popped value a (%v) is not a float64", b)
-		}
-		switch i.op {
-		case fadd:
-			t.Push(a + b)
-		case fsub:
-			t.Push(a - b)
-		case fmul:
-			t.Push(a * b)
-		case fdiv:
-			t.Push(a / b)
-		case fmod:
-			t.Push(math.Mod(a, b))
-		case fpow:
-			t.Push(math.Pow(a, b))
-		}
+	case getfilename:
+		t.Push(v.input.Filename)
 
 	default:
 		v.errorf("illegal instruction: %d", i.op)
-		v.terminate = true
 	}
 }
 
 // processLine handles the incoming lines from the input channel, by running a
 // fetch-execute cycle on the VM bytecode with the line as input to the
 // program, until termination.
-func (v *VM) processLine(input string) {
+func (v *VM) processLine(logline *tailer.LogLine) {
 	t := new(thread)
 	t.matched = false
 	v.t = t
-	v.input = input
+	v.input = logline
 	t.stack = make([]interface{}, 0)
-	t.matches = make(map[int][]string, 0)
+	t.matches = make(map[int][]string, len(v.re))
 	for {
 		if t.pc >= len(v.prog) {
 			return
@@ -611,6 +683,8 @@ func (v *VM) processLine(input string) {
 		t.pc++
 		v.execute(t, i)
 		if v.terminate {
+			// Terminate only stops this invocation on this line of input; reset the terminate flag.
+			v.terminate = false
 			return
 		}
 	}
@@ -619,7 +693,7 @@ func (v *VM) processLine(input string) {
 // Run executes the virtual machine on each line of input received.  When the
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
-func (v *VM) Run(lines <-chan string, shutdown chan<- struct{}) {
+func (v *VM) Run(_ uint32, lines <-chan *tailer.LogLine, shutdown chan<- struct{}) {
 	glog.Infof("Starting program %s", v.name)
 	defer close(shutdown)
 	for line := range lines {
@@ -642,29 +716,31 @@ func New(name string, obj *object, syslogUseCurrentYear bool) *VM {
 	}
 }
 
-// DumpByteCode emits the program disassembly and data to standard out.
-func (v *VM) DumpByteCode(name string) {
-	fmt.Printf("Prog %s\n", name)
-	fmt.Println("Metrics")
+// DumpByteCode emits the program disassembly and program objects to string.
+func (v *VM) DumpByteCode(name string) string {
+	b := new(bytes.Buffer)
+	fmt.Fprintf(b, "Prog: %s\n", name)
+	fmt.Fprintln(b, "Metrics")
 	for i, m := range v.m {
 		if m.Program == v.name {
-			fmt.Printf(" %8d %s\n", i, m)
+			fmt.Fprintf(b, " %8d %s\n", i, m)
 		}
 	}
-	fmt.Println("REs")
+	fmt.Fprintln(b, "Regexps")
 	for i, re := range v.re {
-		fmt.Printf(" %8d /%s/\n", i, re)
+		fmt.Fprintf(b, " %8d /%s/\n", i, re)
 	}
-	fmt.Println("Strings")
+	fmt.Fprintln(b, "Strings")
 	for i, str := range v.str {
-		fmt.Printf(" %8d \"%s\"\n", i, str)
+		fmt.Fprintf(b, " %8d \"%s\"\n", i, str)
 	}
 	w := new(tabwriter.Writer)
-	w.Init(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight)
+	w.Init(b, 0, 0, 1, ' ', tabwriter.AlignRight)
 
 	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
 	for n, i := range v.prog {
-		fmt.Fprintf(w, "\t%d\t%s\t%v\n", n, opNames[i.op], i.opnd)
+		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, opNames[i.op], i.opnd)
 	}
 	w.Flush()
+	return b.String()
 }

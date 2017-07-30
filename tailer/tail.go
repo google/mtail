@@ -14,6 +14,7 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
+	"html/template"
 	"io"
 	"os"
 	"path"
@@ -31,9 +32,9 @@ import (
 )
 
 var (
-	logCount     = expvar.NewInt("log_count")
-	logErrors    = expvar.NewMap("log_errors_total")
-	logRotations = expvar.NewMap("log_rotations_total")
+	LogCount     = expvar.NewInt("log_count")
+	LogErrors    = expvar.NewMap("log_errors_total")
+	LogRotations = expvar.NewMap("log_rotations_total")
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
@@ -42,20 +43,23 @@ var (
 type Tailer struct {
 	w watcher.Watcher
 
-	watched      map[string]struct{}   // Names of logs being watched.
-	watchedLock  sync.RWMutex          // protects `watched'
-	lines        chan<- string         // Logfile lines being emitted.
-	files        map[string]afero.File // File handles for each pathname.
-	filesLock    sync.Mutex            // protects `files'
-	partials     map[string]string     // Accumulator for the currently read line for each pathname.
-	partialsLock sync.Mutex            // protects 'partials'
+	lines chan<- *LogLine // Logfile lines being emitted.
+
+	watched        map[string]struct{}   // Names of logs being watched.
+	watchedMu      sync.RWMutex          // protects `watched'
+	files          map[string]afero.File // File handles for each pathname.
+	filesMu        sync.Mutex            // protects `files'
+	partials       map[string]string     // Accumulator for the currently read line for each pathname.
+	partialsMu     sync.Mutex            // protects 'partials'
+	globPatterns   map[string]struct{}   // glob patterns to match newly created files in dir paths against
+	globPatternsMu sync.RWMutex          // protects `globPatterns'
 
 	fs afero.Fs // mockable filesystem interface
 }
 
 // Options configures a Tailer
 type Options struct {
-	Lines chan<- string
+	Lines chan<- *LogLine
 	W     watcher.Watcher // Not required, will use watcher.LogWatcher if it is zero.
 	FS    afero.Fs        // Not required, will use afero.OsFs if it is zero.
 }
@@ -78,12 +82,13 @@ func New(o Options) (*Tailer, error) {
 		}
 	}
 	t := &Tailer{
-		w:        w,
-		watched:  make(map[string]struct{}),
-		lines:    o.Lines,
-		files:    make(map[string]afero.File),
-		partials: make(map[string]string),
-		fs:       fs,
+		w:            w,
+		watched:      make(map[string]struct{}),
+		lines:        o.Lines,
+		files:        make(map[string]afero.File),
+		partials:     make(map[string]string),
+		globPatterns: make(map[string]struct{}),
+		fs:           fs,
 	}
 	go t.run()
 	return t, nil
@@ -91,55 +96,80 @@ func New(o Options) (*Tailer, error) {
 
 // addWatched adds a path to the list of watched items.
 func (t *Tailer) addWatched(path string) {
-	t.watchedLock.Lock()
-	defer t.watchedLock.Unlock()
+	t.watchedMu.Lock()
+	defer t.watchedMu.Unlock()
 	t.watched[path] = struct{}{}
 }
 
 // isWatching indicates if the path is being watched. It includes both
 // filenames and directories.
 func (t *Tailer) isWatching(path string) bool {
-	t.watchedLock.RLock()
-	defer t.watchedLock.RUnlock()
+	t.watchedMu.RLock()
+	defer t.watchedMu.RUnlock()
 	_, ok := t.watched[path]
 	return ok
 }
 
-// Tail registers a file path to be tailed.
-func (t *Tailer) Tail(pathname string) {
+// Tail registers a pattern to be tailed.  If pattern is a plain
+// file then it is watched for updates and opened.  If pattern is a glob, then
+// all paths that match the glob are opened and watched, and the directories
+// containing those matches, if any, are watched.
+func (t *Tailer) Tail(pattern string) error {
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+	t.globPatternsMu.Lock()
+	t.globPatterns[pattern] = struct{}{}
+	t.globPatternsMu.Unlock()
+	glog.V(1).Infof("glob matches: %v", matches)
+	for _, pathname := range matches {
+		err := t.TailPath(pathname)
+		if err != nil {
+			glog.Infof("Error attempting to tail %q: %s", pathname, err)
+		}
+	}
+	t.watchDirname(pattern)
+	return nil
+}
+
+// TailPath registers a filesystem pathname to be tailed.
+func (t *Tailer) TailPath(pathname string) error {
 	fullpath, err := filepath.Abs(pathname)
 	if err != nil {
 		glog.Infof("Failed to find absolute path for %q: %s\n", pathname, err)
-		return
+		// TODO: errors.Wrap.
+		return err
 	}
 	if !t.isWatching(fullpath) {
 		t.addWatched(fullpath)
-		logCount.Add(1)
+		LogCount.Add(1)
 		t.openLogPath(fullpath, false)
 	}
+	return nil
 }
 
 // TailFile registers a file handle to be tailed.  There is no filesystem to
 // watch, so no watches are registered, and no file paths are opened.
 func (t *Tailer) TailFile(f afero.File) error {
-	logCount.Add(1)
+	LogCount.Add(1)
 	return t.startNewFile(f, false)
 }
 
 // handleLogUpdate reads all available bytes from an already opened file
 // identified by pathname, and sends them to be processed on the lines channel.
 func (t *Tailer) handleLogUpdate(pathname string) {
-	t.filesLock.Lock()
+	t.filesMu.Lock()
 	fd, ok := t.files[pathname]
-	t.filesLock.Unlock()
+	t.filesMu.Unlock()
 	if !ok {
 		glog.Warningf("No file descriptor found for %q, but is being watched", pathname)
 		return
 	}
 	var err error
-	t.partialsLock.Lock()
+	t.partialsMu.Lock()
 	t.partials[pathname], err = t.read(fd, t.partials[pathname])
-	t.partialsLock.Unlock()
+	t.partialsMu.Unlock()
 	if err != nil && err != io.EOF {
 		glog.Info(err)
 	}
@@ -166,7 +196,7 @@ func (t *Tailer) read(f afero.File, partialIn string) (partialOut string, err er
 				partial += string(rune)
 			default:
 				// send off line for processing, blocks if not ready
-				t.lines <- partial
+				t.lines <- NewLogLine(f.Name(), partial)
 				// reset accumulator
 				partial = ""
 			}
@@ -190,9 +220,9 @@ func inode(f os.FileInfo) uint64 {
 
 // handleLogCreate handles both new and rotated log files.
 func (t *Tailer) handleLogCreate(pathname string) {
-	t.filesLock.Lock()
+	t.filesMu.Lock()
 	fd, ok := t.files[pathname]
-	t.filesLock.Unlock()
+	t.filesMu.Unlock()
 	if ok {
 		s1, err := fd.Stat()
 		if err != nil {
@@ -206,7 +236,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 		}
 		if inode(s1) != inode(s2) {
 			glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
-			logRotations.Add(pathname, 1)
+			LogRotations.Add(pathname, 1)
 			// flush the old log, pathname is still an index into t.files with the old inode.
 			t.handleLogUpdate(pathname)
 			fd.Close()
@@ -229,16 +259,20 @@ func (t *Tailer) handleLogCreate(pathname string) {
 	}
 }
 
-// openLogPath opens a log file named by pathname.
-func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
+func (t *Tailer) watchDirname(pathname string) {
 	d := path.Dir(pathname)
 	if !t.isWatching(d) {
 		err := t.w.Add(d)
 		if err != nil {
-			glog.Infof("Failed to create new watch on directory %q: %s", d, err)
+			glog.Infof("Failed to create new watch on directory %q: %s", pathname, err)
 		}
 		t.addWatched(d)
 	}
+}
+
+// openLogPath opens a log file named by pathname.
+func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
+	t.watchDirname(pathname)
 
 	retries := 3
 	retryDelay := 1 * time.Millisecond
@@ -252,10 +286,11 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
 		if os.IsNotExist(err) {
+			glog.V(1).Infof("Pathname %q doesn't eist (yet?)", pathname)
 			return
 		}
 		glog.Infof("Failed to open %q for reading: %s", pathname, err)
-		logErrors.Add(pathname, 1)
+		LogErrors.Add(pathname, 1)
 		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
 		if seenBefore {
 			retries = retries - 1
@@ -278,7 +313,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	fi, err := f.Stat()
 	if err != nil {
 		// Stat failed, log error and return.
-		logErrors.Add(f.Name(), 1)
+		LogErrors.Add(f.Name(), 1)
 		return fmt.Errorf("Failed to stat %q: %s", f.Name(), err)
 	}
 	switch m := fi.Mode(); {
@@ -294,9 +329,9 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		}
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
-		t.partialsLock.Lock()
+		t.partialsMu.Lock()
 		t.partials[f.Name()], err = t.read(f, "")
-		t.partialsLock.Unlock()
+		t.partialsMu.Unlock()
 		if err != nil {
 			if err == io.EOF {
 				// Don't worry about EOF on first read, that's expected.
@@ -309,9 +344,9 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	default:
 		return fmt.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}
-	t.filesLock.Lock()
+	t.filesMu.Lock()
 	t.files[f.Name()] = f
-	t.filesLock.Unlock()
+	t.filesMu.Unlock()
 	glog.Infof("Tailing %s", f.Name())
 
 	return nil
@@ -330,6 +365,23 @@ func (t *Tailer) run() {
 		case watcher.CreateEvent:
 			if t.isWatching(e.Pathname) {
 				t.handleLogCreate(e.Pathname)
+			} else {
+				t.globPatternsMu.RLock()
+				for pattern := range t.globPatterns {
+					matched, err := filepath.Match(pattern, e.Pathname)
+					if err != nil {
+						glog.Warningf("Unexpected bad pattern %q not detected earlier", pattern)
+						continue
+					}
+					if matched {
+						glog.V(1).Infof("New file %q matched existing glob %q", e.Pathname, pattern)
+						err := t.TailPath(e.Pathname)
+						if err != nil {
+							glog.Infof("Failed to tail new file %q: %s", e.Pathname, err)
+						}
+					}
+				}
+				t.globPatternsMu.RUnlock()
 			}
 		case watcher.DeleteEvent:
 		default:
@@ -356,6 +408,31 @@ func (t *Tailer) readForever(f afero.File) {
 }
 
 // Close signals termination to the watcher.
-func (t *Tailer) Close() {
-	t.w.Close()
+func (t *Tailer) Close() error {
+	return t.w.Close()
+}
+
+const tailerTemplate = `
+<h2 id="tailer">Log Tailer</h2>
+{{range $name, $val := $.Watched}}
+<p><b>{{$name}}</b></p>
+{{end}}
+`
+
+func (t *Tailer) WriteStatusHTML(w io.Writer) error {
+	tpl, err := template.New("tailer").Parse(tailerTemplate)
+	if err != nil {
+		return err
+	}
+	t.watchedMu.RLock()
+	defer t.watchedMu.RUnlock()
+	data := struct {
+		Watched map[string]struct{}
+	}{
+		t.watched,
+	}
+	if err := tpl.Execute(w, data); err != nil {
+		return err
+	}
+	return nil
 }

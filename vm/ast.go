@@ -5,18 +5,19 @@ package vm
 
 import (
 	"regexp/syntax"
+	"sync"
 
 	"github.com/google/mtail/metrics"
 )
 
-type node interface {
+type astNode interface {
 	Pos() *position // Returns the position of the node from the original source
 	Type() Type     // Returns the type of the expression in this node
 }
 
 type stmtlistNode struct {
-	s        *scope
-	children []node
+	s        *Scope // Pointer to the local scope for this enclosing block
+	children []astNode
 }
 
 func (n *stmtlistNode) Pos() *position {
@@ -24,11 +25,11 @@ func (n *stmtlistNode) Pos() *position {
 }
 
 func (n *stmtlistNode) Type() Type {
-	return String
+	return None
 }
 
 type exprlistNode struct {
-	children []node
+	children []astNode
 }
 
 func (n *exprlistNode) Pos() *position {
@@ -36,17 +37,18 @@ func (n *exprlistNode) Pos() *position {
 }
 
 func (n *exprlistNode) Type() Type {
-	return String
+	return None
 }
 
 type condNode struct {
-	cond      node
-	truthNode node
-	elseNode  node
+	cond      astNode
+	truthNode astNode
+	elseNode  astNode
+	s         *Scope // a conditional expression can cause new variables to be defined
 }
 
 func (n *condNode) Pos() *position {
-	return mergepositionlist([]node{n.cond, n.truthNode, n.elseNode})
+	return mergepositionlist([]astNode{n.cond, n.truthNode, n.elseNode})
 }
 
 func (n *condNode) Type() Type {
@@ -54,6 +56,7 @@ func (n *condNode) Type() Type {
 }
 
 type regexNode struct {
+	astNode
 	pos     position
 	pattern string
 	addr    int
@@ -65,13 +68,13 @@ func (n *regexNode) Pos() *position {
 }
 
 func (n *regexNode) Type() Type {
-	return String
+	return None
 }
 
 type idNode struct {
 	pos  position
 	name string
-	sym  *symbol
+	sym  *Symbol
 }
 
 func (n *idNode) Pos() *position {
@@ -80,15 +83,16 @@ func (n *idNode) Pos() *position {
 
 func (n *idNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.typ
+		return n.sym.Type.Root()
 	}
-	return Int
+	return None // Bugs
 }
 
 type caprefNode struct {
-	pos  position
-	name string
-	sym  *symbol
+	pos     position
+	name    string
+	isNamed bool // true if the capref is a named reference, not positional
+	sym     *Symbol
 }
 
 func (n *caprefNode) Pos() *position {
@@ -97,15 +101,15 @@ func (n *caprefNode) Pos() *position {
 
 func (n *caprefNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.typ
+		return n.sym.Type.Root()
 	}
-	return Int
+	return None // sym not defined due to undefined capref error
 }
 
 type builtinNode struct {
 	pos  position
 	name string
-	args node
+	args astNode
 }
 
 func (n *builtinNode) Pos() *position {
@@ -117,9 +121,10 @@ func (n *builtinNode) Type() Type {
 }
 
 type binaryExprNode struct {
-	lhs, rhs node
+	lhs, rhs astNode
 	op       int
 	typ      Type
+	typMu    sync.RWMutex
 }
 
 func (n *binaryExprNode) Pos() *position {
@@ -127,14 +132,23 @@ func (n *binaryExprNode) Pos() *position {
 }
 
 func (n *binaryExprNode) Type() Type {
+	n.typMu.RLock()
+	defer n.typMu.RUnlock()
 	return n.typ
 }
 
+func (n *binaryExprNode) SetType(t Type) {
+	n.typMu.Lock()
+	defer n.typMu.Unlock()
+	n.typ = t
+}
+
 type unaryExprNode struct {
-	pos  position // pos is the position of the op
-	expr node
-	op   int
-	typ  Type
+	pos   position // pos is the position of the op
+	expr  astNode
+	op    int
+	typ   Type
+	typMu sync.RWMutex
 }
 
 func (n *unaryExprNode) Pos() *position {
@@ -142,11 +156,19 @@ func (n *unaryExprNode) Pos() *position {
 }
 
 func (n *unaryExprNode) Type() Type {
+	n.typMu.Lock()
+	defer n.typMu.Unlock()
 	return n.typ
 }
 
+func (n *unaryExprNode) SetType(t Type) {
+	n.typMu.Lock()
+	defer n.typMu.Unlock()
+	n.typ = t
+}
+
 type indexedExprNode struct {
-	lhs, index node
+	lhs, index astNode
 }
 
 func (n *indexedExprNode) Pos() *position {
@@ -164,7 +186,7 @@ type declNode struct {
 	keys         []string
 	kind         metrics.Kind
 	exportedName string
-	sym          *symbol
+	sym          *Symbol
 }
 
 func (n *declNode) Pos() *position {
@@ -173,9 +195,9 @@ func (n *declNode) Pos() *position {
 
 func (n *declNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.typ
+		return n.sym.Type.Root()
 	}
-	return Int
+	return Undef
 }
 
 type stringConstNode struct {
@@ -217,8 +239,8 @@ func (n *floatConstNode) Type() Type {
 type defNode struct {
 	pos   position
 	name  string
-	block node
-	sym   *symbol
+	block astNode
+	sym   *Symbol
 }
 
 func (n *defNode) Pos() *position {
@@ -227,7 +249,7 @@ func (n *defNode) Pos() *position {
 
 func (n *defNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.typ
+		return n.sym.Type.Root()
 	}
 	return Int
 }
@@ -235,7 +257,7 @@ func (n *defNode) Type() Type {
 type decoNode struct {
 	pos   position
 	name  string
-	block node
+	block astNode
 	def   *defNode
 }
 
@@ -268,5 +290,18 @@ func (n *otherwiseNode) Pos() *position {
 }
 
 func (n *otherwiseNode) Type() Type {
+	return None
+}
+
+type delNode struct {
+	pos position
+	n   astNode
+}
+
+func (d *delNode) Pos() *position {
+	return &d.pos
+}
+
+func (d *delNode) Type() Type {
 	return None
 }

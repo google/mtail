@@ -13,17 +13,20 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/golang/glog"
 	"github.com/spf13/afero"
 
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/watcher"
 )
 
@@ -44,8 +47,8 @@ const (
 )
 
 // LoadProgs loads all programs in a directory and starts watching the
-// directory for filesystem changes.  The total number of program errors is
-// returned.
+// directory for filesystem changes.  Any compile errors are stored for later retrieival.
+// This function returns an error if an internal error occurs.
 func (l *Loader) LoadProgs(programPath string) error {
 	l.w.Add(programPath)
 
@@ -66,19 +69,26 @@ func (l *Loader) LoadProgs(programPath string) error {
 			}
 			err = l.LoadProg(path.Join(programPath, fi.Name()))
 			if err != nil {
-				return err
+				glog.Warning(err)
 			}
 		}
-		return nil
 	default:
-		return l.LoadProg(programPath)
+		err = l.LoadProg(programPath)
+		if err != nil {
+			glog.Warning(err)
+		}
 	}
+	return nil
 }
 
 // LoadProg loads or reloads a program from the path specified.  The name of
 // the program is the basename of the file.
 func (l *Loader) LoadProg(programPath string) error {
 	name := filepath.Base(programPath)
+	if strings.HasPrefix(name, ".") {
+		glog.Infof("Skipping %s because it is a hidden file.", programPath)
+		return nil
+	}
 	if filepath.Ext(name) != fileExt {
 		glog.Infof("Skipping %s due to file extension.", programPath)
 		return nil
@@ -89,7 +99,54 @@ func (l *Loader) LoadProg(programPath string) error {
 		return fmt.Errorf("Failed to read program %q: %s", programPath, err)
 	}
 	defer f.Close()
-	return l.CompileAndRun(name, f)
+	l.programErrorMu.Lock()
+	defer l.programErrorMu.Unlock()
+	l.programErrors[name] = l.CompileAndRun(name, f)
+	return nil
+}
+
+const loaderTemplate = `
+<h2 id="loader">Program Loader</h2>
+{{range $name, $errors := $.Errors}}
+<p><b>{{$name}}</b></p>
+{{if $errors}}
+<pre>{{$errors}}</pre>
+{{else}}
+<p>No compile errors</p>
+{{end}}
+<p>Total load errors {{index $.Loaderrors $name}}; successes: {{index $.Loadsuccess $name}}</p>
+{{end}}
+`
+
+// WriteStatusHTML writes the current state of the loader as HTML to the given writer w.
+func (l *Loader) WriteStatusHTML(w io.Writer) error {
+	t, err := template.New("loader").Parse(loaderTemplate)
+	if err != nil {
+		return err
+	}
+	l.programErrorMu.RLock()
+	defer l.programErrorMu.RUnlock()
+	data := struct {
+		Errors      map[string]error
+		Loaderrors  map[string]string
+		Loadsuccess map[string]string
+	}{
+		l.programErrors,
+		make(map[string]string),
+		make(map[string]string),
+	}
+	for name, _ := range l.programErrors {
+		if ProgLoadErrors.Get(name) != nil {
+			data.Loaderrors[name] = ProgLoadErrors.Get(name).String()
+		}
+		if ProgLoads.Get(name) != nil {
+			data.Loadsuccess[name] = ProgLoads.Get(name).String()
+		}
+	}
+	if err := t.Execute(w, data); err != nil {
+		return err
+	}
+	return nil
 }
 
 // CompileAndRun compiles a program read from the input, starting execution if
@@ -98,37 +155,69 @@ func (l *Loader) LoadProg(programPath string) error {
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
-	o := &Options{CompileOnly: l.compileOnly, SyslogUseCurrentYear: l.syslogUseCurrentYear}
+	o := &Options{
+		CompileOnly:          l.compileOnly,
+		EmitAst:              l.dumpAst,
+		EmitAstTypes:         l.dumpAstTypes,
+		SyslogUseCurrentYear: l.syslogUseCurrentYear,
+	}
 	v, errs := Compile(name, input, o)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return fmt.Errorf("compile failed for %s:\n%s", name, errs)
 	}
 	if v == nil {
-		glog.Warning("No program returned, but no errors.")
-		return nil
+		ProgLoadErrors.Add(name, 1)
+		return fmt.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
 	}
+
+	if l.dumpBytecode {
+		glog.Info("Dumping program objects and bytecode\n", v.DumpByteCode(name))
+	}
+
+	// Load the metrics from the compilation into the global metric storage for export.
 	for _, m := range v.m {
 		if !m.Hidden {
-			l.ms.Add(m)
+			if l.omitMetricSource {
+				m.Source = ""
+			}
+			err := l.ms.Add(m)
+			if err != nil {
+				return err
+			}
 		}
 	}
-	if l.dumpBytecode {
-		v.DumpByteCode(name)
-	}
+
 	ProgLoads.Add(name, 1)
 	glog.Infof("Loaded program %s", name)
 
+	if l.compileOnly {
+		return nil
+	}
+
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
+
 	// Stop any previous VM.
 	if handle, ok := l.handles[name]; ok {
+		glog.Infof("END OF LINE, %s", name)
 		close(handle.lines)
 		<-handle.done
+		glog.Infof("Stopped %s", name)
 	}
-	l.handles[name] = &vmHandle{make(chan string), make(chan struct{})}
-	go v.Run(l.handles[name].lines, l.handles[name].done)
+
+	l.handles[name] = &vmHandle{make(chan *tailer.LogLine), make(chan struct{})}
+	nameCode := nameToCode(name)
+	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
+	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done)
+
+	glog.Infof("Started %s", name)
+
 	return nil
+}
+
+func nameToCode(name string) uint32 {
+	return uint32(uint32(name[0])<<24 | uint32(name[1])<<16 | uint32(name[2])<<8 | uint32(name[3]))
 }
 
 // Loader handles the lifecycle of programs and virtual machines, by watching
@@ -143,25 +232,35 @@ type Loader struct {
 	handles  map[string]*vmHandle // map of program names to virtual machines
 	handleMu sync.RWMutex         // guards accesses to handles
 
+	programErrors  map[string]error // errors from the last compile attempt of the program
+	programErrorMu sync.RWMutex     // guards access to programErrors
+
 	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
 	compileOnly          bool // Only compile programs and report errors, do not load VMs.
+	dumpAst              bool // print the AST after parse
+	dumpAstTypes         bool // print the AST after type check
 	dumpBytecode         bool // Instructs the loader to dump to stdout the compiled program after compilation.
 	syslogUseCurrentYear bool // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
+	omitMetricSource     bool
 }
 
 // LoaderOptions contains the required and optional parameters for creating a
 // new Loader.
 type LoaderOptions struct {
 	Store *metrics.Store
-	Lines <-chan string
-	W     watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
-	FS    afero.Fs        // Not required, will use afero.OsFs if zero.
+	Lines <-chan *tailer.LogLine
+
+	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
+	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 
 	CompileOnly          bool
+	DumpAst              bool // print the AST after type check
+	DumpAstTypes         bool // Instructs the loader to dump to stdout the compiled program after compilation.
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
+	OmitMetricSource     bool // Don't put the source in the metric when added to the Store.
 }
 
 // NewLoader creates a new program loader.  It takes a filesystem watcher
@@ -188,11 +287,16 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		ms:                   o.Store,
 		fs:                   fs,
 		handles:              make(map[string]*vmHandle),
+		programErrors:        make(map[string]error),
 		watcherDone:          make(chan struct{}),
 		VMsDone:              make(chan struct{}),
 		compileOnly:          o.CompileOnly,
+		dumpAst:              o.DumpAst,
+		dumpAstTypes:         o.DumpAstTypes,
 		dumpBytecode:         o.DumpBytecode,
-		syslogUseCurrentYear: o.SyslogUseCurrentYear}
+		syslogUseCurrentYear: o.SyslogUseCurrentYear,
+		omitMetricSource:     o.OmitMetricSource,
+	}
 
 	go l.processEvents()
 	go l.processLines(o.Lines)
@@ -200,7 +304,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 }
 
 type vmHandle struct {
-	lines chan string
+	lines chan *tailer.LogLine
 	done  chan struct{}
 }
 
@@ -227,12 +331,12 @@ func (l *Loader) processEvents() {
 // processLines provides fanout of the input log lines to each virtual machine
 // running.  Upon close of the incoming lines channel, it also communicates
 // shutdown to the target VMs via channel close.
-func (l *Loader) processLines(lines <-chan string) {
-	for line := range lines {
+func (l *Loader) processLines(lines <-chan *tailer.LogLine) {
+	for logline := range lines {
 		LineCount.Add(1)
 		l.handleMu.RLock()
 		for prog := range l.handles {
-			l.handles[prog].lines <- line
+			l.handles[prog].lines <- logline
 		}
 		l.handleMu.RUnlock()
 	}

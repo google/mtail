@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/go-test/deep"
 )
 
 type lexerTest struct {
@@ -61,7 +61,7 @@ var lexerTests = []lexerTest{
 		token{MOD, "%", position{"operators", 0, 49, 49}},
 		token{EOF, "", position{"operators", 0, 50, 50}}}},
 	{"keywords",
-		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\n", []token{
+		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\n", []token{
 			token{COUNTER, "counter", position{"keywords", 0, 0, 6}},
 			token{NL, "\n", position{"keywords", 1, 7, -1}},
 			token{GAUGE, "gauge", position{"keywords", 1, 0, 4}},
@@ -84,9 +84,11 @@ var lexerTests = []lexerTest{
 			token{NL, "\n", position{"keywords", 10, 9, -1}},
 			token{ELSE, "else", position{"keywords", 10, 0, 3}},
 			token{NL, "\n", position{"keywords", 11, 4, -1}},
-			token{EOF, "", position{"keywords", 11, 0, 0}}}},
+			token{DEL, "del", position{"keywords", 11, 0, 2}},
+			token{NL, "\n", position{"keywords", 12, 3, -1}},
+			token{EOF, "", position{"keywords", 12, 0, 0}}}},
 	{"builtins",
-		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\n", []token{
+		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\n", []token{
 			token{BUILTIN, "strptime", position{"builtins", 0, 0, 7}},
 			token{NL, "\n", position{"builtins", 1, 8, -1}},
 			token{BUILTIN, "timestamp", position{"builtins", 1, 0, 8}},
@@ -99,7 +101,9 @@ var lexerTests = []lexerTest{
 			token{NL, "\n", position{"builtins", 5, 6, -1}},
 			token{BUILTIN, "settime", position{"builtins", 5, 0, 6}},
 			token{NL, "\n", position{"builtins", 6, 7, -1}},
-			token{EOF, "", position{"builtins", 6, 0, 0}}}},
+			token{BUILTIN, "getfilename", position{"builtins", 6, 0, 10}},
+			token{NL, "\n", position{"builtins", 7, 11, -1}},
+			token{EOF, "", position{"builtins", 7, 0, 0}}}},
 	{"numeric", "1 23 3.14 1.61.1", []token{
 		token{INTLITERAL, "1", position{"numeric", 0, 0, 0}},
 		token{INTLITERAL, "23", position{"numeric", 0, 2, 3}},
@@ -129,14 +133,15 @@ var lexerTests = []lexerTest{
 		token{REGEX, `foo\d/`, position{"regex with escape and special char", 0, 1, 7}},
 		token{DIV, "/", position{"regex with escape and special char", 0, 8, 8}},
 		token{EOF, "", position{"regex with escape and special char", 0, 9, 9}}}},
-	{"capref", "$foo", []token{
-		token{CAPREF, "foo", position{"capref", 0, 0, 3}},
-		token{EOF, "", position{"capref", 0, 4, 4}}}},
+	{"capref", "$foo $1", []token{
+		token{CAPREF_NAMED, "foo", position{"capref", 0, 0, 3}},
+		token{CAPREF, "1", position{"capref", 0, 5, 6}},
+		token{EOF, "", position{"capref", 0, 7, 7}}}},
 	{"numerical capref", "$1", []token{
 		token{CAPREF, "1", position{"numerical capref", 0, 0, 1}},
 		token{EOF, "", position{"numerical capref", 0, 2, 2}}}},
 	{"capref with trailing punc", "$foo,", []token{
-		token{CAPREF, "foo", position{"capref with trailing punc", 0, 0, 3}},
+		token{CAPREF_NAMED, "foo", position{"capref with trailing punc", 0, 0, 3}},
 		token{COMMA, ",", position{"capref with trailing punc", 0, 4, 4}},
 		token{EOF, "", position{"capref with trailing punc", 0, 5, 5}}}},
 	{"quoted string", `"asdf"`, []token{
@@ -160,7 +165,7 @@ var lexerTests = []lexerTest{
 			token{NL, "\n", position{"large program", 1, 29, -1}},
 			token{BUILTIN, "strptime", position{"large program", 1, 2, 9}},
 			token{LPAREN, "(", position{"large program", 1, 10, 10}},
-			token{CAPREF, "date", position{"large program", 1, 11, 15}},
+			token{CAPREF_NAMED, "date", position{"large program", 1, 11, 15}},
 			token{COMMA, ",", position{"large program", 1, 16, 16}},
 			token{STRING, "%Y/%m/%d %H:%M:%S", position{"large program", 1, 18, 36}},
 			token{RPAREN, ")", position{"large program", 1, 37, 37}},
@@ -209,11 +214,18 @@ func collect(t *lexerTest) (tokens []token) {
 }
 
 func TestLex(t *testing.T) {
-	for _, test := range lexerTests {
-		tokens := collect(&test)
-		diff := pretty.Compare(test.tokens, tokens)
-		if len(diff) > 0 {
-			t.Errorf("%s tokens didn't match:\n%s:", test.name, diff)
-		}
+	defaultCompareUnexportedFields := deep.CompareUnexportedFields
+	deep.CompareUnexportedFields = true
+	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
+
+	for _, tc := range lexerTests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tokens := collect(&tc)
+
+			if diff := deep.Equal(tc.tokens, tokens); diff != nil {
+				t.Error(diff)
+			}
+		})
 	}
 }
