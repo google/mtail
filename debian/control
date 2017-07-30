@@ -11,7 +11,7 @@ Build-Depends: debhelper (>= 9.0.0),
                golang-github-spf13-afero-dev,
                golang-glog-dev,
                golang-golang-x-tools,
-Standards-Version: 3.9.8
+Standards-Version: 4.0.0
 Vcs-Git: https://anonscm.debian.org/git/pkg-go/packages/mtail.git/
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/mtail.git/
 Homepage: https://github.com/google/mtail/
