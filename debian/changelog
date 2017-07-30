@@ -6,6 +6,8 @@ mtail (3.0.0~rc1+git20170727.6db685b-1) UNRELEASED; urgency=medium
   * debian/control: Update Standards-Version (no changes).
   * debian/control: Mark package as autopkgtest-able.
   * debian/patches: Add patch to force the use of installed goyacc.
+  * Vendor in the go-test/deep library to avoid adding a tiny package to
+    the archive.
 
  -- Martín Ferrari <tincho@debian.org>  Sun, 30 Jul 2017 14:49:14 +0000
 

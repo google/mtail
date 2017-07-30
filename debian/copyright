@@ -10,6 +10,15 @@ Files: debian/*
 Copyright: 2016 Martín Ferrari <tincho@tincho.org>
 License: Apache-2.0
 
+Files: debian/patches/0002-Vendor_go-deep.patch
+Comment:
+ To avoid adding a tiny new package to the archive, this patch vendors the
+ github.com/go-test/deep library.  Retrieved from:
+ https://github.com/go-test/deep at commit:
+ f49763a6ea0a91026be26f8213bebee726b4185f
+Copyright: 2015-2017 Daniel Nichter
+License: MIT
+
 License: Apache-2.0
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
