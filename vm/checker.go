@@ -153,29 +153,35 @@ func (c *checker) VisitAfter(node astNode) {
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
-			rType = Unify(Tl, Tr)
+			//rType = Unify(Tl, Tr)
+			rType = Int
 		case SHL, SHR, AND, OR, XOR, NOT:
 			// bitwise
 			// O ⊢ e1 :Int, O ⊢ e2 : Int
 			// ⇒ O ⊢ e : Int
-			if Equals(Tl, Int) && Equals(Tr, Int) {
-				rType = Int
-			} else {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, Tl, Tr))
-				return
-			}
+			// if Equals(Tl, Int) && Equals(Tr, Int) {
+			// 	rType = Int
+			// } else {
+			// 	c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, Tl, Tr))
+			// 	return
+			// }
+			rType = Int
 		case LT, GT, LE, GE, EQ, NE:
 			// comparable
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
-			rType = Unify(Tl, Tr)
+			// rType = NewTypeVariable()
+
+			// Unify(Tl, Tr)
+			rType = Int
 		case ASSIGN:
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr
 			// ⇒ O ⊢ e : Tl
-			glog.Infof("Tl: %v TR: %v", Tl, Tr)
-			rType = Unify(Tl, Tr)
+			// glog.Infof("Tl: %v TR: %v", Tl, Tr)
+			// rType = Unify(Tl, Tr)
+			rType = Int
 		default:
 			if Tl != Tr {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%v) and rhs (%v) for op %q", Tl, Tr, n.op))
@@ -207,9 +213,9 @@ func (c *checker) VisitAfter(node astNode) {
 		types = append(types, rType)
 
 		fn := Function(types...)
-		Unify(fn, n.Type())
-		if !Equals(fn, n.Type()) {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch on call to `%s': expected %q got %q", n.name, n.Type(), fn))
+		err := Unify(n.Type(), fn)
+		if err != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.name, err))
 			return
 		}
 	}

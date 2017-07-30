@@ -67,7 +67,7 @@ counter bar by a, b
 	  timestamp()
 	}
 	`,
-		[]string{"builtin parameter mismatch:2:13: Type mismatch on call to `strptime': expected \"→ String None\" got \"→ typeVar1\""}},
+		[]string{"builtin parameter mismatch:2:13: call to `strptime': type mismatch: \"→ String None\" != \"→ typeVar1\""}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

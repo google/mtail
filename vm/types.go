@@ -33,7 +33,7 @@ type TypeVariable struct {
 	instanceMu sync.RWMutex
 }
 
-func NewTypeVariable() Type {
+func NewTypeVariable() *TypeVariable {
 	nextVariableIdMu.Lock()
 	id := nextVariableId
 	nextVariableId += 1
@@ -109,59 +109,117 @@ var Builtins = map[string]Type{
 	"getfilename": Function(String),
 }
 
+func FreshType(t Type, nongeneric []Type) Type {
+	mappings := make(map[*TypeVariable]*TypeVariable, 0)
+
+	var freshRec func(Type) Type
+	freshRec = func(tp Type) Type {
+		p := tp.Root()
+		switch p1 := p.(type) {
+		case *TypeVariable:
+			if isGeneric(p1, nongeneric) {
+				if _, ok := mappings[p1]; !ok {
+					mappings[p1] = NewTypeVariable()
+				}
+				return mappings[p1]
+			} else {
+				return p1
+			}
+		case *TypeOperator:
+			args := make([]Type, len(p1.Args))
+			for _, arg := range p1.Args {
+				args = append(args, freshRec(arg))
+			}
+			return &TypeOperator{p1.Name, args}
+		}
+		return nil
+	}
+	return freshRec(t)
+}
+
+func isGeneric(v *TypeVariable, nongeneric []Type) bool {
+	return !occursIn(v, nongeneric)
+}
+
+func occursIn(v *TypeVariable, types []Type) bool {
+	for _, t2 := range types {
+		if occursInType(v, t2) {
+			return true
+		}
+	}
+	return false
+}
+
+func occursInType(v *TypeVariable, t2 Type) bool {
+	root := t2.Root()
+	if Equals(root, v) {
+		return true
+	}
+	if to, ok := root.(*TypeOperator); ok {
+		return occursIn(v, to.Args)
+	}
+	return false
+}
+
 // Unify performs type unification of both parameter Types.  It returns the
 // least upper bound of both types, the smallest type that is capable of
 // representing both parameters.  If either type is a type variable, then that
 // variable is unified with the LUB.
-func Unify(a, b Type) Type {
+func Unify(a, b Type) error {
 	a1, b1 := a.Root(), b.Root()
 	switch a2 := a1.(type) {
 	case *TypeVariable:
-		switch b2 := b1.(type) {
-		case *TypeVariable:
-			if a2.Id == b2.Id {
-				return a2
-			} else {
-				glog.V(2).Infof("Making %q type %q", a2, b1)
-				a2.SetInstance(&b1)
-				return a2
+		b2, ok := b1.(*TypeVariable)
+		if !ok || a2.Id != b2.Id {
+			if occursInType(a2, b1) {
+				return fmt.Errorf("Recursive unification %v %v", a2, b1)
 			}
-		case *TypeOperator:
 			glog.V(2).Infof("Making %q type %q", a2, b1)
 			a2.SetInstance(&b1)
-			return b1
+			return nil
 		}
 	case *TypeOperator:
 		switch b2 := b1.(type) {
 		case *TypeVariable:
 			return Unify(b, a)
+
 		case *TypeOperator:
-			if Equals(a2, b2) {
-				return a2
+			if a2.Name != b2.Name || len(a2.Args) != len(b2.Args) {
+				return fmt.Errorf("type mismatch: %q != %q", a2, b2)
 			}
-			// least upper bound
-			if (Equals(a2, Float) && Equals(b2, Int)) ||
-				(Equals(b2, Float) && Equals(a2, Int)) {
-				return Float
-			}
-			if (Equals(a2, String) && Equals(b2, Int)) ||
-				(Equals(b2, String) && Equals(a2, Int)) ||
-				(Equals(a2, String) && Equals(b2, Float)) ||
-				(Equals(b2, String) && Equals(a2, Float)) {
-				return String
+			for i, argA := range a2.Args {
+				err := Unify(argA, b2.Args[i])
+				if err != nil {
+					return err
+				}
 			}
 
-			if len(a2.Args) != len(b2.Args) {
-				// TODO return error: glog.Errorf("Type mismatch: %q vs %q", a2, b2)
-				return None
-			}
-			for i := range a2.Args {
-				Unify(a2.Args[i], b2.Args[i])
-			}
-			return None
+			// if Equals(a2, b2) {
+			// 	return a2
+			// }
+			// // least upper bound
+			// if (Equals(a2, Float) && Equals(b2, Int)) ||
+			// 	(Equals(b2, Float) && Equals(a2, Int)) {
+			// 	return Float
+			// }
+			// if (Equals(a2, String) && Equals(b2, Int)) ||
+			// 	(Equals(b2, String) && Equals(a2, Int)) ||
+			// 	(Equals(a2, String) && Equals(b2, Float)) ||
+			// 	(Equals(b2, String) && Equals(a2, Float)) {
+			// 	return String
+			// }
+
+			// if len(a2.Args) != len(b2.Args) {
+			// 	// TODO return error: glog.Errorf("Type mismatch: %q vs %q", a2, b2)
+			// 	return None
+			// }
+			// for i := range a2.Args {
+			// 	Unify(a2.Args[i], b2.Args[i])
+			// }
+			// return None
 		}
 	}
-	return None
+	return nil
 }
 
 // inferCaprefType determines a type for a capturing group, based on contents
