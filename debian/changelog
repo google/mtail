@@ -1,8 +1,9 @@
-mtail (0.0+git20161231.ae129e9-2) UNRELEASED; urgency=medium
+mtail (3.0.0~rc1+git20170727.6db685b-1) UNRELEASED; urgency=medium
 
-  * Add watch file, now that upstream is doing releases.
+  * New upstream snapshot.
+  * Add watch file, now that upstream is doing releases (some times).
 
- -- Martín Ferrari <tincho@debian.org>  Sun, 30 Jul 2017 14:12:45 +0000
+ -- Martín Ferrari <tincho@debian.org>  Sun, 30 Jul 2017 14:49:14 +0000
 
 mtail (0.0+git20161231.ae129e9-1) unstable; urgency=medium
 
