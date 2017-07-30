@@ -2,6 +2,7 @@ mtail (3.0.0~rc1+git20170727.6db685b-1) UNRELEASED; urgency=medium
 
   * New upstream snapshot.
   * Add watch file, now that upstream is doing releases (some times).
+  * debian/gbp.conf: Add builder defaults.
 
  -- Martín Ferrari <tincho@debian.org>  Sun, 30 Jul 2017 14:49:14 +0000
 
