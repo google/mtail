@@ -16,6 +16,7 @@ Vcs-Git: https://anonscm.debian.org/git/pkg-go/packages/mtail.git/
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/mtail.git/
 Homepage: https://github.com/google/mtail/
 XS-Go-Import-Path: github.com/google/mtail
+Testsuite: autopkgtest-pkg-go
 
 Package: mtail
 Architecture: any
