@@ -51,8 +51,9 @@ var logs seqStringFlag
 var logFds seqIntFlag
 
 var (
-	port  = flag.String("port", "3903", "HTTP port to listen on.")
-	progs = flag.String("progs", "", "Name of the directory containing mtail programs")
+	port    = flag.Int("port", 3903, "HTTP port to listen on.")
+	address = flag.String("address", "", "IP address on which to bind HTTP listener")
+	progs   = flag.String("progs", "", "Name of the directory containing mtail programs")
 
 	// Compiler behaviour flags
 	oneShot        = flag.Bool("one_shot", false, "Run the contents of the provided logs until EOF and exit.")
@@ -111,15 +112,12 @@ func main() {
 			glog.Exitf("No logs specified to tail; use -logs or -logfds")
 		}
 	}
-	if _, err := strconv.Atoi(*port); err == nil {
-		// If supplied port is a bare int try prepending ":" for implicit global bind
-		*port = ":" + *port
-	}
+	hostport := fmt.Sprintf("%s:%d", *address, *port)
 	o := mtail.Options{
 		Progs:                *progs,
 		LogPathPatterns:      logs,
 		LogFds:               logFds,
-		Port:                 *port,
+		Port:                 hostport,
 		OneShot:              *oneShot,
 		OneShotMetrics:       *oneShotMetrics,
 		CompileOnly:          *compileOnly,
