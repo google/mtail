@@ -65,6 +65,10 @@ var (
 	// Runtime behaviour flags
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
+
+	// Debugging flags
+	blockProfileRate     = flag.Int("block_profile_rate", 0, "Nanoseconds of block time before goroutine blocking events reported. 0 turns off.  See https://golang.org/pkg/runtime/#SetBlockProfileRate")
+	mutexProfileFraction = flag.Int("mutex_profile_fraction", 0, "Fraction of mutex contention events reported.  0 turns off.  See http://golang.org/pkg/runtime/#SetMutexProfileFraction")
 )
 
 func init() {
@@ -91,6 +95,14 @@ func main() {
 	}
 	flag.Parse()
 	glog.Info(buildInfo())
+	if *blockProfileRate > 0 {
+		glog.Infof("Setting block profile rate to %d", *blockProfileRate)
+		runtime.SetBlockProfileRate(*blockProfileRate)
+	}
+	if *mutexProfileFraction > 0 {
+		glog.Infof("Setting mutex profile fraction to %d", *mutexProfileFraction)
+		SetMutexProfileFraction(*mutexProfileFraction)
+	}
 	if *progs == "" {
 		glog.Exitf("No mtail program directory specified; use -progs")
 	}
