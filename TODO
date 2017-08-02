@@ -21,3 +21,5 @@ mapping between progs and logs to reduce wasted processing
 precommit/lint mode, compile and print errors to stderr
 
 use type information to effect bytecode generation
+
+typeerror for type missmatch containing expecte, received 
