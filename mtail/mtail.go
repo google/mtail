@@ -148,10 +148,10 @@ func (m *MtailServer) InitLoader() error {
 const statusTemplate = `
 <html>
 <head>
-<title>mtail on :{{.Port}}</title>
+<title>mtail on {{.Port}}</title>
 </head>
 <body>
-<h1>mtail on :{{.Port}}</h1>
+<h1>mtail on {{.Port}}</h1>
 <p>Build: {{.BuildInfo}}</p>
 <p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
 <p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a></p>
@@ -285,7 +285,7 @@ func (m *MtailServer) Serve() {
 
 	go func() {
 		glog.Infof("Listening on port %s", m.o.Port)
-		err := http.ListenAndServe(":"+m.o.Port, nil)
+		err := http.ListenAndServe(m.o.Port, nil)
 		if err != nil {
 			glog.Exit(err)
 		}
