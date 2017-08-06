@@ -601,7 +601,7 @@ func (v *VM) execute(t *thread, i instr) {
 		index := i.opnd.(int)
 		keys := make([]string, index)
 		//fmt.Printf("keys: %v\n", keys)
-		for a := 0; a < index; a++ {
+		for a := index - 1; a >= 0; a-- {
 			s := t.Pop().(string)
 			//fmt.Printf("s: %v\n", s)
 			keys[a] = s
@@ -619,7 +619,7 @@ func (v *VM) execute(t *thread, i instr) {
 		m := t.Pop().(*metrics.Metric)
 		index := i.opnd.(int)
 		keys := make([]string, index)
-		for j := 0; j < index; j++ {
+		for j := index - 1; j >= 0; j-- {
 			s := t.Pop().(string)
 			keys[j] = s
 		}

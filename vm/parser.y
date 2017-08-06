@@ -261,32 +261,10 @@ unary_expr
   {
     $$ = $1
   }
-  | NOT postfix_expr
+  | NOT unary_expr
   {
     $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $2, op: $1}
   }
-  | BUILTIN LPAREN RPAREN
-  {
-    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: nil}
-  }
-  | BUILTIN LPAREN arg_expr_list RPAREN
-  {
-    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
-  }
-  ;
-
-arg_expr_list
-  : assign_expr
-  {
-    $$ = &exprlistNode{}
-    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $1)
-  }
-  | arg_expr_list COMMA assign_expr
-  {
-    $$ = $1
-    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
-  }
-  ;
 
 postfix_expr
   : primary_expr
@@ -297,14 +275,22 @@ postfix_expr
   {
     $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $1, op: $2}
   }
-  | postfix_expr LSQUARE expr RSQUARE
-  {
-    $$ = &indexedExprNode{lhs: $1, index: $3}
-  }
   ;
 
 primary_expr
-  : ID
+  : primary_expr LSQUARE arg_expr_list RSQUARE
+  {
+    $$ = &indexedExprNode{lhs: $1, index: $3}
+  }
+  | BUILTIN LPAREN RPAREN
+  {
+    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: nil}
+  }
+  | BUILTIN LPAREN arg_expr_list RPAREN
+  {
+    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
+  }
+  | ID
   {
     $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
   }
@@ -334,6 +320,19 @@ primary_expr
   }
   ;
 
+
+arg_expr_list
+  : bitwise_expr
+  {
+    $$ = &exprlistNode{}
+    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $1)
+  }
+  | arg_expr_list COMMA bitwise_expr
+  {
+    $$ = $1
+    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
+  }
+  ;
 
 cond
   : pattern_expr

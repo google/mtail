@@ -237,6 +237,12 @@ foo = 3.14
 	{"getfilename", `
 getfilename()
 `},
+
+	{"indexed expression arg list", `
+counter foo by a,b
+/(\d) (\d+)/ {
+  foo[$1,$2]++
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -306,6 +312,12 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	{"undefined const regex",
 		"/foo / + X + / bar/ {}\n",
 		[]string{"undefined const regex:1:10: Constant 'X' not defined.\n\tTry adding `const X /.../' earlier in the program."}},
+
+	{"index of non-terminal",
+		`// {
+	foo++[$1]++
+	}`,
+		[]string{"index of non-terminal:2:7: syntax error"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {

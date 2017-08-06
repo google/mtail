@@ -130,11 +130,19 @@ var checkerValidPrograms = []struct {
    foo += $1
 }
 `},
+
 	{"index expression",
 		`counter foo by a, b
 /(\d)/ {
-  foo[1][$1] = 3
+  foo[1,$1] = 3
 }`},
+
+	{"odd indexes",
+		`counter foo by a,b,c
+/(\d) (\d)/ {
+  foo[$1,$2][0]++
+}
+`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {
