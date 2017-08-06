@@ -148,10 +148,10 @@ func (m *MtailServer) InitLoader() error {
 const statusTemplate = `
 <html>
 <head>
-<title>mtail on :{{.Port}}</title>
+<title>mtail on {{.BindAddress}}</title>
 </head>
 <body>
-<h1>mtail on :{{.Port}}</h1>
+<h1>mtail on {{.BindAddress}}</h1>
 <p>Build: {{.BuildInfo}}</p>
 <p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
 <p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a></p>
@@ -165,10 +165,10 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		Port      string
-		BuildInfo string
+		BindAddress string
+		BuildInfo   string
 	}{
-		m.o.Port,
+		m.o.BindAddress,
 		m.o.BuildInfo,
 	}
 	w.Header().Add("Content-type", "text/html")
@@ -191,7 +191,7 @@ type Options struct {
 	Progs                string
 	LogPathPatterns      []string
 	LogFds               []int
-	Port                 string
+	BindAddress          string
 	OneShot              bool
 	OneShotMetrics       bool
 	CompileOnly          bool
@@ -284,8 +284,8 @@ func (m *MtailServer) Serve() {
 	m.e.StartMetricPush()
 
 	go func() {
-		glog.Infof("Listening on port %s", m.o.Port)
-		err := http.ListenAndServe(":"+m.o.Port, nil)
+		glog.Infof("Listening on port %s", m.o.BindAddress)
+		err := http.ListenAndServe(m.o.BindAddress, nil)
 		if err != nil {
 			glog.Exit(err)
 		}

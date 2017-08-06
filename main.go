@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"runtime"
 	"strconv"
@@ -51,8 +52,9 @@ var logs seqStringFlag
 var logFds seqIntFlag
 
 var (
-	port  = flag.String("port", "3903", "HTTP port to listen on.")
-	progs = flag.String("progs", "", "Name of the directory containing mtail programs")
+	port    = flag.String("port", "3903", "HTTP port to listen on.")
+	address = flag.String("address", "", "Host or IP address on which to bind HTTP listener")
+	progs   = flag.String("progs", "", "Name of the directory containing mtail programs")
 
 	// Compiler behaviour flags
 	oneShot        = flag.Bool("one_shot", false, "Run the contents of the provided logs until EOF and exit.")
@@ -115,7 +117,7 @@ func main() {
 		Progs:                *progs,
 		LogPathPatterns:      logs,
 		LogFds:               logFds,
-		Port:                 *port,
+		BindAddress:          net.JoinHostPort(*address, *port),
 		OneShot:              *oneShot,
 		OneShotMetrics:       *oneShotMetrics,
 		CompileOnly:          *compileOnly,
