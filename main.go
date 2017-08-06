@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"runtime"
 	"strconv"
@@ -51,8 +52,8 @@ var logs seqStringFlag
 var logFds seqIntFlag
 
 var (
-	port    = flag.Int("port", 3903, "HTTP port to listen on.")
-	address = flag.String("address", "", "IP address on which to bind HTTP listener")
+	port    = flag.String("port", "3903", "HTTP port to listen on.")
+	address = flag.String("address", "", "Host or IP address on which to bind HTTP listener")
 	progs   = flag.String("progs", "", "Name of the directory containing mtail programs")
 
 	// Compiler behaviour flags
@@ -112,12 +113,11 @@ func main() {
 			glog.Exitf("No logs specified to tail; use -logs or -logfds")
 		}
 	}
-	hostport := fmt.Sprintf("%s:%d", *address, *port)
 	o := mtail.Options{
 		Progs:                *progs,
 		LogPathPatterns:      logs,
 		LogFds:               logFds,
-		Port:                 hostport,
+		BindAddress:          net.JoinHostPort(*address, *port),
 		OneShot:              *oneShot,
 		OneShotMetrics:       *oneShotMetrics,
 		CompileOnly:          *compileOnly,
