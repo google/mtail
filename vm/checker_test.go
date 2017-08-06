@@ -53,12 +53,16 @@ var checkerInvalidPrograms = []struct {
 	{"indexedExpr parameter count",
 		`counter foo by a, b
 counter bar by a, b
+counter quux by a
 /(\d+)/ {
   foo[$1]++
   bar[$1][0]++
+  quux[$1][0]++
 }
 	`,
-		[]string{"error"}},
+		[]string{"indexedExpr parameter count:5:3-6: Not enough keys for metric",
+			"indexedExpr parameter count:7:3-12: Too many keys for metric"}},
+
 	{"builtin parameter mismatch",
 		`/(\d+)/ {
 	  strptime()
@@ -126,6 +130,11 @@ var checkerValidPrograms = []struct {
    foo += $1
 }
 `},
+	{"index expression",
+		`counter foo by a, b
+/(\d)/ {
+  foo[1][$1] = 3
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

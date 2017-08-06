@@ -152,6 +152,10 @@ func occursIn(v *TypeVariable, types []Type) bool {
 }
 
 func occursInType(v *TypeVariable, t2 Type) bool {
+	glog.Infof("v %v t2 %v", v, t2)
+	// if t2 == nil {
+	// 	return false
+	// }
 	root := t2.Root()
 	if Equals(root, v) {
 		return true
@@ -167,13 +171,21 @@ func occursInType(v *TypeVariable, t2 Type) bool {
 // representing both parameters.  If either type is a type variable, then that
 // variable is unified with the LUB.
 func Unify(a, b Type) error {
+	glog.V(2).Infof("Unifying %q and %q", a, b)
 	a1, b1 := a.Root(), b.Root()
 	switch a2 := a1.(type) {
 	case *TypeVariable:
-		b2, ok := b1.(*TypeVariable)
-		if !ok || a2.Id != b2.Id {
-			if occursInType(a2, b1) {
-				return fmt.Errorf("Recursive unification %v %v", a2, b1)
+		switch b2 := b1.(type) {
+		case *TypeVariable:
+			if a2.Id != b2.Id {
+				glog.V(2).Infof("Making %q type %q", a2, b1)
+				a2.SetInstance(&b1)
+				return nil
+			}
+		case *TypeOperator:
+			glog.Infof("b1 is a type operator thta looks liek %v", b2)
+			if occursInType(a2, b2) {
+				return fmt.Errorf("Recursive unification %v %v", a2, b2)
 			}
 			glog.V(2).Infof("Making %q type %q", a2, b1)
 			a2.SetInstance(&b1)
@@ -185,10 +197,12 @@ func Unify(a, b Type) error {
 			return Unify(b, a)
 
 		case *TypeOperator:
+			glog.Infof("a2, b2: %q %q", a2, b2)
 			if a2.Name != b2.Name || len(a2.Args) != len(b2.Args) {
 				return fmt.Errorf("type mismatch: %q != %q", a2, b2)
 			}
 			for i, argA := range a2.Args {
+				glog.Infof("a and b: %q %q", argA, b2.Args[i])
 				err := Unify(argA, b2.Args[i])
 				if err != nil {
 					return err

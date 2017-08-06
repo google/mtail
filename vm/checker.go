@@ -62,11 +62,18 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
 		}
-		n.sym.Type = NewTypeVariable()
+		// One type per key and one for the value.
+		keyTypes := make([]Type, 0, len(n.keys)+1)
+		for i := 0; i <= len(n.keys); i++ {
+			keyTypes = append(keyTypes, NewTypeVariable())
+		}
+		n.sym.Type = Function(keyTypes...)
 
 	case *idNode:
 		if n.sym == nil {
+			glog.Infof("name: %s", n.name)
 			if sym := c.scope.Lookup(n.name); sym != nil && sym.Kind == VarSymbol {
+				glog.Infof("found sym %v", sym)
 				n.sym = sym
 			} else {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\tTry adding `counter %s' to the top of the program.", n.name, n.name))
@@ -134,6 +141,15 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 	return c
 }
 
+func isError(t Type) bool {
+	if o, ok := t.(*TypeOperator); ok {
+		if o.Name == "Error" {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *stmtlistNode:
@@ -144,63 +160,154 @@ func (c *checker) VisitAfter(node astNode) {
 
 	case *binaryExprNode:
 		var rType Type
-		Tl := n.lhs.Type()
-		glog.Infof("rhs is a %#V", n.rhs)
-		Tr := n.rhs.Type()
+		lT := n.lhs.Type()
+		glog.Infof("lhs is %v: %v", n.lhs, lT)
+		if isError(lT) {
+			n.SetType(Error)
+			return
+		}
+		rT := n.rhs.Type()
+		glog.Infof("rhs is %v; %v", n.rhs, rT)
+		if isError(rT) {
+			n.SetType(Error)
+			return
+		}
 		switch n.op {
 		case DIV, MOD, MUL, MINUS, PLUS, POW:
 			// Numeric
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
-			//rType = Unify(Tl, Tr)
-			rType = Int
+			rType = NewTypeVariable()
+			opType := Function(rType, rType, rType)
+			exprType := Function(lT, rT, NewTypeVariable())
+			err := Unify(exprType, opType)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				n.SetType(Error)
+				return
+			}
 		case SHL, SHR, AND, OR, XOR, NOT:
 			// bitwise
 			// O ⊢ e1 :Int, O ⊢ e2 : Int
 			// ⇒ O ⊢ e : Int
-			// if Equals(Tl, Int) && Equals(Tr, Int) {
-			// 	rType = Int
-			// } else {
-			// 	c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, Tl, Tr))
-			// 	return
-			// }
 			rType = Int
+			opType := Function(rType, rType, rType)
+			exprType := Function(lT, rT, NewTypeVariable())
+			err := Unify(exprType, opType)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, lT, rT))
+				n.SetType(Error)
+				return
+			}
 		case LT, GT, LE, GE, EQ, NE:
 			// comparable
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
+			rType = Int
+			t := NewTypeVariable()
 			// rType = NewTypeVariable()
-
-			// Unify(Tl, Tr)
+			opType := Function(t, t, rType)
+			exprType := Function(lT, rT, NewTypeVariable())
+			err := Unify(exprType, opType)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				n.SetType(Error)
+				return
+			}
 			rType = Int
 		case ASSIGN:
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr
 			// ⇒ O ⊢ e : Tl
 			// glog.Infof("Tl: %v TR: %v", Tl, Tr)
-			// rType = Unify(Tl, Tr)
-			rType = Int
-		default:
-			if Tl != Tr {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%v) and rhs (%v) for op %q", Tl, Tr, n.op))
+			rType = NewTypeVariable()
+			opType := Function(rType, NewTypeVariable(), rType)
+			exprType := Function(lT, rT, NewTypeVariable())
+			err := Unify(exprType, opType)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
+				n.SetType(Error)
 				return
 			}
-			rType = Tl
+		default:
+			if lT != rT {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%v) and rhs (%v) for op %q", lT, rT, n.op))
+				n.SetType(Error)
+				return
+			}
+			rType = lT
 		}
 		n.SetType(rType)
 
 	case *unaryExprNode:
+		t := n.expr.Type()
+		if isError(t) {
+			n.SetType(Error)
+			return
+		}
 		switch n.op {
 		case NOT:
-			n.SetType(Int)
+			rType := Int
+			err := Unify(rType, t)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
+				n.SetType(Error)
+				return
+			}
+			n.SetType(rType)
+		case INC:
+			rType := Int
+			glog.Infof("expr %q type is %q", n.expr, t)
+			err := Unify(rType, t)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
+				n.SetType(Error)
+				return
+			}
+			n.SetType(rType)
 		default:
-			n.SetType(n.expr.Type())
+			// TODO: error
+			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary expr %v", n))
+			n.SetType(Error)
+			return
 		}
 
 	case *indexedExprNode:
-		n.SetType(n.lhs.Type())
+		glog.Infof("n.lhs: %#v", n.lhs)
+		lType := n.lhs.Type()
+		if isError(lType) {
+			n.SetType(Error)
+			return
+		}
+		iType := n.index.Type()
+		glog.Infof("index types: %v [ %v ]", lType, iType)
+		if isError(iType) {
+			n.SetType(Error)
+			return
+		}
+		switch lT := lType.(type) {
+		case *TypeOperator:
+			if len(lT.Args) <= 1 {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Too many keys for metric"))
+				n.SetType(Error)
+				return
+			}
+			glog.Infof("left, right: %v %v", lT.Args[0], iType)
+			err := Unify(lT.Args[0], iType)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
+				n.SetType(Error)
+				return
+			}
+			glog.Infof("setting tupe %v", lT.Args[1:])
+			n.SetType(Function(lT.Args[1:]...))
+		case *TypeVariable:
+			n.SetType(lT)
+		}
+		glog.Infof("expr %q is now %q", n, n.Type())
 
 	case *builtinNode:
 		types := []Type{}
@@ -216,6 +323,8 @@ func (c *checker) VisitAfter(node astNode) {
 		err := Unify(n.Type(), fn)
 		if err != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.name, err))
+			// TODO: put type on expression tree
+			// n.SetType(Error)
 			return
 		}
 	}
