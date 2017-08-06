@@ -140,6 +140,19 @@ func (c *checker) VisitAfter(node astNode) {
 	case *condNode:
 		c.scope = n.s.Parent
 
+	case *indexedExprNode:
+		switch v := n.lhs.(type) {
+		case *idNode:
+			// ok
+		case *indexedExprNode:
+			n.index.(*exprlistNode).children = append(v.index.(*exprlistNode).children, n.index.(*exprlistNode).children...)
+			n.lhs = v.lhs
+			// ok
+		default:
+			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression."))
+			return
+		}
+
 	case *binaryExprNode:
 		var rType Type
 		Tl := n.lhs.Type()
