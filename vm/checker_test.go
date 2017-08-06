@@ -49,13 +49,6 @@ var checkerInvalidPrograms = []struct {
 	{"duplicate declaration",
 		"counter foo\ncounter foo\n",
 		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11"}},
-
-	{"index of non-terminal",
-		`counter foo by a
-/(\d+)/ {
-foo++[$1]
-}`,
-		[]string{"index of non-terminal:3:1-8: Index taken on unindexable expression."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

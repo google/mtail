@@ -261,9 +261,13 @@ unary_expr
   {
     $$ = $1
   }
-  | NOT postfix_expr
+  | NOT unary_expr
   {
     $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $2, op: $1}
+  }
+  | unary_expr INC
+  {
+    $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $1, op: $2}
   }
   | BUILTIN LPAREN RPAREN
   {
@@ -293,11 +297,7 @@ postfix_expr
   {
     $$ = $1
   }
-  | postfix_expr INC
-  {
-    $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $1, op: $2}
-  }
-  | postfix_expr LSQUARE expr RSQUARE
+  | postfix_expr LSQUARE arg_expr_list RSQUARE
   {
     $$ = &indexedExprNode{lhs: $1, index: $3}
   }

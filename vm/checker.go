@@ -128,14 +128,6 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 				}
 			}
 		}
-	case *indexedExprNode:
-		switch n.lhs.(type) {
-		case *idNode, *indexedExprNode:
-			// ok
-		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression."))
-			return nil
-		}
 	}
 	return c
 }
