@@ -265,17 +265,15 @@ unary_expr
   {
     $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $2, op: $1}
   }
-  | unary_expr INC
+
+postfix_expr
+  : primary_expr
+  {
+    $$ = $1
+  }
+  | postfix_expr INC
   {
     $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $1, op: $2}
-  }
-  | BUILTIN LPAREN RPAREN
-  {
-    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: nil}
-  }
-  | BUILTIN LPAREN arg_expr_list RPAREN
-  {
-    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
   }
   ;
 
@@ -292,19 +290,20 @@ arg_expr_list
   }
   ;
 
-postfix_expr
-  : primary_expr
-  {
-    $$ = $1
-  }
-  | postfix_expr LSQUARE arg_expr_list RSQUARE
+primary_expr
+  : primary_expr LSQUARE arg_expr_list RSQUARE
   {
     $$ = &indexedExprNode{lhs: $1, index: $3}
   }
-  ;
-
-primary_expr
-  : ID
+  | BUILTIN LPAREN RPAREN
+  {
+    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: nil}
+  }
+  | BUILTIN LPAREN arg_expr_list RPAREN
+  {
+    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
+  }
+  | ID
   {
     $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
   }
