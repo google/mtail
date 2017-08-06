@@ -18,7 +18,7 @@ hidden gauge connection_time by pid
   # Transfer log
   # %o %h [%a] %m (%u) %f %l
   /(?P<operation>\S+) (\S+) \[\S+\] (?P<module>\S+) \(\S*\) \S+ (?P<bytes>\d+)/ {
-    transfers_total[$operation][$module]++
+    transfers_total[$operation, $module]++
   }
 
   # Connection starts

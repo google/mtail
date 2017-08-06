@@ -389,6 +389,27 @@ getfilename()
 			instr{getfilename, nil},
 		},
 	},
+
+	{"dimensioned counter",
+		`counter c by a,b,c
+/(\d) (\d) (\d)/ {
+  c[$1,$2][$3]++
+}
+`,
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 13},
+			instr{setmatched, false},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{push, 0},
+			instr{capref, 2},
+			instr{push, 0},
+			instr{capref, 3},
+			instr{mload, 0},
+			instr{dload, 3},
+			instr{inc, nil},
+			instr{setmatched, true}}},
 }
 
 func TestCodegen(t *testing.T) {
@@ -397,6 +418,7 @@ func TestCodegen(t *testing.T) {
 	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
 
 	for _, tc := range testCodeGenPrograms {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ast, err := Parse(tc.name, strings.NewReader(tc.source))
