@@ -6,6 +6,8 @@ package vm
 import (
 	"fmt"
 	"regexp/syntax"
+
+	"github.com/golang/glog"
 )
 
 // checker holds data for a semantic checker
@@ -147,7 +149,7 @@ func (c *checker) VisitAfter(node astNode) {
 		case *indexedExprNode:
 			n.index.(*exprlistNode).children = append(v.index.(*exprlistNode).children, n.index.(*exprlistNode).children...)
 			n.lhs = v.lhs
-			// ok
+			glog.Warning("%s: The chained index form `foo[][]' is deprecated, use the comma-arg form foo[,] instead.", n.Pos())
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression."))
 			return
