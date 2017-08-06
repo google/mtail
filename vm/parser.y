@@ -277,19 +277,6 @@ postfix_expr
   }
   ;
 
-arg_expr_list
-  : assign_expr
-  {
-    $$ = &exprlistNode{}
-    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $1)
-  }
-  | arg_expr_list COMMA assign_expr
-  {
-    $$ = $1
-    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
-  }
-  ;
-
 primary_expr
   : primary_expr LSQUARE arg_expr_list RSQUARE
   {
@@ -333,6 +320,19 @@ primary_expr
   }
   ;
 
+
+arg_expr_list
+  : bitwise_expr
+  {
+    $$ = &exprlistNode{}
+    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $1)
+  }
+  | arg_expr_list COMMA bitwise_expr
+  {
+    $$ = $1
+    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
+  }
+  ;
 
 cond
   : pattern_expr
