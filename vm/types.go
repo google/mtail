@@ -93,6 +93,7 @@ func Function(args ...Type) Type {
 // Builtin types
 var (
 	Undef  = &TypeOperator{"Undef", []Type{}}
+	Error  = &TypeOperator{"Error", []Type{}}
 	None   = &TypeOperator{"None", []Type{}}
 	Int    = &TypeOperator{"Int", []Type{}}
 	Float  = &TypeOperator{"Float", []Type{}}

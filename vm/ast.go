@@ -7,6 +7,7 @@ import (
 	"regexp/syntax"
 	"sync"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 )
 
@@ -83,9 +84,11 @@ func (n *idNode) Pos() *position {
 
 func (n *idNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type.Root()
+		glog.Infof("n.sym: %v", n.sym)
+		glog.Infof("n.sym.Type: %v", n.sym.Type)
+		return n.sym.Type
 	}
-	return None // Bugs
+	return Error // id not defined
 }
 
 type caprefNode struct {
@@ -101,9 +104,9 @@ func (n *caprefNode) Pos() *position {
 
 func (n *caprefNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type.Root()
+		return n.sym.Type
 	}
-	return None // sym not defined due to undefined capref error
+	return Error // sym not defined due to undefined capref error
 }
 
 type builtinNode struct {
@@ -205,9 +208,11 @@ func (n *declNode) Pos() *position {
 
 func (n *declNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type.Root()
+		glog.Infof("n.sym: %v", n.sym)
+		glog.Infof("n.sym.Type: %v", n.sym.Type)
+		return n.sym.Type
 	}
-	return Undef
+	return Error
 }
 
 type stringConstNode struct {
@@ -259,7 +264,7 @@ func (n *defNode) Pos() *position {
 
 func (n *defNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type.Root()
+		return n.sym.Type
 	}
 	return Int
 }
