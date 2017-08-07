@@ -158,17 +158,12 @@ func (c *checker) VisitAfter(node astNode) {
 	case *condNode:
 		c.scope = n.s.Parent
 
-	case *indexedExprNode:
-		switch v := n.lhs.(type) {
-		case *idNode:
-			// ok
-		case *indexedExprNode:
-			n.index.(*exprlistNode).children = append(v.index.(*exprlistNode).children, n.index.(*exprlistNode).children...)
-			n.lhs = v.lhs
-		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression."))
-			return
+	case *exprlistNode:
+		ts := make([]Type, 0, len(n.children))
+		for _, c := range n.children {
+			ts = append(ts, c.Type())
 		}
+		n.SetType(Function(ts...))
 
 	case *binaryExprNode:
 		var rType Type
@@ -288,6 +283,18 @@ func (c *checker) VisitAfter(node astNode) {
 		}
 
 	case *indexedExprNode:
+		// Rewrite chained index form to arg expr list form.
+		switch v := n.lhs.(type) {
+		case *idNode:
+			// ok
+		case *indexedExprNode:
+			n.index.(*exprlistNode).children = append(v.index.(*exprlistNode).children, n.index.(*exprlistNode).children...)
+			n.lhs = v.lhs
+		default:
+			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression."))
+			return
+		}
+
 		glog.Infof("n.lhs: %#v", n.lhs)
 		lType := n.lhs.Type()
 		if isError(lType) {

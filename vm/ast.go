@@ -31,6 +31,8 @@ func (n *stmtlistNode) Type() Type {
 
 type exprlistNode struct {
 	children []astNode
+	typMu    sync.RWMutex
+	typ      Type
 }
 
 func (n *exprlistNode) Pos() *position {
@@ -38,7 +40,15 @@ func (n *exprlistNode) Pos() *position {
 }
 
 func (n *exprlistNode) Type() Type {
-	return None
+	n.typMu.RLock()
+	defer n.typMu.RUnlock()
+	return n.typ
+}
+
+func (n *exprlistNode) SetType(t Type) {
+	n.typMu.Lock()
+	n.typMu.Unlock()
+	n.typ = t
 }
 
 type condNode struct {
