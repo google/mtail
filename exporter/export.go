@@ -22,7 +22,8 @@ import (
 // Commandline Flags.
 var (
 	pushInterval = flag.Int("metric_push_interval_seconds", 60,
-		"Interval between metric pushes, in seconds")
+		"Interval between metric pushes, in seconds.")
+	writeDeadline = flag.Duration("metric_push_write_deadline", 10*time.Second, "Time to wait for a push to succeed before exiting with an error.")
 )
 
 // Exporter manages the export of metrics to passive and active collectors.
@@ -120,11 +121,12 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 func (e *Exporter) WriteMetrics() {
 	for _, target := range e.pushTargets {
 		glog.V(2).Infof("pushing to %s", target.addr)
-		conn, err := net.Dial(target.net, target.addr)
+		conn, err := net.DialTimeout(target.net, target.addr, *writeDeadline)
 		if err != nil {
 			glog.Infof("pusher dial error: %s", err)
 			continue
 		}
+		conn.SetDeadline(time.Now().Add(*writeDeadline))
 		err = e.writeSocketMetrics(conn, target.f, target.total, target.success)
 		if err != nil {
 			glog.Infof("pusher write error: %s", err)
