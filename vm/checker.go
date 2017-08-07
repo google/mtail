@@ -68,6 +68,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			keyTypes = append(keyTypes, NewTypeVariable())
 		}
 		n.sym.Type = Function(keyTypes...)
+		glog.Infof("Making type of %s now %s", n.name, n.sym.Type)
 
 	case *idNode:
 		if n.sym == nil {
@@ -157,13 +158,6 @@ func (c *checker) VisitAfter(node astNode) {
 
 	case *condNode:
 		c.scope = n.s.Parent
-
-	case *exprlistNode:
-		ts := make([]Type, 0, len(n.children))
-		for _, c := range n.children {
-			ts = append(ts, c.Type())
-		}
-		n.SetType(Function(ts...))
 
 	case *binaryExprNode:
 		var rType Type
@@ -292,40 +286,31 @@ func (c *checker) VisitAfter(node astNode) {
 			n.lhs = v.lhs
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression."))
+			n.SetType(Error)
 			return
 		}
 
 		glog.Infof("n.lhs: %#v", n.lhs)
-		lType := n.lhs.Type()
-		if isError(lType) {
+		argTypes := []Type{}
+		if args, ok := n.index.(*exprlistNode); ok {
+			for _, arg := range args.children {
+				argTypes = append(argTypes, arg.Type())
+			}
+		} else {
+			c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected %v", n.index))
 			n.SetType(Error)
 			return
 		}
-		iType := n.index.Type()
-		glog.Infof("index types: %v [ %v ]", lType, iType)
-		if isError(iType) {
+		rType := NewTypeVariable()
+		argTypes = append(argTypes, rType)
+		fn := Function(argTypes...)
+		err := Unify(fn, n.lhs.Type())
+		if err != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("index lookup: %s", err))
 			n.SetType(Error)
 			return
 		}
-		switch lT := lType.(type) {
-		case *TypeOperator:
-			if len(lT.Args) <= 1 {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Too many keys for metric"))
-				n.SetType(Error)
-				return
-			}
-			glog.Infof("left, right: %v %v", lT.Args[0], iType)
-			err := Unify(lT.Args[0], iType)
-			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
-				n.SetType(Error)
-				return
-			}
-			glog.Infof("setting tupe %v", lT.Args[1:])
-			n.SetType(Function(lT.Args[1:]...))
-		case *TypeVariable:
-			n.SetType(lT)
-		}
+		n.SetType(rType)
 		glog.Infof("expr %q is now %q", n, n.Type())
 
 	case *builtinNode:
