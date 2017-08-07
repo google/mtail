@@ -97,6 +97,7 @@ func main() {
 	}
 	flag.Parse()
 	glog.Info(buildInfo())
+	glog.Infof("Commandline: %q", os.Args)
 	if *blockProfileRate > 0 {
 		glog.Infof("Setting block profile rate to %d", *blockProfileRate)
 		runtime.SetBlockProfileRate(*blockProfileRate)
