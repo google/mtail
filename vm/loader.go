@@ -102,6 +102,9 @@ func (l *Loader) LoadProg(programPath string) error {
 	l.programErrorMu.Lock()
 	defer l.programErrorMu.Unlock()
 	l.programErrors[name] = l.CompileAndRun(name, f)
+	if l.programErrors[name] != nil {
+		glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
+	}
 	return nil
 }
 
