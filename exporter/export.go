@@ -97,7 +97,6 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 	for _, ml := range e.store.Metrics {
 		for _, m := range ml {
 			m.RLock()
-			defer m.RUnlock()
 			exportTotal.Add(1)
 			lc := make(chan *metrics.LabelSet)
 			go m.EmitLabelSets(lc)
@@ -111,6 +110,7 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 					return fmt.Errorf("write error: %s\n", err)
 				}
 			}
+			m.RUnlock()
 		}
 	}
 	return nil
