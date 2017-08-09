@@ -166,10 +166,20 @@ func occursInType(v *TypeVariable, t2 Type) bool {
 	return false
 }
 
+type TypeError struct {
+	expected Type
+	received Type
+}
+
+func (e *TypeError) Error() string {
+	return fmt.Sprintf("type mismatch; expected %q received %q", e.expected, e.received)
+}
+
 // Unify performs type unification of both parameter Types.  It returns the
 // least upper bound of both types, the smallest type that is capable of
 // representing both parameters.  If either type is a type variable, then that
-// variable is unified with the LUB.
+// variable is unified with the LUB.  In reporting errors, it is assumed that a
+// is the expected type and b is the type observed.
 func Unify(a, b Type) error {
 	glog.V(2).Infof("Unifying %q and %q", a, b)
 	a1, b1 := a.Root(), b.Root()
@@ -194,12 +204,19 @@ func Unify(a, b Type) error {
 	case *TypeOperator:
 		switch b2 := b1.(type) {
 		case *TypeVariable:
-			return Unify(b, a)
+			err := Unify(b, a)
+			if err != nil {
+				// We flipped the args, flip them back.
+				if e, ok := err.(*TypeError); ok {
+					return &TypeError{e.received, e.expected}
+				}
+			}
+			return err
 
 		case *TypeOperator:
 			glog.Infof("a2, b2: %q %q", a2, b2)
 			if a2.Name != b2.Name || len(a2.Args) != len(b2.Args) {
-				return fmt.Errorf("type mismatch: %q != %q", a2, b2)
+				return &TypeError{a2, b2}
 			}
 			for i, argA := range a2.Args {
 				glog.Infof("a and b: %q %q", argA, b2.Args[i])

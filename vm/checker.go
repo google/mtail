@@ -142,7 +142,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 	return c
 }
 
-func isError(t Type) bool {
+func isErrorType(t Type) bool {
 	if o, ok := t.(*TypeOperator); ok {
 		if o.Name == "Error" {
 			return true
@@ -163,13 +163,13 @@ func (c *checker) VisitAfter(node astNode) {
 		var rType Type
 		lT := n.lhs.Type()
 		glog.Infof("lhs is %v: %v", n.lhs, lT)
-		if isError(lT) {
+		if isErrorType(lT) {
 			n.SetType(Error)
 			return
 		}
 		rT := n.rhs.Type()
 		glog.Infof("rhs is %v; %v", n.rhs, rT)
-		if isError(rT) {
+		if isErrorType(rT) {
 			n.SetType(Error)
 			return
 		}
@@ -182,9 +182,9 @@ func (c *checker) VisitAfter(node astNode) {
 			rType = NewTypeVariable()
 			opType := Function(rType, rType, rType)
 			exprType := Function(lT, rT, NewTypeVariable())
-			err := Unify(exprType, opType)
+			err := Unify(opType, exprType)
 			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(Error)
 				return
 			}
@@ -195,9 +195,9 @@ func (c *checker) VisitAfter(node astNode) {
 			rType = Int
 			opType := Function(rType, rType, rType)
 			exprType := Function(lT, rT, NewTypeVariable())
-			err := Unify(exprType, opType)
+			err := Unify(opType, exprType)
 			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				c.errors.Add(n.Pos(), err.Error())
 				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, lT, rT))
 				n.SetType(Error)
 				return
@@ -212,7 +212,7 @@ func (c *checker) VisitAfter(node astNode) {
 			// rType = NewTypeVariable()
 			opType := Function(t, t, rType)
 			exprType := Function(lT, rT, NewTypeVariable())
-			err := Unify(exprType, opType)
+			err := Unify(opType, exprType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
 				n.SetType(Error)
@@ -227,25 +227,22 @@ func (c *checker) VisitAfter(node astNode) {
 			rType = NewTypeVariable()
 			opType := Function(rType, NewTypeVariable(), rType)
 			exprType := Function(lT, rT, NewTypeVariable())
-			err := Unify(exprType, opType)
+			err := Unify(opType, exprType)
 			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
+				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(Error)
 				return
 			}
 		default:
-			if lT != rT {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%v) and rhs (%v) for op %q", lT, rT, n.op))
-				n.SetType(Error)
-				return
-			}
-			rType = lT
+			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator in node %v", n))
+			n.SetType(Error)
+			return
 		}
 		n.SetType(rType)
 
 	case *unaryExprNode:
 		t := n.expr.Type()
-		if isError(t) {
+		if isErrorType(t) {
 			n.SetType(Error)
 			return
 		}
@@ -294,6 +291,10 @@ func (c *checker) VisitAfter(node astNode) {
 		argTypes := []Type{}
 		if args, ok := n.index.(*exprlistNode); ok {
 			for _, arg := range args.children {
+				if isErrorType(arg.Type()) {
+					n.SetType(Error)
+					return
+				}
 				argTypes = append(argTypes, arg.Type())
 			}
 		} else {
@@ -324,7 +325,7 @@ func (c *checker) VisitAfter(node astNode) {
 		types = append(types, rType)
 
 		fn := Function(types...)
-		err := Unify(n.Type(), fn)
+		err := Unify(fn, n.Type())
 		if err != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.name, err))
 			// TODO: put type on expression tree
