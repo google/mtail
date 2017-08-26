@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/mtail/metrics/datum"
+	"github.com/pkg/errors"
 )
 
 // // Counter is a monotonically nondecreasing metric.
@@ -117,7 +118,7 @@ Loop:
 // Metric.  If the sequence of label values does not yet exist, it is created.
 func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	if len(labelvalues) != len(m.Keys) {
-		return nil, fmt.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
+		return nil, errors.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
 	}
 	m.Lock()
 	defer m.Unlock()
@@ -137,7 +138,7 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 
 func (m *Metric) RemoveDatum(labelvalues ...string) error {
 	if len(labelvalues) != len(m.Keys) {
-		return fmt.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
+		return errors.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
 	}
 	m.Lock()
 	defer m.Unlock()

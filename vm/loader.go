@@ -10,9 +10,7 @@ package vm
 // moves.
 
 import (
-	"errors"
 	"expvar"
-	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -24,6 +22,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 
 	"github.com/google/mtail/metrics"
@@ -55,13 +54,13 @@ func (l *Loader) LoadProgs(programPath string) error {
 
 	s, err := os.Stat(programPath)
 	if err != nil {
-		return fmt.Errorf("failed to stat: %s", err)
+		return errors.Wrap(err, "failed to stat")
 	}
 	switch {
 	case s.IsDir():
 		fis, err := ioutil.ReadDir(programPath)
 		if err != nil {
-			return fmt.Errorf("Failed to list programs in %q: %s", programPath, err)
+			return errors.Wrapf(err, "Failed to list programs in %q", programPath)
 		}
 
 		for _, fi := range fis {
@@ -97,7 +96,7 @@ func (l *Loader) LoadProg(programPath string) error {
 	f, err := l.fs.Open(programPath)
 	if err != nil {
 		ProgLoadErrors.Add(name, 1)
-		return fmt.Errorf("Failed to read program %q: %s", programPath, err)
+		return errors.Wrapf(err, "Failed to read program %q", programPath)
 	}
 	defer f.Close()
 	l.programErrorMu.Lock()
@@ -169,11 +168,11 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	v, errs := Compile(name, input, o)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
-		return fmt.Errorf("compile failed for %s:\n%s", name, errs)
+		return errors.Errorf("compile failed for %s:\n%s", name, errs)
 	}
 	if v == nil {
 		ProgLoadErrors.Add(name, 1)
-		return fmt.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
+		return errors.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
 	}
 
 	if l.dumpBytecode {
@@ -286,7 +285,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		var err error
 		w, err = watcher.NewLogWatcher()
 		if err != nil {
-			return nil, fmt.Errorf("Couldn't create a watcher for loader: %s", err)
+			return nil, errors.Wrap(err, "Couldn't create a watcher for loader")
 		}
 	}
 

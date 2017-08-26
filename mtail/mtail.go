@@ -25,6 +25,7 @@ import (
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
@@ -48,7 +49,7 @@ func (m *MtailServer) OneShot(logfile string, print bool) (count int64, err erro
 	glog.Infof("Oneshot %q", logfile)
 	l, err := os.Open(logfile)
 	if err != nil {
-		return 0, fmt.Errorf("failed to open log file %q: %s", logfile, err)
+		return 0, errors.Wrapf(err, "failed to open log file %q", logfile)
 	}
 	defer l.Close()
 
@@ -71,7 +72,7 @@ Loop:
 			}
 			break Loop
 		case err != nil:
-			return 0, fmt.Errorf("failed to read from %q: %s", logfile, err)
+			return 0, errors.Wrapf(err, "failed to read from %q", logfile)
 		default:
 			m.lines <- tailer.NewLogLine(logfile, line)
 		}
@@ -95,7 +96,7 @@ func (m *MtailServer) StartTailing() error {
 	var err error
 	m.t, err = tailer.New(o)
 	if err != nil {
-		return fmt.Errorf("couldn't create a log tailer: %s", err)
+		return errors.Wrap(err, "couldn't create a log tailer")
 	}
 
 	for _, pattern := range m.o.LogPathPatterns {
@@ -138,9 +139,9 @@ func (m *MtailServer) InitLoader() error {
 		return err
 	}
 	if m.o.Progs != "" {
-		errors := m.l.LoadProgs(m.o.Progs)
-		if errors != nil {
-			return fmt.Errorf("Compile encountered errors:\n%s", errors)
+		errs := m.l.LoadProgs(m.o.Progs)
+		if errs != nil {
+			return errors.Errorf("Compile encountered errors:\n%s", errs)
 		}
 	}
 	return nil
@@ -244,7 +245,7 @@ func (m *MtailServer) WriteMetrics(w io.Writer) error {
 	b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
 	m.store.RUnlock()
 	if err != nil {
-		return fmt.Errorf("failed to marshal metrics into json: %s", err)
+		return errors.Wrap(err, "failed to marshal metrics into json")
 	}
 	w.Write(b)
 	return nil

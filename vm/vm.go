@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
@@ -209,7 +210,7 @@ func (t *thread) PopInt() (int64, error) {
 	case string:
 		r, err := strconv.ParseInt(n, 10, 64)
 		if err != nil {
-			return 0, fmt.Errorf("conversion of %q to int failed: %s", val, err)
+			return 0, errors.Wrapf(err, "conversion of %q to int failed", val)
 		}
 		return r, nil
 	case time.Time:
@@ -217,7 +218,7 @@ func (t *thread) PopInt() (int64, error) {
 	case datum.Datum:
 		return datum.GetInt(n), nil
 	}
-	return 0, fmt.Errorf("unexpected int type %T %q", val, val)
+	return 0, errors.Errorf("unexpected int type %T %q", val, val)
 }
 
 func (t *thread) PopFloat() (float64, error) {
@@ -230,13 +231,13 @@ func (t *thread) PopFloat() (float64, error) {
 	case string:
 		r, err := strconv.ParseFloat(n, 64)
 		if err != nil {
-			return 0, fmt.Errorf("conversion of %q to float failed: %s", val, err)
+			return 0, errors.Wrapf(err, "conversion of %q to float failed", val)
 		}
 		return r, nil
 	case datum.Datum:
 		return datum.GetFloat(n), nil
 	}
-	return 0, fmt.Errorf("unexpected float type %T %q", val, val)
+	return 0, errors.Errorf("unexpected float type %T %q", val, val)
 }
 
 func compareInt(a, b int64, opnd int) (bool, error) {
@@ -248,7 +249,7 @@ func compareInt(a, b int64, opnd int) (bool, error) {
 	case 1:
 		return a > b, nil
 	default:
-		return false, fmt.Errorf("unexpected operator type %q", opnd)
+		return false, errors.Errorf("unexpected operator type %q", opnd)
 	}
 }
 
@@ -261,7 +262,7 @@ func compareFloat(a, b float64, opnd int) (bool, error) {
 	case 1:
 		return a > b, nil
 	default:
-		return false, fmt.Errorf("unexpected operator type %q", opnd)
+		return false, errors.Errorf("unexpected operator type %q", opnd)
 	}
 }
 
@@ -274,7 +275,7 @@ func compareString(a, b string, opnd int) (bool, error) {
 	case 1:
 		return a > b, nil
 	default:
-		return false, fmt.Errorf("unexpected operator type %q", opnd)
+		return false, errors.Errorf("unexpected operator type %q", opnd)
 	}
 }
 
@@ -313,13 +314,13 @@ func compare(a, b interface{}, opnd int) (bool, error) {
 		if rxIsStr {
 			rx, err := strconv.ParseFloat(rxS, 64)
 			if err != nil {
-				return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+				return false, errors.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 			}
 
 			return compareFloat(lxF, rx, opnd)
 		}
 
-		return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+		return false, errors.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 	}
 
 	if lxIsInt {
@@ -334,13 +335,13 @@ func compare(a, b interface{}, opnd int) (bool, error) {
 		if rxIsStr {
 			rx, err := strconv.ParseFloat(rxS, 64)
 			if err != nil {
-				return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+				return false, errors.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 			}
 
 			return compareFloat(lxF, rx, opnd)
 		}
 
-		return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+		return false, errors.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 	}
 
 	if lxIsStr {
@@ -357,7 +358,7 @@ func compare(a, b interface{}, opnd int) (bool, error) {
 		}
 	}
 
-	return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+	return false, errors.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 }
 
 func (v *VM) ParseTime(layout, value string) (tm time.Time) {

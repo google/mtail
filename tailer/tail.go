@@ -11,9 +11,7 @@ package tailer
 // directory.
 
 import (
-	"errors"
 	"expvar"
-	"fmt"
 	"html/template"
 	"io"
 	"os"
@@ -25,6 +23,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 
 	"github.com/google/mtail/watcher"
 
@@ -78,7 +77,7 @@ func New(o Options) (*Tailer, error) {
 		var err error
 		w, err = watcher.NewLogWatcher()
 		if err != nil {
-			return nil, fmt.Errorf("Couldn't create a watcher for tailer: %s", err)
+			return nil, errors.Errorf("Couldn't create a watcher for tailer: %s", err)
 		}
 	}
 	t := &Tailer{
@@ -126,7 +125,7 @@ func (t *Tailer) Tail(pattern string) error {
 	for _, pathname := range matches {
 		err := t.TailPath(pathname)
 		if err != nil {
-			glog.Infof("Error attempting to tail %q: %s", pathname, err)
+			return errors.Wrapf(err, "attempting to tail %q", pathname)
 		}
 	}
 	t.watchDirname(pattern)
@@ -137,9 +136,7 @@ func (t *Tailer) Tail(pattern string) error {
 func (t *Tailer) TailPath(pathname string) error {
 	fullpath, err := filepath.Abs(pathname)
 	if err != nil {
-		glog.Infof("Failed to find absolute path for %q: %s\n", pathname, err)
-		// TODO: errors.Wrap.
-		return err
+		return errors.Wrapf(err, "find absolute path for %q", pathname)
 	}
 	if !t.isWatching(fullpath) {
 		t.addWatched(fullpath)
@@ -265,6 +262,7 @@ func (t *Tailer) watchDirname(pathname string) {
 		err := t.w.Add(d)
 		if err != nil {
 			glog.Infof("Failed to create new watch on directory %q: %s", pathname, err)
+			return
 		}
 		t.addWatched(d)
 	}
@@ -286,7 +284,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
 		if os.IsNotExist(err) {
-			glog.V(1).Infof("Pathname %q doesn't eist (yet?)", pathname)
+			glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
 			return
 		}
 		glog.Infof("Failed to open %q for reading: %s", pathname, err)
@@ -314,7 +312,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	if err != nil {
 		// Stat failed, log error and return.
 		LogErrors.Add(f.Name(), 1)
-		return fmt.Errorf("Failed to stat %q: %s", f.Name(), err)
+		return errors.Wrapf(err, "Failed to stat %q: %s", f.Name())
 	}
 	switch m := fi.Mode(); {
 	case m&os.ModeType == 0:
@@ -325,7 +323,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		}
 		err = t.w.Add(f.Name())
 		if err != nil {
-			return fmt.Errorf("Adding a change watch failed on %q: %s", f.Name(), err)
+			return errors.Wrapf(err, "Adding a change watch failed on %q: %s", f.Name())
 		}
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
@@ -342,7 +340,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	case m&os.ModeType == os.ModeNamedPipe:
 		go t.readForever(f)
 	default:
-		return fmt.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
+		return errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}
 	t.filesMu.Lock()
 	t.files[f.Name()] = f
