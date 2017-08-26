@@ -11,7 +11,6 @@ package tailer
 // directory.
 
 import (
-	"errors"
 	"expvar"
 	"fmt"
 	"html/template"
