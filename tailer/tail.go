@@ -78,7 +78,7 @@ func New(o Options) (*Tailer, error) {
 		var err error
 		w, err = watcher.NewLogWatcher()
 		if err != nil {
-			return nil, fmt.Errorf("Couldn't create a watcher for tailer: %s", err)
+			return nil, errors.Errorf("Couldn't create a watcher for tailer: %s", err)
 		}
 	}
 	t := &Tailer{
@@ -285,7 +285,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
 		if os.IsNotExist(err) {
-			glog.V(1).Infof("Pathname %q doesn't eist (yet?)", pathname)
+			glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
 			return
 		}
 		glog.Infof("Failed to open %q for reading: %s", pathname, err)
