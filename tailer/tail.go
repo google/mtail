@@ -25,6 +25,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 
 	"github.com/google/mtail/watcher"
 
@@ -126,7 +127,7 @@ func (t *Tailer) Tail(pattern string) error {
 	for _, pathname := range matches {
 		err := t.TailPath(pathname)
 		if err != nil {
-			glog.Infof("Error attempting to tail %q: %s", pathname, err)
+			return errors.Wrapf(err, "attempting to tail %q", pathname)
 		}
 	}
 	t.watchDirname(pattern)
@@ -137,9 +138,7 @@ func (t *Tailer) Tail(pattern string) error {
 func (t *Tailer) TailPath(pathname string) error {
 	fullpath, err := filepath.Abs(pathname)
 	if err != nil {
-		glog.Infof("Failed to find absolute path for %q: %s\n", pathname, err)
-		// TODO: errors.Wrap.
-		return err
+		return errors.Wrapf(err, "find absolute path for %q", pathname)
 	}
 	if !t.isWatching(fullpath) {
 		t.addWatched(fullpath)
@@ -265,6 +264,7 @@ func (t *Tailer) watchDirname(pathname string) {
 		err := t.w.Add(d)
 		if err != nil {
 			glog.Infof("Failed to create new watch on directory %q: %s", pathname, err)
+			return
 		}
 		t.addWatched(d)
 	}
