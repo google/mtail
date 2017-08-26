@@ -210,7 +210,7 @@ func (t *thread) PopInt() (int64, error) {
 	case string:
 		r, err := strconv.ParseInt(n, 10, 64)
 		if err != nil {
-			return 0, errors.Errorf("conversion of %q to int failed: %s", val, err)
+			return 0, errors.Wrapf(err, "conversion of %q to int failed", val)
 		}
 		return r, nil
 	case time.Time:
@@ -231,7 +231,7 @@ func (t *thread) PopFloat() (float64, error) {
 	case string:
 		r, err := strconv.ParseFloat(n, 64)
 		if err != nil {
-			return 0, errors.Errorf("conversion of %q to float failed: %s", val, err)
+			return 0, errors.Wrapf(err, "conversion of %q to float failed", val)
 		}
 		return r, nil
 	case datum.Datum:

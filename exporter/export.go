@@ -51,7 +51,7 @@ func New(o Options) (*Exporter, error) {
 		var err error
 		hostname, err = os.Hostname()
 		if err != nil {
-			return nil, errors.Errorf("Error getting hostname: %s\n", err)
+			return nil, errors.Wrap(err, "getting hostname")
 		}
 	}
 	e := &Exporter{store: o.Store, o: o}

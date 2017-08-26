@@ -54,13 +54,13 @@ func (l *Loader) LoadProgs(programPath string) error {
 
 	s, err := os.Stat(programPath)
 	if err != nil {
-		return errors.Errorf("failed to stat: %s", err)
+		return errors.Wrap(err, "failed to stat")
 	}
 	switch {
 	case s.IsDir():
 		fis, err := ioutil.ReadDir(programPath)
 		if err != nil {
-			return errors.Errorf("Failed to list programs in %q: %s", programPath, err)
+			return errors.Wrapf(err, "Failed to list programs in %q", programPath)
 		}
 
 		for _, fi := range fis {
@@ -96,7 +96,7 @@ func (l *Loader) LoadProg(programPath string) error {
 	f, err := l.fs.Open(programPath)
 	if err != nil {
 		ProgLoadErrors.Add(name, 1)
-		return errors.Errorf("Failed to read program %q: %s", programPath, err)
+		return errors.Wrapf(err, "Failed to read program %q", programPath)
 	}
 	defer f.Close()
 	l.programErrorMu.Lock()
@@ -285,7 +285,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		var err error
 		w, err = watcher.NewLogWatcher()
 		if err != nil {
-			return nil, errors.Errorf("Couldn't create a watcher for loader: %s", err)
+			return nil, errors.Wrap(err, "Couldn't create a watcher for loader")
 		}
 	}
 

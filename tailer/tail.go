@@ -312,7 +312,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	if err != nil {
 		// Stat failed, log error and return.
 		LogErrors.Add(f.Name(), 1)
-		return errors.Errorf("Failed to stat %q: %s", f.Name(), err)
+		return errors.Wrapf(err, "Failed to stat %q: %s", f.Name())
 	}
 	switch m := fi.Mode(); {
 	case m&os.ModeType == 0:
@@ -323,7 +323,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		}
 		err = t.w.Add(f.Name())
 		if err != nil {
-			return errors.Errorf("Adding a change watch failed on %q: %s", f.Name(), err)
+			return errors.Wrapf(err, "Adding a change watch failed on %q: %s", f.Name())
 		}
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
