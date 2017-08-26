@@ -181,7 +181,7 @@ func (e *TypeError) Error() string {
 // variable is unified with the LUB.  In reporting errors, it is assumed that a
 // is the expected type and b is the type observed.
 func Unify(a, b Type) error {
-	glog.V(2).Infof("Unifying %q and %q", a, b)
+	glog.V(2).Infof("Unifying a %v , b %v", a, b)
 	a1, b1 := a.Root(), b.Root()
 	switch a2 := a1.(type) {
 	case *TypeVariable:
@@ -215,8 +215,17 @@ func Unify(a, b Type) error {
 
 		case *TypeOperator:
 			glog.Infof("a2, b2: %q %q", a2, b2)
-			if a2.Name != b2.Name || len(a2.Args) != len(b2.Args) {
+			if len(a2.Args) != len(b2.Args) {
 				return &TypeError{a2, b2}
+			}
+			if a2.Name != b2.Name {
+				t := leastUpperBound(a, b)
+				if t == Error {
+					return &TypeError{a2, b2}
+				}
+				a, b = t, t
+				glog.Infof("post Lub a %v b %v", a, b)
+				return nil
 			}
 			for i, argA := range a2.Args {
 				glog.Infof("a and b: %q %q", argA, b2.Args[i])
@@ -225,33 +234,31 @@ func Unify(a, b Type) error {
 					return err
 				}
 			}
-
-			// if Equals(a2, b2) {
-			// 	return a2
-			// }
-			// // least upper bound
-			// if (Equals(a2, Float) && Equals(b2, Int)) ||
-			// 	(Equals(b2, Float) && Equals(a2, Int)) {
-			// 	return Float
-			// }
-			// if (Equals(a2, String) && Equals(b2, Int)) ||
-			// 	(Equals(b2, String) && Equals(a2, Int)) ||
-			// 	(Equals(a2, String) && Equals(b2, Float)) ||
-			// 	(Equals(b2, String) && Equals(a2, Float)) {
-			// 	return String
-			// }
-
-			// if len(a2.Args) != len(b2.Args) {
-			// 	// TODO return error: glog.Errorf("Type mismatch: %q vs %q", a2, b2)
-			// 	return None
-			// }
-			// for i := range a2.Args {
-			// 	Unify(a2.Args[i], b2.Args[i])
-			// }
-			// return None
 		}
 	}
 	return nil
+}
+
+func leastUpperBound(a, b Type) Type {
+	glog.Infof("Lub a %v b %v", a, b)
+	a1, b1 := a.Root(), b.Root()
+
+	if Equals(a1, b1) {
+		return a1
+	}
+	// least upper bound
+	if (Equals(a1, Float) && Equals(b1, Int)) ||
+		(Equals(b1, Float) && Equals(a1, Int)) {
+		glog.Infof("Lub is Float")
+		return Float
+	}
+	if (Equals(a1, String) && Equals(b1, Int)) ||
+		(Equals(b1, String) && Equals(a1, Int)) ||
+		(Equals(a1, String) && Equals(b1, Float)) ||
+		(Equals(b1, String) && Equals(a1, Float)) {
+		return String
+	}
+	return Error
 }
 
 // inferCaprefType determines a type for a capturing group, based on contents

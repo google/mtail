@@ -160,6 +160,7 @@ func (c *checker) VisitAfter(node astNode) {
 		c.scope = n.s.Parent
 
 	case *binaryExprNode:
+		glog.Info("binExpr Node")
 		var rType Type
 		lT := n.lhs.Type()
 		glog.Infof("lhs is %v: %v", n.lhs, lT)
@@ -179,10 +180,12 @@ func (c *checker) VisitAfter(node astNode) {
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
+			glog.Info("arith op")
 			rType = NewTypeVariable()
 			opType := Function(rType, rType, rType)
 			exprType := Function(lT, rT, NewTypeVariable())
 			err := Unify(opType, exprType)
+			glog.Infof("post unify of %v op is %v, %v", n, opType, rType)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(Error)
