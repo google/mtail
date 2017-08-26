@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/mtail"
@@ -66,6 +67,7 @@ var (
 
 	// Runtime behaviour flags
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
+	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of the local zone.")
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 
 	// Debugging flags
@@ -98,6 +100,11 @@ func main() {
 	flag.Parse()
 	glog.Info(buildInfo())
 	glog.Infof("Commandline: %q", os.Args)
+	loc, err := time.LoadLocation(*overrideTimezone)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Couldn't parse timezone %q: %s", *overrideTimezone, err)
+		os.Exit(1)
+	}
 	if *blockProfileRate > 0 {
 		glog.Infof("Setting block profile rate to %d", *blockProfileRate)
 		runtime.SetBlockProfileRate(*blockProfileRate)
@@ -126,6 +133,7 @@ func main() {
 		DumpAstTypes:         *dumpAstTypes,
 		DumpBytecode:         *dumpBytecode,
 		SyslogUseCurrentYear: *syslogUseCurrentYear,
+		OverrideLocation:     loc,
 		OmitProgLabel:        !*emitProgLabel,
 		BuildInfo:            buildInfo(),
 	}

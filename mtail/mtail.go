@@ -127,6 +127,7 @@ func (m *MtailServer) InitLoader() error {
 		DumpAstTypes:         m.o.DumpAstTypes,
 		DumpBytecode:         m.o.DumpBytecode,
 		SyslogUseCurrentYear: m.o.SyslogUseCurrentYear,
+		OverrideLocation:     m.o.OverrideLocation,
 		OmitMetricSource:     m.o.OmitMetricSource,
 		W:                    m.o.W,
 		FS:                   m.o.FS,
@@ -199,6 +200,7 @@ type Options struct {
 	DumpAstTypes         bool
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
+	OverrideLocation     *time.Location
 	OmitMetricSource     bool
 	OmitProgLabel        bool
 

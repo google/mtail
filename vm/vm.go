@@ -164,7 +164,8 @@ type VM struct {
 
 	terminate bool // Flag to stop the VM program.
 
-	syslogUseCurrentYear bool // Overwrite zero years with the current year in a strptime.
+	syslogUseCurrentYear bool           // Overwrite zero years with the current year in a strptime.
+	loc                  *time.Location // Override local timezone with provided, if not empty
 }
 
 // Push a value onto the stack
@@ -359,6 +360,30 @@ func compare(a, b interface{}, opnd int) (bool, error) {
 	return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 }
 
+func (v *VM) ParseTime(layout, value string) (tm time.Time) {
+	var err error
+	if v.loc != nil {
+		tm, err = time.ParseInLocation(layout, value, v.loc)
+	} else {
+		tm, err = time.Parse(layout, value)
+	}
+	if err != nil {
+		v.errorf("strptime (%v, %v, %v) failed: %s", layout, value, v.loc, err)
+		return
+	}
+	// Hack for yearless syslog.
+	if tm.Year() == 0 && v.syslogUseCurrentYear {
+		// No .UTC() as we use local time to match the local log.
+		now := time.Now()
+		// unless there's a timezone
+		if v.loc != nil {
+			now = now.In(v.loc)
+		}
+		tm = tm.AddDate(now.Year(), 0, 0)
+	}
+	return
+}
+
 // Execute performs an instruction cycle in the VM -- acting on the current
 // instruction, and returns a boolean indicating if the current thread should
 // terminate.
@@ -483,15 +508,7 @@ func (v *VM) execute(t *thread, i instr) {
 			ts = t.matches[re][s]
 		}
 		if tm, ok := v.timeMemos[ts]; !ok {
-			tm, err := time.Parse(layout, ts)
-			if err != nil {
-				v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
-			}
-			// Hack for yearless syslog.
-			if tm.Year() == 0 && v.syslogUseCurrentYear {
-				// No .UTC() as we use local time to match the local log.
-				tm = tm.AddDate(time.Now().Year(), 0, 0)
-			}
+			tm := v.ParseTime(layout, ts)
 			v.timeMemos[ts] = tm
 			t.time = tm
 		} else {
@@ -704,7 +721,7 @@ func (v *VM) Run(_ uint32, lines <-chan *tailer.LogLine, shutdown chan<- struct{
 
 // New creates a new virtual machine with the given name, and compiler
 // artifacts for executable and data segments.
-func New(name string, obj *object, syslogUseCurrentYear bool) *VM {
+func New(name string, obj *object, syslogUseCurrentYear bool, loc *time.Location) *VM {
 	return &VM{
 		name:                 name,
 		re:                   obj.re,
@@ -713,6 +730,7 @@ func New(name string, obj *object, syslogUseCurrentYear bool) *VM {
 		prog:                 obj.prog,
 		timeMemos:            make(map[string]time.Time, 0),
 		syslogUseCurrentYear: syslogUseCurrentYear,
+		loc:                  loc,
 	}
 }
 

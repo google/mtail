@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/spf13/afero"
@@ -163,6 +164,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		EmitAst:              l.dumpAst,
 		EmitAstTypes:         l.dumpAstTypes,
 		SyslogUseCurrentYear: l.syslogUseCurrentYear,
+		OverrideLocation:     l.overrideLocation,
 	}
 	v, errs := Compile(name, input, o)
 	if errs != nil {
@@ -241,11 +243,12 @@ type Loader struct {
 	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
-	compileOnly          bool // Only compile programs and report errors, do not load VMs.
-	dumpAst              bool // print the AST after parse
-	dumpAstTypes         bool // print the AST after type check
-	dumpBytecode         bool // Instructs the loader to dump to stdout the compiled program after compilation.
-	syslogUseCurrentYear bool // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
+	compileOnly          bool           // Only compile programs and report errors, do not load VMs.
+	dumpAst              bool           // print the AST after parse
+	dumpAstTypes         bool           // print the AST after type check
+	dumpBytecode         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
+	syslogUseCurrentYear bool           // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
+	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
 	omitMetricSource     bool
 }
 
@@ -258,12 +261,13 @@ type LoaderOptions struct {
 	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 
-	CompileOnly          bool
-	DumpAst              bool // print the AST after type check
-	DumpAstTypes         bool // Instructs the loader to dump to stdout the compiled program after compilation.
-	DumpBytecode         bool
-	SyslogUseCurrentYear bool
-	OmitMetricSource     bool // Don't put the source in the metric when added to the Store.
+	CompileOnly          bool           // Compile, don't start execution.
+	DumpAst              bool           // print the AST after type check
+	DumpAstTypes         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
+	DumpBytecode         bool           // Instructs the loader to dump the program bytecode after compilation.
+	SyslogUseCurrentYear bool           // If true, override empty year with the current in strptime().
+	OverrideLocation     *time.Location // if not nil, overrides the timezone in strptime().
+	OmitMetricSource     bool           // Don't put the source in the metric when added to the Store.
 }
 
 // NewLoader creates a new program loader.  It takes a filesystem watcher
@@ -285,6 +289,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 			return nil, fmt.Errorf("Couldn't create a watcher for loader: %s", err)
 		}
 	}
+
 	l := &Loader{
 		w:                    w,
 		ms:                   o.Store,
@@ -298,6 +303,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		dumpAstTypes:         o.DumpAstTypes,
 		dumpBytecode:         o.DumpBytecode,
 		syslogUseCurrentYear: o.SyslogUseCurrentYear,
+		overrideLocation:     o.OverrideLocation,
 		omitMetricSource:     o.OmitMetricSource,
 	}
 
