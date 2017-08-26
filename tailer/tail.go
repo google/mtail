@@ -11,6 +11,7 @@ package tailer
 // directory.
 
 import (
+	"bytes"
 	"expvar"
 	"html/template"
 	"io"
@@ -44,14 +45,14 @@ type Tailer struct {
 
 	lines chan<- *LogLine // Logfile lines being emitted.
 
-	watched        map[string]struct{}   // Names of logs being watched.
-	watchedMu      sync.RWMutex          // protects `watched'
-	files          map[string]afero.File // File handles for each pathname.
-	filesMu        sync.Mutex            // protects `files'
-	partials       map[string]string     // Accumulator for the currently read line for each pathname.
-	partialsMu     sync.Mutex            // protects 'partials'
-	globPatterns   map[string]struct{}   // glob patterns to match newly created files in dir paths against
-	globPatternsMu sync.RWMutex          // protects `globPatterns'
+	watched        map[string]struct{}      // Names of logs being watched.
+	watchedMu      sync.RWMutex             // protects `watched'
+	files          map[string]afero.File    // File handles for each pathname.
+	filesMu        sync.Mutex               // protects `files'
+	partials       map[string]*bytes.Buffer // Accumulator for the currently read line for each pathname.
+	partialsMu     sync.Mutex               // protects 'partials'
+	globPatterns   map[string]struct{}      // glob patterns to match newly created files in dir paths against
+	globPatternsMu sync.RWMutex             // protects `globPatterns'
 
 	fs afero.Fs // mockable filesystem interface
 }
@@ -85,7 +86,7 @@ func New(o Options) (*Tailer, error) {
 		watched:      make(map[string]struct{}),
 		lines:        o.Lines,
 		files:        make(map[string]afero.File),
-		partials:     make(map[string]string),
+		partials:     make(map[string]*bytes.Buffer),
 		globPatterns: make(map[string]struct{}),
 		fs:           fs,
 	}
@@ -165,7 +166,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	}
 	var err error
 	t.partialsMu.Lock()
-	t.partials[pathname], err = t.read(fd, t.partials[pathname])
+	err = t.read(fd, t.partials[pathname])
 	t.partialsMu.Unlock()
 	if err != nil && err != io.EOF {
 		glog.Info(err)
@@ -175,14 +176,13 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 // read reads blocks of 4096 bytes from the File, sending lines to the
 // channel as it encounters newlines.  If EOF is encountered, the partial line
 // is returned to be concatenated with on the next call.
-func (t *Tailer) read(f afero.File, partialIn string) (partialOut string, err error) {
-	partial := partialIn
+func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 	b := make([]byte, 0, 4096)
 	for {
 		n, err := f.Read(b[:cap(b)])
 		b = b[:n]
 		if err != nil {
-			return partial, err
+			return err
 		}
 
 		for i, width := 0, 0; i < len(b) && i < n; i += width {
@@ -190,12 +190,12 @@ func (t *Tailer) read(f afero.File, partialIn string) (partialOut string, err er
 			rune, width = utf8.DecodeRune(b[i:])
 			switch {
 			case rune != '\n':
-				partial += string(rune)
+				partial.WriteRune(rune)
 			default:
 				// send off line for processing, blocks if not ready
-				t.lines <- NewLogLine(f.Name(), partial)
+				t.lines <- NewLogLine(f.Name(), partial.String())
 				// reset accumulator
-				partial = ""
+				partial.Reset()
 			}
 		}
 	}
@@ -328,7 +328,8 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
 		t.partialsMu.Lock()
-		t.partials[f.Name()], err = t.read(f, "")
+		t.partials[f.Name()] = bytes.NewBufferString("")
+		err = t.read(f, t.partials[f.Name()])
 		t.partialsMu.Unlock()
 		if err != nil {
 			if err == io.EOF {
@@ -393,9 +394,9 @@ func (t *Tailer) run() {
 // readForever handles non-logfile inputs by reading from the File until it is closed.
 func (t *Tailer) readForever(f afero.File) {
 	var err error
-	partial := ""
+	partial := bytes.NewBufferString("")
 	for {
-		partial, err = t.read(f, partial)
+		err = t.read(f, partial)
 		// We want to exit at EOF, because the FD has been closed.
 		if err != nil {
 			glog.Infof("error on partial read of %s (fd %v): %s", f.Name(), f, err)
