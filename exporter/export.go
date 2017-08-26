@@ -6,7 +6,6 @@
 package exporter
 
 import (
-	"errors"
 	"expvar"
 	"flag"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
+	"github.com/pkg/errors"
 )
 
 // Commandline Flags.
@@ -51,7 +51,7 @@ func New(o Options) (*Exporter, error) {
 		var err error
 		hostname, err = os.Hostname()
 		if err != nil {
-			return nil, fmt.Errorf("Error getting hostname: %s\n", err)
+			return nil, errors.Errorf("Error getting hostname: %s\n", err)
 		}
 	}
 	e := &Exporter{store: o.Store, o: o}
@@ -107,7 +107,7 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 				if err == nil {
 					exportSuccess.Add(1)
 				} else {
-					return fmt.Errorf("write error: %s\n", err)
+					return errors.Errorf("write error: %s\n", err)
 				}
 			}
 			m.RUnlock()

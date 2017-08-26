@@ -5,8 +5,9 @@ package metrics
 
 import (
 	"encoding/json"
-	"fmt"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 // Store contains Metrics.
@@ -28,7 +29,7 @@ func (s *Store) Add(m *Metric) error {
 	if len(s.Metrics[m.Name]) > 0 {
 		t := s.Metrics[m.Name][0].Kind
 		if m.Kind != t {
-			return fmt.Errorf("Metric %s has different kind %s to existing %s.", m.Name, m.Kind, t)
+			return errors.Errorf("Metric %s has different kind %s to existing %s.", m.Name, m.Kind, t)
 		}
 	}
 	s.Metrics[m.Name] = append(s.Metrics[m.Name], m)

@@ -12,7 +12,6 @@ package tailer
 
 import (
 	"expvar"
-	"fmt"
 	"html/template"
 	"io"
 	"os"
@@ -313,7 +312,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	if err != nil {
 		// Stat failed, log error and return.
 		LogErrors.Add(f.Name(), 1)
-		return fmt.Errorf("Failed to stat %q: %s", f.Name(), err)
+		return errors.Errorf("Failed to stat %q: %s", f.Name(), err)
 	}
 	switch m := fi.Mode(); {
 	case m&os.ModeType == 0:
@@ -324,7 +323,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		}
 		err = t.w.Add(f.Name())
 		if err != nil {
-			return fmt.Errorf("Adding a change watch failed on %q: %s", f.Name(), err)
+			return errors.Errorf("Adding a change watch failed on %q: %s", f.Name(), err)
 		}
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
@@ -341,7 +340,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	case m&os.ModeType == os.ModeNamedPipe:
 		go t.readForever(f)
 	default:
-		return fmt.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
+		return errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}
 	t.filesMu.Lock()
 	t.files[f.Name()] = f
