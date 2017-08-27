@@ -13,6 +13,7 @@ import (
 	"github.com/google/mtail/mtail"
 	"github.com/google/mtail/testdata"
 	"github.com/google/mtail/watcher"
+	"github.com/spf13/afero"
 )
 
 var exampleProgramTests = []struct {
@@ -75,7 +76,8 @@ func TestExamplePrograms(t *testing.T) {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
-			o := mtail.Options{Progs: tc.programfile, W: w, Store: store, OmitMetricSource: true}
+			fs := &afero.OsFs{}
+			o := mtail.Options{Progs: tc.programfile, W: w, FS: fs, Store: store, OmitMetricSource: true}
 			o.DumpAstTypes = true
 			o.DumpBytecode = true
 			mtail, err := mtail.New(o)

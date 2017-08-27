@@ -22,7 +22,7 @@ import (
 // OneShot reads the contents of a log file into the lines channel from start to finish, terminating the program at the end.
 func (m *MtailServer) OneShot(logfile string, print bool) (count int64, err error) {
 	glog.Infof("Oneshot %q", logfile)
-	l, err := os.Open(logfile)
+	l, err := m.o.FS.Open(logfile)
 	if err != nil {
 		return 0, errors.Wrapf(err, "failed to open log file %q", logfile)
 	}
