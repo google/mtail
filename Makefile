@@ -79,15 +79,15 @@ emgen/emgen: emgen/emgen.go
 
 .PHONY: test check 
 check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 60s ./... ./testdata
+	go test -v -timeout 10s ./... ./testdata
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 5m -race ./... ./testdata
+	go test -v -timeout 1m -race ./... ./testdata
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 10s -test.short ./... ./testdata
+	go test -v -timeout 1s -test.short ./... ./testdata
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
