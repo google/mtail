@@ -25,11 +25,14 @@ var (
 func BenchmarkProgram(b *testing.B) {
 	// exampleProgramTests live in ex_test.go
 	for _, bm := range exampleProgramTests {
+		bm := bm
 		b.Run(fmt.Sprintf("%s on %s", bm.programfile, bm.logfile), func(b *testing.B) {
 			b.ReportAllocs()
 			w := watcher.NewFakeWatcher()
 			fs := afero.NewOsFs()
-			log, err := fs.Create("/tmp/test")
+			// TODO(jaq): Can't use an inmemory file for test until https://github.com/spf13/afero/pull/98 is merged.
+			//fs := afero.NewCopyOnWriteFs(base_fs, afero.NewMemMapFs())
+			log, err := fs.Create("/tmp/test.log")
 			if err != nil {
 				b.Fatalf("failed to create test file descriptor")
 			}
@@ -39,7 +42,10 @@ func BenchmarkProgram(b *testing.B) {
 			if err != nil {
 				b.Fatalf("Failed to create mtail: %s", err)
 			}
-			mtail.StartTailing()
+			err = mtail.StartTailing()
+			if err != nil {
+				b.Fatalf("starttailing failed: %s", err)
+			}
 
 			var total int64
 			b.ResetTimer()
@@ -49,11 +55,11 @@ func BenchmarkProgram(b *testing.B) {
 					b.Fatalf("Couldn't open logfile: %s", err)
 				}
 				count, err := io.Copy(log, l)
-
 				if err != nil {
 					b.Fatalf("Write of test data failed to test file: %s", err)
 				}
 				total += count
+				w.InjectUpdate(log.Name())
 			}
 			mtail.Close()
 			b.StopTimer()
