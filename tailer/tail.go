@@ -127,9 +127,11 @@ func (t *Tailer) Tail(pattern string) error {
 	t.globPatterns[pattern] = struct{}{}
 	t.globPatternsMu.Unlock()
 	glog.V(1).Infof("glob matches: %v", matches)
-	if len(matches) == 0 {
-		return errors.Errorf("No matches for pattern %q", pattern)
-	}
+	// TODO(jaq): Error if there are no matches, or do we just assume that it's OK?
+	// mtail_test.go assumes that it's ok.  Figure out why.
+	// if len(matches) == 0 {
+	// 	return errors.Errorf("No matches for pattern %q", pattern)
+	// }
 	for _, pathname := range matches {
 		err := t.TailPath(pathname)
 		if err != nil {
