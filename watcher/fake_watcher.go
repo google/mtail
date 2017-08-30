@@ -14,15 +14,14 @@ import (
 type FakeWatcher struct {
 	sync.RWMutex
 	watches  map[string]bool
-	events   chan Event
+	events   []chan Event
 	isClosed bool
 }
 
 // NewFakeWatcher returns a fake Watcher for use in tests.
 func NewFakeWatcher() *FakeWatcher {
 	return &FakeWatcher{
-		watches: make(map[string]bool),
-		events:  make(chan Event, 1)}
+		watches: make(map[string]bool)}
 }
 
 // Add adds a watch to the FakeWatcher
@@ -36,7 +35,9 @@ func (w *FakeWatcher) Add(name string) error {
 // Close closes down the FakeWatcher
 func (w *FakeWatcher) Close() error {
 	if !w.isClosed {
-		close(w.events)
+		for _, c := range w.events {
+			close(c)
+		}
 		w.isClosed = true
 	}
 	return nil
@@ -51,7 +52,17 @@ func (w *FakeWatcher) Remove(name string) error {
 }
 
 // Events returns the channel of messages.
-func (w *FakeWatcher) Events() <-chan Event { return w.events }
+func (w *FakeWatcher) Events() <-chan Event {
+	r := make(chan Event, 1)
+	w.events = append(w.events, r)
+	return r
+}
+
+func (w *FakeWatcher) sendEvent(e Event) {
+	for _, c := range w.events {
+		c <- e
+	}
+}
 
 // InjectCreate lets a test inject a fake creation event.
 func (w *FakeWatcher) InjectCreate(name string) {
@@ -60,7 +71,7 @@ func (w *FakeWatcher) InjectCreate(name string) {
 	dir_watched := w.watches[dirname]
 	w.RUnlock()
 	if dir_watched {
-		w.events <- CreateEvent{name}
+		w.sendEvent(CreateEvent{name})
 		w.Add(name)
 	} else {
 		glog.Warningf("not watching %s to see %s", dirname, name)
@@ -73,7 +84,7 @@ func (w *FakeWatcher) InjectUpdate(name string) {
 	watched := w.watches[name]
 	w.RUnlock()
 	if watched {
-		w.events <- UpdateEvent{name}
+		w.sendEvent(UpdateEvent{name})
 	} else {
 		glog.Warningf("can't update: not watching %s", name)
 	}
@@ -85,7 +96,7 @@ func (w *FakeWatcher) InjectDelete(name string) {
 	watched := w.watches[name]
 	w.RUnlock()
 	if watched {
-		w.events <- DeleteEvent{name}
+		w.sendEvent(DeleteEvent{name})
 		w.Remove(name)
 	} else {
 		glog.Warningf("can't delete: not watching %s", name)
