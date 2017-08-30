@@ -12,10 +12,11 @@ import (
 
 // FakeWatcher implements an in-memory Watcher.
 type FakeWatcher struct {
-	sync.RWMutex
-	watches  map[string]bool
-	events   []chan Event
-	isClosed bool
+	watchesMu sync.RWMutex
+	watches   map[string]bool
+	eventsMu  sync.RWMutex
+	events    []chan Event
+	isClosed  bool
 }
 
 // NewFakeWatcher returns a fake Watcher for use in tests.
@@ -26,56 +27,59 @@ func NewFakeWatcher() *FakeWatcher {
 
 // Add adds a watch to the FakeWatcher
 func (w *FakeWatcher) Add(name string) error {
-	w.Lock()
+	w.watchesMu.Lock()
 	w.watches[name] = true
-	w.Unlock()
+	w.watchesMu.Unlock()
 	return nil
 }
 
 // Close closes down the FakeWatcher
 func (w *FakeWatcher) Close() error {
-	w.Lock()
+	w.eventsMu.Lock()
+	defer w.eventsMu.Unlock()
 	if !w.isClosed {
 		for _, c := range w.events {
 			close(c)
 		}
 		w.isClosed = true
 	}
-	w.Unlock()
 	return nil
 }
 
 // Remove removes a watch from the FakeWatcher
 func (w *FakeWatcher) Remove(name string) error {
-	w.Lock()
+	w.watchesMu.Lock()
 	delete(w.watches, name)
-	w.Unlock()
+	w.watchesMu.Unlock()
 	return nil
 }
 
-// Events returns the channel of messages.
+// Events returns a new channel of messages.
 func (w *FakeWatcher) Events() <-chan Event {
+	w.eventsMu.Lock()
+	defer w.eventsMu.Unlock()
+	if w.isClosed {
+		panic("closed")
+	}
 	r := make(chan Event, 1)
-	w.Lock()
 	w.events = append(w.events, r)
-	w.Unlock()
 	return r
 }
 
 func (w *FakeWatcher) sendEvent(e Event) {
-	w.RLock()
+	w.eventsMu.RLock()
+	defer w.eventsMu.RUnlock()
 	for _, c := range w.events {
 		c <- e
 	}
-	w.RUnlock()
 }
 
 // InjectCreate lets a test inject a fake creation event.
 func (w *FakeWatcher) InjectCreate(name string) {
 	dirname := path.Dir(name)
-	w.RLock()
+	w.watchesMu.RLock()
 	dir_watched := w.watches[dirname]
-	w.RUnlock()
+	w.watchesMu.RUnlock()
 	if dir_watched {
 		w.sendEvent(CreateEvent{name})
 		w.Add(name)
@@ -86,9 +90,9 @@ func (w *FakeWatcher) InjectCreate(name string) {
 
 // InjectUpdate lets a test inject a fake update event.
 func (w *FakeWatcher) InjectUpdate(name string) {
-	w.RLock()
+	w.watchesMu.RLock()
 	watched := w.watches[name]
-	w.RUnlock()
+	w.watchesMu.RUnlock()
 	if watched {
 		w.sendEvent(UpdateEvent{name})
 	} else {
@@ -98,9 +102,9 @@ func (w *FakeWatcher) InjectUpdate(name string) {
 
 // InjectDelete lets a test inject a fake deletion event.
 func (w *FakeWatcher) InjectDelete(name string) {
-	w.RLock()
+	w.watchesMu.RLock()
 	watched := w.watches[name]
-	w.RUnlock()
+	w.watchesMu.RUnlock()
 	if watched {
 		w.sendEvent(DeleteEvent{name})
 		w.Remove(name)
