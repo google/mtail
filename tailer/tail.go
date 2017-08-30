@@ -55,13 +55,16 @@ type Tailer struct {
 	globPatternsMu sync.RWMutex             // protects `globPatterns'
 
 	fs afero.Fs // mockable filesystem interface
+
+	oneShot bool
 }
 
 // Options configures a Tailer
 type Options struct {
-	Lines chan<- *LogLine
-	W     watcher.Watcher // Not required, will use watcher.LogWatcher if it is zero.
-	FS    afero.Fs        // Not required, will use afero.OsFs if it is zero.
+	Lines   chan<- *LogLine // output channel of lines read
+	OneShot bool            // if true, reads from start and exits after each file hits eof
+	W       watcher.Watcher // Not required, will use watcher.LogWatcher if it is zero.
+	FS      afero.Fs        // Not required, will use afero.OsFs if it is zero.
 }
 
 // New returns a new Tailer, configured with the supplied Options
@@ -89,6 +92,7 @@ func New(o Options) (*Tailer, error) {
 		partials:     make(map[string]*bytes.Buffer),
 		globPatterns: make(map[string]struct{}),
 		fs:           fs,
+		oneShot:      o.OneShot,
 	}
 	go t.run()
 	return t, nil
@@ -316,7 +320,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	}
 	switch m := fi.Mode(); {
 	case m&os.ModeType == 0:
-		if seekStart {
+		if seekStart || t.oneShot {
 			f.Seek(0, os.SEEK_SET)
 		} else {
 			f.Seek(0, os.SEEK_END)
@@ -332,8 +336,8 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		err = t.read(f, t.partials[f.Name()])
 		t.partialsMu.Unlock()
 		if err != nil {
-			if err == io.EOF {
-				// Don't worry about EOF on first read, that's expected.
+			if err == io.EOF || !t.oneShot {
+				// Don't worry about EOF on first read, that's expected due to SEEK_END.
 				break
 			}
 			return err
