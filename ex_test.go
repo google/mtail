@@ -77,7 +77,10 @@ func TestExamplePrograms(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			fs := &afero.OsFs{}
-			o := mtail.Options{Progs: tc.programfile, W: w, FS: fs, Store: store, OmitMetricSource: true}
+			logs := []string{tc.logfile}
+			o := mtail.Options{Progs: tc.programfile, LogPathPatterns: logs, W: w, FS: fs, Store: store}
+			o.OneShot = true
+			o.OmitMetricSource = true
 			o.DumpAstTypes = true
 			o.DumpBytecode = true
 			mtail, err := mtail.New(o)
@@ -85,9 +88,7 @@ func TestExamplePrograms(t *testing.T) {
 				t.Fatalf("create mtail failed: %s", err)
 			}
 
-			if _, err := mtail.OneShot(tc.logfile, false); err != nil {
-				t.Fatalf("oneshot error: %s", err)
-			}
+			mtail.Serve()
 
 			g, err := os.Open(tc.goldenfile)
 			if err != nil {

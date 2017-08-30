@@ -146,7 +146,8 @@ func (t *Tailer) TailPath(pathname string) error {
 	if !t.isWatching(fullpath) {
 		t.addWatched(fullpath)
 		LogCount.Add(1)
-		t.openLogPath(fullpath, false)
+		// TODO(jaq): ex_test/filename.mtail requires we use the original name here.
+		t.openLogPath(pathname, false)
 	}
 	return nil
 }
@@ -303,7 +304,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 		}
 	}
 	err = t.startNewFile(f, seenBefore)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		glog.Error(err)
 	}
 }
@@ -336,9 +337,12 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		err = t.read(f, t.partials[f.Name()])
 		t.partialsMu.Unlock()
 		if err != nil {
-			if err == io.EOF || !t.oneShot {
-				// Don't worry about EOF on first read, that's expected due to SEEK_END.
-				break
+			if err == io.EOF {
+				glog.V(1).Info("EOF on first read")
+				if !t.oneShot {
+					// Don't worry about EOF on first read, that's expected due to SEEK_END.
+					break
+				}
 			}
 			return err
 		}

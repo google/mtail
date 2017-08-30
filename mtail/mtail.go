@@ -213,21 +213,31 @@ func (m *MtailServer) Serve() {
 		glog.Exitf("tailing failed: %s", err)
 	}
 
-	http.Handle("/", m)
-	http.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
-	http.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
-	http.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
-	http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
-	m.e.StartMetricPush()
+	if !m.o.OneShot {
+		http.Handle("/", m)
+		http.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
+		http.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
+		http.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
+		http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
+		m.e.StartMetricPush()
 
-	go func() {
-		glog.Infof("Listening on port %s", m.o.BindAddress)
-		err := http.ListenAndServe(m.o.BindAddress, nil)
-		if err != nil {
-			glog.Exit(err)
+		go func() {
+			glog.Infof("Listening on port %s", m.o.BindAddress)
+			err := http.ListenAndServe(m.o.BindAddress, nil)
+			if err != nil {
+				glog.Exit(err)
+			}
+		}()
+		m.WaitForShutdown()
+	} else {
+		m.Close()
+		if m.o.OneShotMetrics {
+			fmt.Printf("Metrics store:")
+			if err := m.WriteMetrics(os.Stdout); err != nil {
+				glog.Exit(err)
+			}
 		}
-	}()
-	m.WaitForShutdown()
+	}
 }
 
 func (m *MtailServer) handleQuit(w http.ResponseWriter, r *http.Request) {
@@ -278,9 +288,5 @@ func (m *MtailServer) Run() {
 	if m.o.CompileOnly {
 		return
 	}
-	if m.o.OneShot {
-		m.RunOneShot()
-	} else {
-		m.Serve()
-	}
+	m.Serve()
 }
