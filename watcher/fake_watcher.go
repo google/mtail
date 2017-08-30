@@ -34,12 +34,14 @@ func (w *FakeWatcher) Add(name string) error {
 
 // Close closes down the FakeWatcher
 func (w *FakeWatcher) Close() error {
+	w.Lock()
 	if !w.isClosed {
 		for _, c := range w.events {
 			close(c)
 		}
 		w.isClosed = true
 	}
+	w.Unlock()
 	return nil
 }
 
@@ -54,14 +56,18 @@ func (w *FakeWatcher) Remove(name string) error {
 // Events returns the channel of messages.
 func (w *FakeWatcher) Events() <-chan Event {
 	r := make(chan Event, 1)
+	w.Lock()
 	w.events = append(w.events, r)
+	w.Unlock()
 	return r
 }
 
 func (w *FakeWatcher) sendEvent(e Event) {
+	w.RLock()
 	for _, c := range w.events {
 		c <- e
 	}
+	w.RUnlock()
 }
 
 // InjectCreate lets a test inject a fake creation event.

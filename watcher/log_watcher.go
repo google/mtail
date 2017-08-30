@@ -5,6 +5,7 @@ package watcher
 
 import (
 	"expvar"
+	"sync"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/golang/glog"
@@ -18,14 +19,16 @@ var (
 // LogWatcher implements a Watcher for watching real filesystems.
 type LogWatcher struct {
 	*fsnotify.Watcher
-	events []chan Event
+
+	events   []chan Event
+	eventsMu sync.RWMutex
 }
 
 // NewLogWatcher returns a new LogWatcher, or returns an error.
 func NewLogWatcher() (*LogWatcher, error) {
 	f, err := fsnotify.NewWatcher()
 	if err == nil {
-		w := &LogWatcher{f, make([]chan Event, 0)}
+		w := &LogWatcher{Watcher: f, events: make([]chan Event, 0)}
 		go w.run()
 		return w, nil
 	}
@@ -35,14 +38,18 @@ func NewLogWatcher() (*LogWatcher, error) {
 // Events returns a new readable channel of events from this watcher.
 func (w *LogWatcher) Events() <-chan Event {
 	r := make(chan Event, 1)
+	w.eventsMu.Lock()
 	w.events = append(w.events, r)
+	w.eventsMu.Unlock()
 	return r
 }
 
 func (w *LogWatcher) sendEvent(e Event) {
+	w.eventsMu.RLock()
 	for _, c := range w.events {
 		c <- e
 	}
+	w.eventsMu.RUnlock()
 }
 
 func (w *LogWatcher) run() {
@@ -65,7 +72,10 @@ func (w *LogWatcher) run() {
 		}
 	}
 	glog.Infof("Shutting down log watcher.")
+
+	w.eventsMu.Lock()
 	for _, c := range w.events {
 		close(c)
 	}
+	w.eventsMu.Unlock()
 }
