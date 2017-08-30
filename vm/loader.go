@@ -324,10 +324,8 @@ func (l *Loader) processEvents() {
 	for event := range l.w.Events() {
 		switch event := event.(type) {
 		case watcher.DeleteEvent:
-			glog.Infof("delete prog %s", event.Pathname)
 			l.UnloadProgram(event.Pathname)
 		case watcher.UpdateEvent:
-			glog.Infof("update prog %s", event.Pathname)
 			l.LoadProg(event.Pathname)
 		case watcher.CreateEvent:
 			l.w.Add(event.Pathname)
