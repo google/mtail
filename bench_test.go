@@ -30,8 +30,7 @@ func BenchmarkProgram(b *testing.B) {
 			b.ReportAllocs()
 			w := watcher.NewFakeWatcher()
 			fs := afero.NewOsFs()
-			// TODO(jaq): Can't use an inmemory file for test until https://github.com/spf13/afero/pull/98 is merged.
-			//fs := afero.NewCopyOnWriteFs(base_fs, afero.NewMemMapFs())
+			fs = afero.NewCopyOnWriteFs(fs, afero.NewMemMapFs())
 			log, err := fs.Create("/tmp/test.log")
 			if err != nil {
 				b.Fatalf("failed to create test file descriptor")
