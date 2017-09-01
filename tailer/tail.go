@@ -94,7 +94,8 @@ func New(o Options) (*Tailer, error) {
 		fs:           fs,
 		oneShot:      o.OneShot,
 	}
-	go t.run()
+	eventsChan := t.w.Events()
+	go t.run(eventsChan)
 	return t, nil
 }
 
@@ -367,8 +368,8 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 // start is the main event loop for the Tailer.
 // It receives notification of log file changes from the watcher channel, and
 // handles them.
-func (t *Tailer) run() {
-	for e := range t.w.Events() {
+func (t *Tailer) run(events <-chan watcher.Event) {
+	for e := range events {
 		switch e := e.(type) {
 		case watcher.UpdateEvent:
 			if t.isWatching(e.Pathname) {

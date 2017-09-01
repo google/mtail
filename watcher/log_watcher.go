@@ -37,10 +37,10 @@ func NewLogWatcher() (*LogWatcher, error) {
 
 // Events returns a new readable channel of events from this watcher.
 func (w *LogWatcher) Events() <-chan Event {
-	r := make(chan Event, 1)
 	w.eventsMu.Lock()
+	defer w.eventsMu.Unlock()
+	r := make(chan Event, 1)
 	w.events = append(w.events, r)
-	w.eventsMu.Unlock()
 	return r
 }
 

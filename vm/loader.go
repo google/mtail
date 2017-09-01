@@ -307,7 +307,8 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		omitMetricSource:     o.OmitMetricSource,
 	}
 
-	go l.processEvents()
+	eventsChan := l.w.Events()
+	go l.processEvents(eventsChan)
 	go l.processLines(o.Lines)
 	return l, nil
 }
@@ -319,9 +320,9 @@ type vmHandle struct {
 
 // processEvents manages program lifecycle triggered by events from the
 // filesystem watcher.
-func (l *Loader) processEvents() {
+func (l *Loader) processEvents(events <-chan watcher.Event) {
 	defer close(l.watcherDone)
-	for event := range l.w.Events() {
+	for event := range events {
 		switch event := event.(type) {
 		case watcher.DeleteEvent:
 			l.UnloadProgram(event.Pathname)
