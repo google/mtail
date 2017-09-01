@@ -141,5 +141,8 @@ func main() {
 	if err != nil {
 		glog.Fatalf("couldn't start: %s", err)
 	}
-	m.Run()
+	err = m.Run()
+	if err != nil {
+		glog.Exit(err)
+	}
 }

@@ -50,8 +50,9 @@ func TestLogWatcher(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't make a logfile in temp dir: %s\n", err)
 	}
+	eventsChannel := w.Events()
 	select {
-	case e := <-w.Events():
+	case e := <-eventsChannel:
 		switch e := e.(type) {
 		case CreateEvent:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
@@ -66,7 +67,7 @@ func TestLogWatcher(t *testing.T) {
 	f.WriteString("hi")
 	f.Close()
 	select {
-	case e := <-w.Events():
+	case e := <-eventsChannel:
 		switch e := e.(type) {
 		case UpdateEvent:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
@@ -80,13 +81,13 @@ func TestLogWatcher(t *testing.T) {
 	}
 	os.Chmod(filepath.Join(workdir, "logfile"), os.ModePerm)
 	select {
-	case e := <-w.Events():
+	case e := <-eventsChannel:
 		t.Errorf("no event expected, got %#v", e)
 	case <-time.After(deadline):
 	}
 	os.Remove(filepath.Join(workdir, "logfile"))
 	select {
-	case e := <-w.Events():
+	case e := <-eventsChannel:
 		switch e := e.(type) {
 		case DeleteEvent:
 			if e.Pathname != filepath.Join(workdir, "logfile") {

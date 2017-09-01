@@ -55,13 +55,16 @@ type Tailer struct {
 	globPatternsMu sync.RWMutex             // protects `globPatterns'
 
 	fs afero.Fs // mockable filesystem interface
+
+	oneShot bool
 }
 
 // Options configures a Tailer
 type Options struct {
-	Lines chan<- *LogLine
-	W     watcher.Watcher // Not required, will use watcher.LogWatcher if it is zero.
-	FS    afero.Fs        // Not required, will use afero.OsFs if it is zero.
+	Lines   chan<- *LogLine // output channel of lines read
+	OneShot bool            // if true, reads from start and exits after each file hits eof
+	W       watcher.Watcher // Not required, will use watcher.LogWatcher if it is zero.
+	FS      afero.Fs        // Not required, will use afero.OsFs if it is zero.
 }
 
 // New returns a new Tailer, configured with the supplied Options
@@ -89,8 +92,10 @@ func New(o Options) (*Tailer, error) {
 		partials:     make(map[string]*bytes.Buffer),
 		globPatterns: make(map[string]struct{}),
 		fs:           fs,
+		oneShot:      o.OneShot,
 	}
-	go t.run()
+	eventsChan := t.w.Events()
+	go t.run(eventsChan)
 	return t, nil
 }
 
@@ -123,6 +128,11 @@ func (t *Tailer) Tail(pattern string) error {
 	t.globPatterns[pattern] = struct{}{}
 	t.globPatternsMu.Unlock()
 	glog.V(1).Infof("glob matches: %v", matches)
+	// TODO(jaq): Error if there are no matches, or do we just assume that it's OK?
+	// mtail_test.go assumes that it's ok.  Figure out why.
+	// if len(matches) == 0 {
+	// 	return errors.Errorf("No matches for pattern %q", pattern)
+	// }
 	for _, pathname := range matches {
 		err := t.TailPath(pathname)
 		if err != nil {
@@ -142,7 +152,8 @@ func (t *Tailer) TailPath(pathname string) error {
 	if !t.isWatching(fullpath) {
 		t.addWatched(fullpath)
 		LogCount.Add(1)
-		t.openLogPath(fullpath, false)
+		// TODO(jaq): ex_test/filename.mtail requires we use the original name here.
+		t.openLogPath(pathname, false)
 	}
 	return nil
 }
@@ -299,7 +310,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 		}
 	}
 	err = t.startNewFile(f, seenBefore)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		glog.Error(err)
 	}
 }
@@ -316,7 +327,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	}
 	switch m := fi.Mode(); {
 	case m&os.ModeType == 0:
-		if seekStart {
+		if seekStart || t.oneShot {
 			f.Seek(0, os.SEEK_SET)
 		} else {
 			f.Seek(0, os.SEEK_END)
@@ -333,8 +344,11 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		t.partialsMu.Unlock()
 		if err != nil {
 			if err == io.EOF {
-				// Don't worry about EOF on first read, that's expected.
-				break
+				glog.V(1).Info("EOF on first read")
+				if !t.oneShot {
+					// Don't worry about EOF on first read, that's expected due to SEEK_END.
+					break
+				}
 			}
 			return err
 		}
@@ -354,8 +368,8 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 // start is the main event loop for the Tailer.
 // It receives notification of log file changes from the watcher channel, and
 // handles them.
-func (t *Tailer) run() {
-	for e := range t.w.Events() {
+func (t *Tailer) run(events <-chan watcher.Event) {
+	for e := range events {
 		switch e := e.(type) {
 		case watcher.UpdateEvent:
 			if t.isWatching(e.Pathname) {

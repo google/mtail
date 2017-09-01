@@ -213,8 +213,9 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	l.handles[name] = &vmHandle{make(chan *tailer.LogLine), make(chan struct{})}
 	nameCode := nameToCode(name)
 	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
-	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done)
-
+	started := make(chan struct{})
+	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done, started)
+	<-started
 	glog.Infof("Started %s", name)
 
 	return nil
@@ -306,7 +307,8 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		omitMetricSource:     o.OmitMetricSource,
 	}
 
-	go l.processEvents()
+	eventsChan := l.w.Events()
+	go l.processEvents(eventsChan)
 	go l.processLines(o.Lines)
 	return l, nil
 }
@@ -318,15 +320,13 @@ type vmHandle struct {
 
 // processEvents manages program lifecycle triggered by events from the
 // filesystem watcher.
-func (l *Loader) processEvents() {
+func (l *Loader) processEvents(events <-chan watcher.Event) {
 	defer close(l.watcherDone)
-	for event := range l.w.Events() {
+	for event := range events {
 		switch event := event.(type) {
 		case watcher.DeleteEvent:
-			glog.Infof("delete prog %s", event.Pathname)
 			l.UnloadProgram(event.Pathname)
 		case watcher.UpdateEvent:
-			glog.Infof("update prog %s", event.Pathname)
 			l.LoadProg(event.Pathname)
 		case watcher.CreateEvent:
 			l.w.Add(event.Pathname)
