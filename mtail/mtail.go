@@ -203,41 +203,23 @@ func (m *MtailServer) WriteMetrics(w io.Writer) error {
 	return nil
 }
 
-// Serve begins the long-running mode of mtail, in which it watches the log
-// files for changes and sends any new lines found into the lines channel for
-// pick up by the virtual machines.  It will continue to do so until it is
-// signalled to exit.
+// Serve begins the webserver and awaits a shutdown instruction.
 func (m *MtailServer) Serve() {
-	err := m.StartTailing()
-	if err != nil {
-		glog.Exitf("tailing failed: %s", err)
-	}
+	http.Handle("/", m)
+	http.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
+	http.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
+	http.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
+	http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
+	m.e.StartMetricPush()
 
-	if !m.o.OneShot {
-		http.Handle("/", m)
-		http.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
-		http.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
-		http.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
-		http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
-		m.e.StartMetricPush()
-
-		go func() {
-			glog.Infof("Listening on port %s", m.o.BindAddress)
-			err := http.ListenAndServe(m.o.BindAddress, nil)
-			if err != nil {
-				glog.Exit(err)
-			}
-		}()
-		m.WaitForShutdown()
-	} else {
-		m.Close()
-		if m.o.OneShotMetrics {
-			fmt.Printf("Metrics store:")
-			if err := m.WriteMetrics(os.Stdout); err != nil {
-				glog.Exit(err)
-			}
+	go func() {
+		glog.Infof("Listening on port %s", m.o.BindAddress)
+		err := http.ListenAndServe(m.o.BindAddress, nil)
+		if err != nil {
+			glog.Exit(err)
 		}
-	}
+	}()
+	m.WaitForShutdown()
 }
 
 func (m *MtailServer) handleQuit(w http.ResponseWriter, r *http.Request) {
@@ -283,10 +265,27 @@ func (m *MtailServer) Close() {
 	})
 }
 
-// Run starts MtailServer in the configuration supplied in Options at creation.
-func (m *MtailServer) Run() {
+// Run starts MtailServer's primary function, in which it watches the log
+// files for changes and sends any new lines found into the lines channel for
+// pick up by the virtual machines. If OneShot mode is enabled, it will exit.
+func (m *MtailServer) Run() error {
 	if m.o.CompileOnly {
-		return
+		return nil
 	}
-	m.Serve()
+	err := m.StartTailing()
+	if err != nil {
+		glog.Exitf("tailing failed: %s", err)
+	}
+	if m.o.OneShot {
+		m.Close()
+		if m.o.OneShotMetrics {
+			fmt.Printf("Metrics store:")
+			if err := m.WriteMetrics(os.Stdout); err != nil {
+				return err
+			}
+		}
+	} else {
+		m.Serve()
+	}
+	return nil
 }

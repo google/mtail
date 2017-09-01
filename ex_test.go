@@ -88,7 +88,7 @@ func TestExamplePrograms(t *testing.T) {
 				t.Fatalf("create mtail failed: %s", err)
 			}
 
-			mtail.Serve()
+			mtail.StartTailing()
 
 			g, err := os.Open(tc.goldenfile)
 			if err != nil {
