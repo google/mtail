@@ -26,9 +26,9 @@ var (
 	collectdExportSuccess = expvar.NewInt("collectd_export_success")
 )
 
+// metricToCollectd encodes the metric data in the collectd text protocol format.  The
+// metric lock is held before entering this function.
 func metricToCollectd(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
-	m.RLock()
-	defer m.RUnlock()
 	return fmt.Sprintf(collectdFormat,
 		hostname,
 		*collectdPrefix,

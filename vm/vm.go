@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
@@ -164,7 +165,8 @@ type VM struct {
 
 	terminate bool // Flag to stop the VM program.
 
-	syslogUseCurrentYear bool // Overwrite zero years with the current year in a strptime.
+	syslogUseCurrentYear bool           // Overwrite zero years with the current year in a strptime.
+	loc                  *time.Location // Override local timezone with provided, if not empty
 }
 
 // Push a value onto the stack
@@ -208,7 +210,7 @@ func (t *thread) PopInt() (int64, error) {
 	case string:
 		r, err := strconv.ParseInt(n, 10, 64)
 		if err != nil {
-			return 0, fmt.Errorf("conversion of %q to int failed: %s", val, err)
+			return 0, errors.Wrapf(err, "conversion of %q to int failed", val)
 		}
 		return r, nil
 	case time.Time:
@@ -216,7 +218,7 @@ func (t *thread) PopInt() (int64, error) {
 	case datum.Datum:
 		return datum.GetInt(n), nil
 	}
-	return 0, fmt.Errorf("unexpected int type %T %q", val, val)
+	return 0, errors.Errorf("unexpected int type %T %q", val, val)
 }
 
 func (t *thread) PopFloat() (float64, error) {
@@ -229,13 +231,13 @@ func (t *thread) PopFloat() (float64, error) {
 	case string:
 		r, err := strconv.ParseFloat(n, 64)
 		if err != nil {
-			return 0, fmt.Errorf("conversion of %q to float failed: %s", val, err)
+			return 0, errors.Wrapf(err, "conversion of %q to float failed", val)
 		}
 		return r, nil
 	case datum.Datum:
 		return datum.GetFloat(n), nil
 	}
-	return 0, fmt.Errorf("unexpected float type %T %q", val, val)
+	return 0, errors.Errorf("unexpected float type %T %q", val, val)
 }
 
 func compareInt(a, b int64, opnd int) (bool, error) {
@@ -247,7 +249,7 @@ func compareInt(a, b int64, opnd int) (bool, error) {
 	case 1:
 		return a > b, nil
 	default:
-		return false, fmt.Errorf("unexpected operator type %q", opnd)
+		return false, errors.Errorf("unexpected operator type %q", opnd)
 	}
 }
 
@@ -260,7 +262,7 @@ func compareFloat(a, b float64, opnd int) (bool, error) {
 	case 1:
 		return a > b, nil
 	default:
-		return false, fmt.Errorf("unexpected operator type %q", opnd)
+		return false, errors.Errorf("unexpected operator type %q", opnd)
 	}
 }
 
@@ -273,7 +275,7 @@ func compareString(a, b string, opnd int) (bool, error) {
 	case 1:
 		return a > b, nil
 	default:
-		return false, fmt.Errorf("unexpected operator type %q", opnd)
+		return false, errors.Errorf("unexpected operator type %q", opnd)
 	}
 }
 
@@ -312,13 +314,13 @@ func compare(a, b interface{}, opnd int) (bool, error) {
 		if rxIsStr {
 			rx, err := strconv.ParseFloat(rxS, 64)
 			if err != nil {
-				return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+				return false, errors.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 			}
 
 			return compareFloat(lxF, rx, opnd)
 		}
 
-		return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+		return false, errors.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 	}
 
 	if lxIsInt {
@@ -333,13 +335,13 @@ func compare(a, b interface{}, opnd int) (bool, error) {
 		if rxIsStr {
 			rx, err := strconv.ParseFloat(rxS, 64)
 			if err != nil {
-				return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+				return false, errors.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 			}
 
 			return compareFloat(lxF, rx, opnd)
 		}
 
-		return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+		return false, errors.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 	}
 
 	if lxIsStr {
@@ -356,7 +358,31 @@ func compare(a, b interface{}, opnd int) (bool, error) {
 		}
 	}
 
-	return false, fmt.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+	return false, errors.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
+}
+
+func (v *VM) ParseTime(layout, value string) (tm time.Time) {
+	var err error
+	if v.loc != nil {
+		tm, err = time.ParseInLocation(layout, value, v.loc)
+	} else {
+		tm, err = time.Parse(layout, value)
+	}
+	if err != nil {
+		v.errorf("strptime (%v, %v, %v) failed: %s", layout, value, v.loc, err)
+		return
+	}
+	// Hack for yearless syslog.
+	if tm.Year() == 0 && v.syslogUseCurrentYear {
+		// No .UTC() as we use local time to match the local log.
+		now := time.Now()
+		// unless there's a timezone
+		if v.loc != nil {
+			now = now.In(v.loc)
+		}
+		tm = tm.AddDate(now.Year(), 0, 0)
+	}
+	return
 }
 
 // Execute performs an instruction cycle in the VM -- acting on the current
@@ -483,15 +509,7 @@ func (v *VM) execute(t *thread, i instr) {
 			ts = t.matches[re][s]
 		}
 		if tm, ok := v.timeMemos[ts]; !ok {
-			tm, err := time.Parse(layout, ts)
-			if err != nil {
-				v.errorf("time.Parse(%s, %s) failed: %s", layout, ts, err)
-			}
-			// Hack for yearless syslog.
-			if tm.Year() == 0 && v.syslogUseCurrentYear {
-				// No .UTC() as we use local time to match the local log.
-				tm = tm.AddDate(time.Now().Year(), 0, 0)
-			}
+			tm := v.ParseTime(layout, ts)
 			v.timeMemos[ts] = tm
 			t.time = tm
 		} else {
@@ -693,9 +711,10 @@ func (v *VM) processLine(logline *tailer.LogLine) {
 // Run executes the virtual machine on each line of input received.  When the
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
-func (v *VM) Run(_ uint32, lines <-chan *tailer.LogLine, shutdown chan<- struct{}) {
+func (v *VM) Run(_ uint32, lines <-chan *tailer.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
 	glog.Infof("Starting program %s", v.name)
 	defer close(shutdown)
+	close(started)
 	for line := range lines {
 		v.processLine(line)
 	}
@@ -704,7 +723,7 @@ func (v *VM) Run(_ uint32, lines <-chan *tailer.LogLine, shutdown chan<- struct{
 
 // New creates a new virtual machine with the given name, and compiler
 // artifacts for executable and data segments.
-func New(name string, obj *object, syslogUseCurrentYear bool) *VM {
+func New(name string, obj *object, syslogUseCurrentYear bool, loc *time.Location) *VM {
 	return &VM{
 		name:                 name,
 		re:                   obj.re,
@@ -713,6 +732,7 @@ func New(name string, obj *object, syslogUseCurrentYear bool) *VM {
 		prog:                 obj.prog,
 		timeMemos:            make(map[string]time.Time, 0),
 		syslogUseCurrentYear: syslogUseCurrentYear,
+		loc:                  loc,
 	}
 }
 

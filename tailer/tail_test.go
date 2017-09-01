@@ -4,6 +4,7 @@
 package tailer
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"sync"
@@ -20,7 +21,7 @@ func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, a
 	fs := afero.NewMemMapFs()
 	w := watcher.NewFakeWatcher()
 	lines := make(chan *LogLine, 1)
-	o := Options{lines, w, fs}
+	o := Options{lines, false, w, fs}
 	ta, err := New(o)
 	if err != nil {
 		t.Fatal(err)
@@ -180,34 +181,40 @@ func TestReadPartial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := ta.read(f, "")
-	if p != "" {
+	p := bytes.NewBufferString("")
+	err = ta.read(f, p)
+	if p.String() != "" {
 		t.Errorf("partial line returned not empty: %q", p)
 	}
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
+	p.Reset()
+	p.WriteString("o")
 	f.WriteString("hi")
 	f.Seek(0, 0)
-	p, err = ta.read(f, "o")
-	if p != "ohi" {
+	err = ta.read(f, p)
+	if p.String() != "ohi" {
 		t.Errorf("partial line returned not expected: %q", p)
 	}
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
-	p, err = ta.read(f, "")
+	p.Reset()
+	err = ta.read(f, p)
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
 	f.WriteString("\n")
 	f.Seek(-1, os.SEEK_END)
-	p, err = ta.read(f, "ohi")
+	p.Reset()
+	p.WriteString("ohi")
+	err = ta.read(f, p)
 	l := <-lines
 	if l.Line != "ohi" {
 		t.Errorf("line emitted not ohi: %q", l)
 	}
-	if p != "" {
+	if p.String() != "" {
 		t.Errorf("partial not empty: %q", p)
 	}
 	if err != io.EOF {
