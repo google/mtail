@@ -23,5 +23,3 @@ precommit/lint mode, compile and print errors to stderr
 use type information to effect bytecode generation
 
 typeerror for type missmatch containing expecte, received 
-
-Rewrite OneShot to use tailer or otherwise benchmark tailer.read()
