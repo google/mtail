@@ -10,9 +10,7 @@ package vm
 // moves.
 
 import (
-	"errors"
 	"expvar"
-	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -21,8 +19,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 
 	"github.com/google/mtail/metrics"
@@ -54,13 +54,13 @@ func (l *Loader) LoadProgs(programPath string) error {
 
 	s, err := os.Stat(programPath)
 	if err != nil {
-		return fmt.Errorf("failed to stat: %s", err)
+		return errors.Wrap(err, "failed to stat")
 	}
 	switch {
 	case s.IsDir():
 		fis, err := ioutil.ReadDir(programPath)
 		if err != nil {
-			return fmt.Errorf("Failed to list programs in %q: %s", programPath, err)
+			return errors.Wrapf(err, "Failed to list programs in %q", programPath)
 		}
 
 		for _, fi := range fis {
@@ -96,12 +96,15 @@ func (l *Loader) LoadProg(programPath string) error {
 	f, err := l.fs.Open(programPath)
 	if err != nil {
 		ProgLoadErrors.Add(name, 1)
-		return fmt.Errorf("Failed to read program %q: %s", programPath, err)
+		return errors.Wrapf(err, "Failed to read program %q", programPath)
 	}
 	defer f.Close()
 	l.programErrorMu.Lock()
 	defer l.programErrorMu.Unlock()
 	l.programErrors[name] = l.CompileAndRun(name, f)
+	if l.programErrors[name] != nil {
+		glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
+	}
 	return nil
 }
 
@@ -160,15 +163,16 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		EmitAst:              l.dumpAst,
 		EmitAstTypes:         l.dumpAstTypes,
 		SyslogUseCurrentYear: l.syslogUseCurrentYear,
+		OverrideLocation:     l.overrideLocation,
 	}
 	v, errs := Compile(name, input, o)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
-		return fmt.Errorf("compile failed for %s:\n%s", name, errs)
+		return errors.Errorf("compile failed for %s:\n%s", name, errs)
 	}
 	if v == nil {
 		ProgLoadErrors.Add(name, 1)
-		return fmt.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
+		return errors.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
 	}
 
 	if l.dumpBytecode {
@@ -238,11 +242,12 @@ type Loader struct {
 	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
-	compileOnly          bool // Only compile programs and report errors, do not load VMs.
-	dumpAst              bool // print the AST after parse
-	dumpAstTypes         bool // print the AST after type check
-	dumpBytecode         bool // Instructs the loader to dump to stdout the compiled program after compilation.
-	syslogUseCurrentYear bool // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
+	compileOnly          bool           // Only compile programs and report errors, do not load VMs.
+	dumpAst              bool           // print the AST after parse
+	dumpAstTypes         bool           // print the AST after type check
+	dumpBytecode         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
+	syslogUseCurrentYear bool           // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
+	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
 	omitMetricSource     bool
 }
 
@@ -255,12 +260,13 @@ type LoaderOptions struct {
 	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 
-	CompileOnly          bool
-	DumpAst              bool // print the AST after type check
-	DumpAstTypes         bool // Instructs the loader to dump to stdout the compiled program after compilation.
-	DumpBytecode         bool
-	SyslogUseCurrentYear bool
-	OmitMetricSource     bool // Don't put the source in the metric when added to the Store.
+	CompileOnly          bool           // Compile, don't start execution.
+	DumpAst              bool           // print the AST after type check
+	DumpAstTypes         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
+	DumpBytecode         bool           // Instructs the loader to dump the program bytecode after compilation.
+	SyslogUseCurrentYear bool           // If true, override empty year with the current in strptime().
+	OverrideLocation     *time.Location // if not nil, overrides the timezone in strptime().
+	OmitMetricSource     bool           // Don't put the source in the metric when added to the Store.
 }
 
 // NewLoader creates a new program loader.  It takes a filesystem watcher
@@ -279,9 +285,10 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		var err error
 		w, err = watcher.NewLogWatcher()
 		if err != nil {
-			return nil, fmt.Errorf("Couldn't create a watcher for loader: %s", err)
+			return nil, errors.Wrap(err, "Couldn't create a watcher for loader")
 		}
 	}
+
 	l := &Loader{
 		w:                    w,
 		ms:                   o.Store,
@@ -295,6 +302,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		dumpAstTypes:         o.DumpAstTypes,
 		dumpBytecode:         o.DumpBytecode,
 		syslogUseCurrentYear: o.SyslogUseCurrentYear,
+		overrideLocation:     o.OverrideLocation,
 		omitMetricSource:     o.OmitMetricSource,
 	}
 

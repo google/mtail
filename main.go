@@ -6,10 +6,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/mtail"
@@ -51,8 +53,9 @@ var logs seqStringFlag
 var logFds seqIntFlag
 
 var (
-	port  = flag.String("port", "3903", "HTTP port to listen on.")
-	progs = flag.String("progs", "", "Name of the directory containing mtail programs")
+	port    = flag.String("port", "3903", "HTTP port to listen on.")
+	address = flag.String("address", "", "Host or IP address on which to bind HTTP listener")
+	progs   = flag.String("progs", "", "Name of the directory containing mtail programs")
 
 	// Compiler behaviour flags
 	oneShot        = flag.Bool("one_shot", false, "Run the contents of the provided logs until EOF and exit.")
@@ -64,6 +67,7 @@ var (
 
 	// Runtime behaviour flags
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
+	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of the local zone.")
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 
 	// Debugging flags
@@ -95,6 +99,12 @@ func main() {
 	}
 	flag.Parse()
 	glog.Info(buildInfo())
+	glog.Infof("Commandline: %q", os.Args)
+	loc, err := time.LoadLocation(*overrideTimezone)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Couldn't parse timezone %q: %s", *overrideTimezone, err)
+		os.Exit(1)
+	}
 	if *blockProfileRate > 0 {
 		glog.Infof("Setting block profile rate to %d", *blockProfileRate)
 		runtime.SetBlockProfileRate(*blockProfileRate)
@@ -115,7 +125,7 @@ func main() {
 		Progs:                *progs,
 		LogPathPatterns:      logs,
 		LogFds:               logFds,
-		Port:                 *port,
+		BindAddress:          net.JoinHostPort(*address, *port),
 		OneShot:              *oneShot,
 		OneShotMetrics:       *oneShotMetrics,
 		CompileOnly:          *compileOnly,
@@ -123,6 +133,7 @@ func main() {
 		DumpAstTypes:         *dumpAstTypes,
 		DumpBytecode:         *dumpBytecode,
 		SyslogUseCurrentYear: *syslogUseCurrentYear,
+		OverrideLocation:     loc,
 		OmitProgLabel:        !*emitProgLabel,
 		BuildInfo:            buildInfo(),
 	}

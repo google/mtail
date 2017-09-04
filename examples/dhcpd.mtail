@@ -51,7 +51,7 @@ const MATCH_MAC /(?P<mac>([\da-f]{2}:){5}[\da-f]{2})/
     
 @syslog {
     # Request
-    /(balanced|balancing|bootreply|bootrequest|dhcpack|dhcpdecline|dhcpdiscover|dhcpinform|dhcpnak|dhcpoffer|dhcprelease|dhcprequest)/ {
+    /(balanced|balancing|BOOTREPLY|BOOTREQUEST|DHCPACK|DHCPDECLINE|DHCPDISCOVER|DHCPINFORM|DHCPNAK|DHCPOFFER|DHCPRELEASE|DHCPREQUEST)/ {
         # The lowercased name of the command matched in the regex is used to
         # count the frequency of each command.  An external collector can use
         # this to compute the rate of each command independently.

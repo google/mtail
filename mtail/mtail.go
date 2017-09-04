@@ -25,6 +25,7 @@ import (
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
@@ -48,7 +49,7 @@ func (m *MtailServer) OneShot(logfile string, print bool) (count int64, err erro
 	glog.Infof("Oneshot %q", logfile)
 	l, err := os.Open(logfile)
 	if err != nil {
-		return 0, fmt.Errorf("failed to open log file %q: %s", logfile, err)
+		return 0, errors.Wrapf(err, "failed to open log file %q", logfile)
 	}
 	defer l.Close()
 
@@ -71,7 +72,7 @@ Loop:
 			}
 			break Loop
 		case err != nil:
-			return 0, fmt.Errorf("failed to read from %q: %s", logfile, err)
+			return 0, errors.Wrapf(err, "failed to read from %q", logfile)
 		default:
 			m.lines <- tailer.NewLogLine(logfile, line)
 		}
@@ -95,7 +96,7 @@ func (m *MtailServer) StartTailing() error {
 	var err error
 	m.t, err = tailer.New(o)
 	if err != nil {
-		return fmt.Errorf("couldn't create a log tailer: %s", err)
+		return errors.Wrap(err, "couldn't create a log tailer")
 	}
 
 	for _, pattern := range m.o.LogPathPatterns {
@@ -127,6 +128,7 @@ func (m *MtailServer) InitLoader() error {
 		DumpAstTypes:         m.o.DumpAstTypes,
 		DumpBytecode:         m.o.DumpBytecode,
 		SyslogUseCurrentYear: m.o.SyslogUseCurrentYear,
+		OverrideLocation:     m.o.OverrideLocation,
 		OmitMetricSource:     m.o.OmitMetricSource,
 		W:                    m.o.W,
 		FS:                   m.o.FS,
@@ -137,9 +139,9 @@ func (m *MtailServer) InitLoader() error {
 		return err
 	}
 	if m.o.Progs != "" {
-		errors := m.l.LoadProgs(m.o.Progs)
-		if errors != nil {
-			return fmt.Errorf("Compile encountered errors:\n%s", errors)
+		errs := m.l.LoadProgs(m.o.Progs)
+		if errs != nil {
+			return errors.Errorf("Compile encountered errors:\n%s", errs)
 		}
 	}
 	return nil
@@ -148,10 +150,10 @@ func (m *MtailServer) InitLoader() error {
 const statusTemplate = `
 <html>
 <head>
-<title>mtail on :{{.Port}}</title>
+<title>mtail on {{.BindAddress}}</title>
 </head>
 <body>
-<h1>mtail on :{{.Port}}</h1>
+<h1>mtail on {{.BindAddress}}</h1>
 <p>Build: {{.BuildInfo}}</p>
 <p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
 <p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a></p>
@@ -165,10 +167,10 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		Port      string
-		BuildInfo string
+		BindAddress string
+		BuildInfo   string
 	}{
-		m.o.Port,
+		m.o.BindAddress,
 		m.o.BuildInfo,
 	}
 	w.Header().Add("Content-type", "text/html")
@@ -191,7 +193,7 @@ type Options struct {
 	Progs                string
 	LogPathPatterns      []string
 	LogFds               []int
-	Port                 string
+	BindAddress          string
 	OneShot              bool
 	OneShotMetrics       bool
 	CompileOnly          bool
@@ -199,6 +201,7 @@ type Options struct {
 	DumpAstTypes         bool
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
+	OverrideLocation     *time.Location
 	OmitMetricSource     bool
 	OmitProgLabel        bool
 
@@ -242,7 +245,7 @@ func (m *MtailServer) WriteMetrics(w io.Writer) error {
 	b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
 	m.store.RUnlock()
 	if err != nil {
-		return fmt.Errorf("failed to marshal metrics into json: %s", err)
+		return errors.Wrap(err, "failed to marshal metrics into json")
 	}
 	w.Write(b)
 	return nil
@@ -284,8 +287,8 @@ func (m *MtailServer) Serve() {
 	m.e.StartMetricPush()
 
 	go func() {
-		glog.Infof("Listening on port %s", m.o.Port)
-		err := http.ListenAndServe(":"+m.o.Port, nil)
+		glog.Infof("Listening on port %s", m.o.BindAddress)
+		err := http.ListenAndServe(m.o.BindAddress, nil)
 		if err != nil {
 			glog.Exit(err)
 		}
