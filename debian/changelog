@@ -1,4 +1,4 @@
-mtail (3.0.0~rc2-1) UNRELEASED; urgency=medium
+mtail (3.0.0~rc2-1) unstable; urgency=medium
 
   * New upstream release candidate.
   * Stop generating emgen binary, it is only used for tests.
@@ -7,7 +7,7 @@ mtail (3.0.0~rc2-1) UNRELEASED; urgency=medium
   * debian/control: Update Standards-Version (no changes).
   * debian/control: Replace golang-go with golang-any in Build-Depends.
 
- -- Martín Ferrari <tincho@debian.org>  Mon, 04 Sep 2017 01:47:11 +0000
+ -- Martín Ferrari <tincho@debian.org>  Mon, 04 Sep 2017 02:07:43 +0000
 
 mtail (3.0.0~rc1+git20170727.6db685b-1) unstable; urgency=medium
 
