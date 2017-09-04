@@ -1,4 +1,5 @@
 #!/usr/bin/make -f
+include /usr/share/dpkg/pkg-info.mk
 
 #export DH_VERBOSE=1
 export DH_GOPKG := github.com/google/mtail
@@ -7,13 +8,10 @@ export DH_GOLANG_INSTALL_EXTRA := examples/ testdata/ vm/parser.y
 # Build parser.go
 export DH_GOLANG_GO_GENERATE := 1
 
-DEBVERS    ?= $(shell dpkg-parsechangelog -SVersion)
-VERSION    ?= $(shell echo '$(DEBVERS)' | sed 's/^[[:digit:]]*://; s/[-].*//')
-
 BUILDDIR := $(CURDIR)/build
 BUILDFLAGS := -ldflags \
-  " -X main.Version=$(VERSION)\
-    -X main.Revision=$(DEBVERS)"
+  " -X main.Version=$(DEB_VERSION_UPSTREAM)\
+    -X main.Revision=$(DEB_VERSION)"
 
 %:
 	dh $@ --buildsystem=golang --with=golang --builddirectory=$(BUILDDIR)

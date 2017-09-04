@@ -1,8 +1,9 @@
-mtail (3.0.0~rc2) UNRELEASED; urgency=medium
+mtail (3.0.0~rc2-1) UNRELEASED; urgency=medium
 
   * New upstream release candidate.
   * Stop generating emgen binary, it is only used for tests.
   * Properly set version and revision variables.
+  * Replace dpkg-parsechangelog with /usr/share/dpkg/pkg-info.mk
 
  -- Martín Ferrari <tincho@debian.org>  Mon, 04 Sep 2017 01:47:11 +0000
 
