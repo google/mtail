@@ -1,9 +1,10 @@
-mtail (3.0.0~rc1+git20170727.6db685b-2) UNRELEASED; urgency=medium
+mtail (3.0.0~rc2) UNRELEASED; urgency=medium
 
+  * New upstream release candidate.
   * Stop generating emgen binary, it is only used for tests.
   * Properly set version and revision variables.
 
- -- Martín Ferrari <tincho@debian.org>  Mon, 31 Jul 2017 04:26:35 +0000
+ -- Martín Ferrari <tincho@debian.org>  Mon, 04 Sep 2017 01:47:11 +0000
 
 mtail (3.0.0~rc1+git20170727.6db685b-1) unstable; urgency=medium
 
