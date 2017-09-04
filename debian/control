@@ -4,23 +4,23 @@ Priority: extra
 Maintainer: Debian Go Packaging Team <pkg-go-maintainers@lists.alioth.debian.org>
 Uploaders: Martín Ferrari <tincho@debian.org>
 Build-Depends: debhelper (>= 9.0.0),
-               golang-go,
                dh-golang (>= 1.17~),
+               golang-any,
                golang-github-fsnotify-fsnotify-dev,
                golang-github-kylelemons-godebug-dev,
                golang-github-spf13-afero-dev,
                golang-glog-dev,
                golang-golang-x-tools,
-Standards-Version: 4.0.0
-Vcs-Git: https://anonscm.debian.org/git/pkg-go/packages/mtail.git/
-Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/mtail.git/
+Standards-Version: 4.1.0
+Vcs-Git: https://anonscm.debian.org/git/pkg-go/packages/mtail.git
+Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/mtail.git
 Homepage: https://github.com/google/mtail/
 XS-Go-Import-Path: github.com/google/mtail
 Testsuite: autopkgtest-pkg-go
 
 Package: mtail
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, adduser, daemon,
+Depends: adduser, daemon, ${misc:Depends}, ${shlibs:Depends}
 Conflicts: monkeytail
 Built-Using: ${misc:Built-Using}
 Description: Extract monitoring data from logs for collection in a timeseries database

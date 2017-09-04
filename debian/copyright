@@ -1,4 +1,4 @@
-Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: github.com/google/mtail
 Source: https://github.com/google/mtail
 
@@ -11,13 +11,13 @@ Copyright: 2016 Martín Ferrari <tincho@tincho.org>
 License: Apache-2.0
 
 Files: debian/patches/0002-Vendor_go-deep.patch
+Copyright: 2015-2017 Daniel Nichter
+License: Expat
 Comment:
  To avoid adding a tiny new package to the archive, this patch vendors the
  github.com/go-test/deep library.  Retrieved from:
  https://github.com/go-test/deep at commit:
  f49763a6ea0a91026be26f8213bebee726b4185f
-Copyright: 2015-2017 Daniel Nichter
-License: MIT
 
 License: Apache-2.0
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,7 @@ License: Apache-2.0
  On Debian systems, the full text of the Apache License version 2 can be found
  in the file `/usr/share/common-licenses/Apache-2.0'.
 
-License: MIT
+License: Expat
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights

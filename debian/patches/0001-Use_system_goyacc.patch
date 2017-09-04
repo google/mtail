@@ -1,6 +1,6 @@
-This patch forces go generate to use the installed goyacc, instead of trying to
-rebuild it from git.
-
+Description: Use_system_goyacc
+ This patch forces go generate to use the installed goyacc, instead of trying to
+ rebuild it from git.
 --- a/vm/compiler.go
 +++ b/vm/compiler.go
 @@ -2,7 +2,7 @@
