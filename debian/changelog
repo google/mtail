@@ -1,3 +1,9 @@
+mtail (3.0.0~rc1+git20170727.6db685b-1~bpo9+1) stretch-backports; urgency=medium
+
+  * Rebuild for stretch-backports.
+
+ -- Martín Ferrari <tincho@debian.org>  Mon, 04 Sep 2017 01:37:54 +0000
+
 mtail (3.0.0~rc1+git20170727.6db685b-1) unstable; urgency=medium
 
   * New upstream snapshot.
