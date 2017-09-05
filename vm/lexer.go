@@ -226,6 +226,9 @@ func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 	l.tokens <- token{kind: INVALID,
 		text: fmt.Sprintf(format, args...),
 		pos:  pos}
+	// Reset the current token
+	l.text = ""
+	l.startcol = l.col
 	return lexProg
 }
 
