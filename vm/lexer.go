@@ -16,51 +16,53 @@ type lexeme int
 
 // Printable names for lexemes.
 var lexemeName = map[lexeme]string{
-	EOF:        "EOF",
-	INVALID:    "INVALID",
-	LCURLY:     "LCURLY",
-	RCURLY:     "RCURLY",
-	LPAREN:     "LPAREN",
-	RPAREN:     "RPAREN",
-	LSQUARE:    "LSQUARE",
-	RSQUARE:    "RSQUARE",
-	COMMA:      "COMMA",
-	INC:        "INC",
-	MINUS:      "MINUS",
-	PLUS:       "PLUS",
-	MUL:        "MUL",
-	DIV:        "DIV",
-	POW:        "POW",
-	SHL:        "SHL",
-	SHR:        "SHR",
-	AND:        "AND",
-	OR:         "OR",
-	ADD_ASSIGN: "ADD_ASSIGN",
-	ASSIGN:     "ASSIGN",
-	LT:         "LT",
-	GT:         "GT",
-	LE:         "LE",
-	GE:         "GE",
-	EQ:         "EQ",
-	NE:         "NE",
-	REGEX:      "REGEX",
-	ID:         "ID",
-	CAPREF:     "CAPREF",
-	STRING:     "STRING",
-	BUILTIN:    "BUILTIN",
-	COUNTER:    "COUNTER",
-	GAUGE:      "GAUGE",
-	TIMER:      "TIMER",
-	AS:         "AS",
-	BY:         "BY",
-	HIDDEN:     "HIDDEN",
-	DEF:        "DEF",
-	DECO:       "DECO",
-	NEXT:       "NEXT",
-	CONST:      "CONST",
-	OTHERWISE:  "OTHERWISE",
-	ELSE:       "ELSE",
-	DEL:        "DEL",
+	EOF:          "EOF",
+	INVALID:      "INVALID",
+	LCURLY:       "LCURLY",
+	RCURLY:       "RCURLY",
+	LPAREN:       "LPAREN",
+	RPAREN:       "RPAREN",
+	LSQUARE:      "LSQUARE",
+	RSQUARE:      "RSQUARE",
+	COMMA:        "COMMA",
+	INC:          "INC",
+	MINUS:        "MINUS",
+	PLUS:         "PLUS",
+	MUL:          "MUL",
+	DIV:          "DIV",
+	POW:          "POW",
+	SHL:          "SHL",
+	SHR:          "SHR",
+	AND:          "AND",
+	OR:           "OR",
+	ADD_ASSIGN:   "ADD_ASSIGN",
+	ASSIGN:       "ASSIGN",
+	LT:           "LT",
+	GT:           "GT",
+	LE:           "LE",
+	GE:           "GE",
+	EQ:           "EQ",
+	NE:           "NE",
+	REGEX:        "REGEX",
+	ID:           "ID",
+	CAPREF:       "CAPREF",
+	STRING:       "STRING",
+	BUILTIN:      "BUILTIN",
+	COUNTER:      "COUNTER",
+	GAUGE:        "GAUGE",
+	TIMER:        "TIMER",
+	AS:           "AS",
+	BY:           "BY",
+	HIDDEN:       "HIDDEN",
+	DEF:          "DEF",
+	DECO:         "DECO",
+	NEXT:         "NEXT",
+	CONST:        "CONST",
+	OTHERWISE:    "OTHERWISE",
+	ELSE:         "ELSE",
+	DEL:          "DEL",
+	INTLITERAL:   "INTLITERAL",
+	FLOATLITERAL: "FLOATLITERAL",
 }
 
 func (t lexeme) String() string {
@@ -218,14 +220,13 @@ func (l *lexer) ignore() {
 	l.startcol = l.col
 }
 
-// errorf returns an error token and terminates the scanner by passing back a
-// nil state function to the state machine.
+// errorf returns an error token and resets the scanner
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 	pos := position{l.name, l.line, l.startcol, l.col - 1}
 	l.tokens <- token{kind: INVALID,
 		text: fmt.Sprintf(format, args...),
 		pos:  pos}
-	return nil
+	return lexProg
 }
 
 // State functions.
@@ -266,7 +267,14 @@ func lexProg(l *lexer) stateFn {
 		l.emit(COMMA)
 	case r == '-':
 		l.accept()
-		l.emit(MINUS)
+		switch r = l.next(); {
+		case isDigit(r):
+			l.backup()
+			return lexNumeric
+		default:
+			l.backup()
+			l.emit(MINUS)
+		}
 	case r == '+':
 		l.accept()
 		switch l.next() {
@@ -361,6 +369,7 @@ func lexProg(l *lexer) stateFn {
 	case r == '@':
 		return lexDecorator
 	case isDigit(r):
+		l.backup()
 		return lexNumeric
 	case isAlpha(r):
 		return lexIdentifier
@@ -369,6 +378,9 @@ func lexProg(l *lexer) stateFn {
 		l.emit(EOF)
 		// Stop the machine, we're done.
 		return nil
+	case r == '.':
+		l.backup()
+		return lexNumeric
 	default:
 		l.accept()
 		return l.errorf("Unexpected input: %q", r)
@@ -397,7 +409,6 @@ Loop:
 // Lex a numerical constant.
 func lexNumeric(l *lexer) stateFn {
 	kind := INTLITERAL
-	l.accept()
 Loop:
 	for {
 		switch r := l.next(); {
