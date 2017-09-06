@@ -71,6 +71,11 @@ const (
 	fset // Floating point assignment
 
 	getfilename // Push input.Filename onto the stack.
+
+	// Conversions
+	i2f // int to float
+	s2i // string to int
+	s2f // string to float
 )
 
 var opNames = map[opcode]string{
@@ -114,6 +119,9 @@ var opNames = map[opcode]string{
 	fpow:        "fpow",
 	fset:        "fset",
 	getfilename: "getfilename",
+	i2f:         "i2f",
+	s2i:         "s2i",
+	s2f:         "s2f",
 }
 
 var builtin = map[string]opcode{
@@ -656,7 +664,7 @@ func (v *VM) execute(t *thread, i instr) {
 		s := t.Pop().(string)
 		t.Push(len(s))
 
-	case strtol:
+	case s2i:
 		base, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
@@ -667,6 +675,21 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("%s", err)
 		}
 		t.Push(i)
+
+	case s2f:
+		str := t.Pop().(string)
+		f, err := strconv.ParseFloat(str, 64)
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(f)
+
+	case i2f:
+		i, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(float64(i))
 
 	case setmatched:
 		t.matched = i.opnd.(bool)
