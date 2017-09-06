@@ -179,11 +179,12 @@ func (c *checker) VisitAfter(node astNode) {
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
 			rType = Unify(Tl, Tr)
-		case ASSIGN:
+		case ASSIGN, ADD_ASSIGN:
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr
 			// ⇒ O ⊢ e : Tl
 			rType = Unify(Tl, Tr)
+
 		default:
 			if Tl != Tr {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%v) and rhs (%v) for op %q", Tl, Tr, n.op))
