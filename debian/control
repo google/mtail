@@ -8,7 +8,7 @@ Build-Depends: debhelper (>= 9.0.0),
                golang-any,
                golang-github-fsnotify-fsnotify-dev,
                golang-github-kylelemons-godebug-dev,
-               golang-github-spf13-afero-dev,
+               golang-github-spf13-afero-dev (>= 0.0~git20170901),
                golang-glog-dev,
                golang-golang-x-tools,
 Standards-Version: 4.1.0
