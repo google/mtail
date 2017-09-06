@@ -95,14 +95,15 @@ var (
 	Undef  = &TypeOperator{"Undef", []Type{}}
 	Error  = &TypeOperator{"Error", []Type{}}
 	None   = &TypeOperator{"None", []Type{}}
+	Bool   = &TypeOperator{"Bool", []Type{}}
 	Int    = &TypeOperator{"Int", []Type{}}
 	Float  = &TypeOperator{"Float", []Type{}}
 	String = &TypeOperator{"String", []Type{}}
 )
 
 var Builtins = map[string]Type{
-	"int": Function(NewTypeVariable(), Int),
-	//"bool":        Function(NewTypeVariable(), Bool),
+	"int":         Function(NewTypeVariable(), Int),
+	"bool":        Function(NewTypeVariable(), Bool),
 	"float":       Function(NewTypeVariable(), Float),
 	"string":      Function(NewTypeVariable(), String),
 	"timestamp":   Function(Int),
