@@ -90,9 +90,13 @@ var keywords = map[string]lexeme{
 
 // List of builtin functions.  Keep this list sorted!
 var builtins = []string{
+	"bool",
+	"float",
 	"getfilename",
+	"int",
 	"len",
 	"settime",
+	"string",
 	"strptime",
 	"strtol",
 	"timestamp",
