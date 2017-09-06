@@ -328,7 +328,7 @@ func (c *checker) VisitAfter(node astNode) {
 		types = append(types, rType)
 
 		fn := Function(types...)
-		err := Unify(fn, n.Type())
+		err := Unify(n.Type(), fn)
 		if err != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.name, err))
 			// TODO: put type on expression tree
