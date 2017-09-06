@@ -101,6 +101,10 @@ var (
 )
 
 var Builtins = map[string]Type{
+	"int": Function(NewTypeVariable(), Int),
+	//"bool":        Function(NewTypeVariable(), Bool),
+	"float":       Function(NewTypeVariable(), Float),
+	"string":      Function(NewTypeVariable(), String),
 	"timestamp":   Function(Int),
 	"len":         Function(String, Int),
 	"settime":     Function(Int, None),
