@@ -1,5 +1,6 @@
 gauge should_be_int
 gauge should_be_float
+counter neg
 
 # To make ex_test.go happy
 strptime("2017-07-15T18:03:14Z", "2006-01-02T15:04:05Z07:00")
@@ -10,4 +11,11 @@ strptime("2017-07-15T18:03:14Z", "2006-01-02T15:04:05Z07:00")
 
 /(\d+\.\d+)/ {
   should_be_float = $1
+}
+
+
+/(?P<bar>[+-]?[\d.]+)/ {
+  $bar < -1 {
+    neg++
+  }
 }

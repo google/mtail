@@ -21,7 +21,7 @@ func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, a
 	fs := afero.NewMemMapFs()
 	w := watcher.NewFakeWatcher()
 	lines := make(chan *LogLine, 1)
-	o := Options{lines, w, fs}
+	o := Options{lines, false, w, fs}
 	ta, err := New(o)
 	if err != nil {
 		t.Fatal(err)
