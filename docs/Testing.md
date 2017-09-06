@@ -19,6 +19,8 @@ You can use this to check your programs are syntactically valid during the devel
 mtail --compile_only --progs ./progs
 ```
 
+This could be added as a pre-commit hook to your source code repository.
+
 ## Testing programs
 
 The `one_shot` flag will compile and run the `mtail` programs, then feed in any logs specified from the beginning of the file (instead of tailing them), then print to the log all metrics collected.
