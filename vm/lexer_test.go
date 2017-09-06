@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 )
 
 type lexerTest struct {
@@ -104,12 +104,16 @@ var lexerTests = []lexerTest{
 			token{BUILTIN, "getfilename", position{"builtins", 6, 0, 10}},
 			token{NL, "\n", position{"builtins", 7, 11, -1}},
 			token{EOF, "", position{"builtins", 7, 0, 0}}}},
-	{"numeric", "1 23 3.14 1.61.1", []token{
-		token{INTLITERAL, "1", position{"numeric", 0, 0, 0}},
-		token{INTLITERAL, "23", position{"numeric", 0, 2, 3}},
-		token{FLOATLITERAL, "3.14", position{"numeric", 0, 5, 8}},
-		token{FLOATLITERAL, "1.61", position{"numeric", 0, 10, 13}},
-		token{INVALID, "Unexpected input: '.'", position{"numeric", 0, 14, 14}}}},
+	{"numbers", "1 23 3.14 1.61.1 -1 -1.0", []token{
+		token{INTLITERAL, "1", position{"numbers", 0, 0, 0}},
+		token{INTLITERAL, "23", position{"numbers", 0, 2, 3}},
+		token{FLOATLITERAL, "3.14", position{"numbers", 0, 5, 8}},
+		token{FLOATLITERAL, "1.61", position{"numbers", 0, 10, 13}},
+		token{FLOATLITERAL, ".1", position{"numbers", 0, 14, 15}},
+		token{INTLITERAL, "-1", position{"numbers", 0, 17, 18}},
+		token{FLOATLITERAL, "-1.0", position{"numbers", 0, 20, 23}},
+		token{EOF, "", position{"numbers", 0, 24, 24}},
+	}},
 	{"identifier", "a be foo\nquux line-count", []token{
 		token{ID, "a", position{"identifier", 0, 0, 0}},
 		token{ID, "be", position{"identifier", 0, 2, 3}},
@@ -185,12 +189,15 @@ var lexerTests = []lexerTest{
 			token{EOF, "", position{"linecount", 3, 3, 3}}}},
 	// errors
 	{"unexpected char", "?", []token{
-		token{INVALID, "Unexpected input: '?'", position{"unexpected char", 0, 0, 0}}}},
+		token{INVALID, "Unexpected input: '?'", position{"unexpected char", 0, 0, 0}},
+		token{EOF, "", position{"unexpected char", 0, 1, 1}}}},
 	{"unterminated regex", "/foo\n", []token{
 		token{DIV, "/", position{"unterminated regex", 0, 0, 0}},
-		token{INVALID, "Unterminated regular expression: \"/foo\"", position{"unterminated regex", 0, 1, 3}}}},
+		token{INVALID, "Unterminated regular expression: \"/foo\"", position{"unterminated regex", 0, 1, 3}},
+		token{EOF, "", position{"unterminated regex", 0, 4, 4}}}},
 	{"unterminated quoted string", "\"foo\n", []token{
-		token{INVALID, "Unterminated quoted string: \"\\\"foo\"", position{"unterminated quoted string", 0, 0, 3}}}},
+		token{INVALID, "Unterminated quoted string: \"\\\"foo\"", position{"unterminated quoted string", 0, 0, 3}},
+		token{EOF, "", position{"unterminated quoted string", 0, 4, 4}}}},
 }
 
 // collect gathers the emitted items into a slice.
@@ -206,26 +213,23 @@ func collect(t *lexerTest) (tokens []token) {
 			in_regex_set = true
 		}
 		tokens = append(tokens, token)
-		if token.kind == EOF || token.kind == INVALID {
-			break
+		if token.kind == EOF {
+			return
 		}
 	}
 	return
 }
 
 func TestLex(t *testing.T) {
-	defaultCompareUnexportedFields := deep.CompareUnexportedFields
-	deep.CompareUnexportedFields = true
-	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
-
 	for _, tc := range lexerTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			tokens := collect(&tc)
 
-			if diff := deep.Equal(tc.tokens, tokens); diff != nil {
-				t.Error(diff)
+			if diff := go_cmp.Diff(tc.tokens, tokens, go_cmp.AllowUnexported(token{}, position{})); diff != "" {
+				t.Errorf("-expected +received\n%s", diff)
+				t.Logf("received: %v", tokens)
 			}
 		})
 	}

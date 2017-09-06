@@ -120,7 +120,7 @@ func (t *Tailer) isWatching(path string) bool {
 // all paths that match the glob are opened and watched, and the directories
 // containing those matches, if any, are watched.
 func (t *Tailer) Tail(pattern string) error {
-	matches, err := filepath.Glob(pattern)
+	matches, err := afero.Glob(t.fs, pattern)
 	if err != nil {
 		return err
 	}

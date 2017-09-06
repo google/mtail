@@ -147,7 +147,6 @@ type Options struct {
 	LogFds               []int
 	BindAddress          string
 	OneShot              bool
-	OneShotMetrics       bool
 	CompileOnly          bool
 	DumpAst              bool
 	DumpAstTypes         bool
@@ -278,11 +277,9 @@ func (m *MtailServer) Run() error {
 	}
 	if m.o.OneShot {
 		m.Close()
-		if m.o.OneShotMetrics {
-			fmt.Printf("Metrics store:")
-			if err := m.WriteMetrics(os.Stdout); err != nil {
-				return err
-			}
+		fmt.Printf("Metrics store:")
+		if err := m.WriteMetrics(os.Stdout); err != nil {
+			return err
 		}
 	} else {
 		m.Serve()
