@@ -129,7 +129,7 @@ var builtin = map[string]opcode{
 	"len":         length,
 	"settime":     settime,
 	"strptime":    strptime,
-	"strtol":      strtol,
+	"strtol":      s2i,
 	"tolower":     tolower,
 	"getfilename": getfilename,
 }
