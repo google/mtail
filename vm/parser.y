@@ -158,6 +158,7 @@ assign_expr
   }
   | unary_expr ADD_ASSIGN bitwise_expr
   {
+    // TODO(jaq): no need to expand this out, make it a single instruction to incby
     $$ = &binaryExprNode{lhs: $1, rhs: &binaryExprNode{lhs: $1, rhs: $3, op: PLUS}, op: ASSIGN}
   }
   ;
