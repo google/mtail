@@ -222,7 +222,7 @@ func (c *checker) VisitAfter(node astNode) {
 				return
 			}
 			rType = Int
-		case ASSIGN:
+		case ASSIGN, ADD_ASSIGN:
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr
 			// ⇒ O ⊢ e : Tl

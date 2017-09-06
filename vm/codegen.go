@@ -253,6 +253,9 @@ func (c *codegen) VisitAfter(node astNode) {
 		case NE:
 			c.emit(instr{cmp, 0})
 			c.emit(instr{op: jm})
+		case ADD_ASSIGN:
+			// When operand is not nil, inc pops the delta from the stack.
+			c.emit(instr{inc, 0})
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
 			switch n.Type() {
 			case Int, Float:
