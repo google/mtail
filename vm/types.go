@@ -115,7 +115,7 @@ var Builtins = map[string]Type{
 	"getfilename": Function(String),
 }
 
-func FreshType(t Type, nongeneric []Type) Type {
+func FreshType(t Type) Type {
 	mappings := make(map[*TypeVariable]*TypeVariable, 0)
 
 	var freshRec func(Type) Type
@@ -123,28 +123,23 @@ func FreshType(t Type, nongeneric []Type) Type {
 		p := tp.Root()
 		switch p1 := p.(type) {
 		case *TypeVariable:
-			if isGeneric(p1, nongeneric) {
-				if _, ok := mappings[p1]; !ok {
-					mappings[p1] = NewTypeVariable()
-				}
-				return mappings[p1]
-			} else {
-				return p1
+			if _, ok := mappings[p1]; !ok {
+				mappings[p1] = NewTypeVariable()
 			}
+			return mappings[p1]
 		case *TypeOperator:
-			args := make([]Type, len(p1.Args))
+			args := make([]Type, 0, len(p1.Args))
 			for _, arg := range p1.Args {
 				args = append(args, freshRec(arg))
 			}
+			glog.Infof("Type operator")
 			return &TypeOperator{p1.Name, args}
+		default:
+			glog.Infof("What is a p1? %q", p1)
 		}
-		return nil
+		return tp
 	}
 	return freshRec(t)
-}
-
-func isGeneric(v *TypeVariable, nongeneric []Type) bool {
-	return !occursIn(v, nongeneric)
 }
 
 func occursIn(v *TypeVariable, types []Type) bool {
@@ -157,10 +152,6 @@ func occursIn(v *TypeVariable, types []Type) bool {
 }
 
 func occursInType(v *TypeVariable, t2 Type) bool {
-	glog.Infof("v %v t2 %v", v, t2)
-	// if t2 == nil {
-	// 	return false
-	// }
 	root := t2.Root()
 	if Equals(root, v) {
 		return true
@@ -228,8 +219,15 @@ func Unify(a, b Type) error {
 				if t == Error {
 					return &TypeError{a2, b2}
 				}
-				a, b = t, t
-				glog.Infof("post Lub a %v b %v", a, b)
+				// err := Unify(t, a2)
+				// if err != nil {
+				// 	return err
+				// }
+				// err = Unify(t, b2)
+				// if err != nil {
+				// 	return err
+				// }
+				glog.Infof("post Lub t:= %q a %v b %v", t, a, b)
 				return nil
 			}
 			for i, argA := range a2.Args {
