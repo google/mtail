@@ -158,7 +158,7 @@ assign_expr
   }
   | unary_expr ADD_ASSIGN bitwise_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: &binaryExprNode{lhs: $1, rhs: $3, op: PLUS}, op: ASSIGN}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: ADD_ASSIGN}
   }
   ;
 
