@@ -428,6 +428,23 @@ getfilename()
 			instr{s2i, 1},
 			instr{iset, nil},
 			instr{setmatched, true}}},
+	{"string to float",
+		`counter c
+/(\d)/ {
+  c = float($1)
+}
+`,
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 10},
+			instr{setmatched, false},
+			instr{mload, 0},
+			instr{dload, 0},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{s2f, 1}, // TODO(jaq): This should be i2f because $1 is type Int
+			instr{iset, nil},
+			instr{setmatched, true}}},
 }
 
 func TestCodegen(t *testing.T) {
