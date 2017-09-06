@@ -1,6 +1,7 @@
-mtail (3.0.0~rc2+git20170906.9d26d81-1) UNRELEASED; urgency=medium
+mtail (3.0.0~rc2+git20170906.9d26d81-1) UNRELEASED; urgency=high
 
   * New upstream snapshot, with bug fixes.
+  * debian/rules: Fix compilation on mips* (raising urgency).
 
  -- Martín Ferrari <tincho@debian.org>  Wed, 06 Sep 2017 12:55:40 +0000
 
