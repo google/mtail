@@ -211,7 +211,7 @@ func TestCheckTypeExpressions(t *testing.T) {
 				t.Error(diff)
 				s := Sexp{}
 				s.emitTypes = true
-				t.Log(s.Dump(tc.expr))
+				t.Log("Typed AST:\n" + s.Dump(tc.expr))
 			}
 		})
 	}
