@@ -59,7 +59,7 @@ var (
 
 	// Compiler behaviour flags
 	oneShot        = flag.Bool("one_shot", false, "Run the contents of the provided logs until EOF and exit.")
-	oneShotMetrics = flag.Bool("one_shot_metrics", false, "Dump metrics (to stdout) after one shot mode.")
+	oneShotMetrics = flag.Bool("one_shot_metrics", false, "DEPRECATED: Dump metrics (to stdout) after one shot mode.")
 	compileOnly    = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
 	dumpAst        = flag.Bool("dump_ast", false, "Dump AST of programs after parse (to INFO log).")
 	dumpAstTypes   = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck (to INFO log).")
@@ -127,7 +127,6 @@ func main() {
 		LogFds:               logFds,
 		BindAddress:          net.JoinHostPort(*address, *port),
 		OneShot:              *oneShot,
-		OneShotMetrics:       *oneShotMetrics,
 		CompileOnly:          *compileOnly,
 		DumpAst:              *dumpAst,
 		DumpAstTypes:         *dumpAstTypes,
