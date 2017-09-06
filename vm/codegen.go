@@ -211,10 +211,20 @@ var typedOperators = map[int]map[Type]opcode{
 func (c *codegen) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *builtinNode:
+		arglen := 0
 		if n.args != nil {
-			c.emit(instr{builtin[n.name], len(n.args.(*exprlistNode).children)})
-		} else {
-			c.emit(instr{op: builtin[n.name]})
+			arglen = len(n.args.(*exprlistNode).children)
+		}
+		switch n.name {
+		case "string", "bool":
+			// TODO(jaq): Nothing, no support in VM yet.
+
+		case "int":
+			// Force a base 10 parse.
+			c.emit(instr{push, 10})
+			fallthrough
+		default:
+			c.emit(instr{builtin[n.name], arglen})
 		}
 	case *unaryExprNode:
 		switch n.op {

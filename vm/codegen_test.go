@@ -410,6 +410,24 @@ getfilename()
 			instr{dload, 3},
 			instr{inc, nil},
 			instr{setmatched, true}}},
+	{"string to int",
+		`counter c
+/(\d)/ {
+  c = int($1)
+}
+`,
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 10},
+			instr{setmatched, false},
+			instr{mload, 0},
+			instr{dload, 0},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{push, 10},
+			instr{s2i, 1},
+			instr{iset, nil},
+			instr{setmatched, true}}},
 }
 
 func TestCodegen(t *testing.T) {

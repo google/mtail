@@ -125,13 +125,15 @@ var opNames = map[opcode]string{
 }
 
 var builtin = map[string]opcode{
-	"timestamp":   timestamp,
+	"int":         s2i,
+	"float":       s2f,
+	"getfilename": getfilename,
 	"len":         length,
 	"settime":     settime,
 	"strptime":    strptime,
 	"strtol":      s2i,
+	"timestamp":   timestamp,
 	"tolower":     tolower,
-	"getfilename": getfilename,
 }
 
 type instr struct {
