@@ -6,7 +6,7 @@ It resembles another, more famous pattern-action language, that of AWK.
 
 This page errs on the side of a language specification and reference.  See the [Programming Guide](Programming-Guide) for a gentler introduction to writing `mtail` programs.
 
-# Details
+# Program Execution
 
 `mtail` runs all programs on every line received by the log tailing subsystem.  The rough model of this looks like:
 
@@ -17,7 +17,20 @@ for line in lines:
       do something
 ```
 
-Thus, it is useful to keep in mind that each program is acting on a single line of log data, then terminates.
+Thus it is useful to keep in mind that each program is acting on a single line of log data, then terminates.
+
+An `mtail` program consists of exported variable definitions, pattern-action statements, and optional decorator definitions.
+
+    exported variable
+    
+    pattern {
+      action statements
+    }
+    
+    def decorator {
+      pattern and action statements
+    }
+    
 
 ## Exported Variables
 
@@ -55,7 +68,7 @@ COND {
 }
 ```
 
-COND is a conditional expression.  It can be a regular expression, which if matched, enters the action block, or a relational expression, as you might see in a C program's `if` statement:
+COND is a conditional expression.  It can be a regular expression, which if matched enters the action block, or a relational expression as you might encounter in a C program's `if` statement:
 
 ```
 /foo/ {
@@ -70,6 +83,10 @@ variable > 0 {
 In the above program, ACTION1 is taken on each line input if that line matches the word `foo`, and ACTION2 is taken on each line if when that line is read, the variable `variable` is greater than 0.
 
 The action statements must be wrapped in curly braces, i.e. `{}`.  `mtail` programs have no single-line statement conditionals like C.
+
+## Regular Expressions
+
+`mtail` supports RE2-style regular expression syntax.
 
 ## Single definition of constants
 
@@ -181,8 +198,6 @@ gauge f
 ```
 
 the metric `i` will be of type Int and the metric `f` will be of type Float.
-
-
 
 ## Timestamps
 
