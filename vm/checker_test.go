@@ -144,6 +144,11 @@ var checkerValidPrograms = []struct {
 	//   foo[$1,$2][0]++
 	// }
 	// `},
+	{"implicit int",
+		`counter foo
+/$/ {
+  foo++
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

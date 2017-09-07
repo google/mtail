@@ -62,12 +62,16 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
 		}
-		// One type per key and one for the value.
-		keyTypes := make([]Type, 0, len(n.keys)+1)
-		for i := 0; i <= len(n.keys); i++ {
-			keyTypes = append(keyTypes, NewTypeVariable())
+		if len(n.keys) == 0 {
+			n.sym.Type = NewTypeVariable()
+		} else {
+			// One type per key and one for the value.
+			keyTypes := make([]Type, 0, len(n.keys)+1)
+			for i := 0; i <= len(n.keys); i++ {
+				keyTypes = append(keyTypes, NewTypeVariable())
+			}
+			n.sym.Type = Function(keyTypes...)
 		}
-		n.sym.Type = Function(keyTypes...)
 		glog.Infof("Making type of %s now %s", n.name, n.sym.Type)
 
 	case *idNode:
@@ -205,9 +209,9 @@ func (c *checker) VisitAfter(node astNode) {
 			// O ⊢ e1 :Int, O ⊢ e2 : Int
 			// ⇒ O ⊢ e : Int
 			rType = Int
-			opType := Function(rType, rType, rType)
-			exprType := Function(lT, rT, NewTypeVariable())
-			err := Unify(opType, exprType)
+			exprType := Function(rType, rType, rType)
+			astType := Function(lT, rT, NewTypeVariable())
+			err := Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
 				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, lT, rT))
