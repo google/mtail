@@ -154,11 +154,9 @@ func TestCheckValidPrograms(t *testing.T) {
 			ast, err := Parse(tc.name, strings.NewReader(tc.program))
 			s := Sexp{}
 			s.emitTypes = true
-			t.Log(s.Dump(ast))
+			t.Log("Typed AST:\n" + s.Dump(ast))
 			if err != nil {
-				s := Sexp{}
-				s.emitTypes = true
-				t.Fatal(s.Dump(ast))
+				t.Fatal(err)
 			}
 			err = Check(ast)
 			if err != nil {
