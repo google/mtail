@@ -152,6 +152,9 @@ func TestCheckValidPrograms(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ast, err := Parse(tc.name, strings.NewReader(tc.program))
+			if err != nil {
+				t.Fatal(err)
+			}
 			s := Sexp{}
 			s.emitTypes = true
 			t.Log("Typed AST:\n" + s.Dump(ast))
