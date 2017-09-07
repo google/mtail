@@ -155,13 +155,10 @@ func TestCheckValidPrograms(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			err = Check(ast)
 			s := Sexp{}
 			s.emitTypes = true
 			t.Log("Typed AST:\n" + s.Dump(ast))
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = Check(ast)
 			if err != nil {
 				t.Errorf("check failed: %s", err)
 			}
