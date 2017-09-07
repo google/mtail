@@ -181,11 +181,20 @@ func (c *checker) VisitAfter(node astNode) {
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
 			glog.Info("arith op")
-			rType = NewTypeVariable()
-			opType := Function(rType, rType, rType)
-			exprType := Function(lT, rT, NewTypeVariable())
-			err := Unify(opType, exprType)
-			glog.Infof("post unify of %v op is %v, %v", n, opType, rType)
+			rType = LeastUpperBound(lT, rT)
+			if isErrorType(rType) {
+				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have nothing in common", lT, rT))
+				n.SetType(Error)
+				return
+			}
+			// astType is the type signature of the ast expression
+			astType := Function(lT, rT, rType)
+
+			t := NewTypeVariable()
+			// exprType is the type signature of this expression
+			exprType := Function(t, t, t)
+			err := Unify(exprType, astType)
+			glog.Infof("post unify of %v op is %v, %v", n, exprType, rType)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(Error)
@@ -210,18 +219,22 @@ func (c *checker) VisitAfter(node astNode) {
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
-			rType = Int
+			rType = LeastUpperBound(lT, rT)
+			if isErrorType(rType) {
+				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have nothing in common", lT, rT))
+				n.SetType(Error)
+				return
+			}
+			astType := Function(lT, rT, NewTypeVariable())
+
 			t := NewTypeVariable()
-			// rType = NewTypeVariable()
-			opType := Function(t, t, rType)
-			exprType := Function(lT, rT, NewTypeVariable())
-			err := Unify(opType, exprType)
+			exprType := Function(t, t, Int)
+			err := Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
 				n.SetType(Error)
 				return
 			}
-			rType = Int
 		case ASSIGN, ADD_ASSIGN:
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr
@@ -305,11 +318,15 @@ func (c *checker) VisitAfter(node astNode) {
 			n.SetType(Error)
 			return
 		}
+		glog.Infof("args is now %q", argTypes)
 		rType := NewTypeVariable()
 		argTypes = append(argTypes, rType)
 		fn := Function(argTypes...)
-		err := Unify(fn, n.lhs.Type())
+		glog.Infof("We think this expr is of type %q", fn)
+		glog.Infof("It shouldbe of type %q", n.lhs.Type())
+		err := Unify(n.lhs.Type(), fn)
 		if err != nil {
+			glog.Info("that's an error")
 			c.errors.Add(n.Pos(), fmt.Sprintf("index lookup: %s", err))
 			n.SetType(Error)
 			return
