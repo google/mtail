@@ -120,9 +120,11 @@ func (n *caprefNode) Type() Type {
 }
 
 type builtinNode struct {
-	pos  position
-	name string
-	args astNode
+	pos   position
+	name  string
+	args  astNode
+	typMu sync.RWMutex
+	typ   Type
 }
 
 func (n *builtinNode) Pos() *position {
@@ -130,7 +132,15 @@ func (n *builtinNode) Pos() *position {
 }
 
 func (n *builtinNode) Type() Type {
-	return Builtins[n.name]
+	n.typMu.RLock()
+	defer n.typMu.RUnlock()
+	return n.typ
+}
+
+func (n *builtinNode) SetType(t Type) {
+	n.typMu.Lock()
+	defer n.typMu.Unlock()
+	n.typ = t
 }
 
 type binaryExprNode struct {

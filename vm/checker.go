@@ -187,8 +187,8 @@ func (c *checker) VisitAfter(node astNode) {
 			glog.Info("arith op")
 			rType = LeastUpperBound(lT, rT)
 			if isErrorType(rType) {
-				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have nothing in common", lT, rT))
-				n.SetType(Error)
+				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
+				n.SetType(rType)
 				return
 			}
 			// astType is the type signature of the ast expression
@@ -225,8 +225,8 @@ func (c *checker) VisitAfter(node astNode) {
 			// ⇒ O ⊢ e : lub(Tl, Tr)
 			rType = LeastUpperBound(lT, rT)
 			if isErrorType(rType) {
-				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have nothing in common", lT, rT))
-				n.SetType(Error)
+				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
+				n.SetType(rType)
 				return
 			}
 			astType := Function(lT, rT, NewTypeVariable())
@@ -349,13 +349,13 @@ func (c *checker) VisitAfter(node astNode) {
 		types = append(types, rType)
 
 		fn := Function(types...)
-		fresh := FreshType(n.Type())
+		fresh := FreshType(Builtins[n.name])
 		err := Unify(fresh, fn)
 		if err != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.name, err))
-			// TODO: put type on expression tree
-			// n.SetType(Error)
+			n.SetType(Error)
 			return
 		}
+		n.SetType(rType)
 	}
 }

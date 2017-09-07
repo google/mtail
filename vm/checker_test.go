@@ -149,6 +149,8 @@ var checkerValidPrograms = []struct {
 /$/ {
   foo++
 }`},
+	{"function return value",
+		`len("foo") > 0 {}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {
