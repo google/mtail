@@ -215,18 +215,10 @@ func Unify(a, b Type) error {
 				return &TypeError{a2, b2}
 			}
 			if a2.Name != b2.Name {
-				t := leastUpperBound(a, b)
+				t := LeastUpperBound(a, b)
 				if t == Error {
 					return &TypeError{a2, b2}
 				}
-				// err := Unify(t, a2)
-				// if err != nil {
-				// 	return err
-				// }
-				// err = Unify(t, b2)
-				// if err != nil {
-				// 	return err
-				// }
 				glog.Infof("post Lub t:= %q a %v b %v", t, a, b)
 				return nil
 			}
@@ -242,14 +234,20 @@ func Unify(a, b Type) error {
 	return nil
 }
 
-func leastUpperBound(a, b Type) Type {
+func LeastUpperBound(a, b Type) Type {
 	glog.Infof("Lub a %v b %v", a, b)
 	a1, b1 := a.Root(), b.Root()
 
 	if Equals(a1, b1) {
 		return a1
 	}
-	// least upper bound
+	// If either is a TypeVariable, the other is the lub
+	if _, ok := a1.(*TypeVariable); ok {
+		return b1
+	}
+	if _, ok := b1.(*TypeVariable); ok {
+		return a1
+	}
 	if (Equals(a1, Float) && Equals(b1, Int)) ||
 		(Equals(b1, Float) && Equals(a1, Int)) {
 		glog.Infof("Lub is Float")
