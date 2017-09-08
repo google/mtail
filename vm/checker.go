@@ -229,7 +229,7 @@ func (c *checker) VisitAfter(node astNode) {
 				n.SetType(rType)
 				return
 			}
-			astType := Function(lT, rT, NewTypeVariable())
+			astType := Function(lT, rT, rType)
 
 			t := NewTypeVariable()
 			exprType := Function(t, t, Int)
@@ -239,20 +239,22 @@ func (c *checker) VisitAfter(node astNode) {
 				n.SetType(Error)
 				return
 			}
+
 		case ASSIGN, ADD_ASSIGN:
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
-			// Tl <= Tr
+			// Tr <= Tl
 			// ⇒ O ⊢ e : Tl
 			// glog.Infof("Tl: %v TR: %v", Tl, Tr)
-			rType = NewTypeVariable()
-			opType := Function(rType, NewTypeVariable(), rType)
-			exprType := Function(lT, rT, NewTypeVariable())
-			err := Unify(opType, exprType)
+			rType = lT
+			//glog.Infof("LUB of %q and %q is %q", lT, rT, rType)
+			// e1 = e1 + e2
+			err := Unify(rType, rT)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(Error)
 				return
 			}
+
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator in node %v", n))
 			n.SetType(Error)

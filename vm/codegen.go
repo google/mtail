@@ -257,11 +257,11 @@ func (c *codegen) VisitAfter(node astNode) {
 			// When operand is not nil, inc pops the delta from the stack.
 			c.emit(instr{inc, 0})
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
-			switch n.Type() {
-			case Int, Float:
-				c.emit(instr{op: typedOperators[n.op][n.Type()]})
+			switch t := n.Type(); {
+			case Equals(t, Int), Equals(t, Float):
+				c.emit(instr{op: typedOperators[n.op][t]})
 			default:
-				c.errorf(n.Pos(), "Invalid type for binary expression: %q", n.Type())
+				c.errorf(n.Pos(), "Invalid type for binary expression: %v", n.Type())
 			}
 		case AND:
 			c.emit(instr{op: and})

@@ -151,6 +151,14 @@ var checkerValidPrograms = []struct {
 }`},
 	{"function return value",
 		`len("foo") > 0 {}`},
+	{"conversions",
+		`counter i
+	counter f
+	/(.*)/ {
+	  i = int($1)
+	  f = float($1)
+	}
+	`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

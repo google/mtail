@@ -461,12 +461,12 @@ func TestCodegen(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Check error: %s", err)
 			}
+			s := Sexp{}
+			s.emitTypes = true
+			t.Log("Typed AST:\n" + s.Dump(ast))
 			obj, err := CodeGen(tc.name, ast)
 			if err != nil {
-				t.Errorf("Compile errors:\n%s", err)
-				s := Sexp{}
-				s.emitTypes = true
-				t.Fatalf("AST:\n%s", s.Dump(ast))
+				t.Fatalf("Codegen error:\n%s", err)
 			}
 
 			if diff := deep.Equal(tc.prog, obj.prog); diff != nil {

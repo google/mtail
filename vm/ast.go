@@ -94,8 +94,8 @@ func (n *idNode) Pos() *position {
 
 func (n *idNode) Type() Type {
 	if n.sym != nil {
-		glog.Infof("n.sym: %v", n.sym)
-		glog.Infof("n.sym.Type: %v", n.sym.Type)
+		glog.Infof("id %q n.sym: %v", n.name, n.sym)
+		glog.Infof("id %q n.sym.Type: %v", n.name, n.sym.Type)
 		return n.sym.Type
 	}
 	return Error // id not defined
@@ -228,8 +228,8 @@ func (n *declNode) Pos() *position {
 
 func (n *declNode) Type() Type {
 	if n.sym != nil {
-		glog.Infof("n.sym: %v", n.sym)
-		glog.Infof("n.sym.Type: %v", n.sym.Type)
+		glog.Infof("decl %q n.sym: %v", n.name, n.sym)
+		glog.Infof("decl %q n.sym.Type: %v", n.name, n.sym.Type)
 		return n.sym.Type
 	}
 	return Error
