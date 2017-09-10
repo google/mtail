@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/golang/glog"
 )
 
 var typeUnificationTests = []struct {
@@ -174,5 +175,38 @@ func TestGroupOnlyMatches(t *testing.T) {
 		if result != tc.expected {
 			t.Errorf("Pattern %q didn't only match check %q: expected %+v, received %+v", tc.pattern, tc.check, tc.expected, result)
 		}
+	}
+}
+
+func TestTypeEquals(t *testing.T) {
+	if Equals(NewTypeVariable(), NewTypeVariable()) {
+		t.Error("Type variables are not same")
+	}
+
+	t1 := NewTypeVariable()
+	t2 := NewTypeVariable()
+	err := Unify(t1, t2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !Equals(t1, t2) {
+		t.Errorf("Unified variables should be same: %v %v", t1, t2)
+	}
+	if !Equals(Int, Int) {
+		t.Errorf("type constants not same")
+	}
+
+	t3 := NewTypeVariable()
+	if Equals(t3, Int) {
+		t.Error("ununified type const and var")
+	}
+	err = Unify(Int, t3)
+
+	glog.Infof("t3: %#v", t3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !Equals(t3, Int) {
+		t.Error("unified variable and const not same")
 	}
 }

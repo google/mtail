@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/go-test/deep"
 	"github.com/golang/glog"
 )
 
@@ -19,7 +18,34 @@ type Type interface {
 }
 
 func Equals(t1, t2 Type) bool {
-	return deep.Equal(t1, t2) == nil
+	t1, t2 = t1.Root(), t2.Root()
+	switch t1 := t1.(type) {
+	case *TypeVariable:
+		r2, ok := t2.(*TypeVariable)
+		if !ok {
+			return occursInType(t1, t2)
+		}
+		return t1 == r2
+	case *TypeOperator:
+		t2, ok := t2.(*TypeOperator)
+		if !ok {
+			return false
+		}
+		if t1.Name != t2.Name {
+			return false
+		}
+		if len(t1.Args) != len(t2.Args) {
+			return false
+		}
+		for i := range t1.Args {
+			if !Equals(t1.Args[i], t2.Args[2]) {
+				return false
+			}
+		}
+		return true
+	}
+	return true
+
 }
 
 var (
