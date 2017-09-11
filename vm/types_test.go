@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/golang/glog"
 )
 
 var typeUnificationTests = []struct {
@@ -202,7 +201,6 @@ func TestTypeEquals(t *testing.T) {
 	}
 	err = Unify(Int, t3)
 
-	glog.Infof("t3: %#v", t3)
 	if err != nil {
 		t.Fatal(err)
 	}
