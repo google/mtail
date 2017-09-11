@@ -261,7 +261,7 @@ func (c *codegen) VisitAfter(node astNode) {
 			case Equals(t, Int), Equals(t, Float):
 				c.emit(instr{op: typedOperators[n.op][t]})
 			default:
-				c.errorf(n.Pos(), "Invalid type for binary expression: %v", n.Type())
+				c.errorf(n.Pos(), "Invalid type for binary expression: %v", t)
 			}
 		case AND:
 			c.emit(instr{op: and})
