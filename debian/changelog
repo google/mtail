@@ -1,3 +1,9 @@
+mtail (3.0.0~rc2-1~bpo9+1) UNRELEASED; urgency=medium
+
+  * Rebuild for stretch-backports.
+
+ -- Martín Ferrari <tincho@debian.org>  Mon, 11 Sep 2017 12:11:40 +0000
+
 mtail (3.0.0~rc2-1) unstable; urgency=medium
 
   * New upstream release candidate.
