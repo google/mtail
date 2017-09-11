@@ -135,8 +135,8 @@ var Builtins = map[string]Type{
 	"timestamp":   Function(Int),
 	"len":         Function(String, Int),
 	"settime":     Function(Int, None),
-	"strptime":    Function(String, None),
-	"strtol":      Function(String, Int),
+	"strptime":    Function(String, String, None),
+	"strtol":      Function(String, Int, Int),
 	"tolower":     Function(String, String),
 	"getfilename": Function(String),
 }
