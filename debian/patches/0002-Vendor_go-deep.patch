@@ -1,11 +1,10 @@
-To avoid adding a tiny new package to the archive, this patch vendors the
-github.com/go-test/deep library.
-
-Retrieved from: https://github.com/go-test/deep
-Commit: f49763a6ea0a91026be26f8213bebee726b4185f
-Copyright: 2015-2017 Daniel Nichter
-License: MIT
-
+Description: Vendor_go deep
+ Copyright: 2015-2017 Daniel Nichter
+ License: MIT
+ Commit: f49763a6ea0a91026be26f8213bebee726b4185f
+ Retrieved from: https://github.com/go-test/deep
+ .
+ github.com/go-test/deep library.
 --- a/ex_test.go
 +++ b/ex_test.go
 @@ -8,7 +8,7 @@

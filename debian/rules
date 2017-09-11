@@ -1,21 +1,28 @@
 #!/usr/bin/make -f
+include /usr/share/dpkg/pkg-info.mk
 
 #export DH_VERBOSE=1
 export DH_GOPKG := github.com/google/mtail
-
+export DH_GOLANG_EXCLUDES := /emgen
 export DH_GOLANG_INSTALL_EXTRA := examples/ testdata/ vm/parser.y
-
 # Build parser.go
 export DH_GOLANG_GO_GENERATE := 1
 
 BUILDDIR := $(CURDIR)/build
+BUILDFLAGS := -ldflags \
+  " -X main.Version=$(DEB_VERSION_UPSTREAM)\
+    -X main.Revision=$(DEB_VERSION)"
 
 %:
 	dh $@ --buildsystem=golang --with=golang --builddirectory=$(BUILDDIR)
 
+override_dh_auto_build:
+	dh_auto_build -- $(BUILDFLAGS)
+
 override_dh_auto_test:
 	GOPATH=$(BUILDDIR) go test -v -timeout 60s $(DH_GOPKG)
 ifeq ($(DEB_HOST_ARCH_CPU),amd64)
+	# Only run race tests on amd64.
 	GOPATH=$(BUILDDIR) go test -v -timeout 5m -race $(DH_GOPKG)
 endif
 

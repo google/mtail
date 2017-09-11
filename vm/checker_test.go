@@ -53,6 +53,7 @@ var checkerInvalidPrograms = []struct {
 
 func TestCheckInvalidPrograms(t *testing.T) {
 	for _, tc := range checkerInvalidPrograms {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ast, err := Parse(tc.name, strings.NewReader(tc.program))
@@ -103,10 +104,18 @@ var checkerValidPrograms = []struct {
    foo += $1
 }
 `},
+
+	{"odd indexes",
+		`counter foo by a,b,c
+/(\d) (\d)/ {
+  foo[$1,$2][0]++
+}
+`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {
 	for _, tc := range checkerValidPrograms {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ast, err := Parse(tc.name, strings.NewReader(tc.program))

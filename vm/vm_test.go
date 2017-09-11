@@ -439,7 +439,7 @@ func TestInstrs(t *testing.T) {
 				metrics.NewMetric("bar", "test", metrics.Counter, metrics.Int),
 				metrics.NewMetric("quux", "test", metrics.Gauge, metrics.Float))
 			obj := &object{re: tc.re, str: tc.str, m: m, prog: []instr{tc.i}}
-			v := New(tc.name, obj, true)
+			v := New(tc.name, obj, true, nil)
 			v.t = new(thread)
 			v.t.stack = make([]interface{}, 0)
 			for _, item := range tc.reversedStack {
@@ -465,5 +465,19 @@ func TestInstrs(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+func TestStrptimeWithTimezone(t *testing.T) {
+	loc, _ := time.LoadLocation("Europe/Berlin")
+	obj := &object{prog: []instr{instr{strptime, 0}}}
+	vm := New("strptimezone", obj, true, loc)
+	vm.t = new(thread)
+	vm.t.stack = make([]interface{}, 0)
+	vm.t.Push("2012/01/18 06:25:00")
+	vm.t.Push("2006/01/02 15:04:05")
+	vm.execute(vm.t, obj.prog[0])
+	if vm.t.time != time.Date(2012, 01, 18, 06, 25, 00, 00, loc) {
+		t.Errorf("Time didn't parse with location: %s received", vm.t.time)
 	}
 }

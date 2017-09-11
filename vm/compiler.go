@@ -10,6 +10,7 @@ import (
 	"io"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
@@ -17,10 +18,11 @@ import (
 
 // Options contains all the parameters that affect the behaviour of the compiler.
 type Options struct {
-	CompileOnly          bool // Do not start the program after compilation.
-	SyslogUseCurrentYear bool // Use the current year if no year is present in the log file timestamp.
-	EmitAst              bool // Print the AST after parse
-	EmitAstTypes         bool // Print the AST with types after typechecking
+	CompileOnly          bool           // Do not start the program after compilation.
+	SyslogUseCurrentYear bool           // Use the current year if no year is present in the log file timestamp.
+	OverrideLocation     *time.Location //
+	EmitAst              bool           // Print the AST after parse
+	EmitAstTypes         bool           // Print the AST with types after typechecking
 }
 
 // Compile compiles a program from the input into a virtual machine or a list
@@ -52,7 +54,7 @@ func Compile(name string, input io.Reader, o *Options) (*VM, error) {
 		return nil, err
 	}
 
-	vm := New(name, obj, o.SyslogUseCurrentYear)
+	vm := New(name, obj, o.SyslogUseCurrentYear, o.OverrideLocation)
 	return vm, nil
 }
 
