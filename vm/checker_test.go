@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 )
 
 var checkerInvalidPrograms = []struct {
@@ -17,21 +17,21 @@ var checkerInvalidPrograms = []struct {
 }{
 	{"undefined named capture group",
 		"/blurgh/ { $undef++\n }\n",
-		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression visible to this scope.\n\tTry using `(?P<undef>...)' to name the capture group."}},
+		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression visible to this scope.", "\tTry using `(?P<undef>...)' to name the capture group."}},
 
 	{"out of bounds capref",
 		"/(blyurg)/ { $2++ \n}\n",
 		[]string{"out of bounds capref:1:14-15: Capture group `$2' was not defined by a regular expression " +
-			"visible to this scope.\n\tCheck that there are at least 2 pairs of parentheses."},
+			"visible to this scope.", "\tCheck that there are at least 2 pairs of parentheses."},
 	},
 
 	{"undefined decorator",
 		"@foo {}\n",
-		[]string{"undefined decorator:1:1-4: Decorator `foo' not defined.\n\tTry adding a definition `def foo {}' earlier in the program."}},
+		[]string{"undefined decorator:1:1-4: Decorator `foo' not defined.", "\tTry adding a definition `def foo {}' earlier in the program."}},
 
 	{"undefined identifier",
 		"// { x++ \n}\n",
-		[]string{"undefined identifier:1:6: Identifier `x' not declared.\n\tTry adding `counter x' to the top of the program."},
+		[]string{"undefined identifier:1:6: Identifier `x' not declared.", "\tTry adding `counter x' to the top of the program."},
 	},
 
 	{"invalid regex",
@@ -50,18 +50,18 @@ var checkerInvalidPrograms = []struct {
 		"counter foo\ncounter foo\n",
 		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11"}},
 
-	// 	{"indexedExpr parameter count",
-	// 		`counter foo by a, b
-	// counter bar by a, b
-	// counter quux by a
-	// /(\d+)/ {
-	//   foo[$1]++
-	//   bar[$1][0]++
-	//   quux[$1][0]++
-	// }
-	// 	`,
-	// 		[]string{"indexedExpr parameter count:5:3-8: index lookup: type mismatch: \"→ typeVar1 typeVar2 typeVar3\" != \"→ Int typeVar9\"",
-	// 			"indexedExpr parameter count:7:3-12: Too many keys for metric"}},
+	{"indexedExpr parameter count",
+		`counter foo by a, b
+	counter bar by a, b
+	counter quux by a
+	/(\d+)/ {
+	  foo[$1]++
+	  bar[$1][0]++
+	  quux[$1][0]++
+	}
+		`,
+		[]string{"indexedExpr parameter count:5:4-9: index lookup: type mismatch: expected \"→ typeVar5 typeVar6 typeVar7\" received \"→ Int typeVar13\"",
+			"indexedExpr parameter count:6:4-9: Too many keys for metric"}},
 
 	{"builtin parameter mismatch",
 		`/(\d+)/ {
@@ -88,11 +88,11 @@ func TestCheckInvalidPrograms(t *testing.T) {
 				t.Fatal("check didn't fail")
 			}
 
-			diff := deep.Equal(
-				strings.Join(tc.errors, "\n"),        // want
-				strings.TrimRight(err.Error(), "\n")) // got
-			if diff != nil {
-				t.Error(diff)
+			diff := go_cmp.Diff(
+				tc.errors,                        // want
+				strings.Split(err.Error(), "\n")) // got
+			if diff != "" {
+				t.Errorf("Diff %s", diff)
 				s := Sexp{}
 				s.emitTypes = true
 				t.Log(s.Dump(ast))
@@ -207,10 +207,6 @@ var checkerTypeExpressionTests = []struct {
 }
 
 func TestCheckTypeExpressions(t *testing.T) {
-	defaultCompareUnexportedFields := deep.CompareUnexportedFields
-	deep.CompareUnexportedFields = true
-	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
-
 	for _, tc := range checkerTypeExpressionTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -220,8 +216,8 @@ func TestCheckTypeExpressions(t *testing.T) {
 				t.Fatalf("check error: %s", err)
 			}
 
-			diff := deep.Equal(tc.expected, tc.expr.Type().Root())
-			if len(diff) > 0 {
+			diff := go_cmp.Diff(tc.expected, tc.expr.Type().Root())
+			if diff != "" {
 				t.Error(diff)
 				s := Sexp{}
 				s.emitTypes = true
