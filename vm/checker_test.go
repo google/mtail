@@ -51,17 +51,29 @@ var checkerInvalidPrograms = []struct {
 		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11"}},
 
 	{"indexedExpr parameter count",
-		`counter foo by a, b
+		`counter n
+    counter foo by a, b
 	counter bar by a, b
 	counter quux by a
 	/(\d+)/ {
-	  foo[$1]++
-	  bar[$1][0]++
-	  quux[$1][0]++
+      0[$1]++
+      n[$1]++
+      foo[$1]++
+      bar[$1][0]++
+      quux[$1][0]++
 	}
 		`,
-		[]string{"indexedExpr parameter count:5:4-9: index lookup: type mismatch: expected \"→ typeVar5 typeVar6 typeVar7\" received \"→ Int typeVar13\"",
-			"indexedExpr parameter count:6:4-9: Too many keys for metric"}},
+		[]string{
+			// 0[$1] is not a valud expresison
+			"indexedExpr parameter count:6:7-10: Index taken on unindexable expression.",
+			// n[$1] is syntactically valid, but n is not indexable
+			"indexedExpr parameter count:7:7-10: Too many keys for indexed expression: expecting 0, received 1.",
+			// foo[$1] is short one key but we cannot detect this due to chained indexed expression.
+			// bar[$1][0] is ok
+			// quux[$1][0] has too many keys
+			"indexedExpr parameter count:10:7-16: Too many keys for indexed expression: expecting 1, received 2.",
+			"",
+		}},
 
 	{"builtin parameter mismatch",
 		`/(\d+)/ {

@@ -62,16 +62,12 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
 		}
-		if len(n.keys) == 0 {
-			n.sym.Type = NewTypeVariable()
-		} else {
-			// One type per key and one for the value.
-			keyTypes := make([]Type, 0, len(n.keys)+1)
-			for i := 0; i <= len(n.keys); i++ {
-				keyTypes = append(keyTypes, NewTypeVariable())
-			}
-			n.sym.Type = Function(keyTypes...)
+		// One type per key and one for the value.
+		keyTypes := make([]Type, 0, len(n.keys)+1)
+		for i := 0; i <= len(n.keys); i++ {
+			keyTypes = append(keyTypes, NewTypeVariable())
 		}
+		n.sym.Type = Function(keyTypes...)
 		glog.Infof("Making type of %s now %s", n.name, n.sym.Type)
 
 	case *idNode:
@@ -204,6 +200,7 @@ func (c *checker) VisitAfter(node astNode) {
 				n.SetType(Error)
 				return
 			}
+
 		case SHL, SHR, AND, OR, XOR, NOT:
 			// bitwise
 			// O ⊢ e1 :Int, O ⊢ e2 : Int
@@ -296,11 +293,12 @@ func (c *checker) VisitAfter(node astNode) {
 		}
 
 	case *indexedExprNode:
-		// Rewrite chained index form to arg expr list form.
 		switch v := n.lhs.(type) {
 		case *idNode:
 			// ok
 		case *indexedExprNode:
+			// Collapse any indexedExprNode on the lhs by rewriting to index exprlist form, prepending the lhs children, and copying the lhs's lhs to our own.
+			// As this is a post-order operation, the lhs is already collapsed to exprlist form.
 			n.index.(*exprlistNode).children = append(v.index.(*exprlistNode).children, n.index.(*exprlistNode).children...)
 			n.lhs = v.lhs
 		default:
@@ -327,13 +325,28 @@ func (c *checker) VisitAfter(node astNode) {
 		glog.Infof("args is now %q", argTypes)
 		rType := NewTypeVariable()
 		argTypes = append(argTypes, rType)
-		fn := Function(argTypes...)
-		glog.Infof("We think this expr is of type %q", fn)
+		astType := Function(argTypes...)
+		glog.Infof("We think this expr %v is of type %q", n.lhs, astType)
 		glog.Infof("It shouldbe of type %q", n.lhs.Type())
-		err := Unify(n.lhs.Type(), fn)
+		err := Unify(n.lhs.Type(), astType)
 		if err != nil {
 			glog.Info("that's an error")
-			c.errors.Add(n.Pos(), fmt.Sprintf("index lookup: %s", err))
+			exprType, ok := n.lhs.Type().(*TypeOperator)
+			if !ok {
+				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected lhs type %v", n.lhs.Type()))
+				n.SetType(Error)
+				return
+			}
+			switch {
+			case len(exprType.Args) > len(astType.Args):
+				break
+				// Maybe enclosing expression has enough keys, so we cannot error out here.
+				// c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
+			case len(exprType.Args) < len(astType.Args):
+				c.errors.Add(n.Pos(), fmt.Sprintf("Too many keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
+			default:
+				c.errors.Add(n.Pos(), fmt.Sprintf("Index lookup expression %s", err))
+			}
 			n.SetType(Error)
 			return
 		}
