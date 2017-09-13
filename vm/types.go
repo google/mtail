@@ -112,7 +112,7 @@ func (t *TypeOperator) String() string {
 	return s
 }
 
-func Function(args ...Type) Type {
+func Function(args ...Type) *TypeOperator {
 	return &TypeOperator{"→", args}
 }
 
