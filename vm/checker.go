@@ -277,7 +277,7 @@ func (c *checker) VisitAfter(node astNode) {
 			n.SetType(rType)
 		case INC:
 			rType := Int
-			glog.Infof("expr %q type is %q", n.expr, t)
+			glog.Infof("INC expr %q type is %q", n.expr, t)
 			err := Unify(rType, t)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
@@ -339,9 +339,12 @@ func (c *checker) VisitAfter(node astNode) {
 			}
 			switch {
 			case len(exprType.Args) > len(astType.Args):
-				break
 				// Maybe enclosing expression has enough keys, so we cannot error out here.
 				// c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
+				// so strip the last unmatched parameters from the type,and pass that back
+				n.SetType(Function(exprType.Args[len(astType.Args)-1:]...))
+				glog.Infof("(early) indexedExpr expr %q is now %q", n, n.Type())
+				return
 			case len(exprType.Args) < len(astType.Args):
 				c.errors.Add(n.Pos(), fmt.Sprintf("Too many keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
 			default:
@@ -351,7 +354,7 @@ func (c *checker) VisitAfter(node astNode) {
 			return
 		}
 		n.SetType(rType)
-		glog.Infof("expr %q is now %q", n, n.Type())
+		glog.Infof("indexedExpr expr %q is now %q", n, n.Type())
 
 	case *builtinNode:
 		types := []Type{}

@@ -69,6 +69,7 @@ var checkerInvalidPrograms = []struct {
 			// n[$1] is syntactically valid, but n is not indexable
 			"indexedExpr parameter count:7:7-10: Too many keys for indexed expression: expecting 0, received 1.",
 			// foo[$1] is short one key but we cannot detect this due to chained indexed expression.
+			"indexedExpr parameter count:8:7-15: type mismatch: type mismatch; expected \"Int\" received \"→ typeVar7 typeVar8\"",
 			// bar[$1][0] is ok
 			// quux[$1][0] has too many keys
 			"indexedExpr parameter count:10:7-16: Too many keys for indexed expression: expecting 1, received 2.",
