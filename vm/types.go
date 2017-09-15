@@ -104,16 +104,41 @@ func (t *TypeOperator) Root() Type {
 	return t
 }
 
-func (t *TypeOperator) String() string {
-	s := t.Name
-	for _, a := range t.Args {
-		s += " " + a.String()
+func (t *TypeOperator) String() (s string) {
+	switch l := len(t.Args); {
+	case l < 2:
+		s = t.Name
+		for _, a := range t.Args {
+			s += " " + a.String()
+		}
+	default:
+		s = t.Args[0].String()
+		for _, a := range t.Args[1:] {
+			s += t.Name + a.String()
+		}
 	}
 	return s
 }
 
 func Function(args ...Type) *TypeOperator {
 	return &TypeOperator{"→", args}
+}
+func IsFunction(t Type) bool {
+	if v, ok := t.(*TypeOperator); ok {
+		return v.Name == "→"
+	}
+	return false
+}
+
+func Dimension(args ...Type) *TypeOperator {
+	return &TypeOperator{"❌", args}
+}
+
+func IsDimension(t Type) bool {
+	if v, ok := t.(*TypeOperator); ok {
+		return v.Name == "❌"
+	}
+	return false
 }
 
 // Builtin types

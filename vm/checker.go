@@ -67,7 +67,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		for i := 0; i <= len(n.keys); i++ {
 			keyTypes = append(keyTypes, NewTypeVariable())
 		}
-		n.sym.Type = Function(keyTypes...)
+		n.sym.Type = Dimension(keyTypes...)
 		glog.Infof("Making type of %s now %s", n.name, n.sym.Type)
 
 	case *idNode:
@@ -280,7 +280,11 @@ func (c *checker) VisitAfter(node astNode) {
 			glog.Infof("INC expr %q type is %q", n.expr, t)
 			err := Unify(rType, t)
 			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
+				if t1, ok := t.(*TypeOperator); ok && IsDimension(t) {
+					c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for expression: expecting %d more", len(t1.Args)-1))
+				} else {
+					c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
+				}
 				n.SetType(Error)
 				return
 			}
@@ -325,10 +329,11 @@ func (c *checker) VisitAfter(node astNode) {
 		glog.Infof("args is now %q", argTypes)
 		rType := NewTypeVariable()
 		argTypes = append(argTypes, rType)
-		astType := Function(argTypes...)
+		astType := Dimension(argTypes...)
 		glog.Infof("We think this expr %v is of type %q", n.lhs, astType)
-		glog.Infof("It shouldbe of type %q", n.lhs.Type())
-		err := Unify(n.lhs.Type(), astType)
+		fresh := n.lhs.Type()
+		glog.Infof("It should be of type %q", fresh)
+		err := Unify(fresh, astType)
 		if err != nil {
 			glog.Info("that's an error")
 			exprType, ok := n.lhs.Type().(*TypeOperator)
@@ -342,7 +347,7 @@ func (c *checker) VisitAfter(node astNode) {
 				// Maybe enclosing expression has enough keys, so we cannot error out here.
 				// c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
 				// so strip the last unmatched parameters from the type,and pass that back
-				n.SetType(Function(exprType.Args[len(astType.Args)-1:]...))
+				n.SetType(Dimension(exprType.Args[len(astType.Args)-1:]...))
 				glog.Infof("(early) indexedExpr expr %q is now %q", n, n.Type())
 				return
 			case len(exprType.Args) < len(astType.Args):
