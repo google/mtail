@@ -149,14 +149,12 @@ var checkerValidPrograms = []struct {
 /(\d)/ {
   foo[1,$1] = 3
 }`},
-
-	// TODO(jaq): Issue 73, 68
-	// {"odd indexes",
-	// 	`counter foo by a,b,c
-	// /(\d) (\d)/ {
-	//   foo[$1,$2][0]++
-	// }
-	// `},
+	{"odd indexes",
+		`counter foo by a,b,c
+	/(\d) (\d)/ {
+	  foo[$1,$2][0]++
+	}
+	`},
 	{"implicit int",
 		`counter foo
 /$/ {
