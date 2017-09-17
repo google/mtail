@@ -284,6 +284,7 @@ func (c *checker) VisitAfter(node astNode) {
 			glog.Infof("INC expr %q type is %q", n.expr, t)
 			err := Unify(rType, t)
 			if err != nil {
+				// TODO(jaq): this check needs to occur in more locations on expressions that could take an indexedExprNode as child
 				if t1, ok := t.(*TypeOperator); ok && IsDimension(t) {
 					c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for expression: expecting %d more", len(t1.Args)-1))
 				} else {
