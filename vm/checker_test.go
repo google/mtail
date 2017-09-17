@@ -84,7 +84,7 @@ var checkerInvalidPrograms = []struct {
 	  timestamp()
 	}
 	`,
-		[]string{"builtin parameter mismatch:2:13: call to `strptime': type mismatch; expected \"String→String→None\" received \"→ typeVar5\""}},
+		[]string{"builtin parameter mismatch:2:13: call to `strptime': type mismatch; expected String→String→None received incomplete type"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

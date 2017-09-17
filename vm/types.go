@@ -141,6 +141,21 @@ func IsDimension(t Type) bool {
 	return false
 }
 
+func IsComplete(t Type) bool {
+	switch v := t.Root().(type) {
+	case *TypeVariable:
+		return false
+	case *TypeOperator:
+		for _, a := range v.Args {
+			if !IsComplete(a) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
 // Builtin types
 var (
 	Undef  = &TypeOperator{"Undef", []Type{}}
@@ -219,7 +234,19 @@ type TypeError struct {
 }
 
 func (e *TypeError) Error() string {
-	return fmt.Sprintf("type mismatch; expected %q received %q", e.expected, e.received)
+	var estr, rstr string
+	if IsComplete(e.expected) {
+		estr = e.expected.String()
+	} else {
+		estr = "incomplete type"
+	}
+	if IsComplete(e.received) {
+		rstr = e.received.String()
+	} else {
+		rstr = "incomplete type"
+	}
+	glog.V(2).Infof("type mismatch: expected %q received %q", e.expected, e.received)
+	return fmt.Sprintf("type mismatch; expected %s received %s", estr, rstr)
 }
 
 // Unify performs type unification of both parameter Types.  It returns the
