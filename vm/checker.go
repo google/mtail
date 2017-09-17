@@ -62,12 +62,16 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
 		}
-		// One type per key and one for the value.
-		keyTypes := make([]Type, 0, len(n.keys)+1)
-		for i := 0; i <= len(n.keys); i++ {
-			keyTypes = append(keyTypes, NewTypeVariable())
+		if len(n.keys) > 0 {
+			// One type per key and one for the value.
+			keyTypes := make([]Type, 0, len(n.keys)+1)
+			for i := 0; i <= len(n.keys); i++ {
+				keyTypes = append(keyTypes, NewTypeVariable())
+			}
+			n.sym.Type = Dimension(keyTypes...)
+		} else {
+			n.sym.Type = NewTypeVariable()
 		}
-		n.sym.Type = Dimension(keyTypes...)
 		glog.Infof("Making type of %s now %s", n.name, n.sym.Type)
 
 	case *idNode:
@@ -300,13 +304,21 @@ func (c *checker) VisitAfter(node astNode) {
 		switch v := n.lhs.(type) {
 		case *idNode:
 			// ok
+			if t, ok := v.Type().(*TypeOperator); ok && IsDimension(t) {
+				glog.Infof("Our idNode is a dimension type")
+			} else {
+				glog.Infof("Our idNode is not a dimension type")
+				n.SetType(Error)
+				c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
+				return
+			}
 		case *indexedExprNode:
 			// Collapse any indexedExprNode on the lhs by rewriting to index exprlist form, prepending the lhs children, and copying the lhs's lhs to our own.
 			// As this is a post-order operation, the lhs is already collapsed to exprlist form.
 			n.index.(*exprlistNode).children = append(v.index.(*exprlistNode).children, n.index.(*exprlistNode).children...)
 			n.lhs = v.lhs
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression."))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
 			n.SetType(Error)
 			return
 		}
