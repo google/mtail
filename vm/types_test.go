@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"regexp/syntax"
 	"testing"
-
-	"github.com/go-test/deep"
 )
 
 var typeUnificationTests = []struct {
@@ -18,23 +16,6 @@ var typeUnificationTests = []struct {
 	// The unification of None with None is still None.
 	{
 		None, None,
-		None,
-	},
-	// Any type should unify to None with None.  You might call it the zero function.
-	{
-		None, Float,
-		None,
-	},
-	{
-		None, Int,
-		None,
-	},
-	{
-		Int, None,
-		None,
-	},
-	{
-		String, None,
 		None,
 	},
 	// The unification of a type T with itself is T.
@@ -121,9 +102,9 @@ func TestTypeUnification(t *testing.T) {
 		tc := tc
 		t.Run(fmt.Sprintf("%s %s", tc.a, tc.b), func(t *testing.T) {
 			t.Parallel()
-			result := Unify(tc.a, tc.b)
-			if diff := deep.Equal(tc.expected, result); len(diff) > 0 {
-				t.Error(diff)
+			err := Unify(tc.a, tc.b)
+			if err != nil {
+				t.Errorf("%s", err)
 			}
 		})
 	}
