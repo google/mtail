@@ -186,6 +186,19 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		// overwdrite the dload instruction
 		pc := len(c.obj.prog) - 1
 		c.obj.prog[pc].op = del
+
+	case *convNode:
+		Walk(c, n.n)
+		inType := n.n.Type()
+		outType := n.Type()
+		if Equals(Int, inType) && Equals(Float, outType) {
+			c.emit(instr{op: i2f})
+		} else if Equals(String, inType) && Equals(Float, outType) {
+			c.emit(instr{op: s2f})
+		} else if Equals(String, inType) && Equals(Int, outType) {
+			c.emit(instr{op: s2i})
+		}
+
 	}
 
 	return c

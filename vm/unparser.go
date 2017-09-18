@@ -208,6 +208,9 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 		Walk(u, v.n)
 		u.newline()
 
+	case *convNode:
+		Walk(u, v.n)
+
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}

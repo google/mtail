@@ -340,3 +340,25 @@ func (d *delNode) Pos() *position {
 func (d *delNode) Type() Type {
 	return None
 }
+
+type convNode struct {
+	n   astNode
+	mu  sync.RWMutex
+	typ Type
+}
+
+func (n *convNode) Pos() *position {
+	return n.n.Pos()
+}
+
+func (n *convNode) Type() Type {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	return n.typ
+}
+
+func (n *convNode) SetType(t Type) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.typ = t
+}
