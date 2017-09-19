@@ -351,7 +351,11 @@ func inferCaprefType(re *syntax.Regexp, cap int) Type {
 	case groupOnlyMatches(group, "+-0123456789"):
 		return Int
 	case groupOnlyMatches(group, "+-0123456789.eE"):
-		return Float
+		if strings.Count(re.String(), ".") <= 1 {
+			return Float
+		} else {
+			return String
+		}
 	}
 	// TODO: String.  Current behaviour of mtail before types is assume all
 	// matches are usable in arithmetic expressions.

@@ -158,6 +158,38 @@ func TestGroupOnlyMatches(t *testing.T) {
 	}
 }
 
+var inferCaprefTypeTests = []struct {
+	pattern string
+	typ     Type
+}{
+	{`\d+`,
+		Int,
+	},
+	{`[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?`,
+		Float,
+	},
+	{`\d+\.\d+\.\d+\.\d+`,
+		String,
+	},
+}
+
+func TestInferCaprefType(t *testing.T) {
+	for _, tc := range inferCaprefTypeTests {
+		tc := tc
+		t.Run(tc.pattern, func(t *testing.T) {
+			t.Parallel()
+			re, err := syntax.Parse(`(`+tc.pattern+`)`, syntax.Perl)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := inferCaprefType(re, 1)
+			if !Equals(tc.typ, r) {
+				t.Errorf("Types don't match: %q infers %v, not %v", tc.pattern, r, tc.typ)
+			}
+		})
+	}
+}
+
 func TestTypeEquals(t *testing.T) {
 	if Equals(NewTypeVariable(), NewTypeVariable()) {
 		t.Error("Type variables are not same")
