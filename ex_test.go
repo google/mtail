@@ -6,9 +6,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
 	"github.com/google/mtail/testdata"
@@ -101,9 +103,9 @@ func TestExamplePrograms(t *testing.T) {
 
 			mtail.Close()
 
-			diff := deep.Equal(golden_store, store)
+			diff := go_cmp.Diff(golden_store, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
 
-			if diff != nil {
+			if diff != "" {
 				t.Error(diff)
 				t.Logf(" Golden metrics: %s", golden_store.Metrics)
 				t.Logf("Program metrics: %s", store.Metrics)
