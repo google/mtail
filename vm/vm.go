@@ -111,6 +111,7 @@ var opNames = map[opcode]string{
 	strtol:      "strtol",
 	setmatched:  "setmatched",
 	otherwise:   "otherwise",
+	del:         "del",
 	fadd:        "fadd",
 	fsub:        "fsub",
 	fmul:        "fmul",
@@ -785,7 +786,11 @@ func (v *VM) DumpByteCode(name string) string {
 
 	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
 	for n, i := range v.prog {
-		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, opNames[i.op], i.opnd)
+		name := opNames[i.op]
+		if name == "" {
+			name = fmt.Sprintf("%d", i.op)
+		}
+		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, name, i.opnd)
 	}
 	w.Flush()
 	return b.String()

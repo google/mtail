@@ -183,7 +183,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 
 	case *delNode:
 		Walk(c, n.n)
-		// overwdrite the dload instruction
+		// overwrite the dload instruction
 		pc := len(c.obj.prog) - 1
 		c.obj.prog[pc].op = del
 
@@ -270,11 +270,20 @@ func (c *codegen) VisitAfter(node astNode) {
 			// When operand is not nil, inc pops the delta from the stack.
 			c.emit(instr{inc, 0})
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
-			switch t := n.Type(); {
-			case Equals(t, Int), Equals(t, Float):
-				c.emit(instr{op: typedOperators[n.op][t]})
-			default:
-				c.errorf(n.Pos(), "Invalid type for binary expression: %v", t)
+			opmap, ok := typedOperators[n.op]
+			if !ok {
+				c.errorf(n.Pos(), "Internal error: no typed operator for binary expression %v", n.op)
+			}
+			emitflag := false
+			for t, opcode := range opmap {
+				if Equals(n.Type(), t) {
+					c.emit(instr{op: opcode})
+					emitflag = true
+					break
+				}
+			}
+			if !emitflag {
+				c.errorf(n.Pos(), "Invalid type for binary expression: %v", n.Type())
 			}
 		case AND:
 			c.emit(instr{op: and})
