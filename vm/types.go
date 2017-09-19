@@ -351,7 +351,7 @@ func inferCaprefType(re *syntax.Regexp, cap int) Type {
 	case groupOnlyMatches(group, "+-0123456789"):
 		return Int
 	case groupOnlyMatches(group, "+-0123456789.eE"):
-		if strings.Count(re.String(), ".") <= 1 {
+		if strings.Count(group.String(), ".") <= 1 {
 			return Float
 		} else {
 			return String
