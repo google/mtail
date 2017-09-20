@@ -5,11 +5,8 @@ package datum
 
 import (
 	"fmt"
-	"runtime/debug"
 	"sync/atomic"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 type Type int
@@ -46,10 +43,6 @@ type BaseDatum struct {
 var zeroTime time.Time
 
 func (d *BaseDatum) stamp(timestamp time.Time) {
-	glog.Infof("storing %v", timestamp)
-	if timestamp.IsZero() {
-		glog.Infof("%s", debug.Stack())
-	}
 	if timestamp.IsZero() {
 		atomic.StoreInt64(&d.Time, time.Now().UTC().UnixNano())
 	} else {
@@ -100,7 +93,6 @@ func GetFloat(d Datum) float64 {
 }
 
 func SetInt(d Datum, v int64, ts time.Time) {
-	glog.Infof("datum %v value %v ts %v", d, v, ts)
 	switch d := d.(type) {
 	case *IntDatum:
 		d.Set(v, ts)
@@ -110,7 +102,6 @@ func SetInt(d Datum, v int64, ts time.Time) {
 }
 
 func SetFloat(d Datum, v float64, ts time.Time) {
-	glog.Infof("datum %v value %v ts %v", d, v, ts)
 	switch d := d.(type) {
 	case *FloatDatum:
 		d.Set(v, ts)
