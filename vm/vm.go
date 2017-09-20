@@ -199,7 +199,7 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof("VM stack:\n%s", debug.Stack())
 	glog.Infof("Dumping vm state")
 	glog.Infof("Name: %s", v.name)
-	glog.Infof("Input: %v", v.input)
+	glog.Infof("Input: %#v", v.input)
 	glog.Infof("Thread:")
 	glog.Infof(" PC %v", v.t.pc-1)
 	glog.Infof(" Match %v", v.t.match)
@@ -400,6 +400,14 @@ func (v *VM) ParseTime(layout, value string) (tm time.Time) {
 // instruction, and returns a boolean indicating if the current thread should
 // terminate.
 func (v *VM) execute(t *thread, i instr) {
+	defer func() {
+		if r := recover(); r != nil {
+			v.errorf("panic in thread %#v at instr %q: %s", t, i, r)
+			// TODO(jaq): The terminate flag only stops this thread, but
+			// doesn't stop the VM.  A panic should terminate the whole VM.
+		}
+	}()
+
 	switch i.op {
 	case match:
 		// match regex and store success
