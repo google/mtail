@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
 )
@@ -467,12 +467,14 @@ func TestInstrs(t *testing.T) {
 				t.Fatalf("Execution failed, see info log.")
 			}
 
-			if diff := deep.Equal(tc.expectedStack, v.t.stack); diff != nil {
+			if diff := go_cmp.Diff(tc.expectedStack, v.t.stack); diff != "" {
 				t.Log("unexpected vm stack state")
 				t.Error(diff)
 			}
 
-			if diff := deep.Equal(&tc.expectedThread, v.t); diff != nil {
+			tc.expectedThread.stack = tc.expectedStack
+
+			if diff := go_cmp.Diff(&tc.expectedThread, v.t, go_cmp.AllowUnexported(thread{})); diff != "" {
 				t.Log("unexpected vm thread state")
 				t.Error(diff)
 				t.Errorf("\t%v", *v.t)

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
 )
@@ -152,8 +152,8 @@ func TestHandlePrometheus(t *testing.T) {
 			if err != nil {
 				t.Errorf(" failed to read response: %s", err)
 			}
-			diff := deep.Equal(tc.expected, string(b))
-			if diff != nil {
+			diff := cmp.Diff(tc.expected, string(b))
+			if diff != "" {
 				t.Error(diff)
 			}
 		})

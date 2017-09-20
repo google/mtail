@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
@@ -103,7 +103,7 @@ func TestExamplePrograms(t *testing.T) {
 
 			mtail.Close()
 
-			diff := go_cmp.Diff(golden_store, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
+			diff := cmp.Diff(golden_store, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
 
 			if diff != "" {
 				t.Error(diff)

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/watcher"
@@ -169,7 +169,7 @@ func TestProcessEvents(t *testing.T) {
 			}
 			l.handleMu.RUnlock()
 			l.handleMu.RLock()
-			if diff := deep.Equal(tt.expectedPrograms, programs); diff != nil {
+			if diff := go_cmp.Diff(tt.expectedPrograms, programs); diff != "" {
 				t.Errorf("%q: loaded programs don't match.\nl.handles: %+#v\n%s", tt.name, l.handles, diff)
 			}
 			l.handleMu.RUnlock()

@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"sync"
 	"testing"
 	"testing/quick"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics/datum"
 )
 
@@ -106,8 +108,8 @@ func TestEmitLabelSet(t *testing.T) {
 
 			ls := <-c
 
-			diff := deep.Equal(tc.expectedLabels, ls.Labels)
-			if diff != nil {
+			diff := cmp.Diff(tc.expectedLabels, ls.Labels)
+			if diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -188,7 +190,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 			return false
 		}
 
-		if diff := deep.Equal(m, r); diff != nil {
+		if diff := cmp.Diff(m, r, cmpopts.IgnoreUnexported(sync.RWMutex{})); diff != "" {
 			t.Errorf("Round trip wasn't stable:\n%s", diff)
 			return false
 		}
@@ -206,8 +208,8 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 func TestTimer(t *testing.T) {
 	m := NewMetric("test", "prog", Timer, Int)
 	n := NewMetric("test", "prog", Timer, Int)
-	diff := deep.Equal(m, n)
-	if diff != nil {
+	diff := cmp.Diff(m, n, cmpopts.IgnoreUnexported(sync.RWMutex{}))
+	if diff != "" {
 		t.Errorf("Identical metrics not the same:\n%s", diff)
 	}
 	d, _ := m.GetDatum()

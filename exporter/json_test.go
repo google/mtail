@@ -7,10 +7,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
 )
@@ -110,8 +112,8 @@ func TestHandleJSON(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to read response: %s", err)
 			}
-			diff := deep.Equal(tc.expected, string(b))
-			if diff != nil {
+			diff := cmp.Diff(tc.expected, string(b), cmpopts.IgnoreUnexported(sync.RWMutex{}))
+			if diff != "" {
 				t.Error(diff)
 			}
 		})
