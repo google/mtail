@@ -199,10 +199,9 @@ func FreshType(t Type) Type {
 			for _, arg := range p1.Args {
 				args = append(args, freshRec(arg))
 			}
-			glog.Infof("Type operator")
 			return &TypeOperator{p1.Name, args}
 		default:
-			glog.Infof("What is a p1? %q", p1)
+			glog.V(1).Infof("Unexpected type p1: %v", p1)
 		}
 		return tp
 	}
@@ -256,7 +255,7 @@ func (e *TypeError) Error() string {
 // variable is unified with the LUB.  In reporting errors, it is assumed that a
 // is the expected type and b is the type observed.
 func Unify(a, b Type) error {
-	glog.V(2).Infof("Unifying a %v , b %v", a, b)
+	glog.V(2).Infof("Unifying %v and %v", a, b)
 	a1, b1 := a.Root(), b.Root()
 	switch a2 := a1.(type) {
 	case *TypeVariable:
@@ -268,9 +267,8 @@ func Unify(a, b Type) error {
 				return nil
 			}
 		case *TypeOperator:
-			glog.Infof("b1 is a type operator thta looks liek %v", b2)
 			if occursInType(a2, b2) {
-				return fmt.Errorf("Recursive unification %v %v", a2, b2)
+				return fmt.Errorf("Recursive unification on %v and %v", a2, b2)
 			}
 			glog.V(2).Infof("Making %q type %q", a2, b1)
 			a2.SetInstance(&b1)
@@ -289,7 +287,6 @@ func Unify(a, b Type) error {
 			return err
 
 		case *TypeOperator:
-			glog.Infof("a2, b2: %q %q", a2, b2)
 			if len(a2.Args) != len(b2.Args) {
 				return &TypeError{a2, b2}
 			}
@@ -298,11 +295,9 @@ func Unify(a, b Type) error {
 				if t == Error {
 					return &TypeError{a2, b2}
 				}
-				glog.Infof("post Lub t:= %q a %v b %v", t, a, b)
 				return nil
 			}
 			for i, argA := range a2.Args {
-				glog.Infof("a and b: %q %q", argA, b2.Args[i])
 				err := Unify(argA, b2.Args[i])
 				if err != nil {
 					return err
@@ -314,7 +309,6 @@ func Unify(a, b Type) error {
 }
 
 func LeastUpperBound(a, b Type) Type {
-	glog.Infof("Lub a %v b %v", a, b)
 	a1, b1 := a.Root(), b.Root()
 
 	if Equals(a1, b1) {
@@ -329,7 +323,6 @@ func LeastUpperBound(a, b Type) Type {
 	}
 	if (Equals(a1, Float) && Equals(b1, Int)) ||
 		(Equals(b1, Float) && Equals(a1, Int)) {
-		glog.Infof("Lub is Float")
 		return Float
 	}
 	if (Equals(a1, String) && Equals(b1, Int)) ||
