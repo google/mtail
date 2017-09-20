@@ -34,5 +34,5 @@ func (p ErrorList) Error() string {
 	for _, e := range p {
 		r = r + fmt.Sprintf("%s\n", e)
 	}
-	return r
+	return r[:len(r)-1]
 }

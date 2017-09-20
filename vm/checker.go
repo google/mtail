@@ -153,6 +153,11 @@ func isErrorType(t Type) bool {
 	return false
 }
 
+func dimensionError(c *checker, node astNode, t Type) {
+	t1 := t.(*TypeOperator)
+	c.errors.Add(node.Pos(), fmt.Sprintf("Not enough keys for expression: expecting %d more", len(t1.Args)-1))
+}
+
 func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *stmtlistNode:
@@ -164,12 +169,20 @@ func (c *checker) VisitAfter(node astNode) {
 	case *binaryExprNode:
 		var rType Type
 		lT := n.lhs.Type()
-		if isErrorType(lT) {
+		switch {
+		case IsDimension(lT):
+			dimensionError(c, n.lhs, lT)
+			fallthrough
+		case isErrorType(lT):
 			n.SetType(Error)
 			return
 		}
 		rT := n.rhs.Type()
-		if isErrorType(rT) {
+		switch {
+		case IsDimension(rT):
+			dimensionError(c, n.rhs, rT)
+			fallthrough
+		case isErrorType(rT):
 			n.SetType(Error)
 			return
 		}
@@ -255,7 +268,11 @@ func (c *checker) VisitAfter(node astNode) {
 
 	case *unaryExprNode:
 		t := n.expr.Type()
-		if isErrorType(t) {
+		switch {
+		case IsDimension(t):
+			dimensionError(c, n.expr, t)
+			fallthrough
+		case isErrorType(t):
 			n.SetType(Error)
 			return
 		}
@@ -273,12 +290,7 @@ func (c *checker) VisitAfter(node astNode) {
 			rType := Int
 			err := Unify(rType, t)
 			if err != nil {
-				// TODO(jaq): this check needs to occur in more locations on expressions that could take an indexedExprNode as child
-				if t1, ok := t.(*TypeOperator); ok && IsDimension(t) {
-					c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for expression: expecting %d more", len(t1.Args)-1))
-				} else {
-					c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
-				}
+				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
 				n.SetType(Error)
 				return
 			}
