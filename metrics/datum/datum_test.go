@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestDatumSetAndValue(t *testing.T) {
@@ -55,7 +55,7 @@ func TestMarshalJSON(t *testing.T) {
 		if err != nil {
 			t.Errorf("%d: Marshal failed: %v", i, err)
 		}
-		if diff := deep.Equal(tc.expected, string(b)); len(diff) > 0 {
+		if diff := cmp.Diff(tc.expected, string(b)); diff != "" {
 			t.Errorf("%d: JSON didn't match:\n%s", i, diff)
 		}
 	}

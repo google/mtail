@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 )
 
 var testCodeGenPrograms = []struct {
@@ -76,7 +76,7 @@ var testCodeGenPrograms = []struct {
 			"}\n",
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 16},
+			instr{jnm, 14},
 			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
@@ -95,8 +95,8 @@ var testCodeGenPrograms = []struct {
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
+			instr{push, int64(1)},
+			instr{push, int64(0)},
 			instr{cmp, 1},
 			instr{jnm, 9},
 			instr{setmatched, false},
@@ -110,8 +110,8 @@ var testCodeGenPrograms = []struct {
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
+			instr{push, int64(1)},
+			instr{push, int64(0)},
 			instr{cmp, -1},
 			instr{jnm, 9},
 			instr{setmatched, false},
@@ -125,8 +125,8 @@ var testCodeGenPrograms = []struct {
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
+			instr{push, int64(1)},
+			instr{push, int64(0)},
 			instr{cmp, 0},
 			instr{jnm, 9},
 			instr{setmatched, false},
@@ -140,8 +140,8 @@ var testCodeGenPrograms = []struct {
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
+			instr{push, int64(1)},
+			instr{push, int64(0)},
 			instr{cmp, 1},
 			instr{jm, 9},
 			instr{setmatched, false},
@@ -155,8 +155,8 @@ var testCodeGenPrograms = []struct {
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
+			instr{push, int64(1)},
+			instr{push, int64(0)},
 			instr{cmp, -1},
 			instr{jm, 9},
 			instr{setmatched, false},
@@ -170,8 +170,8 @@ var testCodeGenPrograms = []struct {
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
+			instr{push, int64(1)},
+			instr{push, int64(0)},
 			instr{cmp, 0},
 			instr{jm, 9},
 			instr{setmatched, false},
@@ -192,7 +192,7 @@ var testCodeGenPrograms = []struct {
 			instr{setmatched, false},
 			instr{push, 0},
 			instr{capref, 1},
-			instr{push, 1},
+			instr{push, int64(1)},
 			instr{cmp, 1},
 			instr{jm, 13},
 			instr{setmatched, false},
@@ -229,7 +229,7 @@ var testCodeGenPrograms = []struct {
 		[]instr{
 			instr{str, 0},
 			instr{length, 1},
-			instr{push, 0},
+			instr{push, int64(0)},
 			instr{cmp, 1},
 			instr{jnm, 7},
 			instr{setmatched, false},
@@ -240,19 +240,19 @@ var testCodeGenPrograms = []struct {
 1 >> 20
 `,
 		[]instr{
-			instr{push, 1},
-			instr{push, 7},
+			instr{push, int64(1)},
+			instr{push, int64(7)},
 			instr{and, nil},
-			instr{push, 15},
+			instr{push, int64(15)},
 			instr{xor, nil},
-			instr{push, 8},
+			instr{push, int64(8)},
 			instr{or, nil},
-			instr{push, 16},
+			instr{push, int64(16)},
 			instr{not, nil},
-			instr{push, 2},
+			instr{push, int64(2)},
 			instr{shl, nil},
-			instr{push, 1},
-			instr{push, 20},
+			instr{push, int64(1)},
+			instr{push, int64(20)},
 			instr{shr, nil}}},
 	{"pow", `
 /(\d+) (\d+)/ {
@@ -283,8 +283,8 @@ strtol("deadbeef", 16)
 `,
 		[]instr{
 			instr{str, 0},
-			instr{push, 16},
-			instr{strtol, 2}}},
+			instr{push, int64(16)},
+			instr{s2i, 2}}},
 	{"float", `
 20.0
 `,
@@ -313,8 +313,8 @@ counter bar
   bar++
 }`,
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
+			instr{push, int64(1)},
+			instr{push, int64(0)},
 			instr{cmp, 1},
 			instr{jnm, 10},
 			instr{setmatched, false},
@@ -333,8 +333,8 @@ counter bar
 3 % 1
 `,
 		[]instr{
-			instr{push, 3},
-			instr{push, 1},
+			instr{push, int64(3)},
+			instr{push, int64(1)},
 			instr{imod, nil},
 		},
 	},
@@ -383,7 +383,7 @@ gauge f
 getfilename()
 `,
 		[]instr{
-			instr{getfilename, nil},
+			instr{getfilename, 0},
 		},
 	},
 
@@ -415,7 +415,7 @@ getfilename()
 `,
 		[]instr{
 			instr{match, 0},
-			instr{jnm, 10},
+			instr{jnm, 11},
 			instr{setmatched, false},
 			instr{mload, 0},
 			instr{dload, 0},
@@ -440,15 +440,11 @@ getfilename()
 			instr{push, 0},
 			instr{capref, 1},
 			instr{s2f, 1}, // TODO(jaq): This should be i2f because $1 is type Int
-			instr{iset, nil},
+			instr{fset, nil},
 			instr{setmatched, true}}},
 }
 
 func TestCodegen(t *testing.T) {
-	defaultCompareUnexportedFields := deep.CompareUnexportedFields
-	deep.CompareUnexportedFields = true
-	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
-
 	for _, tc := range testCodeGenPrograms {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -469,7 +465,7 @@ func TestCodegen(t *testing.T) {
 				t.Fatalf("Codegen error:\n%s", err)
 			}
 
-			if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
+			if diff := go_cmp.Diff(tc.prog, obj.prog, go_cmp.AllowUnexported(instr{})); diff != "" {
 				t.Error(diff)
 				t.Logf("Expected:\n%s\nReceived:\n%s", tc.prog, obj.prog)
 			}

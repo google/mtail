@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
@@ -108,7 +108,7 @@ func TestReadTestData(t *testing.T) {
 	defer f.Close()
 	store := metrics.NewStore()
 	ReadTestData(f, "reader_test", store)
-	diff := go_cmp.Diff(expectedMetrics, store.Metrics, cmpopts.IgnoreUnexported(sync.RWMutex{}))
+	diff := cmp.Diff(expectedMetrics, store.Metrics, cmpopts.IgnoreUnexported(sync.RWMutex{}))
 	if diff != "" {
 		t.Error(diff)
 		t.Logf("store contains %s", store.Metrics)

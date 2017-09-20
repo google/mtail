@@ -6,7 +6,7 @@ package vm
 import (
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 )
 
 func TestInsertLookup(t *testing.T) {
@@ -18,7 +18,7 @@ func TestInsertLookup(t *testing.T) {
 	}
 
 	r1 := s.Lookup("foo")
-	if diff := deep.Equal(r1, sym1); diff != nil {
+	if diff := go_cmp.Diff(r1, sym1); diff != "" {
 		t.Error(diff)
 	}
 }

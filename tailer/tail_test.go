@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/watcher"
 
 	"github.com/spf13/afero"
@@ -98,7 +98,7 @@ func TestHandleLogUpdate(t *testing.T) {
 		&LogLine{logfile, "c"},
 		&LogLine{logfile, "d"},
 	}
-	if diff := deep.Equal(result, expected); diff != nil {
+	if diff := cmp.Diff(result, expected); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
@@ -163,8 +163,8 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	expected := []*LogLine{
 		&LogLine{logfile, "ab"},
 	}
-	diff := deep.Equal(result, expected)
-	if diff != nil {
+	diff := cmp.Diff(result, expected)
+	if diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 
