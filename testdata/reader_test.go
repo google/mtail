@@ -2,10 +2,12 @@ package testdata
 
 import (
 	"os"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
 )
@@ -91,7 +93,7 @@ var expectedMetrics = map[string][]*metrics.Metric{
 			LabelValues: []*metrics.LabelValue{
 				&metrics.LabelValue{
 					Labels: []string{},
-					Value:  datum.MakeFloat(37.0, time.Date(2017, 6, 15, 18, 9, 37, 0, time.UTC)),
+					Value:  datum.MakeFloat(37.1, time.Date(2017, 6, 15, 18, 9, 37, 0, time.UTC)),
 				},
 			},
 		},
@@ -106,8 +108,8 @@ func TestReadTestData(t *testing.T) {
 	defer f.Close()
 	store := metrics.NewStore()
 	ReadTestData(f, "reader_test", store)
-	diff := deep.Equal(expectedMetrics, store.Metrics)
-	if diff != nil {
+	diff := go_cmp.Diff(expectedMetrics, store.Metrics, cmpopts.IgnoreUnexported(sync.RWMutex{}))
+	if diff != "" {
 		t.Error(diff)
 		t.Logf("store contains %s", store.Metrics)
 	}
