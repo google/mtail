@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/golang/glog"
 	"github.com/google/mtail/watcher"
 
 	"github.com/spf13/afero"
@@ -69,7 +68,6 @@ func TestHandleLogUpdate(t *testing.T) {
 	wg := sync.WaitGroup{}
 	go func() {
 		for line := range lines {
-			glog.Infof("line: %q\n", line)
 			result = append(result, line)
 			wg.Done()
 		}
@@ -124,7 +122,6 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		for line := range lines {
-			glog.Infof("line: %q\n", line)
 			result = append(result, line)
 			wg.Done()
 		}

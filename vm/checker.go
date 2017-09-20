@@ -72,11 +72,9 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		} else {
 			n.sym.Type = NewTypeVariable()
 		}
-		glog.Infof("Making type of %s now %s", n.name, n.sym.Type)
 
 	case *idNode:
 		if n.sym == nil {
-			glog.Infof("name: %s", n.name)
 			if sym := c.scope.Lookup(n.name); sym != nil && sym.Kind == VarSymbol {
 				glog.Infof("found sym %v", sym)
 				n.sym = sym
@@ -164,16 +162,13 @@ func (c *checker) VisitAfter(node astNode) {
 		c.scope = n.s.Parent
 
 	case *binaryExprNode:
-		glog.Info("binExpr Node")
 		var rType Type
 		lT := n.lhs.Type()
-		glog.Infof("lhs is %v: %v", n.lhs, lT)
 		if isErrorType(lT) {
 			n.SetType(Error)
 			return
 		}
 		rT := n.rhs.Type()
-		glog.Infof("rhs is %v; %v", n.rhs, rT)
 		if isErrorType(rT) {
 			n.SetType(Error)
 			return
@@ -184,7 +179,6 @@ func (c *checker) VisitAfter(node astNode) {
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
-			glog.Info("arith op")
 			rType = LeastUpperBound(lT, rT)
 			if isErrorType(rType) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
@@ -198,7 +192,6 @@ func (c *checker) VisitAfter(node astNode) {
 			// exprType is the type signature of this expression
 			exprType := Function(t, t, t)
 			err := Unify(exprType, astType)
-			glog.Infof("post unify of %v op is %v, %v", n, exprType, rType)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(Error)
@@ -245,10 +238,7 @@ func (c *checker) VisitAfter(node astNode) {
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tr <= Tl
 			// ⇒ O ⊢ e : Tl
-			// glog.Infof("Tl: %v TR: %v", Tl, Tr)
 			rType = lT
-			//glog.Infof("LUB of %q and %q is %q", lT, rT, rType)
-			// e1 = e1 + e2
 			err := Unify(rType, rT)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
@@ -281,7 +271,6 @@ func (c *checker) VisitAfter(node astNode) {
 			n.SetType(rType)
 		case INC:
 			rType := Int
-			glog.Infof("INC expr %q type is %q", n.expr, t)
 			err := Unify(rType, t)
 			if err != nil {
 				// TODO(jaq): this check needs to occur in more locations on expressions that could take an indexedExprNode as child
@@ -306,9 +295,9 @@ func (c *checker) VisitAfter(node astNode) {
 		case *idNode:
 			// ok
 			if t, ok := v.Type().(*TypeOperator); ok && IsDimension(t) {
-				glog.Infof("Our idNode is a dimension type")
+				glog.V(1).Infof("Our idNode is a dimension type")
 			} else {
-				glog.Infof("Our idNode is not a dimension type")
+				glog.V(1).Infof("Our idNode is not a dimension type")
 				n.SetType(Error)
 				c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
 				return
@@ -324,7 +313,6 @@ func (c *checker) VisitAfter(node astNode) {
 			return
 		}
 
-		glog.Infof("n.lhs: %#v", n.lhs)
 		argTypes := []Type{}
 		if args, ok := n.index.(*exprlistNode); ok {
 			for _, arg := range args.children {
@@ -339,16 +327,12 @@ func (c *checker) VisitAfter(node astNode) {
 			n.SetType(Error)
 			return
 		}
-		glog.Infof("args is now %q", argTypes)
 		rType := NewTypeVariable()
 		argTypes = append(argTypes, rType)
 		astType := Dimension(argTypes...)
-		glog.Infof("We think this expr %v is of type %q", n.lhs, astType)
 		fresh := n.lhs.Type()
-		glog.Infof("It should be of type %q", fresh)
 		err := Unify(fresh, astType)
 		if err != nil {
-			glog.Info("that's an error")
 			exprType, ok := n.lhs.Type().(*TypeOperator)
 			if !ok {
 				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected lhs type %v", n.lhs.Type()))
@@ -361,7 +345,6 @@ func (c *checker) VisitAfter(node astNode) {
 				// c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
 				// so strip the last unmatched parameters from the type,and pass that back
 				n.SetType(Dimension(exprType.Args[len(astType.Args)-1:]...))
-				glog.Infof("(early) indexedExpr expr %q is now %q", n, n.Type())
 				return
 			case len(exprType.Args) < len(astType.Args):
 				c.errors.Add(n.Pos(), fmt.Sprintf("Too many keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
@@ -372,7 +355,6 @@ func (c *checker) VisitAfter(node astNode) {
 			return
 		}
 		n.SetType(rType)
-		glog.Infof("indexedExpr expr %q is now %q", n, n.Type())
 
 	case *builtinNode:
 		types := []Type{}
