@@ -369,7 +369,7 @@ func TestGlob(t *testing.T) {
 		}
 		defer log.Close()
 		if tt.expected {
-			count += 1
+			count++
 		}
 		log.WriteString("\n")
 		log.Sync()
@@ -430,7 +430,7 @@ func TestGlobAfterStart(t *testing.T) {
 		}
 		defer log.Close()
 		if tt.expected {
-			count += 1
+			count++
 		}
 		log.WriteString("\n")
 		log.Sync()

@@ -9,6 +9,7 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -46,10 +47,9 @@ func New(o Options) (*Exporter, error) {
 	if o.Store == nil {
 		return nil, errors.New("exporter needs a Store")
 	}
-	hostname := o.Hostname
-	if hostname == "" {
+	if o.Hostname == "" {
 		var err error
-		hostname, err = os.Hostname()
+		o.Hostname, err = os.Hostname()
 		if err != nil {
 			return nil, errors.Wrap(err, "getting hostname")
 		}
@@ -90,7 +90,7 @@ func formatLabels(name string, m map[string]string, ksep, sep string) string {
 // sockets.
 type formatter func(string, *metrics.Metric, *metrics.LabelSet) string
 
-func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
+func (e *Exporter) writeSocketMetrics(c io.Writer, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
 	e.store.RLock()
 	defer e.store.RUnlock()
 
