@@ -763,7 +763,7 @@ func New(name string, obj *object, syslogUseCurrentYear bool, loc *time.Location
 		str:                  obj.str,
 		m:                    obj.m,
 		prog:                 obj.prog,
-		timeMemos:            make(map[string]time.Time, 0),
+		timeMemos:            make(map[string]time.Time),
 		syslogUseCurrentYear: syslogUseCurrentYear,
 		loc:                  loc,
 	}

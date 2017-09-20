@@ -183,7 +183,7 @@ var Builtins = map[string]Type{
 }
 
 func FreshType(t Type) Type {
-	mappings := make(map[*TypeVariable]*TypeVariable, 0)
+	mappings := make(map[*TypeVariable]*TypeVariable)
 
 	var freshRec func(Type) Type
 	freshRec = func(tp Type) Type {

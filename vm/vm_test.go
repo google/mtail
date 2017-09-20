@@ -460,7 +460,7 @@ func TestInstrs(t *testing.T) {
 			for _, item := range tc.reversedStack {
 				v.t.Push(item)
 			}
-			v.t.matches = make(map[int][]string, 0)
+			v.t.matches = make(map[int][]string)
 			v.input = tailer.NewLogLine(testFilename, "aaaab")
 			v.execute(v.t, tc.i)
 			if v.terminate {
