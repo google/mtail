@@ -284,7 +284,6 @@ func (c *checker) VisitAfter(node astNode) {
 			}
 			n.SetType(rType)
 		default:
-			// TODO: error
 			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary expr %v", n))
 			n.SetType(Error)
 			return
