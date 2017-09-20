@@ -47,7 +47,7 @@ func TestScalarMetric(t *testing.T) {
 	if newD == nil {
 		t.Errorf("new_d is nil")
 	}
-	if newD.Value() != "1" {
+	if newD.ValueString() != "1" {
 		t.Errorf("value not 1")
 	}
 	// TODO: try setting datum with labels on scalar
@@ -57,21 +57,21 @@ func TestDimensionedMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, Int, "foo")
 	d, _ := v.GetDatum("a")
 	datum.IncIntBy(d, 1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a"}).Value.Value() != "1" {
+	if v.findLabelValueOrNil([]string{"a"}).Value.ValueString() != "1" {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, Int, "foo", "bar")
 	d, _ = v.GetDatum("a", "b")
 	datum.IncIntBy(d, 1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a", "b"}).Value.Value() != "1" {
+	if v.findLabelValueOrNil([]string{"a", "b"}).Value.ValueString() != "1" {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, Int, "foo", "bar", "quux")
 	d, _ = v.GetDatum("a", "b", "c")
 	datum.IncIntBy(d, 1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a", "b", "c"}).Value.Value() != "1" {
+	if v.findLabelValueOrNil([]string{"a", "b", "c"}).Value.ValueString() != "1" {
 		t.Errorf("fail")
 	}
 }
@@ -93,6 +93,7 @@ var labelSetTests = []struct {
 func TestEmitLabelSet(t *testing.T) {
 	ts := time.Now().UTC()
 	for _, tc := range labelSetTests {
+		tc := tc
 		t.Run(fmt.Sprintf("%v", tc.values), func(t *testing.T) {
 			t.Parallel()
 			m := NewMetric("test", "prog", Gauge, Int, "foo", "bar", "quux")
@@ -219,7 +220,7 @@ func TestTimer(t *testing.T) {
 	if newD == nil {
 		t.Errorf("new_d is nil")
 	}
-	if newD.Value() != "1" {
+	if newD.ValueString() != "1" {
 		t.Errorf("value not 1")
 	}
 }

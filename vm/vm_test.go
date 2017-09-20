@@ -318,12 +318,26 @@ var instructions = []struct {
 		[]interface{}{2, 2},
 		[]interface{}{int64(4)},
 		thread{pc: 0, matches: map[int][]string{}}},
-	{"strtol",
-		instr{strtol, 2},
+	{"s2i",
+		instr{s2i, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"ff", 16},
 		[]interface{}{int64(255)},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"s2f",
+		instr{s2f, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"1.0"},
+		[]interface{}{float64(1.0)},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"i2f",
+		instr{i2f, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1},
+		[]interface{}{float64(1.0)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"settime",
 		instr{settime, 0},
@@ -431,6 +445,7 @@ const testFilename = "test"
 // instruction cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			var m []*metrics.Metric

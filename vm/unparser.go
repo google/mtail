@@ -122,6 +122,8 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 			u.emit(" ** ")
 		case ASSIGN:
 			u.emit(" = ")
+		case ADD_ASSIGN:
+			u.emit(" += ")
 		case MOD:
 			u.emit(" % ")
 		}
@@ -205,6 +207,9 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 		u.emit("del ")
 		Walk(u, v.n)
 		u.newline()
+
+	case *convNode:
+		Walk(u, v.n)
 
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))

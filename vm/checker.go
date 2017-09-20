@@ -6,6 +6,8 @@ package vm
 import (
 	"fmt"
 	"regexp/syntax"
+
+	"github.com/golang/glog"
 )
 
 // checker holds data for a semantic checker
@@ -60,11 +62,23 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
 		}
-		n.sym.Type = NewTypeVariable()
+		if len(n.keys) > 0 {
+			// One type per key and one for the value.
+			keyTypes := make([]Type, 0, len(n.keys)+1)
+			for i := 0; i <= len(n.keys); i++ {
+				keyTypes = append(keyTypes, NewTypeVariable())
+			}
+			n.sym.Type = Dimension(keyTypes...)
+		} else {
+			n.sym.Type = NewTypeVariable()
+		}
+		glog.Infof("Making type of %s now %s", n.name, n.sym.Type)
 
 	case *idNode:
 		if n.sym == nil {
+			glog.Infof("name: %s", n.name)
 			if sym := c.scope.Lookup(n.name); sym != nil && sym.Kind == VarSymbol {
+				glog.Infof("found sym %v", sym)
 				n.sym = sym
 			} else {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\tTry adding `counter %s' to the top of the program.", n.name, n.name))
@@ -132,6 +146,15 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 	return c
 }
 
+func isErrorType(t Type) bool {
+	if o, ok := t.(*TypeOperator); ok {
+		if o.Name == "Error" {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *stmtlistNode:
@@ -140,37 +163,60 @@ func (c *checker) VisitAfter(node astNode) {
 	case *condNode:
 		c.scope = n.s.Parent
 
-	case *indexedExprNode:
-		switch v := n.lhs.(type) {
-		case *idNode:
-			// ok
-		case *indexedExprNode:
-			n.index.(*exprlistNode).children = append(v.index.(*exprlistNode).children, n.index.(*exprlistNode).children...)
-			n.lhs = v.lhs
-		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression."))
+	case *binaryExprNode:
+		glog.Info("binExpr Node")
+		var rType Type
+		lT := n.lhs.Type()
+		glog.Infof("lhs is %v: %v", n.lhs, lT)
+		if isErrorType(lT) {
+			n.SetType(Error)
 			return
 		}
-
-	case *binaryExprNode:
-		var rType Type
-		Tl := n.lhs.Type()
-		Tr := n.rhs.Type()
+		rT := n.rhs.Type()
+		glog.Infof("rhs is %v; %v", n.rhs, rT)
+		if isErrorType(rT) {
+			n.SetType(Error)
+			return
+		}
 		switch n.op {
 		case DIV, MOD, MUL, MINUS, PLUS, POW:
 			// Numeric
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
-			rType = Unify(Tl, Tr)
+			glog.Info("arith op")
+			rType = LeastUpperBound(lT, rT)
+			if isErrorType(rType) {
+				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
+				n.SetType(rType)
+				return
+			}
+			// astType is the type signature of the ast expression
+			astType := Function(lT, rT, rType)
+
+			t := NewTypeVariable()
+			// exprType is the type signature of this expression
+			exprType := Function(t, t, t)
+			err := Unify(exprType, astType)
+			glog.Infof("post unify of %v op is %v, %v", n, exprType, rType)
+			if err != nil {
+				c.errors.Add(n.Pos(), err.Error())
+				n.SetType(Error)
+				return
+			}
+
 		case SHL, SHR, AND, OR, XOR, NOT:
 			// bitwise
 			// O ⊢ e1 :Int, O ⊢ e2 : Int
 			// ⇒ O ⊢ e : Int
-			if Equals(Tl, Int) && Equals(Tr, Int) {
-				rType = Int
-			} else {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, Tl, Tr))
+			rType = Int
+			exprType := Function(rType, rType, rType)
+			astType := Function(lT, rT, NewTypeVariable())
+			err := Unify(exprType, astType)
+			if err != nil {
+				c.errors.Add(n.Pos(), err.Error())
+				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, lT, rT))
+				n.SetType(Error)
 				return
 			}
 		case LT, GT, LE, GE, EQ, NE:
@@ -178,28 +224,174 @@ func (c *checker) VisitAfter(node astNode) {
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
-			rType = Unify(Tl, Tr)
-		case ASSIGN, ADD_ASSIGN:
-			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
-			// Tl <= Tr
-			// ⇒ O ⊢ e : Tl
-			rType = Unify(Tl, Tr)
-
-		default:
-			if Tl != Tr {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch between lhs (%v) and rhs (%v) for op %q", Tl, Tr, n.op))
+			rType = LeastUpperBound(lT, rT)
+			if isErrorType(rType) {
+				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
+				n.SetType(rType)
 				return
 			}
-			rType = Tl
+			astType := Function(lT, rT, rType)
+
+			t := NewTypeVariable()
+			exprType := Function(t, t, Int)
+			err := Unify(exprType, astType)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				n.SetType(Error)
+				return
+			}
+
+		case ASSIGN, ADD_ASSIGN:
+			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
+			// Tr <= Tl
+			// ⇒ O ⊢ e : Tl
+			// glog.Infof("Tl: %v TR: %v", Tl, Tr)
+			rType = lT
+			//glog.Infof("LUB of %q and %q is %q", lT, rT, rType)
+			// e1 = e1 + e2
+			err := Unify(rType, rT)
+			if err != nil {
+				c.errors.Add(n.Pos(), err.Error())
+				n.SetType(Error)
+				return
+			}
+
+		default:
+			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator in node %v", n))
+			n.SetType(Error)
+			return
 		}
 		n.SetType(rType)
 
 	case *unaryExprNode:
+		t := n.expr.Type()
+		if isErrorType(t) {
+			n.SetType(Error)
+			return
+		}
 		switch n.op {
 		case NOT:
-			n.SetType(Int)
+			rType := Int
+			err := Unify(rType, t)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
+				n.SetType(Error)
+				return
+			}
+			n.SetType(rType)
+		case INC:
+			rType := Int
+			glog.Infof("INC expr %q type is %q", n.expr, t)
+			err := Unify(rType, t)
+			if err != nil {
+				// TODO(jaq): this check needs to occur in more locations on expressions that could take an indexedExprNode as child
+				if t1, ok := t.(*TypeOperator); ok && IsDimension(t) {
+					c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for expression: expecting %d more", len(t1.Args)-1))
+				} else {
+					c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
+				}
+				n.SetType(Error)
+				return
+			}
+			n.SetType(rType)
 		default:
-			n.SetType(n.expr.Type())
+			// TODO: error
+			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary expr %v", n))
+			n.SetType(Error)
+			return
 		}
+
+	case *indexedExprNode:
+		switch v := n.lhs.(type) {
+		case *idNode:
+			// ok
+			if t, ok := v.Type().(*TypeOperator); ok && IsDimension(t) {
+				glog.Infof("Our idNode is a dimension type")
+			} else {
+				glog.Infof("Our idNode is not a dimension type")
+				n.SetType(Error)
+				c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
+				return
+			}
+		case *indexedExprNode:
+			// Collapse any indexedExprNode on the lhs by rewriting to index exprlist form, prepending the lhs children, and copying the lhs's lhs to our own.
+			// As this is a post-order operation, the lhs is already collapsed to exprlist form.
+			n.index.(*exprlistNode).children = append(v.index.(*exprlistNode).children, n.index.(*exprlistNode).children...)
+			n.lhs = v.lhs
+		default:
+			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
+			n.SetType(Error)
+			return
+		}
+
+		glog.Infof("n.lhs: %#v", n.lhs)
+		argTypes := []Type{}
+		if args, ok := n.index.(*exprlistNode); ok {
+			for _, arg := range args.children {
+				if isErrorType(arg.Type()) {
+					n.SetType(Error)
+					return
+				}
+				argTypes = append(argTypes, arg.Type())
+			}
+		} else {
+			c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected %v", n.index))
+			n.SetType(Error)
+			return
+		}
+		glog.Infof("args is now %q", argTypes)
+		rType := NewTypeVariable()
+		argTypes = append(argTypes, rType)
+		astType := Dimension(argTypes...)
+		glog.Infof("We think this expr %v is of type %q", n.lhs, astType)
+		fresh := n.lhs.Type()
+		glog.Infof("It should be of type %q", fresh)
+		err := Unify(fresh, astType)
+		if err != nil {
+			glog.Info("that's an error")
+			exprType, ok := n.lhs.Type().(*TypeOperator)
+			if !ok {
+				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected lhs type %v", n.lhs.Type()))
+				n.SetType(Error)
+				return
+			}
+			switch {
+			case len(exprType.Args) > len(astType.Args):
+				// Maybe enclosing expression has enough keys, so we cannot error out here.
+				// c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
+				// so strip the last unmatched parameters from the type,and pass that back
+				n.SetType(Dimension(exprType.Args[len(astType.Args)-1:]...))
+				glog.Infof("(early) indexedExpr expr %q is now %q", n, n.Type())
+				return
+			case len(exprType.Args) < len(astType.Args):
+				c.errors.Add(n.Pos(), fmt.Sprintf("Too many keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
+			default:
+				c.errors.Add(n.Pos(), fmt.Sprintf("Index lookup expression %s", err))
+			}
+			n.SetType(Error)
+			return
+		}
+		n.SetType(rType)
+		glog.Infof("indexedExpr expr %q is now %q", n, n.Type())
+
+	case *builtinNode:
+		types := []Type{}
+		if args, ok := n.args.(*exprlistNode); ok {
+			for _, arg := range args.children {
+				types = append(types, arg.Type())
+			}
+		}
+		rType := NewTypeVariable()
+		types = append(types, rType)
+
+		fn := Function(types...)
+		fresh := FreshType(Builtins[n.name])
+		err := Unify(fresh, fn)
+		if err != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.name, err))
+			n.SetType(Error)
+			return
+		}
+		n.SetType(rType)
 	}
 }

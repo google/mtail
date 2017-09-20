@@ -71,6 +71,11 @@ const (
 	fset // Floating point assignment
 
 	getfilename // Push input.Filename onto the stack.
+
+	// Conversions
+	i2f // int to float
+	s2i // string to int
+	s2f // string to float
 )
 
 var opNames = map[opcode]string{
@@ -106,6 +111,7 @@ var opNames = map[opcode]string{
 	strtol:      "strtol",
 	setmatched:  "setmatched",
 	otherwise:   "otherwise",
+	del:         "del",
 	fadd:        "fadd",
 	fsub:        "fsub",
 	fmul:        "fmul",
@@ -114,16 +120,21 @@ var opNames = map[opcode]string{
 	fpow:        "fpow",
 	fset:        "fset",
 	getfilename: "getfilename",
+	i2f:         "i2f",
+	s2i:         "s2i",
+	s2f:         "s2f",
 }
 
 var builtin = map[string]opcode{
-	"timestamp":   timestamp,
+	"int":         s2i,
+	"float":       s2f,
+	"getfilename": getfilename,
 	"len":         length,
 	"settime":     settime,
 	"strptime":    strptime,
-	"strtol":      strtol,
+	"strtol":      s2i,
+	"timestamp":   timestamp,
 	"tolower":     tolower,
-	"getfilename": getfilename,
 }
 
 type instr struct {
@@ -188,7 +199,7 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof("VM stack:\n%s", debug.Stack())
 	glog.Infof("Dumping vm state")
 	glog.Infof("Name: %s", v.name)
-	glog.Infof("Input: %v", v.input)
+	glog.Infof("Input: %#v", v.input)
 	glog.Infof("Thread:")
 	glog.Infof(" PC %v", v.t.pc-1)
 	glog.Infof(" Match %v", v.t.match)
@@ -389,6 +400,14 @@ func (v *VM) ParseTime(layout, value string) (tm time.Time) {
 // instruction, and returns a boolean indicating if the current thread should
 // terminate.
 func (v *VM) execute(t *thread, i instr) {
+	defer func() {
+		if r := recover(); r != nil {
+			v.errorf("panic in thread %#v at instr %q: %s", t, i, r)
+			// TODO(jaq): The terminate flag only stops this thread, but
+			// doesn't stop the VM.  A panic should terminate the whole VM.
+		}
+	}()
+
 	switch i.op {
 	case match:
 		// match regex and store success
@@ -656,7 +675,7 @@ func (v *VM) execute(t *thread, i instr) {
 		s := t.Pop().(string)
 		t.Push(len(s))
 
-	case strtol:
+	case s2i:
 		base, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
@@ -667,6 +686,21 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("%s", err)
 		}
 		t.Push(i)
+
+	case s2f:
+		str := t.Pop().(string)
+		f, err := strconv.ParseFloat(str, 64)
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(f)
+
+	case i2f:
+		i, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(float64(i))
 
 	case setmatched:
 		t.matched = i.opnd.(bool)
@@ -760,7 +794,11 @@ func (v *VM) DumpByteCode(name string) string {
 
 	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
 	for n, i := range v.prog {
-		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, opNames[i.op], i.opnd)
+		name := opNames[i.op]
+		if name == "" {
+			name = fmt.Sprintf("%d", i.op)
+		}
+		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, name, i.opnd)
 	}
 	w.Flush()
 	return b.String()

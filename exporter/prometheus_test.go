@@ -131,6 +131,7 @@ foo{} 1
 
 func TestHandlePrometheus(t *testing.T) {
 	for _, tc := range handlePrometheusTests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ms := metrics.NewStore()

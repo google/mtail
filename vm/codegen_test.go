@@ -407,6 +407,41 @@ getfilename()
 			instr{dload, 3},
 			instr{inc, nil},
 			instr{setmatched, true}}},
+	{"string to int",
+		`counter c
+/(\d)/ {
+  c = int($1)
+}
+`,
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 10},
+			instr{setmatched, false},
+			instr{mload, 0},
+			instr{dload, 0},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{push, 10},
+			instr{s2i, 1},
+			instr{iset, nil},
+			instr{setmatched, true}}},
+	{"string to float",
+		`counter c
+/(\d)/ {
+  c = float($1)
+}
+`,
+		[]instr{
+			instr{match, 0},
+			instr{jnm, 10},
+			instr{setmatched, false},
+			instr{mload, 0},
+			instr{dload, 0},
+			instr{push, 0},
+			instr{capref, 1},
+			instr{s2f, 1}, // TODO(jaq): This should be i2f because $1 is type Int
+			instr{iset, nil},
+			instr{setmatched, true}}},
 }
 
 func TestCodegen(t *testing.T) {
@@ -426,12 +461,12 @@ func TestCodegen(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Check error: %s", err)
 			}
+			s := Sexp{}
+			s.emitTypes = true
+			t.Log("Typed AST:\n" + s.Dump(ast))
 			obj, err := CodeGen(tc.name, ast)
 			if err != nil {
-				t.Errorf("Compile errors:\n%s", err)
-				s := Sexp{}
-				s.emitTypes = true
-				t.Fatalf("AST:\n%s", s.Dump(ast))
+				t.Fatalf("Codegen error:\n%s", err)
 			}
 
 			if diff := deep.Equal(tc.prog, obj.prog); diff != nil {

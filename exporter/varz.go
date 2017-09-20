@@ -54,5 +54,5 @@ func metricToVarz(o Options, m *metrics.Metric, l *metrics.LabelSet) string {
 	return fmt.Sprintf(varzFormat,
 		m.Name,
 		strings.Join(s, ","),
-		l.Datum.Value())
+		l.Datum.ValueString())
 }
