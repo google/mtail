@@ -225,7 +225,6 @@ func collect(t *lexerTest) (tokens []token) {
 			return
 		}
 	}
-	return
 }
 
 func TestLex(t *testing.T) {
