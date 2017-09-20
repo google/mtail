@@ -56,7 +56,6 @@ const (
 	dload                    // Pop `operand` keys and metric off stack, and push datum at metric[key,...] onto stack.
 	tolower                  // Convert the string at the top of the stack to lowercase.
 	length                   // Compute the length of a string.
-	strtol                   // Convert a string to a number, given a base.
 	setmatched               // Set "matched" flag
 	otherwise                // Only match if "matched" flag is false.
 	del                      //  Pop `operand` keys and metric off stack, and remove the datum at metric[key,...] from memory
@@ -108,7 +107,6 @@ var opNames = map[opcode]string{
 	dload:       "dload",
 	tolower:     "tolower",
 	length:      "length",
-	strtol:      "strtol",
 	setmatched:  "setmatched",
 	otherwise:   "otherwise",
 	del:         "del",
