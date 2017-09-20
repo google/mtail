@@ -31,7 +31,7 @@ func TestNewLoader(t *testing.T) {
 	l.handles["test"] = handle
 	l.handleMu.Unlock()
 	go func() {
-		for _ = range outLines {
+		for range outLines {
 		}
 		close(done)
 	}()

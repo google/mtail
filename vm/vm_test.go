@@ -487,7 +487,7 @@ func TestInstrs(t *testing.T) {
 
 func TestStrptimeWithTimezone(t *testing.T) {
 	loc, _ := time.LoadLocation("Europe/Berlin")
-	obj := &object{prog: []instr{instr{strptime, 0}}}
+	obj := &object{prog: []instr{{strptime, 0}}}
 	vm := New("strptimezone", obj, true, loc)
 	vm.t = new(thread)
 	vm.t.stack = make([]interface{}, 0)

@@ -166,7 +166,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 	f := func(name, prog string, kind Kind, keys []string, val, ti, tns int64) bool {
 		m := NewMetric(name, prog, kind, Int, keys...)
 		labels := make([]string, 0)
-		for _ = range keys {
+		for range keys {
 			if l, ok := quick.Value(reflect.TypeOf(name), rand); ok {
 				labels = append(labels, l.String())
 			} else {

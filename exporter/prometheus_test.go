@@ -26,11 +26,11 @@ var handlePrometheusTests = []struct {
 	},
 	{"single",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
 		`# TYPE foo counter
 foo{} 1
@@ -38,12 +38,12 @@ foo{} 1
 	},
 	{"dimensioned",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a", "b"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 			},
 		},
 		`# TYPE foo counter
@@ -52,11 +52,11 @@ foo{a="1",b="2"} 1
 	},
 	{"gauge",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Gauge,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
 		`# TYPE foo gauge
 foo{} 1
@@ -64,11 +64,11 @@ foo{} 1
 	},
 	{"timer",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Timer,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
 		`# TYPE foo gauge
 foo{} 1
@@ -76,12 +76,12 @@ foo{} 1
 	},
 	{"quotes",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"str\"bang\"blah"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{"str\"bang\"blah"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 			},
 		},
 		`# TYPE foo counter
@@ -90,11 +90,11 @@ foo{a="str\"bang\"blah"} 1
 	},
 	{"help",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 				Source:      "location.mtail:37",
 			},
 		},
@@ -105,18 +105,18 @@ foo{} 1
 	},
 	{"2 help",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 				Source:      "location.mtail:37",
 			},
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 				Source:      "different.mtail:37",
 			},
 		},

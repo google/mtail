@@ -93,10 +93,10 @@ func TestHandleLogUpdate(t *testing.T) {
 	<-done
 
 	expected := []*LogLine{
-		&LogLine{logfile, "a"},
-		&LogLine{logfile, "b"},
-		&LogLine{logfile, "c"},
-		&LogLine{logfile, "d"},
+		{logfile, "a"},
+		{logfile, "b"},
+		{logfile, "c"},
+		{logfile, "d"},
 	}
 	if diff := cmp.Diff(result, expected); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
@@ -161,7 +161,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	<-done
 
 	expected := []*LogLine{
-		&LogLine{logfile, "ab"},
+		{logfile, "ab"},
 	}
 	diff := cmp.Diff(result, expected)
 	if diff != "" {

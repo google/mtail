@@ -26,11 +26,11 @@ var handleVarzTests = []struct {
 	},
 	{"single",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(1397586900, 0))}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(1397586900, 0))}},
 			},
 		},
 		`foo{prog=test,instance=gunstar} 1
@@ -38,12 +38,12 @@ var handleVarzTests = []struct {
 	},
 	{"dimensioned",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a", "b"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(1397586900, 0))}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(1397586900, 0))}},
 			},
 		},
 		`foo{a=1,b=2,prog=test,instance=gunstar} 1

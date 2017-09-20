@@ -138,7 +138,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 		make(map[string]string),
 		make(map[string]string),
 	}
-	for name, _ := range l.programErrors {
+	for name := range l.programErrors {
 		if ProgLoadErrors.Get(name) != nil {
 			data.Loaderrors[name] = ProgLoadErrors.Get(name).String()
 		}
