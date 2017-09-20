@@ -233,7 +233,7 @@ func (m *MtailServer) handleQuit(w http.ResponseWriter, r *http.Request) {
 
 // WaitForShutdown handles shutdown requests from the system or the UI.
 func (m *MtailServer) WaitForShutdown() {
-	n := make(chan os.Signal)
+	n := make(chan os.Signal, 1)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
 	select {
 	case <-n:
