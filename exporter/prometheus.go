@@ -74,7 +74,7 @@ func metricToPrometheus(options Options, m *metrics.Metric, l *metrics.LabelSet)
 	return fmt.Sprintf(prometheusFormat,
 		noHyphens(m.Name),
 		strings.Join(s, ","),
-		l.Datum.Value())
+		l.Datum.ValueString())
 }
 
 func kindToPrometheusType(kind metrics.Kind) string {

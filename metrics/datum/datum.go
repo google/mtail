@@ -5,8 +5,11 @@ package datum
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 type Type int
@@ -31,27 +34,31 @@ type Datum interface {
 	// Type returns the Datum type.
 	Type() Type
 
-	Value() string
+	ValueString() string
 
-	Time() string
+	TimeString() string
 }
 
-type datum struct {
-	time int64 // nanoseconds since unix epoch
+type BaseDatum struct {
+	Time int64 // nanoseconds since unix epoch
 }
 
 var zeroTime time.Time
 
-func (d *datum) stamp(timestamp time.Time) {
+func (d *BaseDatum) stamp(timestamp time.Time) {
+	glog.Infof("storing %v", timestamp)
 	if timestamp.IsZero() {
-		atomic.StoreInt64(&d.time, time.Now().UTC().UnixNano())
+		glog.Infof("%s", debug.Stack())
+	}
+	if timestamp.IsZero() {
+		atomic.StoreInt64(&d.Time, time.Now().UTC().UnixNano())
 	} else {
-		atomic.StoreInt64(&d.time, timestamp.UnixNano())
+		atomic.StoreInt64(&d.Time, timestamp.UnixNano())
 	}
 }
 
-func (d *datum) Time() string {
-	return fmt.Sprintf("%d", atomic.LoadInt64(&d.time)/1e9)
+func (d *BaseDatum) TimeString() string {
+	return fmt.Sprintf("%d", atomic.LoadInt64(&d.Time)/1e9)
 }
 
 func NewInt() Datum {
@@ -63,20 +70,20 @@ func NewFloat() Datum {
 }
 
 func MakeInt(v int64, ts time.Time) Datum {
-	d := &intDatum{}
+	d := &IntDatum{}
 	d.Set(v, ts)
 	return d
 }
 
 func MakeFloat(v float64, ts time.Time) Datum {
-	d := &floatDatum{}
+	d := &FloatDatum{}
 	d.Set(v, ts)
 	return d
 }
 
 func GetInt(d Datum) int64 {
 	switch d := d.(type) {
-	case *intDatum:
+	case *IntDatum:
 		return d.Get()
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
@@ -85,7 +92,7 @@ func GetInt(d Datum) int64 {
 
 func GetFloat(d Datum) float64 {
 	switch d := d.(type) {
-	case *floatDatum:
+	case *FloatDatum:
 		return d.Get()
 	default:
 		panic(fmt.Sprintf("datum %v is not a Float", d))
@@ -93,8 +100,9 @@ func GetFloat(d Datum) float64 {
 }
 
 func SetInt(d Datum, v int64, ts time.Time) {
+	glog.Infof("datum %v value %v ts %v", d, v, ts)
 	switch d := d.(type) {
-	case *intDatum:
+	case *IntDatum:
 		d.Set(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
@@ -102,8 +110,9 @@ func SetInt(d Datum, v int64, ts time.Time) {
 }
 
 func SetFloat(d Datum, v float64, ts time.Time) {
+	glog.Infof("datum %v value %v ts %v", d, v, ts)
 	switch d := d.(type) {
-	case *floatDatum:
+	case *FloatDatum:
 		d.Set(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not a Float", d))
@@ -112,7 +121,7 @@ func SetFloat(d Datum, v float64, ts time.Time) {
 
 func IncIntBy(d Datum, v int64, ts time.Time) {
 	switch d := d.(type) {
-	case *intDatum:
+	case *IntDatum:
 		d.IncBy(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
