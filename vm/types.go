@@ -123,6 +123,7 @@ func (t *TypeOperator) String() (s string) {
 func Function(args ...Type) *TypeOperator {
 	return &TypeOperator{"→", args}
 }
+
 func IsFunction(t Type) bool {
 	if v, ok := t.(*TypeOperator); ok {
 		return v.Name == "→"
