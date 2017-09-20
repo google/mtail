@@ -38,13 +38,13 @@ var exampleProgramTests = []struct {
 		"testdata/anonymised_dhcpd_log",
 		"testdata/anonymised_dhcpd_log.golden",
 	},
-	// {
-	// 	"examples/ntpd.mtail",
-	// 	"testdata/ntp4",
-	// 	"testdata/ntp4.golden",
-	// },
 	{
 		"examples/ntpd.mtail",
+		"testdata/ntp4",
+		"testdata/ntp4.golden",
+	},
+	{
+		"examples/ntpd_peerstats.mtail",
 		"testdata/xntp3_peerstats",
 		"testdata/xntp3_peerstats.golden",
 	},

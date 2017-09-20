@@ -1,0 +1,29 @@
+# Peerstats log handling
+gauge peer_status by peer
+gauge peer_select by peer
+gauge peer_count by peer
+gauge peer_code by peer
+gauge peer_offset by peer
+gauge peer_delay by peer
+gauge peer_dispersion by peer
+counter num_peerstats by peer
+# TODO(jaq) seconds is int, not float
+/^(?P<days>\d+) (?P<seconds>\d+)\.\d+ (?P<peer>\d+\.\d+\.\d+\.\d+) (?P<status>[0-9a-f]+) (?P<offset>-?\d+\.\d+) (?P<delay>\d+\.\d+) (?P<dispersion>\d+\.\d+)/ {
+  # Unix epoch in MJD is 40587.
+  settime(($days - 40587) * 86400 + $seconds)
+
+  peer_offset[$peer] = $offset
+  peer_delay[$peer] = $delay
+  peer_dispersion[$peer] = $dispersion
+  # http://www.cis.udel.edu/~mills/ntp/html/decode.html#peer
+  # bits 0-4
+  peer_status[$peer] = (strtol($status, 16) >> (16 - 5)) & ((2 ** 5) - 1)
+  # bits 5-7
+  peer_select[$peer] = (strtol($status, 16) >> (16 - 8)) & ((2 ** 3) - 1)
+  # bits 6-11
+  peer_count[$peer] = (strtol($status, 16) >> (16 - 12)) & ((2 ** 4) - 1)
+  # bits 12-15
+  peer_code[$peer] = strtol($status, 16) & ((2 ** 4) - 1)
+  num_peerstats[$peer]++
+}
+
