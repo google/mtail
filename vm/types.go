@@ -358,9 +358,7 @@ func inferCaprefType(re *syntax.Regexp, cap int) Type {
 			return String
 		}
 	}
-	// TODO: String.  Current behaviour of mtail before types is assume all
-	// matches are usable in arithmetic expressions.
-	return Int
+	return String
 }
 
 // getCaptureGroup returns the Regexp node of the capturing group numbered cap
