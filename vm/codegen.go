@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
 )
@@ -41,11 +42,6 @@ func (c *codegen) emit(i instr) {
 	c.obj.prog = append(c.obj.prog, i)
 }
 
-var kindMap = map[Type]datum.Type{
-	Int:   metrics.Int,
-	Float: metrics.Float,
-}
-
 func (c *codegen) VisitBefore(node astNode) Visitor {
 	switch n := node.(type) {
 
@@ -59,8 +55,21 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		// If the Type is not in the map, then default to metrics.Int.  This is
 		// a hack for metrics that no type can be inferred, retaining
 		// historical behaviour.
-		kind := kindMap[n.Type()]
-		m := metrics.NewMetric(name, c.name, n.kind, kind, n.keys...)
+		t := n.Type()
+		if IsDimension(t) {
+			t = t.(*TypeOperator).Args[len(t.(*TypeOperator).Args)-1]
+		}
+		var dtyp datum.Type
+		switch {
+		case Equals(Float, t):
+			dtyp = metrics.Float
+		default:
+			if !IsComplete(t) {
+				glog.Errorf("Incomplete type %v for %#v", t, n)
+			}
+			dtyp = metrics.Int
+		}
+		m := metrics.NewMetric(name, c.name, n.kind, dtyp, n.keys...)
 		m.SetSource(n.Pos().String())
 		// Scalar counters can be initialized to zero.  Dimensioned counters we
 		// don't know the values of the labels yet.  Gauges and Timers we can't
@@ -72,7 +81,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 				return nil
 			}
 			// Initialize to zero at the zero time.
-			if kind == metrics.Int {
+			if dtyp == metrics.Int {
 				datum.SetInt(d, 0, time.Unix(0, 0))
 			} else {
 				datum.SetFloat(d, 0, time.Unix(0, 0))
