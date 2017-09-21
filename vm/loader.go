@@ -50,11 +50,12 @@ const (
 // directory for filesystem changes.  Any compile errors are stored for later retrieival.
 // This function returns an error if an internal error occurs.
 func (l *Loader) LoadProgs(programPath string) error {
-	l.w.Add(programPath)
-
 	s, err := os.Stat(programPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to stat")
+		return errors.Wrapf(err, "failed to stat %q", programPath)
+	}
+	if err = l.w.Add(programPath); err != nil {
+		glog.Infof("Failed to add watch on %q but continuing: %s", programPath, err)
 	}
 	switch {
 	case s.IsDir():
