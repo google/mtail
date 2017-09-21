@@ -147,11 +147,8 @@ func (e *Exporter) StartMetricPush() {
 		glog.Info("Started metric push.")
 		ticker := time.NewTicker(time.Duration(*pushInterval) * time.Second)
 		go func() {
-			for {
-				select {
-				case <-ticker.C:
-					e.PushMetrics()
-				}
+			for range ticker.C {
+				e.PushMetrics()
 			}
 		}()
 	}
