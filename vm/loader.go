@@ -71,12 +71,18 @@ func (l *Loader) LoadProgs(programPath string) error {
 			err = l.LoadProg(path.Join(programPath, fi.Name()))
 			if err != nil {
 				glog.Warning(err)
+				if l.compileOnly {
+					return err
+				}
 			}
 		}
 	default:
 		err = l.LoadProg(programPath)
 		if err != nil {
 			glog.Warning(err)
+			if l.compileOnly {
+				return err
+			}
 		}
 	}
 	return nil
@@ -105,6 +111,9 @@ func (l *Loader) LoadProg(programPath string) error {
 	l.programErrors[name] = l.CompileAndRun(name, f)
 	if l.programErrors[name] != nil {
 		glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
+		if l.compileOnly {
+			return l.programErrors[name]
+		}
 	}
 	return nil
 }
