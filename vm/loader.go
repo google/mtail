@@ -146,10 +146,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 			data.Loadsuccess[name] = ProgLoads.Get(name).String()
 		}
 	}
-	if err := t.Execute(w, data); err != nil {
-		return err
-	}
-	return nil
+	return t.Execute(w, data)
 }
 
 // CompileAndRun compiles a program read from the input, starting execution if
