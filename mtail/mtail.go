@@ -127,7 +127,7 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Add("Content-type", "text/html")
 	w.WriteHeader(http.StatusFound)
-	if err := t.Execute(w, data); err != nil {
+	if err = t.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	err = m.l.WriteStatusHTML(w)
