@@ -116,9 +116,8 @@ func (e *Exporter) writeSocketMetrics(c io.Writer, f formatter, exportTotal *exp
 	return nil
 }
 
-// WriteMetrics writes metrics to each of the configured services.
-// TODO(jaq) rename to PushMetrics.
-func (e *Exporter) WriteMetrics() {
+// PushMetrics sends metrics to each of the configured services.
+func (e *Exporter) PushMetrics() {
 	for _, target := range e.pushTargets {
 		glog.V(2).Infof("pushing to %s", target.addr)
 		conn, err := net.DialTimeout(target.net, target.addr, *writeDeadline)
@@ -126,12 +125,19 @@ func (e *Exporter) WriteMetrics() {
 			glog.Infof("pusher dial error: %s", err)
 			continue
 		}
-		conn.SetDeadline(time.Now().Add(*writeDeadline))
+		err = conn.SetDeadline(time.Now().Add(*writeDeadline))
+		if err != nil {
+			glog.Infof("Couldn't set deadline on connection: %s", err)
+		}
 		err = e.writeSocketMetrics(conn, target.f, target.total, target.success)
 		if err != nil {
 			glog.Infof("pusher write error: %s", err)
 		}
-		conn.Close()
+		err = conn.Close()
+		if err != nil {
+
+			glog.Infof("connection close failed: %s", err)
+		}
 	}
 }
 
@@ -144,7 +150,7 @@ func (e *Exporter) StartMetricPush() {
 			for {
 				select {
 				case <-ticker.C:
-					e.WriteMetrics()
+					e.PushMetrics()
 				}
 			}
 		}()
