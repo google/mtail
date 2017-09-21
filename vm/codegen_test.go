@@ -409,7 +409,7 @@ getfilename()
 			{setmatched, true}}},
 	{"string to int",
 		`counter c
-/(\d)/ {
+/(.*)/ {
   c = int($1)
 }
 `,
@@ -422,10 +422,10 @@ getfilename()
 			{push, 0},
 			{capref, 1},
 			{push, 10},
-			{s2i, 1},
+			{s2i, nil},
 			{iset, nil},
 			{setmatched, true}}},
-	{"string to float",
+	{"int to float",
 		`counter c
 /(\d)/ {
   c = float($1)
@@ -439,7 +439,24 @@ getfilename()
 			{dload, 0},
 			{push, 0},
 			{capref, 1},
-			{s2f, 1}, // TODO(jaq): This should be i2f because $1 is type Int
+			{i2f, nil},
+			{fset, nil},
+			{setmatched, true}}},
+	{"string to float",
+		`counter c
+/(.*)/ {
+  c = float($1)
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 10},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{s2f, nil},
 			{fset, nil},
 			{setmatched, true}}},
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
+	"github.com/pkg/errors"
 )
 
 // compiler is data for the code generator.
@@ -196,18 +197,6 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		pc := len(c.obj.prog) - 1
 		c.obj.prog[pc].op = del
 
-	case *convNode:
-		Walk(c, n.n)
-		inType := n.n.Type()
-		outType := n.Type()
-		if Equals(Int, inType) && Equals(Float, outType) {
-			c.emit(instr{op: i2f})
-		} else if Equals(String, inType) && Equals(Float, outType) {
-			c.emit(instr{op: s2f})
-		} else if Equals(String, inType) && Equals(Int, outType) {
-			c.emit(instr{op: s2i})
-		}
-
 	}
 
 	return c
@@ -245,6 +234,17 @@ func (c *codegen) VisitAfter(node astNode) {
 			// Force a base 10 parse.
 			c.emit(instr{push, 10})
 			fallthrough
+		case "float":
+			// len args should be 1
+			if arglen > 1 {
+				c.errorf(n.Pos(), "internal error, too many arguments to builtin %q: %#v", n.name, n)
+				return
+			}
+			if err := c.emitConversion(n.args.(*exprlistNode).children[0].Type(), n.Type()); err != nil {
+				c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
+				return
+			}
+
 		default:
 			c.emit(instr{builtin[n.name], arglen})
 		}
@@ -282,6 +282,7 @@ func (c *codegen) VisitAfter(node astNode) {
 			opmap, ok := typedOperators[n.op]
 			if !ok {
 				c.errorf(n.Pos(), "Internal error: no typed operator for binary expression %v", n.op)
+				return
 			}
 			emitflag := false
 			for t, opcode := range opmap {
@@ -293,6 +294,7 @@ func (c *codegen) VisitAfter(node astNode) {
 			}
 			if !emitflag {
 				c.errorf(n.Pos(), "Invalid type for binary expression: %v", n.Type())
+				return
 			}
 		case AND:
 			c.emit(instr{op: and})
@@ -305,5 +307,25 @@ func (c *codegen) VisitAfter(node astNode) {
 		case SHR:
 			c.emit(instr{op: shr})
 		}
+
+	case *convNode:
+		if err := c.emitConversion(n.n.Type(), n.Type()); err != nil {
+			c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
+			return
+		}
 	}
+}
+
+func (c *codegen) emitConversion(inType, outType Type) error {
+	glog.Infof("Conversion: %q to %q", inType, outType)
+	if Equals(Int, inType) && Equals(Float, outType) {
+		c.emit(instr{op: i2f})
+	} else if Equals(String, inType) && Equals(Float, outType) {
+		c.emit(instr{op: s2f})
+	} else if Equals(String, inType) && Equals(Int, outType) {
+		c.emit(instr{op: s2i})
+	} else {
+		return errors.Errorf("can't convert %q to %q", inType, outType)
+	}
+	return nil
 }
