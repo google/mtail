@@ -15,8 +15,3 @@ type casting
 parse tree/ast testing, s-expressions to render expected?
 
 mapping between progs and logs to reduce wasted processing
-
-precommit/lint mode, compile and print errors to stderr
-- return erros from CompileAndRun instead of logging in compile_only mode
-
-use type information to effect bytecode generation
