@@ -1,9 +1,6 @@
 
 copy flag tests from mtail_test.sh
 
-concatenate programs into a single vm instance, so that common matches can be
-   collapsed, e.g. syslog matching.
-
 standard library, search path
 
 refactor fs and notify into single interface
