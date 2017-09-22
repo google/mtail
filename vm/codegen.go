@@ -228,13 +228,9 @@ func (c *codegen) VisitAfter(node astNode) {
 		}
 		switch n.name {
 		case "string", "bool":
-			// TODO(jaq): Nothing, no support in VM yet.
+		// TODO(jaq): Nothing, no support in VM yet.
 
-		case "int":
-			// Force a base 10 parse.
-			c.emit(instr{push, 10})
-			fallthrough
-		case "float":
+		case "int", "float":
 			// len args should be 1
 			if arglen > 1 {
 				c.errorf(n.Pos(), "internal error, too many arguments to builtin %q: %#v", n.name, n)

@@ -674,9 +674,14 @@ func (v *VM) execute(t *thread, i instr) {
 		t.Push(len(s))
 
 	case s2i:
-		base, err := t.PopInt()
-		if err != nil {
-			v.errorf("%s", err)
+		base := int64(10)
+		var err error
+		if i.opnd != nil {
+			// strtol is emitted with an arglen, int is not
+			base, err = t.PopInt()
+			if err != nil {
+				v.errorf("%s", err)
+			}
 		}
 		str := t.Pop().(string)
 		i, err := strconv.ParseInt(str, int(base), 64)
