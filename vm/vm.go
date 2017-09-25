@@ -371,6 +371,7 @@ func compare(a, b interface{}, opnd int) (bool, error) {
 	return false, errors.Errorf("cannot compare %T %q with %T %q", a, a, b, b)
 }
 
+// ParseTime performs location and syslog-year aware timestamp parsing.
 func (v *VM) ParseTime(layout, value string) (tm time.Time) {
 	var err error
 	if v.loc != nil {
