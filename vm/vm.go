@@ -172,7 +172,8 @@ type VM struct {
 
 	input *tailer.LogLine // Log line input to this round of execution.
 
-	terminate bool // Flag to stop the VM program.
+	terminate bool // Flag to stop the VM on this line of input.
+	abort     bool // Flag to abort the VM.
 
 	syslogUseCurrentYear bool           // Overwrite zero years with the current year in a strptime.
 	loc                  *time.Location // Override local timezone with provided, if not empty
@@ -401,8 +402,7 @@ func (v *VM) execute(t *thread, i instr) {
 	defer func() {
 		if r := recover(); r != nil {
 			v.errorf("panic in thread %#v at instr %q: %s", t, i, r)
-			// TODO(jaq): The terminate flag only stops this thread, but
-			// doesn't stop the VM.  A panic should terminate the whole VM.
+			v.abort = true
 		}
 	}()
 
@@ -737,7 +737,7 @@ func (v *VM) processLine(logline *tailer.LogLine) {
 		i := v.prog[t.pc]
 		t.pc++
 		v.execute(t, i)
-		if v.terminate {
+		if v.terminate || v.abort {
 			// Terminate only stops this invocation on this line of input; reset the terminate flag.
 			v.terminate = false
 			return
@@ -803,6 +803,8 @@ func (v *VM) DumpByteCode(name string) string {
 		}
 		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, name, i.opnd)
 	}
-	w.Flush()
+	if err := w.Flush(); err != nil {
+		glog.Infof("flush error: %s", err)
+	}
 	return b.String()
 }
