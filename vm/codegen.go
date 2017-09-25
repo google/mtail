@@ -66,7 +66,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			dtyp = metrics.Float
 		default:
 			if !IsComplete(t) {
-				glog.Errorf("Incomplete type %v for %#v", t, n)
+				glog.Infof("Incomplete type %v for %#v", t, n)
 			}
 			dtyp = metrics.Int
 		}
