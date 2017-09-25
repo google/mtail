@@ -527,7 +527,7 @@ func (v *VM) execute(t *thread, i instr) {
 			ts = t.matches[re][s]
 		}
 		if tm, ok := v.timeMemos[ts]; !ok {
-			tm := v.ParseTime(layout, ts)
+			tm = v.ParseTime(layout, ts)
 			v.timeMemos[ts] = tm
 			t.time = tm
 		} else {
