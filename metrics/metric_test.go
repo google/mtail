@@ -39,7 +39,10 @@ func TestKindType(t *testing.T) {
 
 func TestScalarMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, Int)
-	d, _ := v.GetDatum()
+	d, err := v.GetDatum()
+	if err != nil {
+		t.Errorf("no datum: %s", err)
+	}
 	datum.IncIntBy(d, 1, time.Now().UTC())
 	lv := v.findLabelValueOrNil([]string{})
 	if lv == nil {
@@ -52,7 +55,10 @@ func TestScalarMetric(t *testing.T) {
 	if newD.ValueString() != "1" {
 		t.Errorf("value not 1")
 	}
-	// TODO: try setting datum with labels on scalar
+	d2, err := v.GetDatum("a", "b")
+	if err == nil {
+		t.Errorf("datum with keys sohuld have returned no value, got %v", d2)
+	}
 }
 
 func TestDimensionedMetric(t *testing.T) {
