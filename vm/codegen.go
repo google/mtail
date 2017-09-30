@@ -292,9 +292,9 @@ func (c *codegen) VisitAfter(node astNode) {
 				c.errorf(n.Pos(), "Invalid type for binary expression: %v", n.Type())
 				return
 			}
-		case AND:
+		case BITAND:
 			c.emit(instr{op: and})
-		case OR:
+		case BITOR:
 			c.emit(instr{op: or})
 		case XOR:
 			c.emit(instr{op: xor})

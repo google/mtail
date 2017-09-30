@@ -211,7 +211,7 @@ func (c *checker) VisitAfter(node astNode) {
 				return
 			}
 
-		case SHL, SHR, AND, OR, XOR, NOT:
+		case SHL, SHR, BITAND, BITOR, XOR, NOT:
 			// bitwise
 			// O ⊢ e1 :Int, O ⊢ e2 : Int
 			// ⇒ O ⊢ e : Int
@@ -260,7 +260,7 @@ func (c *checker) VisitAfter(node astNode) {
 			}
 
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator in node %v", n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator in node %#v", n))
 			n.SetType(Error)
 			return
 		}

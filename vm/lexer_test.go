@@ -37,7 +37,7 @@ var lexerTests = []lexerTest{
 		{RSQUARE, "]", position{"punctuation", 0, 5, 5}},
 		{COMMA, ",", position{"punctuation", 0, 6, 6}},
 		{EOF, "", position{"punctuation", 0, 7, 7}}}},
-	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~ ** %", []token{
+	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~ ** % || &&", []token{
 		{MINUS, "-", position{"operators", 0, 0, 0}},
 		{PLUS, "+", position{"operators", 0, 2, 2}},
 		{ASSIGN, "=", position{"operators", 0, 4, 4}},
@@ -53,13 +53,15 @@ var lexerTests = []lexerTest{
 		{DIV, "/", position{"operators", 0, 30, 30}},
 		{SHL, "<<", position{"operators", 0, 32, 33}},
 		{SHR, ">>", position{"operators", 0, 35, 36}},
-		{AND, "&", position{"operators", 0, 38, 38}},
-		{OR, "|", position{"operators", 0, 40, 40}},
+		{BITAND, "&", position{"operators", 0, 38, 38}},
+		{BITOR, "|", position{"operators", 0, 40, 40}},
 		{XOR, "^", position{"operators", 0, 42, 42}},
 		{NOT, "~", position{"operators", 0, 44, 44}},
 		{POW, "**", position{"operators", 0, 46, 47}},
 		{MOD, "%", position{"operators", 0, 49, 49}},
-		{EOF, "", position{"operators", 0, 50, 50}}}},
+		{OR, "||", position{"operators", 0, 51, 52}},
+		{AND, "&&", position{"operators", 0, 54, 55}},
+		{EOF, "", position{"operators", 0, 56, 56}}}},
 	{"keywords",
 		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\n", []token{
 			{COUNTER, "counter", position{"keywords", 0, 0, 6}},

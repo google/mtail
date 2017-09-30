@@ -33,6 +33,8 @@ var lexemeName = map[lexeme]string{
 	POW:          "POW",
 	SHL:          "SHL",
 	SHR:          "SHR",
+	BITAND:       "BITAND",
+	BITOR:        "BITOR",
 	AND:          "AND",
 	OR:           "OR",
 	ADD_ASSIGN:   "ADD_ASSIGN",
@@ -359,10 +361,24 @@ func lexProg(l *lexer) stateFn {
 		l.emit(MOD)
 	case r == '&':
 		l.accept()
-		l.emit(AND)
+		switch l.next() {
+		case '&':
+			l.accept()
+			l.emit(AND)
+		default:
+			l.backup()
+			l.emit(BITAND)
+		}
 	case r == '|':
 		l.accept()
-		l.emit(OR)
+		switch l.next() {
+		case '|':
+			l.accept()
+			l.emit(OR)
+		default:
+			l.backup()
+			l.emit(BITOR)
+		}
 	case r == '^':
 		l.accept()
 		l.emit(XOR)

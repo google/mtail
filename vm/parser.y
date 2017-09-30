@@ -56,7 +56,7 @@ import (
 %token <op> DIV MOD MUL MINUS PLUS POW
 %token <op> SHL SHR
 %token <op> LT GT LE GE EQ NE
-%token <op> AND OR XOR NOT
+%token <op> BITAND XOR BITOR NOT AND OR
 %token <op> ADD_ASSIGN ASSIGN
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
@@ -172,9 +172,9 @@ bitwise_expr
   ;
 
 bitwise_op
-  : AND
+  : BITAND
   { $$ = $1 }
-  | OR
+  | BITOR
   { $$ = $1 }
   | XOR
   { $$ = $1 }
