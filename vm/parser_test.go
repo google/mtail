@@ -199,6 +199,11 @@ var parserTests = []struct {
   ~ 1
 }`},
 
+	{"logical",
+		`foo || bar && quux
+`,
+	},
+
 	{"floats",
 		`gauge foo
 /foo/ {

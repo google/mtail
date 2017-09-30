@@ -25,13 +25,13 @@ import (
 }
 
 %type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement 
-%type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr
+%type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr logical_expr
 %type <n> declaration declarator definition decoration_statement
 %type <kind> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
-%type <op> relop shift_op bitwise_op
+%type <op> relop shift_op bitwise_op logical_op
 %type <text> pattern_expr
 // Tokens and types are defined here.
 // Invalid input
@@ -148,18 +148,34 @@ expr
   ;
 
 assign_expr
-  : bitwise_expr
+  : logical_expr
   {
     $$ = $1
   }
-  | unary_expr ASSIGN bitwise_expr
+  | unary_expr ASSIGN logical_expr
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
-  | unary_expr ADD_ASSIGN bitwise_expr
+  | unary_expr ADD_ASSIGN logical_expr
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
+  ;
+
+logical_expr
+  : bitwise_expr
+  { $$ = $1 }
+  | logical_expr logical_op bitwise_expr
+  {
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
+  }
+  ;
+
+logical_op
+  : AND
+  { $$ = $1 }
+  | OR
+  { $$ = $1 }
   ;
 
 bitwise_expr
