@@ -200,7 +200,8 @@ var parserTests = []struct {
 }`},
 
 	{"logical",
-		`foo || bar && quux
+		`0 || 1 && 0 {
+}
 `,
 	},
 

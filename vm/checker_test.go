@@ -185,6 +185,13 @@ var checkerValidPrograms = []struct {
 	  f = float($1)
 	}
 	`},
+
+	{"logical operators",
+		`0 || 1 {
+}
+1 && 0 {
+}
+`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

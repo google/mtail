@@ -225,8 +225,8 @@ func (c *checker) VisitAfter(node astNode) {
 				n.SetType(Error)
 				return
 			}
-		case LT, GT, LE, GE, EQ, NE:
-			// comparable
+		case LT, GT, LE, GE, EQ, NE, AND, OR:
+			// comparable, logical
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)

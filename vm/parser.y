@@ -357,7 +357,7 @@ cond
     pos := MergePosition(&mtaillex.(*parser).pos, &mtaillex.(*parser).endPos)
     $$ = &regexNode{pos: *pos, pattern: $1}
   }
-  | rel_expr
+  | logical_expr
   {
     $$ = $1
   }
