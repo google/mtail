@@ -12,11 +12,17 @@ import (
 	"github.com/golang/glog"
 )
 
+// Type represents a type in the mtail program.
 type Type interface {
+	// Root returns an exemplar Type after unification occurs.  If the type
+	// system is complete after unification, Root will be a TypeOperator.
 	Root() Type
+
+	// String returns a string representation of a Type.
 	String() string
 }
 
+// Equals compares two types, testing for equality
 func Equals(t1, t2 Type) bool {
 	t1, t2 = t1.Root(), t2.Root()
 	switch t1 := t1.(type) {
@@ -53,12 +59,14 @@ var (
 	nextVariableIdMu sync.Mutex
 )
 
+// TypeVariable represents an unbound type variable in the type system.
 type TypeVariable struct {
 	Id         int
 	Instance   *Type
 	instanceMu sync.RWMutex
 }
 
+// NewTypeVariable constructs a new unique TypeVariable.
 func NewTypeVariable() *TypeVariable {
 	nextVariableIdMu.Lock()
 	id := nextVariableId
@@ -89,14 +97,22 @@ func (t *TypeVariable) String() string {
 
 }
 
+// SetInstance sets the exemplar instance of this TypeVariable, during
+// unification.
 func (t *TypeVariable) SetInstance(t1 *Type) {
 	t.instanceMu.Lock()
 	defer t.instanceMu.Unlock()
 	t.Instance = t1
 }
 
+// TypeOperator represents a type scheme in the type system.
 type TypeOperator struct {
+	// Name is a common name for this operator
 	Name string
+	// Args is the sequence of types that are parameters to this type.  They
+	// may be fully bound type operators, or partially defined (i.e. contain
+	// TypeVariables) in which case they represent polymorphism in the operator
+	// they are argyments to.
 	Args []Type
 }
 
@@ -120,10 +136,13 @@ func (t *TypeOperator) String() (s string) {
 	return s
 }
 
+// Function is a convenience method, which instantiates a new Function type
+// scheme, with the given args as parameters.
 func Function(args ...Type) *TypeOperator {
 	return &TypeOperator{"→", args}
 }
 
+// IsFunction returns true if the given type is a Function type.
 func IsFunction(t Type) bool {
 	if v, ok := t.(*TypeOperator); ok {
 		return v.Name == "→"
@@ -131,10 +150,13 @@ func IsFunction(t Type) bool {
 	return false
 }
 
+// Dimension is a convenience method which instantiates a new Dimension type
+// scheme, with the given args as the dimensions of the type.
 func Dimension(args ...Type) *TypeOperator {
 	return &TypeOperator{"❌", args}
 }
 
+// IsDimension returns true if the given type is a Dimension type.
 func IsDimension(t Type) bool {
 	if v, ok := t.(*TypeOperator); ok {
 		return v.Name == "❌"
@@ -142,6 +164,7 @@ func IsDimension(t Type) bool {
 	return false
 }
 
+// IsComplete returns true if the type and all its arguments have non-variable exemplars.
 func IsComplete(t Type) bool {
 	switch v := t.Root().(type) {
 	case *TypeVariable:
@@ -168,6 +191,7 @@ var (
 	String = &TypeOperator{"String", []Type{}}
 )
 
+// Builtins is a mapping of the builtin language functions to their type definitions.
 var Builtins = map[string]Type{
 	"int":         Function(NewTypeVariable(), Int),
 	"bool":        Function(NewTypeVariable(), Bool),
@@ -182,6 +206,8 @@ var Builtins = map[string]Type{
 	"getfilename": Function(String),
 }
 
+// FreshType returns a new type from the provided type scheme, replacing any
+// unbound type variables with new type variables.
 func FreshType(t Type) Type {
 	mappings := make(map[*TypeVariable]*TypeVariable)
 
