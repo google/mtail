@@ -157,8 +157,8 @@ func newLexer(name string, input io.Reader) *lexer {
 func (l *lexer) nextToken() token {
 	for {
 		select {
-		case token := <-l.tokens:
-			return token
+		case tok := <-l.tokens:
+			return tok
 		default:
 			l.state = l.state(l)
 		}
