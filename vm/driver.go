@@ -73,7 +73,7 @@ func (p *parser) Lex(lval *mtailSymType) int {
 }
 
 func (p *parser) inRegex() {
-	p.l.in_regex = true
+	p.l.inRegex = true
 }
 
 func init() {

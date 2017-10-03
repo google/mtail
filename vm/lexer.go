@@ -132,7 +132,7 @@ type lexer struct {
 	line  int  // The line position of the current rune.
 	col   int  // The column position of the current rune.
 
-	in_regex bool // Context aware flag from parser to say we're in a regex
+	inRegex bool // Context aware flag from parser to say we're in a regex
 
 	// The currently being lexed token.
 	startcol int    // Starting column of the current token.
@@ -242,7 +242,7 @@ func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 
 // Start lexing a program.
 func lexProg(l *lexer) stateFn {
-	if l.in_regex {
+	if l.inRegex {
 		return lexRegex
 	}
 	switch r := l.next(); {
@@ -536,7 +536,7 @@ Loop:
 // include the '/' quotes.
 func lexRegex(l *lexer) stateFn {
 	// Exit regex mode when leaving this function.
-	defer func() { l.in_regex = false }()
+	defer func() { l.inRegex = false }()
 Loop:
 	for {
 		switch l.next() {

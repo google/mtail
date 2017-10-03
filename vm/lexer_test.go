@@ -219,7 +219,7 @@ func collect(t *lexerTest) (tokens []token) {
 		token := l.nextToken()
 		// Hack to simulate context signal from parser.
 		if token.kind == DIV && (strings.Contains(t.name, "regex") || strings.HasPrefix(t.name, "large program")) && !in_regex_set {
-			l.in_regex = true
+			l.inRegex = true
 			in_regex_set = true
 		}
 		tokens = append(tokens, token)
