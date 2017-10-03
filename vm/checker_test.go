@@ -192,6 +192,10 @@ var checkerValidPrograms = []struct {
 1 && 0 {
 }
 `},
+	{"nested binary conditional",
+		`1 != 0 && 0 == 1 {
+}
+`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {
