@@ -70,18 +70,20 @@ func (l *Loader) LoadProgs(programPath string) error {
 			}
 			err = l.LoadProg(path.Join(programPath, fi.Name()))
 			if err != nil {
-				glog.Warning(err)
-				if l.compileOnly {
+				if l.errorsAbort {
 					return err
+				} else {
+					glog.Warning(err)
 				}
 			}
 		}
 	default:
 		err = l.LoadProg(programPath)
 		if err != nil {
-			glog.Warning(err)
-			if l.compileOnly {
+			if l.errorsAbort {
 				return err
+			} else {
+				glog.Warning(err)
 			}
 		}
 	}
@@ -110,9 +112,10 @@ func (l *Loader) LoadProg(programPath string) error {
 	defer l.programErrorMu.Unlock()
 	l.programErrors[name] = l.CompileAndRun(name, f)
 	if l.programErrors[name] != nil {
-		glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
-		if l.compileOnly {
+		if l.errorsAbort {
 			return l.programErrors[name]
+		} else {
+			glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
 		}
 	}
 	return nil
@@ -251,6 +254,7 @@ type Loader struct {
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
 	compileOnly          bool           // Only compile programs and report errors, do not load VMs.
+	errorsAbort          bool           // Compiler errors abort the loader.
 	dumpAst              bool           // print the AST after parse
 	dumpAstTypes         bool           // print the AST after type check
 	dumpBytecode         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
@@ -269,6 +273,7 @@ type LoaderOptions struct {
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 
 	CompileOnly          bool           // Compile, don't start execution.
+	ErrorsAbort          bool           // Compiler errors abort the loader.
 	DumpAst              bool           // print the AST after type check
 	DumpAstTypes         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
 	DumpBytecode         bool           // Instructs the loader to dump the program bytecode after compilation.
@@ -306,6 +311,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		watcherDone:          make(chan struct{}),
 		VMsDone:              make(chan struct{}),
 		compileOnly:          o.CompileOnly,
+		errorsAbort:          o.ErrorsAbort,
 		dumpAst:              o.DumpAst,
 		dumpAstTypes:         o.DumpAstTypes,
 		dumpBytecode:         o.DumpBytecode,
