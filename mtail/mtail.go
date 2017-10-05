@@ -76,6 +76,7 @@ func (m *MtailServer) InitLoader() error {
 		Store:                m.store,
 		Lines:                m.lines,
 		CompileOnly:          m.o.CompileOnly,
+		ErrorsAbort:          m.o.CompileOnly || m.o.OneShot,
 		DumpAst:              m.o.DumpAst,
 		DumpAstTypes:         m.o.DumpAstTypes,
 		DumpBytecode:         m.o.DumpBytecode,

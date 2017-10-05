@@ -102,14 +102,18 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 			u.emit(" << ")
 		case SHR:
 			u.emit(" >> ")
-		case AND:
+		case BITAND:
 			u.emit(" & ")
-		case OR:
+		case BITOR:
 			u.emit(" | ")
 		case XOR:
 			u.emit(" ^ ")
 		case NOT:
 			u.emit(" ~ ")
+		case AND:
+			u.emit(" && ")
+		case OR:
+			u.emit(" || ")
 		case PLUS:
 			u.emit(" + ")
 		case MINUS:

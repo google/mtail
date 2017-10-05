@@ -79,14 +79,18 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 			s.emit("<<")
 		case SHR:
 			s.emit(">>")
-		case AND:
+		case BITAND:
 			s.emit("&")
-		case OR:
+		case BITOR:
 			s.emit("|")
 		case XOR:
 			s.emit("^")
 		case NOT:
 			s.emit("~")
+		case AND:
+			s.emit("&&")
+		case OR:
+			s.emit("||")
 		case PLUS:
 			s.emit("+")
 		case MINUS:

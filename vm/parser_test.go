@@ -199,6 +199,12 @@ var parserTests = []struct {
   ~ 1
 }`},
 
+	{"logical",
+		`0 || 1 && 0 {
+}
+`,
+	},
+
 	{"floats",
 		`gauge foo
 /foo/ {
@@ -242,6 +248,10 @@ getfilename()
 counter foo by a,b
 /(\d) (\d+)/ {
   foo[$1,$2]++
+}`},
+
+	{"paren expr", `
+(0) || (1 && 3) {
 }`},
 }
 

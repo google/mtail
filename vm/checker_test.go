@@ -185,6 +185,20 @@ var checkerValidPrograms = []struct {
 	  f = float($1)
 	}
 	`},
+
+	{"logical operators",
+		`0 || 1 {
+}
+1 && 0 {
+}
+`},
+	{"nested binary conditional",
+		`1 != 0 && 0 == 1 {
+}
+`},
+	{"paren expr", `
+(0) || (1 && 3) {
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

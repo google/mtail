@@ -68,6 +68,11 @@ var exampleProgramTests = []struct {
 		"testdata/else.log",
 		"testdata/filename.golden",
 	},
+	{
+		"examples/logical.mtail",
+		"testdata/logical.log",
+		"testdata/logical.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -90,7 +95,10 @@ func TestExamplePrograms(t *testing.T) {
 				t.Fatalf("create mtail failed: %s", err)
 			}
 
-			mtail.StartTailing()
+			err = mtail.StartTailing()
+			if err != nil {
+				t.Fatalf("Start tailling failed: %s", err)
+			}
 
 			g, err := os.Open(tc.goldenfile)
 			if err != nil {
