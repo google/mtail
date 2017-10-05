@@ -249,6 +249,10 @@ counter foo by a,b
 /(\d) (\d+)/ {
   foo[$1,$2]++
 }`},
+
+	{"paren expr", `
+(0) || (1 && 3) {
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {

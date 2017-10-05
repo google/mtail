@@ -197,7 +197,10 @@ var checkerValidPrograms = []struct {
 }
 `},
 	// TODO: /regexp/ && $var = "foo" scope
-	// TODO: (paren == something) && other
+
+	{"paren expr", `
+(0) || (1 && 3) {
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {
