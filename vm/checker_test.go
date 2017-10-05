@@ -196,8 +196,6 @@ var checkerValidPrograms = []struct {
 		`1 != 0 && 0 == 1 {
 }
 `},
-	// TODO: /regexp/ && $var = "foo" scope
-
 	{"paren expr", `
 (0) || (1 && 3) {
 }`},
