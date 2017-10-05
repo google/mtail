@@ -43,6 +43,11 @@ func (c *codegen) emit(i instr) {
 	c.obj.prog = append(c.obj.prog, i)
 }
 
+// pc returns the program offset of the last instruction
+func (c *codegen) pc() int {
+	return len(c.obj.prog) - 1
+}
+
 func (c *codegen) VisitBefore(node astNode) Visitor {
 	switch n := node.(type) {
 
@@ -101,24 +106,24 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		// Save PC of previous jump instruction emitted by the n.cond
 		// compilation.  (See regexNode and relNode cases, which will emit a
 		// jump as the last instr.)  This jump will skip over the truthNode.
-		pc := len(c.obj.prog) - 1
+		pc := c.pc()
 		// Set matched flag false for children.
 		c.emit(instr{setmatched, false})
 		Walk(c, n.truthNode)
 		// Re-set matched flag to true for rest of current block.
 		c.emit(instr{setmatched, true})
 		// Rewrite n.cond's jump target to jump to instruction after block.
-		c.obj.prog[pc].opnd = len(c.obj.prog)
+		c.obj.prog[pc].opnd = c.pc() + 1
 		// Now also emit the else clause, and a jump.
 		if n.elseNode != nil {
 			c.emit(instr{op: jmp})
 			// Rewrite jump again to avoid this else-skipper just emitted.
-			c.obj.prog[pc].opnd = len(c.obj.prog)
+			c.obj.prog[pc].opnd = c.pc() + 1
 			// Now get the PC of the else-skipper just emitted.
-			pc = len(c.obj.prog) - 1
+			pc = c.pc()
 			Walk(c, n.elseNode)
 			// Rewrite else-skipper to the next PC.
-			c.obj.prog[pc].opnd = len(c.obj.prog)
+			c.obj.prog[pc].opnd = c.pc() + 1
 		}
 		return nil
 
@@ -194,7 +199,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 	case *delNode:
 		Walk(c, n.n)
 		// overwrite the dload instruction
-		pc := len(c.obj.prog) - 1
+		pc := c.pc()
 		c.obj.prog[pc].op = del
 
 	}
