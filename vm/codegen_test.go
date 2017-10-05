@@ -458,6 +458,33 @@ getfilename()
 			{s2f, nil},
 			{fset, nil},
 			{setmatched, true}}},
+	{"nested conditionals",
+		`counter foo
+/(.*)/ {
+  $1 == "foo" || $1 == "bar" {
+    foo++
+  }
+}
+`, []instr{
+			{match, 0},
+			{jnm, 19},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{str, 0},
+			{cmp, 0},
+			{jm, 14},
+			{push, 0},
+			{capref, 1},
+			{str, 1},
+			{cmp, 0},
+			{jnm, 18},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true},
+			{setmatched, true}}},
 }
 
 func TestCodegen(t *testing.T) {

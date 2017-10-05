@@ -202,6 +202,40 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		pc := c.pc()
 		c.obj.prog[pc].op = del
 
+	case *binaryExprNode:
+		switch n.op {
+		case AND:
+			Walk(c, n.lhs)
+			// pc is jump from first comparison, triggered if this expression is false
+			pc1 := c.pc()
+			Walk(c, n.rhs)
+			pc2 := c.pc()
+			// bounce through the second and leave it there for the condNode containing to overwrite
+			c.obj.prog[pc1].opnd = pc2
+			return nil
+
+		case OR:
+			Walk(c, n.lhs)
+			// pc1 is the jump from first comparison, triggered if false, but we want to jump if true to the block
+			pc1 := c.pc()
+			Walk(c, n.rhs)
+			pc2 := c.pc()
+			// condNode is going to insert a setmatched instruction next, then the block
+			blockPc := pc2 + 2
+			c.obj.prog[pc1].opnd = blockPc
+			switch c.obj.prog[pc1].op {
+			case jnm:
+				c.obj.prog[pc1].op = jm
+			case jm:
+				c.obj.prog[pc1].op = jnm
+			}
+			return nil
+
+		default:
+			// Didn't handle it, let normal walk proceed
+			return c
+		}
+
 	}
 
 	return c
