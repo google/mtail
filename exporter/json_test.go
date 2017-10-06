@@ -7,10 +7,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
 )
@@ -26,11 +28,11 @@ var handleJSONTests = []struct {
 	},
 	{"single",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 			},
 		},
 		`[
@@ -52,12 +54,12 @@ var handleJSONTests = []struct {
 	},
 	{"dimensioned",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a", "b"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 			},
 		},
 		`[
@@ -89,6 +91,7 @@ var handleJSONTests = []struct {
 
 func TestHandleJSON(t *testing.T) {
 	for _, tc := range handleJSONTests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ms := metrics.NewStore()
@@ -109,8 +112,8 @@ func TestHandleJSON(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to read response: %s", err)
 			}
-			diff := deep.Equal(tc.expected, string(b))
-			if diff != nil {
+			diff := cmp.Diff(tc.expected, string(b), cmpopts.IgnoreUnexported(sync.RWMutex{}))
+			if diff != "" {
 				t.Error(diff)
 			}
 		})

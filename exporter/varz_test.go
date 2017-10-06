@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
 )
@@ -26,11 +26,11 @@ var handleVarzTests = []struct {
 	},
 	{"single",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(1397586900, 0))}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(1397586900, 0))}},
 			},
 		},
 		`foo{prog=test,instance=gunstar} 1
@@ -38,12 +38,12 @@ var handleVarzTests = []struct {
 	},
 	{"dimensioned",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a", "b"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(1397586900, 0))}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(1397586900, 0))}},
 			},
 		},
 		`foo{a=1,b=2,prog=test,instance=gunstar} 1
@@ -53,6 +53,7 @@ var handleVarzTests = []struct {
 
 func TestHandleVarz(t *testing.T) {
 	for _, tc := range handleVarzTests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ms := metrics.NewStore()
@@ -73,8 +74,8 @@ func TestHandleVarz(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to read response: %s", err)
 			}
-			diff := deep.Equal(tc.expected, string(b))
-			if diff != nil {
+			diff := cmp.Diff(tc.expected, string(b))
+			if diff != "" {
 				t.Error(diff)
 			}
 		})

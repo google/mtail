@@ -30,6 +30,8 @@ func (n *stmtlistNode) Type() Type {
 
 type exprlistNode struct {
 	children []astNode
+	typMu    sync.RWMutex
+	typ      Type
 }
 
 func (n *exprlistNode) Pos() *position {
@@ -37,7 +39,15 @@ func (n *exprlistNode) Pos() *position {
 }
 
 func (n *exprlistNode) Type() Type {
-	return None
+	n.typMu.RLock()
+	defer n.typMu.RUnlock()
+	return n.typ
+}
+
+func (n *exprlistNode) SetType(t Type) {
+	n.typMu.Lock()
+	n.typMu.Unlock()
+	n.typ = t
 }
 
 type condNode struct {
@@ -83,9 +93,9 @@ func (n *idNode) Pos() *position {
 
 func (n *idNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type.Root()
+		return n.sym.Type
 	}
-	return None // Bugs
+	return Error // id not defined
 }
 
 type caprefNode struct {
@@ -101,15 +111,17 @@ func (n *caprefNode) Pos() *position {
 
 func (n *caprefNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type.Root()
+		return n.sym.Type
 	}
-	return None // sym not defined due to undefined capref error
+	return Error // sym not defined due to undefined capref error
 }
 
 type builtinNode struct {
-	pos  position
-	name string
-	args astNode
+	pos   position
+	name  string
+	args  astNode
+	typMu sync.RWMutex
+	typ   Type
 }
 
 func (n *builtinNode) Pos() *position {
@@ -117,7 +129,15 @@ func (n *builtinNode) Pos() *position {
 }
 
 func (n *builtinNode) Type() Type {
-	return Int
+	n.typMu.RLock()
+	defer n.typMu.RUnlock()
+	return n.typ
+}
+
+func (n *builtinNode) SetType(t Type) {
+	n.typMu.Lock()
+	defer n.typMu.Unlock()
+	n.typ = t
 }
 
 type binaryExprNode struct {
@@ -156,8 +176,8 @@ func (n *unaryExprNode) Pos() *position {
 }
 
 func (n *unaryExprNode) Type() Type {
-	n.typMu.Lock()
-	defer n.typMu.Unlock()
+	n.typMu.RLock()
+	defer n.typMu.RUnlock()
 	return n.typ
 }
 
@@ -169,6 +189,8 @@ func (n *unaryExprNode) SetType(t Type) {
 
 type indexedExprNode struct {
 	lhs, index astNode
+	typ        Type
+	typMu      sync.RWMutex
 }
 
 func (n *indexedExprNode) Pos() *position {
@@ -176,7 +198,15 @@ func (n *indexedExprNode) Pos() *position {
 }
 
 func (n *indexedExprNode) Type() Type {
-	return n.lhs.Type()
+	n.typMu.RLock()
+	defer n.typMu.RUnlock()
+	return n.typ
+}
+
+func (n *indexedExprNode) SetType(t Type) {
+	n.typMu.Lock()
+	defer n.typMu.Unlock()
+	n.typ = t
 }
 
 type declNode struct {
@@ -195,9 +225,9 @@ func (n *declNode) Pos() *position {
 
 func (n *declNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type.Root()
+		return n.sym.Type
 	}
-	return Undef
+	return Error
 }
 
 type stringConstNode struct {
@@ -249,7 +279,7 @@ func (n *defNode) Pos() *position {
 
 func (n *defNode) Type() Type {
 	if n.sym != nil {
-		return n.sym.Type.Root()
+		return n.sym.Type
 	}
 	return Int
 }
@@ -304,4 +334,26 @@ func (d *delNode) Pos() *position {
 
 func (d *delNode) Type() Type {
 	return None
+}
+
+type convNode struct {
+	n   astNode
+	mu  sync.RWMutex
+	typ Type
+}
+
+func (n *convNode) Pos() *position {
+	return n.n.Pos()
+}
+
+func (n *convNode) Type() Type {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	return n.typ
+}
+
+func (n *convNode) SetType(t Type) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.typ = t
 }

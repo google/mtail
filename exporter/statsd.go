@@ -37,5 +37,5 @@ func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) str
 		*statsdPrefix,
 		m.Program,
 		formatLabels(m.Name, l.Labels, ".", "."),
-		l.Datum.Value(), t)
+		l.Datum.ValueString(), t)
 }

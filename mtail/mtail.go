@@ -76,6 +76,7 @@ func (m *MtailServer) InitLoader() error {
 		Store:                m.store,
 		Lines:                m.lines,
 		CompileOnly:          m.o.CompileOnly,
+		ErrorsAbort:          m.o.CompileOnly || m.o.OneShot,
 		DumpAst:              m.o.DumpAst,
 		DumpAstTypes:         m.o.DumpAstTypes,
 		DumpBytecode:         m.o.DumpBytecode,
@@ -127,7 +128,7 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Add("Content-type", "text/html")
 	w.WriteHeader(http.StatusFound)
-	if err := t.Execute(w, data); err != nil {
+	if err = t.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	err = m.l.WriteStatusHTML(w)
@@ -233,7 +234,7 @@ func (m *MtailServer) handleQuit(w http.ResponseWriter, r *http.Request) {
 
 // WaitForShutdown handles shutdown requests from the system or the UI.
 func (m *MtailServer) WaitForShutdown() {
-	n := make(chan os.Signal)
+	n := make(chan os.Signal, 1)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
 	select {
 	case <-n:

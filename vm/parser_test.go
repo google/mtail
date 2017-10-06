@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 )
 
 var parserTests = []struct {
@@ -199,6 +199,12 @@ var parserTests = []struct {
   ~ 1
 }`},
 
+	{"logical",
+		`0 || 1 && 0 {
+}
+`,
+	},
+
 	{"floats",
 		`gauge foo
 /foo/ {
@@ -243,6 +249,10 @@ counter foo by a,b
 /(\d) (\d+)/ {
   foo[$1,$2]++
 }`},
+
+	{"paren expr", `
+(0) || (1 && 3) {
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -277,7 +287,7 @@ func TestParserRoundTrip(t *testing.T) {
 			u = Unparser{}
 			output2 := u.Unparse(p2.root)
 
-			if diff := deep.Equal(output2, output); diff != nil {
+			if diff := go_cmp.Diff(output2, output); diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -328,10 +338,10 @@ func TestParseInvalidPrograms(t *testing.T) {
 			p := newParser(tc.name, strings.NewReader(tc.program))
 			mtailParse(p)
 
-			diff := deep.Equal(
+			diff := go_cmp.Diff(
 				strings.Join(tc.errors, "\n"),             // want
 				strings.TrimRight(p.errors.Error(), "\n")) // got
-			if diff != nil {
+			if diff != "" {
 				t.Error(diff)
 			}
 		})

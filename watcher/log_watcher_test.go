@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 )
 
 // This test requires disk access, and cannot be injected without internal
@@ -177,8 +177,8 @@ func TestWatcherErrors(t *testing.T) {
 	if err := w.Close(); err != nil {
 		t.Fatalf("watcher close failed: %q", err)
 	}
-	diff := deep.Equal(strconv.FormatInt(orig+1, 10), expvar.Get("log_watcher_error_count").String())
-	if diff != nil {
+	diff := cmp.Diff(strconv.FormatInt(orig+1, 10), expvar.Get("log_watcher_error_count").String())
+	if diff != "" {
 		t.Errorf("log watcher error count doens't match:\n%s", diff)
 	}
 }

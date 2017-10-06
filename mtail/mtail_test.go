@@ -369,7 +369,7 @@ func TestGlob(t *testing.T) {
 		}
 		defer log.Close()
 		if tt.expected {
-			count += 1
+			count++
 		}
 		log.WriteString("\n")
 		log.Sync()
@@ -388,7 +388,7 @@ func TestGlob(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("Log count not matching\n\texpecteed: %s\n\t: received: %s", count, tailer.LogCount.String())
+		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, tailer.LogCount.String())
 	}
 }
 
@@ -430,7 +430,7 @@ func TestGlobAfterStart(t *testing.T) {
 		}
 		defer log.Close()
 		if tt.expected {
-			count += 1
+			count++
 		}
 		log.WriteString("\n")
 		log.Sync()
@@ -448,6 +448,6 @@ func TestGlobAfterStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("Log count not matching\n\texpecteed: %s\n\t: received: %s", count, tailer.LogCount.String())
+		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, tailer.LogCount.String())
 	}
 }

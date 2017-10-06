@@ -12,34 +12,34 @@ import (
 )
 
 // floatDatum describes a floating point value at a given timestamp.
-type floatDatum struct {
-	datum
-	valuebits uint64
+type FloatDatum struct {
+	BaseDatum
+	Valuebits uint64
 }
 
-func (*floatDatum) Type() Type { return Float }
+func (*FloatDatum) Type() Type { return Float }
 
-func (d *floatDatum) Value() string {
+func (d *FloatDatum) ValueString() string {
 	return fmt.Sprintf("%g", d.Get())
 }
 
-func (d *floatDatum) Set(v float64, ts time.Time) {
-	atomic.StoreUint64(&d.valuebits, math.Float64bits(v))
+func (d *FloatDatum) Set(v float64, ts time.Time) {
+	atomic.StoreUint64(&d.Valuebits, math.Float64bits(v))
 	d.stamp(ts)
 }
 
-func (d *floatDatum) Get() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&d.valuebits))
+func (d *FloatDatum) Get() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&d.Valuebits))
 }
 
-func (d *floatDatum) String() string {
-	return fmt.Sprintf("%g@%d", d.Get(), atomic.LoadInt64(&d.time))
+func (d *FloatDatum) String() string {
+	return fmt.Sprintf("%g@%d", d.Get(), atomic.LoadInt64(&d.Time))
 }
 
-func (d *floatDatum) MarshalJSON() ([]byte, error) {
+func (d *FloatDatum) MarshalJSON() ([]byte, error) {
 	j := struct {
 		Value float64
 		Time  int64
-	}{d.Get(), atomic.LoadInt64(&d.time)}
+	}{d.Get(), atomic.LoadInt64(&d.Time)}
 	return json.Marshal(j)
 }

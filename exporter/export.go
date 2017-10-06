@@ -9,6 +9,7 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -46,10 +47,9 @@ func New(o Options) (*Exporter, error) {
 	if o.Store == nil {
 		return nil, errors.New("exporter needs a Store")
 	}
-	hostname := o.Hostname
-	if hostname == "" {
+	if o.Hostname == "" {
 		var err error
-		hostname, err = os.Hostname()
+		o.Hostname, err = os.Hostname()
 		if err != nil {
 			return nil, errors.Wrap(err, "getting hostname")
 		}
@@ -90,7 +90,7 @@ func formatLabels(name string, m map[string]string, ksep, sep string) string {
 // sockets.
 type formatter func(string, *metrics.Metric, *metrics.LabelSet) string
 
-func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
+func (e *Exporter) writeSocketMetrics(c io.Writer, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
 	e.store.RLock()
 	defer e.store.RUnlock()
 
@@ -116,9 +116,8 @@ func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expv
 	return nil
 }
 
-// WriteMetrics writes metrics to each of the configured services.
-// TODO(jaq) rename to PushMetrics.
-func (e *Exporter) WriteMetrics() {
+// PushMetrics sends metrics to each of the configured services.
+func (e *Exporter) PushMetrics() {
 	for _, target := range e.pushTargets {
 		glog.V(2).Infof("pushing to %s", target.addr)
 		conn, err := net.DialTimeout(target.net, target.addr, *writeDeadline)
@@ -126,12 +125,19 @@ func (e *Exporter) WriteMetrics() {
 			glog.Infof("pusher dial error: %s", err)
 			continue
 		}
-		conn.SetDeadline(time.Now().Add(*writeDeadline))
+		err = conn.SetDeadline(time.Now().Add(*writeDeadline))
+		if err != nil {
+			glog.Infof("Couldn't set deadline on connection: %s", err)
+		}
 		err = e.writeSocketMetrics(conn, target.f, target.total, target.success)
 		if err != nil {
 			glog.Infof("pusher write error: %s", err)
 		}
-		conn.Close()
+		err = conn.Close()
+		if err != nil {
+
+			glog.Infof("connection close failed: %s", err)
+		}
 	}
 }
 
@@ -141,11 +147,8 @@ func (e *Exporter) StartMetricPush() {
 		glog.Info("Started metric push.")
 		ticker := time.NewTicker(time.Duration(*pushInterval) * time.Second)
 		go func() {
-			for {
-				select {
-				case <-ticker.C:
-					e.WriteMetrics()
-				}
+			for range ticker.C {
+				e.PushMetrics()
 			}
 		}()
 	}

@@ -9,11 +9,3 @@ gauge pll_status
 counter peer_syncs 1 0000-06-30T12:04:51Z
 counter driftfile_errors
 counter sync_lost_total
-gauge peer_status {peer=}
-gauge peer_select {peer=}
-gauge peer_count {peer=}
-gauge peer_code {peer=}
-gauge peer_offset {peer=}
-gauge peer_delay {peer=}
-gauge peer_dispersion {peer=}
-counter num_peerstats {peer=}

@@ -9,7 +9,7 @@ import (
 )
 
 func BenchmarkIncrementScalarInt(b *testing.B) {
-	d := &intDatum{}
+	d := &IntDatum{}
 	ts := time.Now().UTC()
 	for i := 0; i < b.N; i++ {
 		d.IncBy(1, ts)

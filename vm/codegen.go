@@ -8,8 +8,10 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
+	"github.com/pkg/errors"
 )
 
 // compiler is data for the code generator.
@@ -41,9 +43,9 @@ func (c *codegen) emit(i instr) {
 	c.obj.prog = append(c.obj.prog, i)
 }
 
-var kindMap = map[Type]datum.Type{
-	Int:   metrics.Int,
-	Float: metrics.Float,
+// pc returns the program offset of the last instruction
+func (c *codegen) pc() int {
+	return len(c.obj.prog) - 1
 }
 
 func (c *codegen) VisitBefore(node astNode) Visitor {
@@ -59,8 +61,21 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		// If the Type is not in the map, then default to metrics.Int.  This is
 		// a hack for metrics that no type can be inferred, retaining
 		// historical behaviour.
-		kind := kindMap[n.Type()]
-		m := metrics.NewMetric(name, c.name, n.kind, kind, n.keys...)
+		t := n.Type()
+		if IsDimension(t) {
+			t = t.(*TypeOperator).Args[len(t.(*TypeOperator).Args)-1]
+		}
+		var dtyp datum.Type
+		switch {
+		case Equals(Float, t):
+			dtyp = metrics.Float
+		default:
+			if !IsComplete(t) {
+				glog.Infof("Incomplete type %v for %#v", t, n)
+			}
+			dtyp = metrics.Int
+		}
+		m := metrics.NewMetric(name, c.name, n.kind, dtyp, n.keys...)
 		m.SetSource(n.Pos().String())
 		// Scalar counters can be initialized to zero.  Dimensioned counters we
 		// don't know the values of the labels yet.  Gauges and Timers we can't
@@ -72,7 +87,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 				return nil
 			}
 			// Initialize to zero at the zero time.
-			if kind == metrics.Int {
+			if dtyp == metrics.Int {
 				datum.SetInt(d, 0, time.Unix(0, 0))
 			} else {
 				datum.SetFloat(d, 0, time.Unix(0, 0))
@@ -91,24 +106,24 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		// Save PC of previous jump instruction emitted by the n.cond
 		// compilation.  (See regexNode and relNode cases, which will emit a
 		// jump as the last instr.)  This jump will skip over the truthNode.
-		pc := len(c.obj.prog) - 1
+		pc := c.pc()
 		// Set matched flag false for children.
 		c.emit(instr{setmatched, false})
 		Walk(c, n.truthNode)
 		// Re-set matched flag to true for rest of current block.
 		c.emit(instr{setmatched, true})
 		// Rewrite n.cond's jump target to jump to instruction after block.
-		c.obj.prog[pc].opnd = len(c.obj.prog)
+		c.obj.prog[pc].opnd = c.pc() + 1
 		// Now also emit the else clause, and a jump.
 		if n.elseNode != nil {
 			c.emit(instr{op: jmp})
 			// Rewrite jump again to avoid this else-skipper just emitted.
-			c.obj.prog[pc].opnd = len(c.obj.prog)
+			c.obj.prog[pc].opnd = c.pc() + 1
 			// Now get the PC of the else-skipper just emitted.
-			pc = len(c.obj.prog) - 1
+			pc = c.pc()
 			Walk(c, n.elseNode)
 			// Rewrite else-skipper to the next PC.
-			c.obj.prog[pc].opnd = len(c.obj.prog)
+			c.obj.prog[pc].opnd = c.pc() + 1
 		}
 		return nil
 
@@ -183,9 +198,44 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 
 	case *delNode:
 		Walk(c, n.n)
-		// overwdrite the dload instruction
-		pc := len(c.obj.prog) - 1
+		// overwrite the dload instruction
+		pc := c.pc()
 		c.obj.prog[pc].op = del
+
+	case *binaryExprNode:
+		switch n.op {
+		case AND:
+			Walk(c, n.lhs)
+			// pc is jump from first comparison, triggered if this expression is false
+			pc1 := c.pc()
+			Walk(c, n.rhs)
+			pc2 := c.pc()
+			// bounce through the second and leave it there for the condNode containing to overwrite
+			c.obj.prog[pc1].opnd = pc2
+			return nil
+
+		case OR:
+			Walk(c, n.lhs)
+			// pc1 is the jump from first comparison, triggered if false, but we want to jump if true to the block
+			pc1 := c.pc()
+			Walk(c, n.rhs)
+			pc2 := c.pc()
+			// condNode is going to insert a setmatched instruction next, then the block
+			blockPc := pc2 + 2
+			c.obj.prog[pc1].opnd = blockPc
+			switch c.obj.prog[pc1].op {
+			case jnm:
+				c.obj.prog[pc1].op = jm
+			case jm:
+				c.obj.prog[pc1].op = jnm
+			}
+			return nil
+
+		default:
+			// Didn't handle it, let normal walk proceed
+			return c
+		}
+
 	}
 
 	return c
@@ -211,10 +261,27 @@ var typedOperators = map[int]map[Type]opcode{
 func (c *codegen) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *builtinNode:
+		arglen := 0
 		if n.args != nil {
-			c.emit(instr{builtin[n.name], len(n.args.(*exprlistNode).children)})
-		} else {
-			c.emit(instr{op: builtin[n.name]})
+			arglen = len(n.args.(*exprlistNode).children)
+		}
+		switch n.name {
+		case "string", "bool":
+		// TODO(jaq): Nothing, no support in VM yet.
+
+		case "int", "float":
+			// len args should be 1
+			if arglen > 1 {
+				c.errorf(n.Pos(), "internal error, too many arguments to builtin %q: %#v", n.name, n)
+				return
+			}
+			if err := c.emitConversion(n.args.(*exprlistNode).children[0].Type(), n.Type()); err != nil {
+				c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
+				return
+			}
+
+		default:
+			c.emit(instr{builtin[n.name], arglen})
 		}
 	case *unaryExprNode:
 		switch n.op {
@@ -243,16 +310,30 @@ func (c *codegen) VisitAfter(node astNode) {
 		case NE:
 			c.emit(instr{cmp, 0})
 			c.emit(instr{op: jm})
+		case ADD_ASSIGN:
+			// When operand is not nil, inc pops the delta from the stack.
+			c.emit(instr{inc, 0})
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
-			switch n.Type() {
-			case Int, Float:
-				c.emit(instr{op: typedOperators[n.op][n.Type()]})
-			default:
-				c.errorf(n.Pos(), "Invalid type for binary expression: %q", n.Type())
+			opmap, ok := typedOperators[n.op]
+			if !ok {
+				c.errorf(n.Pos(), "Internal error: no typed operator for binary expression %v", n.op)
+				return
 			}
-		case AND:
+			emitflag := false
+			for t, opcode := range opmap {
+				if Equals(n.Type(), t) {
+					c.emit(instr{op: opcode})
+					emitflag = true
+					break
+				}
+			}
+			if !emitflag {
+				c.errorf(n.Pos(), "Invalid type for binary expression: %v", n.Type())
+				return
+			}
+		case BITAND:
 			c.emit(instr{op: and})
-		case OR:
+		case BITOR:
 			c.emit(instr{op: or})
 		case XOR:
 			c.emit(instr{op: xor})
@@ -261,5 +342,25 @@ func (c *codegen) VisitAfter(node astNode) {
 		case SHR:
 			c.emit(instr{op: shr})
 		}
+
+	case *convNode:
+		if err := c.emitConversion(n.n.Type(), n.Type()); err != nil {
+			c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
+			return
+		}
 	}
+}
+
+func (c *codegen) emitConversion(inType, outType Type) error {
+	glog.Infof("Conversion: %q to %q", inType, outType)
+	if Equals(Int, inType) && Equals(Float, outType) {
+		c.emit(instr{op: i2f})
+	} else if Equals(String, inType) && Equals(Float, outType) {
+		c.emit(instr{op: s2f})
+	} else if Equals(String, inType) && Equals(Int, outType) {
+		c.emit(instr{op: s2i})
+	} else {
+		return errors.Errorf("can't convert %q to %q", inType, outType)
+	}
+	return nil
 }

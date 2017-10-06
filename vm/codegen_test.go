@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 )
 
 var testCodeGenPrograms = []struct {
@@ -19,55 +19,55 @@ var testCodeGenPrograms = []struct {
 	{"simple line counter",
 		"counter line_count\n/$/ { line_count++\n }\n",
 		[]instr{
-			instr{match, 0},
-			instr{jnm, 7},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{match, 0},
+			{jnm, 7},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"count a",
 		"counter a_count\n/a$/ { a_count++\n }\n",
 		[]instr{
-			instr{match, 0},
-			instr{jnm, 7},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{match, 0},
+			{jnm, 7},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"strptime and capref",
 		"counter foo\n" +
 			"/(.*)/ { strptime($1, \"2006-01-02T15:04:05\")\n" +
 			"foo++\n}\n",
 		[]instr{
-			instr{match, 0},
-			instr{jnm, 11},
-			instr{setmatched, false},
-			instr{push, 0},
-			instr{capref, 1},
-			instr{str, 0},
-			instr{strptime, 2},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{match, 0},
+			{jnm, 11},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{str, 0},
+			{strptime, 2},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"strptime and named capref",
 		"counter foo\n" +
 			"/(?P<date>.*)/ { strptime($date, \"2006-01-02T15:04:05\")\n" +
 			"foo++\n }\n",
 		[]instr{
-			instr{match, 0},
-			instr{jnm, 11},
-			instr{setmatched, false},
-			instr{push, 0},
-			instr{capref, 1},
-			instr{str, 0},
-			instr{strptime, 2},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{match, 0},
+			{jnm, 11},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{str, 0},
+			{strptime, 2},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"inc by and set",
 		"counter foo\ncounter bar\n" +
 			"/([0-9]+)/ {\n" +
@@ -75,113 +75,110 @@ var testCodeGenPrograms = []struct {
 			"bar = $1\n" +
 			"}\n",
 		[]instr{
-			instr{match, 0},
-			instr{jnm, 17},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{push, 0},
-			instr{capref, 1},
-			instr{iadd, nil},
-			instr{iset, nil},
-			instr{mload, 1},
-			instr{dload, 0},
-			instr{push, 0},
-			instr{capref, 1},
-			instr{iset, nil},
-			instr{setmatched, true}}},
+			{match, 0},
+			{jnm, 14},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{inc, 0},
+			{mload, 1},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{iset, nil},
+			{setmatched, true}}},
 	{"cond expr gt",
 		"counter foo\n" +
 			"1 > 0 {\n" +
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
-			instr{cmp, 1},
-			instr{jnm, 9},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{push, int64(1)},
+			{push, int64(0)},
+			{cmp, 1},
+			{jnm, 9},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"cond expr lt",
 		"counter foo\n" +
 			"1 < 0 {\n" +
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
-			instr{cmp, -1},
-			instr{jnm, 9},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{push, int64(1)},
+			{push, int64(0)},
+			{cmp, -1},
+			{jnm, 9},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"cond expr eq",
 		"counter foo\n" +
 			"1 == 0 {\n" +
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
-			instr{cmp, 0},
-			instr{jnm, 9},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{push, int64(1)},
+			{push, int64(0)},
+			{cmp, 0},
+			{jnm, 9},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"cond expr le",
 		"counter foo\n" +
 			"1 <= 0 {\n" +
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
-			instr{cmp, 1},
-			instr{jm, 9},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{push, int64(1)},
+			{push, int64(0)},
+			{cmp, 1},
+			{jm, 9},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"cond expr ge",
 		"counter foo\n" +
 			"1 >= 0 {\n" +
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
-			instr{cmp, -1},
-			instr{jm, 9},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{push, int64(1)},
+			{push, int64(0)},
+			{cmp, -1},
+			{jm, 9},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"cond expr ne",
 		"counter foo\n" +
 			"1 != 0 {\n" +
 			"  foo++\n" +
 			"}\n",
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
-			instr{cmp, 0},
-			instr{jm, 9},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{push, int64(1)},
+			{push, int64(0)},
+			{cmp, 0},
+			{jm, 9},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"nested cond",
 		"counter foo\n" +
 			"/(.*)/ {\n" +
@@ -190,20 +187,20 @@ var testCodeGenPrograms = []struct {
 			"  }\n" +
 			"}\n",
 		[]instr{
-			instr{match, 0},
-			instr{jnm, 14},
-			instr{setmatched, false},
-			instr{push, 0},
-			instr{capref, 1},
-			instr{push, 1},
-			instr{cmp, 1},
-			instr{jm, 13},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true},
-			instr{setmatched, true}}},
+			{match, 0},
+			{jnm, 14},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{push, int64(1)},
+			{cmp, 1},
+			{jm, 13},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true},
+			{setmatched, true}}},
 	{"deco",
 		"counter foo\n" +
 			"counter bar\n" +
@@ -216,83 +213,83 @@ var testCodeGenPrograms = []struct {
 			"" +
 			"@fooWrap { bar++\n }\n",
 		[]instr{
-			instr{match, 0},
-			instr{jnm, 10},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{mload, 1},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{match, 0},
+			{jnm, 10},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{mload, 1},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"length",
 		"len(\"foo\") > 0 {\n" +
 			"}\n",
 		[]instr{
-			instr{str, 0},
-			instr{length, 1},
-			instr{push, 0},
-			instr{cmp, 1},
-			instr{jnm, 7},
-			instr{setmatched, false},
-			instr{setmatched, true}}},
+			{str, 0},
+			{length, 1},
+			{push, int64(0)},
+			{cmp, 1},
+			{jnm, 7},
+			{setmatched, false},
+			{setmatched, true}}},
 	{"bitwise", `
 1 & 7 ^ 15 | 8
 ~ 16 << 2
 1 >> 20
 `,
 		[]instr{
-			instr{push, 1},
-			instr{push, 7},
-			instr{and, nil},
-			instr{push, 15},
-			instr{xor, nil},
-			instr{push, 8},
-			instr{or, nil},
-			instr{push, 16},
-			instr{not, nil},
-			instr{push, 2},
-			instr{shl, nil},
-			instr{push, 1},
-			instr{push, 20},
-			instr{shr, nil}}},
+			{push, int64(1)},
+			{push, int64(7)},
+			{and, nil},
+			{push, int64(15)},
+			{xor, nil},
+			{push, int64(8)},
+			{or, nil},
+			{push, int64(16)},
+			{not, nil},
+			{push, int64(2)},
+			{shl, nil},
+			{push, int64(1)},
+			{push, int64(20)},
+			{shr, nil}}},
 	{"pow", `
 /(\d+) (\d+)/ {
 $1 ** $2
 }
 `,
 		[]instr{
-			instr{match, 0},
-			instr{jnm, 9},
-			instr{setmatched, false},
-			instr{push, 0},
-			instr{capref, 1},
-			instr{push, 0},
-			instr{capref, 2},
-			instr{ipow, nil},
-			instr{setmatched, true}}},
+			{match, 0},
+			{jnm, 9},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{push, 0},
+			{capref, 2},
+			{ipow, nil},
+			{setmatched, true}}},
 	{"indexed expr", `
 counter a by b
 a["string"]++
 `,
 		[]instr{
-			instr{str, 0},
-			instr{mload, 0},
-			instr{dload, 1},
-			instr{inc, nil}}},
+			{str, 0},
+			{mload, 0},
+			{dload, 1},
+			{inc, nil}}},
 	{"strtol", `
 strtol("deadbeef", 16)
 `,
 		[]instr{
-			instr{str, 0},
-			instr{push, 16},
-			instr{strtol, 2}}},
+			{str, 0},
+			{push, int64(16)},
+			{s2i, 2}}},
 	{"float", `
 20.0
 `,
 		[]instr{
-			instr{push, 20.0}}},
+			{push, 20.0}}},
 	{"otherwise", `
 counter a
 otherwise {
@@ -300,13 +297,13 @@ otherwise {
 }
 `,
 		[]instr{
-			instr{otherwise, nil},
-			instr{jnm, 7},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{otherwise, nil},
+			{jnm, 7},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true}}},
 	{"cond else",
 		`counter foo
 counter bar
@@ -316,19 +313,19 @@ counter bar
   bar++
 }`,
 		[]instr{
-			instr{push, 1},
-			instr{push, 0},
-			instr{cmp, 1},
-			instr{jnm, 10},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{inc, nil},
-			instr{setmatched, true},
-			instr{jmp, 13},
-			instr{mload, 1},
-			instr{dload, 0},
-			instr{inc, nil},
+			{push, int64(1)},
+			{push, int64(0)},
+			{cmp, 1},
+			{jnm, 10},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true},
+			{jmp, 13},
+			{mload, 1},
+			{dload, 0},
+			{inc, nil},
 		},
 	},
 	{"mod",
@@ -336,9 +333,9 @@ counter bar
 3 % 1
 `,
 		[]instr{
-			instr{push, 3},
-			instr{push, 1},
-			instr{imod, nil},
+			{push, int64(3)},
+			{push, int64(1)},
+			{imod, nil},
 		},
 	},
 	{"del", `
@@ -346,9 +343,9 @@ counter a by b
 del a["string"]
 `,
 		[]instr{
-			instr{str, 0},
-			instr{mload, 0},
-			instr{del, 1}},
+			{str, 0},
+			{mload, 0},
+			{del, 1}},
 	},
 	{"types", `
 gauge i
@@ -361,24 +358,24 @@ gauge f
 }
 `,
 		[]instr{
-			instr{match, 0},
-			instr{jnm, 9},
-			instr{setmatched, false},
-			instr{mload, 0},
-			instr{dload, 0},
-			instr{push, 0},
-			instr{capref, 1},
-			instr{iset, nil},
-			instr{setmatched, true},
-			instr{match, 1},
-			instr{jnm, 18},
-			instr{setmatched, false},
-			instr{mload, 1},
-			instr{dload, 0},
-			instr{push, 1},
-			instr{capref, 1},
-			instr{fset, nil},
-			instr{setmatched, true},
+			{match, 0},
+			{jnm, 9},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{iset, nil},
+			{setmatched, true},
+			{match, 1},
+			{jnm, 18},
+			{setmatched, false},
+			{mload, 1},
+			{dload, 0},
+			{push, 1},
+			{capref, 1},
+			{fset, nil},
+			{setmatched, true},
 		},
 	},
 
@@ -386,7 +383,7 @@ gauge f
 getfilename()
 `,
 		[]instr{
-			instr{getfilename, nil},
+			{getfilename, 0},
 		},
 	},
 
@@ -397,26 +394,100 @@ getfilename()
 }
 `,
 		[]instr{
-			instr{match, 0},
-			instr{jnm, 13},
-			instr{setmatched, false},
-			instr{push, 0},
-			instr{capref, 1},
-			instr{push, 0},
-			instr{capref, 2},
-			instr{push, 0},
-			instr{capref, 3},
-			instr{mload, 0},
-			instr{dload, 3},
-			instr{inc, nil},
-			instr{setmatched, true}}},
+			{match, 0},
+			{jnm, 13},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{push, 0},
+			{capref, 2},
+			{push, 0},
+			{capref, 3},
+			{mload, 0},
+			{dload, 3},
+			{inc, nil},
+			{setmatched, true}}},
+	{"string to int",
+		`counter c
+/(.*)/ {
+  c = int($1)
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 10},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{s2i, nil},
+			{iset, nil},
+			{setmatched, true}}},
+	{"int to float",
+		`counter c
+/(\d)/ {
+  c = float($1)
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 10},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{i2f, nil},
+			{fset, nil},
+			{setmatched, true}}},
+	{"string to float",
+		`counter c
+/(.*)/ {
+  c = float($1)
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 10},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{s2f, nil},
+			{fset, nil},
+			{setmatched, true}}},
+	{"nested conditionals",
+		`counter foo
+/(.*)/ {
+  $1 == "foo" || $1 == "bar" {
+    foo++
+  }
+}
+`, []instr{
+			{match, 0},
+			{jnm, 19},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{str, 0},
+			{cmp, 0},
+			{jm, 14},
+			{push, 0},
+			{capref, 1},
+			{str, 1},
+			{cmp, 0},
+			{jnm, 18},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true},
+			{setmatched, true}}},
 }
 
 func TestCodegen(t *testing.T) {
-	defaultCompareUnexportedFields := deep.CompareUnexportedFields
-	deep.CompareUnexportedFields = true
-	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
-
 	for _, tc := range testCodeGenPrograms {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -429,15 +500,15 @@ func TestCodegen(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Check error: %s", err)
 			}
+			s := Sexp{}
+			s.emitTypes = true
+			t.Log("Typed AST:\n" + s.Dump(ast))
 			obj, err := CodeGen(tc.name, ast)
 			if err != nil {
-				t.Errorf("Compile errors:\n%s", err)
-				s := Sexp{}
-				s.emitTypes = true
-				t.Fatalf("AST:\n%s", s.Dump(ast))
+				t.Fatalf("Codegen error:\n%s", err)
 			}
 
-			if diff := deep.Equal(tc.prog, obj.prog); diff != nil {
+			if diff := go_cmp.Diff(tc.prog, obj.prog, go_cmp.AllowUnexported(instr{})); diff != "" {
 				t.Error(diff)
 				t.Logf("Expected:\n%s\nReceived:\n%s", tc.prog, obj.prog)
 			}

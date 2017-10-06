@@ -6,7 +6,7 @@ It resembles another, more famous pattern-action language, that of AWK.
 
 This page errs on the side of a language specification and reference.  See the [Programming Guide](Programming-Guide) for a gentler introduction to writing `mtail` programs.
 
-# Details
+# Program Execution
 
 `mtail` runs all programs on every line received by the log tailing subsystem.  The rough model of this looks like:
 
@@ -17,7 +17,20 @@ for line in lines:
       do something
 ```
 
-Thus, it is useful to keep in mind that each program is acting on a single line of log data, then terminates.
+Thus it is useful to keep in mind that each program is acting on a single line of log data, then terminates.
+
+An `mtail` program consists of exported variable definitions, pattern-action statements, and optional decorator definitions.
+
+    exported variable
+    
+    pattern {
+      action statements
+    }
+    
+    def decorator {
+      pattern and action statements
+    }
+    
 
 ## Exported Variables
 
@@ -55,7 +68,7 @@ COND {
 }
 ```
 
-COND is a conditional expression.  It can be a regular expression, which if matched, enters the action block, or a relational expression, as you might see in a C program's `if` statement:
+COND is a conditional expression.  It can be a regular expression, which if matched enters the action block, or a relational expression as you might encounter in a C program's `if` statement:
 
 ```
 /foo/ {
@@ -70,6 +83,10 @@ variable > 0 {
 In the above program, ACTION1 is taken on each line input if that line matches the word `foo`, and ACTION2 is taken on each line if when that line is read, the variable `variable` is greater than 0.
 
 The action statements must be wrapped in curly braces, i.e. `{}`.  `mtail` programs have no single-line statement conditionals like C.
+
+## Regular Expressions
+
+`mtail` supports RE2-style regular expression syntax.
 
 ## Single definition of constants
 
@@ -182,8 +199,6 @@ gauge f
 
 the metric `i` will be of type Int and the metric `f` will be of type Float.
 
-
-
 ## Timestamps
 
 It is also useful to timestamp a metric with the time the application thought an event occurred.  Logs typically prefix the log line with a timestamp string, which can be extracted and then parsed into a timestamp internally, with the `strptime` builtin function.
@@ -203,7 +218,7 @@ Buyer beware!  The format string used by `mtail` is the same as the [Go time.Par
 
 It is of course possible to nest pattern-actions within actions.  This lets you factor out common prefixes (or suffixes!) and deal with per-message actions separately.
 
-For example, parsing syslog timestamps is something you only want to do once.
+For example, parsing syslog timestamps is something you only want to do once, as it's expensive to match (and difficult to read!)
 ```
 counter foo
 counter bar
@@ -225,33 +240,52 @@ This will result in both foo and bar counters being timestamped with the current
 
 # Builtin functions
 
-A few builtin functions exist for manipulating the virtual machine state.  They
-are:
+There are "pure" builtin functions, in that they have no side effects on the
+program state.
 
+1. `len(x)`, a function of one string argument, which returns the length of
+    the string argument `x`.
+1. `tolower(x)`, a function of one string argument, which returns the input `x`
+   in all lowercase.
+
+There are type coercion functions, useful for overriding the type inference
+made by the compiler if it chooses badly.  (If the choice is egregious, please
+file a bug!)
+
+1. `int(x)`, a function of one argument performs type conversion to integer.
+   If `x` is a type that can be converted to integer, it does so.  If the type
+   of `x` cannot be converted to an integer, a compile error is triggered.  If
+   the valye of `x` cannot be converted to an integer, then a runtime error is
+   triggered.
+1. `float(x)`, a function of one argument that performs type conversion to
+   floating point numbers.  The same rules apply as for `int()` above.
+1. `strtol(x, y)`, a function of two arguments, which converts a string `x` to
+   an integer using base `y`.  Useful for translating octal or hexadecimal
+   values in log messages.
+
+A few builtin functions exist for manipulating the virtual machine state as
+side effects for the metric export.
+
+1. `getfilename()`, a function of no arguments, which returns the filename from
+   which the current log line input came.
+1. `settime(x)`, a function of one integer argument, which sets the current
+   timestamp register.
+1. `strptime(x, y)`, a function of two string arguments, which parses the
+    timestamp in the string `x` with the parse format string in `y`, and sets
+    the current timestamp register.  The parse format string must follow [Go's
+    time.Parse() format string](http://golang.org/src/pkg/time/format.go)
 1. `timestamp()`, a function of no arguments, which returns the current
    timestamp.  This is undefined if neither `settime` or `strptime` have been
    called previously.
-1.  `len(x)`, a function of one string argument, which returns the length of
-    the string argument.
-1. `settime(x)`, a function of one integer argument, which sets the current
-   timestamp
-1.  `strptime(x, y)`, a function of two string arguments, which parses the
-    timestamp in the string `x` with the parse format string in `y`, and sets
-    the current timestamp.  The parse format string must follow [Go's
-    time.Parse() format string](http://golang.org/src/pkg/time/format.go)
-1. `tolower(x)`, a function of one string argument, which lowercases the
-   string.
-1. `getfilename()`, a function of no arguments, which returns the filename from
-   which the current log line input came.
 
-As described in Nested Actions, the current timestamp refers to `mtail`'s idea of
-the time associated with the current log line.  This timestamp is used when the
-variables are exported to the upstream collector.  This defaults to the time
-that the log line arrives in `mtail`, and can be changed with the `settime()` or
-`strptime()` builtins.
+As described in Nested Actions, the **current timestamp register** refers to
+`mtail`'s idea of the time associated with the current log line.  This
+timestamp is used when the variables are exported to the upstream collector.
+The value defaults to the time that the log line arrives in `mtail`, and can be
+changed with the `settime()` or `strptime()` builtins.
 
 User defined functions are not supported, but read on to Decorated Actions for
-how to factor out common matching pattern/action behaviour.
+how to reuse common code.
 
 # Decorated actions
 

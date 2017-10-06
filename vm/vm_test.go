@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
 )
@@ -142,6 +142,13 @@ var instructions = []struct {
 		[]interface{}{"abc", "def"},
 		[]interface{}{},
 		thread{pc: 0, match: false, matches: map[int][]string{}}},
+	{"cmp eq string string true",
+		instr{cmp, 0},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"abc", "abc"},
+		[]interface{}{},
+		thread{pc: 0, match: true, matches: map[int][]string{}}},
 	{"cmp gt float float",
 		instr{cmp, 1},
 		[]*regexp.Regexp{},
@@ -318,12 +325,33 @@ var instructions = []struct {
 		[]interface{}{2, 2},
 		[]interface{}{int64(4)},
 		thread{pc: 0, matches: map[int][]string{}}},
-	{"strtol",
-		instr{strtol, 2},
+	{"s2i pop",
+		instr{s2i, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"ff", 16},
 		[]interface{}{int64(255)},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"s2i",
+		instr{s2i, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"190"},
+		[]interface{}{int64(190)},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"s2f",
+		instr{s2f, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"1.0"},
+		[]interface{}{float64(1.0)},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"i2f",
+		instr{i2f, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1},
+		[]interface{}{float64(1.0)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"settime",
 		instr{settime, 0},
@@ -431,6 +459,7 @@ const testFilename = "test"
 // instruction cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			var m []*metrics.Metric
@@ -445,19 +474,21 @@ func TestInstrs(t *testing.T) {
 			for _, item := range tc.reversedStack {
 				v.t.Push(item)
 			}
-			v.t.matches = make(map[int][]string, 0)
+			v.t.matches = make(map[int][]string)
 			v.input = tailer.NewLogLine(testFilename, "aaaab")
 			v.execute(v.t, tc.i)
 			if v.terminate {
 				t.Fatalf("Execution failed, see info log.")
 			}
 
-			if diff := deep.Equal(tc.expectedStack, v.t.stack); diff != nil {
+			if diff := go_cmp.Diff(tc.expectedStack, v.t.stack); diff != "" {
 				t.Log("unexpected vm stack state")
 				t.Error(diff)
 			}
 
-			if diff := deep.Equal(&tc.expectedThread, v.t); diff != nil {
+			tc.expectedThread.stack = tc.expectedStack
+
+			if diff := go_cmp.Diff(&tc.expectedThread, v.t, go_cmp.AllowUnexported(thread{})); diff != "" {
 				t.Log("unexpected vm thread state")
 				t.Error(diff)
 				t.Errorf("\t%v", *v.t)
@@ -470,7 +501,7 @@ func TestInstrs(t *testing.T) {
 
 func TestStrptimeWithTimezone(t *testing.T) {
 	loc, _ := time.LoadLocation("Europe/Berlin")
-	obj := &object{prog: []instr{instr{strptime, 0}}}
+	obj := &object{prog: []instr{{strptime, 0}}}
 	vm := New("strptimezone", obj, true, loc)
 	vm.t = new(thread)
 	vm.t.stack = make([]interface{}, 0)

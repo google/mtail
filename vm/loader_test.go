@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/watcher"
@@ -19,7 +19,7 @@ func TestNewLoader(t *testing.T) {
 	store := metrics.NewStore()
 	inLines := make(chan *tailer.LogLine)
 	fs := afero.NewMemMapFs()
-	o := LoaderOptions{store, inLines, w, fs, false, false, false, false, true, nil, false}
+	o := LoaderOptions{store, inLines, w, fs, false, false, false, false, false, true, nil, false}
 	l, err := NewLoader(o)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
@@ -31,7 +31,7 @@ func TestNewLoader(t *testing.T) {
 	l.handles["test"] = handle
 	l.handleMu.Unlock()
 	go func() {
-		for _ = range outLines {
+		for range outLines {
 		}
 		close(done)
 	}()
@@ -45,7 +45,7 @@ func TestCompileAndRun(t *testing.T) {
 	lines := make(chan *tailer.LogLine)
 	w := watcher.NewFakeWatcher()
 	fs := afero.NewMemMapFs()
-	o := LoaderOptions{store, lines, w, fs, false, false, false, false, true, nil, false}
+	o := LoaderOptions{store, lines, w, fs, false, false, false, false, false, true, nil, false}
 	l, err := NewLoader(o)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
@@ -113,66 +113,68 @@ var testProgram = "/$/ {}\n"
 
 func TestProcessEvents(t *testing.T) {
 	for _, tt := range testProcessEvents {
-		t.Logf("Starting %s", tt.name)
-		w := watcher.NewFakeWatcher()
-		w.Add(".")
-		store := metrics.NewStore()
-		lines := make(chan *tailer.LogLine)
-		fs := afero.NewMemMapFs()
-		o := LoaderOptions{store, lines, w, fs, false, false, false, false, true, nil, false}
-		l, err := NewLoader(o)
-		if err != nil {
-			t.Fatalf("couldn't create loader: %s", err)
-		}
-		for i := range tt.events {
-			e := tt.events[i]
-			switch e := e.(type) {
-			case watcher.CreateEvent:
-				if e.Pathname != "notexist.mtail" {
-					_, err := fs.Create(e.Pathname)
-					if err != nil {
-						t.Fatalf("Create failed for %s: %s", e.Pathname, err)
-					}
-				}
-				w.InjectCreate(e.Pathname)
-			case watcher.DeleteEvent:
-				err := fs.Remove(e.Pathname)
-				if err != nil {
-					t.Fatalf("Remove failed for %s: %s", e.Pathname, err)
-				}
-				w.InjectDelete(e.Pathname)
-			case watcher.UpdateEvent:
-				if e.Pathname != "notexist.mtail" {
-					f, err := fs.Create(e.Pathname)
-					if err != nil {
-						t.Fatalf("Couldn't open file %s for test: %s", e.Pathname, err)
-					}
-					_, err = f.WriteString(testProgram)
-					if err != nil {
-						t.Fatalf("Couldn't write file contents: %s", err)
-					}
-					if err = f.Close(); err != nil {
-						t.Fatalf("Close failed: %s", err)
-					}
-				}
-				w.InjectUpdate(e.Pathname)
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			w := watcher.NewFakeWatcher()
+			w.Add(".")
+			store := metrics.NewStore()
+			lines := make(chan *tailer.LogLine)
+			fs := afero.NewMemMapFs()
+			o := LoaderOptions{store, lines, w, fs, false, false, false, false, false, true, nil, false}
+			l, err := NewLoader(o)
+			if err != nil {
+				t.Fatalf("couldn't create loader: %s", err)
 			}
-		}
-		w.Close()
-		<-l.watcherDone
-		l.handleMu.RLock()
-		programs := make([]string, 0)
-		for program := range l.handles {
-			programs = append(programs, program)
-		}
-		l.handleMu.RUnlock()
-		l.handleMu.RLock()
-		if diff := deep.Equal(tt.expectedPrograms, programs); diff != nil {
-			t.Errorf("%q: loaded programs don't match.\nl.handles: %+#v\n%s", tt.name, l.handles, diff)
-		}
-		l.handleMu.RUnlock()
-		close(lines)
-
+			for i := range tt.events {
+				e := tt.events[i]
+				switch e := e.(type) {
+				case watcher.CreateEvent:
+					if e.Pathname != "notexist.mtail" {
+						_, err := fs.Create(e.Pathname)
+						if err != nil {
+							t.Fatalf("Create failed for %s: %s", e.Pathname, err)
+						}
+					}
+					w.InjectCreate(e.Pathname)
+				case watcher.DeleteEvent:
+					err := fs.Remove(e.Pathname)
+					if err != nil {
+						t.Fatalf("Remove failed for %s: %s", e.Pathname, err)
+					}
+					w.InjectDelete(e.Pathname)
+				case watcher.UpdateEvent:
+					if e.Pathname != "notexist.mtail" {
+						f, err := fs.Create(e.Pathname)
+						if err != nil {
+							t.Fatalf("Couldn't open file %s for test: %s", e.Pathname, err)
+						}
+						_, err = f.WriteString(testProgram)
+						if err != nil {
+							t.Fatalf("Couldn't write file contents: %s", err)
+						}
+						if err = f.Close(); err != nil {
+							t.Fatalf("Close failed: %s", err)
+						}
+					}
+					w.InjectUpdate(e.Pathname)
+				}
+			}
+			w.Close()
+			<-l.watcherDone
+			l.handleMu.RLock()
+			programs := make([]string, 0)
+			for program := range l.handles {
+				programs = append(programs, program)
+			}
+			l.handleMu.RUnlock()
+			l.handleMu.RLock()
+			if diff := go_cmp.Diff(tt.expectedPrograms, programs); diff != "" {
+				t.Errorf("%q: loaded programs don't match.\nl.handles: %+#v\n%s", tt.name, l.handles, diff)
+			}
+			l.handleMu.RUnlock()
+			close(lines)
+		})
 	}
 }
 
@@ -187,7 +189,7 @@ func TestLoadProg(t *testing.T) {
 	store := metrics.NewStore()
 	inLines := make(chan *tailer.LogLine)
 	fs := afero.NewMemMapFs()
-	o := LoaderOptions{store, inLines, w, fs, false, false, false, false, true, nil, false}
+	o := LoaderOptions{store, inLines, w, fs, false, false, false, false, false, true, nil, false}
 	l, err := NewLoader(o)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)

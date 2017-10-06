@@ -6,9 +6,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
 	"github.com/google/mtail/testdata"
@@ -36,13 +38,13 @@ var exampleProgramTests = []struct {
 		"testdata/anonymised_dhcpd_log",
 		"testdata/anonymised_dhcpd_log.golden",
 	},
-	// {
-	// 	"examples/ntpd.mtail",
-	// 	"testdata/ntp4",
-	// 	"testdata/ntp4.golden",
-	// },
 	{
 		"examples/ntpd.mtail",
+		"testdata/ntp4",
+		"testdata/ntp4.golden",
+	},
+	{
+		"examples/ntpd_peerstats.mtail",
 		"testdata/xntp3_peerstats",
 		"testdata/xntp3_peerstats.golden",
 	},
@@ -66,6 +68,11 @@ var exampleProgramTests = []struct {
 		"testdata/else.log",
 		"testdata/filename.golden",
 	},
+	{
+		"examples/logical.mtail",
+		"testdata/logical.log",
+		"testdata/logical.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -88,7 +95,10 @@ func TestExamplePrograms(t *testing.T) {
 				t.Fatalf("create mtail failed: %s", err)
 			}
 
-			mtail.StartTailing()
+			err = mtail.StartTailing()
+			if err != nil {
+				t.Fatalf("Start tailling failed: %s", err)
+			}
 
 			g, err := os.Open(tc.goldenfile)
 			if err != nil {
@@ -101,9 +111,9 @@ func TestExamplePrograms(t *testing.T) {
 
 			mtail.Close()
 
-			diff := deep.Equal(golden_store, store)
+			diff := cmp.Diff(golden_store, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
 
-			if diff != nil {
+			if diff != "" {
 				t.Error(diff)
 				t.Logf(" Golden metrics: %s", golden_store.Metrics)
 				t.Logf("Program metrics: %s", store.Metrics)

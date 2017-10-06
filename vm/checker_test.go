@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 )
 
 var checkerInvalidPrograms = []struct {
@@ -17,21 +17,21 @@ var checkerInvalidPrograms = []struct {
 }{
 	{"undefined named capture group",
 		"/blurgh/ { $undef++\n }\n",
-		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression visible to this scope.\n\tTry using `(?P<undef>...)' to name the capture group."}},
+		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression visible to this scope.", "\tTry using `(?P<undef>...)' to name the capture group."}},
 
 	{"out of bounds capref",
 		"/(blyurg)/ { $2++ \n}\n",
 		[]string{"out of bounds capref:1:14-15: Capture group `$2' was not defined by a regular expression " +
-			"visible to this scope.\n\tCheck that there are at least 2 pairs of parentheses."},
+			"visible to this scope.", "\tCheck that there are at least 2 pairs of parentheses."},
 	},
 
 	{"undefined decorator",
 		"@foo {}\n",
-		[]string{"undefined decorator:1:1-4: Decorator `foo' not defined.\n\tTry adding a definition `def foo {}' earlier in the program."}},
+		[]string{"undefined decorator:1:1-4: Decorator `foo' not defined.", "\tTry adding a definition `def foo {}' earlier in the program."}},
 
 	{"undefined identifier",
 		"// { x++ \n}\n",
-		[]string{"undefined identifier:1:6: Identifier `x' not declared.\n\tTry adding `counter x' to the top of the program."},
+		[]string{"undefined identifier:1:6: Identifier `x' not declared.", "\tTry adding `counter x' to the top of the program."},
 	},
 
 	{"invalid regex",
@@ -49,6 +49,57 @@ var checkerInvalidPrograms = []struct {
 	{"duplicate declaration",
 		"counter foo\ncounter foo\n",
 		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11"}},
+
+	{"indexedExpr parameter count",
+		`counter n
+    counter foo by a, b
+	counter bar by a, b
+	counter quux by a
+	/(\d+)/ {
+      0[$1]++
+      n[$1]++
+      foo[$1]++
+      bar[$1][0]++
+      quux[$1][0]++
+	}
+		`,
+		[]string{
+			// 0[$1] is not a valud expresison
+			"indexedExpr parameter count:6:7-10: Index taken on unindexable expression",
+			// n[$1] is syntactically valid, but n is not indexable
+			"indexedExpr parameter count:7:7-10: Index taken on unindexable expression",
+			// foo[$1] is short one key but we cannot detect this due to chained indexed expression.
+			"indexedExpr parameter count:8:7-12: Not enough keys for expression: expecting 1 more",
+			// bar[$1][0] is ok
+			// quux[$1][0] has too many keys
+			"indexedExpr parameter count:10:7-16: Too many keys for indexed expression: expecting 1, received 2.",
+		}},
+
+	{"indexedExpr binary expression",
+		`counter foo by a, b
+counter bar by a, b
+/(\d+)/ {
+  foo[$1]+=$1
+}
+/(.*)/ {
+  foo = bar[$1] + 1
+}
+`,
+		[]string{
+			"indexedExpr binary expression:4:3-8: Not enough keys for expression: expecting 1 more",
+			"indexedExpr binary expression:7:9-14: Not enough keys for expression: expecting 1 more",
+			"indexedExpr binary expression:7:3-5: Not enough keys for expression: expecting 2 more",
+		}},
+
+	{"builtin parameter mismatch",
+		`/(\d+)/ {
+	  strptime()
+	}
+    /(\d+)/ {
+	  timestamp()
+	}
+	`,
+		[]string{"builtin parameter mismatch:2:13: call to `strptime': type mismatch; expected String→String→None received incomplete type"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
@@ -62,14 +113,17 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			}
 			err = Check(ast)
 			if err == nil {
-				t.Fatalf("check error: %s", err)
+				t.Fatal("check didn't fail")
 			}
 
-			diff := deep.Equal(
-				strings.Join(tc.errors, "\n"),        // want
-				strings.TrimRight(err.Error(), "\n")) // got
-			if diff != nil {
-				t.Error(diff)
+			diff := go_cmp.Diff(
+				tc.errors,                        // want
+				strings.Split(err.Error(), "\n")) // got
+			if diff != "" {
+				t.Errorf("Diff %s", diff)
+				s := Sexp{}
+				s.emitTypes = true
+				t.Log(s.Dump(ast))
 			}
 		})
 	}
@@ -105,12 +159,46 @@ var checkerValidPrograms = []struct {
 }
 `},
 
+	{"index expression",
+		`counter foo by a, b
+/(\d)/ {
+  foo[1,$1] = 3
+}`},
 	{"odd indexes",
 		`counter foo by a,b,c
-/(\d) (\d)/ {
-  foo[$1,$2][0]++
+	/(\d) (\d)/ {
+	  foo[$1,$2][0]++
+	}
+	`},
+	{"implicit int",
+		`counter foo
+/$/ {
+  foo++
+}`},
+	{"function return value",
+		`len("foo") > 0 {}`},
+	{"conversions",
+		`counter i
+	counter f
+	/(.*)/ {
+	  i = int($1)
+	  f = float($1)
+	}
+	`},
+
+	{"logical operators",
+		`0 || 1 {
+}
+1 && 0 {
 }
 `},
+	{"nested binary conditional",
+		`1 != 0 && 0 == 1 {
+}
+`},
+	{"paren expr", `
+(0) || (1 && 3) {
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {
@@ -123,6 +211,9 @@ func TestCheckValidPrograms(t *testing.T) {
 				t.Fatal(err)
 			}
 			err = Check(ast)
+			s := Sexp{}
+			s.emitTypes = true
+			t.Log("Typed AST:\n" + s.Dump(ast))
 			if err != nil {
 				t.Errorf("check failed: %s", err)
 			}
@@ -135,13 +226,12 @@ var checkerTypeExpressionTests = []struct {
 	expr     astNode
 	expected Type
 }{
-	{"Int + Int -> Float",
+	{"Int + Int -> Int",
 		&binaryExprNode{lhs: &intConstNode{position{}, 1},
 			rhs: &intConstNode{position{}, 1},
 			op:  PLUS},
 		Int,
 	},
-
 	{"Int + Float -> Float",
 		&binaryExprNode{lhs: &intConstNode{position{}, 1},
 			rhs: &floatConstNode{position{}, 1.0},
@@ -151,17 +241,14 @@ var checkerTypeExpressionTests = []struct {
 	{"⍺ + Float -> Float",
 		&binaryExprNode{lhs: &idNode{pos: position{}, sym: &Symbol{Name: "i", Kind: VarSymbol, Type: NewTypeVariable()}},
 			rhs: &caprefNode{pos: position{}, sym: &Symbol{Kind: CaprefSymbol, Type: Float}},
-			op:  ASSIGN},
+			op:  PLUS},
 		Float,
 	},
 }
 
 func TestCheckTypeExpressions(t *testing.T) {
-	defaultCompareUnexportedFields := deep.CompareUnexportedFields
-	deep.CompareUnexportedFields = true
-	defer func() { deep.CompareUnexportedFields = defaultCompareUnexportedFields }()
-
 	for _, tc := range checkerTypeExpressionTests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			err := Check(tc.expr)
@@ -169,9 +256,12 @@ func TestCheckTypeExpressions(t *testing.T) {
 				t.Fatalf("check error: %s", err)
 			}
 
-			diff := deep.Equal(tc.expected, tc.expr.Type())
-			if len(diff) > 0 {
+			diff := go_cmp.Diff(tc.expected, tc.expr.Type().Root())
+			if diff != "" {
 				t.Error(diff)
+				s := Sexp{}
+				s.emitTypes = true
+				t.Log("Typed AST:\n" + s.Dump(tc.expr))
 			}
 		})
 	}

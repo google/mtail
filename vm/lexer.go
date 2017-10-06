@@ -33,6 +33,8 @@ var lexemeName = map[lexeme]string{
 	POW:          "POW",
 	SHL:          "SHL",
 	SHR:          "SHR",
+	BITAND:       "BITAND",
+	BITOR:        "BITOR",
 	AND:          "AND",
 	OR:           "OR",
 	ADD_ASSIGN:   "ADD_ASSIGN",
@@ -90,9 +92,13 @@ var keywords = map[string]lexeme{
 
 // List of builtin functions.  Keep this list sorted!
 var builtins = []string{
+	"bool",
+	"float",
 	"getfilename",
+	"int",
 	"len",
 	"settime",
+	"string",
 	"strptime",
 	"strtol",
 	"timestamp",
@@ -126,7 +132,7 @@ type lexer struct {
 	line  int  // The line position of the current rune.
 	col   int  // The column position of the current rune.
 
-	in_regex bool // Context aware flag from parser to say we're in a regex
+	inRegex bool // Context aware flag from parser to say we're in a regex
 
 	// The currently being lexed token.
 	startcol int    // Starting column of the current token.
@@ -151,8 +157,8 @@ func newLexer(name string, input io.Reader) *lexer {
 func (l *lexer) nextToken() token {
 	for {
 		select {
-		case token := <-l.tokens:
-			return token
+		case tok := <-l.tokens:
+			return tok
 		default:
 			l.state = l.state(l)
 		}
@@ -236,7 +242,7 @@ func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 
 // Start lexing a program.
 func lexProg(l *lexer) stateFn {
-	if l.in_regex {
+	if l.inRegex {
 		return lexRegex
 	}
 	switch r := l.next(); {
@@ -355,10 +361,24 @@ func lexProg(l *lexer) stateFn {
 		l.emit(MOD)
 	case r == '&':
 		l.accept()
-		l.emit(AND)
+		switch l.next() {
+		case '&':
+			l.accept()
+			l.emit(AND)
+		default:
+			l.backup()
+			l.emit(BITAND)
+		}
 	case r == '|':
 		l.accept()
-		l.emit(OR)
+		switch l.next() {
+		case '|':
+			l.accept()
+			l.emit(OR)
+		default:
+			l.backup()
+			l.emit(BITOR)
+		}
 	case r == '^':
 		l.accept()
 		l.emit(XOR)
@@ -516,7 +536,7 @@ Loop:
 // include the '/' quotes.
 func lexRegex(l *lexer) stateFn {
 	// Exit regex mode when leaving this function.
-	defer func() { l.in_regex = false }()
+	defer func() { l.inRegex = false }()
 Loop:
 	for {
 		switch l.next() {

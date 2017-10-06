@@ -81,9 +81,10 @@ func init() {
 }
 
 var (
-	// Externally supplied by the linker
-	Version   string
-	Revision  string
+	// Version and Revision are supplied by the linker
+	Version  string
+	Revision string
+
 	GoVersion = runtime.Version()
 )
 
