@@ -60,7 +60,7 @@ all: mtail
 clean:
 	rm -f $(CLEANFILES) .*dep-stamp
 
-install mtail: $(GOFILES)
+install mtail: $(GOFILES) .dep-stamp
 	go install
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
@@ -70,28 +70,28 @@ emgen/emgen: emgen/emgen.go
 	cd emgen && go build
 
 .PHONY: test check 
-check test: $(GOFILES) $(GOTESTFILES)
+check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 60s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOTESTFILES)
+testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 5m -race ./...
 
 .PHONY: smoke
-smoke: $(GOFILES) $(GOTESTFILES)
+smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 10s -test.short ./...
 
 .PHONY: bench
-bench: $(GOFILES) $(GOTESTFILES)
+bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -timeout 60s -run=XXX ./...
 
 .PHONY: recbench
-recbench: $(GOFILES) $(GOTESTFILES)
+recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: coverage
 coverage: gover.coverprofile
-gover.coverprofile: $(GOFILES) $(GOTESTFILES)
+gover.coverprofile: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	for package in exporter metrics mtail tailer vm watcher; do\
 		go test -covermode=count -coverprofile=$$package.coverprofile ./$$package;\
     done
@@ -105,6 +105,18 @@ coverage.html: gover.coverprofile
 
 .PHONY: testall
 testall: testrace bench
+
+.PHONY: install_deps
+install_deps: .dep-stamp
+
+IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
+TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
+
+.dep-stamp:
+	# Install all dependencies, ensuring they're updated
+	go get -u -v $(IMPORTS)
+	go get -u -v $(TESTIMPORTS)
+	touch $@
 
 .PHONY: install_gen_deps
 install_gen_deps: .gen-dep-stamp
