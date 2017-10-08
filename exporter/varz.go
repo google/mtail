@@ -17,7 +17,7 @@ var (
 	exportVarzTotal = expvar.NewInt("exporter_varz_total")
 )
 
-const varzFormat = "%s{%s} %d\n"
+const varzFormat = "%s{%s} %s\n"
 
 // HandleVarz exports the metrics in Varz format via HTTP.
 func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
@@ -26,29 +26,33 @@ func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-type", "text/plain")
 
-	for _, m := range e.store.Metrics {
-		m.RLock()
-		exportVarzTotal.Add(1)
-		lc := make(chan *metrics.LabelSet)
-		go m.EmitLabelSets(lc)
-		for l := range lc {
-			line := metricToVarz(e.hostname, m, l)
-			fmt.Fprint(w, line)
+	for _, ml := range e.store.Metrics {
+		for _, m := range ml {
+			m.RLock()
+			exportVarzTotal.Add(1)
+			lc := make(chan *metrics.LabelSet)
+			go m.EmitLabelSets(lc)
+			for l := range lc {
+				line := metricToVarz(e.o, m, l)
+				fmt.Fprint(w, line)
+			}
+			m.RUnlock()
 		}
-		m.RUnlock()
 	}
 }
 
-func metricToVarz(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToVarz(o Options, m *metrics.Metric, l *metrics.LabelSet) string {
 	var s []string
 	for k, v := range l.Labels {
 		s = append(s, fmt.Sprintf("%s=%s", k, v))
 	}
 	sort.Strings(s)
-	s = append(s, fmt.Sprintf("prog=%s", m.Program))
-	s = append(s, fmt.Sprintf("instance=%s", hostname))
+	if !o.OmitProgLabel {
+		s = append(s, fmt.Sprintf("prog=%s", m.Program))
+	}
+	s = append(s, fmt.Sprintf("instance=%s", o.Hostname))
 	return fmt.Sprintf(varzFormat,
 		m.Name,
 		strings.Join(s, ","),
-		l.Datum.Get())
+		l.Datum.ValueString())
 }

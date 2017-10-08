@@ -14,17 +14,20 @@ import (
 var (
 	graphiteHostPort = flag.String("graphite_host_port", "",
 		"Host:port to graphite carbon server to write metrics to.")
+	graphitePrefix = flag.String("graphite_prefix", "",
+		"Prefix to use for graphite metrics.")
 
 	graphiteExportTotal   = expvar.NewInt("graphite_export_total")
 	graphiteExportSuccess = expvar.NewInt("graphite_export_success")
 )
 
+// metricToGraphite encodes a metric in the graphite text protocol format.  The
+// metric lock is held before entering this function.
 func metricToGraphite(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
-	m.RLock()
-	defer m.RUnlock()
-	return fmt.Sprintf("%s.%s %v %v\n",
+	return fmt.Sprintf("%s%s.%s %v %v\n",
+		*graphitePrefix,
 		m.Program,
 		formatLabels(m.Name, l.Labels, ".", "."),
-		l.Datum.Get(),
-		l.Datum.Time/1e9)
+		l.Datum.ValueString(),
+		l.Datum.TimeString())
 }

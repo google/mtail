@@ -1,13 +1,20 @@
+counter request_total {command=dhcprequest} 10261 0000-11-16T07:46:06Z
+counter request_total {command=dhcpack} 10752 0000-11-16T07:46:06Z
+counter request_total {command=dhcpdiscover} 2189 0000-11-16T07:46:05Z
+counter request_total {command=dhcpnak} 675 0000-11-16T07:46:06Z
+counter request_total {command=dhcprelease} 324 0000-11-16T07:46:03Z
+counter request_total {command=dhcpinform} 1819 0000-11-16T07:46:04Z
 counter request_total {command=balancing} 9317 0000-11-16T07:45:14Z
 counter request_total {command=balanced} 9317 0000-11-16T07:45:14Z
+counter request_total {command=dhcpoffer} 924 0000-11-16T07:46:06Z
 counter config_file_errors
 counter peer_disconnects
-counter dhcpdiscovers {mac=}
+counter dhcpdiscovers {mac=00:00:00:01:02:03} 2189 0000-11-16T07:46:05Z
 counter bind_xid_mismatch 4088 0000-11-16T07:46:05Z
 counter duplicate_lease 53 0000-11-16T07:44:51Z
 counter bad_udp_checksum
 counter unknown_subnet
-counter dhcpdiscover_nofree {network=}
+counter dhcpdiscover_nofree {network=172.16.0.1/32} 1 0000-11-16T06:36:31Z
 counter unknown_lease {ip=}
 counter update_rejected
 counter failover_peer_timeout

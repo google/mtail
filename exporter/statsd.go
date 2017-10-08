@@ -14,14 +14,16 @@ import (
 var (
 	statsdHostPort = flag.String("statsd_hostport", "",
 		"Host:port to statsd server to write metrics to.")
+	statsdPrefix = flag.String("statsd_prefix", "",
+		"Prefix to use for statsd metrics.")
 
 	statsdExportTotal   = expvar.NewInt("statsd_export_total")
 	statsdExportSuccess = expvar.NewInt("statsd_export_success")
 )
 
+// metricToStatsd encodes a metric in the statsd text protocol format.  The
+// metric lock is held before entering this function.
 func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
-	m.RLock()
-	defer m.RUnlock()
 	var t string
 	switch m.Kind {
 	case metrics.Counter:
@@ -31,8 +33,9 @@ func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) str
 	case metrics.Timer:
 		t = "ms" // StatsD Timer
 	}
-	return fmt.Sprintf("%s.%s:%d|%s",
+	return fmt.Sprintf("%s%s.%s:%s|%s",
+		*statsdPrefix,
 		m.Program,
 		formatLabels(m.Name, l.Labels, ".", "."),
-		l.Datum.Get(), t)
+		l.Datum.ValueString(), t)
 }

@@ -6,10 +6,10 @@
 package exporter
 
 import (
-	"errors"
 	"expvar"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -17,26 +17,29 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
+	"github.com/pkg/errors"
 )
 
 // Commandline Flags.
 var (
 	pushInterval = flag.Int("metric_push_interval_seconds", 60,
-		"Interval between metric pushes, in seconds")
+		"Interval between metric pushes, in seconds.")
+	writeDeadline = flag.Duration("metric_push_write_deadline", 10*time.Second, "Time to wait for a push to succeed before exiting with an error.")
 )
 
 // Exporter manages the export of metrics to passive and active collectors.
 type Exporter struct {
 	store       *metrics.Store
-	hostname    string
+	o           Options
 	pushTargets []pushOptions
 }
 
 // Options contains the required and optional parameters for constructing an
 // Exporter.
 type Options struct {
-	Store    *metrics.Store
-	Hostname string // Not required, uses os.Hostname if zero.
+	Store         *metrics.Store
+	Hostname      string // Not required, uses os.Hostname if zero.
+	OmitProgLabel bool   // If true, don't emit the prog label that identifies the source program in variable exports.
 }
 
 // New creates a new Exporter.
@@ -44,15 +47,14 @@ func New(o Options) (*Exporter, error) {
 	if o.Store == nil {
 		return nil, errors.New("exporter needs a Store")
 	}
-	hostname := o.Hostname
-	if hostname == "" {
+	if o.Hostname == "" {
 		var err error
-		hostname, err = os.Hostname()
+		o.Hostname, err = os.Hostname()
 		if err != nil {
-			return nil, fmt.Errorf("Error getting hostname: %s\n", err)
+			return nil, errors.Wrap(err, "getting hostname")
 		}
 	}
-	e := &Exporter{store: o.Store, hostname: hostname}
+	e := &Exporter{store: o.Store, o: o}
 
 	if *collectdSocketPath != "" {
 		o := pushOptions{"unix", *collectdSocketPath, metricToCollectd, collectdExportTotal, collectdExportSuccess}
@@ -88,45 +90,54 @@ func formatLabels(name string, m map[string]string, ksep, sep string) string {
 // sockets.
 type formatter func(string, *metrics.Metric, *metrics.LabelSet) string
 
-func (e *Exporter) writeSocketMetrics(c net.Conn, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
+func (e *Exporter) writeSocketMetrics(c io.Writer, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
 	e.store.RLock()
 	defer e.store.RUnlock()
 
-	for _, m := range e.store.Metrics {
-		m.RLock()
-		defer m.RUnlock()
-		exportTotal.Add(1)
-		lc := make(chan *metrics.LabelSet)
-		go m.EmitLabelSets(lc)
-		for l := range lc {
-			line := f(e.hostname, m, l)
-			n, err := fmt.Fprint(c, line)
-			glog.V(2).Infof("Sent %d bytes\n", n)
-			if err == nil {
-				exportSuccess.Add(1)
-			} else {
-				return fmt.Errorf("write error: %s\n", err)
+	for _, ml := range e.store.Metrics {
+		for _, m := range ml {
+			m.RLock()
+			exportTotal.Add(1)
+			lc := make(chan *metrics.LabelSet)
+			go m.EmitLabelSets(lc)
+			for l := range lc {
+				line := f(e.o.Hostname, m, l)
+				n, err := fmt.Fprint(c, line)
+				glog.V(2).Infof("Sent %d bytes\n", n)
+				if err == nil {
+					exportSuccess.Add(1)
+				} else {
+					return errors.Errorf("write error: %s\n", err)
+				}
 			}
+			m.RUnlock()
 		}
 	}
 	return nil
 }
 
-// WriteMetrics writes metrics to each of the configured services.
-// TODO(jaq) rename to PushMetrics.
-func (e *Exporter) WriteMetrics() {
+// PushMetrics sends metrics to each of the configured services.
+func (e *Exporter) PushMetrics() {
 	for _, target := range e.pushTargets {
 		glog.V(2).Infof("pushing to %s", target.addr)
-		conn, err := net.Dial(target.net, target.addr)
+		conn, err := net.DialTimeout(target.net, target.addr, *writeDeadline)
 		if err != nil {
 			glog.Infof("pusher dial error: %s", err)
 			continue
+		}
+		err = conn.SetDeadline(time.Now().Add(*writeDeadline))
+		if err != nil {
+			glog.Infof("Couldn't set deadline on connection: %s", err)
 		}
 		err = e.writeSocketMetrics(conn, target.f, target.total, target.success)
 		if err != nil {
 			glog.Infof("pusher write error: %s", err)
 		}
-		conn.Close()
+		err = conn.Close()
+		if err != nil {
+
+			glog.Infof("connection close failed: %s", err)
+		}
 	}
 }
 
@@ -136,11 +147,8 @@ func (e *Exporter) StartMetricPush() {
 		glog.Info("Started metric push.")
 		ticker := time.NewTicker(time.Duration(*pushInterval) * time.Second)
 		go func() {
-			for {
-				select {
-				case <-ticker.C:
-					e.WriteMetrics()
-				}
+			for range ticker.C {
+				e.PushMetrics()
 			}
 		}()
 	}

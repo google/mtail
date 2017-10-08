@@ -20,18 +20,18 @@ import (
     text string
     texts []string
     flag bool
-    n node
+    n astNode
     kind metrics.Kind
 }
 
 %type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement 
-%type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr
+%type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr logical_expr
 %type <n> declaration declarator definition decoration_statement
 %type <kind> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
-%type <op> relop shift_op bitwise_op
+%type <op> relop shift_op bitwise_op logical_op
 %type <text> pattern_expr
 // Tokens and types are defined here.
 // Invalid input
@@ -39,14 +39,14 @@ import (
 // Types
 %token COUNTER GAUGE TIMER
 // Reserved words
-%token AS BY CONST HIDDEN DEF NEXT OTHERWISE ELSE
+%token AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
 // references, identifiers, decorators, and numerical constants.
 %token <text> REGEX
 %token <text> STRING
-%token <text> CAPREF
+%token <text> CAPREF CAPREF_NAMED
 %token <text> ID
 %token <text> DECO
 %token <intVal> INTLITERAL
@@ -56,7 +56,7 @@ import (
 %token <op> DIV MOD MUL MINUS PLUS POW
 %token <op> SHL SHR
 %token <op> LT GT LE GE EQ NE
-%token <op> AND OR XOR NOT
+%token <op> BITAND XOR BITOR NOT AND OR
 %token <op> ADD_ASSIGN ASSIGN
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
@@ -107,17 +107,21 @@ stmt
     // Store the regex for concatenation
     mtaillex.(*parser).res[$2] = $3
   }
+  | DEL postfix_expr
+  {
+    $$ = &delNode{mtaillex.(*parser).t.pos, $2}
+  }
   ;
 
 conditional_statement
   : cond compound_statement ELSE compound_statement
   {
-    $$ = &condNode{$1, $2, $4}
+    $$ = &condNode{$1, $2, $4, nil}
   }
   | cond compound_statement
   {
     if $1 != nil {
-      $$ = &condNode{$1, $2, nil}
+      $$ = &condNode{$1, $2, nil, nil}
     } else {
       $$ = $2
     }
@@ -144,18 +148,34 @@ expr
   ;
 
 assign_expr
-  : bitwise_expr
+  : logical_expr
   {
     $$ = $1
   }
-  | unary_expr ASSIGN bitwise_expr
+  | unary_expr ASSIGN logical_expr
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
-  | unary_expr ADD_ASSIGN bitwise_expr
+  | unary_expr ADD_ASSIGN logical_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: &binaryExprNode{lhs: $1, rhs: $3, op: PLUS}, op: ASSIGN}
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
+  ;
+
+logical_expr
+  : bitwise_expr
+  { $$ = $1 }
+  | logical_expr logical_op bitwise_expr
+  {
+    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
+  }
+  ;
+
+logical_op
+  : AND
+  { $$ = $1 }
+  | OR
+  { $$ = $1 }
   ;
 
 bitwise_expr
@@ -168,9 +188,9 @@ bitwise_expr
   ;
 
 bitwise_op
-  : AND
+  : BITAND
   { $$ = $1 }
-  | OR
+  | BITOR
   { $$ = $1 }
   | XOR
   { $$ = $1 }
@@ -257,32 +277,10 @@ unary_expr
   {
     $$ = $1
   }
-  | NOT postfix_expr
+  | NOT unary_expr
   {
     $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $2, op: $1}
   }
-  | BUILTIN LPAREN RPAREN
-  {
-    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: nil}
-  }
-  | BUILTIN LPAREN arg_expr_list RPAREN
-  {
-    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
-  }
-  ;
-
-arg_expr_list
-  : assign_expr
-  {
-    $$ = &exprlistNode{}
-    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $1)
-  }
-  | arg_expr_list COMMA assign_expr
-  {
-    $$ = $1
-    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
-  }
-  ;
 
 postfix_expr
   : primary_expr
@@ -293,20 +291,32 @@ postfix_expr
   {
     $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $1, op: $2}
   }
-  | postfix_expr LSQUARE expr RSQUARE
-  {
-    $$ = &indexedExprNode{lhs: $1, index: $3}
-  }
   ;
 
 primary_expr
-  : ID
+  : primary_expr LSQUARE arg_expr_list RSQUARE
+  {
+    $$ = &indexedExprNode{lhs: $1, index: $3}
+  }
+  | BUILTIN LPAREN RPAREN
+  {
+    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: nil}
+  }
+  | BUILTIN LPAREN arg_expr_list RPAREN
+  {
+    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
+  }
+  | ID
   {
     $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
   }
   | CAPREF
   {
-    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, nil}
+    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, false, nil}
+  }
+  | CAPREF_NAMED
+  {
+    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, true, nil}
   }
   | STRING
   {
@@ -327,6 +337,19 @@ primary_expr
   ;
 
 
+arg_expr_list
+  : bitwise_expr
+  {
+    $$ = &exprlistNode{}
+    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $1)
+  }
+  | arg_expr_list COMMA bitwise_expr
+  {
+    $$ = $1
+    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
+  }
+  ;
+
 cond
   : pattern_expr
   {
@@ -334,7 +357,7 @@ cond
     pos := MergePosition(&mtaillex.(*parser).pos, &mtaillex.(*parser).endPos)
     $$ = &regexNode{pos: *pos, pattern: $1}
   }
-  | rel_expr
+  | logical_expr
   {
     $$ = $1
   }

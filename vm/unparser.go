@@ -13,9 +13,10 @@ import (
 
 // Unparser is for converting program syntax trees back to program text.
 type Unparser struct {
-	pos    int
-	output string
-	line   string
+	pos       int
+	output    string
+	line      string
+	emitTypes bool
 }
 
 func (u *Unparser) indent() {
@@ -42,7 +43,10 @@ func (u *Unparser) newline() {
 	u.line = ""
 }
 
-func (u *Unparser) VisitBefore(n node) Visitor {
+func (u *Unparser) VisitBefore(n astNode) Visitor {
+	if u.emitTypes {
+		u.emit(fmt.Sprintf("<%s>(", n.Type()))
+	}
 	switch v := n.(type) {
 	case *stmtlistNode:
 		for _, child := range v.children {
@@ -98,14 +102,18 @@ func (u *Unparser) VisitBefore(n node) Visitor {
 			u.emit(" << ")
 		case SHR:
 			u.emit(" >> ")
-		case AND:
+		case BITAND:
 			u.emit(" & ")
-		case OR:
+		case BITOR:
 			u.emit(" | ")
 		case XOR:
 			u.emit(" ^ ")
 		case NOT:
 			u.emit(" ~ ")
+		case AND:
+			u.emit(" && ")
+		case OR:
+			u.emit(" || ")
 		case PLUS:
 			u.emit(" + ")
 		case MINUS:
@@ -118,6 +126,8 @@ func (u *Unparser) VisitBefore(n node) Visitor {
 			u.emit(" ** ")
 		case ASSIGN:
 			u.emit(" = ")
+		case ADD_ASSIGN:
+			u.emit(" += ")
 		case MOD:
 			u.emit(" % ")
 		}
@@ -197,17 +207,28 @@ func (u *Unparser) VisitBefore(n node) Visitor {
 	case *otherwiseNode:
 		u.emit("otherwise")
 
+	case *delNode:
+		u.emit("del ")
+		Walk(u, v.n)
+		u.newline()
+
+	case *convNode:
+		Walk(u, v.n)
+
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}
-
+	if u.emitTypes {
+		u.emit(")")
+	}
 	return nil
 }
 
-func (u *Unparser) VisitAfter(n node) {}
+func (u *Unparser) VisitAfter(n astNode) {
+}
 
 // Unparse begins the unparsing of the syntax tree, returning the program text as a single string.
-func (u *Unparser) Unparse(n node) string {
+func (u *Unparser) Unparse(n astNode) string {
 	Walk(u, n)
 	return u.output
 }

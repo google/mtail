@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/metrics"
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/google/mtail/metrics/datum"
 )
 
 func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
@@ -31,23 +32,23 @@ func TestMetricToCollectd(t *testing.T) {
 	}
 	ms := metrics.NewStore()
 
-	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
+	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter, metrics.Int)
 	d, _ := scalarMetric.GetDatum()
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	ms.Add(scalarMetric)
 
 	r := FakeSocketWrite(metricToCollectd, scalarMetric)
 	expected := []string{"PUTVAL \"gunstar/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
-	diff := pretty.Compare(r, expected)
-	if len(diff) > 0 {
+	diff := cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
-	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "label")
+	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "label")
 	d, _ = dimensionedMetric.GetDatum("quux")
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	d, _ = dimensionedMetric.GetDatum("snuh")
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	ms.ClearMetrics()
 	ms.Add(dimensionedMetric)
 
@@ -55,21 +56,29 @@ func TestMetricToCollectd(t *testing.T) {
 	expected = []string{
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
-	diff = pretty.Compare(r, expected)
-	if len(diff) > 0 {
+	diff = cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
-	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer)
+	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer, metrics.Int)
 	d, _ = timingMetric.GetDatum()
-	d.Set(123, ts)
+	datum.SetInt(d, 123, ts)
 	ms.Add(timingMetric)
 
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/mtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
-	diff = pretty.Compare(r, expected)
-	if len(diff) > 0 {
+	diff = cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
+	}
+
+	*collectdPrefix = "prefix"
+	r = FakeSocketWrite(metricToCollectd, timingMetric)
+	expected = []string{"PUTVAL \"gunstar/prefixmtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
+	diff = cmp.Diff(expected, r)
+	if diff != "" {
+		t.Errorf("prefixed string didn't match:\n%s", diff)
 	}
 }
 
@@ -79,28 +88,38 @@ func TestMetricToGraphite(t *testing.T) {
 		t.Errorf("time parse error: %s", terr)
 	}
 
-	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
+	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter, metrics.Int)
 	d, _ := scalarMetric.GetDatum()
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	r := FakeSocketWrite(metricToGraphite, scalarMetric)
 	expected := []string{"prog.foo 37 1343124840\n"}
-	diff := pretty.Compare(r, expected)
-	if len(diff) > 0 {
+	diff := cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
-	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "l")
+	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "l")
 	d, _ = dimensionedMetric.GetDatum("quux")
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	d, _ = dimensionedMetric.GetDatum("snuh")
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
 	expected = []string{
 		"prog.bar.l.quux 37 1343124840\n",
 		"prog.bar.l.snuh 37 1343124840\n"}
-	diff = pretty.Compare(r, expected)
-	if len(diff) > 0 {
+	diff = cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
+	}
+
+	*graphitePrefix = "prefix"
+	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
+	expected = []string{
+		"prefixprog.bar.l.quux 37 1343124840\n",
+		"prefixprog.bar.l.snuh 37 1343124840\n"}
+	diff = cmp.Diff(expected, r)
+	if diff != "" {
+		t.Errorf("prefixed string didn't match:\n%s", diff)
 	}
 }
 
@@ -110,20 +129,20 @@ func TestMetricToStatsd(t *testing.T) {
 		t.Errorf("time parse error: %s", terr)
 	}
 
-	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter)
+	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter, metrics.Int)
 	d, _ := scalarMetric.GetDatum()
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	r := FakeSocketWrite(metricToStatsd, scalarMetric)
 	expected := []string{"prog.foo:37|c"}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
 
-	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, "l")
+	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "l")
 	d, _ = dimensionedMetric.GetDatum("quux")
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	d, _ = dimensionedMetric.GetDatum("snuh")
-	d.Set(42, ts)
+	datum.SetInt(d, 42, ts)
 	r = FakeSocketWrite(metricToStatsd, dimensionedMetric)
 	expected = []string{
 		"prog.bar.l.quux:37|g",
@@ -132,12 +151,19 @@ func TestMetricToStatsd(t *testing.T) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
 
-	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer)
+	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer, metrics.Int)
 	d, _ = timingMetric.GetDatum()
-	d.Set(37, ts)
+	datum.SetInt(d, 37, ts)
 	r = FakeSocketWrite(metricToStatsd, timingMetric)
 	expected = []string{"prog.foo:37|ms"}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
+	}
+
+	*statsdPrefix = "prefix"
+	r = FakeSocketWrite(metricToStatsd, timingMetric)
+	expected = []string{"prefixprog.foo:37|ms"}
+	if !reflect.DeepEqual(expected, r) {
+		t.Errorf("prefixed string didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
 }

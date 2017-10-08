@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-func Parse(name string, input io.Reader) (node, error) {
+func Parse(name string, input io.Reader) (astNode, error) {
 	p := newParser(name, input)
 	r := mtailParse(p)
 	if r != 0 || p == nil || p.errors != nil {
@@ -23,18 +23,16 @@ const EOF = 0
 
 type parser struct {
 	name   string
-	root   node
+	root   astNode
 	errors ErrorList
 	l      *lexer
-	t      token    // Most recently lexed token.
-	pos    position // Maybe contains the position of the start of a node when the parser is doing preprocessor concatenation.
-	endPos position // Maybe contains the position of the end of a node when the parser is doing preprocessor concatenation.
-	symtab SymbolTable
+	t      token             // Most recently lexed token.
+	pos    position          // Maybe contains the position of the start of a node when the parser is doing preprocessor concatenation.
+	endPos position          // Maybe contains the position of the end of a node when the parser is doing preprocessor concatenation.
 	res    map[string]string // Mapping of regex constants to patterns.
 }
 
 func newParser(name string, input io.Reader) *parser {
-	mtailDebug = *mtailDebugFlag
 	return &parser{name: name, l: newLexer(name, input), res: make(map[string]string)}
 }
 
@@ -66,7 +64,7 @@ func (p *parser) Lex(lval *mtailSymType) int {
 			p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
 			return INVALID
 		}
-	case LT, GT, LE, GE, NE, EQ, SHL, SHR, AND, OR, XOR, NOT, INC, DIV, MUL, MINUS, PLUS, ASSIGN, ADD_ASSIGN, POW:
+	case LT, GT, LE, GE, NE, EQ, SHL, SHR, BITAND, BITOR, AND, OR, XOR, NOT, INC, DIV, MUL, MINUS, PLUS, ASSIGN, ADD_ASSIGN, POW:
 		lval.op = int(p.t.kind)
 	default:
 		lval.text = p.t.text
@@ -75,7 +73,9 @@ func (p *parser) Lex(lval *mtailSymType) int {
 }
 
 func (p *parser) inRegex() {
-	p.l.in_regex = true
+	p.l.inRegex = true
 }
 
-var mtailDebugFlag = flag.Int("mtailDebug", 0, "Set parser debug level.")
+func init() {
+	flag.IntVar(&mtailDebug, "mtailDebug", 0, "Set parser debug level.")
+}

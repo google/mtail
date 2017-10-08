@@ -25,9 +25,8 @@ after_success:
 # Run tests at these Go versions.
 go:
   - tip
+  - 1.8
   - 1.7
-  - 1.6
-  - 1.5
 
 # GOMAXPROCS=1 forces scheduling race bugs.
 env:

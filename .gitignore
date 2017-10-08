@@ -19,3 +19,5 @@ foo.log
 /.dep-stamp
 /.build-dep-stamp
 /.gen-dep-stamp
+/cpu.out
+/mem.out

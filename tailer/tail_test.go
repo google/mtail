@@ -4,23 +4,23 @@
 package tailer
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"sync"
 	"testing"
 
-	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/watcher"
-	"github.com/kylelemons/godebug/pretty"
 
 	"github.com/spf13/afero"
 )
 
-func makeTestTail(t *testing.T) (*Tailer, chan string, *watcher.FakeWatcher, afero.Fs) {
+func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, afero.Fs) {
 	fs := afero.NewMemMapFs()
 	w := watcher.NewFakeWatcher()
-	lines := make(chan string, 1)
-	o := Options{lines, w, fs}
+	lines := make(chan *LogLine, 1)
+	o := Options{lines, false, w, fs}
 	ta, err := New(o)
 	if err != nil {
 		t.Fatal(err)
@@ -39,7 +39,10 @@ func TestTail(t *testing.T) {
 	defer f.Close()
 	defer w.Close()
 
-	ta.Tail(logfile)
+	err = ta.TailPath(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// Tail also causes the log to be read, so no need to inject an event.
 
 	if _, ok := ta.files[logfile]; !ok {
@@ -60,19 +63,21 @@ func TestHandleLogUpdate(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []string{}
+	result := []*LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	go func() {
 		for line := range lines {
-			glog.Infof("line: %q\n", line)
 			result = append(result, line)
 			wg.Done()
 		}
 		close(done)
 	}()
 
-	ta.Tail(logfile)
+	err = ta.TailPath(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = f.WriteString("a\nb\nc\nd\n")
 	if err != nil {
@@ -87,9 +92,13 @@ func TestHandleLogUpdate(t *testing.T) {
 	w.Close()
 	<-done
 
-	expected := []string{"a", "b", "c", "d"}
-	diff := pretty.Compare(result, expected)
-	if len(diff) > 0 {
+	expected := []*LogLine{
+		{logfile, "a"},
+		{logfile, "b"},
+		{logfile, "c"},
+		{logfile, "d"},
+	}
+	if diff := cmp.Diff(result, expected); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
@@ -107,20 +116,22 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []string{}
+	result := []*LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		for line := range lines {
-			glog.Infof("line: %q\n", line)
 			result = append(result, line)
 			wg.Done()
 		}
 		close(done)
 	}()
 
-	ta.Tail(logfile)
+	err = ta.TailPath(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = f.WriteString("a")
 	if err != nil {
@@ -149,9 +160,11 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	w.Close()
 	<-done
 
-	expected := []string{"ab"}
-	diff := pretty.Compare(result, expected)
-	if len(diff) > 0 {
+	expected := []*LogLine{
+		{logfile, "ab"},
+	}
+	diff := cmp.Diff(result, expected)
+	if diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 
@@ -165,34 +178,40 @@ func TestReadPartial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := ta.read(f, "")
-	if p != "" {
+	p := bytes.NewBufferString("")
+	err = ta.read(f, p)
+	if p.String() != "" {
 		t.Errorf("partial line returned not empty: %q", p)
 	}
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
+	p.Reset()
+	p.WriteString("o")
 	f.WriteString("hi")
 	f.Seek(0, 0)
-	p, err = ta.read(f, "o")
-	if p != "ohi" {
+	err = ta.read(f, p)
+	if p.String() != "ohi" {
 		t.Errorf("partial line returned not expected: %q", p)
 	}
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
-	p, err = ta.read(f, "")
+	p.Reset()
+	err = ta.read(f, p)
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
 	f.WriteString("\n")
 	f.Seek(-1, os.SEEK_END)
-	p, err = ta.read(f, "ohi")
+	p.Reset()
+	p.WriteString("ohi")
+	err = ta.read(f, p)
 	l := <-lines
-	if l != "ohi" {
+	if l.Line != "ohi" {
 		t.Errorf("line emitted not ohi: %q", l)
 	}
-	if p != "" {
+	if p.String() != "" {
 		t.Errorf("partial not empty: %q", p)
 	}
 	if err != io.EOF {
@@ -221,7 +240,7 @@ func TestReadPipe(t *testing.T) {
 		t.Fatalf("Didn't write enough bytes: %d", n)
 	}
 	l := <-lines
-	if l != "hi" {
+	if l.Line != "hi" {
 		t.Errorf("line not expected: %q", l)
 	}
 }

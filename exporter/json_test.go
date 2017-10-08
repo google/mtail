@@ -7,10 +7,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/google/mtail/metrics/datum"
 )
 
 var handleJSONTests = []struct {
@@ -24,11 +28,11 @@ var handleJSONTests = []struct {
 	},
 	{"single",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{}, Value: &metrics.Datum{Value: 1}}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 			},
 		},
 		`[
@@ -36,6 +40,7 @@ var handleJSONTests = []struct {
     "Name": "foo",
     "Program": "test",
     "Kind": 1,
+    "Type": 0,
     "LabelValues": [
       {
         "Value": {
@@ -49,12 +54,12 @@ var handleJSONTests = []struct {
 	},
 	{"dimensioned",
 		[]*metrics.Metric{
-			&metrics.Metric{
+			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
 				Keys:        []string{"a", "b"},
-				LabelValues: []*metrics.LabelValue{&metrics.LabelValue{Labels: []string{"1", "2"}, Value: &metrics.Datum{Value: 1}}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 			},
 		},
 		`[
@@ -62,6 +67,7 @@ var handleJSONTests = []struct {
     "Name": "foo",
     "Program": "test",
     "Kind": 1,
+    "Type": 0,
     "Keys": [
       "a",
       "b"
@@ -85,27 +91,31 @@ var handleJSONTests = []struct {
 
 func TestHandleJSON(t *testing.T) {
 	for _, tc := range handleJSONTests {
-		ms := metrics.NewStore()
-		for _, metric := range tc.metrics {
-			ms.Add(metric)
-		}
-		o := Options{ms, "gunstar"}
-		e, err := New(o)
-		if err != nil {
-			t.Fatalf("couldn't make exporter: %s", err)
-		}
-		response := httptest.NewRecorder()
-		e.HandleJSON(response, &http.Request{})
-		if response.Code != 200 {
-			t.Errorf("test case %s: response code not 200: %d", tc.name, response.Code)
-		}
-		b, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			t.Errorf("test case %s: failed to read response: %s", tc.name, err)
-		}
-		diff := pretty.Compare(string(b), tc.expected)
-		if len(diff) > 0 {
-			t.Errorf("test case %s: response not expected:\n%s", tc.name, diff)
-		}
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ms := metrics.NewStore()
+			for _, metric := range tc.metrics {
+				ms.Add(metric)
+			}
+			o := Options{ms, "gunstar", false}
+			e, err := New(o)
+			if err != nil {
+				t.Fatalf("couldn't make exporter: %s", err)
+			}
+			response := httptest.NewRecorder()
+			e.HandleJSON(response, &http.Request{})
+			if response.Code != 200 {
+				t.Errorf("response code not 200: %d", response.Code)
+			}
+			b, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				t.Errorf("failed to read response: %s", err)
+			}
+			diff := cmp.Diff(tc.expected, string(b), cmpopts.IgnoreUnexported(sync.RWMutex{}))
+			if diff != "" {
+				t.Error(diff)
+			}
+		})
 	}
 }

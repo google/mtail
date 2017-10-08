@@ -4,14 +4,18 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
 	"github.com/google/mtail/testdata"
 	"github.com/google/mtail/watcher"
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/spf13/afero"
 )
 
 var exampleProgramTests = []struct {
@@ -34,16 +38,16 @@ var exampleProgramTests = []struct {
 		"testdata/anonymised_dhcpd_log",
 		"testdata/anonymised_dhcpd_log.golden",
 	},
-	// {
-	// 	"examples/ntpd.mtail",
-	// 	"testdata/ntp4",
-	// 	"testdata/ntp4.golden",
-	// },
-	// {
-	// 	"examples/ntpd.mtail",
-	// 	"testdata/xntp3_peerstats",
-	// 	"testdata/xntp3_peerstats.golden",
-	// },
+	{
+		"examples/ntpd.mtail",
+		"testdata/ntp4",
+		"testdata/ntp4.golden",
+	},
+	{
+		"examples/ntpd_peerstats.mtail",
+		"testdata/xntp3_peerstats",
+		"testdata/xntp3_peerstats.golden",
+	},
 	{
 		"examples/otherwise.mtail",
 		"testdata/otherwise.log",
@@ -54,6 +58,21 @@ var exampleProgramTests = []struct {
 		"testdata/else.log",
 		"testdata/else.golden",
 	},
+	{
+		"examples/types.mtail",
+		"testdata/types.log",
+		"testdata/types.golden",
+	},
+	{
+		"examples/filename.mtail",
+		"testdata/else.log",
+		"testdata/filename.golden",
+	},
+	{
+		"examples/logical.mtail",
+		"testdata/logical.log",
+		"testdata/logical.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -61,36 +80,44 @@ func TestExamplePrograms(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 	for _, tc := range exampleProgramTests {
-		w := watcher.NewFakeWatcher()
-		store := metrics.NewStore()
-		o := mtail.Options{Progs: tc.programfile, W: w, Store: store}
-		mtail, err := mtail.New(o)
-		if err != nil {
-			t.Fatalf("create mtail failed: %s", err)
-		}
+		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
+			w := watcher.NewFakeWatcher()
+			store := metrics.NewStore()
+			fs := &afero.OsFs{}
+			logs := []string{tc.logfile}
+			o := mtail.Options{Progs: tc.programfile, LogPathPatterns: logs, W: w, FS: fs, Store: store}
+			o.OneShot = true
+			o.OmitMetricSource = true
+			o.DumpAstTypes = true
+			o.DumpBytecode = true
+			mtail, err := mtail.New(o)
+			if err != nil {
+				t.Fatalf("create mtail failed: %s", err)
+			}
 
-		if _, err := mtail.OneShot(tc.logfile, false); err != nil {
-			t.Errorf("Oneshot failed for %s: %s", tc.logfile, err)
-			continue
-		}
+			err = mtail.StartTailing()
+			if err != nil {
+				t.Fatalf("Start tailling failed: %s", err)
+			}
 
-		g, err := os.Open(tc.goldenfile)
-		if err != nil {
-			t.Fatalf("%s: could not open golden file: %s", tc.goldenfile, err)
-		}
-		defer g.Close()
+			g, err := os.Open(tc.goldenfile)
+			if err != nil {
+				t.Fatalf("could not open golden file: %s", err)
+			}
+			defer g.Close()
 
-		golden_store := metrics.NewStore()
-		testdata.ReadTestData(g, tc.programfile, golden_store)
+			golden_store := metrics.NewStore()
+			testdata.ReadTestData(g, tc.programfile, golden_store)
 
-		mtail.Close()
+			mtail.Close()
 
-		diff := pretty.Compare(golden_store, store)
+			diff := cmp.Diff(golden_store, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
 
-		if len(diff) > 0 {
-			t.Errorf("%s: metrics don't match:\n%s", tc.programfile, diff)
-
-			t.Errorf("Store metrics: %#v", store.Metrics)
-		}
+			if diff != "" {
+				t.Error(diff)
+				t.Logf(" Golden metrics: %s", golden_store.Metrics)
+				t.Logf("Program metrics: %s", store.Metrics)
+			}
+		})
 	}
 }

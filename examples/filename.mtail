@@ -1,0 +1,8 @@
+counter filename_lines by filename
+
+# To make ex_test.go happy
+strptime("2017-07-20T22:50:42Z", "2006-01-02T15:04:05Z07:00")
+
+// {
+    filename_lines[getfilename()] ++
+}

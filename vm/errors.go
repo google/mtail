@@ -22,8 +22,6 @@ func (p *ErrorList) Add(pos *position, msg string) {
 	*p = append(*p, &compileError{*pos, msg})
 }
 
-//
-
 // ErrorList implements the error interface.
 func (p ErrorList) Error() string {
 	switch len(p) {
@@ -36,5 +34,5 @@ func (p ErrorList) Error() string {
 	for _, e := range p {
 		r = r + fmt.Sprintf("%s\n", e)
 	}
-	return r
+	return r[:len(r)-1]
 }

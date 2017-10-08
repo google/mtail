@@ -3,12 +3,17 @@
 
 package metrics
 
-import "sync"
+import (
+	"encoding/json"
+	"sync"
+
+	"github.com/pkg/errors"
+)
 
 // Store contains Metrics.
 type Store struct {
 	sync.RWMutex
-	Metrics []*Metric
+	Metrics map[string][]*Metric
 }
 
 func NewStore() (s *Store) {
@@ -17,34 +22,33 @@ func NewStore() (s *Store) {
 	return
 }
 
-// Add is used to add one or more metrics in the Store.
-func (ms *Store) Add(m ...*Metric) {
-	ms.Lock()
-	defer ms.Unlock()
-	ms.Metrics = append(ms.Metrics, m...)
+// Add is used to add one metric to the Store.
+func (s *Store) Add(m *Metric) error {
+	s.Lock()
+	defer s.Unlock()
+	if len(s.Metrics[m.Name]) > 0 {
+		t := s.Metrics[m.Name][0].Kind
+		if m.Kind != t {
+			return errors.Errorf("Metric %s has different kind %s to existing %s.", m.Name, m.Kind, t)
+		}
+	}
+	s.Metrics[m.Name] = append(s.Metrics[m.Name], m)
+	return nil
 }
 
 // ClearMetrics empties the store of all metrics.
-func (ms *Store) ClearMetrics() {
-	ms.Lock()
-	defer ms.Unlock()
-	ms.Metrics = make([]*Metric, 0)
+func (s *Store) ClearMetrics() {
+	s.Lock()
+	defer s.Unlock()
+	s.Metrics = make(map[string][]*Metric)
 }
 
-// Metrics defines a Sortable type for a slice of metrics.
-type Metrics []*Metric
-
-func (ms Metrics) Len() int      { return len(ms) }
-func (ms Metrics) Swap(i, j int) { ms[i], ms[j] = ms[j], ms[i] }
-func (ms Metrics) Less(i, j int) bool {
-	switch {
-	case ms[i].Program < ms[j].Program:
-		return true
-	case ms[i].Name < ms[j].Name:
-		return true
-	case len(ms[i].Keys) < len(ms[j].Keys):
-		return true
-	default:
-		return false
+func (s *Store) MarshalJSON() (b []byte, err error) {
+	s.Lock()
+	defer s.Unlock()
+	ms := make([]*Metric, 0)
+	for _, ml := range s.Metrics {
+		ms = append(ms, ml...)
 	}
+	return json.Marshal(ms)
 }
