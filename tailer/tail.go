@@ -187,7 +187,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 
 // handleTruncate checks to see if the current offset into the file
 // is past the end of the file based on its size, and if so seeks to
-// the start again.
+// the start again.  Returns nil iff that happened.
 func (t *Tailer) handleTruncate(f afero.File) error {
 	offset, err := f.Seek(0, io.SeekCurrent)
 	if err != nil {
@@ -219,11 +219,10 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 		b = b[:n]
 
 		if err == io.EOF && ntotal == 0 {
-			// If an update caused our invocation, and there was nothing to be read,
-			// that could be because the file just got truncated.
+			// If there was nothing to be read, perhaps the file just got truncated.
 			herr := t.handleTruncate(f)
 			if herr == nil {
-				// Try again
+				// Try again: offset was greater than filesize and now we've seeked to start.
 				continue
 			}
 		}

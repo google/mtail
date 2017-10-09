@@ -103,6 +103,9 @@ func TestHandleLogUpdate(t *testing.T) {
 	}
 }
 
+// TestHandleLogTruncate writes to a file, waits for those
+// writes to be seen, then truncates the file and writes some more.
+// At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
 	ta, lines, w, fs := makeTestTail(t)
 
@@ -132,11 +135,11 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = f.WriteString("a\nb\n")
+	_, err = f.WriteString("a\nb\nc\n")
 	if err != nil {
 		t.Fatal(err)
 	}
-	wg.Add(2)
+	wg.Add(3)
 	w.InjectUpdate(logfile)
 	wg.Wait()
 
@@ -144,9 +147,17 @@ func TestHandleLogTruncate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// This is potentially racy.  Unlike in the case where we've got new
+	// lines that we can verify were seen with the WaitGroup, here nothing
+	// ensures that this update-due-to-truncate is seen by the Tailer before
+	// we write new data to the file.  In order to avoid the race we'll make
+	// sure that the total data size written post-truncate is less than
+	// pre-truncate, so that the post-truncate offset is always smaller
+	// than the offset seen after wg.Add(3); wg.Wait() above.
 	w.InjectUpdate(logfile)
 
-	_, err = f.WriteString("c\nd\n")
+	_, err = f.WriteString("d\ne\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,6 +174,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		{logfile, "b"},
 		{logfile, "c"},
 		{logfile, "d"},
+		{logfile, "e"},
 	}
 	if diff := cmp.Diff(result, expected); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
