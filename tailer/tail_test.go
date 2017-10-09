@@ -103,6 +103,72 @@ func TestHandleLogUpdate(t *testing.T) {
 	}
 }
 
+func TestHandleLogTruncate(t *testing.T) {
+	ta, lines, w, fs := makeTestTail(t)
+
+	err := fs.Mkdir("/tail_test", os.ModePerm)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	logfile := "/tail_test/log"
+	f, err := fs.Create(logfile)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	result := []*LogLine{}
+	done := make(chan struct{})
+	wg := sync.WaitGroup{}
+	go func() {
+		for line := range lines {
+			result = append(result, line)
+			wg.Done()
+		}
+		close(done)
+	}()
+
+	err = ta.TailPath(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f.WriteString("a\nb\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wg.Add(2)
+	w.InjectUpdate(logfile)
+	wg.Wait()
+
+	err = f.Truncate(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.InjectUpdate(logfile)
+
+	_, err = f.WriteString("c\nd\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wg.Add(2)
+	w.InjectUpdate(logfile)
+
+	// ugh
+	wg.Wait()
+	w.Close()
+	<-done
+
+	expected := []*LogLine{
+		{logfile, "a"},
+		{logfile, "b"},
+		{logfile, "c"},
+		{logfile, "d"},
+	}
+	if diff := cmp.Diff(result, expected); diff != "" {
+		t.Errorf("result didn't match:\n%s", diff)
+	}
+}
+
 func TestHandleLogUpdatePartialLine(t *testing.T) {
 	ta, lines, w, fs := makeTestTail(t)
 
