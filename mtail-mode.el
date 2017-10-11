@@ -44,7 +44,7 @@
   "All keywords in the mtail language.  Used for font locking.")
 
 (defconst mtail-mode-builtins
-  '("len" "strptime" "timestamp")
+  '("len" "strptime" "timestamp" "concat")
   "All builtins in the mtail language.  Used for font locking.")
 
 (defvar mtail-mode-font-lock-defaults

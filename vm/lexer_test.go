@@ -90,7 +90,7 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position{"keywords", 12, 3, -1}},
 			{EOF, "", position{"keywords", 12, 0, 0}}}},
 	{"builtins",
-		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\n", []token{
+		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\nconcat\n", []token{
 			{BUILTIN, "strptime", position{"builtins", 0, 0, 7}},
 			{NL, "\n", position{"builtins", 1, 8, -1}},
 			{BUILTIN, "timestamp", position{"builtins", 1, 0, 8}},
@@ -113,7 +113,9 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position{"builtins", 10, 5, -1}},
 			{BUILTIN, "string", position{"builtins", 10, 0, 5}},
 			{NL, "\n", position{"builtins", 11, 6, -1}},
-			{EOF, "", position{"builtins", 11, 0, 0}}}},
+			{BUILTIN, "concat", position{"builtins", 11, 0, 5}},
+			{NL, "\n", position{"builtins", 12, 6, -1}},
+			{EOF, "", position{"builtins", 12, 0, 0}}}},
 	{"numbers", "1 23 3.14 1.61.1 -1 -1.0", []token{
 		{INTLITERAL, "1", position{"numbers", 0, 0, 0}},
 		{INTLITERAL, "23", position{"numbers", 0, 2, 3}},
