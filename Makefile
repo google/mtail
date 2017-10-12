@@ -89,6 +89,10 @@ testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
 smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -v -timeout 1s -test.short ./... ./testdata
 
+.PHONY: ex_test
+ex_test: ex_test.go testdata/* examples/*
+	go test -run TestExamplePrograms -v --logtostderr
+
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -timeout=60s -run=XXX ./... ./testdata
