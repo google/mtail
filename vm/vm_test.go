@@ -23,31 +23,6 @@ var instructions = []struct {
 	expectedStack  []interface{}
 	expectedThread thread
 }{
-	// Composite literals require too many explicit conversions.
-	{"inc",
-		instr{inc, nil},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{0},
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}},
-	},
-	{"inc by int",
-		instr{inc, 2},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{0, 1}, // first is metric 0 "foo", second is the inc val.
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}},
-	},
-	{"inc by string",
-		instr{inc, 2},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{0, "1"}, // first is metric 0 "foo", second is the inc val.
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}},
-	},
 	{"set int",
 		instr{iset, nil},
 		[]*regexp.Regexp{},
@@ -496,6 +471,121 @@ func TestInstrs(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+// makeVM is a helper method for construction a single-instruction VM
+func makeVM(i instr, m []*metrics.Metric) *VM {
+	obj := &object{m: m, prog: []instr{i}}
+	v := New("test", obj, true, nil)
+	v.t = new(thread)
+	v.t.stack = make([]interface{}, 0)
+	v.t.matches = make(map[int][]string)
+	v.input = tailer.NewLogLine(testFilename, "aaaab")
+	return v
+
+}
+
+// Instructions with datum store side effects
+func TestDatumSetInstrs(t *testing.T) {
+	var m []*metrics.Metric
+	m = append(m,
+		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int),
+		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float))
+
+	// simple inc
+	v := makeVM(instr{inc, nil}, m)
+	d, err := m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "1" {
+		t.Errorf("Unexpected value %v", d)
+	}
+	// inc by int
+	v = makeVM(instr{inc, 0}, m)
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push(2)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "3" {
+		t.Errorf("Unexpected value %v", d)
+	}
+	// inc by str
+	v = makeVM(instr{inc, 0}, m)
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push("1")
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "4" {
+		t.Errorf("Unexpected value %v", d)
+	}
+	// iset
+	v = makeVM(instr{iset, nil}, m)
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push(2)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "2" {
+		t.Errorf("Unexpected value %v", d)
+	}
+	// fset
+	v = makeVM(instr{fset, nil}, m)
+	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push(3.1)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "3.1" {
+		t.Errorf("Unexpected value %v", d)
 	}
 }
 

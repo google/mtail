@@ -454,17 +454,9 @@ func (v *VM) execute(t *thread, i instr) {
 				v.errorf("%s", err)
 			}
 		}
-		// TODO(jaq): the stack should only have the datum, not the offset
 		switch n := t.Pop().(type) {
 		case datum.Datum:
 			datum.IncIntBy(n, delta, t.time)
-		case int: // offset into metric
-			m := v.m[n]
-			d, err := m.GetDatum()
-			if err != nil {
-				v.errorf("GetDatum failed: %s", err)
-			}
-			datum.IncIntBy(d, delta, t.time)
 		default:
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
