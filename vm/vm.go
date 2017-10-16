@@ -454,10 +454,9 @@ func (v *VM) execute(t *thread, i instr) {
 				v.errorf("%s", err)
 			}
 		}
-		switch n := t.Pop().(type) {
-		case datum.Datum:
+		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.IncIntBy(n, delta, t.time)
-		default:
+		} else {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
 
@@ -467,10 +466,9 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		switch n := t.Pop().(type) {
-		case datum.Datum:
+		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.SetInt(n, value, t.time)
-		default:
+		} else {
 			v.errorf("Unexpected type to set: %T %q", n, n)
 		}
 
@@ -480,10 +478,9 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		switch n := t.Pop().(type) {
-		case datum.Datum:
+		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.SetFloat(n, value, t.time)
-		default:
+		} else {
 			v.errorf("Unexpected type to set: %T %q", n, n)
 		}
 
