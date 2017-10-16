@@ -124,8 +124,6 @@ var opNames = map[opcode]string{
 }
 
 var builtin = map[string]opcode{
-	"int":         s2i,
-	"float":       s2f,
 	"getfilename": getfilename,
 	"len":         length,
 	"settime":     settime,
