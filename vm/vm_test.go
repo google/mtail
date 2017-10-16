@@ -23,22 +23,6 @@ var instructions = []struct {
 	expectedStack  []interface{}
 	expectedThread thread
 }{
-	{"set int",
-		instr{iset, nil},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{1, 2}, // set metric 1 "bar"
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}},
-	},
-	{"set str",
-		instr{iset, nil},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{1, "2"},
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}},
-	},
 	{"match",
 		instr{match, 0},
 		[]*regexp.Regexp{regexp.MustCompile("a*b")},
@@ -412,13 +396,6 @@ var instructions = []struct {
 		[]interface{}{2.0, 2.0},
 		[]interface{}{4.0},
 		thread{pc: 0, matches: map[int][]string{}}},
-	{"fset",
-		instr{fset, nil},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{2, 2.0}, // quux set to 2.
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}}},
 	{"getfilename",
 		instr{getfilename, nil},
 		[]*regexp.Regexp{},
@@ -568,6 +545,25 @@ func TestDatumSetInstrs(t *testing.T) {
 	if d.ValueString() != "2" {
 		t.Errorf("Unexpected value %v", d)
 	}
+	// iset str
+	v = makeVM(instr{iset, nil}, m)
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push("3")
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "3" {
+		t.Errorf("Unexpected value %v", d)
+	}
 	// fset
 	v = makeVM(instr{fset, nil}, m)
 	d, err = m[1].GetDatum()
@@ -585,6 +581,25 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Fatal(err)
 	}
 	if d.ValueString() != "3.1" {
+		t.Errorf("Unexpected value %v", d)
+	}
+	// fset str
+	v = makeVM(instr{fset, nil}, m)
+	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push("4.1")
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "4.1" {
 		t.Errorf("Unexpected value %v", d)
 	}
 }

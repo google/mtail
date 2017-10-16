@@ -467,17 +467,9 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		// TODO(jaq): the stack should only have the datum, not the offset
 		switch n := t.Pop().(type) {
 		case datum.Datum:
 			datum.SetInt(n, value, t.time)
-		case int: // offset into metric
-			m := v.m[n]
-			d, err := m.GetDatum()
-			if err != nil {
-				v.errorf("GetDatum failed: %s", err)
-			}
-			datum.SetInt(d, value, t.time)
 		default:
 			v.errorf("Unexpected type to set: %T %q", n, n)
 		}
@@ -488,17 +480,9 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		// TODO(jaq): the stack should only have the datum, not the offset, unfortunately used by test
 		switch n := t.Pop().(type) {
 		case datum.Datum:
 			datum.SetFloat(n, value, t.time)
-		case int: // offset into metric
-			m := v.m[n]
-			d, err := m.GetDatum()
-			if err != nil {
-				v.errorf("GetDatum failed: %s", err)
-			}
-			datum.SetFloat(d, value, t.time)
 		default:
 			v.errorf("Unexpected type to set: %T %q", n, n)
 		}
