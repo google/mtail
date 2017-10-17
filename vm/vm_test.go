@@ -403,6 +403,20 @@ var instructions = []struct {
 		[]interface{}{},
 		[]interface{}{testFilename},
 		thread{pc: 0, matches: map[int][]string{}}},
+	{"i2s",
+		instr{i2s, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1},
+		[]interface{}{"1"},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"f2s",
+		instr{f2s, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{3.1},
+		[]interface{}{"3.1"},
+		thread{pc: 0, matches: map[int][]string{}}},
 }
 
 const testFilename = "test"

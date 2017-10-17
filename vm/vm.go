@@ -75,6 +75,8 @@ const (
 	i2f // int to float
 	s2i // string to int
 	s2f // string to float
+	i2s // int to string
+	f2s // float to string
 )
 
 var opNames = map[opcode]string{
@@ -121,6 +123,8 @@ var opNames = map[opcode]string{
 	i2f:         "i2f",
 	s2i:         "s2i",
 	s2f:         "s2f",
+	i2s:         "i2s",
+	f2s:         "f2s",
 }
 
 var builtin = map[string]opcode{
@@ -676,6 +680,20 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("%s", err)
 		}
 		t.Push(float64(i))
+
+	case i2s:
+		i, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(fmt.Sprintf("%d", i))
+
+	case f2s:
+		f, err := t.PopFloat()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(fmt.Sprintf("%g", f))
 
 	case setmatched:
 		t.matched = i.opnd.(bool)
