@@ -266,10 +266,10 @@ func (c *codegen) VisitAfter(node astNode) {
 			arglen = len(n.args.(*exprlistNode).children)
 		}
 		switch n.name {
-		case "string", "bool":
+		case "bool":
 		// TODO(jaq): Nothing, no support in VM yet.
 
-		case "int", "float":
+		case "int", "float", "string":
 			// len args should be 1
 			if arglen > 1 {
 				c.errorf(n.Pos(), "internal error, too many arguments to builtin %q: %#v", n.name, n)
@@ -359,6 +359,10 @@ func (c *codegen) emitConversion(inType, outType Type) error {
 		c.emit(instr{op: s2f})
 	} else if Equals(String, inType) && Equals(Int, outType) {
 		c.emit(instr{op: s2i})
+	} else if Equals(Float, inType) && Equals(String, outType) {
+		c.emit(instr{op: f2s})
+	} else if Equals(Int, inType) && Equals(String, outType) {
+		c.emit(instr{op: i2s})
 	} else {
 		return errors.Errorf("can't convert %q to %q", inType, outType)
 	}

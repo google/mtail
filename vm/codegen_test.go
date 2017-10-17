@@ -458,6 +458,40 @@ getfilename()
 			{s2f, nil},
 			{fset, nil},
 			{setmatched, true}}},
+	{"float to string",
+		`counter c by a
+/(\d+\.\d+)/ {
+  c[string($1)] ++
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 10},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{f2s, nil},
+			{mload, 0},
+			{dload, 1},
+			{inc, nil},
+			{setmatched, true}}},
+	{"int to string",
+		`counter c by a
+/(\d+)/ {
+  c[string($1)] ++
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 10},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{i2s, nil},
+			{mload, 0},
+			{dload, 1},
+			{inc, nil},
+			{setmatched, true}}},
 	{"nested conditionals",
 		`counter foo
 /(.*)/ {
