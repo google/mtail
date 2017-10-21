@@ -6,7 +6,9 @@ package tailer
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -26,6 +28,26 @@ func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, a
 		t.Fatal(err)
 	}
 	return ta, lines, w, fs
+}
+
+func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *watcher.LogWatcher, afero.Fs, string) {
+	dir, err := ioutil.TempDir("", prefix)
+	if err != nil {
+		t.Fatalf("can't create tempdir: %v", err)
+	}
+
+	fs := afero.NewOsFs()
+	w, err := watcher.NewLogWatcher()
+	if err != nil {
+		t.Fatalf("can't create watcher: %v", err)
+	}
+	lines := make(chan *LogLine, 1)
+	o := Options{lines, false, w, fs}
+	ta, err := New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ta, lines, w, fs, dir
 }
 
 func TestTail(t *testing.T) {
@@ -107,13 +129,10 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	ta, lines, w, fs := makeTestTail(t)
+	ta, lines, w, fs, dir := makeTestTailReal(t, "trunc")
+	defer os.RemoveAll(dir) // clean up
 
-	err := fs.Mkdir("/tail_test", os.ModePerm)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	logfile := "/tail_test/log"
+	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -140,7 +159,6 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 	wg.Add(3)
-	w.InjectUpdate(logfile)
 	wg.Wait()
 
 	err = f.Truncate(0)
@@ -155,14 +173,12 @@ func TestHandleLogTruncate(t *testing.T) {
 	// sure that the total data size written post-truncate is less than
 	// pre-truncate, so that the post-truncate offset is always smaller
 	// than the offset seen after wg.Add(3); wg.Wait() above.
-	w.InjectUpdate(logfile)
 
 	_, err = f.WriteString("d\ne\n")
 	if err != nil {
 		t.Fatal(err)
 	}
 	wg.Add(2)
-	w.InjectUpdate(logfile)
 
 	// ugh
 	wg.Wait()
