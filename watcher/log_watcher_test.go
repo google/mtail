@@ -19,7 +19,7 @@ import (
 
 // This test requires disk access, and cannot be injected without internal
 // knowledge of the fsnotify code. Make the wait deadlines long.
-const deadline = 1 * time.Second
+const deadline = 5 * time.Second
 
 func TestLogWatcher(t *testing.T) {
 	if testing.Short() {
