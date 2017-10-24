@@ -155,7 +155,7 @@ func isErrorType(t Type) bool {
 
 func dimensionError(c *checker, node astNode, t Type) {
 	t1 := t.(*TypeOperator)
-	c.errors.Add(node.Pos(), fmt.Sprintf("Not enough keys for expression: expecting %d more", len(t1.Args)-1))
+	c.errors.Add(node.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d more", len(t1.Args)-1))
 }
 
 func (c *checker) VisitAfter(node astNode) {
@@ -313,11 +313,11 @@ func (c *checker) VisitAfter(node astNode) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
 				return
 			}
-		case *indexedExprNode:
-			// Collapse any indexedExprNode on the lhs by rewriting to index exprlist form, prepending the lhs children, and copying the lhs's lhs to our own.
-			// As this is a post-order operation, the lhs is already collapsed to exprlist form.
-			n.index.(*exprlistNode).children = append(v.index.(*exprlistNode).children, n.index.(*exprlistNode).children...)
-			n.lhs = v.lhs
+		// case *indexedExprNode:
+		// 	// Collapse any indexedExprNode on the lhs by rewriting to index exprlist form, prepending the lhs children, and copying the lhs's lhs to our own.
+		// 	// As this is a post-order operation, the lhs is already collapsed to exprlist form.
+		// 	n.index.(*exprlistNode).children = append(v.index.(*exprlistNode).children, n.index.(*exprlistNode).children...)
+		// 	n.lhs = v.lhs
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
 			n.SetType(Error)
@@ -352,10 +352,8 @@ func (c *checker) VisitAfter(node astNode) {
 			}
 			switch {
 			case len(exprType.Args) > len(astType.Args):
-				// Maybe enclosing expression has enough keys, so we cannot error out here.
-				// c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
-				// so strip the last unmatched parameters from the type,and pass that back
-				n.SetType(Dimension(exprType.Args[len(astType.Args)-1:]...))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d, received %d", len(exprType.Args)-1, len(astType.Args)-1))
+				n.SetType(Error)
 				return
 			case len(exprType.Args) < len(astType.Args):
 				c.errors.Add(n.Pos(), fmt.Sprintf("Too many keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))

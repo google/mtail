@@ -66,7 +66,7 @@ var checkerInvalidPrograms = []struct {
 			// n[$1] is syntactically valid, but n is not indexable
 			"indexedExpr parameter count:6:7-10: Index taken on unindexable expression",
 			// foo[$1] is short one key but we cannot detect this due to chained indexed expression.
-			"indexedExpr parameter count:7:7-12: Not enough keys for expression: expecting 1 more",
+			"indexedExpr parameter count:7:7-12: Not enough keys for indexed expression: expecting 2, received 1",
 			// bar[$1][0] is ok
 			// quux[$1][0] has too many keys
 			"indexedExpr parameter count:9:7-16: Too many keys for indexed expression: expecting 1, received 2.",
@@ -83,9 +83,9 @@ counter bar by a, b
 }
 `,
 		[]string{
-			"indexedExpr binary expression:4:3-8: Not enough keys for expression: expecting 1 more",
-			"indexedExpr binary expression:7:9-14: Not enough keys for expression: expecting 1 more",
-			"indexedExpr binary expression:7:3-5: Not enough keys for expression: expecting 2 more",
+			"indexedExpr binary expression:4:3-8: Not enough keys for indexed expression: expecting 2, received 1",
+			"indexedExpr binary expression:7:9-14: Not enough keys for indexed expression: expecting 2, received 1",
+			"indexedExpr binary expression:7:3-5: Not enough keys for indexed expression: expecting 2 more",
 		}},
 
 	{"builtin parameter mismatch",
