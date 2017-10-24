@@ -24,8 +24,8 @@ import (
     kind metrics.Kind
 }
 
-%type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement 
-%type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr logical_expr
+%type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement 
+%type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr
 %type <n> declaration declarator definition decoration_statement
 %type <kind> type_spec
 %type <text> as_spec
@@ -114,11 +114,11 @@ stmt
   ;
 
 conditional_statement
-  : cond compound_statement ELSE compound_statement
+  : logical_expr compound_statement ELSE compound_statement
   {
     $$ = &condNode{$1, $2, $4, nil}
   }
-  | cond compound_statement
+  | logical_expr compound_statement
   {
     if $1 != nil {
       $$ = &condNode{$1, $2, nil, nil}
@@ -294,9 +294,19 @@ postfix_expr
   ;
 
 primary_expr
-  : primary_expr LSQUARE arg_expr_list RSQUARE
+  : indexed_expr
   {
-    $$ = &indexedExprNode{lhs: $1, index: $3}
+    $$ = $1
+  }
+  | pattern_expr
+  {
+    // pos, endPos were stashed during the concatenation of the regex.
+    pos := MergePosition(&mtaillex.(*parser).pos, &mtaillex.(*parser).endPos)
+    $$ = &regexNode{pos: *pos, pattern: $1}
+  }
+  | OTHERWISE
+  {
+    $$ = &otherwiseNode{mtaillex.(*parser).t.pos}
   }
   | BUILTIN LPAREN RPAREN
   {
@@ -306,9 +316,9 @@ primary_expr
   {
     $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
   }
-  | ID
+  | id_expr
   {
-    $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
+    $$ = $1
   }
   | CAPREF
   {
@@ -336,6 +346,26 @@ primary_expr
   }
   ;
 
+indexed_expr
+  : indexed_expr LSQUARE arg_expr_list RSQUARE
+  {
+    $$ = $1
+    $$.(*indexedExprNode).index.(*exprlistNode).children =
+        append($$.(*indexedExprNode).index.(*exprlistNode).children,
+               $3.(*exprlistNode).children...)
+  }
+  | id_expr
+  {
+    $$ = &indexedExprNode{lhs: $1, index:&exprlistNode{}}
+  }
+  ;
+
+id_expr
+  : ID
+    {
+      $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
+    }
+    ;
 
 arg_expr_list
   : bitwise_expr
@@ -350,25 +380,10 @@ arg_expr_list
   }
   ;
 
-cond
-  : pattern_expr
-  {
-    // pos, endPos were stashed during the concatenation of the regex.
-    pos := MergePosition(&mtaillex.(*parser).pos, &mtaillex.(*parser).endPos)
-    $$ = &regexNode{pos: *pos, pattern: $1}
-  }
-  | logical_expr
-  {
-    $$ = $1
-  }
-  | OTHERWISE
-  {
-    $$ = &otherwiseNode{mtaillex.(*parser).t.pos}
-  }
-  ;
+
 
 pattern_expr
-: { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DIV { mtaillex.(*parser).inRegex() } REGEX DIV
+  : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DIV { mtaillex.(*parser).inRegex() } REGEX DIV
   {
     // Before the first DIV, stash the start of the pattern_expr in a state
     // variable.  We know it's the start because pattern_expr is left
