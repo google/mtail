@@ -335,18 +335,14 @@ primary_expr
 indexed_expr
   : id_expr
   {
-    $$ = $1
+    $$ = &indexedExprNode{lhs: $1, index: &exprlistNode{}}
   }
   | indexed_expr LSQUARE arg_expr_list RSQUARE
   {
-    if v, ok := $1.(*indexedExprNode); ok {
-      v.index.(*exprlistNode).children = append(
-        v.index.(*exprlistNode).children,
+    $$ = $1
+      $$.(*indexedExprNode).index.(*exprlistNode).children = append(
+        $$.(*indexedExprNode).index.(*exprlistNode).children,
         $3.(*exprlistNode).children...)
-      $$ = v
-    } else {
-      $$ = &indexedExprNode{lhs: $1, index: $3}
-    }
   }
   ;
 
