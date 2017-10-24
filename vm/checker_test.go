@@ -56,7 +56,6 @@ var checkerInvalidPrograms = []struct {
 	counter bar by a, b
 	counter quux by a
 	/(\d+)/ {
-      0[$1]++
       n[$1]++
       foo[$1]++
       bar[$1][0]++
@@ -64,15 +63,13 @@ var checkerInvalidPrograms = []struct {
 	}
 		`,
 		[]string{
-			// 0[$1] is not a valud expresison
-			"indexedExpr parameter count:6:7-10: Index taken on unindexable expression",
 			// n[$1] is syntactically valid, but n is not indexable
-			"indexedExpr parameter count:7:7-10: Index taken on unindexable expression",
+			"indexedExpr parameter count:6:7-10: Index taken on unindexable expression",
 			// foo[$1] is short one key but we cannot detect this due to chained indexed expression.
-			"indexedExpr parameter count:8:7-12: Not enough keys for expression: expecting 1 more",
+			"indexedExpr parameter count:7:7-12: Not enough keys for expression: expecting 1 more",
 			// bar[$1][0] is ok
 			// quux[$1][0] has too many keys
-			"indexedExpr parameter count:10:7-16: Too many keys for indexed expression: expecting 1, received 2.",
+			"indexedExpr parameter count:9:7-16: Too many keys for indexed expression: expecting 1, received 2.",
 		}},
 
 	{"indexedExpr binary expression",

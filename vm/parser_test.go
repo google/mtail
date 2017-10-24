@@ -330,6 +330,11 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	foo++[$1]++
 	}`,
 		[]string{"index of non-terminal:2:7: syntax error"}},
+	{"index of non-terminal",
+		`// {
+	0[$1]++
+	}`,
+		[]string{"index of non-terminal:2:3: syntax error"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {

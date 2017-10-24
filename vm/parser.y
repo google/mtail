@@ -339,7 +339,14 @@ indexed_expr
   }
   | indexed_expr LSQUARE arg_expr_list RSQUARE
   {
-    $$ = &indexedExprNode{lhs: $1, index: $3}
+    if v, ok := $1.(*indexedExprNode); ok {
+      v.index.(*exprlistNode).children = append(
+        v.index.(*exprlistNode).children,
+        $3.(*exprlistNode).children...)
+      $$ = v
+    } else {
+      $$ = &indexedExprNode{lhs: $1, index: $3}
+    }
   }
   ;
 
