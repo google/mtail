@@ -281,7 +281,9 @@ func TestParserRoundTrip(t *testing.T) {
 				for _, e := range p2.errors {
 					t.Errorf("\t%s\n", e)
 				}
-				t.Fatalf("2nd pass input was:\n%s", output)
+				t.Logf("2nd pass input was:\n%s", output)
+				t.Logf("2nd pass diff:\n%s", go_cmp.Diff(tc.program, output))
+				t.Fatal()
 			}
 
 			u = Unparser{}

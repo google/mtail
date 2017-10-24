@@ -25,7 +25,7 @@ import (
 }
 
 %type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement 
-%type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr logical_expr
+%type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr
 %type <n> declaration declarator definition decoration_statement
 %type <kind> type_spec
 %type <text> as_spec
@@ -294,9 +294,9 @@ postfix_expr
   ;
 
 primary_expr
-  : primary_expr LSQUARE arg_expr_list RSQUARE
+  : indexed_expr
   {
-    $$ = &indexedExprNode{lhs: $1, index: $3}
+    $$ = $1
   }
   | BUILTIN LPAREN RPAREN
   {
@@ -305,10 +305,6 @@ primary_expr
   | BUILTIN LPAREN arg_expr_list RPAREN
   {
     $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
-  }
-  | ID
-  {
-    $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
   }
   | CAPREF
   {
@@ -336,6 +332,16 @@ primary_expr
   }
   ;
 
+indexed_expr
+  : id_expr
+  {
+    $$ = $1
+  }
+  | indexed_expr LSQUARE arg_expr_list RSQUARE
+  {
+    $$ = &indexedExprNode{lhs: $1, index: $3}
+  }
+  ;
 
 arg_expr_list
   : bitwise_expr
@@ -347,6 +353,13 @@ arg_expr_list
   {
     $$ = $1
     $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
+  }
+  ;
+
+id_expr
+  : ID
+  {
+    $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
   }
   ;
 
