@@ -6,6 +6,7 @@ package vm
 import (
 	"fmt"
 	"regexp/syntax"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -390,13 +391,19 @@ func (c *checker) VisitAfter(node astNode) {
 
 		switch n.name {
 		case "strptime":
-			// First argument to strptime is the format string.  If it is
+			// Second argument to strptime is the format string.  If it is
 			// defined at compile time, we can verify it can be use as a format
 			// string by parsing itself.
-			if f, ok := n.args.(*exprlistNode).children[0].(*stringConstNode); ok {
-				_, err := time.Parse(f.text, f.text)
+			if f, ok := n.args.(*exprlistNode).children[1].(*stringConstNode); ok {
+				// Layout strings can contain an underscore to indicate a digit
+				// field if the layout field can contain two digits; but they
+				// won't parse themselves.  Zulu Timezones in the layout need
+				// to be converted to offset in the parsed time.
+				timeStr := strings.Replace(strings.Replace(f.text, "_", "", -1), "Z", "+", -1)
+				glog.Infof("time_str is %q", timeStr)
+				_, err := time.Parse(f.text, timeStr)
 				if err != nil {
-					glog.Infof("time.Parse validation failed with error %s", err)
+					glog.Infof("time.Parse(%q, %q) failed: %s", f.text, timeStr, err)
 					c.errors.Add(f.Pos(), fmt.Sprintf("invalid time format string %q\n\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice.", f.text))
 					n.SetType(Error)
 					return
