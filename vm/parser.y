@@ -378,7 +378,7 @@ arg_expr_list
 
 
 pattern_expr
-  : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DIV { mtaillex.(*parser).inRegex() } REGEX DIV
+  : mark_pos DIV in_regex REGEX DIV
   {
     // Before the first DIV, stash the start of the pattern_expr in a state
     // variable.  We know it's the start because pattern_expr is left
@@ -386,21 +386,20 @@ pattern_expr
     mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
     $$ = $4
   }
-  | pattern_expr PLUS opt_nl DIV { mtaillex.(*parser).inRegex() } REGEX DIV
+  | pattern_expr PLUS opt_nl DIV in_regex REGEX DIV
   {
     mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
     $$ = $1 + $6
   }
-  | pattern_expr PLUS ID
+  | pattern_expr PLUS opt_nl ID
   {
-    if s, ok := mtaillex.(*parser).res[$3]; ok {
+    if s, ok := mtaillex.(*parser).res[$4]; ok {
       $$ = $1 + s
     } else {
-      mtaillex.Error(fmt.Sprintf("Constant '%s' not defined.\n\tTry adding `const %s /.../' earlier in the program.", $3, $3))
+      mtaillex.Error(fmt.Sprintf("Constant '%s' not defined.\n\tTry adding `const %s /.../' earlier in the program.", $4, $4))
     }
   }
   ;
-
 
 declaration
   : hide_spec type_spec declarator
@@ -497,19 +496,40 @@ as_spec
   ;
 
 definition
-  : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DEF ID compound_statement
+  : mark_pos DEF ID compound_statement
   {
     $$ = &defNode{pos: mtaillex.(*parser).pos, name: $3, block: $4}
   }
   ;
 
 decoration_statement
-  : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DECO compound_statement
+  : mark_pos DECO compound_statement
   {
     $$ = &decoNode{mtaillex.(*parser).pos, $2, $3, nil}
   }
   ;
 
+// mark_pos is an epsilon (marker nonterminal) that records the current token
+// position as the parser position.
+mark_pos
+  :
+  {
+    mtaillex.(*parser).pos = mtaillex.(*parser).t.pos
+  }
+  ;
+
+// in_regex is a marker nonterminal that tells the parser and lexer it is now
+// in a regular expression
+in_regex
+  :
+  {
+    mtaillex.(*parser).inRegex()
+  }
+  ;
+
+// opt_nl optionally accepts a newline when a line break could occur inside an
+// expression for formatting.  Newlines terminate expressions so must be
+// handled explicitly.
 opt_nl
   : /* empty */
   | NL
