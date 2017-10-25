@@ -6,6 +6,7 @@ package vm
 import (
 	"fmt"
 	"regexp/syntax"
+	"time"
 
 	"github.com/golang/glog"
 )
@@ -386,5 +387,21 @@ func (c *checker) VisitAfter(node astNode) {
 			return
 		}
 		n.SetType(rType)
+
+		switch n.name {
+		case "strptime":
+			// First argument to strptime is the format string.  If it is
+			// defined at compile time, we can verify it can be use as a format
+			// string by parsing itself.
+			if f, ok := n.args.(*exprlistNode).children[0].(*stringConstNode); ok {
+				_, err := time.Parse(f.text, f.text)
+				if err != nil {
+					glog.Infof("time.Parse validation failed with error %s", err)
+					c.errors.Add(f.Pos(), fmt.Sprintf("invalid time format string %q\n\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice.", f.text))
+					n.SetType(Error)
+					return
+				}
+			}
+		}
 	}
 }
