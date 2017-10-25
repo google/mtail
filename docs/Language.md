@@ -212,7 +212,7 @@ A regular expression that extracts the timestamp in boring old syslog format loo
 }
 ```
 
-Buyer beware!  The format string used by `mtail` is the same as the [Go time.Parse() format string](http://godoc.org/time#Parse), which is completely unlike that used by C's strptime.  The format string must always be the 2nd of January 2006 at 3:04:05 PM.  See the documentation for the **ANSIC** format in the above link for more details.
+Buyer beware!  The format string used by `mtail` is the same as the [Go time.Parse() format string](http://godoc.org/time#Parse), which is completely unlike that used by C's strptime.  The format string must always be the 2nd of January 2006 at 3:04:05 PM.  See the documentation for the **ANSIC** format in the above link for more details.  **NOTE** that *unlike* Go's `time.Parse()` (and *like* C's) the format string is the *second* argument to this builtin function.
 
 ## Nested Actions
 
