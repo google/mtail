@@ -247,6 +247,8 @@ program state.
     the string argument `x`.
 1. `tolower(x)`, a function of one string argument, which returns the input `x`
    in all lowercase.
+1. `concat(x,y)`, a function of two string arguments, which returns
+   second argument appenedet to first (concatenation of strings).
 
 There are type coercion functions, useful for overriding the type inference
 made by the compiler if it chooses badly.  (If the choice is egregious, please

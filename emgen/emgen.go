@@ -51,7 +51,7 @@ var table = map[string]node{
 	"def_spec":      {[][]string{{"def", "ID", "{", "stmt_list", "}"}}, ""},
 	"deco_spec":     {[][]string{{"deco", "{", "stmt_list", "}"}}, ""},
 
-	"BUILTIN": {[][]string{{"strptime"}, {"timestamp"}, {"len"}, {"tolower"}}, ""},
+	"BUILTIN": {[][]string{{"strptime"}, {"timestamp"}, {"len"}, {"tolower"}, {"concat"}}, ""},
 
 	"CAPREF":  {[][]string{}, "$1"},
 	"REGEX":   {[][]string{}, "/foo/"},
