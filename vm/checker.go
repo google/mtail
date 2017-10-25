@@ -153,11 +153,6 @@ func isErrorType(t Type) bool {
 	return false
 }
 
-func dimensionError(c *checker, node astNode, t Type) {
-	t1 := t.(*TypeOperator)
-	c.errors.Add(node.Pos(), fmt.Sprintf("Not enough keys for expression: expecting %d more", len(t1.Args)-1))
-}
-
 func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *stmtlistNode:
@@ -170,18 +165,12 @@ func (c *checker) VisitAfter(node astNode) {
 		var rType Type
 		lT := n.lhs.Type()
 		switch {
-		case IsDimension(lT):
-			dimensionError(c, n.lhs, lT)
-			fallthrough
 		case isErrorType(lT):
 			n.SetType(Error)
 			return
 		}
 		rT := n.rhs.Type()
 		switch {
-		case IsDimension(rT):
-			dimensionError(c, n.rhs, rT)
-			fallthrough
 		case isErrorType(rT):
 			n.SetType(Error)
 			return
@@ -269,9 +258,6 @@ func (c *checker) VisitAfter(node astNode) {
 	case *unaryExprNode:
 		t := n.expr.Type()
 		switch {
-		case IsDimension(t):
-			dimensionError(c, n.expr, t)
-			fallthrough
 		case isErrorType(t):
 			n.SetType(Error)
 			return
@@ -302,28 +288,6 @@ func (c *checker) VisitAfter(node astNode) {
 		}
 
 	case *indexedExprNode:
-		switch v := n.lhs.(type) {
-		case *idNode:
-			// ok
-			if t, ok := v.Type().(*TypeOperator); ok && IsDimension(t) {
-				glog.V(1).Infof("Our idNode is a dimension type")
-			} else {
-				glog.V(1).Infof("Our idNode is not a dimension type")
-				n.SetType(Error)
-				c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
-				return
-			}
-		case *indexedExprNode:
-			// Collapse any indexedExprNode on the lhs by rewriting to index exprlist form, prepending the lhs children, and copying the lhs's lhs to our own.
-			// As this is a post-order operation, the lhs is already collapsed to exprlist form.
-			n.index.(*exprlistNode).children = append(v.index.(*exprlistNode).children, n.index.(*exprlistNode).children...)
-			n.lhs = v.lhs
-		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
-			n.SetType(Error)
-			return
-		}
-
 		argTypes := []Type{}
 		if args, ok := n.index.(*exprlistNode); ok {
 			for _, arg := range args.children {
@@ -338,6 +302,33 @@ func (c *checker) VisitAfter(node astNode) {
 			n.SetType(Error)
 			return
 		}
+
+		switch v := n.lhs.(type) {
+		case *idNode:
+			if v.sym == nil {
+				// undefined, already caught
+				n.SetType(Error)
+				return
+			}
+			// ok
+			if t, ok := v.Type().(*TypeOperator); ok && IsDimension(t) {
+				glog.V(1).Infof("Our idNode is a dimension type")
+			} else {
+				if len(argTypes) > 0 {
+					glog.V(1).Infof("Our idNode is not a dimension type")
+					n.SetType(Error)
+					c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
+				} else {
+					n.SetType(v.Type())
+				}
+				return
+			}
+		default:
+			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
+			n.SetType(Error)
+			return
+		}
+
 		rType := NewTypeVariable()
 		argTypes = append(argTypes, rType)
 		astType := Dimension(argTypes...)
@@ -352,10 +343,8 @@ func (c *checker) VisitAfter(node astNode) {
 			}
 			switch {
 			case len(exprType.Args) > len(astType.Args):
-				// Maybe enclosing expression has enough keys, so we cannot error out here.
-				// c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
-				// so strip the last unmatched parameters from the type,and pass that back
-				n.SetType(Dimension(exprType.Args[len(astType.Args)-1:]...))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d, received %d", len(exprType.Args)-1, len(astType.Args)-1))
+				n.SetType(Error)
 				return
 			case len(exprType.Args) < len(astType.Args):
 				c.errors.Add(n.Pos(), fmt.Sprintf("Too many keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))

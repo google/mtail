@@ -24,7 +24,7 @@ import (
     kind metrics.Kind
 }
 
-%type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement 
+%type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr
 %type <n> declaration declarator definition decoration_statement
 %type <kind> type_spec
@@ -88,7 +88,7 @@ stmt_list
   ;
 
 stmt
-  : conditional_statement 
+  : conditional_statement
   { $$ = $1 }
   | expression_statement
   { $$ = $1 }
@@ -200,7 +200,7 @@ rel_expr
   : shift_expr
   { $$ = $1 }
   | rel_expr relop shift_expr
-  { 
+  {
     $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   ;
@@ -316,10 +316,6 @@ primary_expr
   {
     $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
   }
-  | id_expr
-  {
-    $$ = $1
-  }
   | CAPREF
   {
     $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, false, nil}
@@ -347,16 +343,16 @@ primary_expr
   ;
 
 indexed_expr
-  : indexed_expr LSQUARE arg_expr_list RSQUARE
+  : id_expr
+  {
+    $$ = &indexedExprNode{lhs: $1, index: &exprlistNode{}}
+  }
+  | indexed_expr LSQUARE arg_expr_list RSQUARE
   {
     $$ = $1
-    $$.(*indexedExprNode).index.(*exprlistNode).children =
-        append($$.(*indexedExprNode).index.(*exprlistNode).children,
-               $3.(*exprlistNode).children...)
-  }
-  | id_expr
-  {
-    $$ = &indexedExprNode{lhs: $1, index:&exprlistNode{}}
+      $$.(*indexedExprNode).index.(*exprlistNode).children = append(
+        $$.(*indexedExprNode).index.(*exprlistNode).children,
+        $3.(*exprlistNode).children...)
   }
   ;
 
@@ -379,7 +375,6 @@ arg_expr_list
     $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
   }
   ;
-
 
 
 pattern_expr
@@ -511,7 +506,7 @@ definition
 decoration_statement
   : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DECO compound_statement
   {
-    $$ = &decoNode{mtaillex.(*parser).pos, $2, $3, nil} 
+    $$ = &decoNode{mtaillex.(*parser).pos, $2, $3, nil}
   }
   ;
 
