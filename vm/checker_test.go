@@ -105,7 +105,7 @@ counter bar by a, b
 		`strptime("2017-10-16 06:50:25", "2017-10-16 06:50:25")
 `,
 		[]string{
-			"bad strptime format:1:10-30: invalid time format string \"2017-10-16 06:50:25\"", "\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice."}},
+			"bad strptime format:1:33-53: invalid time format string \"2017-10-16 06:50:25\"", "\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
