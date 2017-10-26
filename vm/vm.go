@@ -413,6 +413,10 @@ func (v *VM) execute(t *thread, i instr) {
 	}()
 
 	switch i.op {
+	case bad:
+		v.errorf("Invalid instruction.  Aborting.")
+		v.abort = true
+
 	case match:
 		// match regex and store success
 		// Store the results in the operandth element of the stack,
