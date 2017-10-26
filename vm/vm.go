@@ -27,7 +27,8 @@ import (
 type opcode int
 
 const (
-	match      opcode = iota // Match a regular expression against input, and set the match register.
+	bad        opcode = iota // Invalid instruction, indicates a bug in the generator.
+	match                    // Match a regular expression against input, and set the match register.
 	cmp                      // Compare two values on the stack and set the match register.
 	jnm                      // Jump if no match.
 	jm                       // Jump if match.
