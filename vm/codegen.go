@@ -243,7 +243,8 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 
 var typedOperators = map[int]map[Type]opcode{
 	PLUS: {Int: iadd,
-		Float: fadd},
+		Float:  fadd,
+		String: cat},
 	MINUS: {Int: isub,
 		Float: fsub},
 	MUL: {Int: imul,

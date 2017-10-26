@@ -281,7 +281,9 @@ func TestParserRoundTrip(t *testing.T) {
 				for _, e := range p2.errors {
 					t.Errorf("\t%s\n", e)
 				}
-				t.Fatalf("2nd pass input was:\n%s", output)
+				t.Logf("2nd pass input was:\n%s", output)
+				t.Logf("2nd pass diff:\n%s", go_cmp.Diff(tc.program, output))
+				t.Fatal()
 			}
 
 			u = Unparser{}
@@ -328,6 +330,11 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	foo++[$1]++
 	}`,
 		[]string{"index of non-terminal:2:7: syntax error"}},
+	{"index of non-terminal",
+		`// {
+	0[$1]++
+	}`,
+		[]string{"index of non-terminal:2:3: syntax error"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
