@@ -120,7 +120,7 @@ func TestHandleLogUpdate(t *testing.T) {
 		{logfile, "c"},
 		{logfile, "d"},
 	}
-	if diff := cmp.Diff(result, expected); diff != "" {
+	if diff := cmp.Diff(expected, result); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
@@ -192,7 +192,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		{logfile, "d"},
 		{logfile, "e"},
 	}
-	if diff := cmp.Diff(result, expected); diff != "" {
+	if diff := cmp.Diff(expected, result); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
@@ -257,7 +257,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	expected := []*LogLine{
 		{logfile, "ab"},
 	}
-	diff := cmp.Diff(result, expected)
+	diff := cmp.Diff(expected, result)
 	if diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
