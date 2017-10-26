@@ -27,7 +27,8 @@ import (
 type opcode int
 
 const (
-	match      opcode = iota // Match a regular expression against input, and set the match register.
+	bad        opcode = iota // Invalid instruction, indicates a bug in the generator.
+	match                    // Match a regular expression against input, and set the match register.
 	cmp                      // Compare two values on the stack and set the match register.
 	jnm                      // Jump if no match.
 	jm                       // Jump if match.
@@ -56,6 +57,7 @@ const (
 	dload                    // Pop `operand` keys and metric off stack, and push datum at metric[key,...] onto stack.
 	tolower                  // Convert the string at the top of the stack to lowercase.
 	length                   // Compute the length of a string.
+	cat                      // string concatenation
 	setmatched               // Set "matched" flag
 	otherwise                // Only match if "matched" flag is false.
 	del                      //  Pop `operand` keys and metric off stack, and remove the datum at metric[key,...] from memory
@@ -109,6 +111,7 @@ var opNames = map[opcode]string{
 	dload:       "dload",
 	tolower:     "tolower",
 	length:      "length",
+	cat:         "cat",
 	setmatched:  "setmatched",
 	otherwise:   "otherwise",
 	del:         "del",
@@ -410,6 +413,10 @@ func (v *VM) execute(t *thread, i instr) {
 	}()
 
 	switch i.op {
+	case bad:
+		v.errorf("Invalid instruction.  Aborting.")
+		v.abort = true
+
 	case match:
 		// match regex and store success
 		// Store the results in the operandth element of the stack,
@@ -704,6 +711,11 @@ func (v *VM) execute(t *thread, i instr) {
 
 	case getfilename:
 		t.Push(v.input.Filename)
+
+	case cat:
+		s1 := t.Pop().(string)
+		s2 := t.Pop().(string)
+		t.Push(s2 + s1)
 
 	default:
 		v.errorf("illegal instruction: %d", i.op)

@@ -519,6 +519,26 @@ getfilename()
 			{inc, nil},
 			{setmatched, true},
 			{setmatched, true}}},
+	{"string concat", `
+counter f by s
+/(.*), (.*)/ {
+  f[$1 + $2]++
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 12},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{push, 0},
+			{capref, 2},
+			{cat, nil},
+			{mload, 0},
+			{dload, 1},
+			{inc, nil},
+			{setmatched, true},
+		}},
 }
 
 func TestCodegen(t *testing.T) {

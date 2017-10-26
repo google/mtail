@@ -148,9 +148,11 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 
 	case *indexedExprNode:
 		Walk(u, v.lhs)
-		u.emit("[")
-		Walk(u, v.index)
-		u.emit("]")
+		if len(v.index.(*exprlistNode).children) > 0 {
+			u.emit("[")
+			Walk(u, v.index)
+			u.emit("]")
+		}
 
 	case *declNode:
 		switch v.kind {

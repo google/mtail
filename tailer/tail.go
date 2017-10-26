@@ -204,7 +204,7 @@ func (t *Tailer) handleTruncate(f afero.File) error {
 	}
 
 	_, err = f.Seek(0, io.SeekStart)
-	return nil
+	return err
 }
 
 // read reads blocks of 4096 bytes from the File, sending lines to the
