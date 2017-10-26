@@ -206,6 +206,13 @@ var checkerValidPrograms = []struct {
 	{"strptime format", `
 strptime("2006-01-02 15:04:05", "2006-01-02 15:04:05")
 `},
+
+	{"string concat", `
+counter f by s
+/(.*), (.*)/ {
+  f[$1 + $2]++
+}
+`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {
