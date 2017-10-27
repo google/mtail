@@ -119,7 +119,10 @@ func TestExamplePrograms(t *testing.T) {
 			golden_store := metrics.NewStore()
 			testdata.ReadTestData(g, tc.programfile, golden_store)
 
-			mtail.Close()
+			err = mtail.Close()
+			if err != nil {
+				t.Error(err)
+			}
 
 			diff := cmp.Diff(golden_store, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
 
