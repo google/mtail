@@ -78,6 +78,11 @@ var exampleProgramTests = []struct {
 		"testdata/strcat.log",
 		"testdata/strcat.golden",
 	},
+	{
+		"examples/add_assign_float.mtail",
+		"testdata/add_assign_float.log",
+		"testdata/add_assign_float.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
