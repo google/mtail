@@ -313,6 +313,7 @@ func (c *codegen) VisitAfter(node astNode) {
 			c.emit(instr{op: jm})
 		case ADD_ASSIGN:
 			// When operand is not nil, inc pops the delta from the stack.
+			// TODO(jaq): inc doesn't support float
 			c.emit(instr{inc, 0})
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
 			opmap, ok := typedOperators[n.op]
