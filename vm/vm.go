@@ -478,7 +478,7 @@ func (v *VM) execute(t *thread, i instr) {
 		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.SetInt(n, value, t.time)
 		} else {
-			v.errorf("Unexpected type to set: %T %q", n, n)
+			v.errorf("Unexpected type to iset: %T %q", n, n)
 		}
 
 	case fset:
@@ -490,7 +490,7 @@ func (v *VM) execute(t *thread, i instr) {
 		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.SetFloat(n, value, t.time)
 		} else {
-			v.errorf("Unexpected type to set: %T %q", n, n)
+			v.errorf("Unexpected type to fset: %T %q", n, n)
 		}
 
 	case strptime:

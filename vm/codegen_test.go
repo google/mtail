@@ -539,6 +539,26 @@ counter f by s
 			{inc, nil},
 			{setmatched, true},
 		}},
+	{"add assign float", `
+gauge foo
+/(\d+\.\d+)/ {
+  foo += $1
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 12},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{fadd, nil},
+			{fset, nil},
+			{setmatched, true},
+		}},
 }
 
 func TestCodegen(t *testing.T) {
