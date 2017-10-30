@@ -319,6 +319,7 @@ func (c *codegen) VisitAfter(node astNode) {
 			c.emit(instr{op: jm})
 		case ADD_ASSIGN:
 			// When operand is not nil, inc pops the delta from the stack.
+			// TODO(jaq): string concatenation, once datums can hold strings.
 			switch {
 			case Equals(n.Type(), Int):
 				c.emit(instr{inc, 0})
