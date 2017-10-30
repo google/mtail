@@ -73,6 +73,16 @@ var exampleProgramTests = []struct {
 		"testdata/logical.log",
 		"testdata/logical.golden",
 	},
+	{
+		"examples/strcat.mtail",
+		"testdata/strcat.log",
+		"testdata/strcat.golden",
+	},
+	{
+		"examples/add_assign_float.mtail",
+		"testdata/add_assign_float.log",
+		"testdata/add_assign_float.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -109,7 +119,10 @@ func TestExamplePrograms(t *testing.T) {
 			golden_store := metrics.NewStore()
 			testdata.ReadTestData(g, tc.programfile, golden_store)
 
-			mtail.Close()
+			err = mtail.Close()
+			if err != nil {
+				t.Error(err)
+			}
 
 			diff := cmp.Diff(golden_store, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
 

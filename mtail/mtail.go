@@ -246,7 +246,7 @@ func (m *MtailServer) WaitForShutdown() {
 }
 
 // Close handles the graceful shutdown of this mtail instance, ensuring that it only occurs once.
-func (m *MtailServer) Close() {
+func (m *MtailServer) Close() error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		if m.t != nil {
@@ -263,6 +263,7 @@ func (m *MtailServer) Close() {
 		}
 		glog.Info("All done.")
 	})
+	return nil
 }
 
 // Run starts MtailServer's primary function, in which it watches the log
@@ -277,7 +278,10 @@ func (m *MtailServer) Run() error {
 		glog.Exitf("tailing failed: %s", err)
 	}
 	if m.o.OneShot {
-		m.Close()
+		err := m.Close()
+		if err != nil {
+			return err
+		}
 		fmt.Printf("Metrics store:")
 		if err := m.WriteMetrics(os.Stdout); err != nil {
 			return err

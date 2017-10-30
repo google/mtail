@@ -231,6 +231,12 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			}
 			return nil
 
+		case ADD_ASSIGN:
+			if Equals(n.Type(), Float) {
+				// Double-emit the lhs so that it can be assigned to
+				Walk(c, n.lhs)
+			}
+
 		default:
 			// Didn't handle it, let normal walk proceed
 			return c
@@ -243,7 +249,8 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 
 var typedOperators = map[int]map[Type]opcode{
 	PLUS: {Int: iadd,
-		Float: fadd},
+		Float:  fadd,
+		String: cat},
 	MINUS: {Int: isub,
 		Float: fsub},
 	MUL: {Int: imul,
@@ -312,7 +319,19 @@ func (c *codegen) VisitAfter(node astNode) {
 			c.emit(instr{op: jm})
 		case ADD_ASSIGN:
 			// When operand is not nil, inc pops the delta from the stack.
-			c.emit(instr{inc, 0})
+			// TODO(jaq): string concatenation, once datums can hold strings.
+			switch {
+			case Equals(n.Type(), Int):
+				c.emit(instr{inc, 0})
+			case Equals(n.Type(), Float):
+				// Already walked the lhs and rhs of this expression
+				c.emit(instr{fadd, nil})
+				// And a second lhs
+				c.emit(instr{fset, nil})
+			default:
+				c.errorf(n.Pos(), "Internal error: invalid type for add-assignment: %v", n.op)
+				return
+			}
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
 			opmap, ok := typedOperators[n.op]
 			if !ok {

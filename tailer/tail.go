@@ -13,6 +13,7 @@ package tailer
 import (
 	"bytes"
 	"expvar"
+	"fmt"
 	"html/template"
 	"io"
 	"os"
@@ -184,14 +185,48 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	}
 }
 
+// handleTruncate checks to see if the current offset into the file
+// is past the end of the file based on its size, and if so seeks to
+// the start again.  Returns nil iff that happened.
+func (t *Tailer) handleTruncate(f afero.File) error {
+	offset, err := f.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return err
+	}
+
+	fi, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
+	if offset == 0 || fi.Size() >= offset {
+		return fmt.Errorf("no truncate appears to have occurred")
+	}
+
+	_, err = f.Seek(0, io.SeekStart)
+	return err
+}
+
 // read reads blocks of 4096 bytes from the File, sending lines to the
 // channel as it encounters newlines.  If EOF is encountered, the partial line
 // is returned to be concatenated with on the next call.
 func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 	b := make([]byte, 0, 4096)
+	ntotal := 0 // bytes read in this invocation
 	for {
 		n, err := f.Read(b[:cap(b)])
+		ntotal += n
 		b = b[:n]
+
+		if err == io.EOF && ntotal == 0 {
+			// If there was nothing to be read, perhaps the file just got truncated.
+			herr := t.handleTruncate(f)
+			if herr == nil {
+				// Try again: offset was greater than filesize and now we've seeked to start.
+				continue
+			}
+		}
+
 		if err != nil {
 			return err
 		}
@@ -353,6 +388,9 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 			return err
 		}
 	case m&os.ModeType == os.ModeNamedPipe:
+		t.partialsMu.Lock()
+		t.partials[f.Name()] = bytes.NewBufferString("")
+		t.partialsMu.Unlock()
 		go t.readForever(f)
 	default:
 		return errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
