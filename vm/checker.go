@@ -289,6 +289,17 @@ func (c *checker) VisitAfter(node astNode) {
 			return
 		}
 
+	case *exprlistNode:
+		argTypes := []Type{}
+		for _, arg := range n.children {
+			if isErrorType(arg.Type()) {
+				n.SetType(Error)
+				return
+			}
+			argTypes = append(argTypes, arg.Type())
+		}
+		n.SetType(Dimension(argTypes...))
+
 	case *indexedExprNode:
 		argTypes := []Type{}
 		if args, ok := n.index.(*exprlistNode); ok {
