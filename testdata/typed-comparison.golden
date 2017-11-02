@@ -1,0 +1,5 @@
+counter t {le=0.5} 1 2017-11-02T16:07:14Z
+counter t {le=1} 1 2017-11-02T16:07:14Z
+counter t {le=inf} 3 2017-11-02T16:07:14Z
+counter t_sum 2.865 2017-11-02T16:07:14Z
+
