@@ -6,8 +6,10 @@ package watcher
 import (
 	"errors"
 	"expvar"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"syscall"
@@ -128,6 +130,13 @@ func TestNewLogWatcherError(t *testing.T) {
 func TestLogWatcherAddError(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping log watcher test in short mode")
+	}
+	u, err := user.Current()
+	if err != nil {
+		t.Skip(fmt.Sprintf("Couldn't determine current user id: %s", err))
+	}
+	if u.Uid == "0" {
+		t.Skip("Skipping test when run as root")
 	}
 
 	workdir, err := ioutil.TempDir("", "log_watcher_test")
