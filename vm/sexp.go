@@ -172,6 +172,9 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	case *delNode:
 		s.emit("del")
 
+	case *convNode:
+		s.emit("conv")
+
 	case *indexedExprNode, *stmtlistNode, *exprlistNode, *condNode, *decoDefNode, *decoNode, *patternExprNode: // normal walk
 
 	default:
