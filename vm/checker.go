@@ -44,7 +44,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 
 	case *caprefNode:
 		if n.sym == nil {
-			if sym := c.scope.Lookup(n.name); sym == nil || sym.Kind != CaprefSymbol {
+			if sym := c.scope.Lookup(n.name, CaprefSymbol); sym == nil {
 				msg := fmt.Sprintf("Capture group `$%s' was not defined by a regular expression visible to this scope.", n.name)
 				if n.isNamed {
 					msg = fmt.Sprintf("%s\n\tTry using `(?P<%s>...)' to name the capture group.", msg, n.name)
@@ -77,7 +77,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 
 	case *idNode:
 		if n.sym == nil {
-			if sym := c.scope.Lookup(n.name); sym != nil && sym.Kind == VarSymbol {
+			if sym := c.scope.Lookup(n.name, VarSymbol); sym != nil {
 				glog.Infof("found sym %v", sym)
 				n.sym = sym
 			} else {
@@ -95,7 +95,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		}
 
 	case *decoNode:
-		if sym := c.scope.Lookup(n.name); sym != nil && sym.Kind == DecoSymbol {
+		if sym := c.scope.Lookup(n.name, DecoSymbol); sym != nil {
 			if sym.Binding == nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.name))
 				return nil
@@ -288,6 +288,17 @@ func (c *checker) VisitAfter(node astNode) {
 			n.SetType(Error)
 			return
 		}
+
+	case *exprlistNode:
+		argTypes := []Type{}
+		for _, arg := range n.children {
+			if isErrorType(arg.Type()) {
+				n.SetType(Error)
+				return
+			}
+			argTypes = append(argTypes, arg.Type())
+		}
+		n.SetType(Dimension(argTypes...))
 
 	case *indexedExprNode:
 		argTypes := []Type{}

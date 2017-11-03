@@ -24,7 +24,7 @@ import (
     kind metrics.Kind
 }
 
-%type <n> stmt_list stmt cond arg_expr_list compound_statement conditional_statement expression_statement 
+%type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr
 %type <n> declaration declarator definition decoration_statement
 %type <kind> type_spec
@@ -88,7 +88,7 @@ stmt_list
   ;
 
 stmt
-  : conditional_statement 
+  : conditional_statement
   { $$ = $1 }
   | expression_statement
   { $$ = $1 }
@@ -114,11 +114,11 @@ stmt
   ;
 
 conditional_statement
-  : cond compound_statement ELSE compound_statement
+  : logical_expr compound_statement ELSE compound_statement
   {
     $$ = &condNode{$1, $2, $4, nil}
   }
-  | cond compound_statement
+  | logical_expr compound_statement
   {
     if $1 != nil {
       $$ = &condNode{$1, $2, nil, nil}
@@ -200,7 +200,7 @@ rel_expr
   : shift_expr
   { $$ = $1 }
   | rel_expr relop shift_expr
-  { 
+  {
     $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
   }
   ;
@@ -298,6 +298,16 @@ primary_expr
   {
     $$ = $1
   }
+  | pattern_expr
+  {
+    // pos, endPos were stashed during the concatenation of the regex.
+    pos := MergePosition(&mtaillex.(*parser).pos, &mtaillex.(*parser).endPos)
+    $$ = &regexNode{pos: *pos, pattern: $1}
+  }
+  | OTHERWISE
+  {
+    $$ = &otherwiseNode{mtaillex.(*parser).t.pos}
+  }
   | BUILTIN LPAREN RPAREN
   {
     $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: nil}
@@ -346,6 +356,13 @@ indexed_expr
   }
   ;
 
+id_expr
+  : ID
+    {
+      $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
+    }
+    ;
+
 arg_expr_list
   : bitwise_expr
   {
@@ -359,32 +376,9 @@ arg_expr_list
   }
   ;
 
-id_expr
-  : ID
-  {
-    $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
-  }
-  ;
-
-cond
-  : pattern_expr
-  {
-    // pos, endPos were stashed during the concatenation of the regex.
-    pos := MergePosition(&mtaillex.(*parser).pos, &mtaillex.(*parser).endPos)
-    $$ = &regexNode{pos: *pos, pattern: $1}
-  }
-  | logical_expr
-  {
-    $$ = $1
-  }
-  | OTHERWISE
-  {
-    $$ = &otherwiseNode{mtaillex.(*parser).t.pos}
-  }
-  ;
 
 pattern_expr
-: { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DIV { mtaillex.(*parser).inRegex() } REGEX DIV
+  : mark_pos DIV in_regex REGEX DIV
   {
     // Before the first DIV, stash the start of the pattern_expr in a state
     // variable.  We know it's the start because pattern_expr is left
@@ -392,21 +386,20 @@ pattern_expr
     mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
     $$ = $4
   }
-  | pattern_expr PLUS opt_nl DIV { mtaillex.(*parser).inRegex() } REGEX DIV
+  | pattern_expr PLUS opt_nl DIV in_regex REGEX DIV
   {
     mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
     $$ = $1 + $6
   }
-  | pattern_expr PLUS ID
+  | pattern_expr PLUS opt_nl ID
   {
-    if s, ok := mtaillex.(*parser).res[$3]; ok {
+    if s, ok := mtaillex.(*parser).res[$4]; ok {
       $$ = $1 + s
     } else {
-      mtaillex.Error(fmt.Sprintf("Constant '%s' not defined.\n\tTry adding `const %s /.../' earlier in the program.", $3, $3))
+      mtaillex.Error(fmt.Sprintf("Constant '%s' not defined.\n\tTry adding `const %s /.../' earlier in the program.", $4, $4))
     }
   }
   ;
-
 
 declaration
   : hide_spec type_spec declarator
@@ -503,19 +496,40 @@ as_spec
   ;
 
 definition
-  : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DEF ID compound_statement
+  : mark_pos DEF ID compound_statement
   {
     $$ = &defNode{pos: mtaillex.(*parser).pos, name: $3, block: $4}
   }
   ;
 
 decoration_statement
-  : { mtaillex.(*parser).pos = mtaillex.(*parser).t.pos } DECO compound_statement
+  : mark_pos DECO compound_statement
   {
-    $$ = &decoNode{mtaillex.(*parser).pos, $2, $3, nil} 
+    $$ = &decoNode{mtaillex.(*parser).pos, $2, $3, nil}
   }
   ;
 
+// mark_pos is an epsilon (marker nonterminal) that records the current token
+// position as the parser position.
+mark_pos
+  :
+  {
+    mtaillex.(*parser).pos = mtaillex.(*parser).t.pos
+  }
+  ;
+
+// in_regex is a marker nonterminal that tells the parser and lexer it is now
+// in a regular expression
+in_regex
+  :
+  {
+    mtaillex.(*parser).inRegex()
+  }
+  ;
+
+// opt_nl optionally accepts a newline when a line break could occur inside an
+// expression for formatting.  Newlines terminate expressions so must be
+// handled explicitly.
 opt_nl
   : /* empty */
   | NL

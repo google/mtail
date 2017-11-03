@@ -153,13 +153,13 @@ func IsFunction(t Type) bool {
 // Dimension is a convenience method which instantiates a new Dimension type
 // scheme, with the given args as the dimensions of the type.
 func Dimension(args ...Type) *TypeOperator {
-	return &TypeOperator{"❌", args}
+	return &TypeOperator{"⨯", args}
 }
 
 // IsDimension returns true if the given type is a Dimension type.
 func IsDimension(t Type) bool {
 	if v, ok := t.(*TypeOperator); ok {
-		return v.Name == "❌"
+		return v.Name == "⨯"
 	}
 	return false
 }

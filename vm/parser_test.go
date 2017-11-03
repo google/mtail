@@ -253,6 +253,11 @@ counter foo by a,b
 	{"paren expr", `
 (0) || (1 && 3) {
 }`},
+
+	{"regex cond expr", `
+/(\d)/ && 1 {
+}
+`},
 }
 
 func TestParserRoundTrip(t *testing.T) {

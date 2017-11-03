@@ -213,6 +213,13 @@ counter f by s
   f[$1 + $2]++
 }
 `},
+	{"namespace", `
+counter test
+
+/(?P<test>.*)/ {
+    test++
+}
+`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {
