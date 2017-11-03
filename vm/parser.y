@@ -388,6 +388,10 @@ pattern_expr
   }
   | pattern_expr PLUS opt_nl DIV in_regex REGEX DIV
   {
+    // This rule and the next create the shift/reduce conflict because PLUS is
+    // ambiguous against an additive_expr.  TODO: concatenate the patterns in
+    // the Checker, via some const-folding?  This means also moving regex
+    // compilation into the codegen module.
     mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
     $$ = $1 + $6
   }
