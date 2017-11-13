@@ -12,7 +12,7 @@ install:
  - travis_retry make install_coverage_deps
 
 # Run all tests, under race detector.
-script: make testrace
+script: time make testrace
 
 # If the full suite passes, run again to collect coverage, merge all of the
 # packages reports, and send to coveralls.io.
