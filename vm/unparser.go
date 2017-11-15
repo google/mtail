@@ -83,6 +83,12 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 	case *regexNode:
 		u.emit("/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/")
 
+	case *patternConstNode:
+		if v.name != "" {
+			u.emit("const " + v.name)
+		}
+		u.emit("/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/")
+
 	case *binaryExprNode:
 		Walk(u, v.lhs)
 		switch v.op {

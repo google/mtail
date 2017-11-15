@@ -5,8 +5,6 @@
 package vm
 
 import (
-    "fmt"
-
     "github.com/google/mtail/metrics"
 )
 
@@ -32,7 +30,7 @@ import (
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
 %type <op> relop shift_op bitwise_op logical_op
-%type <text> pattern_expr
+%type <text> regex_pattern
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
@@ -102,10 +100,9 @@ stmt
   {
     $$ = &nextNode{mtaillex.(*parser).t.pos}
   }
-  | CONST ID pattern_expr
+  | CONST ID regex_pattern
   {
-    // Store the regex for concatenation
-    mtaillex.(*parser).res[$2] = $3
+    $$ = &patternConstNode{mtaillex.(*parser).t.pos, $3, $2}
   }
   | DEL postfix_expr
   {
@@ -298,11 +295,9 @@ primary_expr
   {
     $$ = $1
   }
-  | pattern_expr
+  | regex_pattern
   {
-    // pos, endPos were stashed during the concatenation of the regex.
-    pos := MergePosition(&mtaillex.(*parser).pos, &mtaillex.(*parser).endPos)
-    $$ = &regexNode{pos: *pos, pattern: $1}
+    $$ = &patternConstNode{pos:mtaillex.(*parser).t.pos, pattern: $1}
   }
   | OTHERWISE
   {
@@ -376,32 +371,10 @@ arg_expr_list
   }
   ;
 
-
-pattern_expr
-  : mark_pos DIV in_regex REGEX DIV
+regex_pattern
+  : DIV in_regex REGEX DIV
   {
-    // Before the first DIV, stash the start of the pattern_expr in a state
-    // variable.  We know it's the start because pattern_expr is left
-    // associative.  Then, store the end position after the second DIV.
-    mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
-    $$ = $4
-  }
-  | pattern_expr PLUS opt_nl DIV in_regex REGEX DIV
-  {
-    // This rule and the next create the shift/reduce conflict because PLUS is
-    // ambiguous against an additive_expr.  TODO: concatenate the patterns in
-    // the Checker, via some const-folding?  This means also moving regex
-    // compilation into the codegen module.
-    mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
-    $$ = $1 + $6
-  }
-  | pattern_expr PLUS opt_nl ID
-  {
-    if s, ok := mtaillex.(*parser).res[$4]; ok {
-      $$ = $1 + s
-    } else {
-      mtaillex.Error(fmt.Sprintf("Constant '%s' not defined.\n\tTry adding `const %s /.../' earlier in the program.", $4, $4))
-    }
+    $$ = $3
   }
   ;
 
@@ -529,14 +502,6 @@ in_regex
   {
     mtaillex.(*parser).inRegex()
   }
-  ;
-
-// opt_nl optionally accepts a newline when a line break could occur inside an
-// expression for formatting.  Newlines terminate expressions so must be
-// handled explicitly.
-opt_nl
-  : /* empty */
-  | NL
   ;
 
 %%

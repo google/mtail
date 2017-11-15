@@ -266,6 +266,21 @@ func (n *floatConstNode) Type() Type {
 	return Float
 }
 
+// patternConstNode holds (partial) pattern constants
+type patternConstNode struct {
+	pos     position
+	pattern string
+	name    string // Optional name of the pattern
+}
+
+func (n *patternConstNode) Pos() *position {
+	return &n.pos
+}
+
+func (n *patternConstNode) Type() Type {
+	return Pattern
+}
+
 type defNode struct {
 	pos   position
 	name  string

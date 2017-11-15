@@ -26,14 +26,13 @@ type parser struct {
 	root   astNode
 	errors ErrorList
 	l      *lexer
-	t      token             // Most recently lexed token.
-	pos    position          // Maybe contains the position of the start of a node when the parser is doing preprocessor concatenation.
-	endPos position          // Maybe contains the position of the end of a node when the parser is doing preprocessor concatenation.
-	res    map[string]string // Mapping of regex constants to patterns.
+	t      token    // Most recently lexed token.
+	pos    position // Maybe contains the position of the start of a node when the parser is doing preprocessor concatenation.
+	endPos position // Maybe contains the position of the end of a node when the parser is doing preprocessor concatenation.
 }
 
 func newParser(name string, input io.Reader) *parser {
-	return &parser{name: name, l: newLexer(name, input), res: make(map[string]string)}
+	return &parser{name: name, l: newLexer(name, input)}
 }
 
 func (p *parser) ErrorP(s string, pos *position) {

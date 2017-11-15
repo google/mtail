@@ -182,13 +182,14 @@ func IsComplete(t Type) bool {
 
 // Builtin types
 var (
-	Undef  = &TypeOperator{"Undef", []Type{}}
-	Error  = &TypeOperator{"Error", []Type{}}
-	None   = &TypeOperator{"None", []Type{}}
-	Bool   = &TypeOperator{"Bool", []Type{}}
-	Int    = &TypeOperator{"Int", []Type{}}
-	Float  = &TypeOperator{"Float", []Type{}}
-	String = &TypeOperator{"String", []Type{}}
+	Undef   = &TypeOperator{"Undef", []Type{}}
+	Error   = &TypeOperator{"Error", []Type{}}
+	None    = &TypeOperator{"None", []Type{}}
+	Bool    = &TypeOperator{"Bool", []Type{}}
+	Int     = &TypeOperator{"Int", []Type{}}
+	Float   = &TypeOperator{"Float", []Type{}}
+	String  = &TypeOperator{"String", []Type{}}
+	Pattern = &TypeOperator{"Pattern", []Type{}}
 )
 
 // Builtins is a mapping of the builtin language functions to their type definitions.

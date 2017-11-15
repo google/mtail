@@ -61,6 +61,12 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	case *regexNode:
 		s.emit("\"" + v.pattern + "\"")
 
+	case *patternConstNode:
+		if v.name != "" {
+			s.emit(fmt.Sprintf("const %q", v.name))
+		}
+		s.emit("\"" + v.pattern + "\"")
+
 	case *binaryExprNode:
 		switch v.op {
 		case LT:
