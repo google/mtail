@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+
+	"github.com/golang/glog"
 )
 
 func Parse(name string, input io.Reader) (astNode, error) {
@@ -72,6 +74,7 @@ func (p *parser) Lex(lval *mtailSymType) int {
 }
 
 func (p *parser) inRegex() {
+	glog.V(2).Info("Entering regex")
 	p.l.inRegex = true
 }
 

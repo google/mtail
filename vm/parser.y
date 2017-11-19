@@ -29,7 +29,7 @@ import (
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
-%type <op> relop shift_op bitwise_op logical_op
+%type <op> rel_op shift_op bitwise_op logical_op add_op mul_op
 %type <text> regex_pattern
 // Tokens and types are defined here.
 // Invalid input
@@ -149,22 +149,22 @@ assign_expr
   {
     $$ = $1
   }
-  | unary_expr ASSIGN logical_expr
+  | unary_expr ASSIGN opt_nl logical_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
-  | unary_expr ADD_ASSIGN logical_expr
+  | unary_expr ADD_ASSIGN opt_nl logical_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
   ;
 
 logical_expr
   : bitwise_expr
   { $$ = $1 }
-  | logical_expr logical_op bitwise_expr
+  | logical_expr logical_op opt_nl bitwise_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
   ;
 
@@ -178,9 +178,9 @@ logical_op
 bitwise_expr
   : rel_expr
   { $$ = $1 }
-  | bitwise_expr bitwise_op rel_expr
+  | bitwise_expr bitwise_op opt_nl rel_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
   ;
 
@@ -196,13 +196,13 @@ bitwise_op
 rel_expr
   : shift_expr
   { $$ = $1 }
-  | rel_expr relop shift_expr
+  | rel_expr rel_op opt_nl shift_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
   ;
 
-relop
+rel_op
   : LT
   { $$ = $1 }
   | GT
@@ -220,9 +220,9 @@ relop
 shift_expr
   : additive_expr
   { $$ = $1 }
-  | shift_expr shift_op additive_expr
+  | shift_expr shift_op opt_nl additive_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
   ;
 
@@ -236,13 +236,20 @@ shift_op
 additive_expr
   : multiplicative_expr
   { $$ = $1 }
-  | additive_expr PLUS multiplicative_expr
+  | additive_expr add_op opt_nl multiplicative_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: PLUS}
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
-  | additive_expr MINUS multiplicative_expr
+  ;
+
+add_op
+  : PLUS
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: MINUS}
+    $$ = $1
+  }
+  | MINUS
+  {
+    $$ = $1
   }
   ;
 
@@ -251,21 +258,28 @@ multiplicative_expr
   {
     $$ = $1
   }
-  | multiplicative_expr MUL unary_expr
+  | multiplicative_expr mul_op opt_nl unary_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: MUL}
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
-  | multiplicative_expr DIV unary_expr
+  ;
+
+mul_op
+  : MUL
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: DIV}
+    $$ = $1
   }
-  | multiplicative_expr MOD unary_expr
+  | DIV
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: MOD}
+    $$ = $1
   }
-  | multiplicative_expr POW unary_expr
+  | MOD
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $3, op: $2}
+    $$ = $1
+  }
+  | POW
+  {
+    $$ = $1
   }
   ;
 
@@ -503,5 +517,10 @@ in_regex
     mtaillex.(*parser).inRegex()
   }
   ;
+
+opt_nl
+:
+| '\n'
+;
 
 %%

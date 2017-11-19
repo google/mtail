@@ -9,6 +9,8 @@ import (
 	"io"
 	"sort"
 	"unicode"
+
+	"github.com/golang/glog"
 )
 
 // Lexeme enumerates the types of lexical tokens in a mtail program.
@@ -532,11 +534,14 @@ Loop:
 
 }
 
-// Lex a regular expression. The text of the regular expression does not
-// include the '/' quotes.
+// Lex a regular expression pattern. The text of the regular expression does
+// not include the '/' quotes.
 func lexRegex(l *lexer) stateFn {
 	// Exit regex mode when leaving this function.
-	defer func() { l.inRegex = false }()
+	defer func() {
+		glog.V(2).Info("Exiting regex")
+		l.inRegex = false
+	}()
 Loop:
 	for {
 		switch l.next() {
