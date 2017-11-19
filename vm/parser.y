@@ -518,9 +518,12 @@ in_regex
   }
   ;
 
+// opt_nl optionally accepts a newline when a line break could occur inside an
+// expression for formatting.  Newlines terminate expressions so must be
+// handled explicitly.
 opt_nl
-:
-| '\n'
-;
+  : /* empty */
+  | NL
+  ;
 
 %%
