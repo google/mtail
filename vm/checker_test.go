@@ -103,6 +103,10 @@ counter bar by a, b
 `,
 		[]string{
 			"bad strptime format:1:33-53: invalid time format string \"2017-10-16 06:50:25\"", "\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice."}},
+
+	{"undefined const regex",
+		"/foo / + X + / bar/ {}\n",
+		[]string{"undefined const regex:1:10: Identifier `X' not declared.", "\tTry adding `const X /.../' earlier in the program."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

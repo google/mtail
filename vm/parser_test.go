@@ -326,10 +326,6 @@ var parserInvalidPrograms = []parserInvalidProgram{
 		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",
 			"unterminated const regex:1:10-17: syntax error"}},
 
-	{"undefined const regex",
-		"/foo / + X + / bar/ {}\n",
-		[]string{"undefined const regex:1:10: Constant 'X' not defined.\n\tTry adding `const X /.../' earlier in the program."}},
-
 	{"index of non-terminal",
 		`// {
 	foo++[$1]++
