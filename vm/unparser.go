@@ -80,9 +80,6 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 		u.outdent()
 		u.emit("}")
 
-	case *regexNode:
-		u.emit("/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/")
-
 	case *patternConstNode:
 		if v.name != "" {
 			u.emit("const " + v.name)

@@ -127,7 +127,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		}
 		return nil
 
-	case *regexNode:
+	case *patternConstNode:
 		re, err := regexp.Compile(n.pattern)
 		if err != nil {
 			c.errorf(n.Pos(), "%s", err)
@@ -163,7 +163,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.name)
 			return nil
 		}
-		rn := n.sym.Binding.(*regexNode)
+		rn := n.sym.Binding.(*patternConstNode)
 		// rn.addr contains the index of the regular expression object,
 		// which correlates to storage on the re slice
 		c.emit(instr{push, rn.addr})

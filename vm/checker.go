@@ -80,8 +80,18 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			if sym := c.scope.Lookup(n.name, VarSymbol); sym != nil {
 				glog.Infof("found sym %v", sym)
 				n.sym = sym
+			} else if sym := c.scope.Lookup(n.name, PatternSymbol); sym != nil {
+				glog.Infof("Found Sym %v", sym)
+				n.sym = sym
 			} else {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\tTry adding `counter %s' to the top of the program.", n.name, n.name))
+				// Apply a terribly bad heuristic to choose a suggestion.
+				sug := fmt.Sprintf("Try adding `counter %s' to the top of the program.", n.name)
+				if n.name == strings.ToUpper(n.name) {
+					// If the string is all uppercase, pretend it was a const
+					// pattern because that's what the docs do.
+					sug = fmt.Sprintf("Try adding `const %s /.../' earlier in the program.", n.name)
+				}
+				c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\t%s", n.name, sug))
 				return nil
 			}
 		}
@@ -106,33 +116,16 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			return nil
 		}
 
-	case *delNode:
-		Walk(c, n.n)
-
-	case *regexNode:
-		if re, err := syntax.Parse(n.pattern, syntax.Perl); err != nil {
-			c.errors.Add(n.Pos(), fmt.Sprintf(err.Error()))
-			return nil
-		} else {
-			n.re_ast = re
-			// We reserve the names of the capturing groups as declarations
-			// of those symbols, so that future CAPREF tokens parsed can
-			// retrieve their value.  By recording them in the symbol table, we
-			// can warn the user about unknown capture group references.
-			for i := 1; i <= re.MaxCap(); i++ {
-				sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
-				sym.Type = inferCaprefType(re, i)
-				sym.Binding = n
-				sym.Addr = i
-				if alt := c.scope.Insert(sym); alt != nil {
-					c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
-					return nil
-				}
-			}
-			for i, capref := range re.CapNames() {
-				if capref != "" {
-					sym := NewSymbol(capref, CaprefSymbol, n.Pos())
-					sym.Type = inferCaprefType(re, i)
+	case *patternConstNode:
+		if n.name == "" {
+			if n.reAst, n.reError = syntax.Parse(n.pattern, syntax.Perl); n.reError == nil {
+				// We reserve the names of the capturing groups as declarations
+				// of those symbols, so that future CAPREF tokens parsed can
+				// retrieve their value.  By recording them in the symbol table, we
+				// can warn the user about unknown capture group references.
+				for i := 1; i <= n.reAst.MaxCap(); i++ {
+					sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
+					sym.Type = inferCaprefType(n.reAst, i)
 					sym.Binding = n
 					sym.Addr = i
 					if alt := c.scope.Insert(sym); alt != nil {
@@ -140,8 +133,30 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 						return nil
 					}
 				}
+				for i, capref := range n.reAst.CapNames() {
+					if capref != "" {
+						sym := NewSymbol(capref, CaprefSymbol, n.Pos())
+						sym.Type = inferCaprefType(n.reAst, i)
+						sym.Binding = n
+						sym.Addr = i
+						if alt := c.scope.Insert(sym); alt != nil {
+							c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
+							return nil
+						}
+					}
+				}
 			}
+			break
 		}
+		n.sym = NewSymbol(n.name, PatternSymbol, &n.pos)
+		if alt := c.scope.Insert(n.sym); alt != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", n.name, alt.Pos))
+			return nil
+		}
+
+	case *delNode:
+		Walk(c, n.n)
+
 	}
 	return c
 }
@@ -161,6 +176,16 @@ func (c *checker) VisitAfter(node astNode) {
 		c.scope = n.s.Parent
 
 	case *condNode:
+		switch v := n.cond.(type) {
+		case *patternConstNode:
+			// Emit the regex errors if the top of the pattern subtree errored.
+			if v.reError != nil {
+				glog.Infof("asdfasdffds ")
+				c.errors.Add(n.cond.Pos(), fmt.Sprintf(v.reError.Error()))
+				return
+			}
+		}
+		// Pop the scope
 		c.scope = n.s.Parent
 
 	case *binaryExprNode:

@@ -6,6 +6,7 @@ package vm
 
 import (
     "github.com/google/mtail/metrics"
+    "github.com/golang/glog"
 )
 
 %}
@@ -102,7 +103,8 @@ stmt
   }
   | CONST ID regex_pattern
   {
-    $$ = &patternConstNode{mtaillex.(*parser).t.pos, $3, $2}
+    glog.Infof("pattern const node is at %v", mtaillex.(*parser).t.pos)
+    $$ = &patternConstNode{pos: mtaillex.(*parser).t.pos, pattern: $3, name: $2}
   }
   | DEL postfix_expr
   {
@@ -311,7 +313,8 @@ primary_expr
   }
   | regex_pattern
   {
-    $$ = &patternConstNode{pos:mtaillex.(*parser).t.pos, pattern: $1}
+    pos := MergePosition(&mtaillex.(*parser).pos, &mtaillex.(*parser).endPos)
+    $$ = &patternConstNode{pos: *pos, pattern: $1}
   }
   | OTHERWISE
   {
@@ -386,9 +389,10 @@ arg_expr_list
   ;
 
 regex_pattern
-  : DIV in_regex REGEX DIV
+  : mark_pos DIV in_regex REGEX DIV
   {
-    $$ = $3
+    mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
+    $$ = $4
   }
   ;
 
@@ -503,8 +507,9 @@ decoration_statement
 // mark_pos is an epsilon (marker nonterminal) that records the current token
 // position as the parser position.
 mark_pos
-  :
+  : /* empty */
   {
+    glog.V(2).Infof("position marked at %v", mtaillex.(*parser).t.pos)
     mtaillex.(*parser).pos = mtaillex.(*parser).t.pos
   }
   ;
@@ -512,7 +517,7 @@ mark_pos
 // in_regex is a marker nonterminal that tells the parser and lexer it is now
 // in a regular expression
 in_regex
-  :
+  :  /* empty */
   {
     mtaillex.(*parser).inRegex()
   }

@@ -67,7 +67,7 @@ func Walk(v Visitor, node astNode) {
 	case *convNode:
 		Walk(v, n.n)
 
-	case *regexNode, *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *patternConstNode, *nextNode, *otherwiseNode, *delNode:
+	case *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *patternConstNode, *nextNode, *otherwiseNode, *delNode:
 		// These nodes are terminals, thus have no children to walk.
 
 	default:

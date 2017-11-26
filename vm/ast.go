@@ -65,22 +65,6 @@ func (n *condNode) Type() Type {
 	return None
 }
 
-type regexNode struct {
-	astNode
-	pos     position
-	pattern string
-	addr    int
-	re_ast  *syntax.Regexp
-}
-
-func (n *regexNode) Pos() *position {
-	return &n.pos
-}
-
-func (n *regexNode) Type() Type {
-	return None
-}
-
 type idNode struct {
 	pos  position
 	name string
@@ -270,7 +254,11 @@ func (n *floatConstNode) Type() Type {
 type patternConstNode struct {
 	pos     position
 	pattern string
-	name    string // Optional name of the pattern
+	name    string  // Optional name of the pattern
+	sym     *Symbol // Optional Symbol for a named pattern
+	addr    int
+	reAst   *syntax.Regexp
+	reError error
 }
 
 func (n *patternConstNode) Pos() *position {

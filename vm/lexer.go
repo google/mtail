@@ -170,6 +170,7 @@ func (l *lexer) nextToken() token {
 // emit passes a token to the client.
 func (l *lexer) emit(kind lexeme) {
 	pos := position{l.name, l.line, l.startcol, l.col - 1}
+	glog.V(2).Infof("Emitting %v at %v", kind, pos)
 	l.tokens <- token{kind, l.text, pos}
 	// Reset the current token
 	l.text = ""
@@ -540,6 +541,7 @@ func lexRegex(l *lexer) stateFn {
 	// Exit regex mode when leaving this function.
 	defer func() {
 		glog.V(2).Info("Exiting regex")
+		glog.V(2).Infof("Regex at startcol %d, col %d line %d", l.startcol, l.col, l.line)
 		l.inRegex = false
 	}()
 Loop:
