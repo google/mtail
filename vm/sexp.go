@@ -108,6 +108,8 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 			s.emit("=")
 		case MOD:
 			s.emit("%")
+		default:
+			s.emit(fmt.Sprintf("Unexpected op: %v", v.op))
 		}
 		s.newline()
 		s.indent()
