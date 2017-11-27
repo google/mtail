@@ -246,13 +246,9 @@ additive_expr
 
 add_op
   : PLUS
-  {
-    $$ = $1
-  }
+  { $$ = $1 }
   | MINUS
-  {
-    $$ = $1
-  }
+  { $$ = $1 }
   ;
 
 multiplicative_expr
@@ -268,28 +264,20 @@ multiplicative_expr
 
 mul_op
   : MUL
-  {
-    $$ = $1
-  }
+  { $$ = $1 }
   | DIV
-  {
-    $$ = $1
-  }
+  { $$ = $1 }
   | MOD
   {
     $$ = $1
   }
   | POW
-  {
-    $$ = $1
-  }
+  { $$ = $1 }
   ;
 
 unary_expr
   : postfix_expr
-  {
-    $$ = $1
-  }
+  { $$ = $1 }
   | NOT unary_expr
   {
     $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $2, op: $1}
