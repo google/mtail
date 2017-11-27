@@ -32,6 +32,7 @@ var lexemeName = map[lexeme]string{
 	PLUS:         "PLUS",
 	MUL:          "MUL",
 	DIV:          "DIV",
+	MOD:          "MOD",
 	POW:          "POW",
 	SHL:          "SHL",
 	SHR:          "SHR",
@@ -67,6 +68,7 @@ var lexemeName = map[lexeme]string{
 	DEL:          "DEL",
 	INTLITERAL:   "INTLITERAL",
 	FLOATLITERAL: "FLOATLITERAL",
+	NL:           "NL",
 }
 
 func (t lexeme) String() string {

@@ -276,7 +276,7 @@ func (c *checker) VisitAfter(node astNode) {
 			}
 
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator in node %#v", n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %v in node %#v", n.op, n))
 			n.SetType(Error)
 			return
 		}
