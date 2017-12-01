@@ -5,7 +5,7 @@ package vm
 
 import "fmt"
 
-// a Visitor's VisitBefore method is invoked for each node encountered by Walk.
+// Visitor's VisitBefore method is invoked for each node encountered by Walk.
 // If the result Visitor v is not nil, Walk visits each of the children of that
 // node with v.  VisitAfter is called on n at the end.
 type Visitor interface {
