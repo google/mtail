@@ -34,7 +34,7 @@ var checkerInvalidPrograms = []struct {
 		[]string{"undefined identifier:1:6: Identifier `x' not declared.", "\tTry adding `counter x' to the top of the program."},
 	},
 
-	{"invalid regex",
+	{"invalid regex 1",
 		"/foo(/ {}\n",
 		[]string{"invalid regex:1:1-6: error parsing regexp: missing closing ): `foo(`"}},
 
@@ -120,6 +120,9 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			}
 			err = Check(ast)
 			if err == nil {
+				s := Sexp{}
+				s.emitTypes = true
+				t.Log(s.Dump(ast))
 				t.Fatal("check didn't fail")
 			}
 
