@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -136,6 +137,36 @@ func TestExamplePrograms(t *testing.T) {
 				t.Logf(" Golden metrics: %s", golden_store.Metrics)
 				t.Logf("Program metrics: %s", store.Metrics)
 			}
+		})
+	}
+}
+
+// This test only compiles examples, but has coverage over all examples
+// provided.  This ensures we ship at least syntactically correct examples.
+func TestCompileExamplePrograms(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	matches, err := filepath.Glob("examples/*.mtail")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, match := range matches {
+		t.Run(match, func(t *testing.T) {
+			w := watcher.NewFakeWatcher()
+			s := metrics.NewStore()
+			fs := &afero.OsFs{}
+			logs := []string{tc.logfile}
+			o := mtail.Options{Progs: tc.programfile, LogPathPatterns: logs, W: w, FS: fs, Store: store}
+			o.CompileOnly = true
+			o.OmitMetricSource = true
+			o.DumpAstTypes = true
+			o.DumpBytecode = true
+			mtail, err := mtail.New(o)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Log("Good.")
 		})
 	}
 }
