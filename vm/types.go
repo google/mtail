@@ -432,3 +432,13 @@ func groupOnlyMatches(re *syntax.Regexp, s string) bool {
 	}
 	return true
 }
+
+// isErrorType indicates that a given type is the result of a type error.
+func isErrorType(t Type) bool {
+	if o, ok := t.(*TypeOperator); ok {
+		if o.Name == "Error" {
+			return true
+		}
+	}
+	return false
+}

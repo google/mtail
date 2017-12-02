@@ -161,15 +161,6 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 	return c
 }
 
-func isErrorType(t Type) bool {
-	if o, ok := t.(*TypeOperator); ok {
-		if o.Name == "Error" {
-			return true
-		}
-	}
-	return false
-}
-
 func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *stmtlistNode:
