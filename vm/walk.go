@@ -58,7 +58,7 @@ func Walk(v Visitor, node astNode) {
 		Walk(v, n.index)
 		Walk(v, n.lhs)
 
-	case *defNode:
+	case *decoDefNode:
 		Walk(v, n.block)
 
 	case *decoNode:
