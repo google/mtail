@@ -78,10 +78,10 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 	case *idNode:
 		if n.sym == nil {
 			if sym := c.scope.Lookup(n.name, VarSymbol); sym != nil {
-				glog.Infof("found sym %v", sym)
+				glog.V(2).Infof("found sym %v", sym)
 				n.sym = sym
 			} else if sym := c.scope.Lookup(n.name, PatternSymbol); sym != nil {
-				glog.Infof("Found Sym %v", sym)
+				glog.V(2).Infof("Found Sym %v", sym)
 				n.sym = sym
 			} else {
 				// Apply a terribly bad heuristic to choose a suggestion.
@@ -117,13 +117,13 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		}
 
 	case *patternFragmentDefNode:
-		glog.Info("patterndef")
 		n.sym = NewSymbol(n.name, PatternSymbol, &n.pos)
 		if alt := c.scope.Insert(n.sym); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", n.name, alt.Pos))
 			return nil
 		}
 		n.sym.Binding = n
+		n.sym.Type = Pattern
 
 	case *delNode:
 		Walk(c, n.n)
@@ -389,7 +389,7 @@ func (c *checker) VisitAfter(node astNode) {
 				// won't parse themselves.  Zulu Timezones in the layout need
 				// to be converted to offset in the parsed time.
 				timeStr := strings.Replace(strings.Replace(f.text, "_", "", -1), "Z", "+", -1)
-				glog.Infof("time_str is %q", timeStr)
+				glog.V(2).Infof("time_str is %q", timeStr)
 				_, err := time.Parse(f.text, timeStr)
 				if err != nil {
 					glog.Infof("time.Parse(%q, %q) failed: %s", f.text, timeStr, err)
@@ -418,7 +418,6 @@ func (c *checker) VisitAfter(node astNode) {
 			return
 		}
 		n.pattern = pe.pattern
-		c.checkRegex(n.pattern, n)
 
 	}
 }
