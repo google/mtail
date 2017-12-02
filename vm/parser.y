@@ -24,14 +24,14 @@ import (
 }
 
 %type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement
-%type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr
-%type <n> declaration declarator definition decoration_statement
+%type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
+%type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
+%type <n> declaration declarator definition decoration_statement regex_pattern
 %type <kind> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
 %type <op> rel_op shift_op bitwise_op logical_op add_op mul_op
-%type <text> regex_pattern
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
@@ -57,6 +57,7 @@ import (
 %token <op> LT GT LE GE EQ NE
 %token <op> BITAND XOR BITOR NOT AND OR
 %token <op> ADD_ASSIGN ASSIGN
+%token <op> CONCAT
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
 %token COMMA
@@ -101,7 +102,7 @@ stmt
   {
     $$ = &nextNode{tokenpos(mtaillex)}
   }
-  | CONST ID regex_pattern
+  | CONST ID concat_expr
   {
     $$ = &patternFragmentDefNode{pos: tokenpos(mtaillex), name: $2, expr: $3}
   }
@@ -163,7 +164,13 @@ assign_expr
 logical_expr
   : bitwise_expr
   { $$ = $1 }
+  | pattern_expr
+  { $$ = $1 }
   | logical_expr logical_op opt_nl bitwise_expr
+  {
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+  }
+  | logical_expr logical_op opt_nl pattern_expr
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
@@ -243,6 +250,28 @@ additive_expr
   }
   ;
 
+pattern_expr
+  : concat_expr
+  {
+    $$ = &patternExprNode{expr: $1}
+  }
+  ;
+
+concat_expr
+  : regex_pattern
+  {
+    $$ = $1
+  }
+  | concat_expr PLUS opt_nl regex_pattern
+  {
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: CONCAT}
+  }
+  | concat_expr PLUS opt_nl id_expr
+  {
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: CONCAT}
+  }
+  ;
+
 add_op
   : PLUS
   { $$ = $1 }
@@ -252,9 +281,7 @@ add_op
 
 multiplicative_expr
   : unary_expr
-  {
-    $$ = $1
-  }
+  { $$ = $1 }
   | multiplicative_expr mul_op opt_nl unary_expr
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
@@ -267,9 +294,7 @@ mul_op
   | DIV
   { $$ = $1 }
   | MOD
-  {
-    $$ = $1
-  }
+  { $$ = $1 }
   | POW
   { $$ = $1 }
   ;
@@ -284,9 +309,7 @@ unary_expr
 
 postfix_expr
   : primary_expr
-  {
-    $$ = $1
-  }
+  { $$ = $1 }
   | postfix_expr INC
   {
     $$ = &unaryExprNode{pos: tokenpos(mtaillex), expr: $1, op: $2}
@@ -295,14 +318,7 @@ postfix_expr
 
 primary_expr
   : indexed_expr
-  {
-    $$ = $1
-  }
-  | regex_pattern
-  {
-    pos := MergePosition(&mtaillex.(*parser).pos, &mtaillex.(*parser).endPos)
-    $$ = &patternConstNode{pos: *pos, pattern: $1}
-  }
+  { $$ = $1 }
   | OTHERWISE
   {
     $$ = &otherwiseNode{tokenpos(mtaillex)}

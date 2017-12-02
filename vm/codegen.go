@@ -127,16 +127,16 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		}
 		return nil
 
-	case *patternConstNode:
+	case *patternExprNode:
 		re, err := regexp.Compile(n.pattern)
 		if err != nil {
 			c.errorf(n.Pos(), "%s", err)
 			return nil
 		}
 		c.obj.re = append(c.obj.re, re)
-		// Store the location of this regular expression in the regexNode
-		n.addr = len(c.obj.re) - 1
-		c.emit(instr{match, n.addr})
+		// Store the location of this regular expression in the patterNode
+		n.index = len(c.obj.re) - 1
+		c.emit(instr{match, n.index})
 		c.emit(instr{op: jnm})
 
 	case *stringConstNode:
@@ -163,10 +163,10 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.name)
 			return nil
 		}
-		rn := n.sym.Binding.(*patternConstNode)
-		// rn.addr contains the index of the regular expression object,
-		// which correlates to storage on the re slice
-		c.emit(instr{push, rn.addr})
+		rn := n.sym.Binding.(*patternExprNode)
+		// rn.index contains the index of the compiled regular expression object
+		// in the re slice of the object code
+		c.emit(instr{push, rn.index})
 		// n.sym.addr is the capture group offset
 		c.emit(instr{capref, n.sym.Addr})
 

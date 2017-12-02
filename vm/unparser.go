@@ -80,10 +80,11 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 		u.outdent()
 		u.emit("}")
 
+	case *patternFragmentDefNode:
+		u.emit("const " + v.name + " ")
+		Walk(u, v.expr)
+
 	case *patternConstNode:
-		if v.name != "" {
-			u.emit("const " + v.name)
-		}
 		u.emit("/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/")
 
 	case *binaryExprNode:
@@ -133,6 +134,8 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 			u.emit(" += ")
 		case MOD:
 			u.emit(" % ")
+		case CONCAT:
+			u.emit(" + ")
 		}
 		Walk(u, v.rhs)
 
@@ -219,6 +222,9 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 
 	case *convNode:
 		Walk(u, v.n)
+
+	case *patternExprNode:
+		Walk(u, v.expr)
 
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))

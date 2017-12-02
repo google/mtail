@@ -58,11 +58,11 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	s.indent()
 	switch v := n.(type) {
 
+	case *patternFragmentDefNode:
+		s.emit(fmt.Sprintf("const %q ", v.name))
+
 	case *patternConstNode:
-		if v.name != "" {
-			s.emit(fmt.Sprintf("const %q ", v.name))
-		}
-		s.emit(fmt.Sprintf("/%s/", v.pattern))
+		s.emit(fmt.Sprintf("%q", v.pattern))
 
 	case *binaryExprNode:
 		switch v.op {
@@ -108,6 +108,8 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 			s.emit("=")
 		case MOD:
 			s.emit("%")
+		case CONCAT:
+			s.emit("++")
 		default:
 			s.emit(fmt.Sprintf("Unexpected op: %v", v.op))
 		}
@@ -164,10 +166,10 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	case *delNode:
 		s.emit("del")
 
-	case *indexedExprNode, *stmtlistNode, *exprlistNode, *condNode, *defNode, *decoNode: // normal walk
+	case *indexedExprNode, *stmtlistNode, *exprlistNode, *condNode, *defNode, *decoNode, *patternExprNode: // normal walk
 
 	default:
-		panic(fmt.Sprintf("unparser found undefined type %T", n))
+		panic(fmt.Sprintf("sexp found undefined type %T", n))
 	}
 	return s
 }

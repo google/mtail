@@ -69,6 +69,7 @@ var lexemeName = map[lexeme]string{
 	INTLITERAL:   "INTLITERAL",
 	FLOATLITERAL: "FLOATLITERAL",
 	NL:           "NL",
+	CONCAT:       "CONCAT",
 }
 
 func (t lexeme) String() string {
