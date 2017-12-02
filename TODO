@@ -10,3 +10,9 @@ no trailing newline in parser test, requires changes to expr stmt
 parse tree/ast testing, s-expressions to render expected?
 
 mapping between progs and logs to reduce wasted processing
+
+~ and !~ 
+
+define a capref in the same expression it's used:
+
+/(?<x>.*)/ && x > 0
