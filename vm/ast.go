@@ -4,7 +4,6 @@
 package vm
 
 import (
-	"regexp/syntax"
 	"sync"
 
 	"github.com/google/mtail/metrics"
@@ -62,22 +61,6 @@ func (n *condNode) Pos() *position {
 }
 
 func (n *condNode) Type() Type {
-	return None
-}
-
-type regexNode struct {
-	astNode
-	pos     position
-	pattern string
-	addr    int
-	re_ast  *syntax.Regexp
-}
-
-func (n *regexNode) Pos() *position {
-	return &n.pos
-}
-
-func (n *regexNode) Type() Type {
 	return None
 }
 
@@ -264,6 +247,52 @@ func (n *floatConstNode) Pos() *position {
 }
 func (n *floatConstNode) Type() Type {
 	return Float
+}
+
+// patternExprNode is the top of a pattern expression
+type patternExprNode struct {
+	expr    astNode
+	pattern string // if not empty, the fully defined pattern after typecheck
+	index   int    // reference to the compiled object offset after codegen
+}
+
+func (n *patternExprNode) Pos() *position {
+	return n.expr.Pos()
+}
+
+func (n *patternExprNode) Type() Type {
+	return Pattern
+}
+
+// patternConstNode holds inline constant pattern fragments
+type patternConstNode struct {
+	pos     position
+	pattern string
+}
+
+func (n *patternConstNode) Pos() *position {
+	return &n.pos
+}
+
+func (n *patternConstNode) Type() Type {
+	return Pattern
+}
+
+// patternDefNode holds a named pattern expression
+type patternFragmentDefNode struct {
+	pos     position
+	name    string
+	expr    astNode
+	sym     *Symbol // Optional Symbol for a named pattern
+	pattern string  // If not empty, contains the complete evaluated pattern of the expr
+}
+
+func (n *patternFragmentDefNode) Pos() *position {
+	return &n.pos
+}
+
+func (n *patternFragmentDefNode) Type() Type {
+	return Pattern
 }
 
 type defNode struct {

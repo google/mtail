@@ -34,9 +34,9 @@ var checkerInvalidPrograms = []struct {
 		[]string{"undefined identifier:1:6: Identifier `x' not declared.", "\tTry adding `counter x' to the top of the program."},
 	},
 
-	{"invalid regex",
+	{"invalid regex 1",
 		"/foo(/ {}\n",
-		[]string{"invalid regex:1:1-6: error parsing regexp: missing closing ): `foo(`"}},
+		[]string{"invalid regex 1:1:1-6: error parsing regexp: missing closing ): `foo(`"}},
 
 	{"invalid regex 2",
 		"/blurg(?P<x.)/ {}\n",
@@ -103,6 +103,10 @@ counter bar by a, b
 `,
 		[]string{
 			"bad strptime format:1:33-53: invalid time format string \"2017-10-16 06:50:25\"", "\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice."}},
+
+	{"undefined const regex",
+		"/foo / + X + / bar/ {}\n",
+		[]string{"undefined const regex:1:10: Identifier `X' not declared.", "\tTry adding `const X /.../' earlier in the program."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
@@ -116,6 +120,9 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			}
 			err = Check(ast)
 			if err == nil {
+				s := Sexp{}
+				s.emitTypes = true
+				t.Log(s.Dump(ast))
 				t.Fatal("check didn't fail")
 			}
 
@@ -124,6 +131,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 				strings.Split(err.Error(), "\n")) // got
 			if diff != "" {
 				t.Errorf("Diff %s", diff)
+				t.Logf("Got: %s", err.Error())
 				s := Sexp{}
 				s.emitTypes = true
 				t.Log(s.Dump(ast))

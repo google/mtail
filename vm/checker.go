@@ -78,10 +78,20 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 	case *idNode:
 		if n.sym == nil {
 			if sym := c.scope.Lookup(n.name, VarSymbol); sym != nil {
-				glog.Infof("found sym %v", sym)
+				glog.V(2).Infof("found sym %v", sym)
+				n.sym = sym
+			} else if sym := c.scope.Lookup(n.name, PatternSymbol); sym != nil {
+				glog.V(2).Infof("Found Sym %v", sym)
 				n.sym = sym
 			} else {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\tTry adding `counter %s' to the top of the program.", n.name, n.name))
+				// Apply a terribly bad heuristic to choose a suggestion.
+				sug := fmt.Sprintf("Try adding `counter %s' to the top of the program.", n.name)
+				if n.name == strings.ToUpper(n.name) {
+					// If the string is all uppercase, pretend it was a const
+					// pattern because that's what the docs do.
+					sug = fmt.Sprintf("Try adding `const %s /.../' earlier in the program.", n.name)
+				}
+				c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\t%s", n.name, sug))
 				return nil
 			}
 		}
@@ -106,53 +116,20 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			return nil
 		}
 
+	case *patternFragmentDefNode:
+		n.sym = NewSymbol(n.name, PatternSymbol, &n.pos)
+		if alt := c.scope.Insert(n.sym); alt != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", n.name, alt.Pos))
+			return nil
+		}
+		n.sym.Binding = n
+		n.sym.Type = Pattern
+
 	case *delNode:
 		Walk(c, n.n)
 
-	case *regexNode:
-		if re, err := syntax.Parse(n.pattern, syntax.Perl); err != nil {
-			c.errors.Add(n.Pos(), fmt.Sprintf(err.Error()))
-			return nil
-		} else {
-			n.re_ast = re
-			// We reserve the names of the capturing groups as declarations
-			// of those symbols, so that future CAPREF tokens parsed can
-			// retrieve their value.  By recording them in the symbol table, we
-			// can warn the user about unknown capture group references.
-			for i := 1; i <= re.MaxCap(); i++ {
-				sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
-				sym.Type = inferCaprefType(re, i)
-				sym.Binding = n
-				sym.Addr = i
-				if alt := c.scope.Insert(sym); alt != nil {
-					c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
-					return nil
-				}
-			}
-			for i, capref := range re.CapNames() {
-				if capref != "" {
-					sym := NewSymbol(capref, CaprefSymbol, n.Pos())
-					sym.Type = inferCaprefType(re, i)
-					sym.Binding = n
-					sym.Addr = i
-					if alt := c.scope.Insert(sym); alt != nil {
-						c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
-						return nil
-					}
-				}
-			}
-		}
 	}
 	return c
-}
-
-func isErrorType(t Type) bool {
-	if o, ok := t.(*TypeOperator); ok {
-		if o.Name == "Error" {
-			return true
-		}
-	}
-	return false
 }
 
 func (c *checker) VisitAfter(node astNode) {
@@ -161,6 +138,7 @@ func (c *checker) VisitAfter(node astNode) {
 		c.scope = n.s.Parent
 
 	case *condNode:
+		// Pop the scope
 		c.scope = n.s.Parent
 
 	case *binaryExprNode:
@@ -250,8 +228,19 @@ func (c *checker) VisitAfter(node astNode) {
 				return
 			}
 
+		case CONCAT:
+			rType = Pattern
+			exprType := Function(rType, rType, rType)
+			astType := Function(lT, rT, NewTypeVariable())
+			err := Unify(exprType, astType)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				n.SetType(Error)
+				return
+			}
+
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator in node %#v", n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %v in node %#v", n.op, n))
 			n.SetType(Error)
 			return
 		}
@@ -400,7 +389,7 @@ func (c *checker) VisitAfter(node astNode) {
 				// won't parse themselves.  Zulu Timezones in the layout need
 				// to be converted to offset in the parsed time.
 				timeStr := strings.Replace(strings.Replace(f.text, "_", "", -1), "Z", "+", -1)
-				glog.Infof("time_str is %q", timeStr)
+				glog.V(2).Infof("time_str is %q", timeStr)
 				_, err := time.Parse(f.text, timeStr)
 				if err != nil {
 					glog.Infof("time.Parse(%q, %q) failed: %s", f.text, timeStr, err)
@@ -410,5 +399,93 @@ func (c *checker) VisitAfter(node astNode) {
 				}
 			}
 		}
+
+	case *patternExprNode:
+		// Evaluate the expression.
+		pe := &patternEvaluator{scope: c.scope, errors: &c.errors}
+		Walk(pe, n)
+		if pe.pattern == "" {
+			return
+		}
+		n.pattern = pe.pattern
+		c.checkRegex(pe.pattern, n)
+
+	case *patternFragmentDefNode:
+		// Evaluate the expression.
+		pe := &patternEvaluator{scope: c.scope, errors: &c.errors}
+		Walk(pe, n.expr)
+		if pe.pattern == "" {
+			return
+		}
+		n.pattern = pe.pattern
+
 	}
+}
+
+func (c *checker) checkRegex(pattern string, n astNode) {
+	if reAst, err := syntax.Parse(pattern, syntax.Perl); err == nil {
+		// We reserve the names of the capturing groups as declarations
+		// of those symbols, so that future CAPREF tokens parsed can
+		// retrieve their value.  By recording them in the symbol table, we
+		// can warn the user about unknown capture group references.
+		for i := 1; i <= reAst.MaxCap(); i++ {
+			sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
+			sym.Type = inferCaprefType(reAst, i)
+			sym.Binding = n
+			sym.Addr = i
+			if alt := c.scope.Insert(sym); alt != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
+				// No return, let this loop collect all errors
+			}
+		}
+		for i, capref := range reAst.CapNames() {
+			if capref != "" {
+				sym := NewSymbol(capref, CaprefSymbol, n.Pos())
+				sym.Type = inferCaprefType(reAst, i)
+				sym.Binding = n
+				sym.Addr = i
+				if alt := c.scope.Insert(sym); alt != nil {
+					c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
+					// No return, let this loop collect all errors
+				}
+			}
+		}
+	} else {
+		c.errors.Add(n.Pos(), err.Error())
+		return
+	}
+}
+
+type patternEvaluator struct {
+	scope   *Scope
+	errors  *ErrorList
+	pattern string
+}
+
+func (p *patternEvaluator) VisitBefore(n astNode) Visitor {
+	switch v := n.(type) {
+	case *binaryExprNode:
+		if v.op != CONCAT {
+			p.errors.Add(v.Pos(), fmt.Sprintf("internal error: Invalid operator in concatenation: %v", v))
+			return nil
+		}
+	case *patternConstNode:
+		p.pattern += v.pattern
+	case *idNode:
+		// Already looked up sym, if still nil undefined.
+		if v.sym == nil {
+			return nil
+		}
+		idPattern := v.sym.Binding.(*patternFragmentDefNode).pattern
+		if idPattern == "" {
+			idEvaluator := &patternEvaluator{scope: p.scope}
+			Walk(idEvaluator, v.sym.Binding.(*patternFragmentDefNode))
+			idPattern = idEvaluator.pattern
+		}
+		p.pattern += idPattern
+	}
+	return p
+}
+
+func (p *patternEvaluator) VisitAfter(n astNode) {
 }

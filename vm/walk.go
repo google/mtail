@@ -5,7 +5,7 @@ package vm
 
 import "fmt"
 
-// a Visitor's VisitBefore method is invoked for each node encountered by Walk.
+// Visitor's VisitBefore method is invoked for each node encountered by Walk.
 // If the result Visitor v is not nil, Walk visits each of the children of that
 // node with v.  VisitAfter is called on n at the end.
 type Visitor interface {
@@ -22,7 +22,7 @@ func walknodelist(v Visitor, list []astNode) {
 
 func Walk(v Visitor, node astNode) {
 	// Returning nil from VisitBefore signals to Walk that the Visitor has
-	// handled the children of this node.
+	// handled the children of this node.  VisitAfter will not be called.
 	if v := v.VisitBefore(node); v == nil {
 		return
 	}
@@ -67,7 +67,13 @@ func Walk(v Visitor, node astNode) {
 	case *convNode:
 		Walk(v, n.n)
 
-	case *regexNode, *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *nextNode, *otherwiseNode, *delNode:
+	case *patternExprNode:
+		Walk(v, n.expr)
+
+	case *patternFragmentDefNode:
+		Walk(v, n.expr)
+
+	case *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *patternConstNode, *nextNode, *otherwiseNode, *delNode:
 		// These nodes are terminals, thus have no children to walk.
 
 	default:

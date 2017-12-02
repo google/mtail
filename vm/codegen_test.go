@@ -571,12 +571,12 @@ func TestCodegen(t *testing.T) {
 				t.Fatalf("Parse error: %s", err)
 			}
 			err = Check(ast)
-			if err != nil {
-				t.Fatalf("Check error: %s", err)
-			}
 			s := Sexp{}
 			s.emitTypes = true
 			t.Log("Typed AST:\n" + s.Dump(ast))
+			if err != nil {
+				t.Fatalf("Check error: %s", err)
+			}
 			obj, err := CodeGen(tc.name, ast)
 			if err != nil {
 				t.Fatalf("Codegen error:\n%s", err)

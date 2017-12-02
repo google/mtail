@@ -12,11 +12,10 @@ type SymbolKind int
 
 // SymbolKind enumerates the kinds of symbols found in the program text.
 const (
-	VarSymbol    SymbolKind = iota // Variables
-	CaprefSymbol                   // Capture group references
-	DecoSymbol                     // Decorators
-
-	endSymbol
+	VarSymbol     SymbolKind = iota // Variables
+	CaprefSymbol                    // Capture group references
+	DecoSymbol                      // Decorators
+	PatternSymbol                   // Named pattern constants
 )
 
 // Symbol describes a named program object.
