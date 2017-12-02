@@ -150,6 +150,9 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		c.emit(instr{push, n.f})
 
 	case *idNode:
+		if n.sym.Kind != VarSymbol {
+			break
+		}
 		if n.sym == nil || n.sym.Binding == nil {
 			c.errorf(n.Pos(), "No metric bound to identifier %q", n.name)
 			return nil
