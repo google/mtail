@@ -434,7 +434,7 @@ func (v *VM) execute(t *thread, i instr) {
 
 		match, err := compare(a, b, i.opnd.(int))
 		if err != nil {
-			v.errorf("%s", err)
+			v.errorf("%+v", err)
 		}
 
 		t.match = match
