@@ -1,6 +1,12 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
+ifeq ($(TRAVIS),true)
+timeout := 5m
+else
+timeout := 60s
+endif
+
 GOFILES=\
 	exporter/collectd.go\
 	exporter/export.go\
@@ -83,7 +89,7 @@ check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 60s -race ./... ./testdata
+	go test -v -timeout ${timeout} -race ./... ./testdata
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
