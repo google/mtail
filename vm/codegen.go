@@ -173,7 +173,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		// n.sym.addr is the capture group offset
 		c.emit(instr{capref, n.sym.Addr})
 
-	case *defNode:
+	case *decoDefNode:
 		// Do nothing, defs are inlined.
 		return nil
 

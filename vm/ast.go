@@ -295,18 +295,18 @@ func (n *patternFragmentDefNode) Type() Type {
 	return Pattern
 }
 
-type defNode struct {
+type decoDefNode struct {
 	pos   position
 	name  string
 	block astNode
 	sym   *Symbol
 }
 
-func (n *defNode) Pos() *position {
+func (n *decoDefNode) Pos() *position {
 	return MergePosition(&n.pos, n.block.Pos())
 }
 
-func (n *defNode) Type() Type {
+func (n *decoDefNode) Type() Type {
 	if n.sym != nil {
 		return n.sym.Type
 	}
@@ -317,7 +317,7 @@ type decoNode struct {
 	pos   position
 	name  string
 	block astNode
-	def   *defNode
+	def   *decoDefNode
 }
 
 func (n *decoNode) Pos() *position {

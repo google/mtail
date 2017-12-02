@@ -498,7 +498,7 @@ as_spec
 definition
   : mark_pos DEF ID compound_statement
   {
-    $$ = &defNode{pos: markedpos(mtaillex), name: $3, block: $4}
+    $$ = &decoDefNode{pos: markedpos(mtaillex), name: $3, block: $4}
   }
   ;
 

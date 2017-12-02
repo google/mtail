@@ -193,7 +193,7 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 	case *floatConstNode:
 		u.emit(strconv.FormatFloat(v.f, 'g', -1, 64))
 
-	case *defNode:
+	case *decoDefNode:
 		u.emit(fmt.Sprintf("def %s {", v.name))
 		u.newline()
 		u.indent()

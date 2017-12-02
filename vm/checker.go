@@ -96,7 +96,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			}
 		}
 
-	case *defNode:
+	case *decoDefNode:
 		n.sym = NewSymbol(n.name, DecoSymbol, &n.pos)
 		(*n.sym).Binding = n
 		if alt := c.scope.Insert(n.sym); alt != nil {
@@ -110,7 +110,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.name))
 				return nil
 			}
-			n.def = sym.Binding.(*defNode)
+			n.def = sym.Binding.(*decoDefNode)
 		} else {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.name, n.name))
 			return nil
