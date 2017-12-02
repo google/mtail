@@ -36,7 +36,7 @@ var checkerInvalidPrograms = []struct {
 
 	{"invalid regex 1",
 		"/foo(/ {}\n",
-		[]string{"invalid regex:1:1-6: error parsing regexp: missing closing ): `foo(`"}},
+		[]string{"invalid regex 1:1:1-6: error parsing regexp: missing closing ): `foo(`"}},
 
 	{"invalid regex 2",
 		"/blurg(?P<x.)/ {}\n",
@@ -131,6 +131,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 				strings.Split(err.Error(), "\n")) // got
 			if diff != "" {
 				t.Errorf("Diff %s", diff)
+				t.Logf("Got: %s", err.Error())
 				s := Sexp{}
 				s.emitTypes = true
 				t.Log(s.Dump(ast))
