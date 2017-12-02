@@ -29,8 +29,7 @@ type parser struct {
 	errors ErrorList
 	l      *lexer
 	t      token    // Most recently lexed token.
-	pos    position // Maybe contains the position of the start of a node when the parser is doing preprocessor concatenation.
-	endPos position // Maybe contains the position of the end of a node when the parser is doing preprocessor concatenation.
+	pos    position // Optionally contains the position of the start of a production
 }
 
 func newParser(name string, input io.Reader) *parser {

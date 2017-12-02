@@ -99,16 +99,15 @@ stmt
   { $$ = $1 }
   | NEXT
   {
-    $$ = &nextNode{mtaillex.(*parser).t.pos}
+    $$ = &nextNode{tokenpos(mtaillex)}
   }
   | CONST ID regex_pattern
   {
-    glog.Infof("pattern const node is at %v", mtaillex.(*parser).t.pos)
-    $$ = &patternConstNode{pos: mtaillex.(*parser).t.pos, pattern: $3, name: $2}
+    $$ = &patternFragmentDefNode{pos: tokenpos(mtaillex), name: $2, expr: $3}
   }
   | DEL postfix_expr
   {
-    $$ = &delNode{mtaillex.(*parser).t.pos, $2}
+    $$ = &delNode{tokenpos(mtaillex), $2}
   }
   ;
 
@@ -280,7 +279,7 @@ unary_expr
   { $$ = $1 }
   | NOT unary_expr
   {
-    $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $2, op: $1}
+    $$ = &unaryExprNode{pos: tokenpos(mtaillex), expr: $2, op: $1}
   }
 
 postfix_expr
@@ -290,7 +289,7 @@ postfix_expr
   }
   | postfix_expr INC
   {
-    $$ = &unaryExprNode{pos: mtaillex.(*parser).t.pos, expr: $1, op: $2}
+    $$ = &unaryExprNode{pos: tokenpos(mtaillex), expr: $1, op: $2}
   }
   ;
 
@@ -306,27 +305,27 @@ primary_expr
   }
   | OTHERWISE
   {
-    $$ = &otherwiseNode{mtaillex.(*parser).t.pos}
+    $$ = &otherwiseNode{tokenpos(mtaillex)}
   }
   | BUILTIN LPAREN RPAREN
   {
-    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: nil}
+    $$ = &builtinNode{pos: tokenpos(mtaillex), name: $1, args: nil}
   }
   | BUILTIN LPAREN arg_expr_list RPAREN
   {
-    $$ = &builtinNode{pos: mtaillex.(*parser).t.pos, name: $1, args: $3}
+    $$ = &builtinNode{pos: tokenpos(mtaillex), name: $1, args: $3}
   }
   | CAPREF
   {
-    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, false, nil}
+    $$ = &caprefNode{tokenpos(mtaillex), $1, false, nil}
   }
   | CAPREF_NAMED
   {
-    $$ = &caprefNode{mtaillex.(*parser).t.pos, $1, true, nil}
+    $$ = &caprefNode{tokenpos(mtaillex), $1, true, nil}
   }
   | STRING
   {
-    $$ = &stringConstNode{mtaillex.(*parser).t.pos, $1}
+    $$ = &stringConstNode{tokenpos(mtaillex), $1}
   }
   | LPAREN expr RPAREN
   {
@@ -334,11 +333,11 @@ primary_expr
   }
   | INTLITERAL
   {
-    $$ = &intConstNode{mtaillex.(*parser).t.pos, $1}
+    $$ = &intConstNode{tokenpos(mtaillex), $1}
   }
   | FLOATLITERAL
   {
-    $$ = &floatConstNode{mtaillex.(*parser).t.pos, $1}
+    $$ = &floatConstNode{tokenpos(mtaillex), $1}
   }
   ;
 
@@ -359,7 +358,7 @@ indexed_expr
 id_expr
   : ID
     {
-      $$ = &idNode{mtaillex.(*parser).t.pos, $1, nil}
+      $$ = &idNode{tokenpos(mtaillex), $1, nil}
     }
     ;
 
@@ -379,8 +378,10 @@ arg_expr_list
 regex_pattern
   : mark_pos DIV in_regex REGEX DIV
   {
-    mtaillex.(*parser).endPos = mtaillex.(*parser).t.pos
-    $$ = $4
+    mp := markedpos(mtaillex)
+    tp := tokenpos(mtaillex)
+    pos := MergePosition(&mp, &tp)
+    $$ = &patternConstNode{pos: *pos, pattern: $4}
   }
   ;
 
@@ -418,11 +419,11 @@ declarator
   }
   | ID
   {
-    $$ = &declNode{pos: mtaillex.(*parser).t.pos, name: $1}
+    $$ = &declNode{pos: tokenpos(mtaillex), name: $1}
   }
   | STRING
   {
-    $$ = &declNode{pos: mtaillex.(*parser).t.pos, name: $1}
+    $$ = &declNode{pos: tokenpos(mtaillex), name: $1}
   }
   ;
 
@@ -481,24 +482,25 @@ as_spec
 definition
   : mark_pos DEF ID compound_statement
   {
-    $$ = &defNode{pos: mtaillex.(*parser).pos, name: $3, block: $4}
+    $$ = &defNode{pos: markedpos(mtaillex), name: $3, block: $4}
   }
   ;
 
 decoration_statement
   : mark_pos DECO compound_statement
   {
-    $$ = &decoNode{mtaillex.(*parser).pos, $2, $3, nil}
+    $$ = &decoNode{markedpos(mtaillex), $2, $3, nil}
   }
   ;
 
 // mark_pos is an epsilon (marker nonterminal) that records the current token
-// position as the parser position.
+// position as the parser position.  Use markerpos() to fetch the position and
+// merge with tokenpos for exotic productions.
 mark_pos
   : /* empty */
   {
-    glog.V(2).Infof("position marked at %v", mtaillex.(*parser).t.pos)
-    mtaillex.(*parser).pos = mtaillex.(*parser).t.pos
+    glog.V(2).Infof("position marked at %v", tokenpos(mtaillex))
+    mtaillex.(*parser).pos = tokenpos(mtaillex)
   }
   ;
 
@@ -520,3 +522,14 @@ opt_nl
   ;
 
 %%
+
+//  tokenpos returns the position of the current token.
+func tokenpos(mtaillex mtailLexer) position {
+    return mtaillex.(*parser).t.pos
+}
+
+// markedpos returns the position recorded from the most recent mark_pos
+// production.
+func markedpos(mtaillex mtailLexer) position {
+    return mtaillex.(*parser).pos
+}
