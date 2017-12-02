@@ -151,13 +151,12 @@ func TestCompileExamplePrograms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, match := range matches {
-		t.Run(match, func(t *testing.T) {
+	for _, tc := range matches {
+		t.Run(tc, func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
 			fs := &afero.OsFs{}
-			logs := []string{tc.logfile}
-			o := mtail.Options{Progs: tc.programfile, LogPathPatterns: logs, W: w, FS: fs, Store: store}
+			o := mtail.Options{Progs: tc, W: w, FS: fs, Store: s}
 			o.CompileOnly = true
 			o.OmitMetricSource = true
 			o.DumpAstTypes = true
@@ -167,6 +166,7 @@ func TestCompileExamplePrograms(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Log("Good.")
+			mtail.Close()
 		})
 	}
 }
