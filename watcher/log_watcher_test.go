@@ -174,6 +174,9 @@ func TestLogWatcherAddError(t *testing.T) {
 }
 
 func TestWatcherErrors(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping log watcher test in short mode")
+	}
 	orig, err := strconv.ParseInt(expvar.Get("log_watcher_error_count").String(), 10, 64)
 	if err != nil {
 		t.Fatalf("couldn't convert expvar %q", expvar.Get("log_watcher_error_count").String())
