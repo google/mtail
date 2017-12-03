@@ -165,7 +165,6 @@ func TestCompileExamplePrograms(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			t.Log("Good.")
 			mtail.Close()
 		})
 	}
