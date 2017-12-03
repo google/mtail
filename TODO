@@ -13,6 +13,10 @@ mapping between progs and logs to reduce wasted processing
 
 ~ and !~ 
 
-define a capref in the same expression it's used:
+define a capref in the same expression it's used: e.g.
+  /(?<x>.*)/ && x > 0
 
-/(?<x>.*)/ && x > 0
+conversion in vm.compare() crashes on $var == "string" when $var is
+    float (logical.mtail, input line "12.8") -- 
+
+codegen for conditional and jmp is weird for 2-deep trees
