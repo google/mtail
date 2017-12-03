@@ -20,3 +20,17 @@ conversion in vm.compare() crashes on $var == "string" when $var is
     float (logical.mtail, input line "12.8") -- 
 
 codegen for conditional and jmp is weird for 2-deep trees
+
+Using a const pattern fragment as the first or only in a pattern expr is a
+    parse error.
+	{"concat expr 1", `
+/bar/ + X {
+}`},
+	{"concat expr 2", `
+X {
+}`},
+	// 	{"match expression 3", `
+	// $foo =~ X {
+	// }
+	// `},
+
