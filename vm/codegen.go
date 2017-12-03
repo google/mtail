@@ -43,6 +43,18 @@ func (c *codegen) emit(i instr) {
 	c.obj.prog = append(c.obj.prog, i)
 }
 
+// newLabel creates a new label to jump to
+func (c *codegen) newLabel() (l int) {
+	l = len(c.obj.l)
+	c.obj.l = append(c.obj.l, 0)
+	return
+}
+
+// setLabel points a label to the next instruction
+func (c *codegen) putlabel(l int) {
+	c.obj.l[l] = c.pc() + 1
+}
+
 // pc returns the program offset of the last instruction
 func (c *codegen) pc() int {
 	return len(c.obj.prog) - 1

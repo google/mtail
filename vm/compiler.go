@@ -9,11 +9,9 @@ package vm
 import (
 	"io"
 	"path/filepath"
-	"regexp"
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/metrics"
 )
 
 // Options contains all the parameters that affect the behaviour of the compiler.
@@ -56,12 +54,4 @@ func Compile(name string, input io.Reader, o *Options) (*VM, error) {
 
 	vm := New(name, obj, o.SyslogUseCurrentYear, o.OverrideLocation)
 	return vm, nil
-}
-
-// object describes a built object of data and bytecode
-type object struct {
-	prog []instr           // The emitted program.
-	str  []string          // Static strings.
-	re   []*regexp.Regexp  // Static regular expressions.
-	m    []*metrics.Metric // Metrics accessible to this program.
 }
