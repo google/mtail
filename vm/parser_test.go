@@ -258,6 +258,27 @@ counter foo by a,b
 /(\d)/ && 1 {
 }
 `},
+
+	// 	{"concat expr 1", `
+	// /bar/ + X {
+	// }`},
+	// 	{"concat expr 2", `
+	// X {
+	// }`},
+
+	{"match expression 1", `
+$foo =~ /bar/ {
+}
+$foo !~ /bar/ {
+}
+`},
+	{"match expression 2", `
+$foo =~ /bar/ + X {
+}`},
+	// 	{"match expression 3", `
+	// $foo =~ X {
+	// }
+	// `},
 }
 
 func TestParserRoundTrip(t *testing.T) {
