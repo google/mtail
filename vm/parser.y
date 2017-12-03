@@ -126,6 +126,11 @@ conditional_statement
       $$ = $2
     }
   }
+  | OTHERWISE compound_statement
+  {
+    o := &otherwiseNode{tokenpos(mtaillex)}
+    $$ = &condNode{o, $2, nil, nil}
+  }
   ;
 
 expression_statement
@@ -334,10 +339,6 @@ postfix_expr
 primary_expr
   : indexed_expr
   { $$ = $1 }
-  | OTHERWISE
-  {
-    $$ = &otherwiseNode{tokenpos(mtaillex)}
-  }
   | BUILTIN LPAREN RPAREN
   {
     $$ = &builtinNode{pos: tokenpos(mtaillex), name: $1, args: nil}
@@ -388,10 +389,10 @@ indexed_expr
 
 id_expr
   : ID
-    {
-      $$ = &idNode{tokenpos(mtaillex), $1, nil}
-    }
-    ;
+  {
+    $$ = &idNode{tokenpos(mtaillex), $1, nil}
+  }
+  ;
 
 arg_expr_list
   : bitwise_expr
