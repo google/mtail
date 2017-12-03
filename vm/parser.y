@@ -58,6 +58,7 @@ import (
 %token <op> BITAND XOR BITOR NOT AND OR
 %token <op> ADD_ASSIGN ASSIGN
 %token <op> CONCAT
+%token <op> MATCH NOT_MATCH
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
 %token COMMA

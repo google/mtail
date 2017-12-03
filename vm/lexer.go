@@ -70,6 +70,8 @@ var lexemeName = map[lexeme]string{
 	FLOATLITERAL: "FLOATLITERAL",
 	NL:           "NL",
 	CONCAT:       "CONCAT",
+	MATCH:        "MATCH",
+	NOT_MATCH:    "NOT_MATCH",
 }
 
 func (t lexeme) String() string {
@@ -319,6 +321,9 @@ func lexProg(l *lexer) stateFn {
 		case '=':
 			l.accept()
 			l.emit(EQ)
+		case '~':
+			l.accept()
+			l.emit(MATCH)
 		default:
 			l.backup()
 			l.emit(ASSIGN)
@@ -355,6 +360,9 @@ func lexProg(l *lexer) stateFn {
 		case '=':
 			l.accept()
 			l.emit(NE)
+		case '~':
+			l.accept()
+			l.emit(NOT_MATCH)
 		default:
 			l.backup()
 			return l.errorf("Unexpected input: %q", r)
