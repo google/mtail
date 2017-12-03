@@ -51,6 +51,7 @@ var lexemeName = map[lexeme]string{
 	REGEX:        "REGEX",
 	ID:           "ID",
 	CAPREF:       "CAPREF",
+	CAPREF_NAMED: "CAPREF_NAMED",
 	STRING:       "STRING",
 	BUILTIN:      "BUILTIN",
 	COUNTER:      "COUNTER",
