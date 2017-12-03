@@ -29,6 +29,7 @@ type opcode int
 const (
 	bad        opcode = iota // Invalid instruction, indicates a bug in the generator.
 	match                    // Match a regular expression against input, and set the match register.
+	smatch                   // Match a regular expression against top of stack, and set the match register.
 	cmp                      // Compare two values on the stack and set the match register.
 	jnm                      // Jump if no match.
 	jm                       // Jump if match.
@@ -83,6 +84,7 @@ const (
 
 var opNames = map[opcode]string{
 	match:       "match",
+	smatch:      "smatch",
 	cmp:         "cmp",
 	jnm:         "jnm",
 	jm:          "jm",
@@ -423,6 +425,13 @@ func (v *VM) execute(t *thread, i instr) {
 		// where i.opnd == the matched re index
 		index := i.opnd.(int)
 		t.matches[index] = v.re[index].FindStringSubmatch(v.input.Line)
+		t.match = t.matches[index] != nil
+
+	case smatch:
+		// match regex against item on the stack
+		index := i.opnd.(int)
+		line := t.Pop().(string)
+		t.matches[index] = v.re[index].FindStringSubmatch(line)
 		t.match = t.matches[index] != nil
 
 	case cmp:
