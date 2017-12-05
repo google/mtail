@@ -154,7 +154,6 @@ func (i instr) String() string {
 
 type thread struct {
 	pc      int              // Program counter.
-	match   bool             // Match register.
 	matched bool             // Flag set if any match has been found.
 	matches map[int][]string // Match result variables.
 	time    time.Time        // Time register.
@@ -208,7 +207,6 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof("Input: %#v", v.input)
 	glog.Infof("Thread:")
 	glog.Infof(" PC %v", v.t.pc-1)
-	glog.Infof(" Match %v", v.t.match)
 	glog.Infof(" Matched %v", v.t.matched)
 	glog.Infof(" Matches %v", v.t.matches)
 	glog.Infof(" Timestamp %v", v.t.time)
@@ -425,14 +423,14 @@ func (v *VM) execute(t *thread, i instr) {
 		// where i.opnd == the matched re index
 		index := i.opnd.(int)
 		t.matches[index] = v.re[index].FindStringSubmatch(v.input.Line)
-		t.match = t.matches[index] != nil
+		t.Push(t.matches[index] != nil)
 
 	case smatch:
 		// match regex against item on the stack
 		index := i.opnd.(int)
 		line := t.Pop().(string)
 		t.matches[index] = v.re[index].FindStringSubmatch(line)
-		t.match = t.matches[index] != nil
+		t.Push(t.matches[index] != nil)
 
 	case cmp:
 		// Compare two elements on the stack.
@@ -446,15 +444,17 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("%+v", err)
 		}
 
-		t.match = match
+		t.Push(match)
 
 	case jnm:
-		if !t.match {
+		match := t.Pop().(bool)
+		if !match {
 			t.pc = i.opnd.(int)
 		}
 
 	case jm:
-		if t.match {
+		match := t.Pop().(bool)
+		if match {
 			t.pc = i.opnd.(int)
 		}
 
@@ -716,7 +716,7 @@ func (v *VM) execute(t *thread, i instr) {
 
 	case otherwise:
 		// Only match if the matched flag is false.
-		t.match = !t.matched
+		t.Push(!t.matched)
 
 	case getfilename:
 		t.Push(v.input.Filename)

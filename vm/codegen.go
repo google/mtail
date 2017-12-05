@@ -20,6 +20,7 @@ type codegen struct {
 
 	errors ErrorList // Compile errors.
 	obj    object    // The object to return
+	l      []int     // jump table
 
 	decos []*decoNode // Decorator stack to unwind
 }
@@ -28,6 +29,7 @@ type codegen struct {
 func CodeGen(name string, ast astNode) (*object, error) {
 	c := &codegen{name: name}
 	Walk(c, ast)
+	c.writeJumps()
 	if len(c.errors) > 0 {
 		return nil, c.errors
 	}
@@ -45,14 +47,14 @@ func (c *codegen) emit(i instr) {
 
 // newLabel creates a new label to jump to
 func (c *codegen) newLabel() (l int) {
-	l = len(c.obj.l)
-	c.obj.l = append(c.obj.l, 0)
+	l = len(c.l)
+	c.l = append(c.l, 0)
 	return
 }
 
 // setLabel points a label to the next instruction
-func (c *codegen) putlabel(l int) {
-	c.obj.l[l] = c.pc() + 1
+func (c *codegen) setLabel(l int) {
+	c.l[l] = c.pc() + 1
 }
 
 // pc returns the program offset of the last instruction
@@ -401,4 +403,18 @@ func (c *codegen) emitConversion(inType, outType Type) error {
 		return errors.Errorf("can't convert %q to %q", inType, outType)
 	}
 	return nil
+}
+
+func (c *codegen) writeJumps() {
+	for _, i := range c.obj.prog {
+		switch i.op {
+		case jmp, jm, jnm:
+			index := i.opnd.(int)
+			if index > len(c.l) {
+				c.errorf(nil, "internal error: no jump at label %v, table is %v", i.opnd, c.l)
+				continue
+			}
+			i.opnd = c.l[index]
+		}
+	}
 }
