@@ -26,12 +26,12 @@ import (
 %type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
-%type <n> declaration declarator definition decoration_statement regex_pattern
+%type <n> declaration declarator definition decoration_statement regex_pattern match_expr
 %type <kind> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
-%type <op> rel_op shift_op bitwise_op logical_op add_op mul_op
+%type <op> rel_op shift_op bitwise_op logical_op add_op mul_op match_op
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
@@ -58,6 +58,7 @@ import (
 %token <op> BITAND XOR BITOR NOT AND OR
 %token <op> ADD_ASSIGN ASSIGN
 %token <op> CONCAT
+%token <op> MATCH NOT_MATCH
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
 %token COMMA
@@ -125,6 +126,11 @@ conditional_statement
       $$ = $2
     }
   }
+  | OTHERWISE compound_statement
+  {
+    o := &otherwiseNode{tokenpos(mtaillex)}
+    $$ = &condNode{o, $2, nil, nil}
+  }
   ;
 
 expression_statement
@@ -164,13 +170,13 @@ assign_expr
 logical_expr
   : bitwise_expr
   { $$ = $1 }
-  | pattern_expr
+  | match_expr
   { $$ = $1 }
   | logical_expr logical_op opt_nl bitwise_expr
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
-  | logical_expr logical_op opt_nl pattern_expr
+  | logical_expr logical_op opt_nl match_expr
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
@@ -250,6 +256,22 @@ additive_expr
   }
   ;
 
+match_expr
+  : pattern_expr
+  { $$ = $1 }
+  | primary_expr match_op opt_nl pattern_expr
+  {
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+  }
+  ;
+
+match_op
+  : MATCH
+  { $$ = $1 }
+  | NOT_MATCH
+  { $$ = $1 }
+  ;
+
 pattern_expr
   : concat_expr
   {
@@ -259,9 +281,7 @@ pattern_expr
 
 concat_expr
   : regex_pattern
-  {
-    $$ = $1
-  }
+  { $$ = $1 }
   | concat_expr PLUS opt_nl regex_pattern
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $4, op: CONCAT}
@@ -319,10 +339,6 @@ postfix_expr
 primary_expr
   : indexed_expr
   { $$ = $1 }
-  | OTHERWISE
-  {
-    $$ = &otherwiseNode{tokenpos(mtaillex)}
-  }
   | BUILTIN LPAREN RPAREN
   {
     $$ = &builtinNode{pos: tokenpos(mtaillex), name: $1, args: nil}
@@ -373,10 +389,10 @@ indexed_expr
 
 id_expr
   : ID
-    {
-      $$ = &idNode{tokenpos(mtaillex), $1, nil}
-    }
-    ;
+  {
+    $$ = &idNode{tokenpos(mtaillex), $1, nil}
+  }
+  ;
 
 arg_expr_list
   : bitwise_expr

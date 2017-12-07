@@ -239,6 +239,17 @@ func (c *checker) VisitAfter(node astNode) {
 				return
 			}
 
+		case MATCH, NOT_MATCH:
+			rType = Bool
+			exprType := Function(NewTypeVariable(), Pattern, rType)
+			astType := Function(lT, rT, NewTypeVariable())
+			err := Unify(exprType, astType)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				n.SetType(Error)
+				return
+			}
+
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %v in node %#v", n.op, n))
 			n.SetType(Error)

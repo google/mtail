@@ -228,6 +228,11 @@ counter test
     test++
 }
 `},
+	{"match expr 1", `
+/(?P<foo>.*)/ {
+  $foo =~ /bar/ {
+  }
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

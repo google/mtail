@@ -29,6 +29,7 @@ type opcode int
 const (
 	bad        opcode = iota // Invalid instruction, indicates a bug in the generator.
 	match                    // Match a regular expression against input, and set the match register.
+	smatch                   // Match a regular expression against top of stack, and set the match register.
 	cmp                      // Compare two values on the stack and set the match register.
 	jnm                      // Jump if no match.
 	jm                       // Jump if match.
@@ -50,7 +51,8 @@ const (
 	and                      // Bitwise AND the 2 at top of stack, and push result
 	or                       // Bitwise OR the 2 at top of stack, and push result
 	xor                      // Bitwise XOR the 2 at top of stack, and push result
-	not                      // Bitwise NOT the top of stack, and push result
+	neg                      // Bitwise NOT the top of stack, and push result
+	not                      // Boolean NOT the top of stack, and push result
 	shl                      // Shift TOS left, push result
 	shr                      // Shift TOS right, push result
 	mload                    // Load metric at operand onto top of stack
@@ -83,6 +85,7 @@ const (
 
 var opNames = map[opcode]string{
 	match:       "match",
+	smatch:      "smatch",
 	cmp:         "cmp",
 	jnm:         "jnm",
 	jm:          "jm",
@@ -107,6 +110,7 @@ var opNames = map[opcode]string{
 	or:          "or",
 	xor:         "xor",
 	not:         "not",
+	neg:         "neg",
 	mload:       "mload",
 	dload:       "dload",
 	tolower:     "tolower",
@@ -152,7 +156,6 @@ func (i instr) String() string {
 
 type thread struct {
 	pc      int              // Program counter.
-	match   bool             // Match register.
 	matched bool             // Flag set if any match has been found.
 	matches map[int][]string // Match result variables.
 	time    time.Time        // Time register.
@@ -206,7 +209,6 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof("Input: %#v", v.input)
 	glog.Infof("Thread:")
 	glog.Infof(" PC %v", v.t.pc-1)
-	glog.Infof(" Match %v", v.t.match)
 	glog.Infof(" Matched %v", v.t.matched)
 	glog.Infof(" Matches %v", v.t.matches)
 	glog.Infof(" Timestamp %v", v.t.time)
@@ -423,7 +425,14 @@ func (v *VM) execute(t *thread, i instr) {
 		// where i.opnd == the matched re index
 		index := i.opnd.(int)
 		t.matches[index] = v.re[index].FindStringSubmatch(v.input.Line)
-		t.match = t.matches[index] != nil
+		t.Push(t.matches[index] != nil)
+
+	case smatch:
+		// match regex against item on the stack
+		index := i.opnd.(int)
+		line := t.Pop().(string)
+		t.matches[index] = v.re[index].FindStringSubmatch(line)
+		t.Push(t.matches[index] != nil)
 
 	case cmp:
 		// Compare two elements on the stack.
@@ -437,15 +446,17 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("%+v", err)
 		}
 
-		t.match = match
+		t.Push(match)
 
 	case jnm:
-		if !t.match {
+		match := t.Pop().(bool)
+		if !match {
 			t.pc = i.opnd.(int)
 		}
 
 	case jm:
-		if t.match {
+		match := t.Pop().(bool)
+		if match {
 			t.pc = i.opnd.(int)
 		}
 
@@ -600,12 +611,16 @@ func (v *VM) execute(t *thread, i instr) {
 			t.Push(a ^ b)
 		}
 
-	case not:
+	case neg:
 		a, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
 		}
 		t.Push(^a)
+
+	case not:
+		a := t.Pop().(bool)
+		t.Push(!a)
 
 	case mload:
 		// Load a metric at operand onto stack
@@ -707,7 +722,7 @@ func (v *VM) execute(t *thread, i instr) {
 
 	case otherwise:
 		// Only match if the matched flag is false.
-		t.match = !t.matched
+		t.Push(!t.matched)
 
 	case getfilename:
 		t.Push(v.input.Filename)

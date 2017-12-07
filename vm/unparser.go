@@ -136,6 +136,12 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 			u.emit(" % ")
 		case CONCAT:
 			u.emit(" + ")
+		case MATCH:
+			u.emit(" =~ ")
+		case NOT_MATCH:
+			u.emit(" !~ ")
+		default:
+			u.emit(fmt.Sprintf("Unexpected op: %v", v.op))
 		}
 		Walk(u, v.rhs)
 

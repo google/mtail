@@ -20,6 +20,7 @@ type codegen struct {
 
 	errors ErrorList // Compile errors.
 	obj    object    // The object to return
+	l      []int     // jump table
 
 	decos []*decoNode // Decorator stack to unwind
 }
@@ -28,6 +29,7 @@ type codegen struct {
 func CodeGen(name string, ast astNode) (*object, error) {
 	c := &codegen{name: name}
 	Walk(c, ast)
+	c.writeJumps()
 	if len(c.errors) > 0 {
 		return nil, c.errors
 	}
@@ -41,6 +43,18 @@ func (c *codegen) errorf(pos *position, format string, args ...interface{}) {
 
 func (c *codegen) emit(i instr) {
 	c.obj.prog = append(c.obj.prog, i)
+}
+
+// newLabel creates a new label to jump to
+func (c *codegen) newLabel() (l int) {
+	l = len(c.l)
+	c.l = append(c.l, -1)
+	return
+}
+
+// setLabel points a label to the next instruction
+func (c *codegen) setLabel(l int) {
+	c.l[l] = c.pc() + 1
 }
 
 // pc returns the program offset of the last instruction
@@ -100,31 +114,25 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		return nil
 
 	case *condNode:
+		lElse := c.newLabel()
+		lEnd := c.newLabel()
 		if n.cond != nil {
 			Walk(c, n.cond)
+			c.emit(instr{jnm, lElse})
 		}
-		// Save PC of previous jump instruction emitted by the n.cond
-		// compilation.  (See regexNode and relNode cases, which will emit a
-		// jump as the last instr.)  This jump will skip over the truthNode.
-		pc := c.pc()
 		// Set matched flag false for children.
 		c.emit(instr{setmatched, false})
 		Walk(c, n.truthNode)
 		// Re-set matched flag to true for rest of current block.
 		c.emit(instr{setmatched, true})
-		// Rewrite n.cond's jump target to jump to instruction after block.
-		c.obj.prog[pc].opnd = c.pc() + 1
-		// Now also emit the else clause, and a jump.
 		if n.elseNode != nil {
-			c.emit(instr{op: jmp})
-			// Rewrite jump again to avoid this else-skipper just emitted.
-			c.obj.prog[pc].opnd = c.pc() + 1
-			// Now get the PC of the else-skipper just emitted.
-			pc = c.pc()
-			Walk(c, n.elseNode)
-			// Rewrite else-skipper to the next PC.
-			c.obj.prog[pc].opnd = c.pc() + 1
+			c.emit(instr{jmp, lEnd})
 		}
+		c.setLabel(lElse)
+		if n.elseNode != nil {
+			Walk(c, n.elseNode)
+		}
+		c.setLabel(lEnd)
 		return nil
 
 	case *patternExprNode:
@@ -137,7 +145,6 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		// Store the location of this regular expression in the patterNode
 		n.index = len(c.obj.re) - 1
 		c.emit(instr{match, n.index})
-		c.emit(instr{op: jnm})
 
 	case *stringConstNode:
 		c.obj.str = append(c.obj.str, n.text)
@@ -197,7 +204,6 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 
 	case *otherwiseNode:
 		c.emit(instr{op: otherwise})
-		c.emit(instr{op: jnm})
 
 	case *delNode:
 		Walk(c, n.n)
@@ -208,30 +214,31 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 	case *binaryExprNode:
 		switch n.op {
 		case AND:
+			lFalse := c.newLabel()
+			lEnd := c.newLabel()
 			Walk(c, n.lhs)
-			// pc is jump from first comparison, triggered if this expression is false
-			pc1 := c.pc()
+			c.emit(instr{jnm, lFalse})
 			Walk(c, n.rhs)
-			pc2 := c.pc()
-			// bounce through the second and leave it there for the condNode containing to overwrite
-			c.obj.prog[pc1].opnd = pc2
+			c.emit(instr{jnm, lFalse})
+			c.emit(instr{push, true})
+			c.emit(instr{jmp, lEnd})
+			c.setLabel(lFalse)
+			c.emit(instr{push, false})
+			c.setLabel(lEnd)
 			return nil
 
 		case OR:
+			lTrue := c.newLabel()
+			lEnd := c.newLabel()
 			Walk(c, n.lhs)
-			// pc1 is the jump from first comparison, triggered if false, but we want to jump if true to the block
-			pc1 := c.pc()
+			c.emit(instr{jm, lTrue})
 			Walk(c, n.rhs)
-			pc2 := c.pc()
-			// condNode is going to insert a setmatched instruction next, then the block
-			blockPc := pc2 + 2
-			c.obj.prog[pc1].opnd = blockPc
-			switch c.obj.prog[pc1].op {
-			case jnm:
-				c.obj.prog[pc1].op = jm
-			case jm:
-				c.obj.prog[pc1].op = jnm
-			}
+			c.emit(instr{jm, lTrue})
+			c.emit(instr{push, false})
+			c.emit(instr{jmp, lEnd})
+			c.setLabel(lTrue)
+			c.emit(instr{push, true})
+			c.setLabel(lEnd)
 			return nil
 
 		case ADD_ASSIGN:
@@ -282,11 +289,11 @@ func (c *codegen) VisitAfter(node astNode) {
 		case "int", "float", "string":
 			// len args should be 1
 			if arglen > 1 {
-				c.errorf(n.Pos(), "internal error, too many arguments to builtin %q: %#v", n.name, n)
+				c.errorf(n.Pos(), "too many arguments to builtin %q: %#v", n.name, n)
 				return
 			}
 			if err := c.emitConversion(n.args.(*exprlistNode).children[0].Type(), n.Type()); err != nil {
-				c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
+				c.errorf(n.Pos(), "%s on node %v", err.Error(), n)
 				return
 			}
 
@@ -298,28 +305,42 @@ func (c *codegen) VisitAfter(node astNode) {
 		case INC:
 			c.emit(instr{op: inc})
 		case NOT:
-			c.emit(instr{op: not})
+			c.emit(instr{op: neg})
 		}
 	case *binaryExprNode:
 		switch n.op {
-		case LT:
-			c.emit(instr{cmp, -1})
-			c.emit(instr{op: jnm})
-		case GT:
-			c.emit(instr{cmp, 1})
-			c.emit(instr{op: jnm})
-		case LE:
-			c.emit(instr{cmp, 1})
-			c.emit(instr{op: jm})
-		case GE:
-			c.emit(instr{cmp, -1})
-			c.emit(instr{op: jm})
-		case EQ:
-			c.emit(instr{cmp, 0})
-			c.emit(instr{op: jnm})
-		case NE:
-			c.emit(instr{cmp, 0})
-			c.emit(instr{op: jm})
+		case LT, GT, LE, GE, EQ, NE:
+			lFail := c.newLabel()
+			lEnd := c.newLabel()
+			var cmpArg int
+			var jumpOp opcode
+			switch n.op {
+			case LT:
+				cmpArg = -1
+				jumpOp = jnm
+			case GT:
+				cmpArg = 1
+				jumpOp = jnm
+			case LE:
+				cmpArg = 1
+				jumpOp = jm
+			case GE:
+				cmpArg = -1
+				jumpOp = jm
+			case EQ:
+				cmpArg = 0
+				jumpOp = jnm
+			case NE:
+				cmpArg = 0
+				jumpOp = jm
+			}
+			c.emit(instr{cmp, cmpArg})
+			c.emit(instr{jumpOp, lFail})
+			c.emit(instr{push, true})
+			c.emit(instr{jmp, lEnd})
+			c.setLabel(lFail)
+			c.emit(instr{push, false})
+			c.setLabel(lEnd)
 		case ADD_ASSIGN:
 			// When operand is not nil, inc pops the delta from the stack.
 			// TODO(jaq): string concatenation, once datums can hold strings.
@@ -332,13 +353,13 @@ func (c *codegen) VisitAfter(node astNode) {
 				// And a second lhs
 				c.emit(instr{fset, nil})
 			default:
-				c.errorf(n.Pos(), "Internal error: invalid type for add-assignment: %v", n.op)
+				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.op)
 				return
 			}
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
 			opmap, ok := typedOperators[n.op]
 			if !ok {
-				c.errorf(n.Pos(), "Internal error: no typed operator for binary expression %v", n.op)
+				c.errorf(n.Pos(), "no typed operator for binary expression %v", n.op)
 				return
 			}
 			emitflag := false
@@ -350,7 +371,7 @@ func (c *codegen) VisitAfter(node astNode) {
 				}
 			}
 			if !emitflag {
-				c.errorf(n.Pos(), "Invalid type for binary expression: %v", n.Type())
+				c.errorf(n.Pos(), "invalid type for binary expression: %v", n.Type())
 				return
 			}
 		case BITAND:
@@ -363,6 +384,21 @@ func (c *codegen) VisitAfter(node astNode) {
 			c.emit(instr{op: shl})
 		case SHR:
 			c.emit(instr{op: shr})
+
+		case MATCH:
+			// Cross fingers that last branch was a patternExprNode
+			c.obj.prog[c.pc()].op = smatch
+
+		case NOT_MATCH:
+			// Cross fingers that last branch was a patternExprNode
+			c.obj.prog[c.pc()].op = smatch
+			c.emit(instr{op: not})
+
+		case CONCAT:
+			// skip
+
+		default:
+			c.errorf(n.Pos(), "unexpected op %v", n.op)
 		}
 
 	case *convNode:
@@ -389,4 +425,23 @@ func (c *codegen) emitConversion(inType, outType Type) error {
 		return errors.Errorf("can't convert %q to %q", inType, outType)
 	}
 	return nil
+}
+
+func (c *codegen) writeJumps() {
+	for j, i := range c.obj.prog {
+		switch i.op {
+		case jmp, jm, jnm:
+			index := i.opnd.(int)
+			if index > len(c.l) {
+				c.errorf(nil, "no jump at label %v, table is %v", i.opnd, c.l)
+				continue
+			}
+			offset := c.l[index]
+			if offset < 0 {
+				c.errorf(nil, "offset for label %v is negative, table is %v", i.opnd, c.l)
+				continue
+			}
+			c.obj.prog[j].opnd = c.l[index]
+		}
+	}
 }

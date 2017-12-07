@@ -110,6 +110,10 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 			s.emit("%")
 		case CONCAT:
 			s.emit("++")
+		case MATCH:
+			s.emit("=~")
+		case NOT_MATCH:
+			s.emit("!~")
 		default:
 			s.emit(fmt.Sprintf("Unexpected op: %v", v.op))
 		}
