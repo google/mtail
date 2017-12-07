@@ -289,11 +289,11 @@ func (c *codegen) VisitAfter(node astNode) {
 		case "int", "float", "string":
 			// len args should be 1
 			if arglen > 1 {
-				c.errorf(n.Pos(), "internal error, too many arguments to builtin %q: %#v", n.name, n)
+				c.errorf(n.Pos(), "too many arguments to builtin %q: %#v", n.name, n)
 				return
 			}
 			if err := c.emitConversion(n.args.(*exprlistNode).children[0].Type(), n.Type()); err != nil {
-				c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
+				c.errorf(n.Pos(), "%s on node %v", err.Error(), n)
 				return
 			}
 
@@ -353,13 +353,13 @@ func (c *codegen) VisitAfter(node astNode) {
 				// And a second lhs
 				c.emit(instr{fset, nil})
 			default:
-				c.errorf(n.Pos(), "Internal error: invalid type for add-assignment: %v", n.op)
+				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.op)
 				return
 			}
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
 			opmap, ok := typedOperators[n.op]
 			if !ok {
-				c.errorf(n.Pos(), "Internal error: no typed operator for binary expression %v", n.op)
+				c.errorf(n.Pos(), "no typed operator for binary expression %v", n.op)
 				return
 			}
 			emitflag := false
@@ -371,7 +371,7 @@ func (c *codegen) VisitAfter(node astNode) {
 				}
 			}
 			if !emitflag {
-				c.errorf(n.Pos(), "Invalid type for binary expression: %v", n.Type())
+				c.errorf(n.Pos(), "invalid type for binary expression: %v", n.Type())
 				return
 			}
 		case BITAND:
@@ -384,6 +384,8 @@ func (c *codegen) VisitAfter(node astNode) {
 			c.emit(instr{op: shl})
 		case SHR:
 			c.emit(instr{op: shr})
+		default:
+			c.errorf(n.Pos(), "unexpected op %v", n.op)
 		}
 
 	case *convNode:
@@ -418,12 +420,12 @@ func (c *codegen) writeJumps() {
 		case jmp, jm, jnm:
 			index := i.opnd.(int)
 			if index > len(c.l) {
-				c.errorf(nil, "internal error: no jump at label %v, table is %v", i.opnd, c.l)
+				c.errorf(nil, "no jump at label %v, table is %v", i.opnd, c.l)
 				continue
 			}
 			offset := c.l[index]
 			if offset < 0 {
-				c.errorf(nil, "internal error: offset for label %v is negative, table is %v", i.opnd, c.l)
+				c.errorf(nil, "offset for label %v is negative, table is %v", i.opnd, c.l)
 				continue
 			}
 			c.obj.prog[j].opnd = c.l[index]
