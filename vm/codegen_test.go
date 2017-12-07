@@ -607,27 +607,28 @@ gauge foo
 			{fset, nil},
 			{setmatched, true},
 		}},
-	// 	{"match expression", `
-	// counter foo
-	// /(.*)/ {
-	//   $1 =~ /asdf/ {
-	//     foo++
-	//   }
-	// }`,
-	// 		[]instr{
-	// 			{match, 0},
-	// 			{jnm, 13},
-	// 			{setmatched, false},
-	// 			{push, 0},
-	// 			{capref, 1},
-	// 			{smatch, 2},
-	// 			{jnm, 12},
-	// 			{mload, 0},
-	// 			{dload, 0},
-	// 			{inc, nil},
-	// 			{setmatched, true},
-	// 			{setmatched, true},
-	// 		}},
+	{"match expression", `
+	counter foo
+	/(.*)/ {
+	  $1 =~ /asdf/ {
+	    foo++
+	  }
+	}`,
+		[]instr{
+			{match, 0},
+			{jnm, 13},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{smatch, 1},
+			{jnm, 12},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true},
+			{setmatched, true},
+		}},
 }
 
 func TestCodegen(t *testing.T) {

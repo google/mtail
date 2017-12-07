@@ -384,6 +384,11 @@ func (c *codegen) VisitAfter(node astNode) {
 			c.emit(instr{op: shl})
 		case SHR:
 			c.emit(instr{op: shr})
+
+		case MATCH:
+			// Cross fingers that last branch was a patternExprNode
+			c.obj.prog[c.pc()].op = smatch
+
 		default:
 			c.errorf(n.Pos(), "unexpected op %v", n.op)
 		}
