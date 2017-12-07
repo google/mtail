@@ -280,7 +280,7 @@ var testCodeGenPrograms = []struct {
 			{push, int64(8)},
 			{or, nil},
 			{push, int64(16)},
-			{not, nil},
+			{neg, nil},
 			{push, int64(2)},
 			{shl, nil},
 			{push, int64(1)},

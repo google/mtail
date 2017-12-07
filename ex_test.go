@@ -89,6 +89,11 @@ var exampleProgramTests = []struct {
 		"testdata/typed-comparison.log",
 		"testdata/typed-comparison.golden",
 	},
+	{
+		"examples/match-expression.mtail",
+		"testdata/match-expression.log",
+		"testdata/match-expression.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {

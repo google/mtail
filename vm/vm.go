@@ -51,7 +51,8 @@ const (
 	and                      // Bitwise AND the 2 at top of stack, and push result
 	or                       // Bitwise OR the 2 at top of stack, and push result
 	xor                      // Bitwise XOR the 2 at top of stack, and push result
-	not                      // Bitwise NOT the top of stack, and push result
+	neg                      // Bitwise NOT the top of stack, and push result
+	not                      // Boolean NOT the top of stack, and push result
 	shl                      // Shift TOS left, push result
 	shr                      // Shift TOS right, push result
 	mload                    // Load metric at operand onto top of stack
@@ -109,6 +110,7 @@ var opNames = map[opcode]string{
 	or:          "or",
 	xor:         "xor",
 	not:         "not",
+	neg:         "neg",
 	mload:       "mload",
 	dload:       "dload",
 	tolower:     "tolower",
@@ -609,12 +611,16 @@ func (v *VM) execute(t *thread, i instr) {
 			t.Push(a ^ b)
 		}
 
-	case not:
+	case neg:
 		a, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
 		}
 		t.Push(^a)
+
+	case not:
+		a := t.Pop().(bool)
+		t.Push(!a)
 
 	case mload:
 		// Load a metric at operand onto stack

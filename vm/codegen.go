@@ -305,7 +305,7 @@ func (c *codegen) VisitAfter(node astNode) {
 		case INC:
 			c.emit(instr{op: inc})
 		case NOT:
-			c.emit(instr{op: not})
+			c.emit(instr{op: neg})
 		}
 	case *binaryExprNode:
 		switch n.op {
