@@ -394,6 +394,9 @@ func (c *codegen) VisitAfter(node astNode) {
 			c.obj.prog[c.pc()].op = smatch
 			c.emit(instr{op: not})
 
+		case CONCAT:
+			// skip
+
 		default:
 			c.errorf(n.Pos(), "unexpected op %v", n.op)
 		}
