@@ -18,3 +18,41 @@ func TestMatchingKind(t *testing.T) {
 		t.Fatal("should be err")
 	}
 }
+
+func TestDuplicateMetric(t *testing.T) {
+	expectedMetrics := 0
+	s := NewStore()
+	_ = s.Add(NewMetric("foo", "prog", Counter, Int, "user", "host"))
+	_ = s.Add(NewMetric("foo", "prog", Counter, Int))
+	expectedMetrics++
+	if len(s.Metrics["foo"]) != expectedMetrics {
+		t.Fatalf("should not add duplicate metric. Store: %s", s)
+	}
+
+	_ = s.Add(NewMetric("foo", "prog", Counter, Float))
+	t.Logf("Store: %s", s)
+	expectedMetrics++
+	if len(s.Metrics["foo"]) != expectedMetrics {
+		t.Fatalf("should add metric of a different type: %s", s)
+	}
+
+	_ = s.Add(NewMetric("foo", "prog", Counter, Int, "user", "host", "zone", "domain"))
+	t.Logf("Store: %s", s)
+	if len(s.Metrics["foo"]) != expectedMetrics {
+		t.Fatalf("should not add duplicate metric, but replace the old one. Store: %s", s)
+	}
+
+	_ = s.Add(NewMetric("foo", "prog1", Counter, Int))
+	t.Logf("Store: %s", s)
+	expectedMetrics++
+	if len(s.Metrics["foo"]) != expectedMetrics {
+		t.Fatalf("should add metric with a different prog: %s", s)
+	}
+
+	_ = s.Add(NewMetric("foo", "prog1", Counter, Float))
+	t.Logf("Store: %s", s)
+	expectedMetrics++
+	if len(s.Metrics["foo"]) != expectedMetrics {
+		t.Fatalf("should add metric of a different type: %s", s)
+	}
+}
