@@ -392,15 +392,16 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		return errors.Wrapf(err, "Failed to stat %q: %s", f.Name())
 	}
 	switch m := fi.Mode(); {
-	case m&os.ModeType == 0:
+	case m.IsRegular():
+		seekWhence := io.SeekEnd
 		if seekStart || t.oneShot {
-			f.Seek(0, os.SEEK_SET)
-		} else {
-			f.Seek(0, os.SEEK_END)
+			seekWhence = io.SeekCurrent
 		}
-		err = t.w.Add(f.Name())
-		if err != nil {
-			return errors.Wrapf(err, "Adding a change watch failed on %q: %s", f.Name())
+		if _, err := f.Seek(0, seekWhence); err != nil {
+			return errors.Wrapf(err, "Seek failed on %q", f.Name())
+		}
+		if err := t.w.Add(f.Name()); err != nil {
+			return errors.Wrapf(err, "Adding a change watch failed on %q", f.Name())
 		}
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
