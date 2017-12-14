@@ -14,7 +14,7 @@ import (
 type FakeWatcher struct {
 	watchesMu sync.RWMutex
 	watches   map[string]bool
-	eventsMu  sync.RWMutex
+	eventsMu  sync.RWMutex // locks events and isClosed
 	events    []chan Event
 	isClosed  bool
 }
@@ -37,12 +37,13 @@ func (w *FakeWatcher) Add(name string) error {
 func (w *FakeWatcher) Close() error {
 	w.eventsMu.Lock()
 	defer w.eventsMu.Unlock()
-	if !w.isClosed {
-		for _, c := range w.events {
-			close(c)
-		}
-		w.isClosed = true
+	if w.isClosed {
+		return nil
 	}
+	for _, c := range w.events {
+		close(c)
+	}
+	w.isClosed = true
 	return nil
 }
 
@@ -80,12 +81,12 @@ func (w *FakeWatcher) InjectCreate(name string) {
 	w.watchesMu.RLock()
 	dir_watched := w.watches[dirname]
 	w.watchesMu.RUnlock()
-	if dir_watched {
-		w.sendEvent(CreateEvent{name})
-		w.Add(name)
-	} else {
+	if !dir_watched {
 		glog.Warningf("not watching %s to see %s", dirname, name)
+		return
 	}
+	w.sendEvent(CreateEvent{name})
+	w.Add(name)
 }
 
 // InjectUpdate lets a test inject a fake update event.
@@ -93,11 +94,11 @@ func (w *FakeWatcher) InjectUpdate(name string) {
 	w.watchesMu.RLock()
 	watched := w.watches[name]
 	w.watchesMu.RUnlock()
-	if watched {
-		w.sendEvent(UpdateEvent{name})
-	} else {
+	if !watched {
 		glog.Warningf("can't update: not watching %s", name)
+		return
 	}
+	w.sendEvent(UpdateEvent{name})
 }
 
 // InjectDelete lets a test inject a fake deletion event.
@@ -105,10 +106,10 @@ func (w *FakeWatcher) InjectDelete(name string) {
 	w.watchesMu.RLock()
 	watched := w.watches[name]
 	w.watchesMu.RUnlock()
-	if watched {
-		w.sendEvent(DeleteEvent{name})
-		w.Remove(name)
-	} else {
+	if !watched {
 		glog.Warningf("can't delete: not watching %s", name)
+		return
 	}
+	w.sendEvent(DeleteEvent{name})
+	w.Remove(name)
 }
