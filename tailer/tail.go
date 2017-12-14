@@ -232,8 +232,11 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 			return err
 		}
 
-		for i, width := 0, 0; i < len(b) && i < n; i += width {
-			var rune rune
+		var (
+			rune  rune
+			width int
+		)
+		for i := 0; i < len(b) && i < n; i += width {
 			rune, width = utf8.DecodeRune(b[i:])
 			switch {
 			case rune != '\n':
