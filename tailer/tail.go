@@ -346,39 +346,49 @@ func (t *Tailer) watchDirname(pathname string) {
 }
 
 // openLogPath opens a log file named by pathname.
-func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
+func (t *Tailer) openLogPath(pathname string, seenBefore bool) error {
+	glog.V(2).Infof("openlogPath %s %v", pathname, seenBefore)
 	t.watchDirname(pathname)
 
 	retries := 3
 	retryDelay := 1 * time.Millisecond
+	shouldRetry := func() bool {
+		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
+		if !seenBefore {
+			return false
+		}
+		return retries > 0
+	}
 	var f afero.File
 	var err error
-	for retries > 0 {
-		f, err = t.fs.Open(pathname)
-		if err == nil {
-			break
-		}
-		// Doesn't exist yet. We're watching the directory, so we'll pick it up
-		// again on create; return successfully.
-		if os.IsNotExist(err) {
-			glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
-			return
-		}
+Retry:
+	f, err = t.fs.Open(pathname)
+	if err == nil {
+		glog.V(2).Infof("open succeeded %s", pathname)
+	}
+	// Doesn't exist yet. We're watching the directory, so we'll pick it up
+	// again on create; return successfully.
+	if os.IsNotExist(err) {
+		glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
+		return nil
+	}
+	LogErrors.Add(pathname, 1)
+	if shouldRetry() {
+		retries = retries - 1
+		time.Sleep(retryDelay)
+		retryDelay = retryDelay + retryDelay
+		goto Retry
+	}
+	if err != nil {
 		glog.Infof("Failed to open %q for reading: %s", pathname, err)
-		LogErrors.Add(pathname, 1)
-		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
-		if seenBefore {
-			retries = retries - 1
-			time.Sleep(retryDelay)
-			retryDelay = retryDelay + retryDelay
-		} else {
-			return
-		}
+		return err
 	}
 	err = t.startNewFile(f, seenBefore)
 	if err != nil && err != io.EOF {
 		glog.Error(err)
+		return err
 	}
+	return nil
 }
 
 // startNewFile optionally seeks to the start or end of the file, then starts
