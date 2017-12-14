@@ -527,8 +527,5 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	}{
 		t.watched,
 	}
-	if err := tpl.Execute(w, data); err != nil {
-		return err
-	}
-	return nil
+	return tpl.Execute(w, data)
 }
