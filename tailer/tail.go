@@ -169,6 +169,7 @@ func (t *Tailer) TailFile(f afero.File) error {
 // handleLogUpdate reads all available bytes from an already opened file
 // identified by pathname, and sends them to be processed on the lines channel.
 func (t *Tailer) handleLogUpdate(pathname string) {
+	glog.V(2).Infof("handleLogUpdate %s", pathname)
 	t.filesMu.Lock()
 	fd, ok := t.files[pathname]
 	t.filesMu.Unlock()
@@ -263,43 +264,73 @@ func inode(f os.FileInfo) uint64 {
 
 // handleLogCreate handles both new and rotated log files.
 func (t *Tailer) handleLogCreate(pathname string) {
+	glog.V(2).Infof("handleLogCreate %s", pathname)
 	t.filesMu.Lock()
 	fd, ok := t.files[pathname]
 	t.filesMu.Unlock()
-	if ok {
-		s1, err := fd.Stat()
-		if err != nil {
-			glog.Infof("Stat failed on %q: %s", t.files[pathname].Name(), err)
-			return
-		}
-		s2, err := t.fs.Stat(pathname)
-		if err != nil {
-			glog.Infof("Stat failed on %q: %s", pathname, err)
-			return
-		}
-		if inode(s1) != inode(s2) {
-			glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
-			LogRotations.Add(pathname, 1)
-			// flush the old log, pathname is still an index into t.files with the old inode.
-			t.handleLogUpdate(pathname)
-			fd.Close()
-			go func() {
-				// Run in goroutine as Remove may block waiting on event processing.
-				err := t.w.Remove(pathname)
-				if err != nil {
-					glog.Infof("Failed removing watches on %s: %s", pathname, err)
-				}
-				// openLogPath readds the file to the watcher, so must be strictly after the Remove succeeds.
-				t.openLogPath(pathname, true)
-			}()
-		} else {
-			glog.V(1).Infof("Path %s already being watched, and inode not changed.",
-				pathname)
-		}
-	} else {
+
+	if !ok {
 		// Freshly opened log file, never seen before.
 		t.openLogPath(pathname, true)
+		return
 	}
+	// if fd == nil {
+	// 	// File descriptor entry is there, but is nil, means we closed this file.
+	// 	t.openLogPath(pathname, true)
+	// 	return
+	// }
+
+	s1, err := fd.Stat()
+	if err != nil {
+		glog.Infof("Stat failed on %q: %s", t.files[pathname].Name(), err)
+		// We have a fd but it's invalid, handle as a rotation (delete/create)
+		LogRotations.Add(pathname, 1)
+		t.openLogPath(pathname, true)
+		return
+	}
+	s2, err := t.fs.Stat(pathname)
+	if err != nil {
+		glog.Infof("Stat failed on %q: %s", pathname, err)
+		return
+	}
+	if inode(s1) == inode(s2) {
+		glog.V(1).Infof("Path %s already being watched, and inode not changed.",
+			pathname)
+		return
+
+	}
+	glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
+	LogRotations.Add(pathname, 1)
+	// flush the old log, pathname is still an index into t.files with the old inode.
+	t.handleLogUpdate(pathname)
+	if err := fd.Close(); err != nil {
+		glog.Info(err)
+	}
+	go func() {
+		// Run in goroutine as Remove may block waiting on event processing.
+		if err := t.w.Remove(pathname); err != nil {
+			glog.Infof("Failed removing watches on %s: %s", pathname, err)
+		}
+		// openLogPath readds the file to the watcher, so must be strictly after the Remove succeeds.
+		t.openLogPath(pathname, true)
+	}()
+}
+
+func (t *Tailer) handleLogDelete(pathname string) {
+	glog.V(2).Infof("handleLogDelete %s", pathname)
+	t.filesMu.Lock()
+	fd, ok := t.files[pathname]
+	t.filesMu.Unlock()
+	if !ok {
+		glog.V(2).Infof("Delete without fd for %s", pathname)
+		return
+	}
+	// flush the old log, as pathname is stlil an index into t.files with the old inode still open
+	t.handleLogUpdate(pathname)
+	if err := fd.Close(); err != nil {
+		glog.Warning(err)
+	}
+	// Explicitly leave the filedescriptor invalid to test for log rotation in handleLogCreate
 }
 
 func (t *Tailer) watchDirname(pathname string) {
@@ -435,6 +466,9 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 				t.globPatternsMu.RUnlock()
 			}
 		case watcher.DeleteEvent:
+			if t.isWatching(e.Pathname) {
+				t.handleLogDelete(e.Pathname)
+			}
 		default:
 			glog.Infof("Unexpected event %#v", e)
 		}
