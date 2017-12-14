@@ -150,13 +150,13 @@ func (t *Tailer) TailPath(pathname string) error {
 	if err != nil {
 		return errors.Wrapf(err, "find absolute path for %q", pathname)
 	}
-	if !t.isWatching(fullpath) {
-		t.addWatched(fullpath)
-		LogCount.Add(1)
-		// TODO(jaq): ex_test/filename.mtail requires we use the original name here.
-		t.openLogPath(pathname, false)
+	if t.isWatching(fullpath) {
+		return nil
 	}
-	return nil
+	t.addWatched(fullpath)
+	LogCount.Add(1)
+	// TODO(jaq): ex_test/filename.mtail requires we use the original pathname here, not fullpath
+	return t.openLogPath(pathname, false)
 }
 
 // TailFile registers a file handle to be tailed.  There is no filesystem to
