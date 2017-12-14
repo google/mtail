@@ -553,7 +553,7 @@ func lexRegex(l *lexer) stateFn {
 	// Exit regex mode when leaving this function.
 	defer func() {
 		glog.V(2).Info("Exiting regex")
-		glog.V(2).Infof("Regex at startcol %d, col %d line %d", l.startcol, l.col, l.line)
+		glog.V(2).Infof("Regex at line %d, startcol %d, col %d", l.line, l.startcol, l.col)
 		l.inRegex = false
 	}()
 Loop:
