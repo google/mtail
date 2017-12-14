@@ -274,17 +274,13 @@ func (t *Tailer) handleLogCreate(pathname string) {
 		t.openLogPath(pathname, true)
 		return
 	}
-	// if fd == nil {
-	// 	// File descriptor entry is there, but is nil, means we closed this file.
-	// 	t.openLogPath(pathname, true)
-	// 	return
-	// }
 
 	s1, err := fd.Stat()
 	if err != nil {
 		glog.Infof("Stat failed on %q: %s", t.files[pathname].Name(), err)
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
 		LogRotations.Add(pathname, 1)
+		LogCount.Add(1)
 		t.openLogPath(pathname, true)
 		return
 	}
@@ -330,6 +326,7 @@ func (t *Tailer) handleLogDelete(pathname string) {
 	if err := fd.Close(); err != nil {
 		glog.Warning(err)
 	}
+	LogCount.Add(-1)
 	// Explicitly leave the filedescriptor invalid to test for log rotation in handleLogCreate
 }
 
