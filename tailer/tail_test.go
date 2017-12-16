@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/watcher"
@@ -363,4 +364,7 @@ func TestOpenRetries(t *testing.T) {
 	if err := ta.TailPath(logfile); err != nil {
 		t.Fatal(err)
 	}
+
+	// Ugh, wait for it.
+	time.Sleep(300 * time.Millisecond)
 }
