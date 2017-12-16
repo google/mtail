@@ -271,7 +271,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 
 	if !ok {
 		// Freshly opened log file, never seen before.
-		t.openLogPath(pathname, true)
+		t.openLogPath(pathname, false)
 		return
 	}
 
