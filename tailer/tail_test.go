@@ -342,7 +342,7 @@ func TestReadPipe(t *testing.T) {
 }
 
 func TestOpenRetries(t *testing.T) {
-	ta, _, _, fs, dir := makeTestTailReal(t, "retries")
+	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
 	defer os.RemoveAll(dir)
 
 	logfile := filepath.Join(dir, "log")
@@ -350,21 +350,41 @@ func TestOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	done := make(chan struct{})
+	wg := sync.WaitGroup{}
+	wg.Add(1) // lines written
+	go func() {
+		for range lines {
+			wg.Done()
+		}
+		close(done)
+	}()
+
 	if err := ta.TailPath(logfile); err != nil {
 		t.Fatal(err)
 	}
-
 	if err := fs.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
+	f, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
+	if err != nil {
 		t.Fatal(err)
 	}
-
-	if err := ta.TailPath(logfile); err != nil {
+	time.Sleep(10 * time.Millisecond)
+	if err := fs.Chmod(logfile, 0666); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := f.WriteString("\n"); err != nil {
+		t.Fatal(err)
+	}
+	wg.Wait()
+	w.Close()
+	<-done
 
-	// Ugh, wait for it.
-	time.Sleep(300 * time.Millisecond)
+	// // if err := ta.TailPath(logfile); err != nil {
+	// // 	t.Fatal(err)
+	// // }
+
+	// // Ugh, wait for it.
+	// time.Sleep(300 * time.Millisecond)
 }
