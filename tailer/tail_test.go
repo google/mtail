@@ -339,3 +339,28 @@ func TestReadPipe(t *testing.T) {
 		t.Errorf("line not expected: %q", l)
 	}
 }
+
+func TestOpenRetries(t *testing.T) {
+	ta, _, _, fs, dir := makeTestTailReal(t, "retries")
+	defer os.RemoveAll(dir)
+
+	logfile := filepath.Join(dir, "log")
+	if _, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ta.TailPath(logfile); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := fs.Remove(logfile); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ta.TailPath(logfile); err != nil {
+		t.Fatal(err)
+	}
+}
