@@ -14,7 +14,7 @@ mapping between progs and logs to reduce wasted processing
 ~ and !~ 
 
 define a capref in the same expression it's used: e.g.
-  /(?<x>.*)/ && x > 0
+  /(?<x>.*)/ && $x > 0
 
 conversion in vm.compare() crashes on $var == "string" when $var is
     float (logical.mtail, input line "12.8") -- 
@@ -56,3 +56,8 @@ and we need to worry about the jump table too
 
 
 count stack size and preallocate stack
+
+
+Use capture group references to feed back to declaring regular expression,
+    noting unused caprefs,
+    possibly flipping back to noncapturing (and renumbering the caprefs?)
