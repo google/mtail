@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/watcher"
@@ -338,4 +339,52 @@ func TestReadPipe(t *testing.T) {
 	if l.Line != "hi" {
 		t.Errorf("line not expected: %q", l)
 	}
+}
+
+func TestOpenRetries(t *testing.T) {
+	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
+	defer os.RemoveAll(dir)
+
+	logfile := filepath.Join(dir, "log")
+	if _, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan struct{})
+	wg := sync.WaitGroup{}
+	wg.Add(1) // lines written
+	go func() {
+		for range lines {
+			wg.Done()
+		}
+		close(done)
+	}()
+
+	if err := ta.TailPath(logfile); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.Remove(logfile); err != nil {
+		t.Fatal(err)
+	}
+	f, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	if err := fs.Chmod(logfile, 0666); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString("\n"); err != nil {
+		t.Fatal(err)
+	}
+	wg.Wait()
+	w.Close()
+	<-done
+
+	// // if err := ta.TailPath(logfile); err != nil {
+	// // 	t.Fatal(err)
+	// // }
+
+	// // Ugh, wait for it.
+	// time.Sleep(300 * time.Millisecond)
 }
