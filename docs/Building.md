@@ -6,7 +6,9 @@ You will need to install Go 1.7 or higher.
 
 # Details
 
-[Clone](http://github.com/google/mtail) the source from GitHub.
+[Clone](http://github.com/google/mtail) the source from GitHub into your `$GOPATH`.  If you're new to Go, check out these references on setting up the `$GOPATH` workspace:
+
+* 
 
 mtail uses `make` to build.  Type `make` at the commandline to install all the dependencies, and then build `mtail`.  This assumes that your Go environment is already set up.
 
