@@ -106,7 +106,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Seek(0, 0) // In memory files share the same offset
+	f.Seek(0, 0) // afero in-memory files share the same offset
 	wg.Add(4)
 	w.InjectUpdate(logfile)
 
@@ -130,13 +130,9 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	//t.Skip("flaky")
-	//ta, lines, w, fs, dir := makeTestTailReal(t, "trunc")
 	ta, lines, w, fs := makeTestTail(t)
-	//defer os.RemoveAll(dir) // clean up
-	defer wa.Close()
 
-	dir = "/"
+	dir := "/"
 
 	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
@@ -155,36 +151,27 @@ func TestHandleLogTruncate(t *testing.T) {
 		close(done)
 	}()
 
-	err = ta.TailPath(logfile)
-	if err != nil {
+	if err = ta.TailPath(logfile); err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = f.WriteString("a\nb\nc\n")
-	if err != nil {
+	if _, err = f.WriteString("a\nb\nc\n"); err != nil {
 		t.Fatal(err)
 	}
 	wg.Add(3)
+	w.InjectUpdate(logfile)
 	wg.Wait()
 
-	err = f.Truncate(0)
-	if err != nil {
+	if err = f.Truncate(0); err != nil {
 		t.Fatal(err)
 	}
+	w.InjectUpdate(logfile)
 
-	// This is potentially racy.  Unlike in the case where we've got new
-	// lines that we can verify were seen with the WaitGroup, here nothing
-	// ensures that this update-due-to-truncate is seen by the Tailer before
-	// we write new data to the file.  In order to avoid the race we'll make
-	// sure that the total data size written post-truncate is less than
-	// pre-truncate, so that the post-truncate offset is always smaller
-	// than the offset seen after wg.Add(3); wg.Wait() above.
-
-	_, err = f.WriteString("d\ne\n")
-	if err != nil {
+	if _, err = f.WriteString("d\ne\n"); err != nil {
 		t.Fatal(err)
 	}
 	wg.Add(2)
+	w.InjectUpdate(logfile)
 
 	// ugh
 	wg.Wait()
