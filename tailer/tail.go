@@ -150,13 +150,13 @@ func (t *Tailer) TailPath(pathname string) error {
 	if err != nil {
 		return errors.Wrapf(err, "find absolute path for %q", pathname)
 	}
-	if !t.isWatching(fullpath) {
-		t.addWatched(fullpath)
-		LogCount.Add(1)
-		// TODO(jaq): ex_test/filename.mtail requires we use the original name here.
-		t.openLogPath(pathname, false)
+	if t.isWatching(fullpath) {
+		return nil
 	}
-	return nil
+	t.addWatched(fullpath)
+	LogCount.Add(1)
+	// TODO(jaq): ex_test/filename.mtail requires we use the original pathname here, not fullpath
+	return t.openLogPath(pathname, false)
 }
 
 // TailFile registers a file handle to be tailed.  There is no filesystem to
@@ -234,8 +234,11 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 			return err
 		}
 
-		for i, width := 0, 0; i < len(b) && i < n; i += width {
-			var rune rune
+		var (
+			rune  rune
+			width int
+		)
+		for i := 0; i < len(b) && i < n; i += width {
 			rune, width = utf8.DecodeRune(b[i:])
 			switch {
 			case rune != '\n':
@@ -345,39 +348,49 @@ func (t *Tailer) watchDirname(pathname string) {
 }
 
 // openLogPath opens a log file named by pathname.
-func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
+func (t *Tailer) openLogPath(pathname string, seenBefore bool) error {
+	glog.V(2).Infof("openlogPath %s %v", pathname, seenBefore)
 	t.watchDirname(pathname)
 
 	retries := 3
 	retryDelay := 1 * time.Millisecond
+	shouldRetry := func() bool {
+		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
+		if !seenBefore {
+			return false
+		}
+		return retries > 0
+	}
 	var f afero.File
 	var err error
-	for retries > 0 {
-		f, err = t.fs.Open(pathname)
-		if err == nil {
-			break
-		}
-		// Doesn't exist yet. We're watching the directory, so we'll pick it up
-		// again on create; return successfully.
-		if os.IsNotExist(err) {
-			glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
-			return
-		}
+Retry:
+	f, err = t.fs.Open(pathname)
+	if err == nil {
+		glog.V(2).Infof("open succeeded %s", pathname)
+	}
+	// Doesn't exist yet. We're watching the directory, so we'll pick it up
+	// again on create; return successfully.
+	if os.IsNotExist(err) {
+		glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
+		return nil
+	}
+	LogErrors.Add(pathname, 1)
+	if shouldRetry() {
+		retries = retries - 1
+		time.Sleep(retryDelay)
+		retryDelay = retryDelay + retryDelay
+		goto Retry
+	}
+	if err != nil {
 		glog.Infof("Failed to open %q for reading: %s", pathname, err)
-		LogErrors.Add(pathname, 1)
-		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
-		if seenBefore {
-			retries = retries - 1
-			time.Sleep(retryDelay)
-			retryDelay = retryDelay + retryDelay
-		} else {
-			return
-		}
+		return err
 	}
 	err = t.startNewFile(f, seenBefore)
 	if err != nil && err != io.EOF {
 		glog.Error(err)
+		return err
 	}
+	return nil
 }
 
 // startNewFile optionally seeks to the start or end of the file, then starts
@@ -391,15 +404,16 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		return errors.Wrapf(err, "Failed to stat %q: %s", f.Name())
 	}
 	switch m := fi.Mode(); {
-	case m&os.ModeType == 0:
+	case m.IsRegular():
+		seekWhence := io.SeekEnd
 		if seekStart || t.oneShot {
-			f.Seek(0, os.SEEK_SET)
-		} else {
-			f.Seek(0, os.SEEK_END)
+			seekWhence = io.SeekCurrent
 		}
-		err = t.w.Add(f.Name())
-		if err != nil {
-			return errors.Wrapf(err, "Adding a change watch failed on %q: %s", f.Name())
+		if _, err := f.Seek(0, seekWhence); err != nil {
+			return errors.Wrapf(err, "Seek failed on %q", f.Name())
+		}
+		if err := t.w.Add(f.Name()); err != nil {
+			return errors.Wrapf(err, "Adding a change watch failed on %q", f.Name())
 		}
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
@@ -515,8 +529,5 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	}{
 		t.watched,
 	}
-	if err := tpl.Execute(w, data); err != nil {
-		return err
-	}
-	return nil
+	return tpl.Execute(w, data)
 }

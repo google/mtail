@@ -10,7 +10,7 @@ It has a **class**, so that tools can automatically perform some aggregation ope
 
 It has a **type**, describing the sort of data it contains: floating point or integer values.
 
-Finally, it has some **tags**, so that additional information about the measurement can be added to assist queries later.
+Finally, it has some **labels**, so that additional information about the measurement can be added to assist queries later.  Labels are key/value pairs, where the value may change for a specific measurement, but the keys remain constant across all measurements in a metric.
 
 ## Classes of Metrics
 
@@ -52,3 +52,24 @@ counter a
 ```
 
 the compiler can figure out that the capturing group reference `$1` contains digit and decimal point characters, and is likely then a floating point type.
+
+## Labelling
+
+Labels are added as dimensions on a metric:
+
+```
+counter a by x, y, z
+```
+
+creates a three dimensional metric called `a`, with each dimension key `x`, `y`, `z`.
+
+Setting a measurement by label is done with an indexed expression:
+
+```
+  a[1, 2, 3]++
+```
+
+which has the effect of incrementing the metric a when x = 1, y = 2, and z = 3.
+
+Dimensions, aka *labels* in the metric name, can be used to export rich data to
+the metrics collector, for potential slicing and aggregation by each dimension.
