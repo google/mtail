@@ -382,8 +382,7 @@ Retry:
 		goto Retry
 	}
 	if err != nil {
-		glog.Infof("Failed to open %q for reading: %s", pathname, err)
-		return err
+		return errors.Wrap(err, "openLogPath failed all retries")
 	}
 	err = t.startNewFile(f, seenBefore)
 	if err != nil && err != io.EOF {

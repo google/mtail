@@ -351,8 +351,8 @@ func TestOpenRetries(t *testing.T) {
 		close(done)
 	}()
 
-	if err := ta.TailPath(logfile); err != nil {
-		t.Fatal(err)
+	if err := ta.TailPath(logfile); err == nil {
+		t.Fatal("Expected a permission denied error here.")
 	}
 	if err := fs.Remove(logfile); err != nil {
 		t.Fatal(err)
@@ -371,11 +371,4 @@ func TestOpenRetries(t *testing.T) {
 	wg.Wait()
 	w.Close()
 	<-done
-
-	// // if err := ta.TailPath(logfile); err != nil {
-	// // 	t.Fatal(err)
-	// // }
-
-	// // Ugh, wait for it.
-	// time.Sleep(300 * time.Millisecond)
 }
