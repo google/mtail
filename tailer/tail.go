@@ -174,7 +174,9 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	fd, ok := t.files[pathname]
 	t.filesMu.Unlock()
 	if !ok {
-		glog.Warningf("No file descriptor found for %q, but is being watched", pathname)
+		glog.Warningf("No file descriptor found for %q, but is being watched; opening", pathname)
+		// Try to open it, and because we have a watch set seenBefore.
+		t.openLogPath(pathname, true)
 		return
 	}
 	var err error
@@ -274,7 +276,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 
 	if !ok {
 		// Freshly opened log file, never seen before.
-		t.openLogPath(pathname, true)
+		t.openLogPath(pathname, false)
 		return
 	}
 
