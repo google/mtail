@@ -36,6 +36,6 @@ func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) str
 	return fmt.Sprintf("%s%s.%s:%s|%s",
 		*statsdPrefix,
 		m.Program,
-		formatLabels(m.Name, l.Labels, ".", "."),
+		formatLabels(m.Name, l.Labels, ".", ".", "_"),
 		l.Datum.ValueString(), t)
 }

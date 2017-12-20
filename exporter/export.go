@@ -74,12 +74,16 @@ func New(o Options) (*Exporter, error) {
 
 // formatLabels converts a metric name and key-value map of labels to a single
 // string for exporting to the correct output format for each export target.
-func formatLabels(name string, m map[string]string, ksep, sep string) string {
+// ksep and sep mark what to use for key/val separator, and between label separators respoectively.
+// If not empty, rep is used to replace cases of ksep and sep in the original strings.
+func formatLabels(name string, m map[string]string, ksep, sep, rep string) string {
 	r := name
 	if len(m) > 0 {
 		var s []string
 		for k, v := range m {
-			s = append(s, fmt.Sprintf("%s%s%s", k, ksep, v))
+			k1 := strings.Replace(strings.Replace(k, ksep, rep, -1), sep, rep, -1)
+			v1 := strings.Replace(strings.Replace(v, ksep, rep, -1), sep, rep, -1)
+			s = append(s, fmt.Sprintf("%s%s%s", k1, ksep, v1))
 		}
 		return r + sep + strings.Join(s, sep)
 	}
