@@ -20,7 +20,6 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -250,20 +249,6 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 	}
 }
 
-// inode returns the inode number of a file, or 0 if the file has no underlying Sys implementation.
-func inode(f os.FileInfo) uint64 {
-	s := f.Sys()
-	if s == nil {
-		return 0
-	}
-	switch s := s.(type) {
-	case *syscall.Stat_t:
-		return uint64(s.Ino)
-	default:
-		return 0
-	}
-}
-
 // handleLogCreate handles both new and rotated log files.
 func (t *Tailer) handleLogCreate(pathname string) {
 	glog.V(2).Infof("handleLogCreate %s", pathname)
@@ -291,7 +276,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 		glog.Infof("Stat failed on %q: %s", pathname, err)
 		return
 	}
-	if inode(s1) == inode(s2) {
+	if os.SameFile(s1, s2) {
 		glog.V(1).Infof("Path %s already being watched, and inode not changed.",
 			pathname)
 		return
