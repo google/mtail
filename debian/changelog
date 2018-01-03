@@ -1,3 +1,9 @@
+mtail (3.0.0~rc5-1) unstable; urgency=medium
+
+  * New upstream release candidate.
+
+ -- Filippo Giunchedi <filippo@debian.org>  Wed, 03 Jan 2018 11:51:53 +0100
+
 mtail (3.0.0~rc4-1) unstable; urgency=high
 
   * New upstream snapshot, with bug fixes.
