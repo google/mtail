@@ -6,8 +6,10 @@ package watcher
 import (
 	"errors"
 	"expvar"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"syscall"
@@ -19,7 +21,7 @@ import (
 
 // This test requires disk access, and cannot be injected without internal
 // knowledge of the fsnotify code. Make the wait deadlines long.
-const deadline = 1 * time.Second
+const deadline = 5 * time.Second
 
 func TestLogWatcher(t *testing.T) {
 	if testing.Short() {
@@ -129,6 +131,13 @@ func TestLogWatcherAddError(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping log watcher test in short mode")
 	}
+	u, err := user.Current()
+	if err != nil {
+		t.Skip(fmt.Sprintf("Couldn't determine current user id: %s", err))
+	}
+	if u.Uid == "0" {
+		t.Skip("Skipping test when run as root")
+	}
 
 	workdir, err := ioutil.TempDir("", "log_watcher_test")
 	if err != nil {
@@ -165,6 +174,9 @@ func TestLogWatcherAddError(t *testing.T) {
 }
 
 func TestWatcherErrors(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping log watcher test in short mode")
+	}
 	orig, err := strconv.ParseInt(expvar.Get("log_watcher_error_count").String(), 10, 64)
 	if err != nil {
 		t.Fatalf("couldn't convert expvar %q", expvar.Get("log_watcher_error_count").String())

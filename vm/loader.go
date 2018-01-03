@@ -362,7 +362,10 @@ func (l *Loader) processLines(lines <-chan *tailer.LogLine) {
 		l.handleMu.RUnlock()
 	}
 	glog.Info("Shutting down loader.")
-	l.w.Close()
+	err := l.w.Close()
+	if err != nil {
+		glog.Info("error closing watcher: %s", err)
+	}
 	<-l.watcherDone
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()

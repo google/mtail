@@ -98,7 +98,11 @@ var testCodeGenPrograms = []struct {
 			{push, int64(1)},
 			{push, int64(0)},
 			{cmp, 1},
-			{jnm, 9},
+			{jnm, 6},
+			{push, true},
+			{jmp, 7},
+			{push, false},
+			{jnm, 13},
 			{setmatched, false},
 			{mload, 0},
 			{dload, 0},
@@ -113,7 +117,11 @@ var testCodeGenPrograms = []struct {
 			{push, int64(1)},
 			{push, int64(0)},
 			{cmp, -1},
-			{jnm, 9},
+			{jnm, 6},
+			{push, true},
+			{jmp, 7},
+			{push, false},
+			{jnm, 13},
 			{setmatched, false},
 			{mload, 0},
 			{dload, 0},
@@ -128,7 +136,11 @@ var testCodeGenPrograms = []struct {
 			{push, int64(1)},
 			{push, int64(0)},
 			{cmp, 0},
-			{jnm, 9},
+			{jnm, 6},
+			{push, true},
+			{jmp, 7},
+			{push, false},
+			{jnm, 13},
 			{setmatched, false},
 			{mload, 0},
 			{dload, 0},
@@ -143,7 +155,11 @@ var testCodeGenPrograms = []struct {
 			{push, int64(1)},
 			{push, int64(0)},
 			{cmp, 1},
-			{jm, 9},
+			{jm, 6},
+			{push, true},
+			{jmp, 7},
+			{push, false},
+			{jnm, 13},
 			{setmatched, false},
 			{mload, 0},
 			{dload, 0},
@@ -158,7 +174,11 @@ var testCodeGenPrograms = []struct {
 			{push, int64(1)},
 			{push, int64(0)},
 			{cmp, -1},
-			{jm, 9},
+			{jm, 6},
+			{push, true},
+			{jmp, 7},
+			{push, false},
+			{jnm, 13},
 			{setmatched, false},
 			{mload, 0},
 			{dload, 0},
@@ -173,7 +193,11 @@ var testCodeGenPrograms = []struct {
 			{push, int64(1)},
 			{push, int64(0)},
 			{cmp, 0},
-			{jm, 9},
+			{jm, 6},
+			{push, true},
+			{jmp, 7},
+			{push, false},
+			{jnm, 13},
 			{setmatched, false},
 			{mload, 0},
 			{dload, 0},
@@ -188,13 +212,17 @@ var testCodeGenPrograms = []struct {
 			"}\n",
 		[]instr{
 			{match, 0},
-			{jnm, 14},
+			{jnm, 18},
 			{setmatched, false},
 			{push, 0},
 			{capref, 1},
 			{push, int64(1)},
 			{cmp, 1},
-			{jm, 13},
+			{jm, 10},
+			{push, true},
+			{jmp, 11},
+			{push, false},
+			{jnm, 17},
 			{setmatched, false},
 			{mload, 0},
 			{dload, 0},
@@ -232,6 +260,10 @@ var testCodeGenPrograms = []struct {
 			{push, int64(0)},
 			{cmp, 1},
 			{jnm, 7},
+			{push, true},
+			{jmp, 8},
+			{push, false},
+			{jnm, 11},
 			{setmatched, false},
 			{setmatched, true}}},
 	{"bitwise", `
@@ -248,7 +280,7 @@ var testCodeGenPrograms = []struct {
 			{push, int64(8)},
 			{or, nil},
 			{push, int64(16)},
-			{not, nil},
+			{neg, nil},
 			{push, int64(2)},
 			{shl, nil},
 			{push, int64(1)},
@@ -316,13 +348,17 @@ counter bar
 			{push, int64(1)},
 			{push, int64(0)},
 			{cmp, 1},
-			{jnm, 10},
+			{jnm, 6},
+			{push, true},
+			{jmp, 7},
+			{push, false},
+			{jnm, 14},
 			{setmatched, false},
 			{mload, 0},
 			{dload, 0},
 			{inc, nil},
 			{setmatched, true},
-			{jmp, 13},
+			{jmp, 17},
 			{mload, 1},
 			{dload, 0},
 			{inc, nil},
@@ -458,7 +494,41 @@ getfilename()
 			{s2f, nil},
 			{fset, nil},
 			{setmatched, true}}},
-	{"nested conditionals",
+	{"float to string",
+		`counter c by a
+/(\d+\.\d+)/ {
+  c[string($1)] ++
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 10},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{f2s, nil},
+			{mload, 0},
+			{dload, 1},
+			{inc, nil},
+			{setmatched, true}}},
+	{"int to string",
+		`counter c by a
+/(\d+)/ {
+  c[string($1)] ++
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 10},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{i2s, nil},
+			{mload, 0},
+			{dload, 1},
+			{inc, nil},
+			{setmatched, true}}},
+	{"nested comparisons",
 		`counter foo
 /(.*)/ {
   $1 == "foo" || $1 == "bar" {
@@ -467,24 +537,121 @@ getfilename()
 }
 `, []instr{
 			{match, 0},
-			{jnm, 19},
+			{jnm, 31},
 			{setmatched, false},
 			{push, 0},
 			{capref, 1},
 			{str, 0},
 			{cmp, 0},
-			{jm, 14},
+			{jnm, 10},
+			{push, true},
+			{jmp, 11},
+			{push, false},
+			{jm, 23},
 			{push, 0},
 			{capref, 1},
 			{str, 1},
 			{cmp, 0},
-			{jnm, 18},
+			{jnm, 19},
+			{push, true},
+			{jmp, 20},
+			{push, false},
+			{jm, 23},
+			{push, false},
+			{jmp, 24},
+			{push, true},
+			{jnm, 30},
 			{setmatched, false},
 			{mload, 0},
 			{dload, 0},
 			{inc, nil},
 			{setmatched, true},
 			{setmatched, true}}},
+	{"string concat", `
+counter f by s
+/(.*), (.*)/ {
+  f[$1 + $2]++
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 12},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{push, 0},
+			{capref, 2},
+			{cat, nil},
+			{mload, 0},
+			{dload, 1},
+			{inc, nil},
+			{setmatched, true},
+		}},
+	{"add assign float", `
+gauge foo
+/(\d+\.\d+)/ {
+  foo += $1
+}
+`,
+		[]instr{
+			{match, 0},
+			{jnm, 12},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{fadd, nil},
+			{fset, nil},
+			{setmatched, true},
+		}},
+	{"match expression", `
+	counter foo
+	/(.*)/ {
+	  $1 =~ /asdf/ {
+	    foo++
+	  }
+	}`,
+		[]instr{
+			{match, 0},
+			{jnm, 13},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{smatch, 1},
+			{jnm, 12},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true},
+			{setmatched, true},
+		}},
+	{"negative match expression", `
+	counter foo
+	/(.*)/ {
+	  $1 !~ /asdf/ {
+	    foo++
+	  }
+	}`,
+		[]instr{
+			{match, 0},
+			{jnm, 14},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{smatch, 1},
+			{not, nil},
+			{jnm, 13},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true},
+			{setmatched, true},
+		}},
 }
 
 func TestCodegen(t *testing.T) {
@@ -497,12 +664,12 @@ func TestCodegen(t *testing.T) {
 				t.Fatalf("Parse error: %s", err)
 			}
 			err = Check(ast)
-			if err != nil {
-				t.Fatalf("Check error: %s", err)
-			}
 			s := Sexp{}
 			s.emitTypes = true
 			t.Log("Typed AST:\n" + s.Dump(ast))
+			if err != nil {
+				t.Fatalf("Check error: %s", err)
+			}
 			obj, err := CodeGen(tc.name, ast)
 			if err != nil {
 				t.Fatalf("Codegen error:\n%s", err)

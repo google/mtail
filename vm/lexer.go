@@ -9,6 +9,8 @@ import (
 	"io"
 	"sort"
 	"unicode"
+
+	"github.com/golang/glog"
 )
 
 // Lexeme enumerates the types of lexical tokens in a mtail program.
@@ -30,6 +32,7 @@ var lexemeName = map[lexeme]string{
 	PLUS:         "PLUS",
 	MUL:          "MUL",
 	DIV:          "DIV",
+	MOD:          "MOD",
 	POW:          "POW",
 	SHL:          "SHL",
 	SHR:          "SHR",
@@ -48,6 +51,7 @@ var lexemeName = map[lexeme]string{
 	REGEX:        "REGEX",
 	ID:           "ID",
 	CAPREF:       "CAPREF",
+	CAPREF_NAMED: "CAPREF_NAMED",
 	STRING:       "STRING",
 	BUILTIN:      "BUILTIN",
 	COUNTER:      "COUNTER",
@@ -65,6 +69,10 @@ var lexemeName = map[lexeme]string{
 	DEL:          "DEL",
 	INTLITERAL:   "INTLITERAL",
 	FLOATLITERAL: "FLOATLITERAL",
+	NL:           "NL",
+	CONCAT:       "CONCAT",
+	MATCH:        "MATCH",
+	NOT_MATCH:    "NOT_MATCH",
 }
 
 func (t lexeme) String() string {
@@ -168,6 +176,7 @@ func (l *lexer) nextToken() token {
 // emit passes a token to the client.
 func (l *lexer) emit(kind lexeme) {
 	pos := position{l.name, l.line, l.startcol, l.col - 1}
+	glog.V(2).Infof("Emitting %v at %v", kind, pos)
 	l.tokens <- token{kind, l.text, pos}
 	// Reset the current token
 	l.text = ""
@@ -313,6 +322,9 @@ func lexProg(l *lexer) stateFn {
 		case '=':
 			l.accept()
 			l.emit(EQ)
+		case '~':
+			l.accept()
+			l.emit(MATCH)
 		default:
 			l.backup()
 			l.emit(ASSIGN)
@@ -349,6 +361,9 @@ func lexProg(l *lexer) stateFn {
 		case '=':
 			l.accept()
 			l.emit(NE)
+		case '~':
+			l.accept()
+			l.emit(NOT_MATCH)
 		default:
 			l.backup()
 			return l.errorf("Unexpected input: %q", r)
@@ -532,11 +547,15 @@ Loop:
 
 }
 
-// Lex a regular expression. The text of the regular expression does not
-// include the '/' quotes.
+// Lex a regular expression pattern. The text of the regular expression does
+// not include the '/' quotes.
 func lexRegex(l *lexer) stateFn {
 	// Exit regex mode when leaving this function.
-	defer func() { l.inRegex = false }()
+	defer func() {
+		glog.V(2).Info("Exiting regex")
+		glog.V(2).Infof("Regex at line %d, startcol %d, col %d", l.line, l.startcol, l.col)
+		l.inRegex = false
+	}()
 Loop:
 	for {
 		switch l.next() {

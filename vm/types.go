@@ -153,13 +153,13 @@ func IsFunction(t Type) bool {
 // Dimension is a convenience method which instantiates a new Dimension type
 // scheme, with the given args as the dimensions of the type.
 func Dimension(args ...Type) *TypeOperator {
-	return &TypeOperator{"❌", args}
+	return &TypeOperator{"⨯", args}
 }
 
 // IsDimension returns true if the given type is a Dimension type.
 func IsDimension(t Type) bool {
 	if v, ok := t.(*TypeOperator); ok {
-		return v.Name == "❌"
+		return v.Name == "⨯"
 	}
 	return false
 }
@@ -182,13 +182,14 @@ func IsComplete(t Type) bool {
 
 // Builtin types
 var (
-	Undef  = &TypeOperator{"Undef", []Type{}}
-	Error  = &TypeOperator{"Error", []Type{}}
-	None   = &TypeOperator{"None", []Type{}}
-	Bool   = &TypeOperator{"Bool", []Type{}}
-	Int    = &TypeOperator{"Int", []Type{}}
-	Float  = &TypeOperator{"Float", []Type{}}
-	String = &TypeOperator{"String", []Type{}}
+	Undef   = &TypeOperator{"Undef", []Type{}}
+	Error   = &TypeOperator{"Error", []Type{}}
+	None    = &TypeOperator{"None", []Type{}}
+	Bool    = &TypeOperator{"Bool", []Type{}}
+	Int     = &TypeOperator{"Int", []Type{}}
+	Float   = &TypeOperator{"Float", []Type{}}
+	String  = &TypeOperator{"String", []Type{}}
+	Pattern = &TypeOperator{"Pattern", []Type{}}
 )
 
 // Builtins is a mapping of the builtin language functions to their type definitions.
@@ -373,9 +374,8 @@ func inferCaprefType(re *syntax.Regexp, cap int) Type {
 	case groupOnlyMatches(group, "+-0123456789.eE"):
 		if strings.Count(group.String(), ".") <= 1 {
 			return Float
-		} else {
-			return String
 		}
+		return String
 	}
 	return String
 }
@@ -431,4 +431,14 @@ func groupOnlyMatches(re *syntax.Regexp, s string) bool {
 		return false
 	}
 	return true
+}
+
+// isErrorType indicates that a given type is the result of a type error.
+func isErrorType(t Type) bool {
+	if o, ok := t.(*TypeOperator); ok {
+		if o.Name == "Error" {
+			return true
+		}
+	}
+	return false
 }

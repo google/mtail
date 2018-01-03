@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -73,6 +74,26 @@ var exampleProgramTests = []struct {
 		"testdata/logical.log",
 		"testdata/logical.golden",
 	},
+	{
+		"examples/strcat.mtail",
+		"testdata/strcat.log",
+		"testdata/strcat.golden",
+	},
+	{
+		"examples/add_assign_float.mtail",
+		"testdata/add_assign_float.log",
+		"testdata/add_assign_float.golden",
+	},
+	{
+		"examples/typed-comparison.mtail",
+		"testdata/typed-comparison.log",
+		"testdata/typed-comparison.golden",
+	},
+	{
+		"examples/match-expression.mtail",
+		"testdata/match-expression.log",
+		"testdata/match-expression.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -109,7 +130,10 @@ func TestExamplePrograms(t *testing.T) {
 			golden_store := metrics.NewStore()
 			testdata.ReadTestData(g, tc.programfile, golden_store)
 
-			mtail.Close()
+			err = mtail.Close()
+			if err != nil {
+				t.Error(err)
+			}
 
 			diff := cmp.Diff(golden_store, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
 
@@ -118,6 +142,35 @@ func TestExamplePrograms(t *testing.T) {
 				t.Logf(" Golden metrics: %s", golden_store.Metrics)
 				t.Logf("Program metrics: %s", store.Metrics)
 			}
+		})
+	}
+}
+
+// This test only compiles examples, but has coverage over all examples
+// provided.  This ensures we ship at least syntactically correct examples.
+func TestCompileExamplePrograms(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	matches, err := filepath.Glob("examples/*.mtail")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range matches {
+		t.Run(tc, func(t *testing.T) {
+			w := watcher.NewFakeWatcher()
+			s := metrics.NewStore()
+			fs := &afero.OsFs{}
+			o := mtail.Options{Progs: tc, W: w, FS: fs, Store: s}
+			o.CompileOnly = true
+			o.OmitMetricSource = true
+			o.DumpAstTypes = true
+			o.DumpBytecode = true
+			mtail, err := mtail.New(o)
+			if err != nil {
+				t.Fatal(err)
+			}
+			mtail.Close()
 		})
 	}
 }

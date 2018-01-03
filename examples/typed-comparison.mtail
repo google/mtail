@@ -1,0 +1,16 @@
+counter t by le
+counter t_sum
+
+# To make ex_test.go happy
+strptime("2017-11-02T16:07:14Z", "2006-01-02T15:04:05Z07:00")
+
+/^(?P<v>\d+(\.\d+)?)/ {
+    $v < 0.5 {
+            t["0.5"]++
+    }
+    $v < 1 {
+            t["1"]++
+    }
+    t["inf"]++
+    t_sum += $v
+}

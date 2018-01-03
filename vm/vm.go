@@ -27,7 +27,9 @@ import (
 type opcode int
 
 const (
-	match      opcode = iota // Match a regular expression against input, and set the match register.
+	bad        opcode = iota // Invalid instruction, indicates a bug in the generator.
+	match                    // Match a regular expression against input, and set the match register.
+	smatch                   // Match a regular expression against top of stack, and set the match register.
 	cmp                      // Compare two values on the stack and set the match register.
 	jnm                      // Jump if no match.
 	jm                       // Jump if match.
@@ -49,13 +51,15 @@ const (
 	and                      // Bitwise AND the 2 at top of stack, and push result
 	or                       // Bitwise OR the 2 at top of stack, and push result
 	xor                      // Bitwise XOR the 2 at top of stack, and push result
-	not                      // Bitwise NOT the top of stack, and push result
+	neg                      // Bitwise NOT the top of stack, and push result
+	not                      // Boolean NOT the top of stack, and push result
 	shl                      // Shift TOS left, push result
 	shr                      // Shift TOS right, push result
 	mload                    // Load metric at operand onto top of stack
 	dload                    // Pop `operand` keys and metric off stack, and push datum at metric[key,...] onto stack.
 	tolower                  // Convert the string at the top of the stack to lowercase.
 	length                   // Compute the length of a string.
+	cat                      // string concatenation
 	setmatched               // Set "matched" flag
 	otherwise                // Only match if "matched" flag is false.
 	del                      //  Pop `operand` keys and metric off stack, and remove the datum at metric[key,...] from memory
@@ -75,10 +79,13 @@ const (
 	i2f // int to float
 	s2i // string to int
 	s2f // string to float
+	i2s // int to string
+	f2s // float to string
 )
 
 var opNames = map[opcode]string{
 	match:       "match",
+	smatch:      "smatch",
 	cmp:         "cmp",
 	jnm:         "jnm",
 	jm:          "jm",
@@ -103,10 +110,12 @@ var opNames = map[opcode]string{
 	or:          "or",
 	xor:         "xor",
 	not:         "not",
+	neg:         "neg",
 	mload:       "mload",
 	dload:       "dload",
 	tolower:     "tolower",
 	length:      "length",
+	cat:         "cat",
 	setmatched:  "setmatched",
 	otherwise:   "otherwise",
 	del:         "del",
@@ -121,11 +130,11 @@ var opNames = map[opcode]string{
 	i2f:         "i2f",
 	s2i:         "s2i",
 	s2f:         "s2f",
+	i2s:         "i2s",
+	f2s:         "f2s",
 }
 
 var builtin = map[string]opcode{
-	"int":         s2i,
-	"float":       s2f,
 	"getfilename": getfilename,
 	"len":         length,
 	"settime":     settime,
@@ -147,7 +156,6 @@ func (i instr) String() string {
 
 type thread struct {
 	pc      int              // Program counter.
-	match   bool             // Match register.
 	matched bool             // Flag set if any match has been found.
 	matches map[int][]string // Match result variables.
 	time    time.Time        // Time register.
@@ -201,7 +209,6 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	glog.Infof("Input: %#v", v.input)
 	glog.Infof("Thread:")
 	glog.Infof(" PC %v", v.t.pc-1)
-	glog.Infof(" Match %v", v.t.match)
 	glog.Infof(" Matched %v", v.t.matched)
 	glog.Infof(" Matches %v", v.t.matches)
 	glog.Infof(" Timestamp %v", v.t.time)
@@ -408,13 +415,24 @@ func (v *VM) execute(t *thread, i instr) {
 	}()
 
 	switch i.op {
+	case bad:
+		v.errorf("Invalid instruction.  Aborting.")
+		v.abort = true
+
 	case match:
 		// match regex and store success
 		// Store the results in the operandth element of the stack,
 		// where i.opnd == the matched re index
 		index := i.opnd.(int)
 		t.matches[index] = v.re[index].FindStringSubmatch(v.input.Line)
-		t.match = t.matches[index] != nil
+		t.Push(t.matches[index] != nil)
+
+	case smatch:
+		// match regex against item on the stack
+		index := i.opnd.(int)
+		line := t.Pop().(string)
+		t.matches[index] = v.re[index].FindStringSubmatch(line)
+		t.Push(t.matches[index] != nil)
 
 	case cmp:
 		// Compare two elements on the stack.
@@ -425,18 +443,20 @@ func (v *VM) execute(t *thread, i instr) {
 
 		match, err := compare(a, b, i.opnd.(int))
 		if err != nil {
-			v.errorf("%s", err)
+			v.errorf("%+v", err)
 		}
 
-		t.match = match
+		t.Push(match)
 
 	case jnm:
-		if !t.match {
+		match := t.Pop().(bool)
+		if !match {
 			t.pc = i.opnd.(int)
 		}
 
 	case jm:
-		if t.match {
+		match := t.Pop().(bool)
+		if match {
 			t.pc = i.opnd.(int)
 		}
 
@@ -454,18 +474,9 @@ func (v *VM) execute(t *thread, i instr) {
 				v.errorf("%s", err)
 			}
 		}
-		// TODO(jaq): the stack should only have the datum, not the offset
-		switch n := t.Pop().(type) {
-		case datum.Datum:
+		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.IncIntBy(n, delta, t.time)
-		case int: // offset into metric
-			m := v.m[n]
-			d, err := m.GetDatum()
-			if err != nil {
-				v.errorf("GetDatum failed: %s", err)
-			}
-			datum.IncIntBy(d, delta, t.time)
-		default:
+		} else {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
 
@@ -475,19 +486,10 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		// TODO(jaq): the stack should only have the datum, not the offset
-		switch n := t.Pop().(type) {
-		case datum.Datum:
+		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.SetInt(n, value, t.time)
-		case int: // offset into metric
-			m := v.m[n]
-			d, err := m.GetDatum()
-			if err != nil {
-				v.errorf("GetDatum failed: %s", err)
-			}
-			datum.SetInt(d, value, t.time)
-		default:
-			v.errorf("Unexpected type to set: %T %q", n, n)
+		} else {
+			v.errorf("Unexpected type to iset: %T %q", n, n)
 		}
 
 	case fset:
@@ -496,19 +498,10 @@ func (v *VM) execute(t *thread, i instr) {
 		if err != nil {
 			v.errorf("%s", err)
 		}
-		// TODO(jaq): the stack should only have the datum, not the offset, unfortunately used by test
-		switch n := t.Pop().(type) {
-		case datum.Datum:
+		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.SetFloat(n, value, t.time)
-		case int: // offset into metric
-			m := v.m[n]
-			d, err := m.GetDatum()
-			if err != nil {
-				v.errorf("GetDatum failed: %s", err)
-			}
-			datum.SetFloat(d, value, t.time)
-		default:
-			v.errorf("Unexpected type to set: %T %q", n, n)
+		} else {
+			v.errorf("Unexpected type to fset: %T %q", n, n)
 		}
 
 	case strptime:
@@ -618,12 +611,16 @@ func (v *VM) execute(t *thread, i instr) {
 			t.Push(a ^ b)
 		}
 
-	case not:
+	case neg:
 		a, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
 		}
 		t.Push(^a)
+
+	case not:
+		a := t.Pop().(bool)
+		t.Push(!a)
 
 	case mload:
 		// Load a metric at operand onto stack
@@ -706,15 +703,34 @@ func (v *VM) execute(t *thread, i instr) {
 		}
 		t.Push(float64(i))
 
+	case i2s:
+		i, err := t.PopInt()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(fmt.Sprintf("%d", i))
+
+	case f2s:
+		f, err := t.PopFloat()
+		if err != nil {
+			v.errorf("%s", err)
+		}
+		t.Push(fmt.Sprintf("%g", f))
+
 	case setmatched:
 		t.matched = i.opnd.(bool)
 
 	case otherwise:
 		// Only match if the matched flag is false.
-		t.match = !t.matched
+		t.Push(!t.matched)
 
 	case getfilename:
 		t.Push(v.input.Filename)
+
+	case cat:
+		s1 := t.Pop().(string)
+		s2 := t.Pop().(string)
+		t.Push(s2 + s1)
 
 	default:
 		v.errorf("illegal instruction: %d", i.op)

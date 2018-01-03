@@ -23,165 +23,124 @@ var instructions = []struct {
 	expectedStack  []interface{}
 	expectedThread thread
 }{
-	// Composite literals require too many explicit conversions.
-	{"inc",
-		instr{inc, nil},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{0},
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}},
-	},
-	{"inc by int",
-		instr{inc, 2},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{0, 1}, // first is metric 0 "foo", second is the inc val.
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}},
-	},
-	{"inc by string",
-		instr{inc, 2},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{0, "1"}, // first is metric 0 "foo", second is the inc val.
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}},
-	},
-	{"set int",
-		instr{iset, nil},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{1, 2}, // set metric 1 "bar"
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}},
-	},
-	{"set str",
-		instr{iset, nil},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{1, "2"},
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}},
-	},
 	{"match",
 		instr{match, 0},
 		[]*regexp.Regexp{regexp.MustCompile("a*b")},
 		[]string{},
 		[]interface{}{},
-		[]interface{}{},
-		thread{match: true, pc: 0, matches: map[int][]string{0: {"aaaab"}}},
+		[]interface{}{true},
+		thread{pc: 0, matches: map[int][]string{0: {"aaaab"}}},
 	},
 	{"cmp lt",
 		instr{cmp, -1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1, "2"},
-		[]interface{}{},
-		thread{pc: 0, match: true, matches: map[int][]string{}}},
+		[]interface{}{true},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp eq",
 		instr{cmp, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"2", "2"},
-		[]interface{}{},
-		thread{pc: 0, match: true, matches: map[int][]string{}}},
+		[]interface{}{true},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt",
 		instr{cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
-		[]interface{}{},
-		thread{pc: 0, match: true, matches: map[int][]string{}}},
+		[]interface{}{true},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp le",
 		instr{cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, "2"},
-		[]interface{}{},
-		thread{pc: 0, match: false, matches: map[int][]string{}}},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp ne",
 		instr{cmp, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"1", "2"},
-		[]interface{}{},
-		thread{pc: 0, match: false, matches: map[int][]string{}}},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp ge",
 		instr{cmp, -1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 2},
-		[]interface{}{},
-		thread{pc: 0, match: false, matches: map[int][]string{}}},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt float float",
 		instr{cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"2.0", "1.0"},
-		[]interface{}{},
-		thread{pc: 0, match: true, matches: map[int][]string{}}},
+		[]interface{}{true},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt float int",
 		instr{cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"1.0", "2"},
-		[]interface{}{},
-		thread{pc: 0, match: false, matches: map[int][]string{}}},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt int float",
 		instr{cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"1", "2.0"},
-		[]interface{}{},
-		thread{pc: 0, match: false, matches: map[int][]string{}}},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp eq string string false",
 		instr{cmp, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"abc", "def"},
-		[]interface{}{},
-		thread{pc: 0, match: false, matches: map[int][]string{}}},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp eq string string true",
 		instr{cmp, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"abc", "abc"},
-		[]interface{}{},
-		thread{pc: 0, match: true, matches: map[int][]string{}}},
+		[]interface{}{true},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt float float",
 		instr{cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2.0, 1.0},
-		[]interface{}{},
-		thread{pc: 0, match: true, matches: map[int][]string{}}},
+		[]interface{}{true},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt float int",
 		instr{cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1.0, 2},
-		[]interface{}{},
-		thread{pc: 0, match: false, matches: map[int][]string{}}},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt int float",
 		instr{cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1, 2.0},
-		[]interface{}{},
-		thread{pc: 0, match: false, matches: map[int][]string{}}},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"jnm",
 		instr{jnm, 37},
 		[]*regexp.Regexp{},
 		[]string{},
-		[]interface{}{},
+		[]interface{}{false},
 		[]interface{}{},
 		thread{pc: 37, matches: map[int][]string{}}},
 	{"jm",
 		instr{jm, 37},
 		[]*regexp.Regexp{},
 		[]string{},
-		[]interface{}{},
+		[]interface{}{false},
 		[]interface{}{},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"jmp",
@@ -311,12 +270,19 @@ var instructions = []struct {
 		[]interface{}{-1, 3},
 		[]interface{}{int64(^3)},
 		thread{pc: 0, matches: map[int][]string{}}},
-	{"not",
-		instr{not, 0},
+	{"neg",
+		instr{neg, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{0},
 		[]interface{}{int64(-1)},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"not",
+		instr{not, 0},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{false},
+		[]interface{}{true},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"pow",
 		instr{ipow, 0},
@@ -393,15 +359,15 @@ var instructions = []struct {
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{},
-		[]interface{}{},
-		thread{match: true, pc: 0, matches: map[int][]string{}}},
+		[]interface{}{true},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"fadd",
 		instr{fadd, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1.0, 2.0},
 		[]interface{}{3.0},
-		thread{match: false, pc: 0, matches: map[int][]string{}}},
+		thread{pc: 0, matches: map[int][]string{}}},
 	{"fsub",
 		instr{fsub, nil},
 		[]*regexp.Regexp{},
@@ -437,19 +403,33 @@ var instructions = []struct {
 		[]interface{}{2.0, 2.0},
 		[]interface{}{4.0},
 		thread{pc: 0, matches: map[int][]string{}}},
-	{"fset",
-		instr{fset, nil},
-		[]*regexp.Regexp{},
-		[]string{},
-		[]interface{}{2, 2.0}, // quux set to 2.
-		[]interface{}{},
-		thread{pc: 0, matches: map[int][]string{}}},
 	{"getfilename",
 		instr{getfilename, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{},
 		[]interface{}{testFilename},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"i2s",
+		instr{i2s, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1},
+		[]interface{}{"1"},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"f2s",
+		instr{f2s, nil},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{3.1},
+		[]interface{}{"3.1"},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"cat",
+		instr{cat, 0},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"first", "second"},
+		[]interface{}{"firstsecond"},
 		thread{pc: 0, matches: map[int][]string{}}},
 }
 
@@ -496,6 +476,159 @@ func TestInstrs(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+// makeVM is a helper method for construction a single-instruction VM
+func makeVM(i instr, m []*metrics.Metric) *VM {
+	obj := &object{m: m, prog: []instr{i}}
+	v := New("test", obj, true, nil)
+	v.t = new(thread)
+	v.t.stack = make([]interface{}, 0)
+	v.t.matches = make(map[int][]string)
+	v.input = tailer.NewLogLine(testFilename, "aaaab")
+	return v
+
+}
+
+// Instructions with datum store side effects
+func TestDatumSetInstrs(t *testing.T) {
+	var m []*metrics.Metric
+	m = append(m,
+		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int),
+		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float))
+
+	// simple inc
+	v := makeVM(instr{inc, nil}, m)
+	d, err := m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "1" {
+		t.Errorf("Unexpected value %v", d)
+	}
+	// inc by int
+	v = makeVM(instr{inc, 0}, m)
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push(2)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "3" {
+		t.Errorf("Unexpected value %v", d)
+	}
+	// inc by str
+	v = makeVM(instr{inc, 0}, m)
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push("1")
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "4" {
+		t.Errorf("Unexpected value %v", d)
+	}
+	// iset
+	v = makeVM(instr{iset, nil}, m)
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push(2)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "2" {
+		t.Errorf("Unexpected value %v", d)
+	}
+	// iset str
+	v = makeVM(instr{iset, nil}, m)
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push("3")
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "3" {
+		t.Errorf("Unexpected value %v", d)
+	}
+	// fset
+	v = makeVM(instr{fset, nil}, m)
+	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push(3.1)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "3.1" {
+		t.Errorf("Unexpected value %v", d)
+	}
+	// fset str
+	v = makeVM(instr{fset, nil}, m)
+	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push("4.1")
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "4.1" {
+		t.Errorf("Unexpected value %v", d)
 	}
 }
 

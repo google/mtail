@@ -12,11 +12,10 @@ type SymbolKind int
 
 // SymbolKind enumerates the kinds of symbols found in the program text.
 const (
-	VarSymbol    SymbolKind = iota // Variables
-	CaprefSymbol                   // Capture group references
-	DecoSymbol                     // Decorators
-
-	endSymbol
+	VarSymbol     SymbolKind = iota // Variables
+	CaprefSymbol                    // Capture group references
+	DecoSymbol                      // Decorators
+	PatternSymbol                   // Named pattern constants
 )
 
 // Symbol describes a named program object.
@@ -56,11 +55,11 @@ func (s *Scope) Insert(sym *Symbol) (alt *Symbol) {
 	return
 }
 
-// lookup returns the symbol with the given name if it is found in this or any
+// Lookup returns the symbol with the given name if it is found in this or any
 // parent scope, otherwise nil.
-func (s *Scope) Lookup(name string) *Symbol {
+func (s *Scope) Lookup(name string, kind SymbolKind) *Symbol {
 	for scope := s; scope != nil; scope = scope.Parent {
-		if sym := scope.Symbols[name]; sym != nil {
+		if sym := scope.Symbols[name]; sym != nil && sym.Kind == kind {
 			return sym
 		}
 	}

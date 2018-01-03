@@ -34,9 +34,9 @@ var checkerInvalidPrograms = []struct {
 		[]string{"undefined identifier:1:6: Identifier `x' not declared.", "\tTry adding `counter x' to the top of the program."},
 	},
 
-	{"invalid regex",
+	{"invalid regex 1",
 		"/foo(/ {}\n",
-		[]string{"invalid regex:1:1-6: error parsing regexp: missing closing ): `foo(`"}},
+		[]string{"invalid regex 1:1:1-6: error parsing regexp: missing closing ): `foo(`"}},
 
 	{"invalid regex 2",
 		"/blurg(?P<x.)/ {}\n",
@@ -56,7 +56,6 @@ var checkerInvalidPrograms = []struct {
 	counter bar by a, b
 	counter quux by a
 	/(\d+)/ {
-      0[$1]++
       n[$1]++
       foo[$1]++
       bar[$1][0]++
@@ -64,15 +63,13 @@ var checkerInvalidPrograms = []struct {
 	}
 		`,
 		[]string{
-			// 0[$1] is not a valud expresison
-			"indexedExpr parameter count:6:7-10: Index taken on unindexable expression",
 			// n[$1] is syntactically valid, but n is not indexable
-			"indexedExpr parameter count:7:7-10: Index taken on unindexable expression",
-			// foo[$1] is short one key but we cannot detect this due to chained indexed expression.
-			"indexedExpr parameter count:8:7-12: Not enough keys for expression: expecting 1 more",
+			"indexedExpr parameter count:6:7-10: Index taken on unindexable expression",
+			// foo[$1] is short one key
+			"indexedExpr parameter count:7:7-12: Not enough keys for indexed expression: expecting 2, received 1",
 			// bar[$1][0] is ok
 			// quux[$1][0] has too many keys
-			"indexedExpr parameter count:10:7-16: Too many keys for indexed expression: expecting 1, received 2.",
+			"indexedExpr parameter count:9:7-16: Too many keys for indexed expression: expecting 1, received 2.",
 		}},
 
 	{"indexedExpr binary expression",
@@ -86,9 +83,9 @@ counter bar by a, b
 }
 `,
 		[]string{
-			"indexedExpr binary expression:4:3-8: Not enough keys for expression: expecting 1 more",
-			"indexedExpr binary expression:7:9-14: Not enough keys for expression: expecting 1 more",
-			"indexedExpr binary expression:7:3-5: Not enough keys for expression: expecting 2 more",
+			"indexedExpr binary expression:4:3-8: Not enough keys for indexed expression: expecting 2, received 1",
+			"indexedExpr binary expression:7:3-5: Not enough keys for indexed expression: expecting 2, received 0",
+			"indexedExpr binary expression:7:9-14: Not enough keys for indexed expression: expecting 2, received 1",
 		}},
 
 	{"builtin parameter mismatch",
@@ -100,6 +97,16 @@ counter bar by a, b
 	}
 	`,
 		[]string{"builtin parameter mismatch:2:13: call to `strptime': type mismatch; expected String→String→None received incomplete type"}},
+
+	{"bad strptime format",
+		`strptime("2017-10-16 06:50:25", "2017-10-16 06:50:25")
+`,
+		[]string{
+			"bad strptime format:1:33-53: invalid time format string \"2017-10-16 06:50:25\"", "\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice."}},
+
+	{"undefined const regex",
+		"/foo / + X + / bar/ {}\n",
+		[]string{"undefined const regex:1:10: Identifier `X' not declared.", "\tTry adding `const X /.../' earlier in the program."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
@@ -113,6 +120,9 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			}
 			err = Check(ast)
 			if err == nil {
+				s := Sexp{}
+				s.emitTypes = true
+				t.Log(s.Dump(ast))
 				t.Fatal("check didn't fail")
 			}
 
@@ -121,6 +131,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 				strings.Split(err.Error(), "\n")) // got
 			if diff != "" {
 				t.Errorf("Diff %s", diff)
+				t.Logf("Got: %s", err.Error())
 				s := Sexp{}
 				s.emitTypes = true
 				t.Log(s.Dump(ast))
@@ -198,6 +209,29 @@ var checkerValidPrograms = []struct {
 `},
 	{"paren expr", `
 (0) || (1 && 3) {
+}`},
+
+	{"strptime format", `
+strptime("2006-01-02 15:04:05", "2006-01-02 15:04:05")
+`},
+
+	{"string concat", `
+counter f by s
+/(.*), (.*)/ {
+  f[$1 + $2]++
+}
+`},
+	{"namespace", `
+counter test
+
+/(?P<test>.*)/ {
+    test++
+}
+`},
+	{"match expr 1", `
+/(?P<foo>.*)/ {
+  $foo =~ /bar/ {
+  }
 }`},
 }
 
