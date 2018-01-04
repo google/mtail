@@ -54,6 +54,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 				c.errors.Add(n.Pos(), msg)
 				return nil
 			} else {
+				sym.Used = true
 				n.sym = sym
 			}
 		}
@@ -79,9 +80,11 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		if n.sym == nil {
 			if sym := c.scope.Lookup(n.name, VarSymbol); sym != nil {
 				glog.V(2).Infof("found sym %v", sym)
+				sym.Used = true
 				n.sym = sym
 			} else if sym := c.scope.Lookup(n.name, PatternSymbol); sym != nil {
 				glog.V(2).Infof("Found Sym %v", sym)
+				sym.Used = true
 				n.sym = sym
 			} else {
 				// Apply a terribly bad heuristic to choose a suggestion.
@@ -110,6 +113,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.name))
 				return nil
 			}
+			sym.Used = true
 			n.def = sym.Binding.(*decoDefNode)
 		} else {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.name, n.name))
@@ -132,12 +136,34 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 	return c
 }
 
+func (c *checker) checkSymbolUsage() {
+	for _, sym := range c.scope.Symbols {
+		if !sym.Used {
+			// Users don't have control over the patterns given from decorators
+			// so this should never be an error; but it can be useful to know
+			// if a program is doing unneccessary work.
+			if sym.Kind == CaprefSymbol {
+				if sym.Addr == 0 {
+					// Don't warn about the zeroth capture group; it's not user-defined.
+					continue
+				}
+				glog.Infof("declaration of capture group reference `%s' at %s appears to be unused", sym.Name, sym.Pos)
+				continue
+			}
+			c.errors.Add(sym.Pos, fmt.Sprintf("Declaration of %s `%s' is never used", sym.Kind, sym.Name))
+		}
+	}
+}
+
 func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *stmtlistNode:
+		c.checkSymbolUsage()
+		// Pop the scope
 		c.scope = n.s.Parent
 
 	case *condNode:
+		c.checkSymbolUsage()
 		// Pop the scope
 		c.scope = n.s.Parent
 
@@ -439,7 +465,7 @@ func (c *checker) checkRegex(pattern string, n astNode) {
 		// of those symbols, so that future CAPREF tokens parsed can
 		// retrieve their value.  By recording them in the symbol table, we
 		// can warn the user about unknown capture group references.
-		for i := 1; i <= reAst.MaxCap(); i++ {
+		for i, capref := range reAst.CapNames() {
 			sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
 			sym.Type = inferCaprefType(reAst, i)
 			sym.Binding = n
@@ -448,14 +474,9 @@ func (c *checker) checkRegex(pattern string, n astNode) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
 				// No return, let this loop collect all errors
 			}
-		}
-		for i, capref := range reAst.CapNames() {
 			if capref != "" {
-				sym := NewSymbol(capref, CaprefSymbol, n.Pos())
-				sym.Type = inferCaprefType(reAst, i)
-				sym.Binding = n
-				sym.Addr = i
-				if alt := c.scope.Insert(sym); alt != nil {
+				sym.Name = capref
+				if alt := c.scope.InsertAlias(sym, capref); alt != nil {
 					c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
 					// No return, let this loop collect all errors
 				}

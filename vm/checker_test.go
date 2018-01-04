@@ -48,7 +48,8 @@ var checkerInvalidPrograms = []struct {
 
 	{"duplicate declaration",
 		"counter foo\ncounter foo\n",
-		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11"}},
+		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11",
+			"duplicate declaration:1:9-11: Declaration of variable `foo' is never used"}},
 
 	{"indexedExpr parameter count",
 		`counter n
@@ -89,10 +90,10 @@ counter bar by a, b
 		}},
 
 	{"builtin parameter mismatch",
-		`/(\d+)/ {
+		`/\d+/ {
 	  strptime()
 	}
-    /(\d+)/ {
+    /\d+/ {
 	  timestamp()
 	}
 	`,
