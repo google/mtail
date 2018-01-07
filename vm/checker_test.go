@@ -108,6 +108,15 @@ counter bar by a, b
 	{"undefined const regex",
 		"/foo / + X + / bar/ {}\n",
 		[]string{"undefined const regex:1:10: Identifier `X' not declared.", "\tTry adding `const X /.../' earlier in the program."}},
+
+	{"unused symbols",
+		`counter foo
+const ID /bar/
+/asdf/ {
+}
+`,
+		[]string{"unused symbols:1:9-11: Declaration of variable `foo' is never used",
+			"unused symbols:3:15: Declaration of named pattern constant `ID' is never used"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
