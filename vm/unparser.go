@@ -81,7 +81,9 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 		u.emit("}")
 
 	case *patternFragmentDefNode:
-		u.emit("const " + v.name + " ")
+		u.emit("const ")
+		Walk(u, v.id)
+		u.emit(" ")
 		Walk(u, v.expr)
 
 	case *patternConstNode:

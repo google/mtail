@@ -103,9 +103,9 @@ stmt
   {
     $$ = &nextNode{tokenpos(mtaillex)}
   }
-  | CONST ID concat_expr
+  | CONST id_expr concat_expr
   {
-    $$ = &patternFragmentDefNode{pos: tokenpos(mtaillex), name: $2, expr: $3}
+    $$ = &patternFragmentDefNode{id: $2, expr: $3}
   }
   | DEL postfix_expr
   {
@@ -526,7 +526,7 @@ decoration_statement
   ;
 
 // mark_pos is an epsilon (marker nonterminal) that records the current token
-// position as the parser position.  Use markerpos() to fetch the position and
+// position as the parser position.  Use markedpos() to fetch the position and
 // merge with tokenpos for exotic productions.
 mark_pos
   : /* empty */

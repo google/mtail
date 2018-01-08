@@ -59,7 +59,9 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	switch v := n.(type) {
 
 	case *patternFragmentDefNode:
-		s.emit(fmt.Sprintf("const %q ", v.name))
+		s.emit("const ")
+		Walk(s, v.id)
+		s.emit(" ")
 
 	case *patternConstNode:
 		s.emit(fmt.Sprintf("%q", v.pattern))
