@@ -121,8 +121,14 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		}
 
 	case *patternFragmentDefNode:
+		id, ok := n.id.(*idNode)
+		if !ok {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no identifier attache to pattern fragment %#v", n))
+			return nil
+		}
+		n.sym = NewSymbol(id.name, PatternSymbol, id.Pos())
 		if alt := c.scope.Insert(n.sym); alt != nil {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", n.name, alt.Pos))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", id.name, alt.Pos))
 			return nil
 		}
 		n.sym.Binding = n

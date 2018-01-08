@@ -117,7 +117,7 @@ const ID /bar/
 }
 `,
 		[]string{"unused symbols:1:9-11: Declaration of variable `foo' is never used",
-			"unused symbols:3:15: Declaration of named pattern constant `ID' is never used"}},
+			"unused symbols:2:7-8: Declaration of named pattern constant `ID' is never used"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
