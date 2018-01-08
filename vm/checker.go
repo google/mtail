@@ -60,7 +60,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		}
 
 	case *declNode:
-		n.sym = NewSymbol(n.name, VarSymbol, &n.pos)
+		n.sym = NewSymbol(n.name, VarSymbol, n.Pos())
 		if alt := c.scope.Insert(n.sym); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
@@ -100,7 +100,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		}
 
 	case *decoDefNode:
-		n.sym = NewSymbol(n.name, DecoSymbol, &n.pos)
+		n.sym = NewSymbol(n.name, DecoSymbol, n.Pos())
 		(*n.sym).Binding = n
 		if alt := c.scope.Insert(n.sym); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `%s' previously declared at %s", n.name, alt.Pos))
@@ -121,7 +121,6 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		}
 
 	case *patternFragmentDefNode:
-		n.sym = NewSymbol(n.name, PatternSymbol, &n.pos)
 		if alt := c.scope.Insert(n.sym); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", n.name, alt.Pos))
 			return nil
