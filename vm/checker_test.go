@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 var checkerInvalidPrograms = []struct {
@@ -138,7 +139,8 @@ func TestCheckInvalidPrograms(t *testing.T) {
 
 			diff := go_cmp.Diff(
 				tc.errors,                        // want
-				strings.Split(err.Error(), "\n")) // got
+				strings.Split(err.Error(), "\n"), // got
+				cmpopts.SortSlices(func(x, y string) bool { return x < y }))
 			if diff != "" {
 				t.Errorf("Diff %s", diff)
 				t.Logf("Got: %s", err.Error())
