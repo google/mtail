@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 )
 
 var parserTests = []struct {
@@ -199,6 +199,12 @@ var parserTests = []struct {
   ~ 1
 }`},
 
+	{"logical",
+		`0 || 1 && 0 {
+}
+`,
+	},
+
 	{"floats",
 		`gauge foo
 /foo/ {
@@ -243,6 +249,25 @@ counter foo by a,b
 /(\d) (\d+)/ {
   foo[$1,$2]++
 }`},
+
+	{"paren expr", `
+(0) || (1 && 3) {
+}`},
+
+	{"regex cond expr", `
+/(\d)/ && 1 {
+}
+`},
+
+	{"match expression 1", `
+$foo =~ /bar/ {
+}
+$foo !~ /bar/ {
+}
+`},
+	{"match expression 2", `
+$foo =~ /bar/ + X {
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -271,13 +296,15 @@ func TestParserRoundTrip(t *testing.T) {
 				for _, e := range p2.errors {
 					t.Errorf("\t%s\n", e)
 				}
-				t.Fatalf("2nd pass input was:\n%s", output)
+				t.Logf("2nd pass input was:\n%s", output)
+				t.Logf("2nd pass diff:\n%s", go_cmp.Diff(tc.program, output))
+				t.Fatal()
 			}
 
 			u = Unparser{}
 			output2 := u.Unparse(p2.root)
 
-			if diff := deep.Equal(output2, output); diff != nil {
+			if diff := go_cmp.Diff(output2, output); diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -309,15 +336,16 @@ var parserInvalidPrograms = []parserInvalidProgram{
 		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",
 			"unterminated const regex:1:10-17: syntax error"}},
 
-	{"undefined const regex",
-		"/foo / + X + / bar/ {}\n",
-		[]string{"undefined const regex:1:10: Constant 'X' not defined.\n\tTry adding `const X /.../' earlier in the program."}},
-
 	{"index of non-terminal",
 		`// {
 	foo++[$1]++
 	}`,
 		[]string{"index of non-terminal:2:7: syntax error"}},
+	{"index of non-terminal",
+		`// {
+	0[$1]++
+	}`,
+		[]string{"index of non-terminal:2:3: syntax error"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
@@ -328,10 +356,10 @@ func TestParseInvalidPrograms(t *testing.T) {
 			p := newParser(tc.name, strings.NewReader(tc.program))
 			mtailParse(p)
 
-			diff := deep.Equal(
+			diff := go_cmp.Diff(
 				strings.Join(tc.errors, "\n"),             // want
 				strings.TrimRight(p.errors.Error(), "\n")) // got
-			if diff != nil {
+			if diff != "" {
 				t.Error(diff)
 			}
 		})

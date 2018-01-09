@@ -8,8 +8,10 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
+	"github.com/pkg/errors"
 )
 
 // compiler is data for the code generator.
@@ -18,6 +20,7 @@ type codegen struct {
 
 	errors ErrorList // Compile errors.
 	obj    object    // The object to return
+	l      []int     // jump table
 
 	decos []*decoNode // Decorator stack to unwind
 }
@@ -26,6 +29,7 @@ type codegen struct {
 func CodeGen(name string, ast astNode) (*object, error) {
 	c := &codegen{name: name}
 	Walk(c, ast)
+	c.writeJumps()
 	if len(c.errors) > 0 {
 		return nil, c.errors
 	}
@@ -41,9 +45,21 @@ func (c *codegen) emit(i instr) {
 	c.obj.prog = append(c.obj.prog, i)
 }
 
-var kindMap = map[Type]datum.Type{
-	Int:   metrics.Int,
-	Float: metrics.Float,
+// newLabel creates a new label to jump to
+func (c *codegen) newLabel() (l int) {
+	l = len(c.l)
+	c.l = append(c.l, -1)
+	return
+}
+
+// setLabel points a label to the next instruction
+func (c *codegen) setLabel(l int) {
+	c.l[l] = c.pc() + 1
+}
+
+// pc returns the program offset of the last instruction
+func (c *codegen) pc() int {
+	return len(c.obj.prog) - 1
 }
 
 func (c *codegen) VisitBefore(node astNode) Visitor {
@@ -59,8 +75,21 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		// If the Type is not in the map, then default to metrics.Int.  This is
 		// a hack for metrics that no type can be inferred, retaining
 		// historical behaviour.
-		kind := kindMap[n.Type()]
-		m := metrics.NewMetric(name, c.name, n.kind, kind, n.keys...)
+		t := n.Type()
+		if IsDimension(t) {
+			t = t.(*TypeOperator).Args[len(t.(*TypeOperator).Args)-1]
+		}
+		var dtyp datum.Type
+		switch {
+		case Equals(Float, t):
+			dtyp = metrics.Float
+		default:
+			if !IsComplete(t) {
+				glog.Infof("Incomplete type %v for %#v", t, n)
+			}
+			dtyp = metrics.Int
+		}
+		m := metrics.NewMetric(name, c.name, n.kind, dtyp, n.keys...)
 		m.SetSource(n.Pos().String())
 		// Scalar counters can be initialized to zero.  Dimensioned counters we
 		// don't know the values of the labels yet.  Gauges and Timers we can't
@@ -72,7 +101,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 				return nil
 			}
 			// Initialize to zero at the zero time.
-			if kind == metrics.Int {
+			if dtyp == metrics.Int {
 				datum.SetInt(d, 0, time.Unix(0, 0))
 			} else {
 				datum.SetFloat(d, 0, time.Unix(0, 0))
@@ -85,44 +114,37 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		return nil
 
 	case *condNode:
+		lElse := c.newLabel()
+		lEnd := c.newLabel()
 		if n.cond != nil {
 			Walk(c, n.cond)
+			c.emit(instr{jnm, lElse})
 		}
-		// Save PC of previous jump instruction emitted by the n.cond
-		// compilation.  (See regexNode and relNode cases, which will emit a
-		// jump as the last instr.)  This jump will skip over the truthNode.
-		pc := len(c.obj.prog) - 1
 		// Set matched flag false for children.
 		c.emit(instr{setmatched, false})
 		Walk(c, n.truthNode)
 		// Re-set matched flag to true for rest of current block.
 		c.emit(instr{setmatched, true})
-		// Rewrite n.cond's jump target to jump to instruction after block.
-		c.obj.prog[pc].opnd = len(c.obj.prog)
-		// Now also emit the else clause, and a jump.
 		if n.elseNode != nil {
-			c.emit(instr{op: jmp})
-			// Rewrite jump again to avoid this else-skipper just emitted.
-			c.obj.prog[pc].opnd = len(c.obj.prog)
-			// Now get the PC of the else-skipper just emitted.
-			pc = len(c.obj.prog) - 1
-			Walk(c, n.elseNode)
-			// Rewrite else-skipper to the next PC.
-			c.obj.prog[pc].opnd = len(c.obj.prog)
+			c.emit(instr{jmp, lEnd})
 		}
+		c.setLabel(lElse)
+		if n.elseNode != nil {
+			Walk(c, n.elseNode)
+		}
+		c.setLabel(lEnd)
 		return nil
 
-	case *regexNode:
+	case *patternExprNode:
 		re, err := regexp.Compile(n.pattern)
 		if err != nil {
 			c.errorf(n.Pos(), "%s", err)
 			return nil
 		}
 		c.obj.re = append(c.obj.re, re)
-		// Store the location of this regular expression in the regexNode
-		n.addr = len(c.obj.re) - 1
-		c.emit(instr{match, n.addr})
-		c.emit(instr{op: jnm})
+		// Store the location of this regular expression in the patterNode
+		n.index = len(c.obj.re) - 1
+		c.emit(instr{match, n.index})
 
 	case *stringConstNode:
 		c.obj.str = append(c.obj.str, n.text)
@@ -135,6 +157,9 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		c.emit(instr{push, n.f})
 
 	case *idNode:
+		if n.sym.Kind != VarSymbol {
+			break
+		}
 		if n.sym == nil || n.sym.Binding == nil {
 			c.errorf(n.Pos(), "No metric bound to identifier %q", n.name)
 			return nil
@@ -148,14 +173,14 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.name)
 			return nil
 		}
-		rn := n.sym.Binding.(*regexNode)
-		// rn.addr contains the index of the regular expression object,
-		// which correlates to storage on the re slice
-		c.emit(instr{push, rn.addr})
+		rn := n.sym.Binding.(*patternExprNode)
+		// rn.index contains the index of the compiled regular expression object
+		// in the re slice of the object code
+		c.emit(instr{push, rn.index})
 		// n.sym.addr is the capture group offset
 		c.emit(instr{capref, n.sym.Addr})
 
-	case *defNode:
+	case *decoDefNode:
 		// Do nothing, defs are inlined.
 		return nil
 
@@ -179,13 +204,54 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 
 	case *otherwiseNode:
 		c.emit(instr{op: otherwise})
-		c.emit(instr{op: jnm})
 
 	case *delNode:
 		Walk(c, n.n)
-		// overwdrite the dload instruction
-		pc := len(c.obj.prog) - 1
+		// overwrite the dload instruction
+		pc := c.pc()
 		c.obj.prog[pc].op = del
+
+	case *binaryExprNode:
+		switch n.op {
+		case AND:
+			lFalse := c.newLabel()
+			lEnd := c.newLabel()
+			Walk(c, n.lhs)
+			c.emit(instr{jnm, lFalse})
+			Walk(c, n.rhs)
+			c.emit(instr{jnm, lFalse})
+			c.emit(instr{push, true})
+			c.emit(instr{jmp, lEnd})
+			c.setLabel(lFalse)
+			c.emit(instr{push, false})
+			c.setLabel(lEnd)
+			return nil
+
+		case OR:
+			lTrue := c.newLabel()
+			lEnd := c.newLabel()
+			Walk(c, n.lhs)
+			c.emit(instr{jm, lTrue})
+			Walk(c, n.rhs)
+			c.emit(instr{jm, lTrue})
+			c.emit(instr{push, false})
+			c.emit(instr{jmp, lEnd})
+			c.setLabel(lTrue)
+			c.emit(instr{push, true})
+			c.setLabel(lEnd)
+			return nil
+
+		case ADD_ASSIGN:
+			if Equals(n.Type(), Float) {
+				// Double-emit the lhs so that it can be assigned to
+				Walk(c, n.lhs)
+			}
+
+		default:
+			// Didn't handle it, let normal walk proceed
+			return c
+		}
+
 	}
 
 	return c
@@ -193,7 +259,8 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 
 var typedOperators = map[int]map[Type]opcode{
 	PLUS: {Int: iadd,
-		Float: fadd},
+		Float:  fadd,
+		String: cat},
 	MINUS: {Int: isub,
 		Float: fsub},
 	MUL: {Int: imul,
@@ -211,48 +278,105 @@ var typedOperators = map[int]map[Type]opcode{
 func (c *codegen) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *builtinNode:
+		arglen := 0
 		if n.args != nil {
-			c.emit(instr{builtin[n.name], len(n.args.(*exprlistNode).children)})
-		} else {
-			c.emit(instr{op: builtin[n.name]})
+			arglen = len(n.args.(*exprlistNode).children)
+		}
+		switch n.name {
+		case "bool":
+		// TODO(jaq): Nothing, no support in VM yet.
+
+		case "int", "float", "string":
+			// len args should be 1
+			if arglen > 1 {
+				c.errorf(n.Pos(), "too many arguments to builtin %q: %#v", n.name, n)
+				return
+			}
+			if err := c.emitConversion(n.args.(*exprlistNode).children[0].Type(), n.Type()); err != nil {
+				c.errorf(n.Pos(), "%s on node %v", err.Error(), n)
+				return
+			}
+
+		default:
+			c.emit(instr{builtin[n.name], arglen})
 		}
 	case *unaryExprNode:
 		switch n.op {
 		case INC:
 			c.emit(instr{op: inc})
 		case NOT:
-			c.emit(instr{op: not})
+			c.emit(instr{op: neg})
 		}
 	case *binaryExprNode:
 		switch n.op {
-		case LT:
-			c.emit(instr{cmp, -1})
-			c.emit(instr{op: jnm})
-		case GT:
-			c.emit(instr{cmp, 1})
-			c.emit(instr{op: jnm})
-		case LE:
-			c.emit(instr{cmp, 1})
-			c.emit(instr{op: jm})
-		case GE:
-			c.emit(instr{cmp, -1})
-			c.emit(instr{op: jm})
-		case EQ:
-			c.emit(instr{cmp, 0})
-			c.emit(instr{op: jnm})
-		case NE:
-			c.emit(instr{cmp, 0})
-			c.emit(instr{op: jm})
-		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
-			switch n.Type() {
-			case Int, Float:
-				c.emit(instr{op: typedOperators[n.op][n.Type()]})
-			default:
-				c.errorf(n.Pos(), "Invalid type for binary expression: %q", n.Type())
+		case LT, GT, LE, GE, EQ, NE:
+			lFail := c.newLabel()
+			lEnd := c.newLabel()
+			var cmpArg int
+			var jumpOp opcode
+			switch n.op {
+			case LT:
+				cmpArg = -1
+				jumpOp = jnm
+			case GT:
+				cmpArg = 1
+				jumpOp = jnm
+			case LE:
+				cmpArg = 1
+				jumpOp = jm
+			case GE:
+				cmpArg = -1
+				jumpOp = jm
+			case EQ:
+				cmpArg = 0
+				jumpOp = jnm
+			case NE:
+				cmpArg = 0
+				jumpOp = jm
 			}
-		case AND:
+			c.emit(instr{cmp, cmpArg})
+			c.emit(instr{jumpOp, lFail})
+			c.emit(instr{push, true})
+			c.emit(instr{jmp, lEnd})
+			c.setLabel(lFail)
+			c.emit(instr{push, false})
+			c.setLabel(lEnd)
+		case ADD_ASSIGN:
+			// When operand is not nil, inc pops the delta from the stack.
+			// TODO(jaq): string concatenation, once datums can hold strings.
+			switch {
+			case Equals(n.Type(), Int):
+				c.emit(instr{inc, 0})
+			case Equals(n.Type(), Float):
+				// Already walked the lhs and rhs of this expression
+				c.emit(instr{fadd, nil})
+				// And a second lhs
+				c.emit(instr{fset, nil})
+			default:
+				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.op)
+				return
+			}
+		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
+			opmap, ok := typedOperators[n.op]
+			if !ok {
+				c.errorf(n.Pos(), "no typed operator for binary expression %v", n.op)
+				return
+			}
+			emitflag := false
+			for t, opcode := range opmap {
+				if Equals(n.Type(), t) {
+					c.emit(instr{op: opcode})
+					emitflag = true
+					break
+				}
+			}
+			if !emitflag {
+				c.errorf(n.Pos(), "invalid type for binary expression: %v", n.Type())
+				return
+			}
+		case BITAND:
 			c.emit(instr{op: and})
-		case OR:
+		case BITOR:
 			c.emit(instr{op: or})
 		case XOR:
 			c.emit(instr{op: xor})
@@ -260,6 +384,64 @@ func (c *codegen) VisitAfter(node astNode) {
 			c.emit(instr{op: shl})
 		case SHR:
 			c.emit(instr{op: shr})
+
+		case MATCH:
+			// Cross fingers that last branch was a patternExprNode
+			c.obj.prog[c.pc()].op = smatch
+
+		case NOT_MATCH:
+			// Cross fingers that last branch was a patternExprNode
+			c.obj.prog[c.pc()].op = smatch
+			c.emit(instr{op: not})
+
+		case CONCAT:
+			// skip
+
+		default:
+			c.errorf(n.Pos(), "unexpected op %v", n.op)
+		}
+
+	case *convNode:
+		if err := c.emitConversion(n.n.Type(), n.Type()); err != nil {
+			c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
+			return
+		}
+	}
+}
+
+func (c *codegen) emitConversion(inType, outType Type) error {
+	glog.Infof("Conversion: %q to %q", inType, outType)
+	if Equals(Int, inType) && Equals(Float, outType) {
+		c.emit(instr{op: i2f})
+	} else if Equals(String, inType) && Equals(Float, outType) {
+		c.emit(instr{op: s2f})
+	} else if Equals(String, inType) && Equals(Int, outType) {
+		c.emit(instr{op: s2i})
+	} else if Equals(Float, inType) && Equals(String, outType) {
+		c.emit(instr{op: f2s})
+	} else if Equals(Int, inType) && Equals(String, outType) {
+		c.emit(instr{op: i2s})
+	} else {
+		return errors.Errorf("can't convert %q to %q", inType, outType)
+	}
+	return nil
+}
+
+func (c *codegen) writeJumps() {
+	for j, i := range c.obj.prog {
+		switch i.op {
+		case jmp, jm, jnm:
+			index := i.opnd.(int)
+			if index > len(c.l) {
+				c.errorf(nil, "no jump at label %v, table is %v", i.opnd, c.l)
+				continue
+			}
+			offset := c.l[index]
+			if offset < 0 {
+				c.errorf(nil, "offset for label %v is negative, table is %v", i.opnd, c.l)
+				continue
+			}
+			c.obj.prog[j].opnd = c.l[index]
 		}
 	}
 }

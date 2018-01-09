@@ -25,8 +25,11 @@ func TestFakeWatcher(t *testing.T) {
 	w.Add("/tmp")
 	wg := sync.WaitGroup{}
 	wg.Add(1)
+
+	eventsChannel := w.Events()
+
 	go func() {
-		e := <-w.Events()
+		e := <-eventsChannel
 		switch e := e.(type) {
 		case CreateEvent:
 			if e.Pathname != "/tmp/log" {
@@ -44,7 +47,7 @@ func TestFakeWatcher(t *testing.T) {
 	wg = sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		e := <-w.Events()
+		e := <-eventsChannel
 		switch e := e.(type) {
 		case UpdateEvent:
 			if e.Pathname != "/tmp/foo" {
@@ -61,7 +64,7 @@ func TestFakeWatcher(t *testing.T) {
 	wg = sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		e := <-w.Events()
+		e := <-eventsChannel
 		switch e := e.(type) {
 		case DeleteEvent:
 			if e.Pathname != "/tmp/foo" {
@@ -80,8 +83,9 @@ func TestFakeWatcherUnwatchedFiles(t *testing.T) {
 	w := NewFakeWatcher()
 	wg := sync.WaitGroup{}
 	wg.Add(1)
+	eventsChannel := w.Events()
 	go func() {
-		for e := range w.Events() {
+		for e := range eventsChannel {
 			switch e := e.(type) {
 			case CreateEvent, DeleteEvent, UpdateEvent:
 				t.Errorf("Received an event, expecting nothing: %q", e)
@@ -98,7 +102,7 @@ func TestFakeWatcherUnwatchedFiles(t *testing.T) {
 	wg = sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		for e := range w.Events() {
+		for e := range eventsChannel {
 			switch e := e.(type) {
 			case CreateEvent, DeleteEvent, UpdateEvent:
 				t.Errorf("Received an event, expecting nothing: %q", e)
@@ -115,7 +119,7 @@ func TestFakeWatcherUnwatchedFiles(t *testing.T) {
 	wg = sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		for e := range w.Events() {
+		for e := range eventsChannel {
 			switch e := e.(type) {
 			case CreateEvent, DeleteEvent, UpdateEvent:
 				t.Errorf("Received an event, expecting nothing: %q", e)

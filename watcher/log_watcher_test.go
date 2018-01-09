@@ -6,20 +6,22 @@ package watcher
 import (
 	"errors"
 	"expvar"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"syscall"
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 )
 
 // This test requires disk access, and cannot be injected without internal
 // knowledge of the fsnotify code. Make the wait deadlines long.
-const deadline = 1 * time.Second
+const deadline = 5 * time.Second
 
 func TestLogWatcher(t *testing.T) {
 	if testing.Short() {
@@ -50,8 +52,9 @@ func TestLogWatcher(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't make a logfile in temp dir: %s\n", err)
 	}
+	eventsChannel := w.Events()
 	select {
-	case e := <-w.Events():
+	case e := <-eventsChannel:
 		switch e := e.(type) {
 		case CreateEvent:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
@@ -66,7 +69,7 @@ func TestLogWatcher(t *testing.T) {
 	f.WriteString("hi")
 	f.Close()
 	select {
-	case e := <-w.Events():
+	case e := <-eventsChannel:
 		switch e := e.(type) {
 		case UpdateEvent:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
@@ -80,13 +83,13 @@ func TestLogWatcher(t *testing.T) {
 	}
 	os.Chmod(filepath.Join(workdir, "logfile"), os.ModePerm)
 	select {
-	case e := <-w.Events():
+	case e := <-eventsChannel:
 		t.Errorf("no event expected, got %#v", e)
 	case <-time.After(deadline):
 	}
 	os.Remove(filepath.Join(workdir, "logfile"))
 	select {
-	case e := <-w.Events():
+	case e := <-eventsChannel:
 		switch e := e.(type) {
 		case DeleteEvent:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
@@ -128,6 +131,13 @@ func TestLogWatcherAddError(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping log watcher test in short mode")
 	}
+	u, err := user.Current()
+	if err != nil {
+		t.Skip(fmt.Sprintf("Couldn't determine current user id: %s", err))
+	}
+	if u.Uid == "0" {
+		t.Skip("Skipping test when run as root")
+	}
 
 	workdir, err := ioutil.TempDir("", "log_watcher_test")
 	if err != nil {
@@ -164,6 +174,9 @@ func TestLogWatcherAddError(t *testing.T) {
 }
 
 func TestWatcherErrors(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping log watcher test in short mode")
+	}
 	orig, err := strconv.ParseInt(expvar.Get("log_watcher_error_count").String(), 10, 64)
 	if err != nil {
 		t.Fatalf("couldn't convert expvar %q", expvar.Get("log_watcher_error_count").String())
@@ -176,8 +189,8 @@ func TestWatcherErrors(t *testing.T) {
 	if err := w.Close(); err != nil {
 		t.Fatalf("watcher close failed: %q", err)
 	}
-	diff := deep.Equal(strconv.FormatInt(orig+1, 10), expvar.Get("log_watcher_error_count").String())
-	if diff != nil {
+	diff := cmp.Diff(strconv.FormatInt(orig+1, 10), expvar.Get("log_watcher_error_count").String())
+	if diff != "" {
 		t.Errorf("log watcher error count doens't match:\n%s", diff)
 	}
 }

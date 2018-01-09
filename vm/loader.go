@@ -50,11 +50,12 @@ const (
 // directory for filesystem changes.  Any compile errors are stored for later retrieival.
 // This function returns an error if an internal error occurs.
 func (l *Loader) LoadProgs(programPath string) error {
-	l.w.Add(programPath)
-
 	s, err := os.Stat(programPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to stat")
+		return errors.Wrapf(err, "failed to stat %q", programPath)
+	}
+	if err = l.w.Add(programPath); err != nil {
+		glog.Infof("Failed to add watch on %q but continuing: %s", programPath, err)
 	}
 	switch {
 	case s.IsDir():
@@ -69,13 +70,21 @@ func (l *Loader) LoadProgs(programPath string) error {
 			}
 			err = l.LoadProg(path.Join(programPath, fi.Name()))
 			if err != nil {
-				glog.Warning(err)
+				if l.errorsAbort {
+					return err
+				} else {
+					glog.Warning(err)
+				}
 			}
 		}
 	default:
 		err = l.LoadProg(programPath)
 		if err != nil {
-			glog.Warning(err)
+			if l.errorsAbort {
+				return err
+			} else {
+				glog.Warning(err)
+			}
 		}
 	}
 	return nil
@@ -103,7 +112,11 @@ func (l *Loader) LoadProg(programPath string) error {
 	defer l.programErrorMu.Unlock()
 	l.programErrors[name] = l.CompileAndRun(name, f)
 	if l.programErrors[name] != nil {
-		glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
+		if l.errorsAbort {
+			return l.programErrors[name]
+		} else {
+			glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
+		}
 	}
 	return nil
 }
@@ -138,7 +151,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 		make(map[string]string),
 		make(map[string]string),
 	}
-	for name, _ := range l.programErrors {
+	for name := range l.programErrors {
 		if ProgLoadErrors.Get(name) != nil {
 			data.Loaderrors[name] = ProgLoadErrors.Get(name).String()
 		}
@@ -146,10 +159,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 			data.Loadsuccess[name] = ProgLoads.Get(name).String()
 		}
 	}
-	if err := t.Execute(w, data); err != nil {
-		return err
-	}
-	return nil
+	return t.Execute(w, data)
 }
 
 // CompileAndRun compiles a program read from the input, starting execution if
@@ -213,8 +223,9 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	l.handles[name] = &vmHandle{make(chan *tailer.LogLine), make(chan struct{})}
 	nameCode := nameToCode(name)
 	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
-	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done)
-
+	started := make(chan struct{})
+	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done, started)
+	<-started
 	glog.Infof("Started %s", name)
 
 	return nil
@@ -243,6 +254,7 @@ type Loader struct {
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
 	compileOnly          bool           // Only compile programs and report errors, do not load VMs.
+	errorsAbort          bool           // Compiler errors abort the loader.
 	dumpAst              bool           // print the AST after parse
 	dumpAstTypes         bool           // print the AST after type check
 	dumpBytecode         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
@@ -261,6 +273,7 @@ type LoaderOptions struct {
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 
 	CompileOnly          bool           // Compile, don't start execution.
+	ErrorsAbort          bool           // Compiler errors abort the loader.
 	DumpAst              bool           // print the AST after type check
 	DumpAstTypes         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
 	DumpBytecode         bool           // Instructs the loader to dump the program bytecode after compilation.
@@ -298,6 +311,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		watcherDone:          make(chan struct{}),
 		VMsDone:              make(chan struct{}),
 		compileOnly:          o.CompileOnly,
+		errorsAbort:          o.ErrorsAbort,
 		dumpAst:              o.DumpAst,
 		dumpAstTypes:         o.DumpAstTypes,
 		dumpBytecode:         o.DumpBytecode,
@@ -306,7 +320,8 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		omitMetricSource:     o.OmitMetricSource,
 	}
 
-	go l.processEvents()
+	eventsChan := l.w.Events()
+	go l.processEvents(eventsChan)
 	go l.processLines(o.Lines)
 	return l, nil
 }
@@ -318,15 +333,13 @@ type vmHandle struct {
 
 // processEvents manages program lifecycle triggered by events from the
 // filesystem watcher.
-func (l *Loader) processEvents() {
+func (l *Loader) processEvents(events <-chan watcher.Event) {
 	defer close(l.watcherDone)
-	for event := range l.w.Events() {
+	for event := range events {
 		switch event := event.(type) {
 		case watcher.DeleteEvent:
-			glog.Infof("delete prog %s", event.Pathname)
 			l.UnloadProgram(event.Pathname)
 		case watcher.UpdateEvent:
-			glog.Infof("update prog %s", event.Pathname)
 			l.LoadProg(event.Pathname)
 		case watcher.CreateEvent:
 			l.w.Add(event.Pathname)
@@ -349,7 +362,10 @@ func (l *Loader) processLines(lines <-chan *tailer.LogLine) {
 		l.handleMu.RUnlock()
 	}
 	glog.Info("Shutting down loader.")
-	l.w.Close()
+	err := l.w.Close()
+	if err != nil {
+		glog.Info("error closing watcher: %s", err)
+	}
 	<-l.watcherDone
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()

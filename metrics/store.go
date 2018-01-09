@@ -40,7 +40,7 @@ func (s *Store) Add(m *Metric) error {
 func (s *Store) ClearMetrics() {
 	s.Lock()
 	defer s.Unlock()
-	s.Metrics = make(map[string][]*Metric, 0)
+	s.Metrics = make(map[string][]*Metric)
 }
 
 func (s *Store) MarshalJSON() (b []byte, err error) {

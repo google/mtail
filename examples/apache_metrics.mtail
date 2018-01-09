@@ -109,10 +109,10 @@ counter http_request_duration_seconds_count by server_port, handler, method, cod
   # + = Connection may be kept alive after the response is sent.
   # - = Connection will be closed after the response is sent.
   / conn=X / {
-    http_connections_aborted_total[$server_port][$handler][$method][$code][$protocol]++
+    http_connections_aborted_total[$server_port][$handler][$method][$code][$protocol][$connection_status]++
   }
   # Will not include all closed connections. :-(
   / conn=- / {
-    http_connections_closed_total[$server_port][$handler][$method][$code][$protocol]++
+    http_connections_closed_total[$server_port][$handler][$method][$code][$protocol][$connection_status]++
   }
 }

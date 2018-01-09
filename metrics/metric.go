@@ -97,7 +97,7 @@ func NewMetric(name string, prog string, kind Kind, typ datum.Type, keys ...stri
 
 // newMetric returns a new empty Metric
 func newMetric(len int) *Metric {
-	return &Metric{Keys: make([]string, len, len),
+	return &Metric{Keys: make([]string, len),
 		LabelValues: make([]*LabelValue, 0)}
 }
 
@@ -163,7 +163,7 @@ type LabelSet struct {
 }
 
 func zip(keys []string, values []string) map[string]string {
-	r := make(map[string]string, 0)
+	r := make(map[string]string)
 	for i, v := range values {
 		r[keys[i]] = v
 	}

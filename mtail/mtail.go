@@ -4,7 +4,6 @@
 package mtail
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -12,9 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -44,55 +41,10 @@ type MtailServer struct {
 	o Options // Options passed in at creation time.
 }
 
-// OneShot reads the contents of a log file into the lines channel from start to finish, terminating the program at the end.
-func (m *MtailServer) OneShot(logfile string, print bool) (count int64, err error) {
-	glog.Infof("Oneshot %q", logfile)
-	l, err := os.Open(logfile)
-	if err != nil {
-		return 0, errors.Wrapf(err, "failed to open log file %q", logfile)
-	}
-	defer l.Close()
-
-	r := bufio.NewReader(l)
-
-	if print {
-		fmt.Printf("%s: %d MAXPROCS, %d CPUs, ", logfile, runtime.GOMAXPROCS(-1), runtime.NumCPU())
-	}
-
-	start := time.Now()
-
-Loop:
-	for {
-		line, err := r.ReadString('\n')
-		line = strings.TrimSuffix(line, "\n")
-		switch {
-		case err == io.EOF:
-			if len(line) > 0 {
-				m.lines <- tailer.NewLogLine(logfile, line)
-			}
-			break Loop
-		case err != nil:
-			return 0, errors.Wrapf(err, "failed to read from %q", logfile)
-		default:
-			m.lines <- tailer.NewLogLine(logfile, line)
-		}
-	}
-	duration := time.Since(start)
-	count, err = strconv.ParseInt(vm.LineCount.String(), 10, 64)
-	if err != nil {
-		return
-	}
-	if print {
-		µsPerL := float64(duration.Nanoseconds()) / (float64(count) * 1000)
-		fmt.Printf("%d lines, %s total time, %6.3f µs/line\n", count, duration, µsPerL)
-	}
-	return
-}
-
 // StartTailing constructs a new Tailer and commences sending log lines into
 // the lines channel.
 func (m *MtailServer) StartTailing() error {
-	o := tailer.Options{Lines: m.lines, W: m.o.W, FS: m.o.FS}
+	o := tailer.Options{Lines: m.lines, OneShot: m.o.OneShot, W: m.o.W, FS: m.o.FS}
 	var err error
 	m.t, err = tailer.New(o)
 	if err != nil {
@@ -124,6 +76,7 @@ func (m *MtailServer) InitLoader() error {
 		Store:                m.store,
 		Lines:                m.lines,
 		CompileOnly:          m.o.CompileOnly,
+		ErrorsAbort:          m.o.CompileOnly || m.o.OneShot,
 		DumpAst:              m.o.DumpAst,
 		DumpAstTypes:         m.o.DumpAstTypes,
 		DumpBytecode:         m.o.DumpBytecode,
@@ -175,7 +128,7 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Add("Content-type", "text/html")
 	w.WriteHeader(http.StatusFound)
-	if err := t.Execute(w, data); err != nil {
+	if err = t.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	err = m.l.WriteStatusHTML(w)
@@ -195,7 +148,6 @@ type Options struct {
 	LogFds               []int
 	BindAddress          string
 	OneShot              bool
-	OneShotMetrics       bool
 	CompileOnly          bool
 	DumpAst              bool
 	DumpAstTypes         bool
@@ -251,34 +203,8 @@ func (m *MtailServer) WriteMetrics(w io.Writer) error {
 	return nil
 }
 
-// RunOneShot performs the work of the one_shot commandline flag; after compiling programs mtail will read all of the log files in full, once, dump the metric results at the end, and then exit.
-func (m *MtailServer) RunOneShot() {
-	fmt.Println("Oneshot results:")
-	for _, pathname := range m.o.LogPathPatterns {
-		_, err := m.OneShot(pathname, true)
-		if err != nil {
-			glog.Exitf("Failed one shot mode for %q: %s\n", pathname, err)
-		}
-	}
-	if m.o.OneShotMetrics {
-		fmt.Printf("Metrics store:")
-		if err := m.WriteMetrics(os.Stdout); err != nil {
-			glog.Exit(err)
-		}
-	}
-	m.Close()
-}
-
-// Serve begins the long-running mode of mtail, in which it watches the log
-// files for changes and sends any new lines found into the lines channel for
-// pick up by the virtual machines.  It will continue to do so until it is
-// signalled to exit.
+// Serve begins the webserver and awaits a shutdown instruction.
 func (m *MtailServer) Serve() {
-	err := m.StartTailing()
-	if err != nil {
-		glog.Exitf("tailing failed: %s", err)
-	}
-
 	http.Handle("/", m)
 	http.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	http.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
@@ -308,7 +234,7 @@ func (m *MtailServer) handleQuit(w http.ResponseWriter, r *http.Request) {
 
 // WaitForShutdown handles shutdown requests from the system or the UI.
 func (m *MtailServer) WaitForShutdown() {
-	n := make(chan os.Signal)
+	n := make(chan os.Signal, 1)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
 	select {
 	case <-n:
@@ -320,7 +246,7 @@ func (m *MtailServer) WaitForShutdown() {
 }
 
 // Close handles the graceful shutdown of this mtail instance, ensuring that it only occurs once.
-func (m *MtailServer) Close() {
+func (m *MtailServer) Close() error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		if m.t != nil {
@@ -337,16 +263,31 @@ func (m *MtailServer) Close() {
 		}
 		glog.Info("All done.")
 	})
+	return nil
 }
 
-// Run starts MtailServer in the configuration supplied in Options at creation.
-func (m *MtailServer) Run() {
+// Run starts MtailServer's primary function, in which it watches the log
+// files for changes and sends any new lines found into the lines channel for
+// pick up by the virtual machines. If OneShot mode is enabled, it will exit.
+func (m *MtailServer) Run() error {
 	if m.o.CompileOnly {
-		return
+		return nil
+	}
+	err := m.StartTailing()
+	if err != nil {
+		glog.Exitf("tailing failed: %s", err)
 	}
 	if m.o.OneShot {
-		m.RunOneShot()
+		err := m.Close()
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Metrics store:")
+		if err := m.WriteMetrics(os.Stdout); err != nil {
+			return err
+		}
 	} else {
 		m.Serve()
 	}
+	return nil
 }

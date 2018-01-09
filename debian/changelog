@@ -1,3 +1,19 @@
+mtail (3.0.0~rc5-1) unstable; urgency=medium
+
+  * New upstream release candidate.
+
+ -- Filippo Giunchedi <filippo@debian.org>  Wed, 03 Jan 2018 11:51:53 +0100
+
+mtail (3.0.0~rc4-1) unstable; urgency=high
+
+  * New upstream snapshot, with bug fixes.
+  * debian/rules: Fix compilation on mips* (raising urgency).
+  * debian/control: Depend of specific version of spf13/afero.
+  * Add new dependency on go-cmp.
+  * Remove now unneeded go-deep vendoring.
+
+ -- Martín Ferrari <tincho@debian.org>  Fri, 06 Oct 2017 11:23:40 +0000
+
 mtail (3.0.0~rc2-1~bpo9+1) stretch-backports; urgency=medium
 
   * Rebuild for stretch-backports.

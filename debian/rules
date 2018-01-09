@@ -9,9 +9,20 @@ export DH_GOLANG_INSTALL_EXTRA := examples/ testdata/ vm/parser.y
 export DH_GOLANG_GO_GENERATE := 1
 
 BUILDDIR := $(CURDIR)/build
-BUILDFLAGS := -ldflags \
+GCCGO      := $(strip $(shell go version | grep gccgo))
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+BUILDTAGS  :=
+BUILDFLAGS  = -tags "$(BUILDTAGS)" -ldflags \
   " -X main.Version=$(DEB_VERSION_UPSTREAM)\
     -X main.Revision=$(DEB_VERSION)"
+
+ifneq ($(GCCGO),)
+# Workaround until #872402 is fixed.
+ifeq ($(findstring mips,$(DEB_HOST_ARCH)),mips)
+# mipsel => mipsle, mips64el => mips64le
+BUILDTAGS += $(DEB_HOST_ARCH:el=le)
+endif
+endif
 
 %:
 	dh $@ --buildsystem=golang --with=golang --builddirectory=$(BUILDDIR)
@@ -21,10 +32,9 @@ override_dh_auto_build:
 
 override_dh_auto_test:
 	GOPATH=$(BUILDDIR) go test -v -timeout 60s $(DH_GOPKG)
-ifeq ($(DEB_HOST_ARCH_CPU),amd64)
 	# Only run race tests on amd64.
-	GOPATH=$(BUILDDIR) go test -v -timeout 5m -race $(DH_GOPKG)
-endif
+	test "$(DEB_HOST_ARCH_CPU)" != amd64 || \
+            GOPATH=$(BUILDDIR) go test -v -timeout 5m -race $(DH_GOPKG)
 
 override_dh_auto_install:
 	dh_auto_install -- --no-source

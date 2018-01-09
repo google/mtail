@@ -34,10 +34,10 @@ func metricToCollectd(hostname string, m *metrics.Metric, l *metrics.LabelSet) s
 		*collectdPrefix,
 		m.Program,
 		kindToCollectdType(m.Kind),
-		formatLabels(m.Name, l.Labels, "-", "-"),
+		formatLabels(m.Name, l.Labels, "-", "-", "_"),
 		*pushInterval,
-		l.Datum.Time(),
-		l.Datum.Value())
+		l.Datum.TimeString(),
+		l.Datum.ValueString())
 }
 
 func kindToCollectdType(kind metrics.Kind) string {

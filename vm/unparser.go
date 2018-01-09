@@ -80,7 +80,11 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 		u.outdent()
 		u.emit("}")
 
-	case *regexNode:
+	case *patternFragmentDefNode:
+		u.emit("const " + v.name + " ")
+		Walk(u, v.expr)
+
+	case *patternConstNode:
 		u.emit("/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/")
 
 	case *binaryExprNode:
@@ -102,14 +106,18 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 			u.emit(" << ")
 		case SHR:
 			u.emit(" >> ")
-		case AND:
+		case BITAND:
 			u.emit(" & ")
-		case OR:
+		case BITOR:
 			u.emit(" | ")
 		case XOR:
 			u.emit(" ^ ")
 		case NOT:
 			u.emit(" ~ ")
+		case AND:
+			u.emit(" && ")
+		case OR:
+			u.emit(" || ")
 		case PLUS:
 			u.emit(" + ")
 		case MINUS:
@@ -122,8 +130,18 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 			u.emit(" ** ")
 		case ASSIGN:
 			u.emit(" = ")
+		case ADD_ASSIGN:
+			u.emit(" += ")
 		case MOD:
 			u.emit(" % ")
+		case CONCAT:
+			u.emit(" + ")
+		case MATCH:
+			u.emit(" =~ ")
+		case NOT_MATCH:
+			u.emit(" !~ ")
+		default:
+			u.emit(fmt.Sprintf("Unexpected op: %v", v.op))
 		}
 		Walk(u, v.rhs)
 
@@ -142,9 +160,11 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 
 	case *indexedExprNode:
 		Walk(u, v.lhs)
-		u.emit("[")
-		Walk(u, v.index)
-		u.emit("]")
+		if len(v.index.(*exprlistNode).children) > 0 {
+			u.emit("[")
+			Walk(u, v.index)
+			u.emit("]")
+		}
 
 	case *declNode:
 		switch v.kind {
@@ -179,7 +199,7 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 	case *floatConstNode:
 		u.emit(strconv.FormatFloat(v.f, 'g', -1, 64))
 
-	case *defNode:
+	case *decoDefNode:
 		u.emit(fmt.Sprintf("def %s {", v.name))
 		u.newline()
 		u.indent()
@@ -205,6 +225,12 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 		u.emit("del ")
 		Walk(u, v.n)
 		u.newline()
+
+	case *convNode:
+		Walk(u, v.n)
+
+	case *patternExprNode:
+		Walk(u, v.expr)
 
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))

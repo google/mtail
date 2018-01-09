@@ -1,6 +1,12 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
+ifeq ($(TRAVIS),true)
+timeout := 5m
+else
+timeout := 60s
+endif
+
 GOFILES=\
 	exporter/collectd.go\
 	exporter/export.go\
@@ -79,15 +85,19 @@ emgen/emgen: emgen/emgen.go
 
 .PHONY: test check 
 check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 60s ./... ./testdata
+	go test -v -timeout 10s ./... ./testdata
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 5m -race ./... ./testdata
+	go test -v -timeout ${timeout} -race ./... ./testdata
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 10s -test.short ./... ./testdata
+	go test -v -timeout 1s -test.short ./... ./testdata
+
+.PHONY: ex_test
+ex_test: ex_test.go testdata/* examples/*
+	go test -run TestExamplePrograms -v --logtostderr
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
@@ -95,10 +105,10 @@ bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 
 .PHONY: bench_cpu
 bench_cpu:
-	go test -bench=. -run=TestExample -timeout=60s -cpuprofile=cpu.out
+	go test -bench=. -run=XXX -timeout=60s -cpuprofile=cpu.out
 .PHONY: bench_mem
 bench_mem:
-	go test -bench=. -run=TestExample -timeout=60s -memprofile=mem.out
+	go test -bench=. -run=XXX -timeout=60s -memprofile=mem.out
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp

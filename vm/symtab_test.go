@@ -6,7 +6,7 @@ package vm
 import (
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 )
 
 func TestInsertLookup(t *testing.T) {
@@ -17,8 +17,8 @@ func TestInsertLookup(t *testing.T) {
 		t.Errorf("Insert already had sym1: %v", r)
 	}
 
-	r1 := s.Lookup("foo")
-	if diff := deep.Equal(r1, sym1); diff != nil {
+	r1 := s.Lookup("foo", VarSymbol)
+	if diff := go_cmp.Diff(r1, sym1); diff != "" {
 		t.Error(diff)
 	}
 }
@@ -37,15 +37,15 @@ func TestNestedScope(t *testing.T) {
 		t.Errorf("Insert already had sym2: %v", r1)
 	}
 
-	if s1.Lookup("foo") == nil {
+	if s1.Lookup("foo", VarSymbol) == nil {
 		t.Errorf("foo not found in s1")
 	}
 
-	if s.Lookup("foo") != nil {
+	if s.Lookup("foo", VarSymbol) != nil {
 		t.Errorf("foo found in s")
 	}
 
-	if s1.Lookup("bar") == nil {
+	if s1.Lookup("bar", VarSymbol) == nil {
 		t.Errorf("bar not found from s1")
 	}
 }
