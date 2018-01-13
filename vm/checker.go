@@ -19,9 +19,9 @@ type checker struct {
 	errors ErrorList
 }
 
-// Check performs a semantic check of the ast node, and returns a list of
-// errors found, or nil if the program is semantically valid.  At the
-// completion of Check, the symbol table and type annotation is also complete.
+// Check performs a semantic check of the astNode, and returns a list of errors
+// found, or nil if the program is semantically valid.  At the completion of
+// Check, the symbol table and type annotation are also complete.
 func Check(node astNode) error {
 	c := &checker{}
 	Walk(c, node)
@@ -31,6 +31,8 @@ func Check(node astNode) error {
 	return nil
 }
 
+// VisitBefore performs most of the symbol table construction, so that symbols
+// are guaranteed to exist before their use.
 func (c *checker) VisitBefore(node astNode) Visitor {
 	switch n := node.(type) {
 
@@ -141,6 +143,8 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 	return c
 }
 
+// checkSymbolUsage emits errors if any elegible symbols in the current scope
+// are not marked as used.
 func (c *checker) checkSymbolUsage() {
 	for _, sym := range c.scope.Symbols {
 		if !sym.Used {
@@ -160,6 +164,8 @@ func (c *checker) checkSymbolUsage() {
 	}
 }
 
+// VisitAfter perfoms the type annotation and checking, once the child nodes of
+// expressions have been annotated and checked.
 func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *stmtlistNode:
@@ -464,6 +470,8 @@ func (c *checker) VisitAfter(node astNode) {
 	}
 }
 
+// checkRegex is a helper method to compile and check a regular expression, and
+// to generate its capture groups as symbols.
 func (c *checker) checkRegex(pattern string, n astNode) {
 	if reAst, err := syntax.Parse(pattern, syntax.Perl); err == nil {
 		// We reserve the names of the capturing groups as declarations
@@ -493,6 +501,8 @@ func (c *checker) checkRegex(pattern string, n astNode) {
 	}
 }
 
+// patternEvaluator is a helper that performs concatenation of pattern
+// fragments so that they can be compiled as whole regular expression patterns.
 type patternEvaluator struct {
 	scope   *Scope
 	errors  *ErrorList
