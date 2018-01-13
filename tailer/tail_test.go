@@ -130,7 +130,7 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	t.Skip("flaky")
+	//t.Skip("flaky")
 	ta, lines, w, fs, dir := makeTestTailReal(t, "trunc")
 	defer os.RemoveAll(dir) // clean up
 
