@@ -378,13 +378,8 @@ func TestOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 	wg.Wait()
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
 	<-done
-
-	// // if err := ta.TailPath(logfile); err != nil {
-	// // 	t.Fatal(err)
-	// // }
-
-	// // Ugh, wait for it.
-	// time.Sleep(300 * time.Millisecond)
 }
