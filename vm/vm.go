@@ -403,9 +403,8 @@ func (v *VM) ParseTime(layout, value string) (tm time.Time) {
 	return
 }
 
-// Execute performs an instruction cycle in the VM -- acting on the current
-// instruction, and returns a boolean indicating if the current thread should
-// terminate.
+// Execute performs an instruction cycle in the VM. acting on the instruction
+// i in thread t.
 func (v *VM) execute(t *thread, i instr) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -791,7 +790,7 @@ func New(name string, obj *object, syslogUseCurrentYear bool, loc *time.Location
 	}
 }
 
-// DumpByteCode emits the program disassembly and program objects to string.
+// DumpByteCode emits the program disassembly and program objects to a string.
 func (v *VM) DumpByteCode(name string) string {
 	b := new(bytes.Buffer)
 	fmt.Fprintf(b, "Prog: %s\n", name)
