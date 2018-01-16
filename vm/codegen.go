@@ -14,15 +14,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-// compiler is data for the code generator.
+// codegen represents a code generator.
 type codegen struct {
 	name string // Name of the program.
 
-	errors ErrorList // Compile errors.
-	obj    object    // The object to return
-	l      []int     // jump table
+	errors ErrorList // Any compile errors detected are accumulated here.
+	obj    object    // The object to return, if successful.
 
-	decos []*decoNode // Decorator stack to unwind
+	l     []int       // Label table for recording jump destinations.
+	decos []*decoNode // Decorator stack to unwind when entering decorated blocks.
 }
 
 // CodeGen is the function that compiles the program to bytecode and data.

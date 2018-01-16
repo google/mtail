@@ -192,6 +192,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 // the start again.  Returns nil iff that happened.
 func (t *Tailer) handleTruncate(f afero.File) error {
 	offset, err := f.Seek(0, io.SeekCurrent)
+	glog.V(2).Infof("seek to current, now %d", offset)
 	if err != nil {
 		return err
 	}
@@ -205,7 +206,7 @@ func (t *Tailer) handleTruncate(f afero.File) error {
 		return fmt.Errorf("no truncate appears to have occurred")
 	}
 
-	_, err = f.Seek(0, io.SeekStart)
+	_, err := f.Seek(0, io.SeekStart)
 	return err
 }
 
@@ -219,10 +220,12 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 		n, err := f.Read(b[:cap(b)])
 		ntotal += n
 		b = b[:n]
+		glog.Infof("Read %v, %v", n, b)
 
 		if err == io.EOF && ntotal == 0 {
 			// If there was nothing to be read, perhaps the file just got truncated.
 			herr := t.handleTruncate(f)
+			glog.Infof("handletrunc with error '%v'", herr)
 			if herr == nil {
 				// Try again: offset was greater than filesize and now we've seeked to start.
 				continue
@@ -365,9 +368,11 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 	}
 }
 
-// startNewFile optionally seeks to the start or end of the file, then starts
-// the consumption of log lines. Rotated logs should read from the start, but
-// logs opened for the first time read from the end.
+// startNewFile optionally seeks to the start or end of the file f, then starts
+// the consumption of log lines. Rotated logs and logs read in oneshot mode
+// should read from the start, but logs opened for the first time read from the
+// "current point in time", which is the end of the file for logs being
+// appended to.
 func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	fi, err := f.Stat()
 	if err != nil {
