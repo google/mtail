@@ -345,7 +345,8 @@ func TestReadPipe(t *testing.T) {
 }
 
 func TestOpenRetries(t *testing.T) {
-	// Use the real filesystem because we struggle to create a repro with afero.
+	// Use the real filesystem because afero doesn't implement correct
+	// permissions checking on OpenFile in the memfile implementation.
 	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
 	defer func() {
 		if err := os.RemoveAll(dir); err != nil {
