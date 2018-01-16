@@ -33,6 +33,9 @@ func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, a
 }
 
 func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *watcher.LogWatcher, afero.Fs, string) {
+	if testing.Short() {
+		t.Skip("skipping real fs test in short mode")
+	}
 	dir, err := ioutil.TempDir("", prefix)
 	if err != nil {
 		t.Fatalf("can't create tempdir: %v", err)
