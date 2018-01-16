@@ -192,6 +192,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 // the start again.  Returns nil iff that happened.
 func (t *Tailer) handleTruncate(f afero.File) error {
 	offset, err := f.Seek(0, io.SeekCurrent)
+	glog.Infof("seek to current")
 	if err != nil {
 		return err
 	}
@@ -205,7 +206,11 @@ func (t *Tailer) handleTruncate(f afero.File) error {
 		return fmt.Errorf("no truncate appears to have occurred")
 	}
 
-	_, err = f.Seek(0, io.SeekStart)
+	new, err := f.Seek(0, io.SeekStart)
+	glog.Infof("seek to start")
+	if new != 0 {
+		glog.Infof("new offset is not zero")
+	}
 	return err
 }
 
@@ -219,10 +224,12 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 		n, err := f.Read(b[:cap(b)])
 		ntotal += n
 		b = b[:n]
+		glog.Infof("Read %v, %v", n, b)
 
 		if err == io.EOF && ntotal == 0 {
 			// If there was nothing to be read, perhaps the file just got truncated.
 			herr := t.handleTruncate(f)
+			glog.Infof("handletrunc with error '%v'", herr)
 			if herr == nil {
 				// Try again: offset was greater than filesize and now we've seeked to start.
 				continue

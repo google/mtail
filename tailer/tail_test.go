@@ -130,11 +130,10 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	t.Skip("flaky")
-	ta, lines, w, fs, dir := makeTestTailReal(t, "trunc")
-	defer os.RemoveAll(dir) // clean up
+	ta, lines, w, fs := makeTestTail(t)
 
-	logfile := filepath.Join(dir, "log")
+	//logfile := filepath.Join(dir, "log")
+	logfile := "/test/log"
 	f, err := fs.Create(logfile)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -161,12 +160,14 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 	wg.Add(3)
+	w.InjectUpdate(logfile)
 	wg.Wait()
 
 	err = f.Truncate(0)
 	if err != nil {
 		t.Fatal(err)
 	}
+	w.InjectUpdate(logfile)
 
 	// This is potentially racy.  Unlike in the case where we've got new
 	// lines that we can verify were seen with the WaitGroup, here nothing
@@ -181,10 +182,12 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 	wg.Add(2)
+	w.InjectUpdate(logfile)
 
-	// ugh
 	wg.Wait()
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
 	<-done
 
 	expected := []*LogLine{
@@ -342,8 +345,13 @@ func TestReadPipe(t *testing.T) {
 }
 
 func TestOpenRetries(t *testing.T) {
+	// Use the real filesystem because we struggle to create a repro with afero.
 	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
-	defer os.RemoveAll(dir)
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Log(err)
+		}
+	}()
 
 	logfile := filepath.Join(dir, "log")
 	if _, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
@@ -378,13 +386,8 @@ func TestOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 	wg.Wait()
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
 	<-done
-
-	// // if err := ta.TailPath(logfile); err != nil {
-	// // 	t.Fatal(err)
-	// // }
-
-	// // Ugh, wait for it.
-	// time.Sleep(300 * time.Millisecond)
 }
