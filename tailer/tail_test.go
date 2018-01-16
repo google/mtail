@@ -130,10 +130,14 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	ta, lines, w, fs := makeTestTail(t)
+	ta, lines, w, fs, dir := makeTestTailReal(t, "/tmp")
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
-	//logfile := filepath.Join(dir, "log")
-	logfile := "/test/log"
+	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -160,14 +164,16 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 	wg.Add(3)
-	w.InjectUpdate(logfile)
 	wg.Wait()
 
 	err = f.Truncate(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	w.InjectUpdate(logfile)
+	// Truncate does not move the I/O offset, so move it explicitly.
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		t.Fatal(err)
+	}
 
 	// This is potentially racy.  Unlike in the case where we've got new
 	// lines that we can verify were seen with the WaitGroup, here nothing
@@ -182,7 +188,6 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 	wg.Add(2)
-	w.InjectUpdate(logfile)
 
 	wg.Wait()
 	if err := w.Close(); err != nil {
