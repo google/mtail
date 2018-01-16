@@ -372,9 +372,11 @@ func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
 	}
 }
 
-// startNewFile optionally seeks to the start or end of the file, then starts
-// the consumption of log lines. Rotated logs should read from the start, but
-// logs opened for the first time read from the end.
+// startNewFile optionally seeks to the start or end of the file f, then starts
+// the consumption of log lines. Rotated logs and logs read in oneshot mode
+// should read from the start, but logs opened for the first time read from the
+// "current point in time", which is the end of the file for logs being
+// appended to.
 func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	fi, err := f.Stat()
 	if err != nil {
