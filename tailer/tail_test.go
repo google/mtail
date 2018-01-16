@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/watcher"
 
@@ -130,9 +131,12 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	t.Skip("flaky")
-	ta, lines, w, fs, dir := makeTestTailReal(t, "trunc")
-	defer os.RemoveAll(dir) // clean up
+	ta, lines, w, fs, dir := makeTestTailReal(t, "/tmp")
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
@@ -167,6 +171,10 @@ func TestHandleLogTruncate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Truncate does not move the I/O offset, so move it explicitly.
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		t.Fatal(err)
+	}
 
 	// This is potentially racy.  Unlike in the case where we've got new
 	// lines that we can verify were seen with the WaitGroup, here nothing
@@ -182,9 +190,10 @@ func TestHandleLogTruncate(t *testing.T) {
 	}
 	wg.Add(2)
 
-	// ugh
 	wg.Wait()
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
 	<-done
 
 	expected := []*LogLine{
@@ -342,8 +351,20 @@ func TestReadPipe(t *testing.T) {
 }
 
 func TestOpenRetries(t *testing.T) {
+	// This test is flaky (when go1.8 and GOMAXPROCS=2) because the write
+	// immediately after open may race and there's a io.SeekEnd after the write
+	// but before the reader reads from the start of the new file, missing the
+	// content, so the test never reads a line.
+	t.Skip("flaky")
+
+	// Use the real filesystem because afero doesn't implement correct
+	// permissions checking on OpenFile in the memfile implementation.
 	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
-	defer os.RemoveAll(dir)
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Log(err)
+		}
+	}()
 
 	logfile := filepath.Join(dir, "log")
 	if _, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
@@ -363,28 +384,30 @@ func TestOpenRetries(t *testing.T) {
 	if err := ta.TailPath(logfile); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("remove")
 	if err := fs.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("openfile")
 	f, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(10 * time.Millisecond)
+	glog.Info("chmod")
 	if err := fs.Chmod(logfile, 0666); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("write string")
 	if _, err := f.WriteString("\n"); err != nil {
 		t.Fatal(err)
 	}
 	wg.Wait()
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
 	<-done
-
-	// // if err := ta.TailPath(logfile); err != nil {
-	// // 	t.Fatal(err)
-	// // }
-
-	// // Ugh, wait for it.
-	// time.Sleep(300 * time.Millisecond)
 }

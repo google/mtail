@@ -23,6 +23,7 @@ GOFILES=\
 	mtail/mtail.go\
 	tailer/tail.go\
 	vm/ast.go\
+	vm/bytecode.go\
 	vm/checker.go\
 	vm/compiler.go\
 	vm/driver.go\
