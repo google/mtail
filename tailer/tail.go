@@ -192,7 +192,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 // the start again.  Returns nil iff that happened.
 func (t *Tailer) handleTruncate(f afero.File) error {
 	offset, err := f.Seek(0, io.SeekCurrent)
-	glog.Infof("seek to current")
+	glog.V(2).Infof("seek to current, now %d", offset)
 	if err != nil {
 		return err
 	}
@@ -206,11 +206,7 @@ func (t *Tailer) handleTruncate(f afero.File) error {
 		return fmt.Errorf("no truncate appears to have occurred")
 	}
 
-	new, err := f.Seek(0, io.SeekStart)
-	glog.Infof("seek to start")
-	if new != 0 {
-		glog.Infof("new offset is not zero")
-	}
+	_, err := f.Seek(0, io.SeekStart)
 	return err
 }
 

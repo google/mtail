@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/watcher"
 
@@ -350,6 +351,12 @@ func TestReadPipe(t *testing.T) {
 }
 
 func TestOpenRetries(t *testing.T) {
+	// This test is flaky (when go1.8 and GOMAXPROCS=2) because the write
+	// immediately after open may race and there's a io.SeekEnd after the write
+	// but before the reader reads from the start of the new file, missing the
+	// content, so the test never reads a line.
+	t.Skip("flaky")
+
 	// Use the real filesystem because afero doesn't implement correct
 	// permissions checking on OpenFile in the memfile implementation.
 	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
@@ -377,17 +384,24 @@ func TestOpenRetries(t *testing.T) {
 	if err := ta.TailPath(logfile); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("remove")
 	if err := fs.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("openfile")
 	f, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(10 * time.Millisecond)
+	glog.Info("chmod")
 	if err := fs.Chmod(logfile, 0666); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("write string")
 	if _, err := f.WriteString("\n"); err != nil {
 		t.Fatal(err)
 	}
