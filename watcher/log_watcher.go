@@ -5,6 +5,7 @@ package watcher
 
 import (
 	"expvar"
+	"fmt"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -61,14 +62,23 @@ func (w *LogWatcher) run() {
 		}
 	}()
 	for e := range w.Watcher.Events {
+		glog.V(2).Infof("watcher event %v", e)
 		eventCount.Add(e.Name, 1)
 		switch {
 		case e.Op&fsnotify.Create == fsnotify.Create:
 			w.sendEvent(CreateEvent{e.Name})
-		case e.Op&fsnotify.Write == fsnotify.Write:
+		case e.Op&fsnotify.Write == fsnotify.Write,
+			e.Op&fsnotify.Chmod == fsnotify.Chmod:
 			w.sendEvent(UpdateEvent{e.Name})
 		case e.Op&fsnotify.Remove == fsnotify.Remove:
 			w.sendEvent(DeleteEvent{e.Name})
+		case e.Op&fsnotify.Rename == fsnotify.Rename:
+			// TODO: replace this hack with a true rename handler, and reuse
+			// that when we do rename heuristics.
+			w.sendEvent(DeleteEvent{e.Name})
+			w.sendEvent(CreateEvent{e.Name})
+		default:
+			panic(fmt.Sprintf("unknown op type %v", e.Op))
 		}
 	}
 	glog.Infof("Shutting down log watcher.")
