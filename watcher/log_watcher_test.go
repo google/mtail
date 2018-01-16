@@ -35,8 +35,7 @@ func TestLogWatcher(t *testing.T) {
 	}
 
 	defer func() {
-		err := os.RemoveAll(workdir)
-		if err != nil {
+		if err := os.RemoveAll(workdir); err != nil {
 			t.Fatalf("could not remove temp dir %s: %s:", workdir, err)
 		}
 	}()
@@ -45,9 +44,15 @@ func TestLogWatcher(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
-	defer w.Close()
+	defer func() {
+		if err := w.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
-	w.Add(workdir)
+	if err := w.Add(workdir); err != nil {
+		t.Fatal(err)
+	}
 	f, err := os.Create(filepath.Join(workdir, "logfile"))
 	if err != nil {
 		t.Fatalf("couldn't make a logfile in temp dir: %s\n", err)
@@ -66,8 +71,15 @@ func TestLogWatcher(t *testing.T) {
 	case <-time.After(deadline):
 		t.Errorf("didn't receive create message before timeout")
 	}
-	f.WriteString("hi")
-	f.Close()
+	if n, err := f.WriteString("hi"); err != nil {
+		t.Fatal(err)
+		if n != 2 {
+			t.Fatalf("wrote %d instead of 2", n)
+		}
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case e := <-eventsChannel:
 		switch e := e.(type) {
@@ -81,13 +93,26 @@ func TestLogWatcher(t *testing.T) {
 	case <-time.After(deadline):
 		t.Errorf("didn't receive update message before timeout")
 	}
-	os.Chmod(filepath.Join(workdir, "logfile"), os.ModePerm)
+	if err := os.Chmod(filepath.Join(workdir, "logfile"), os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case e := <-eventsChannel:
-		t.Errorf("no event expected, got %#v", e)
+		switch e := e.(type) {
+		case UpdateEvent:
+			if e.Pathname != filepath.Join(workdir, "logfile") {
+				t.Errorf("update doesnt' match")
+			}
+		default:
+
+			t.Errorf("wrong event type: %v", e)
+		}
 	case <-time.After(deadline):
+		t.Errorf("didn't receive update message befor timeout")
 	}
-	os.Remove(filepath.Join(workdir, "logfile"))
+	if err := os.Remove(filepath.Join(workdir, "logfile")); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case e := <-eventsChannel:
 		switch e := e.(type) {
@@ -155,7 +180,11 @@ func TestLogWatcherAddError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
-	defer w.Close()
+	defer func() {
+		if err := w.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	filename := filepath.Join(workdir, "test")
 	if _, err := os.Create(filename); err != nil {

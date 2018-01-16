@@ -206,7 +206,7 @@ func (t *Tailer) handleTruncate(f afero.File) error {
 		return fmt.Errorf("no truncate appears to have occurred")
 	}
 
-	_, err := f.Seek(0, io.SeekStart)
+	_, err = f.Seek(0, io.SeekStart)
 	return err
 }
 
