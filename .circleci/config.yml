@@ -17,11 +17,11 @@ jobs:
     #### expecting it in the form of
     ####   /go/src/github.com/circleci/go-tool
     ####   /go/src/bitbucket.org/circleci/go-tool
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    working_directory: /go/src/github.com/google/mtail
     steps:
       - checkout
 
       # specify any bash command here prefixed with `run: `
       - run: make vm/parser.go
       - run: make install_coverage_deps
-      - run: pwd && echo $GOPATH && time make testrace
+      - run: time make testrace
