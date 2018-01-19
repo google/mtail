@@ -24,4 +24,4 @@ jobs:
       # specify any bash command here prefixed with `run: `
       - run: make vm/parser.go
       - run: make install_coverage_deps
-      - run: time make testrace
+      - run: pwd && echo $GOPATH && time make testrace
