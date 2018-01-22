@@ -10,5 +10,4 @@ jobs:
       - run: make install_coverage_deps
       - run: time make testrace
       - run: make coverage
-      - run: goveralls -coverprofile=gover.coverprofile
       - run: make bench
