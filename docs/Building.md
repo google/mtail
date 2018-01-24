@@ -10,7 +10,8 @@ You will need to install Go 1.7 or higher.
 
 ```
 cd $GOPATH/src
-go get https://github.com/google/mtail
+go get github.com/google/mtail
+cd github.com/google/mtail
 make
 ```
 
