@@ -13,7 +13,7 @@ The `--help` flag will print a list of flags for configuring `mtail`.
 Basic flags necessary to start `mtail`:
 
   * `--logs` is a comma separated list of filenames to extract from, but can also be used multiple times, and each filename can be a [glob pattern](http://godoc.org/path/filepath#Match).
-  * `--progs` is a directory path containing [mtail programs](Language). Programs must have the `.mtail` suffix.
+  * `--progs` is a directory path containing [mtail programs](Language.md). Programs must have the `.mtail` suffix.
 
 mtail runs an HTTP server on port 3903, which can be changed with the `--port` flag.
 
@@ -32,7 +32,7 @@ changes.
 
 ## Writing the programme
 
-Read the [Programming Guide](Programming-Guide) for instructions on how to write an `mtail` program.
+Read the [Programming Guide](Programming-Guide.md) for instructions on how to write an `mtail` program.
 
 ## Getting the Metrics Out
 
@@ -64,7 +64,7 @@ Additionally, the flag `metric_push_interval_seconds` can be used to configure t
 
 ## Troubleshooting
 
-Lots of state is logged to the log file, by default in `/tmp/mtail.INFO`.  See [Troubleshooting](Troubleshooting) for more information.
+Lots of state is logged to the log file, by default in `/tmp/mtail.INFO`.  See [Troubleshooting](Troubleshooting.md) for more information.
 
 N.B. Oneshot mode (the `one_shot` flag on the commandline) can be used to check
 that a program is correctly reading metrics from a log, but with the following
