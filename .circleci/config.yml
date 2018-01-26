@@ -6,10 +6,11 @@ common-build: &common-build
     - run: go get github.com/jstemmer/go-junit-report
     - run: make vm/parser.go
     - run: make install_coverage_deps
-    - run: Run tests with race detector
-      command: |
-        trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
-        make testrace | tee ${TEST_RESULTS}/go-test.out
+    - run:
+        name: Run tests with race detector
+        command: |
+          trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
+          make testrace | tee ${TEST_RESULTS}/go-test.out
     - run: make coverage
     - run: make bench
     - store_test_results:
