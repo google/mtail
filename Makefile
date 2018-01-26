@@ -90,7 +90,7 @@ check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -timeout ${timeout} -race ./... ./testdata
+	go test -timeout ${timeout} -race -v ./... ./testdata
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp

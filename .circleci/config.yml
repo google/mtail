@@ -2,31 +2,38 @@ common-build: &common-build
   working_directory: /go/src/github.com/google/mtail
   steps:
     - checkout
+    - run: mkdir -p $TEST_RESULTS
+    - run: go get github.com/jstemmer/go-junit-report
     - run: make vm/parser.go
     - run: make install_coverage_deps
-    - run: time make testrace
+    - run: Run tests with race detector
+      command: |
+        trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
+        make testrace | tee ${TEST_RESULTS}/go-test.out
     - run: make coverage
     - run: make bench
+    - store_test_results:
+        path: /tmp/test-results
 
 version: 2
 jobs:
-  build-go1.8:
-    <<: *common-build
-    docker:
-      - image: circleci/golang:1.8
   build-go1.9:
     <<: *common-build
     docker:
       - image: circleci/golang:1.9
+  build-go1.8:
+    <<: *common-build
+    docker:
+      - image: circleci/golang:1.8
   build-go1.7:
     <<: *common-build
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.7
 
 workflows:
   version: 2
   build:
     jobs:
-      - build-go1.7
-      - build-go1.8
       - build-go1.9
+      - build-go1.8
+      - build-go1.7
