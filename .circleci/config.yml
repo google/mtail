@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  build-go1.8:
     docker:
       - image: circleci/golang:1.8
     working_directory: /go/src/github.com/google/mtail
@@ -11,3 +11,33 @@ jobs:
       - run: time make testrace
       - run: make coverage
       - run: make bench
+  build-go1.9:
+    docker:
+      - image: circleci/golang:1.9
+    working_directory: /go/src/github.com/google/mtail
+    steps:
+      - checkout
+      - run: make vm/parser.go
+      - run: make install_coverage_deps
+      - run: time make testrace
+      - run: make coverage
+      - run: make bench
+  build-go1.7:
+    docker:
+      - image: circleci/golang:1.9
+    working_directory: /go/src/github.com/google/mtail
+    steps:
+      - checkout
+      - run: make vm/parser.go
+      - run: make install_coverage_deps
+      - run: time make testrace
+      - run: make coverage
+      - run: make bench
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build-go1.7
+      - build-go1.8
+      - build-go1.9
