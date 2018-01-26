@@ -10,15 +10,15 @@ common-build: &common-build
 
 version: 2
 jobs:
-  build-go18:
+  build-go1.8:
     <<: *common-build
     docker:
       - image: circleci/golang:1.8
-  build-go19:
+  build-go1.9:
     <<: *common-build
     docker:
       - image: circleci/golang:1.9
-  build-go17:
+  build-go1.7:
     <<: *common-build
     docker:
       - image: circleci/golang:1.9
