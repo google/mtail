@@ -1,5 +1,7 @@
 common-build: &common-build
   working_directory: /go/src/github.com/google/mtail
+  environment:
+    TEST_RESULTS: /tmp/test-results
   steps:
     - checkout
     - run: mkdir -p $TEST_RESULTS
