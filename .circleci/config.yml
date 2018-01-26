@@ -1,26 +1,3 @@
-version: 2
-jobs:
-  build-go18:
-    docker:
-      - image: circleci/golang:1.8
-    <<: *common-build
-  build-go19:
-    docker:
-      - image: circleci/golang:1.9
-    <<: *common-build
-  build-go17:
-    docker:
-      - image: circleci/golang:1.9
-    <<: *common-build
-
-workflows:
-  version: 2
-  build:
-    jobs:
-      - build-go1.7
-      - build-go1.8
-      - build-go1.9
-
 common-build: &common-build
   working_directory: /go/src/github.com/google/mtail
   steps:
@@ -30,3 +7,26 @@ common-build: &common-build
     - run: time make testrace
     - run: make coverage
     - run: make bench
+
+version: 2
+jobs:
+  build-go18:
+    <<: *common-build
+    docker:
+      - image: circleci/golang:1.8
+  build-go19:
+    <<: *common-build
+    docker:
+      - image: circleci/golang:1.9
+  build-go17:
+    <<: *common-build
+    docker:
+      - image: circleci/golang:1.9
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build-go1.7
+      - build-go1.8
+      - build-go1.9
