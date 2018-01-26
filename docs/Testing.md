@@ -50,4 +50,4 @@ The `TestExamplePrograms` behaves like the `one_shot` flag, and
 
 # Troubleshooting
 
-For more information about debugging mtail programs, see the tips under [Troubleshooting](Troubleshooting)
+For more information about debugging mtail programs, see the tips under [Troubleshooting](Troubleshooting.md)

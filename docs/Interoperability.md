@@ -1,6 +1,6 @@
 # Introduction
 
-mtail is only part of a monitoring ecosystem -- it fills the gap between applications that export no metrics of their own in a [common protocol](Metrics) and the timeseries database.
+mtail is only part of a monitoring ecosystem -- it fills the gap between applications that export no metrics of their own in a [common protocol](Metrics.md) and the timeseries database.
 
 # Details
 
