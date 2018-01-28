@@ -138,7 +138,7 @@ install_deps: .dep-stamp
 IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... ./testdata | sort | uniq | grep -v mtail)
 TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... ./testdata | sort | uniq | grep -v mtail)
 
-.dep-stamp:
+.dep-stamp: vm/parser.go
 	# Install all dependencies, ensuring they're updated
 	go get -u -v $(IMPORTS)
 	go get -u -v $(TESTIMPORTS)
@@ -152,7 +152,7 @@ install_gen_deps: .gen-dep-stamp
 	touch $@
 
 .PHONY: install_coverage_deps
-install_coverage_deps: .cov-dep-stamp
+install_coverage_deps: .cov-dep-stamp vm/parser.go
 
 .cov-dep-stamp: install_deps
 	go get golang.org/x/tools/cmd/cover
