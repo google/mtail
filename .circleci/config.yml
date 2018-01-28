@@ -50,32 +50,23 @@ concurrency_1: &concurrency_1
 version: 2
 jobs:
   build-go1.9-4:
-    <<: *go1_9
-    <<: *concurrency_4
+    <<: [*go1_9, *concurrency_4]
   build-go1.9-2:
-    <<: *go1_9
-    <<: *concurrency_2
+    <<: [*go1_9, *concurrency_2]
   build-go1.9-1:
-    <<: *go1_9
-    <<: *concurrency_1
+    <<: [*go1_9, *concurrency_1]
   build-go1.8-4:
-    <<: *go1_8
-    <<: *concurrency_4
+    <<: [*go1_8, *concurrency_4]
   build-go1.8-2:
-    <<: *go1_8
-    <<: *concurrency_2
+    <<: [*go1_8, *concurrency_2]
   build-go1.8-1:
-    <<: *go1_8
-    <<: *concurrency_1
+    <<: [*go1_8, *concurrency_1]
   build-go1.7-4:
-    <<: *go1_7
-    <<: *concurrency_4
+    <<: [*go1_7, *concurrency_4]
   build-go1.7-2:
-    <<: *go1_7
-    <<: *concurrency_2
+    <<: [*go1_7, *concurrency_2]
   build-go1.7-1:
-    <<: *go1_7
-    <<: *concurrency_1
+    <<: [*go1_7, *concurrency_1]
 
 workflows:
   version: 2
