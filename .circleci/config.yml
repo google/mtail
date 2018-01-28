@@ -13,30 +13,80 @@ common-build: &common-build
         command: |
           trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
           make testrace | tee ${TEST_RESULTS}/go-test.out
-    - run: make coverage
+    - run:
+        name: Run tests with coverage
+        command: |
+          make coverage
     - run: make bench
     - store_test_results:
         path: /tmp/test-results
+    - store_artifacts:
+        path: gover.coverprofile
+        destination: coverage
+
+go1_9: &go1_9
+  <<: *common-build
+  docker:
+    - image: circleci/golang:1.9
+go1_8: &go1_8
+  <<: *common-build
+  docker:
+    - image: circleci/golang:1.8
+go1_7: &go1_7
+  <<: *common-build
+  docker:
+    - image: circleci/golang:1.7
+
+concurrency_4: &concurrency_4
+  environment:
+    GOMAXPROCS: 4
+concurrency_2: &concurrency_2
+  environment:
+    GOMAXPROCS: 2
+concurrency_1: &concurrency_1
+  environment:
+    GOMAXPROCS: 1
 
 version: 2
 jobs:
-  build-go1.9:
-    <<: *common-build
-    docker:
-      - image: circleci/golang:1.9
-  build-go1.8:
-    <<: *common-build
-    docker:
-      - image: circleci/golang:1.8
-  build-go1.7:
-    <<: *common-build
-    docker:
-      - image: circleci/golang:1.7
+  build-go1.9-4:
+    <<: *go1_9
+    <<: *concurrency_4
+  build-go1.9-2:
+    <<: *go1_9
+    <<: *concurrency_2
+  build-go1.9-1:
+    <<: *go1_9
+    <<: *concurrency_1
+  build-go1.8-4:
+    <<: *go1_8
+    <<: *concurrency_4
+  build-go1.8-2:
+    <<: *go1_8
+    <<: *concurrency_2
+  build-go1.8-1:
+    <<: *go1_8
+    <<: *concurrency_1
+  build-go1.7-4:
+    <<: *go1_7
+    <<: *concurrency_4
+  build-go1.7-2:
+    <<: *go1_7
+    <<: *concurrency_2
+  build-go1.7-1:
+    <<: *go1_7
+    <<: *concurrency_1
 
 workflows:
   version: 2
   build:
     jobs:
-      - build-go1.9
-      - build-go1.8
-      - build-go1.7
+      - build-go1.9-4
+      - build-go1.9-2
+      - build-go1.9-1
+      - build-go1.8-4
+      - build-go1.8-2
+      - build-go1.8-1
+      - build-go1.7-4
+      - build-go1.7-2
+      - build-go1.7-1
