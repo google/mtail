@@ -80,17 +80,17 @@ jobs:
           at: /tmp/workspace
       - run: make install_coverage_deps
       - run:
-        name: Generate coverage
-        command: |
-          gover /tmp/workspace
-          go tool cover -html=gover.coverprofile -o coverage.html
-          goveralls -coverprofile=gover.coverprofile -service=circle-ci
+          name: Generate coverage
+          command: |
+            gover /tmp/workspace
+            go tool cover -html=gover.coverprofile -o coverage.html
+            goveralls -coverprofile=gover.coverprofile -service=circle-ci
       - store_artifacts:
-        path: gover.coverprofile
-        destination: coverage
+          path: gover.coverprofile
+          destination: coverage
       - store_artifacts:
-        path: coverage.html
-        destination: coverage
+          path: coverage.html
+          destination: coverage
 
 
 workflows:
