@@ -16,7 +16,7 @@ common-build: &common-build
     - run:
         name: Run tests with coverage
         command: |
-          make coverage.html
+          make coverage.html upload_to_coveralls
     - run: make bench
     - store_test_results:
         path: /tmp/test-results

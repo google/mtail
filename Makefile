@@ -159,3 +159,14 @@ install_coverage_deps: .cov-dep-stamp vm/parser.go
 	go get github.com/modocache/gover
 	go get github.com/mattn/goveralls
 	touch $@
+
+ifeq ($(CIRCLECI),true)
+  COVERALLS_SERVICE := circleci
+endif
+ifeq ($(TRAVIS),true)
+  COVERALLS_SERVICE := travis-ci
+endif
+
+upload_to_coveralls: gover.coverprofile
+	goveralls -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE) --repotoken $(COVERALLS_REPO_TOKEN)
+
