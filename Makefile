@@ -161,12 +161,12 @@ install_coverage_deps: .cov-dep-stamp vm/parser.go
 	touch $@
 
 ifeq ($(CIRCLECI),true)
-  COVERALLS_SERVICE := circleci
+  COVERALLS_SERVICE := circle-ci
 endif
 ifeq ($(TRAVIS),true)
   COVERALLS_SERVICE := travis-ci
 endif
 
 upload_to_coveralls: gover.coverprofile
-	goveralls -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE) --repotoken $(COVERALLS_REPO_TOKEN)
+	goveralls -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE)
 
