@@ -76,9 +76,9 @@ jobs:
     docker:
       - image: circleci/golang:1.9
     steps:
+      - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - run: make install_coverage_deps
       - run:
           name: Generate coverage
           command: |
