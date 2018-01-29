@@ -156,7 +156,7 @@ install_coverage_deps: .cov-dep-stamp vm/parser.go
 
 .cov-dep-stamp: install_deps
 	go get golang.org/x/tools/cmd/cover
-	go get github.com/modocache/gover
+	go get github.com/sozorogami/gover
 	go get github.com/mattn/goveralls
 	touch $@
 
