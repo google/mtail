@@ -100,7 +100,7 @@ smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
 ex_test: ex_test.go testdata/* examples/*
 	go test -run TestExamplePrograms --logtostderr
 
-.PHONY: bench
+.PHONY: bench>
 bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -timeout=60s -run=XXX ./... ./testdata
 
@@ -139,7 +139,7 @@ IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... ./testdata | sort |
 TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... ./testdata | sort | uniq | grep -v mtail)
 
 .dep-stamp: vm/parser.go
-	# Install all dependencies, ensuring they're updated
+	@echo "Install all dependencies, ensuring they're updated"
 	go get -u -v $(IMPORTS)
 	go get -u -v $(TESTIMPORTS)
 	touch $@
@@ -170,3 +170,7 @@ endif
 upload_to_coveralls: gover.coverprofile
 	goveralls -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE)
 
+# Append the bin subdirs of every element of the GOPATH list to PATH, so we can find goyacc.
+space :=
+space += 
+export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPATH))))
