@@ -106,12 +106,12 @@ func TestHandleLogUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	wg.Add(4)
 	_, err = f.WriteString("a\nb\nc\nd\n")
 	if err != nil {
 		t.Fatal(err)
 	}
 	f.Seek(0, 0) // In memory files share the same offset
-	wg.Add(4)
 	w.InjectUpdate(logfile)
 
 	// ugh
@@ -163,11 +163,11 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	wg.Add(3)
 	_, err = f.WriteString("a\nb\nc\n")
 	if err != nil {
 		t.Fatal(err)
 	}
-	wg.Add(3)
 	wg.Wait()
 
 	err = f.Truncate(0)
@@ -187,11 +187,11 @@ func TestHandleLogTruncate(t *testing.T) {
 	// pre-truncate, so that the post-truncate offset is always smaller
 	// than the offset seen after wg.Add(3); wg.Wait() above.
 
+	wg.Add(2)
 	_, err = f.WriteString("d\ne\n")
 	if err != nil {
 		t.Fatal(err)
 	}
-	wg.Add(2)
 
 	wg.Wait()
 	if err := w.Close(); err != nil {
