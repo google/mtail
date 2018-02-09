@@ -128,11 +128,6 @@ func TestHandleLogRotation(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not touch log file: %s", err)
 	}
-	defer func() {
-		if cerr := logFile.Close(); cerr != nil {
-			t.Fatal(cerr)
-		}
-	}()
 	// Create a logger
 	hup := make(chan bool, 1)
 	pathnames := []string{logFilepath}
@@ -143,28 +138,28 @@ func TestHandleLogRotation(t *testing.T) {
 		}
 	}()
 
+	// Rotate the log file after 500ms.
 	go func() {
 		<-time.After(5 * 100 * time.Millisecond)
 		err = os.Rename(logFilepath, logFilepath+".1")
 		if err != nil {
 			t.Errorf("could not rename log file: %s", err)
 		}
+		// "sighup" the "logging process"
 		hup <- true
 	}()
-	i := 0
-	for i <= 10 {
+	for i := 0; i <= 10; {
 		select {
 		case <-hup:
-			// touch log file
+			// Close to flush contents
+			if err = logFile.Close(); err != nil {
+				t.Fatal(err)
+			}
+			// Received a HUP so reopen the logfile.
 			logFile, err = os.OpenFile(logFilepath, os.O_RDWR|os.O_CREATE, 0)
 			if err != nil {
 				t.Errorf("could not create rotated log file: %s", err)
 			}
-			defer func() {
-				if err := logFile.Close(); err != nil {
-					t.Fatal(err)
-				}
-			}()
 			time.Sleep(1 * time.Millisecond)
 			err = logFile.Chmod(0666)
 			if err != nil {
@@ -176,6 +171,9 @@ func TestHandleLogRotation(t *testing.T) {
 			}
 			i++
 		}
+	}
+	if err = logFile.Close(); err != nil {
+		t.Fatal(err)
 	}
 	expected := "10"
 	if vm.LineCount.String() != expected {
