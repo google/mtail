@@ -62,26 +62,23 @@ var table = map[string]node{
 
 func emitter(c chan string) {
 	var l int
-	for {
-		select {
-		case w := <-c:
-			if w == "\n" {
-				fmt.Println()
+	for w := range c {
+		if w == "\n" {
+			fmt.Println()
+		}
+		if w == "" {
+			continue
+		}
+		if l+len(w)+1 >= 80 {
+			fmt.Println()
+			fmt.Print(w)
+			l = len(w)
+		} else {
+			if l != 0 {
+				w = " " + w
 			}
-			if w == "" {
-				continue
-			}
-			if l+len(w)+1 >= 80 {
-				fmt.Println()
-				fmt.Print(w)
-				l = len(w)
-			} else {
-				if l != 0 {
-					w = " " + w
-				}
-				l += len(w)
-				fmt.Print(w)
-			}
+			l += len(w)
+			fmt.Print(w)
 		}
 	}
 }
