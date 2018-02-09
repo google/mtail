@@ -128,29 +128,31 @@ func TestHandleLogRotation(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not touch log file: %s", err)
 	}
-	defer logFile.Close()
+	defer func() {
+		if cerr := logFile.Close(); cerr != nil {
+			t.Fatal(cerr)
+		}
+	}()
 	// Create a logger
 	hup := make(chan bool, 1)
 	pathnames := []string{logFilepath}
 	m := startMtailServer(t, pathnames, "")
-	defer m.Close()
-
-	go func() {
-		for {
-			select {
-			case <-time.After(5 * 100 * time.Millisecond):
-				err = os.Rename(logFilepath, logFilepath+".1")
-				if err != nil {
-					t.Errorf("could not rename log file: %s", err)
-				}
-				hup <- true
-				return
-			}
+	defer func() {
+		if cerr := m.Close(); cerr != nil {
+			t.Fatal(cerr)
 		}
 	}()
+
+	go func() {
+		<-time.After(5 * 100 * time.Millisecond)
+		err = os.Rename(logFilepath, logFilepath+".1")
+		if err != nil {
+			t.Errorf("could not rename log file: %s", err)
+		}
+		hup <- true
+	}()
 	i := 0
-	running := true
-	for running {
+	for i <= 10 {
 		select {
 		case <-hup:
 			// touch log file
@@ -158,19 +160,21 @@ func TestHandleLogRotation(t *testing.T) {
 			if err != nil {
 				t.Errorf("could not create rotated log file: %s", err)
 			}
-			defer logFile.Close()
+			defer func() {
+				if err := logFile.Close(); err != nil {
+					t.Fatal(err)
+				}
+			}()
 			time.Sleep(1 * time.Millisecond)
 			err = logFile.Chmod(0666)
 			if err != nil {
 				t.Errorf("could not chmod log file to read: %s", err)
 			}
-		default:
-			logFile.WriteString(fmt.Sprintf("%d\n", i))
-			time.Sleep(100 * time.Millisecond)
-			i++
-			if i >= 10 {
-				running = false
+		case <-time.Tick(100 * time.Millisecond):
+			if _, werr := logFile.WriteString(fmt.Sprintf("%d\n", i)); werr != nil {
+				t.Fatal(werr)
 			}
+			i++
 		}
 	}
 	expected := "10"
