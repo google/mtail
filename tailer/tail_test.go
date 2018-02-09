@@ -175,8 +175,8 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Truncate does not move the I/O offset, so move it explicitly.
-	if _, err := f.Seek(0, io.SeekStart); err != nil {
-		t.Fatal(err)
+	if _, terr := f.Seek(0, io.SeekStart); terr != nil {
+		t.Fatal(terr)
 	}
 
 	// This is potentially racy.  Unlike in the case where we've got new
