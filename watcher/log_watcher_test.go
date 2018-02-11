@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 // This test requires disk access, and cannot be injected without internal
@@ -229,25 +231,11 @@ func TestWatcherErrors(t *testing.T) {
 		t.Fatalf("couldn't create a watcher")
 	}
 	w.Errors <- errors.New("Injected error for test")
-	expected := strconv.FormatInt(orig+1, 10)
-	check := func() (bool, error) {
-		if expvar.Get("log_watcher_error_count").String() != expected {
-			return false, nil
-		}
-		return true, nil
-	}
-	// Wait for the counter to be increased.  We can't strictly order this
-	// becase the fsnotify code has nothing to hook on.
-	ok, err := doOrTimeout(check, 100*time.Millisecond, time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !ok {
-		t.Errorf("log watcher error count didn't increase\n\texpected: %s\n\treceived: %s", expected, expvar.Get("log_watcher_error_count").String())
-	}
-
-	// Close only closes the channels, it does not guarantee the channel reader has finished working.
 	if err := w.Close(); err != nil {
 		t.Fatalf("watcher close failed: %q", err)
+	}
+	expected := strconv.FormatInt(orig+1, 10)
+	if diff := cmp.Diff(expected, expvar.Get("log_watcher_error_count").String()); diff != "" {
+		t.Errorf("log watcher error count not increased:\n%s", diff)
 	}
 }
