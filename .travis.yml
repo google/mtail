@@ -6,21 +6,12 @@ before_install:
  - make vm/parser.go
 
 # Default dependency installation command, which is disabled when Makefile
-# detected.  Also install three tools for measuring coverage and sending to
-# coveralls.io.
+# detected.
 install:
- - travis_retry make install_coverage_deps
+ - travis_retry make install_deps
 
 # Run all tests, under race detector.
 script: time make testrace
-
-# If the full suite passes, run again to collect coverage, merge all of the
-# packages reports, and send to coveralls.io.
-# Run the benchmarks, if applicable.
-after_success:
- - make coverage
- - goveralls -coverprofile=gover.coverprofile -service=travis-ci
- - make bench
 
 # Run tests at these Go versions.
 go:
