@@ -15,8 +15,6 @@ import (
 	"syscall"
 	"testing"
 	"time"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 // This test requires disk access, and cannot be injected without internal
@@ -202,6 +200,22 @@ func TestLogWatcherAddError(t *testing.T) {
 	}
 }
 
+func doOrTimeout(do func() (bool, error), deadline, interval time.Duration) (bool, error) {
+	for {
+		select {
+		case <-time.After(deadline):
+			return false, errors.New("timeout")
+		case <-time.Tick(interval):
+			ok, err := do()
+			if err != nil {
+				return false, err
+			} else if ok {
+				return true, nil
+			}
+		}
+	}
+}
+
 func TestWatcherErrors(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping log watcher test in short mode")
@@ -218,8 +232,19 @@ func TestWatcherErrors(t *testing.T) {
 	if err := w.Close(); err != nil {
 		t.Fatalf("watcher close failed: %q", err)
 	}
-	diff := cmp.Diff(strconv.FormatInt(orig+1, 10), expvar.Get("log_watcher_error_count").String())
-	if diff != "" {
-		t.Errorf("log watcher error count doens't match:\n%s", diff)
+	t.Log("watcher now closed.")
+	expected := strconv.FormatInt(orig+1, 10)
+	check := func() (bool, error) {
+		if expvar.Get("log_watcher_error_count").String() != expected {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err := doOrTimeout(check, 100*time.Millisecond, time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Errorf("log watcher error count didn't increase\n\texpected: %s\n\treceived: %s", expected, expvar.Get("log_watcher_error_count").String())
 	}
 }
