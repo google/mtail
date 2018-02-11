@@ -80,10 +80,8 @@ func (w *LogWatcher) run() {
 		case e.Op&fsnotify.Remove == fsnotify.Remove:
 			w.sendEvent(DeleteEvent{e.Name})
 		case e.Op&fsnotify.Rename == fsnotify.Rename:
-			// TODO: replace this hack with a true rename handler, and reuse
-			// that when we do rename heuristics.
+			// Rename is only issued on the original file path; the new name receives a Create event
 			w.sendEvent(DeleteEvent{e.Name})
-			w.sendEvent(CreateEvent{e.Name})
 		default:
 			panic(fmt.Sprintf("unknown op type %v", e.Op))
 		}

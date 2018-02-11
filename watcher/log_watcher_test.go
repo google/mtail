@@ -93,14 +93,45 @@ func TestLogWatcher(t *testing.T) {
 	case <-time.After(deadline):
 		t.Errorf("didn't receive update message before timeout")
 	}
-	if err := os.Chmod(filepath.Join(workdir, "logfile"), os.ModePerm); err != nil {
+	if err := os.Rename(filepath.Join(workdir, "logfile"), filepath.Join(workdir, "logfile2")); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case e := <-eventsChannel:
+		switch e := e.(type) {
+		case DeleteEvent:
+			if e.Pathname != filepath.Join(workdir, "logfile") {
+				t.Errorf("delete doesnt' match")
+			}
+		default:
+
+			t.Errorf("wrong event type: %v", e)
+		}
+	case <-time.After(deadline):
+		t.Errorf("didn't receive delete befor timeout")
+	}
+	select {
+	case e := <-eventsChannel:
+		switch e := e.(type) {
+		case CreateEvent:
+			if e.Pathname != filepath.Join(workdir, "logfile2") {
+				t.Errorf("create doesnt' match")
+			}
+		default:
+
+			t.Errorf("wrong event type: %v", e)
+		}
+	case <-time.After(deadline):
+		t.Errorf("didn't receive create message befor timeout")
+	}
+	if err := os.Chmod(filepath.Join(workdir, "logfile2"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 	select {
 	case e := <-eventsChannel:
 		switch e := e.(type) {
 		case UpdateEvent:
-			if e.Pathname != filepath.Join(workdir, "logfile") {
+			if e.Pathname != filepath.Join(workdir, "logfile2") {
 				t.Errorf("update doesnt' match")
 			}
 		default:
@@ -110,14 +141,14 @@ func TestLogWatcher(t *testing.T) {
 	case <-time.After(deadline):
 		t.Errorf("didn't receive update message befor timeout")
 	}
-	if err := os.Remove(filepath.Join(workdir, "logfile")); err != nil {
+	if err := os.Remove(filepath.Join(workdir, "logfile2")); err != nil {
 		t.Fatal(err)
 	}
 	select {
 	case e := <-eventsChannel:
 		switch e := e.(type) {
 		case DeleteEvent:
-			if e.Pathname != filepath.Join(workdir, "logfile") {
+			if e.Pathname != filepath.Join(workdir, "logfile2") {
 				t.Errorf("delete doesn't match")
 			}
 		default:
