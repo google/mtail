@@ -40,5 +40,12 @@ the [Build instructions](docs/Building.md) for more details.
 
 ### Deployment
 
-`mtail` works best when paired with a timeseries-based calculator and alerting
-tool, like [Prometheus](http://prometheus.io).
+`mtail` works best when it paired with a timeseries-based calculator and
+alerting tool, like [Prometheus](http://prometheus.io).
+
+> So what you do is you take the metrics from the log files and 
+> you bring them down to the monitoring system?
+
+[It deals with the instrumentation so the engineers don't have
+to!](http://www.imdb.com/title/tt0151804/quotes/qt0386890).  It has the
+extraction skills!  It is good at dealing with logfiles!!
