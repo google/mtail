@@ -253,13 +253,13 @@ type Loader struct {
 	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
+	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
 	compileOnly          bool           // Only compile programs and report errors, do not load VMs.
 	errorsAbort          bool           // Compiler errors abort the loader.
 	dumpAst              bool           // print the AST after parse
 	dumpAstTypes         bool           // print the AST after type check
 	dumpBytecode         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
 	syslogUseCurrentYear bool           // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
-	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
 	omitMetricSource     bool
 }
 
@@ -272,13 +272,13 @@ type LoaderOptions struct {
 	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 
+	OverrideLocation     *time.Location // if not nil, overrides the timezone in strptime().
 	CompileOnly          bool           // Compile, don't start execution.
 	ErrorsAbort          bool           // Compiler errors abort the loader.
 	DumpAst              bool           // print the AST after type check
 	DumpAstTypes         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
 	DumpBytecode         bool           // Instructs the loader to dump the program bytecode after compilation.
 	SyslogUseCurrentYear bool           // If true, override empty year with the current in strptime().
-	OverrideLocation     *time.Location // if not nil, overrides the timezone in strptime().
 	OmitMetricSource     bool           // Don't put the source in the metric when added to the Store.
 }
 
