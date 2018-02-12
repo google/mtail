@@ -257,11 +257,13 @@ func (m *MtailServer) Close() error {
 				glog.Infof("tailer close failed: %s", err)
 			}
 		} else {
-			glog.Info("No tailer, closing lines channel.")
+			glog.Info("No tailer, closing lines channel directly.")
 			close(m.lines)
 		}
 		if m.l != nil {
 			<-m.l.VMsDone
+		} else {
+			glog.V(2).Info("No loader, so not waiting for shutdown.")
 		}
 		glog.Info("All done.")
 	})
