@@ -127,6 +127,6 @@ upload_to_coveralls: gover.coverprofile
 	goveralls -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE)
 
 # Append the bin subdirs of every element of the GOPATH list to PATH, so we can find goyacc.
-space :=
-space +=
+empty :=
+space := $(empty) $(empty)
 export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPATH))))
