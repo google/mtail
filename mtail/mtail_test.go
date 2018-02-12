@@ -191,6 +191,10 @@ Loop:
 	if diff := cmp.Diff(expected, expvar.Get("line_count").String()); diff != "" {
 		t.Errorf("line_count metric didn't match\n%s", diff)
 	}
+	diff := cmp.Diff("1", expvar.Get("log_rotations_total").(*expvar.Map).Get(logFilepath).String())
+	if diff != "" {
+		t.Errorf("log_rotations_total metric didn't match\n%s", diff)
+	}
 }
 
 func TestHandleNewLogAfterStart(t *testing.T) {
