@@ -273,7 +273,7 @@ func (m *MtailServer) Close() error {
 		if m.l != nil {
 			<-m.l.VMsDone
 		} else {
-			glog.V(2).Info("No loader, so not waiting for shutdown.")
+			glog.V(2).Info("No loader, so not waiting for loader shutdown.")
 		}
 		glog.Info("All done.")
 	})
