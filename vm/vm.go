@@ -635,8 +635,9 @@ func (v *VM) processLine(logline *tailer.LogLine) {
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
 func (v *VM) Run(_ uint32, lines <-chan *tailer.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
-	glog.Infof("Starting program %s", v.name)
 	defer close(shutdown)
+
+	glog.Infof("Starting program %s", v.name)
 	close(started)
 	for line := range lines {
 		// TODO(jaq): measure and export the processLine runtime per VM as a histo.
