@@ -10,21 +10,23 @@ ifeq ($(CIRCLECI),true)
 timeout := 5m
 endif
 
-GOFILES=$(find . -name '*.go' -a ! -name '*_test.go')
+GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
-GOTESTFILES=$(find . -name '*_test.go')
+GOTESTFILES=$(shell find . -name '*_test.go')
 
 CLEANFILES+=\
 	vm/parser.go\
 	vm/y.output\
-	*.coverprofile\
 
 
 all: mtail
 
-.PHONY: clean
-clean:
+.PHONY: clean covclean
+clean: covclean
 	rm -f $(CLEANFILES) .*dep-stamp
+covclean:
+	rm -f *.coverprofile coverage.html
+
 
 version := $(shell git describe --tags)
 revision := $(shell git rev-parse HEAD)
@@ -71,7 +73,7 @@ recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 
 PACKAGES := $(shell find . -path './testdata' -prune -o -name '*.go' -printf '%h\n' | sort -u)
 
-.PHONY: coverage
+PHONY: coverage
 coverage: gover.coverprofile
 gover.coverprofile: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	for package in $(PACKAGES); do\
