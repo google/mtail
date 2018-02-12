@@ -57,7 +57,9 @@ func startMtailServer(t *testing.T, logPathnames []string, progPathname string) 
 	vm.LineCount.Set(0)
 	tailer.LogCount.Set(0)
 
-	m.StartTailing()
+	if err := m.StartTailing(); err != nil {
+		t.Errorf("StartTailing failed: %s", err)
+	}
 	return m
 }
 
