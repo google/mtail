@@ -54,6 +54,9 @@ type Tailer struct {
 	globPatterns   map[string]struct{}      // glob patterns to match newly created files in dir paths against
 	globPatternsMu sync.RWMutex             // protects `globPatterns'
 
+	stopForever chan struct{} // Signals termination to the readForever goroutine
+	runDone     chan struct{} // Signals termination of the run goroutine.
+
 	fs afero.Fs // mockable filesystem interface
 
 	oneShot bool
@@ -87,6 +90,8 @@ func New(o Options) (*Tailer, error) {
 		globPatterns: make(map[string]struct{}),
 		fs:           o.FS,
 		oneShot:      o.OneShot,
+		stopForever:  make(chan struct{}),
+		runDone:      make(chan struct{}),
 	}
 	eventsChan := t.w.Events()
 	go t.run(eventsChan)
@@ -421,6 +426,8 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 // It receives notification of log file changes from the watcher channel, and
 // handles them.
 func (t *Tailer) run(events <-chan watcher.Event) {
+	defer close(t.runDone)
+
 	for e := range events {
 		switch e := e.(type) {
 		case watcher.UpdateEvent:
@@ -465,19 +472,29 @@ func (t *Tailer) readForever(f afero.File) {
 	var err error
 	partial := bytes.NewBufferString("")
 	for {
-		err = t.read(f, partial)
-		// We want to exit at EOF, because the FD has been closed.
-		if err != nil {
-			glog.Infof("error on partial read of %s (fd %v): %s", f.Name(), f, err)
+		select {
+		case <-t.stopForever:
 			return
+		default:
+			err = t.read(f, partial)
+			// We want to exit at EOF, because the FD has been closed.
+			if err != nil {
+				glog.Infof("error on partial read of %s (fd %v): %s", f.Name(), f, err)
+				return
+			}
+			// TODO(jaq): nonblocking read, handle eagain, and do a little sleep if so, so the read can be interrupted
 		}
-		// TODO(jaq): nonblocking read, handle eagain, and do a little sleep if so, so the read can be interrupted
 	}
 }
 
 // Close signals termination to the watcher.
 func (t *Tailer) Close() error {
-	return t.w.Close()
+	close(t.stopForever)
+	if err := t.w.Close(); err != nil {
+		return err
+	}
+	<-t.runDone
+	return nil
 }
 
 const tailerTemplate = `
