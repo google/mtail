@@ -1,6 +1,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
+# Set the timeout for tests run under the race detector.
 timeout := 60s
 ifeq ($(TRAVIS),true)
 timeout := 5m
@@ -9,64 +10,15 @@ ifeq ($(CIRCLECI),true)
 timeout := 5m
 endif
 
-GOFILES=\
-	exporter/collectd.go\
-	exporter/export.go\
-	exporter/graphite.go\
-	exporter/json.go\
-	exporter/prometheus.go\
-	exporter/statsd.go\
-	exporter/varz.go\
-	main.go\
-	metrics/datum/datum.go\
-	metrics/datum/int.go\
-	metrics/metric.go\
-	metrics/store.go\
-	mtail/mtail.go\
-	tailer/tail.go\
-	vm/ast.go\
-	vm/bytecode.go\
-	vm/checker.go\
-	vm/compiler.go\
-	vm/driver.go\
-	vm/lexer.go\
-	vm/loader.go\
-	vm/parser.go\
-	vm/symtab.go\
-	vm/unparser.go\
-	vm/vm.go\
-	watcher/fake_watcher.go\
-	watcher/log_watcher.go\
-	watcher/watcher.go\
+GOFILES=$(find . -name '*.go' -a ! -name '*_test.go')
 
-GOTESTFILES=\
-	ex_test.go\
-	bench_test.go\
-	exporter/export_test.go\
-	exporter/json_test.go\
-	exporter/prometheus_test.go\
-	exporter/varz_test.go\
-	metrics/datum/int_test.go\
-	metrics/metric_test.go\
-	metrics/store_test.go\
-	mtail/mtail_test.go\
-	tailer/tail_test.go\
-	testdata/reader.go\
-	testdata/reader_test.go\
-	vm/checker_test.go\
-	vm/codegen_test.go\
-	vm/lexer_test.go\
-	vm/parser_test.go\
-	vm/symtab_test.go\
-	vm/types_test.go\
-	vm/vm_test.go\
-	watcher/fake_watcher_test.go\
-	watcher/log_watcher_test.go\
-
+GOTESTFILES=$(find . -name '*_test.go')
 
 CLEANFILES+=\
 	vm/parser.go\
 	vm/y.output\
+	*.coverprofile\
+
 
 all: mtail
 
@@ -86,7 +38,7 @@ vm/parser.go: vm/parser.y .gen-dep-stamp
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
 
-.PHONY: test check 
+.PHONY: test check
 check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -timeout 10s ./... ./testdata
 
@@ -117,11 +69,13 @@ bench_mem:
 recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -run=XXX --record_benchmark ./... ./testdata
 
+PACKAGES := $(shell find . -path './testdata' -prune -o -name '*.go' -printf '%h\n' | sort -u)
+
 .PHONY: coverage
 coverage: gover.coverprofile
 gover.coverprofile: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	for package in exporter metrics mtail tailer vm watcher; do\
-		go test -covermode=count -coverprofile=$$package.coverprofile ./$$package;\
+	for package in $(PACKAGES); do\
+		go test -covermode=count -coverprofile=$$(echo $$package | tr './' '__').coverprofile ./$$package;\
     done
 	gover
 
@@ -174,5 +128,5 @@ upload_to_coveralls: gover.coverprofile
 
 # Append the bin subdirs of every element of the GOPATH list to PATH, so we can find goyacc.
 space :=
-space += 
+space +=
 export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPATH))))
