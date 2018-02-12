@@ -95,6 +95,7 @@ func (w *LogWatcher) run() {
 	w.eventsMu.Unlock()
 }
 
+// Close shuts down the LogWatcher.
 func (w *LogWatcher) Close() (err error) {
 	err = w.Watcher.Close()
 	<-w.doneResp
