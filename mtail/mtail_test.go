@@ -45,7 +45,9 @@ func startMtailServer(t *testing.T, logPathnames []string, progPathname string) 
 	}
 
 	if progPathname != "" {
-		m.l.LoadProgs(progPathname)
+		if lerr := m.l.LoadProgs(progPathname); lerr != nil {
+			t.Errorf("Couldn't LoadProgs: %s", lerr)
+		}
 	} else {
 		if pErr := m.l.CompileAndRun("test", strings.NewReader(testProgram)); pErr != nil {
 			t.Errorf("Couldn't compile program: %s", pErr)
