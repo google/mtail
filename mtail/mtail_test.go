@@ -65,13 +65,11 @@ func startMtailServer(t *testing.T, logPathnames []string, progPathname string) 
 }
 
 func doOrTimeout(do func() (bool, error), deadline, interval time.Duration) (bool, error) {
-	timeout := time.After(deadline)
-	ticker := time.Tick(interval)
 	for {
 		select {
-		case <-timeout:
+		case <-time.After(deadline):
 			return false, errors.New("timeout")
-		case <-ticker:
+		case <-time.Tick(interval):
 			ok, err := do()
 			if err != nil {
 				return false, err
