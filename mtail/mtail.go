@@ -48,7 +48,7 @@ func (m *MtailServer) StartTailing() error {
 	var err error
 	m.t, err = tailer.New(o)
 	if err != nil {
-		return errors.Wrap(err, "couldn't create a log tailer")
+		return errors.Wrap(err, "tailer.New")
 	}
 
 	for _, pattern := range m.o.LogPathPatterns {
@@ -170,6 +170,16 @@ func New(o Options) (*MtailServer, error) {
 	store := o.Store
 	if store == nil {
 		store = metrics.NewStore()
+	}
+	if o.FS == nil {
+		o.FS = &afero.OsFs{}
+	}
+	if o.W == nil {
+		w, err := watcher.NewLogWatcher()
+		if err != nil {
+			return nil, err
+		}
+		o.W = w
 	}
 	m := &MtailServer{
 		lines:   make(chan *tailer.LogLine),

@@ -63,35 +63,29 @@ type Tailer struct {
 type Options struct {
 	Lines   chan<- *LogLine // output channel of lines read
 	OneShot bool            // if true, reads from start and exits after each file hits eof
-	W       watcher.Watcher // Not required, will use watcher.LogWatcher if it is zero.
-	FS      afero.Fs        // Not required, will use afero.OsFs if it is zero.
+	W       watcher.Watcher
+	FS      afero.Fs
 }
 
 // New returns a new Tailer, configured with the supplied Options
 func New(o Options) (*Tailer, error) {
 	if o.Lines == nil {
-		return nil, errors.New("tailer needs lines")
+		return nil, errors.New("can't create tailer without lines channel")
 	}
-	fs := o.FS
-	if fs == nil {
-		fs = &afero.OsFs{}
+	if o.FS == nil {
+		return nil, errors.New("can't create tailer without FS")
 	}
-	w := o.W
-	if w == nil {
-		var err error
-		w, err = watcher.NewLogWatcher()
-		if err != nil {
-			return nil, errors.Errorf("Couldn't create a watcher for tailer: %s", err)
-		}
+	if o.W == nil {
+		return nil, errors.New("can't create tailer without W")
 	}
 	t := &Tailer{
-		w:            w,
+		w:            o.W,
 		watched:      make(map[string]struct{}),
 		lines:        o.Lines,
 		files:        make(map[string]afero.File),
 		partials:     make(map[string]*bytes.Buffer),
 		globPatterns: make(map[string]struct{}),
-		fs:           fs,
+		fs:           o.FS,
 		oneShot:      o.OneShot,
 	}
 	eventsChan := t.w.Events()
