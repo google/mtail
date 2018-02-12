@@ -166,7 +166,6 @@ Loop:
 			if err != nil {
 				t.Errorf("could not create rotated log file: %s", err)
 			}
-			//time.Sleep(1 * time.Millisecond)
 			err = logFile.Chmod(0666)
 			if err != nil {
 				t.Errorf("could not chmod log file to read: %s", err)
