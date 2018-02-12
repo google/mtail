@@ -24,7 +24,7 @@ type LogWatcher struct {
 	events   []chan Event
 	eventsMu sync.RWMutex
 
-	doneResp chan struct{} // Channel to respond to Close
+	runDone chan struct{} // Channel to respond to Close
 }
 
 // NewLogWatcher returns a new LogWatcher, or returns an error.
@@ -32,9 +32,9 @@ func NewLogWatcher() (*LogWatcher, error) {
 	f, err := fsnotify.NewWatcher()
 	if err == nil {
 		w := &LogWatcher{
-			Watcher:  f,
-			events:   make([]chan Event, 0),
-			doneResp: make(chan struct{}),
+			Watcher: f,
+			events:  make([]chan Event, 0),
+			runDone: make(chan struct{}),
 		}
 		go w.run()
 		return w, nil
@@ -60,7 +60,7 @@ func (w *LogWatcher) sendEvent(e Event) {
 }
 
 func (w *LogWatcher) run() {
-	defer close(w.doneResp)
+	defer close(w.runDone)
 	// Suck out errors and dump them to the error log.
 	go func() {
 		for err := range w.Watcher.Errors {
@@ -95,9 +95,9 @@ func (w *LogWatcher) run() {
 	w.eventsMu.Unlock()
 }
 
-// Close shuts down the LogWatcher.
+// Close shuts down the LogWatcher.  It is safe to call this from multiple clients because
 func (w *LogWatcher) Close() (err error) {
 	err = w.Watcher.Close()
-	<-w.doneResp
+	<-w.runDone
 	return
 }
