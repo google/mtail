@@ -31,15 +31,12 @@ import (
 )
 
 var (
+	// LineCount counts the number of lines read by the program loader from the input channel.
+	LineCount = expvar.NewInt("line_count")
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
 	// ProgLoadErrors counts the number of program load errors.
 	ProgLoadErrors = expvar.NewMap("prog_load_errors")
-)
-
-var (
-	// LineCount counts the number of lines read by the virtual machine engine from the input channel.
-	LineCount = expvar.NewInt("line_count")
 )
 
 const (
