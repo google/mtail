@@ -242,7 +242,9 @@ func (m *MtailServer) WaitForShutdown() {
 	case <-m.webquit:
 		glog.Info("Received Quit from UI, exiting...")
 	}
-	m.Close()
+	if err := m.Close(); err != nil {
+		glog.Warning(err)
+	}
 }
 
 // Close handles the graceful shutdown of this mtail instance, ensuring that it only occurs once.
