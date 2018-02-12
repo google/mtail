@@ -250,7 +250,7 @@ func (m *MtailServer) WaitForShutdown() {
 	case <-n:
 		glog.Info("Received SIGTERM, exiting...")
 	case <-m.webquit:
-		glog.Info("Received Quit from UI, exiting...")
+		glog.Info("Received Quit from HTTP, exiting...")
 	}
 	if err := m.Close(); err != nil {
 		glog.Warning(err)
