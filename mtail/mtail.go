@@ -261,15 +261,20 @@ func (m *MtailServer) WaitForShutdown() {
 func (m *MtailServer) Close() error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
+		// If we have a tailer (i.e. not in test) then signal the tailer to
+		// shut down, which will cause the watcher to shut down and for the
+		// lines channel to close, causing the loader to start shutdown.
 		if m.t != nil {
 			err := m.t.Close()
 			if err != nil {
 				glog.Infof("tailer close failed: %s", err)
 			}
 		} else {
-			glog.Info("No tailer, closing lines channel directly.")
+			// Without a tailer, MtailServer has ownership of the lines channel.
+			glog.V(2).Info("No tailer, closing lines channel directly.")
 			close(m.lines)
 		}
+		// If we have a loader, wait for it to signal that it has completed shutdown.
 		if m.l != nil {
 			<-m.l.VMsDone
 		} else {
