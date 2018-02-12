@@ -1,10 +1,12 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
+timeout := 60s
 ifeq ($(TRAVIS),true)
 timeout := 5m
-else
-timeout := 60s
+endif
+ifeq ($(CIRCLECI),true)
+timeout := 5m
 endif
 
 GOFILES=\
@@ -100,7 +102,7 @@ smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
 ex_test: ex_test.go testdata/* examples/*
 	go test -run TestExamplePrograms --logtostderr
 
-.PHONY: bench>
+.PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -timeout=60s -run=XXX ./... ./testdata
 
