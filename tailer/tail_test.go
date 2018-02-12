@@ -414,3 +414,11 @@ func TestOpenRetries(t *testing.T) {
 	}
 	<-done
 }
+
+func TestTailerInitErrors(t *testing.T) {
+	o := Options{}
+	_, err := New(o)
+	if err == nil {
+		t.Error("expected error")
+	}
+}
