@@ -5,6 +5,7 @@ package mtail
 
 import (
 	"errors"
+	"expvar"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
 )
@@ -148,7 +150,9 @@ func TestHandleLogRotation(t *testing.T) {
 		// "sighup" the "logging process"
 		hup <- true
 	}()
-	for i := 0; i <= 10; {
+	i := 0
+Loop:
+	for {
 		select {
 		case <-hup:
 			// Close to flush contents
@@ -160,24 +164,31 @@ func TestHandleLogRotation(t *testing.T) {
 			if err != nil {
 				t.Errorf("could not create rotated log file: %s", err)
 			}
-			time.Sleep(1 * time.Millisecond)
+			//time.Sleep(1 * time.Millisecond)
 			err = logFile.Chmod(0666)
 			if err != nil {
 				t.Errorf("could not chmod log file to read: %s", err)
 			}
 		case <-time.Tick(100 * time.Millisecond):
+			if i >= 10 {
+				break Loop
+			}
 			if _, werr := logFile.WriteString(fmt.Sprintf("%d\n", i)); werr != nil {
 				t.Fatal(werr)
 			}
 			i++
 		}
 	}
+	// Close to flush contents.
 	if err = logFile.Close(); err != nil {
 		t.Fatal(err)
 	}
+	if err = m.Close(); err != nil {
+		t.Fatal(err)
+	}
 	expected := "10"
-	if vm.LineCount.String() != expected {
-		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
+	if diff := cmp.Diff(expected, expvar.Get("line_count").String()); diff != "" {
+		t.Errorf("line_count metric didn't match\n%s", diff)
 	}
 }
 
