@@ -247,7 +247,7 @@ type Loader struct {
 	programErrors  map[string]error // errors from the last compile attempt of the program
 	programErrorMu sync.RWMutex     // guards access to programErrors
 
-	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
+	watcherDone chan struct{} // Synchronise shutdown of the watcher processEvents goroutine
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
 	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
@@ -332,6 +332,7 @@ type vmHandle struct {
 // filesystem watcher.
 func (l *Loader) processEvents(events <-chan watcher.Event) {
 	defer close(l.watcherDone)
+
 	for event := range events {
 		switch event := event.(type) {
 		case watcher.DeleteEvent:
@@ -350,6 +351,7 @@ func (l *Loader) processEvents(events <-chan watcher.Event) {
 // running.  Upon close of the incoming lines channel, it also communicates
 // shutdown to the target VMs via channel close.
 func (l *Loader) processLines(lines <-chan *tailer.LogLine) {
+	// Copy all input LogLines to each VM's LogLine input channel.
 	for logline := range lines {
 		LineCount.Add(1)
 		l.handleMu.RLock()
@@ -358,6 +360,8 @@ func (l *Loader) processLines(lines <-chan *tailer.LogLine) {
 		}
 		l.handleMu.RUnlock()
 	}
+	// When lines is closed, the tailer has shut down which signals that it's
+	// time to shut down the program loader.
 	glog.Info("Shutting down loader.")
 	err := l.w.Close()
 	if err != nil {
