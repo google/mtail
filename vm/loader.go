@@ -349,8 +349,11 @@ func (l *Loader) processEvents(events <-chan watcher.Event) {
 
 // processLines provides fanout of the input log lines to each virtual machine
 // running.  Upon close of the incoming lines channel, it also communicates
-// shutdown to the target VMs via channel close.
+// shutdown to the target VMs via channel close.  At termination it signals via
+// VMsDone that the goroutine has finished, and thus all VMs are terminated.
 func (l *Loader) processLines(lines <-chan *tailer.LogLine) {
+	defer close(l.VMsDone)
+
 	// Copy all input LogLines to each VM's LogLine input channel.
 	for logline := range lines {
 		LineCount.Add(1)
@@ -363,19 +366,18 @@ func (l *Loader) processLines(lines <-chan *tailer.LogLine) {
 	// When lines is closed, the tailer has shut down which signals that it's
 	// time to shut down the program loader.
 	glog.Info("Shutting down loader.")
-	err := l.w.Close()
-	if err != nil {
+	if err := l.w.Close(); err != nil {
 		glog.Info("error closing watcher: %s", err)
 	}
 	<-l.watcherDone
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
 	for prog := range l.handles {
+		// Close the per-VM lines channel, and wait for it to signal it's done.
 		close(l.handles[prog].lines)
 		<-l.handles[prog].done
 		delete(l.handles, prog)
 	}
-	close(l.VMsDone)
 }
 
 // UnloadProgram removes the named program from the watcher to prevent future
