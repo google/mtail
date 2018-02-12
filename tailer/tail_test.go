@@ -421,4 +421,19 @@ func TestTailerInitErrors(t *testing.T) {
 	if err == nil {
 		t.Error("expected error")
 	}
+	o.Lines = make(chan *LogLine)
+	_, err = New(o)
+	if err == nil {
+		t.Error("expected error")
+	}
+	o.FS = afero.NewMemMapFs()
+	_, err = New(o)
+	if err == nil {
+		t.Error("expected error")
+	}
+	o.W = watcher.NewFakeWatcher()
+	_, err = New(o)
+	if err != nil {
+		t.Errorf("unexpected error %s", err)
+	}
 }
