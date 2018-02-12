@@ -59,9 +59,9 @@ func (l *Loader) LoadProgs(programPath string) error {
 	}
 	switch {
 	case s.IsDir():
-		fis, err := ioutil.ReadDir(programPath)
-		if err != nil {
-			return errors.Wrapf(err, "Failed to list programs in %q", programPath)
+		fis, rerr := ioutil.ReadDir(programPath)
+		if rerr != nil {
+			return errors.Wrapf(rerr, "Failed to list programs in %q", programPath)
 		}
 
 		for _, fi := range fis {
@@ -72,9 +72,8 @@ func (l *Loader) LoadProgs(programPath string) error {
 			if err != nil {
 				if l.errorsAbort {
 					return err
-				} else {
-					glog.Warning(err)
 				}
+				glog.Warning(err)
 			}
 		}
 	default:
@@ -82,9 +81,8 @@ func (l *Loader) LoadProgs(programPath string) error {
 		if err != nil {
 			if l.errorsAbort {
 				return err
-			} else {
-				glog.Warning(err)
 			}
+			glog.Warning(err)
 		}
 	}
 	return nil
@@ -114,9 +112,8 @@ func (l *Loader) LoadProg(programPath string) error {
 	if l.programErrors[name] != nil {
 		if l.errorsAbort {
 			return l.programErrors[name]
-		} else {
-			glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
 		}
+		glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
 	}
 	return nil
 }
@@ -232,7 +229,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 }
 
 func nameToCode(name string) uint32 {
-	return uint32(uint32(name[0])<<24 | uint32(name[1])<<16 | uint32(name[2])<<8 | uint32(name[3]))
+	return uint32(name[0])<<24 | uint32(name[1])<<16 | uint32(name[2])<<8 | uint32(name[3])
 }
 
 // Loader handles the lifecycle of programs and virtual machines, by watching
