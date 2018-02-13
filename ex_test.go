@@ -14,7 +14,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
-	"github.com/google/mtail/testdata"
+	"github.com/google/mtail/testutil"
 	"github.com/google/mtail/watcher"
 	"github.com/spf13/afero"
 )
@@ -127,19 +127,19 @@ func TestExamplePrograms(t *testing.T) {
 			}
 			defer g.Close()
 
-			golden_store := metrics.NewStore()
-			testdata.ReadTestData(g, tc.programfile, golden_store)
+			goldenStore := metrics.NewStore()
+			testutil.ReadTestData(g, tc.programfile, goldenStore)
 
 			err = mtail.Close()
 			if err != nil {
 				t.Error(err)
 			}
 
-			diff := cmp.Diff(golden_store, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
+			diff := cmp.Diff(goldenStore, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
 
 			if diff != "" {
 				t.Error(diff)
-				t.Logf(" Golden metrics: %s", golden_store.Metrics)
+				t.Logf(" Golden metrics: %s", goldenStore.Metrics)
 				t.Logf("Program metrics: %s", store.Metrics)
 			}
 		})

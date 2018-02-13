@@ -42,15 +42,15 @@ emgen/emgen: emgen/emgen.go
 
 .PHONY: test check
 check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -timeout 10s ./... ./testdata
+	go test -timeout 10s ./...
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -timeout ${timeout} -race -v ./... ./testdata
+	go test -timeout ${timeout} -race -v ./...
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -timeout 1s -test.short ./... ./testdata
+	go test -timeout 1s -test.short ./...
 
 .PHONY: ex_test
 ex_test: ex_test.go testdata/* examples/*
@@ -58,7 +58,7 @@ ex_test: ex_test.go testdata/* examples/*
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -bench=. -timeout=60s -run=XXX ./... ./testdata
+	go test -bench=. -timeout=60s -run=XXX ./...
 
 .PHONY: bench_cpu
 bench_cpu:
@@ -69,9 +69,9 @@ bench_mem:
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -bench=. -run=XXX --record_benchmark ./... ./testdata
+	go test -bench=. -run=XXX --record_benchmark ./... 
 
-PACKAGES := $(shell find . -path './testdata' -prune -o -name '*.go' -printf '%h\n' | sort -u)
+PACKAGES := $(shell find . -name '*.go' -printf '%h\n' | sort -u)
 
 PHONY: coverage
 coverage: gover.coverprofile
@@ -93,8 +93,8 @@ testall: testrace bench
 .PHONY: install_deps
 install_deps: .dep-stamp
 
-IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... ./testdata | sort | uniq | grep -v mtail)
-TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... ./testdata | sort | uniq | grep -v mtail)
+IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
+TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
 
 .dep-stamp: vm/parser.go
 	@echo "Install all dependencies, ensuring they're updated"
