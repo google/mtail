@@ -58,3 +58,5 @@ Use capture group references to feed back to declaring regular expression,
     noting unused caprefs,
     possibly flipping back to noncapturing (and renumbering the caprefs?)
 -> unlikely to implement, probably won't impact regexp speed
+
+Run and upload benchmarks to https://perfdata.golang.org/ from circleci
