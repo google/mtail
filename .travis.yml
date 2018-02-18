@@ -13,7 +13,9 @@ install:
 # Run all tests, under race detector.
 script: time make testrace
 
-# Run tests at these Go versions.
+# Run tests at these Go versions.  YAML always attempts to autoconvert
+# numerics, which famously turns "1.10" into "1.1", so quote all our versions
+# here as strings.
 go:
   - "tip"
   - "1.10"
