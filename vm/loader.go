@@ -43,29 +43,29 @@ const (
 	fileExt = ".mtail"
 )
 
-// LoadProgs loads all programs in a directory and starts watching the
+// LoadAllPrograms loads all programs in a directory and starts watching the
 // directory for filesystem changes.  Any compile errors are stored for later retrieival.
 // This function returns an error if an internal error occurs.
-func (l *Loader) LoadProgs(programPath string) error {
-	s, err := os.Stat(programPath)
+func (l *Loader) LoadAllPrograms() error {
+	s, err := os.Stat(l.programPath)
 	if err != nil {
-		return errors.Wrapf(err, "failed to stat %q", programPath)
+		return errors.Wrapf(err, "failed to stat %q", l.programPath)
 	}
-	if err = l.w.Add(programPath); err != nil {
-		glog.Infof("Failed to add watch on %q but continuing: %s", programPath, err)
+	if err = l.w.Add(l.programPath); err != nil {
+		glog.Infof("Failed to add watch on %q but continuing: %s", l.programPath, err)
 	}
 	switch {
 	case s.IsDir():
-		fis, rerr := ioutil.ReadDir(programPath)
+		fis, rerr := ioutil.ReadDir(l.programPath)
 		if rerr != nil {
-			return errors.Wrapf(rerr, "Failed to list programs in %q", programPath)
+			return errors.Wrapf(rerr, "Failed to list programs in %q", l.programPath)
 		}
 
 		for _, fi := range fis {
 			if fi.IsDir() {
 				continue
 			}
-			err = l.LoadProg(path.Join(programPath, fi.Name()))
+			err = l.LoadProgram(path.Join(l.programPath, fi.Name()))
 			if err != nil {
 				if l.errorsAbort {
 					return err
@@ -74,7 +74,7 @@ func (l *Loader) LoadProgs(programPath string) error {
 			}
 		}
 	default:
-		err = l.LoadProg(programPath)
+		err = l.LoadProgram(l.programPath)
 		if err != nil {
 			if l.errorsAbort {
 				return err
@@ -85,9 +85,9 @@ func (l *Loader) LoadProgs(programPath string) error {
 	return nil
 }
 
-// LoadProg loads or reloads a program from the path specified.  The name of
+// LoadProgram loads or reloads a program from the path specified.  The name of
 // the program is the basename of the file.
-func (l *Loader) LoadProg(programPath string) error {
+func (l *Loader) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)
 	if strings.HasPrefix(name, ".") {
 		glog.Infof("Skipping %s because it is a hidden file.", programPath)
@@ -238,6 +238,8 @@ type Loader struct {
 	fs afero.Fs        // filesystem interface
 	ms *metrics.Store  // pointer to store to pass to compiler
 
+	programPath string // Path that contains mtail programs.
+
 	handles  map[string]*vmHandle // map of program names to virtual machines
 	handleMu sync.RWMutex         // guards accesses to handles
 
@@ -262,6 +264,8 @@ type Loader struct {
 type LoaderOptions struct {
 	Store *metrics.Store
 	Lines <-chan *tailer.LogLine
+
+	ProgramPath string // Path containing mtail programs
 
 	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
@@ -300,6 +304,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		w:                    w,
 		ms:                   o.Store,
 		fs:                   fs,
+		programPath:          o.ProgramPath,
 		handles:              make(map[string]*vmHandle),
 		programErrors:        make(map[string]error),
 		watcherDone:          make(chan struct{}),
@@ -335,7 +340,7 @@ func (l *Loader) processEvents(events <-chan watcher.Event) {
 		case watcher.DeleteEvent:
 			l.UnloadProgram(event.Pathname)
 		case watcher.UpdateEvent:
-			l.LoadProg(event.Pathname)
+			l.LoadProgram(event.Pathname)
 		case watcher.CreateEvent:
 			l.w.Add(event.Pathname)
 		default:
@@ -381,7 +386,7 @@ func (l *Loader) processLines(lines <-chan *tailer.LogLine) {
 // updates, and terminates any currently running VM goroutine.
 func (l *Loader) UnloadProgram(pathname string) {
 	if err := l.w.Remove(pathname); err != nil {
-		glog.Infof("Remove watch on %s failed: %s", pathname, err)
+		glog.V(2).Infof("Remove watch on %s failed: %s", pathname, err)
 	}
 	name := filepath.Base(pathname)
 	l.handleMu.Lock()
