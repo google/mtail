@@ -354,12 +354,6 @@ func TestReadPipe(t *testing.T) {
 }
 
 func TestOpenRetries(t *testing.T) {
-	// This test is flaky (when go1.8 and GOMAXPROCS=2) because the write
-	// immediately after open may race and there's a io.SeekEnd after the write
-	// but before the reader reads from the start of the new file, missing the
-	// content, so the test never reads a line.
-	t.Skip("flaky")
-
 	// Use the real filesystem because afero doesn't implement correct
 	// permissions checking on OpenFile in the memfile implementation.
 	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
