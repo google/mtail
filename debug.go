@@ -1,6 +1,6 @@
 // Copyright 2017 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
-// +build !1.7 !1.8
+// +build !go1.7
 
 package main
 
