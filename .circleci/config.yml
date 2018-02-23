@@ -1,3 +1,4 @@
+# common-build names an anchor which contains all the reusable build instructions.
 common-build: &common-build
   working_directory: /go/src/github.com/google/mtail
   environment:
@@ -27,6 +28,8 @@ common-build: &common-build
     - store_test_results:
         path: /tmp/test-results
 
+# go* names anchors which define the Go versions to build with, merging the
+# common-build alias above.
 go1_9: &go1_9
   <<: *common-build
   docker:
@@ -40,6 +43,8 @@ go1_7: &go1_7
   docker:
     - image: circleci/golang:1.7
 
+# concurrency* names anchors which define the the concurrency level to run
+# tests with.
 concurrency_4: &concurrency_4
   environment:
     GOMAXPROCS: 4
@@ -50,8 +55,10 @@ concurrency_1: &concurrency_1
   environment:
     GOMAXPROCS: 1
 
+# The main circle-ci configuration.
 version: 2
 jobs:
+  # The main build steps are the crossproduct of concurrency and go versions.
   build-go1.9-4:
     <<: [*go1_9, *concurrency_4]
   build-go1.9-2:
@@ -71,6 +78,8 @@ jobs:
   build-go1.7-1:
     <<: [*go1_7, *concurrency_1]
 
+  # Coverage collects all the coverage reports from each build and merges them,
+  # before sending off to Coveralls.
   coverage:
     working_directory: /go/src/github.com/google/mtail
     docker:
@@ -93,7 +102,9 @@ jobs:
           path: coverage.html
           destination: coverage
 
-
+# Using workflows to sequence each of our builds in parallel, and coverage
+# depending on all of them.  These two lists need to be updated when the inputs
+# of the build matrix change.
 workflows:
   version: 2
   build:

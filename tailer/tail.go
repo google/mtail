@@ -219,7 +219,6 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 		n, err := f.Read(b[:cap(b)])
 		ntotal += n
 		b = b[:n]
-		glog.Infof("Read %v, %v", n, b)
 
 		if err == io.EOF && ntotal == 0 {
 			// If there was nothing to be read, perhaps the file just got truncated.

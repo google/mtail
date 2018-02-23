@@ -75,6 +75,7 @@ func (m *MtailServer) InitLoader() error {
 	o := vm.LoaderOptions{
 		Store:                m.store,
 		Lines:                m.lines,
+		ProgramPath:          m.o.Progs,
 		CompileOnly:          m.o.CompileOnly,
 		ErrorsAbort:          m.o.CompileOnly || m.o.OneShot,
 		DumpAst:              m.o.DumpAst,
@@ -92,7 +93,7 @@ func (m *MtailServer) InitLoader() error {
 		return err
 	}
 	if m.o.Progs != "" {
-		errs := m.l.LoadProgs(m.o.Progs)
+		errs := m.l.LoadAllPrograms()
 		if errs != nil {
 			return errors.Errorf("Compile encountered errors:\n%s", errs)
 		}
