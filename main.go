@@ -57,6 +57,8 @@ var (
 	address = flag.String("address", "", "Host or IP address on which to bind HTTP listener")
 	progs   = flag.String("progs", "", "Name of the directory containing mtail programs")
 
+	version = flag.Bool("version", false, "Print mtail version information.")
+
 	// Compiler behaviour flags
 	oneShot        = flag.Bool("one_shot", false, "Compile the programs, then read the contents of the provided logs from start until EOF, print the values of the metrics store and exit. This is a debugging flag only, not for production use.")
 	oneShotMetrics = flag.Bool("one_shot_metrics", false, "DEPRECATED: Dump metrics (to stdout) after one shot mode.")
@@ -99,6 +101,10 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	if *version {
+		fmt.Println(buildInfo())
+		os.Exit(1)
+	}
 	glog.Info(buildInfo())
 	glog.Infof("Commandline: %q", os.Args)
 	loc, err := time.LoadLocation(*overrideTimezone)
