@@ -190,8 +190,8 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 // is past the end of the file based on its size, and if so seeks to
 // the start again.  Returns nil iff that happened.
 func (t *Tailer) handleTruncate(f afero.File) error {
-	offset, err := f.Seek(0, io.SeekCurrent)
-	glog.V(2).Infof("seek to current, now %d", offset)
+	currentOffset, err := f.Seek(0, io.SeekCurrent)
+	glog.V(2).Infof("current seek position at %d", currentOffset)
 	if err != nil {
 		return err
 	}
@@ -201,7 +201,7 @@ func (t *Tailer) handleTruncate(f afero.File) error {
 		return err
 	}
 
-	if offset == 0 || fi.Size() >= offset {
+	if currentOffset == 0 || fi.Size() >= currentOffset {
 		return fmt.Errorf("no truncate appears to have occurred")
 	}
 
