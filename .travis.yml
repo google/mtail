@@ -1,4 +1,5 @@
 language: go
+sudo: false
 
 # Must generate the parser before installing deps or go get will error out on
 # undefined lexer tokens.
@@ -11,7 +12,7 @@ install:
  - travis_retry make install_deps
 
 # Run all tests, under race detector.
-script: time make testrace
+script: make && go test
 
 # Run tests at these Go versions.  YAML always attempts to autoconvert
 # numerics, which famously turns "1.10" into "1.1", so quote all our versions
@@ -35,6 +36,15 @@ matrix:
   allow_failures:
     - go: tip
 
+before_deploy:
+  - make crossbuild
 
-# Not using sudo, can use containers.
-sudo: false
+deploy:
+  provider: releases
+  skip_cleanup: true
+  file_glob: true
+  file:
+    - build/*
+  on:
+    tags: true
+
