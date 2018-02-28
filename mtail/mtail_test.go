@@ -514,3 +514,58 @@ func TestHandleLogDeletes(t *testing.T) {
 		t.Errorf("Log count not decreased\n\texpected: %s\n\treceived %s", expected, tailer.LogCount.String())
 	}
 }
+
+func TestHandleLogTruncate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
+
+	logFilepath := path.Join(workdir, "log")
+	logFile, err := os.Create(logFilepath)
+	if err != nil {
+		t.Errorf("could not touch log file: %s", err)
+	}
+	defer logFile.Close()
+	pathnames := []string{logFilepath}
+	m := startMtailServer(t, pathnames, "")
+	defer func() {
+		if cerr := m.Close(); cerr != nil {
+			t.Fatal(cerr)
+		}
+	}()
+
+	logFile.WriteString("x\n")
+	glog.Info("Write")
+	check := func() (bool, error) {
+		if expvar.Get("line_count").String() != "1" {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err := doOrTimeout(check, 10*time.Second, 10*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Errorf("log line count received %s, expected 1", tailer.LogCount.String())
+	}
+	logFile.Truncate(0)
+	glog.Infof("Truncate")
+	logFile.WriteString("x\n")
+	glog.Info("Write")
+	check2 := func() (bool, error) {
+		if expvar.Get("line_count").String() != "2" {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err = doOrTimeout(check2, 10*time.Second, 10*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Errorf("log line count received %s, expected 2", tailer.LogCount.String())
+	}
+}
