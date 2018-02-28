@@ -92,6 +92,19 @@ jobs:
           path: coverage.html
           destination: coverage
 
+  deploy:
+    working_directory: /go/src/github.com/google/mtail
+    docker:
+      - image: circleci/golang:1.9
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run: make vm/parser.go
+      - run: make crossbuild
+      - run: go get github.com/tcnksm/ghr
+      - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace `git describe --tags` build/
+
 # Using workflows to sequence each of our builds in parallel, and coverage
 # depending on all of them.  These two lists need to be updated when the inputs
 # of the build matrix change.
@@ -113,3 +126,11 @@ workflows:
             - build-go1.8-4
             - build-go1.8-2
             - build-go1.8-1
+      - deploy:
+          requires:
+            - coverage
+          filters:
+            branches:
+              only: master
+            tags:
+              only: /^v.*/

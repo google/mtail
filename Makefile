@@ -30,6 +30,7 @@ covclean:
 
 version := $(shell git describe --tags)
 revision := $(shell git rev-parse HEAD)
+release := $(shell git describe --tags | cut -d"-" -f 1,2)
 
 install mtail: $(GOFILES) .dep-stamp
 	go install -ldflags "-X main.Version=${version} -X main.Revision=${revision}"
@@ -39,6 +40,13 @@ vm/parser.go: vm/parser.y .gen-dep-stamp
 
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
+
+install_gox:
+	go get github.com/mitchellh/gox
+
+crossbuild: install_gox $(GOFILES) .dep-stamp
+	mkdir -p build
+	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch="linux/amd64 windows/amd64 darwin/amd64" -arch="amd64"
 
 .PHONY: test check
 check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
