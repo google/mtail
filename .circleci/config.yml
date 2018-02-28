@@ -126,6 +126,9 @@ workflows:
             - build-go1.8-4
             - build-go1.8-2
             - build-go1.8-1
+          filters:
+            branches:
+              only: master
       - deploy:
           requires:
             - coverage
