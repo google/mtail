@@ -22,3 +22,4 @@ foo.log
 /cpu.out
 /mem.out
 /build
+/.crossbuild-dep-stamp

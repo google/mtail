@@ -41,10 +41,15 @@ vm/parser.go: vm/parser.y .gen-dep-stamp
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
 
-install_gox:
-	go get github.com/mitchellh/gox
+.PHONY: install_crossbuild
+install_crossbuild: .crossbuild-dep-stamp
 
-crossbuild: install_gox $(GOFILES) .dep-stamp
+.crossbuild-dep-stamp:
+	go get github.com/mitchellh/gox
+	touch $@
+
+.PHONY: crossbuild
+crossbuild: install_crossbuild $(GOFILES) .dep-stamp
 	mkdir -p build
 	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch="linux/amd64 windows/amd64 darwin/amd64" -arch="amd64"
 
