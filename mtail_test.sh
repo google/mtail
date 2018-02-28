@@ -7,7 +7,7 @@ mkdir /tmp/test/progs
 
 mtail --logtostderr --vmodule=tail=2,log_watcher=2 --progs /tmp/test/progs --logs /tmp/test/logs/log &
 pid=$!
-
+# wait for http port to respond, or sleep 1
 sleep 1
 echo 1 >> /tmp/test/logs/log
 sleep 1
