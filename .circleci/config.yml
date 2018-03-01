@@ -149,6 +149,8 @@ workflows:
           filters:
             branches:
               only: master
+            tags:
+              only: /.*/
       - deploy:
           requires:
             - coverage
@@ -156,4 +158,4 @@ workflows:
             branches:
               only: master
             tags:
-              only: /^v.*/
+              only: /^v[0-9].*/
