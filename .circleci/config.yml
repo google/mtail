@@ -152,5 +152,6 @@ workflows:
           filters:
             tags:
               only: /^v[0-9].*/
+            # Explicitly disable all branches, otherwise we match on every commit.
             branches:
               ignore: /.*/
