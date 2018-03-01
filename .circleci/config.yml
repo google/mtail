@@ -117,7 +117,7 @@ jobs:
       - run: make vm/parser.go
       - run: make crossbuild
       - run: go get github.com/tcnksm/ghr
-      - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace $CIRCLE_TAG build/
+      - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace ${CIRCLE_TAG?} build/
 
 # Using workflows to sequence each of our builds in parallel, and coverage
 # depending on all of them.  These two lists need to be updated when the inputs
