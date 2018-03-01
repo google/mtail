@@ -73,7 +73,7 @@ jobs:
   coverage:
     working_directory: /go/src/github.com/google/mtail
     environment:
-      COVERALLS_REPO_TOKEN: AQTCw3bl6FDphbQcMMkgVZBIunz5r3H8b
+      COVERALLS_TOKEN: AQTCw3bl6FDphbQcMMkgVZBIunz5r3H8b
     docker:
       - image: circleci/golang:1.9
     steps:
