@@ -32,8 +32,10 @@ version := $(shell git describe --tags)
 revision := $(shell git rev-parse HEAD)
 release := $(shell git describe --tags | cut -d"-" -f 1,2)
 
+GOLDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
+
 install mtail: $(GOFILES) .dep-stamp
-	go install -ldflags "-X main.Version=${version} -X main.Revision=${revision}"
+	go install -ldflags $(GOLDFLAGS)
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
 	go generate -x ./vm
@@ -51,7 +53,7 @@ install_crossbuild: .crossbuild-dep-stamp
 .PHONY: crossbuild
 crossbuild: install_crossbuild $(GOFILES) .dep-stamp
 	mkdir -p build
-	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch="linux/amd64 windows/amd64 darwin/amd64" -arch="amd64"
+	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch="linux/amd64 windows/amd64 darwin/amd64" -arch="amd64" -ldflags $(GOLDFLAGS)
 
 .PHONY: test check
 check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
