@@ -122,7 +122,7 @@ jobs:
 tag-filter: &tag-filter
   filters:
     tags:
-      only: /v.*/
+      only: /^v.*/
 
 # Using workflows to sequence each of our builds in parallel, and coverage
 # depending on all of them.  These two lists need to be updated when the inputs
