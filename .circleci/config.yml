@@ -1,4 +1,6 @@
-# common-build names an anchor which contains all the reusable build instructions.
+---
+# common-build names an anchor which contains all the reusable build
+# instructions.
 common-build: &common-build
   working_directory: /go/src/github.com/google/mtail
   environment:
@@ -30,6 +32,10 @@ common-build: &common-build
 
 # go* names anchors which define the Go versions to build with, merging the
 # common-build alias above.
+go1_10: &go1_10
+  <<: *common-build
+  docker:
+    - image: circleci/golang:1.10
 go1_9: &go1_9
   <<: *common-build
   docker:
@@ -55,6 +61,12 @@ concurrency_1: &concurrency_1
 version: 2
 jobs:
   # The main build steps are the crossproduct of concurrency and go versions.
+  build-go1.10-4:
+    <<: [*go1_10, *concurrency_4]
+  build-go1.10-2:
+    <<: [*go1_10, *concurrency_2]
+  build-go1.10-1:
+    <<: [*go1_10, *concurrency_1]
   build-go1.9-4:
     <<: [*go1_9, *concurrency_4]
   build-go1.9-2:
@@ -114,6 +126,9 @@ workflows:
   version: 2
   build:
     jobs:
+      - build-go1.10-4
+      - build-go1.10-2
+      - build-go1.10-1
       - build-go1.9-4
       - build-go1.9-2
       - build-go1.9-1
@@ -122,6 +137,9 @@ workflows:
       - build-go1.8-1
       - coverage:
           requires:
+            - build-go1.10-4
+            - build-go1.10-2
+            - build-go1.10-1
             - build-go1.9-4
             - build-go1.9-2
             - build-go1.9-1
