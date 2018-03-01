@@ -126,42 +126,15 @@ workflows:
   version: 2
   build:
     jobs:
-      - build-go1.10-4:
-          filters:
-            tags:
-              only: /.*/
-      - build-go1.10-2:
-          filters:
-            tags:
-              only: /.*/
-      - build-go1.10-1:
-          filters:
-            tags:
-              only: /.*/
-      - build-go1.9-4:
-          filters:
-            tags:
-              only: /.*/
-      - build-go1.9-2:
-          filters:
-            tags:
-              only: /.*/
-      - build-go1.9-1:
-          filters:
-            tags:
-              only: /.*/
-      - build-go1.8-4:
-          filters:
-            tags:
-              only: /.*/
-      - build-go1.8-2:
-          filters:
-            tags:
-              only: /.*/
-      - build-go1.8-1:
-          filters:
-            tags:
-              only: /.*/
+      - build-go1.10-4
+      - build-go1.10-2
+      - build-go1.10-1
+      - build-go1.9-4
+      - build-go1.9-2
+      - build-go1.9-1
+      - build-go1.8-4
+      - build-go1.8-2
+      - build-go1.8-1
       - coverage:
           requires:
             - build-go1.10-4
@@ -173,14 +146,11 @@ workflows:
             - build-go1.8-4
             - build-go1.8-2
             - build-go1.8-1
-          filters:
-            tags:
-              only: /.*/
       - deploy:
           requires:
             - coverage
           filters:
-            branches:
-              only: master
             tags:
               only: /^v[0-9].*/
+            branches:
+              only: master
