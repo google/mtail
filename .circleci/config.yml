@@ -116,6 +116,8 @@ jobs:
           at: /tmp/workspace
       - run: make vm/parser.go
       - run: make crossbuild
+      - store_artifacts:
+          path: build/
       - run: go get github.com/tcnksm/ghr
       - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace ${CIRCLE_TAG?} build/
 
