@@ -162,10 +162,11 @@ workflows:
             - build-go1.8-2
             - build-go1.8-1
       - deploy:
-          <<: *tag-filter
           requires:
             - coverage
           filters:
+            tags:
+              only: /^v.*/
             # Explicitly disable all branches, otherwise we match on every
             # commit.
             branches:
