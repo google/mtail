@@ -201,7 +201,7 @@ func (t *Tailer) handleTruncate(f afero.File) error {
 		return err
 	}
 
-	glog.Infof("File size is %d", fi.Size())
+	glog.V(2).Infof("File size is %d", fi.Size())
 	if currentOffset == 0 || fi.Size() >= currentOffset {
 		return fmt.Errorf("no truncate appears to have occurred")
 	}
@@ -227,7 +227,7 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 			glog.V(2).Info("Suspected truncation.")
 			// If there was nothing to be read, perhaps the file just got truncated.
 			herr := t.handleTruncate(f)
-			glog.Infof("handletrunc with error '%v'", herr)
+			glog.V(2).Infof("handletrunc with error '%v'", herr)
 			if herr == nil {
 				// Try again: offset was greater than filesize and now we've seeked to start.
 				continue

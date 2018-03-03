@@ -90,11 +90,11 @@ func (l *Loader) LoadAllPrograms() error {
 func (l *Loader) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)
 	if strings.HasPrefix(name, ".") {
-		glog.Infof("Skipping %s because it is a hidden file.", programPath)
+		glog.V(2).Infof("Skipping %s because it is a hidden file.", programPath)
 		return nil
 	}
 	if filepath.Ext(name) != fileExt {
-		glog.Infof("Skipping %s due to file extension.", programPath)
+		glog.V(2).Infof("Skipping %s due to file extension.", programPath)
 		return nil
 	}
 	f, err := l.fs.Open(programPath)
