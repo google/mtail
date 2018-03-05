@@ -118,8 +118,12 @@ jobs:
       - run: make crossbuild
       - store_artifacts:
           path: build/
-      - run: go get github.com/tcnksm/ghr
-      - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace ${CIRCLE_TAG?} build/
+      - run:
+          name: Upload binaries to GitHub Release
+          # GITHUB_TOKEN is a secret from the CircleCI environment
+          command: |
+            go get github.com/tcnksm/ghr
+            ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace ${CIRCLE_TAG?} build/
 
 tag-filter: &tag-filter
   filters:
