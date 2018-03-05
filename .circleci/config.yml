@@ -167,7 +167,7 @@ workflows:
             - build-go1.8-4
             - build-go1.8-2
             - build-go1.8-1
-      - deploy:
+      - deliver:
           requires:
             - coverage
           filters:
