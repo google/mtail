@@ -87,7 +87,7 @@ jobs:
     environment:
       COVERALLS_TOKEN: AQTCw3bl6FDphbQcMMkgVZBIunz5r3H8b
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.10
     steps:
       - checkout
       - attach_workspace:
@@ -109,7 +109,7 @@ jobs:
   deploy:
     working_directory: /go/src/github.com/google/mtail
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.10
     steps:
       - checkout
       - attach_workspace:
