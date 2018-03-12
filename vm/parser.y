@@ -111,6 +111,10 @@ stmt
   {
     $$ = &delNode{tokenpos(mtaillex), $2}
   }
+  | INVALID
+  {
+    $$ = &errorNode{tokenpos(mtaillex), $1}
+  }
   ;
 
 conditional_statement
