@@ -79,4 +79,5 @@ func (p *parser) inRegex() {
 
 func init() {
 	flag.IntVar(&mtailDebug, "mtailDebug", 0, "Set parser debug level.")
+	mtailErrorVerbose = true
 }
