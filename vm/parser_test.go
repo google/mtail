@@ -324,8 +324,7 @@ var parserInvalidPrograms = []parserInvalidProgram{
 
 	{"unterminated regex",
 		"/foo\n",
-		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\"",
-			"unterminated regex:1:2-4: syntax error"}},
+		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\""}},
 
 	{"unterminated string",
 		" \"foo }\n",
@@ -333,8 +332,7 @@ var parserInvalidPrograms = []parserInvalidProgram{
 
 	{"unterminated const regex",
 		"const X /(?P<foo>",
-		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",
-			"unterminated const regex:1:10-17: syntax error"}},
+		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\""}},
 
 	{"index of non-terminal",
 		`// {

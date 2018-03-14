@@ -65,6 +65,8 @@ import (
 %token NL
 
 %start start
+
+ //%error stmt_list stmt expression_statement mark_pos DIV in_regex INVALID  : "unexpected end of file"
 %%
 
 start
@@ -556,6 +558,7 @@ opt_nl
   : /* empty */
   | NL
   ;
+
 
 %%
 
