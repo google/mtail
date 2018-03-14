@@ -324,7 +324,8 @@ var parserInvalidPrograms = []parserInvalidProgram{
 
 	{"unterminated regex",
 		"/foo\n",
-		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\""}},
+		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\"",
+			"unterminated regex:1:2-4: syntax error: unexpected INVALID, expecting REGEX"}},
 
 	{"unterminated string",
 		" \"foo }\n",
@@ -332,18 +333,19 @@ var parserInvalidPrograms = []parserInvalidProgram{
 
 	{"unterminated const regex",
 		"const X /(?P<foo>",
-		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\""}},
+		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",
+			"unterminated const regex:1:10-17: syntax error: unexpected INVALID, expecting REGEX"}},
 
-	{"index of non-terminal",
+	{"index of non-terminal 1",
 		`// {
 	foo++[$1]++
 	}`,
-		[]string{"index of non-terminal:2:7: syntax error"}},
-	{"index of non-terminal",
+		[]string{"index of non-terminal 1:2:7: syntax error: unexpected LSQUARE, expecting NL"}},
+	{"index of non-terminal 2",
 		`// {
 	0[$1]++
 	}`,
-		[]string{"index of non-terminal:2:3: syntax error"}},
+		[]string{"index of non-terminal 2:2:3: syntax error: unexpected LSQUARE, expecting NL"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
