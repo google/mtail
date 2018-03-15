@@ -7,7 +7,7 @@ refactor fs and notify into single interface
 
 no trailing newline in parser test, requires changes to expr stmt
 
-parse tree/ast testing, s-expressions to render expected?
+parse tree/ast testing?
 
 mapping between progs and logs to reduce wasted processing
 
