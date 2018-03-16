@@ -33,10 +33,10 @@ version := $(shell git describe --tags)
 revision := $(shell git rev-parse HEAD)
 release := $(shell git describe --tags | cut -d"-" -f 1,2)
 
-GOLDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
+GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 
 install mtail: $(GOFILES) .dep-stamp
-	go install -ldflags $(GOLDFLAGS)
+	go install -ldflags $(GO_LDFLAGS)
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
 	go generate -x ./vm
@@ -51,10 +51,15 @@ install_crossbuild: .crossbuild-dep-stamp
 	go get github.com/mitchellh/gox
 	touch $@
 
+GOX_OSARCH := "linux/amd64 windows/amd64 darwin/amd64"
+#GOX_OSARCH := ""
+GOX_ARCH="amd64"
+#GOX_ARCH := ""
+
 .PHONY: crossbuild
 crossbuild: install_crossbuild $(GOFILES) .dep-stamp
 	mkdir -p build
-	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch="linux/amd64 windows/amd64 darwin/amd64" -arch="amd64" -ldflags $(GOLDFLAGS)
+	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -arch=$(GOX_ARCH) -ldflags $(GO_LDFLAGS)
 
 .PHONY: test check
 check test: $(GOFILES) $(GOTESTFILES) 

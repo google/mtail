@@ -87,7 +87,7 @@ jobs:
     environment:
       COVERALLS_TOKEN: AQTCw3bl6FDphbQcMMkgVZBIunz5r3H8b
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.10
     steps:
       - checkout
       - attach_workspace:
@@ -109,7 +109,7 @@ jobs:
   deploy:
     working_directory: /go/src/github.com/google/mtail
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.10
     steps:
       - checkout
       - attach_workspace:
@@ -119,8 +119,12 @@ jobs:
       - run: sha1sum build/*
       - store_artifacts:
           path: build/
-      - run: go get github.com/tcnksm/ghr
-      - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace ${CIRCLE_TAG?} build/
+      - run:
+          name: Upload binaries to GitHub Release
+          # GITHUB_TOKEN is a secret from the CircleCI environment
+          command: |
+            go get github.com/tcnksm/ghr
+            ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace ${CIRCLE_TAG?} build/
 
 tag-filter: &tag-filter
   filters:
@@ -164,7 +168,7 @@ workflows:
             - build-go1.8-4
             - build-go1.8-2
             - build-go1.8-1
-      - deploy:
+      - deliver:
           requires:
             - coverage
           filters:
