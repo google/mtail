@@ -234,6 +234,11 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 	case *patternExprNode:
 		Walk(u, v.expr)
 
+	case *errorNode:
+		u.emit("// error")
+		u.newline()
+		u.emit(v.spelling)
+
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}

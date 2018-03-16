@@ -385,3 +385,16 @@ func (n *convNode) SetType(t Type) {
 	defer n.mu.Unlock()
 	n.typ = t
 }
+
+type errorNode struct {
+	pos      position
+	spelling string
+}
+
+func (n *errorNode) Pos() *position {
+	return &n.pos
+}
+
+func (n *errorNode) Type() Type {
+	return Error
+}

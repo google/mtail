@@ -21,12 +21,13 @@ CLEANFILES+=\
 
 all: mtail
 
-.PHONY: clean covclean
-clean: covclean
+.PHONY: clean covclean crossclean
+clean: covclean crossclean
 	rm -f $(CLEANFILES) .*dep-stamp
 covclean:
 	rm -f *.coverprofile coverage.html
-
+crossclean:
+	rm -rf build
 
 version := $(shell git describe --tags)
 revision := $(shell git rev-parse HEAD)
