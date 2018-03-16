@@ -268,6 +268,10 @@ $foo !~ /bar/ {
 	{"match expression 2", `
 $foo =~ /bar/ + X {
 }`},
+
+	{"capref used in def", `
+/(?P<x>.*)/ && $x > 0 {
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {

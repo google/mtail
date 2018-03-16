@@ -7,12 +7,9 @@ refactor fs and notify into single interface
 
 no trailing newline in parser test, requires changes to expr stmt
 
-parse tree/ast testing, s-expressions to render expected?
+parse tree/ast testing?
 
 mapping between progs and logs to reduce wasted processing
-
-define a capref in the same expression it's used: e.g.
-  /(?<x>.*)/ && $x > 0
 
 conversion in vm.compare() crashes on $var == "string" when $var is
     float (logical.mtail, input line "12.8") -- 
@@ -56,11 +53,12 @@ count stack size and preallocate stack
 -> test to keep p/p counts updated
 
 
+Run and upload benchmarks to https://perfdata.golang.org/ from circleci
+
+
+# Won't do
+
 X Use capture group references to feed back to declaring regular expression,
 X     noting unused caprefs,
 X     possibly flipping back to noncapturing (and renumbering the caprefs?)
 X -> unlikely to implement, probably won't impact regexp speed
-
-Run and upload benchmarks to https://perfdata.golang.org/ from circleci
-
-Add error nodes to the ast and error productions to the parser.

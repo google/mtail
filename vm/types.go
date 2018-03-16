@@ -337,6 +337,7 @@ func Unify(a, b Type) error {
 
 func LeastUpperBound(a, b Type) Type {
 	a1, b1 := a.Root(), b.Root()
+	glog.V(2).Infof("Computing LUB(%q, %q)", a1, b1)
 
 	if Equals(a1, b1) {
 		return a1
@@ -357,6 +358,14 @@ func LeastUpperBound(a, b Type) Type {
 		(Equals(a1, String) && Equals(b1, Float)) ||
 		(Equals(b1, String) && Equals(a1, Float)) {
 		return String
+	}
+	if (Equals(a1, Pattern) && Equals(b1, Bool)) ||
+		(Equals(a1, Int) && Equals(b1, Pattern)) {
+		return Bool
+	}
+	if (Equals(a1, Bool) && Equals(b1, Int)) ||
+		(Equals(a1, Int) && Equals(b1, Bool)) {
+		return Int
 	}
 	return Error
 }
