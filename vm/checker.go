@@ -235,8 +235,8 @@ func (c *checker) VisitAfter(node astNode) {
 			// comparable, logical
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
-			// ⇒ O ⊢ e : lub(Tl, Tr)
-			rType = LeastUpperBound(lT, rT)
+			// ⇒ O ⊢ e : Bool
+			rType = Bool
 			if isErrorType(rType) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
 				n.SetType(rType)
@@ -245,7 +245,7 @@ func (c *checker) VisitAfter(node astNode) {
 			astType := Function(lT, rT, rType)
 
 			t := NewTypeVariable()
-			exprType := Function(t, t, Int)
+			exprType := Function(t, t, Bool)
 			err := Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
