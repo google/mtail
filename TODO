@@ -11,9 +11,6 @@ parse tree/ast testing?
 
 mapping between progs and logs to reduce wasted processing
 
-define a capref in the same expression it's used: e.g.
-  /(?<x>.*)/ && $x > 0
-
 conversion in vm.compare() crashes on $var == "string" when $var is
     float (logical.mtail, input line "12.8") -- 
 
