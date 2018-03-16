@@ -65,6 +65,10 @@ import (
 %token NL
 
 %start start
+
+// The %error directive takes a list of tokens describing a parser state in error, and an error message.
+// See "Generating LR syntax error messages from examples", Jeffery, ACM TOPLAS Volume 24 Issue 5 Sep 2003.
+%error stmt_list stmt expression_statement mark_pos DIV in_regex INVALID  : "unexpected end of file"
 %%
 
 start
@@ -110,6 +114,10 @@ stmt
   | DEL postfix_expr
   {
     $$ = &delNode{tokenpos(mtaillex), $2}
+  }
+  | INVALID
+  {
+    $$ = &errorNode{tokenpos(mtaillex), $1}
   }
   ;
 
@@ -552,6 +560,7 @@ opt_nl
   : /* empty */
   | NL
   ;
+
 
 %%
 

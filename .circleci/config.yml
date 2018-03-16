@@ -116,6 +116,7 @@ jobs:
           at: /tmp/workspace
       - run: make vm/parser.go
       - run: make crossbuild
+      - run: sha1sum build/*
       - store_artifacts:
           path: build/
       - run: go get github.com/tcnksm/ghr

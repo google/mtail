@@ -21,12 +21,13 @@ CLEANFILES+=\
 
 all: mtail
 
-.PHONY: clean covclean
-clean: covclean
+.PHONY: clean covclean crossclean
+clean: covclean crossclean
 	rm -f $(CLEANFILES) .*dep-stamp
 covclean:
 	rm -f *.coverprofile coverage.html
-
+crossclean:
+	rm -rf build
 
 version := $(shell git describe --tags)
 revision := $(shell git rev-parse HEAD)
@@ -56,15 +57,15 @@ crossbuild: install_crossbuild $(GOFILES) .dep-stamp
 	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch="linux/amd64 windows/amd64 darwin/amd64" -arch="amd64" -ldflags $(GOLDFLAGS)
 
 .PHONY: test check
-check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
+check test: $(GOFILES) $(GOTESTFILES) 
 	go test -timeout 10s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
+testrace: $(GOFILES) $(GOTESTFILES)
 	go test -timeout ${timeout} -race -v ./...
 
 .PHONY: smoke
-smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
+smoke: $(GOFILES) $(GOTESTFILES)
 	go test -timeout 1s -test.short ./...
 
 .PHONY: ex_test

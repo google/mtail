@@ -49,7 +49,8 @@ func (p *parser) Lex(lval *mtailSymType) int {
 	switch p.t.kind {
 	case INVALID:
 		p.Error(p.t.text)
-		return EOF
+		lval.text = p.t.text
+		return INVALID
 	case INTLITERAL:
 		var err error
 		lval.intVal, err = strconv.ParseInt(p.t.text, 10, 64)
@@ -79,4 +80,5 @@ func (p *parser) inRegex() {
 
 func init() {
 	flag.IntVar(&mtailDebug, "mtailDebug", 0, "Set parser debug level.")
+	mtailErrorVerbose = true
 }
