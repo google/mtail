@@ -104,6 +104,15 @@ var typeUnificationTests = []struct {
 		Bool, Pattern,
 		Bool,
 	},
+	// lub of Bool and Int is an Int.
+	{
+		Bool, Int,
+		Int,
+	},
+	{
+		Int, Bool,
+		Int,
+	},
 }
 
 func TestTypeUnification(t *testing.T) {
