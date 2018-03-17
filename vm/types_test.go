@@ -95,6 +95,15 @@ var typeUnificationTests = []struct {
 		String, Float,
 		String,
 	},
+	// Implicitly, a Pattern by itself returns the value of its' match
+	{
+		Pattern, Bool,
+		Bool,
+	},
+	{
+		Bool, Pattern,
+		Bool,
+	},
 }
 
 func TestTypeUnification(t *testing.T) {
