@@ -175,6 +175,9 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	case *convNode:
 		s.emit("conv")
 
+	case *errorNode:
+		s.emit(fmt.Sprintf("error %q", v.spelling))
+
 	case *indexedExprNode, *stmtlistNode, *exprlistNode, *condNode, *decoDefNode, *decoNode, *patternExprNode: // normal walk
 
 	default:

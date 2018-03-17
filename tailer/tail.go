@@ -190,8 +190,8 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 // is past the end of the file based on its size, and if so seeks to
 // the start again.  Returns nil iff that happened.
 func (t *Tailer) handleTruncate(f afero.File) error {
-	offset, err := f.Seek(0, io.SeekCurrent)
-	glog.V(2).Infof("seek to current, now %d", offset)
+	currentOffset, err := f.Seek(0, io.SeekCurrent)
+	glog.V(2).Infof("current seek position at %d", currentOffset)
 	if err != nil {
 		return err
 	}
@@ -201,12 +201,14 @@ func (t *Tailer) handleTruncate(f afero.File) error {
 		return err
 	}
 
-	if offset == 0 || fi.Size() >= offset {
+	glog.V(2).Infof("File size is %d", fi.Size())
+	if currentOffset == 0 || fi.Size() >= currentOffset {
 		return fmt.Errorf("no truncate appears to have occurred")
 	}
 
-	_, err = f.Seek(0, io.SeekStart)
-	return err
+	p, serr := f.Seek(0, io.SeekStart)
+	glog.V(2).Infof("Truncated?  Seeked to %d: %v", p, serr)
+	return serr
 }
 
 // read reads blocks of 4096 bytes from the File, sending lines to the
@@ -217,13 +219,15 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 	ntotal := 0 // bytes read in this invocation
 	for {
 		n, err := f.Read(b[:cap(b)])
+		glog.V(2).Infof("Read: %v %v", n, err)
 		ntotal += n
 		b = b[:n]
 
 		if err == io.EOF && ntotal == 0 {
+			glog.V(2).Info("Suspected truncation.")
 			// If there was nothing to be read, perhaps the file just got truncated.
 			herr := t.handleTruncate(f)
-			glog.Infof("handletrunc with error '%v'", herr)
+			glog.V(2).Infof("handletrunc with error '%v'", herr)
 			if herr == nil {
 				// Try again: offset was greater than filesize and now we've seeked to start.
 				continue
@@ -428,6 +432,7 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 	defer close(t.runDone)
 
 	for e := range events {
+		glog.V(2).Infof("Event type %#v", e)
 		switch e := e.(type) {
 		case watcher.UpdateEvent:
 			if t.isWatching(e.Pathname) {

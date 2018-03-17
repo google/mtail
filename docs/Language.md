@@ -168,6 +168,14 @@ Numeric capture groups address subexpressions in the match result as you might e
 
 Named capture groups can be referred to by their name as indicated in the regular expression using the `?P<name>` notation, as popularised by the Python regular expression library.
 
+Capture groups can be used in the same expression that defines them, for example:
+
+```
+/(?P<x>\d+)/ && $x > 1 {
+  nonzero_positives++
+}
+```
+
 ## Numerical capture groups and Metric type information
 
 By limiting the pattern of a capturing group to only numeric characters, the programmer can hint to mtail about the type of an expression.  For example, in the regular expression

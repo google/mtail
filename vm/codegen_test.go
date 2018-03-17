@@ -652,6 +652,28 @@ gauge foo
 			{setmatched, true},
 			{setmatched, true},
 		}},
+	{"capref used in def", `
+/(?P<x>\d+)/ && $x > 5 {
+}`,
+		[]instr{
+			{match, 0},
+			{jnm, 13},
+			{push, 0},
+			{capref, 1},
+			{push, int64(5)},
+			{cmp, 1},
+			{jnm, 9},
+			{push, true},
+			{jmp, 10},
+			{push, false},
+			{jnm, 13},
+			{push, true},
+			{jmp, 14},
+			{push, false},
+			{jnm, 17},
+			{setmatched, false},
+			{setmatched, true},
+		}},
 }
 
 func TestCodegen(t *testing.T) {

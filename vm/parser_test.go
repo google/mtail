@@ -268,6 +268,10 @@ $foo !~ /bar/ {
 	{"match expression 2", `
 $foo =~ /bar/ + X {
 }`},
+
+	{"capref used in def", `
+/(?P<x>.*)/ && $x > 0 {
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -325,7 +329,7 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	{"unterminated regex",
 		"/foo\n",
 		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\"",
-			"unterminated regex:1:2-4: syntax error"}},
+			"unterminated regex:1:2-4: syntax error: unexpected end of file"}},
 
 	{"unterminated string",
 		" \"foo }\n",
@@ -334,18 +338,18 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	{"unterminated const regex",
 		"const X /(?P<foo>",
 		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",
-			"unterminated const regex:1:10-17: syntax error"}},
+			"unterminated const regex:1:10-17: syntax error: unexpected end of file"}},
 
-	{"index of non-terminal",
+	{"index of non-terminal 1",
 		`// {
 	foo++[$1]++
 	}`,
-		[]string{"index of non-terminal:2:7: syntax error"}},
-	{"index of non-terminal",
+		[]string{"index of non-terminal 1:2:7: syntax error: unexpected LSQUARE, expecting NL"}},
+	{"index of non-terminal 2",
 		`// {
 	0[$1]++
 	}`,
-		[]string{"index of non-terminal:2:3: syntax error"}},
+		[]string{"index of non-terminal 2:2:3: syntax error: unexpected LSQUARE, expecting NL"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {

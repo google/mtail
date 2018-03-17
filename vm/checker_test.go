@@ -245,6 +245,10 @@ counter test
   $foo =~ /bar/ {
   }
 }`},
+
+	{"capref used in def", `
+/(?P<x>\d+)/ && $x > 0 {
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

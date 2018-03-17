@@ -1,4 +1,6 @@
-# common-build names an anchor which contains all the reusable build instructions.
+---
+# common-build names an anchor which contains all the reusable build
+# instructions.
 common-build: &common-build
   working_directory: /go/src/github.com/google/mtail
   environment:
@@ -30,6 +32,10 @@ common-build: &common-build
 
 # go* names anchors which define the Go versions to build with, merging the
 # common-build alias above.
+go1_10: &go1_10
+  <<: *common-build
+  docker:
+    - image: circleci/golang:1.10
 go1_9: &go1_9
   <<: *common-build
   docker:
@@ -38,10 +44,6 @@ go1_8: &go1_8
   <<: *common-build
   docker:
     - image: circleci/golang:1.8
-go1_7: &go1_7
-  <<: *common-build
-  docker:
-    - image: circleci/golang:1.7
 
 # concurrency* names anchors which define the the concurrency level to run
 # tests with.
@@ -59,6 +61,12 @@ concurrency_1: &concurrency_1
 version: 2
 jobs:
   # The main build steps are the crossproduct of concurrency and go versions.
+  build-go1.10-4:
+    <<: [*go1_10, *concurrency_4]
+  build-go1.10-2:
+    <<: [*go1_10, *concurrency_2]
+  build-go1.10-1:
+    <<: [*go1_10, *concurrency_1]
   build-go1.9-4:
     <<: [*go1_9, *concurrency_4]
   build-go1.9-2:
@@ -71,19 +79,15 @@ jobs:
     <<: [*go1_8, *concurrency_2]
   build-go1.8-1:
     <<: [*go1_8, *concurrency_1]
-  build-go1.7-4:
-    <<: [*go1_7, *concurrency_4]
-  build-go1.7-2:
-    <<: [*go1_7, *concurrency_2]
-  build-go1.7-1:
-    <<: [*go1_7, *concurrency_1]
 
   # Coverage collects all the coverage reports from each build and merges them,
   # before sending off to Coveralls.
   coverage:
     working_directory: /go/src/github.com/google/mtail
+    environment:
+      COVERALLS_TOKEN: AQTCw3bl6FDphbQcMMkgVZBIunz5r3H8b
     docker:
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.10
     steps:
       - checkout
       - attach_workspace:
@@ -102,6 +106,31 @@ jobs:
           path: coverage.html
           destination: coverage
 
+  deploy:
+    working_directory: /go/src/github.com/google/mtail
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run: make vm/parser.go
+      - run: make crossbuild
+      - run: sha1sum build/*
+      - store_artifacts:
+          path: build/
+      - run:
+          name: Upload binaries to GitHub Release
+          # GITHUB_TOKEN is a secret from the CircleCI environment
+          command: |
+            go get github.com/tcnksm/ghr
+            ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace ${CIRCLE_TAG?} build/
+
+tag-filter: &tag-filter
+  filters:
+    tags:
+      only: /^v.*/
+
 # Using workflows to sequence each of our builds in parallel, and coverage
 # depending on all of them.  These two lists need to be updated when the inputs
 # of the build matrix change.
@@ -109,23 +138,43 @@ workflows:
   version: 2
   build:
     jobs:
-      - build-go1.9-4
-      - build-go1.9-2
-      - build-go1.9-1
-      - build-go1.8-4
-      - build-go1.8-2
-      - build-go1.8-1
-      - build-go1.7-4
-      - build-go1.7-2
-      - build-go1.7-1
+      - build-go1.10-4:
+          <<: *tag-filter
+      - build-go1.10-2:
+          <<: *tag-filter
+      - build-go1.10-1:
+          <<: *tag-filter
+      - build-go1.9-4:
+          <<: *tag-filter
+      - build-go1.9-2:
+          <<: *tag-filter
+      - build-go1.9-1:
+          <<: *tag-filter
+      - build-go1.8-4:
+          <<: *tag-filter
+      - build-go1.8-2:
+          <<: *tag-filter
+      - build-go1.8-1:
+          <<: *tag-filter
       - coverage:
+          <<: *tag-filter
           requires:
+            - build-go1.10-4
+            - build-go1.10-2
+            - build-go1.10-1
             - build-go1.9-4
             - build-go1.9-2
             - build-go1.9-1
             - build-go1.8-4
             - build-go1.8-2
             - build-go1.8-1
-            - build-go1.7-4
-            - build-go1.7-2
-            - build-go1.7-1
+      - deliver:
+          requires:
+            - coverage
+          filters:
+            tags:
+              only: /^v.*/
+            # Explicitly disable all branches, otherwise we match on every
+            # commit.
+            branches:
+              ignore: /.*/

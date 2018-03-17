@@ -21,18 +21,22 @@ CLEANFILES+=\
 
 all: mtail
 
-.PHONY: clean covclean
-clean: covclean
+.PHONY: clean covclean crossclean
+clean: covclean crossclean
 	rm -f $(CLEANFILES) .*dep-stamp
 covclean:
 	rm -f *.coverprofile coverage.html
-
+crossclean:
+	rm -rf build
 
 version := $(shell git describe --tags)
 revision := $(shell git rev-parse HEAD)
+release := $(shell git describe --tags | cut -d"-" -f 1,2)
+
+GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 
 install mtail: $(GOFILES) .dep-stamp
-	go install -ldflags "-X main.Version=${version} -X main.Revision=${revision}"
+	go install -ldflags $(GO_LDFLAGS)
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
 	go generate -x ./vm
@@ -40,16 +44,33 @@ vm/parser.go: vm/parser.y .gen-dep-stamp
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
 
+.PHONY: install_crossbuild
+install_crossbuild: .crossbuild-dep-stamp
+
+.crossbuild-dep-stamp:
+	go get github.com/mitchellh/gox
+	touch $@
+
+GOX_OSARCH := "linux/amd64 windows/amd64 darwin/amd64"
+#GOX_OSARCH := ""
+GOX_ARCH="amd64"
+#GOX_ARCH := ""
+
+.PHONY: crossbuild
+crossbuild: install_crossbuild $(GOFILES) .dep-stamp
+	mkdir -p build
+	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -arch=$(GOX_ARCH) -ldflags $(GO_LDFLAGS)
+
 .PHONY: test check
-check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
+check test: $(GOFILES) $(GOTESTFILES) 
 	go test -timeout 10s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
+testrace: $(GOFILES) $(GOTESTFILES)
 	go test -timeout ${timeout} -race -v ./...
 
 .PHONY: smoke
-smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
+smoke: $(GOFILES) $(GOTESTFILES)
 	go test -timeout 1s -test.short ./...
 
 .PHONY: ex_test
