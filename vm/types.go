@@ -360,7 +360,7 @@ func LeastUpperBound(a, b Type) Type {
 		return String
 	}
 	if (Equals(a1, Pattern) && Equals(b1, Bool)) ||
-		(Equals(a1, Int) && Equals(b1, Pattern)) {
+		(Equals(a1, Bool) && Equals(b1, Pattern)) {
 		return Bool
 	}
 	if (Equals(a1, Bool) && Equals(b1, Int)) ||
