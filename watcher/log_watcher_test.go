@@ -233,22 +233,6 @@ func TestLogWatcherAddError(t *testing.T) {
 	}
 }
 
-func doOrTimeout(do func() (bool, error), deadline, interval time.Duration) (bool, error) {
-	for {
-		select {
-		case <-time.After(deadline):
-			return false, errors.New("timeout")
-		case <-time.Tick(interval):
-			ok, err := do()
-			if err != nil {
-				return false, err
-			} else if ok {
-				return true, nil
-			}
-		}
-	}
-}
-
 func TestWatcherErrors(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping log watcher test in short mode")

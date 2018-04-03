@@ -385,9 +385,9 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	switch m := fi.Mode(); {
 	case m&os.ModeType == 0:
 		if seekStart || t.oneShot {
-			f.Seek(0, os.SEEK_SET)
+			f.Seek(0, io.SeekCurrent)
 		} else {
-			f.Seek(0, os.SEEK_END)
+			f.Seek(0, io.SeekEnd)
 		}
 		err = t.w.Add(f.Name())
 		if err != nil {
@@ -520,8 +520,5 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	}{
 		t.watched,
 	}
-	if err := tpl.Execute(w, data); err != nil {
-		return err
-	}
-	return nil
+	return tpl.Execute(w, data)
 }
