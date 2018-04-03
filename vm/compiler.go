@@ -18,9 +18,9 @@ import (
 type Options struct {
 	CompileOnly          bool           // Do not start the program after compilation.
 	SyslogUseCurrentYear bool           // Use the current year if no year is present in the log file timestamp.
-	OverrideLocation     *time.Location //
 	EmitAst              bool           // Print the AST after parse
 	EmitAstTypes         bool           // Print the AST with types after typechecking
+	OverrideLocation     *time.Location //
 }
 
 // Compile compiles a program from the input into a virtual machine or a list
