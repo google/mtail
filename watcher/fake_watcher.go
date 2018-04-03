@@ -78,9 +78,9 @@ func (w *FakeWatcher) sendEvent(e Event) {
 func (w *FakeWatcher) InjectCreate(name string) {
 	dirname := path.Dir(name)
 	w.watchesMu.RLock()
-	dir_watched := w.watches[dirname]
+	dirWatched := w.watches[dirname]
 	w.watchesMu.RUnlock()
-	if dir_watched {
+	if dirWatched {
 		w.sendEvent(CreateEvent{name})
 		w.Add(name)
 	} else {

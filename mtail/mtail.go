@@ -165,7 +165,7 @@ type Options struct {
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 }
 
-// New creates an MtailServer from the supplied Options.
+// New creates a MtailServer from the supplied Options.
 func New(o Options) (*MtailServer, error) {
 	store := o.Store
 	if store == nil {
