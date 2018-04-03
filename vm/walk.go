@@ -23,7 +23,7 @@ func walknodelist(v Visitor, list []astNode) {
 func Walk(v Visitor, node astNode) {
 	// Returning nil from VisitBefore signals to Walk that the Visitor has
 	// handled the children of this node.  VisitAfter will not be called.
-	if v := v.VisitBefore(node); v == nil {
+	if v = v.VisitBefore(node); v == nil {
 		return
 	}
 

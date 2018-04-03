@@ -35,7 +35,7 @@ func TestLogWatcher(t *testing.T) {
 	}
 
 	defer func() {
-		if err := os.RemoveAll(workdir); err != nil {
+		if err = os.RemoveAll(workdir); err != nil {
 			t.Fatalf("could not remove temp dir %s: %s:", workdir, err)
 		}
 	}()
@@ -45,12 +45,12 @@ func TestLogWatcher(t *testing.T) {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
 	defer func() {
-		if err := w.Close(); err != nil {
+		if err = w.Close(); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
-	if err := w.Add(workdir); err != nil {
+	if err = w.Add(workdir); err != nil {
 		t.Fatal(err)
 	}
 	f, err := os.Create(filepath.Join(workdir, "logfile"))
@@ -201,7 +201,7 @@ func TestLogWatcherAddError(t *testing.T) {
 	}
 
 	defer func() {
-		err := os.RemoveAll(workdir)
+		err = os.RemoveAll(workdir)
 		if err != nil {
 			t.Fatalf("could not remove temp dir %s: %s:", workdir, err)
 		}
@@ -212,16 +212,16 @@ func TestLogWatcherAddError(t *testing.T) {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
 	defer func() {
-		if err := w.Close(); err != nil {
+		if err = w.Close(); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
 	filename := filepath.Join(workdir, "test")
-	if _, err := os.Create(filename); err != nil {
+	if _, err = os.Create(filename); err != nil {
 		t.Fatalf("couldn't create file: %s", err)
 	}
-	if err := os.Chmod(filename, 0); err != nil {
+	if err = os.Chmod(filename, 0); err != nil {
 		t.Fatalf("couldn't chmod file: %s", err)
 	}
 	err = w.Add(filename)

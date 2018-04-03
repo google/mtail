@@ -38,7 +38,7 @@ func Compile(name string, input io.Reader, o *Options) (*VM, error) {
 		glog.Infof("%s AST:\n%s", name, s.Dump(ast))
 	}
 
-	if err := Check(ast); err != nil {
+	if err = Check(ast); err != nil {
 		return nil, err
 	}
 	if o.EmitAstTypes {
