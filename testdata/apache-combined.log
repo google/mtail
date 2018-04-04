@@ -1,0 +1,5 @@
+192.168.1.23 - - [23/Mar/2018:12:31:01 +0000] "GET /api/config HTTP/1.1" 200 28 "https://fubarservice.example.com/" "libcurl"
+192.168.1.23 - - [23/Mar/2018:12:31:02 +0000] "GET /api/pools HTTP/1.1" 200 925 "https://fubarservice.example.com/" "libcurl"
+192.168.1.23 - - [23/Mar/2018:12:31:03 +0000] "GET /api/categories HTTP/1.1" 200 775 "https://fubarservice.example.com/" "libcurl"
+192.168.1.23 - - [23/Mar/2018:12:31:04 +0000] "GET /api/top HTTP/1.1" 200 874 "https://fubarservice.example.com/" "libcurl"
+192.168.1.23 - - [23/Mar/2018:12:31:05 +0000] "GET /index.html HTTP/1.1" 304 - "https://fubarservice.example.com/" "libcurl"
