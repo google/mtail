@@ -6,7 +6,7 @@ gauge apache_http_response_time by remote_host, request_method, request_uri, sta
 gauge apache_http_response_size by remote_host, request_method, request_uri, status_code, user_agent
 
 /^/ +
-/(?P<remote_host>[0-9A-Za-z\.-]+) / + # %h
+/(?P<remote_host>[0-9A-Za-z\.:-]+) / + # %h
 /(?P<remote_logname>[0-9A-Za-z-]+) / + # %l
 /(?P<remote_username>[0-9A-Za-z-]+) / + # %u
 /\[(?P<timestamp>\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2} (\+|-)\d{4})\] / + # %u

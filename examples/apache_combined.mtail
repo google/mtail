@@ -7,7 +7,7 @@ counter apache_http_requests_total by request_method, http_version, request_stat
 counter apache_http_bytes_total by request_method, http_version, request_status
 
 /^/ +
-/(?P<hostname>[0-9A-Za-z\.-]+) / + # %h
+/(?P<hostname>[0-9A-Za-z\.:-]+) / + # %h
 /(?P<remote_logname>[0-9A-Za-z-]+) / + # %l
 /(?P<remote_username>[0-9A-Za-z-]+) / + # %u
 /\[(?P<timestamp>\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2} (\+|-)\d{4})\] / + # %u
