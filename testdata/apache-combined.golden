@@ -1,0 +1,3 @@
+counter apache_http_bytes_total {request_method=GET,http_version=HTTP/1.1,request_status=200} 2602 2018-03-23T12:31:04.000000000Z
+counter apache_http_requests_total {request_method=GET,http_version=HTTP/1.1,request_status=200} 4 2018-03-23T12:31:04.000000000Z
+counter apache_http_requests_total {request_method=GET,http_version=HTTP/1.1,request_status=304} 1 2018-03-23T12:31:05.000000000Z
