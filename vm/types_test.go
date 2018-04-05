@@ -32,8 +32,8 @@ var typeUnificationTests = []struct {
 		Float,
 	},
 	{
-		&TypeVariable{Id: 0}, &TypeVariable{Id: 0},
-		&TypeVariable{Id: 0},
+		&TypeVariable{ID: 0}, &TypeVariable{ID: 0},
+		&TypeVariable{ID: 0},
 	},
 	// The unification of any type operator with a type variable is the type operator
 	{

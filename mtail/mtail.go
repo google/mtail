@@ -144,29 +144,28 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Options contains all the parameters necessary for constructing a new MtailServer.
 type Options struct {
+	BindAddress          string
 	Progs                string
+	BuildInfo            string
 	LogPathPatterns      []string
 	LogFds               []int
-	BindAddress          string
 	OneShot              bool
 	CompileOnly          bool
 	DumpAst              bool
 	DumpAstTypes         bool
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
-	OverrideLocation     *time.Location
 	OmitMetricSource     bool
 	OmitProgLabel        bool
 
-	BuildInfo string
-
-	Store *metrics.Store
+	OverrideLocation *time.Location
+	Store            *metrics.Store
 
 	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 }
 
-// New creates an MtailServer from the supplied Options.
+// New creates a MtailServer from the supplied Options.
 func New(o Options) (*MtailServer, error) {
 	store := o.Store
 	if store == nil {

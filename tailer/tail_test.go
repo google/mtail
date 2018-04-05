@@ -311,7 +311,7 @@ func TestReadPartial(t *testing.T) {
 		t.Errorf("error returned not EOF: %v", err)
 	}
 	f.WriteString("\n")
-	f.Seek(-1, os.SEEK_END)
+	f.Seek(-1, io.SeekEnd)
 	p.Reset()
 	p.WriteString("ohi")
 	err = ta.read(f, p)
