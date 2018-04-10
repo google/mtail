@@ -70,7 +70,7 @@ func (m *MtailServer) StartTailing() error {
 	return nil
 }
 
-// InitLoader constructs a new program loader and performs the inital load of program files in the program directory.
+// InitLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *MtailServer) InitLoader() error {
 	o := vm.LoaderOptions{
 		Store:                m.store,

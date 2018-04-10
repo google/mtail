@@ -498,7 +498,7 @@ Loop:
 }
 
 // Lex a capture group reference. These are local variable references to
-// capture groups in the preceeding regular expression.
+// capture groups in the preceding regular expression.
 func lexCapref(l *lexer) stateFn {
 	l.skip() // Skip the leading $
 	named := false
