@@ -344,7 +344,7 @@ func (l *Loader) processEvents(events <-chan watcher.Event) {
 		case watcher.CreateEvent:
 			l.w.Add(event.Pathname)
 		default:
-			glog.V(1).Infof("Unexected event type %+#v", event)
+			glog.V(1).Infof("Unexpected event type %+#v", event)
 		}
 	}
 }
