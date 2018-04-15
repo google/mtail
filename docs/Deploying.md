@@ -62,6 +62,12 @@ Likewise, set `statsd_hostport` to the host:port of the statsd server.
 
 Additionally, the flag `metric_push_interval_seconds` can be used to configure the push frequency.  It defaults to 60, i.e. a push every minute.
 
+## Setting a default timezone
+
+The `--override_timezone` flag sets the timezone that `mtail` uses for timestamp conversion.  By default, `mtail` assumes timestamps are in UTC.
+
+To use the machine's local timezone, `--override_timezone=Local` can be used.
+
 ## Troubleshooting
 
 Lots of state is logged to the log file, by default in `/tmp/mtail.INFO`.  See [Troubleshooting](Troubleshooting.md) for more information.
