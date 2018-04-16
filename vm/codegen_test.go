@@ -674,6 +674,26 @@ gauge foo
 			{setmatched, false},
 			{setmatched, true},
 		}},
+	{"comparison type conversion", `
+gauge var
+/(?P<x>\d+) (\d+\.\d+)/ {
+  var = $x + $2
+}`,
+		[]instr{
+			{match, 0},
+			{jnm, 13},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{i2f, nil},
+			{push, 0},
+			{capref, 2},
+			{fadd, nil},
+			{fset, nil},
+			{setmatched, true},
+		}},
 }
 
 func TestCodegen(t *testing.T) {

@@ -216,8 +216,8 @@ func (c *checker) VisitAfter(node astNode) {
 				n.SetType(Error)
 				return
 			}
-			// Implicit type conversion for non-comparisons
-			// TODO(jaq): why doesn't this work for comparisons?
+			// Implicit type conversion for non-comparisons, promoting each
+			// half to the return type before the op.
 			if !Equals(rType, lT) {
 				conv := &convNode{n: n.lhs, typ: rType}
 				n.lhs = conv
