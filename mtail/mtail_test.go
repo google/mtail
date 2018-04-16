@@ -491,7 +491,7 @@ func TestHandleLogDeletes(t *testing.T) {
 	m := startMtailServer(t, pathnames, "")
 	defer m.Close()
 
-	if err := os.Remove(logFilepath); err != nil {
+	if err = os.Remove(logFilepath); err != nil {
 		t.Fatal(err)
 	}
 

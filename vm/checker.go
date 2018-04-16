@@ -143,14 +143,14 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 	return c
 }
 
-// checkSymbolUsage emits errors if any elegible symbols in the current scope
+// checkSymbolUsage emits errors if any eligible symbols in the current scope
 // are not marked as used.
 func (c *checker) checkSymbolUsage() {
 	for _, sym := range c.scope.Symbols {
 		if !sym.Used {
 			// Users don't have control over the patterns given from decorators
 			// so this should never be an error; but it can be useful to know
-			// if a program is doing unneccessary work.
+			// if a program is doing unnecessary work.
 			if sym.Kind == CaprefSymbol {
 				if sym.Addr == 0 {
 					// Don't warn about the zeroth capture group; it's not user-defined.
@@ -164,7 +164,7 @@ func (c *checker) checkSymbolUsage() {
 	}
 }
 
-// VisitAfter perfoms the type annotation and checking, once the child nodes of
+// VisitAfter performs the type annotation and checking, once the child nodes of
 // expressions have been annotated and checked.
 func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {

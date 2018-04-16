@@ -35,7 +35,7 @@ func TestLogWatcher(t *testing.T) {
 	}
 
 	defer func() {
-		if err := os.RemoveAll(workdir); err != nil {
+		if err = os.RemoveAll(workdir); err != nil {
 			t.Fatalf("could not remove temp dir %s: %s:", workdir, err)
 		}
 	}()
@@ -45,12 +45,12 @@ func TestLogWatcher(t *testing.T) {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
 	defer func() {
-		if err := w.Close(); err != nil {
+		if err = w.Close(); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
-	if err := w.Add(workdir); err != nil {
+	if err = w.Add(workdir); err != nil {
 		t.Fatal(err)
 	}
 	f, err := os.Create(filepath.Join(workdir, "logfile"))
@@ -101,28 +101,28 @@ func TestLogWatcher(t *testing.T) {
 		switch e := e.(type) {
 		case DeleteEvent:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
-				t.Errorf("delete doesnt' match")
+				t.Errorf("delete doesn't match")
 			}
 		default:
 
 			t.Errorf("wrong event type: %v", e)
 		}
 	case <-time.After(deadline):
-		t.Errorf("didn't receive delete befor timeout")
+		t.Errorf("didn't receive delete before timeout")
 	}
 	select {
 	case e := <-eventsChannel:
 		switch e := e.(type) {
 		case CreateEvent:
 			if e.Pathname != filepath.Join(workdir, "logfile2") {
-				t.Errorf("create doesnt' match")
+				t.Errorf("create doesn't match")
 			}
 		default:
 
 			t.Errorf("wrong event type: %v", e)
 		}
 	case <-time.After(deadline):
-		t.Errorf("didn't receive create message befor timeout")
+		t.Errorf("didn't receive create message before timeout")
 	}
 	if err := os.Chmod(filepath.Join(workdir, "logfile2"), os.ModePerm); err != nil {
 		t.Fatal(err)
@@ -132,14 +132,14 @@ func TestLogWatcher(t *testing.T) {
 		switch e := e.(type) {
 		case UpdateEvent:
 			if e.Pathname != filepath.Join(workdir, "logfile2") {
-				t.Errorf("update doesnt' match")
+				t.Errorf("update doesn't match")
 			}
 		default:
 
 			t.Errorf("wrong event type: %v", e)
 		}
 	case <-time.After(deadline):
-		t.Errorf("didn't receive update message befor timeout")
+		t.Errorf("didn't receive update message before timeout")
 	}
 	if err := os.Remove(filepath.Join(workdir, "logfile2")); err != nil {
 		t.Fatal(err)
@@ -201,7 +201,7 @@ func TestLogWatcherAddError(t *testing.T) {
 	}
 
 	defer func() {
-		err := os.RemoveAll(workdir)
+		err = os.RemoveAll(workdir)
 		if err != nil {
 			t.Fatalf("could not remove temp dir %s: %s:", workdir, err)
 		}
@@ -212,16 +212,16 @@ func TestLogWatcherAddError(t *testing.T) {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
 	defer func() {
-		if err := w.Close(); err != nil {
+		if err = w.Close(); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
 	filename := filepath.Join(workdir, "test")
-	if _, err := os.Create(filename); err != nil {
+	if _, err = os.Create(filename); err != nil {
 		t.Fatalf("couldn't create file: %s", err)
 	}
-	if err := os.Chmod(filename, 0); err != nil {
+	if err = os.Chmod(filename, 0); err != nil {
 		t.Fatalf("couldn't chmod file: %s", err)
 	}
 	err = w.Add(filename)
@@ -230,22 +230,6 @@ func TestLogWatcherAddError(t *testing.T) {
 	}
 	if err := os.Chmod(filename, 0777); err != nil {
 		t.Fatalf("couldn't reset file perms: %s", err)
-	}
-}
-
-func doOrTimeout(do func() (bool, error), deadline, interval time.Duration) (bool, error) {
-	for {
-		select {
-		case <-time.After(deadline):
-			return false, errors.New("timeout")
-		case <-time.Tick(interval):
-			ok, err := do()
-			if err != nil {
-				return false, err
-			} else if ok {
-				return true, nil
-			}
-		}
 	}
 }
 

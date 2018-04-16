@@ -55,24 +55,24 @@ func Equals(t1, t2 Type) bool {
 }
 
 var (
-	nextVariableId   int
-	nextVariableIdMu sync.Mutex
+	nextVariableID   int
+	nextVariableIDMu sync.Mutex
 )
 
 // TypeVariable represents an unbound type variable in the type system.
 type TypeVariable struct {
-	Id         int
+	ID         int
 	Instance   *Type
 	instanceMu sync.RWMutex
 }
 
 // NewTypeVariable constructs a new unique TypeVariable.
 func NewTypeVariable() *TypeVariable {
-	nextVariableIdMu.Lock()
-	id := nextVariableId
-	nextVariableId += 1
-	nextVariableIdMu.Unlock()
-	return &TypeVariable{Id: id}
+	nextVariableIDMu.Lock()
+	id := nextVariableID
+	nextVariableID++
+	nextVariableIDMu.Unlock()
+	return &TypeVariable{ID: id}
 }
 
 func (t *TypeVariable) Root() Type {
@@ -80,11 +80,10 @@ func (t *TypeVariable) Root() Type {
 	defer t.instanceMu.Unlock()
 	if t.Instance == nil {
 		return t
-	} else {
-		r := (*t.Instance).Root()
-		t.Instance = &r
-		return r
 	}
+	r := (*t.Instance).Root()
+	t.Instance = &r
+	return r
 }
 
 func (t *TypeVariable) String() string {
@@ -93,7 +92,7 @@ func (t *TypeVariable) String() string {
 	if t.Instance != nil {
 		return (*t.Instance).String()
 	}
-	return fmt.Sprintf("typeVar%d", t.Id)
+	return fmt.Sprintf("typeVar%d", t.ID)
 
 }
 
@@ -288,7 +287,7 @@ func Unify(a, b Type) error {
 	case *TypeVariable:
 		switch b2 := b1.(type) {
 		case *TypeVariable:
-			if a2.Id != b2.Id {
+			if a2.ID != b2.ID {
 				glog.V(2).Infof("Making %q type %q", a2, b1)
 				a2.SetInstance(&b1)
 				return nil

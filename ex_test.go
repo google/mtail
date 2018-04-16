@@ -94,6 +94,16 @@ var exampleProgramTests = []struct {
 		"testdata/match-expression.log",
 		"testdata/match-expression.golden",
 	},
+	{
+		"examples/apache_combined.mtail",
+		"testdata/apache-combined.log",
+		"testdata/apache-combined.golden",
+	},
+	{
+		"examples/apache_common.mtail",
+		"testdata/apache-common.log",
+		"testdata/apache-common.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {

@@ -77,7 +77,7 @@ def syslog {
         }
         # If the RFC3339 style matched, parse it this way.
         len($rfc3339_date) > 0 {
-            strptime($rfc3339_date, "2006-01-02T03:04:05-0700")
+            strptime($rfc3339_date, "2006-01-02T15:04:05-0700")
         }
         # Call into the decorated block
         next

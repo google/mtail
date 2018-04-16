@@ -17,7 +17,7 @@ import (
 	"github.com/google/mtail/metrics/datum"
 )
 
-var var_re = regexp.MustCompile(`^(counter|gauge|timer) ([^ ]+)(?: {([^}]+)})?(?: ([+-]?\d+(?:\.\d+(?:[eE]-?\d+)?)?))?(?: (.+))?`)
+var varRe = regexp.MustCompile(`^(counter|gauge|timer) ([^ ]+)(?: {([^}]+)})?(?: ([+-]?\d+(?:\.\d+(?:[eE]-?\d+)?)?))?(?: (.+))?`)
 
 // Find a metric in a store
 func FindMetricOrNil(store *metrics.Store, name string) *metrics.Metric {
@@ -36,7 +36,7 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		glog.V(2).Infof("'%s'\n", scanner.Text())
-		match := var_re.FindStringSubmatch(scanner.Text())
+		match := varRe.FindStringSubmatch(scanner.Text())
 		glog.V(2).Infof("len match: %d\n", len(match))
 		if len(match) == 0 {
 			continue

@@ -70,7 +70,7 @@ func (m *MtailServer) StartTailing() error {
 	return nil
 }
 
-// InitLoader constructs a new program loader and performs the inital load of program files in the program directory.
+// InitLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *MtailServer) InitLoader() error {
 	o := vm.LoaderOptions{
 		Store:                m.store,
@@ -144,29 +144,28 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Options contains all the parameters necessary for constructing a new MtailServer.
 type Options struct {
+	BindAddress          string
 	Progs                string
+	BuildInfo            string
 	LogPathPatterns      []string
 	LogFds               []int
-	BindAddress          string
 	OneShot              bool
 	CompileOnly          bool
 	DumpAst              bool
 	DumpAstTypes         bool
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
-	OverrideLocation     *time.Location
 	OmitMetricSource     bool
 	OmitProgLabel        bool
 
-	BuildInfo string
-
-	Store *metrics.Store
+	OverrideLocation *time.Location
+	Store            *metrics.Store
 
 	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 }
 
-// New creates an MtailServer from the supplied Options.
+// New creates a MtailServer from the supplied Options.
 func New(o Options) (*MtailServer, error) {
 	store := o.Store
 	if store == nil {
