@@ -262,6 +262,15 @@ func (c *checker) VisitAfter(node astNode) {
 				n.SetType(Error)
 				return
 			}
+			// Promote types if the ast types are not the same as the expression type.
+			if !Equals(t, lT) {
+				conv := &convNode{n: n.lhs, typ: t}
+				n.lhs = conv
+			}
+			if !Equals(t, rT) {
+				conv := &convNode{n: n.rhs, typ: t}
+				n.rhs = conv
+			}
 
 		case ASSIGN, ADD_ASSIGN:
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
