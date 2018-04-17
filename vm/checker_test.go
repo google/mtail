@@ -249,6 +249,16 @@ counter test
 	{"capref used in def", `
 /(?P<x>\d+)/ && $x > 0 {
 }`},
+	{"binop compare type conversion", `
+gauge var
+/(?P<x>\d+) (\d+\.\d+)/ {
+  var = $x + $2
+}`},
+	{"binop arith type conversion", `
+gauge var
+/(?P<x>\d+) (\d+\.\d+)/ {
+  var = $x + $2
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

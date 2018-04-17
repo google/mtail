@@ -216,6 +216,16 @@ func (c *checker) VisitAfter(node astNode) {
 				n.SetType(Error)
 				return
 			}
+			// Implicit type conversion for non-comparisons, promoting each
+			// half to the return type of the op.
+			if !Equals(rType, lT) {
+				conv := &convNode{n: n.lhs, typ: rType}
+				n.lhs = conv
+			}
+			if !Equals(rType, rT) {
+				conv := &convNode{n: n.rhs, typ: rType}
+				n.rhs = conv
+			}
 
 		case SHL, SHR, BITAND, BITOR, XOR, NOT:
 			// bitwise
@@ -244,13 +254,24 @@ func (c *checker) VisitAfter(node astNode) {
 			}
 			astType := Function(lT, rT, rType)
 
-			t := NewTypeVariable()
+			t := LeastUpperBound(lT, rT)
 			exprType := Function(t, t, Bool)
 			err := Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
 				n.SetType(Error)
 				return
+			}
+			// Promote types if the ast types are not the same as the expression type.
+			if !Equals(t, lT) {
+				conv := &convNode{n: n.lhs, typ: t}
+				n.lhs = conv
+				glog.Infof("Emitting convnode %+v", conv)
+			}
+			if !Equals(t, rT) {
+				conv := &convNode{n: n.rhs, typ: t}
+				n.rhs = conv
+				glog.Infof("Emitting convnode %+v", conv)
 			}
 
 		case ASSIGN, ADD_ASSIGN:

@@ -172,6 +172,9 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	case *delNode:
 		s.emit("del")
 
+	case *convNode:
+		s.emit("conv")
+
 	case *errorNode:
 		s.emit(fmt.Sprintf("error %q", v.spelling))
 

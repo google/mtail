@@ -334,7 +334,20 @@ func (c *codegen) VisitAfter(node astNode) {
 				cmpArg = 0
 				jumpOp = jm
 			}
-			c.emit(instr{cmp, cmpArg})
+			cmpOp := cmp
+			if Equals(n.lhs.Type(), n.rhs.Type()) {
+				switch n.lhs.Type() {
+				case Float:
+					cmpOp = fcmp
+				case Int:
+					cmpOp = icmp
+				case String:
+					cmpOp = scmp
+				default:
+					cmpOp = cmp
+				}
+			}
+			c.emit(instr{cmpOp, cmpArg})
 			c.emit(instr{jumpOp, lFail})
 			c.emit(instr{push, true})
 			c.emit(instr{jmp, lEnd})
@@ -421,6 +434,8 @@ func (c *codegen) emitConversion(inType, outType Type) error {
 		c.emit(instr{op: f2s})
 	} else if Equals(Int, inType) && Equals(String, outType) {
 		c.emit(instr{op: i2s})
+	} else if Equals(Pattern, inType) && Equals(Bool, outType) {
+		// nothing, pattern is implicit bool
 	} else {
 		return errors.Errorf("can't convert %q to %q", inType, outType)
 	}

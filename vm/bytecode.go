@@ -64,6 +64,11 @@ const (
 	s2f // string to float
 	i2s // int to string
 	f2s // float to string
+
+	// Typed comparisons, behave the same as cmp but do no conversion.
+	icmp // integer compare
+	fcmp // floating point compare
+	scmp // string compare
 )
 
 var opNames = map[opcode]string{
@@ -115,6 +120,9 @@ var opNames = map[opcode]string{
 	s2f:         "s2f",
 	i2s:         "i2s",
 	f2s:         "f2s",
+	icmp:        "icmp",
+	fcmp:        "fcmp",
+	scmp:        "scmp",
 }
 
 var builtin = map[string]opcode{
