@@ -674,7 +674,7 @@ gauge foo
 			{setmatched, false},
 			{setmatched, true},
 		}},
-	{"comparison type conversion", `
+	{"binop arith type conversion", `
 gauge var
 /(?P<x>\d+) (\d+\.\d+)/ {
   var = $x + $2
