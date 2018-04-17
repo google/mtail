@@ -92,7 +92,7 @@ bench_mem:
 recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -run=XXX --record_benchmark ./... 
 
-PACKAGES := $(shell find . -name '*.go' -printf '%h\n' | sort -u)
+PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
 
 PHONY: coverage
 coverage: gover.coverprofile
