@@ -318,9 +318,16 @@ func Unify(a, b Type) error {
 			}
 			if a2.Name != b2.Name {
 				t := LeastUpperBound(a, b)
+				glog.Infof("Got LUB = %q", t)
 				if t == Error {
 					return &TypeError{a2, b2}
 				}
+				// if !Equals(t, a2) {
+				// 	a2.SetInstance(&t)
+				// }
+				// if !Equals(t, b2) {
+				// 	b2.SetInstance(&t)
+				// }
 				return nil
 			}
 			for i, argA := range a2.Args {
