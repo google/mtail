@@ -694,6 +694,35 @@ gauge var
 			{fset, nil},
 			{setmatched, true},
 		}},
+	{"binop compare type conversion", `
+counter var
+/(?P<x>\d+) (\d+\.\d+)/ {
+  $x > $2 {
+    var++
+  }
+}`,
+		[]instr{
+			{match, 0},
+			{jnm, 19},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{i2f, nil},
+			{push, 0},
+			{capref, 2},
+			{cmp, 1},
+			{jnm, 11},
+			{push, true},
+			{jmp, 12},
+			{push, false},
+			{jnm, 18},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true},
+			{setmatched, true},
+		}},
 }
 
 func TestCodegen(t *testing.T) {
