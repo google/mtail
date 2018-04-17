@@ -1,9 +1,8 @@
 FROM golang:1.10.1-alpine3.7 AS builder
-
-RUN apk add --update git make \
-  && git clone https://github.com/google/mtail.git /go/src/github.com/google/mtail \
-  && cd /go/src/github.com/google/mtail \
-  && make
+RUN apk add --update git make
+WORKDIR /go/src/github.com/google/mtail
+COPY . /go/src/github.com/google/mtail
+RUN make
 
 
 FROM alpine:3.7
