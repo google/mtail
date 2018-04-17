@@ -217,7 +217,7 @@ func (c *checker) VisitAfter(node astNode) {
 				return
 			}
 			// Implicit type conversion for non-comparisons, promoting each
-			// half to the return type before the op.
+			// half to the return type of the op.
 			if !Equals(rType, lT) {
 				conv := &convNode{n: n.lhs, typ: rType}
 				n.lhs = conv
