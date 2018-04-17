@@ -317,6 +317,46 @@ func (v *VM) execute(t *thread, i instr) {
 
 		t.Push(match)
 
+	case icmp:
+		b, berr := t.PopInt()
+		if berr != nil {
+			v.errorf("%v", berr)
+		}
+		a, aerr := t.PopInt()
+		if aerr != nil {
+			v.errorf("%v", aerr)
+		}
+		match, err := compareInt(a, b, i.opnd.(int))
+		if err != nil {
+			v.errorf("%+v", err)
+		}
+
+		t.Push(match)
+	case fcmp:
+		b, berr := t.PopFloat()
+		if berr != nil {
+			v.errorf("%v", berr)
+		}
+		a, aerr := t.PopFloat()
+		if aerr != nil {
+			v.errorf("%v", aerr)
+		}
+		match, err := compareFloat(a, b, i.opnd.(int))
+		if err != nil {
+			v.errorf("%+v", err)
+		}
+
+		t.Push(match)
+	case scmp:
+		b := t.Pop().(string)
+		a := t.Pop().(string)
+		match, err := compareString(a, b, i.opnd.(int))
+		if err != nil {
+			v.errorf("%+v", err)
+		}
+
+		t.Push(match)
+
 	case jnm:
 		match := t.Pop().(bool)
 		if !match {
