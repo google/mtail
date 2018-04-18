@@ -33,12 +33,29 @@ to write mtail programs.
 
 Mailing list: https://groups.google.com/forum/#!forum/mtail-users
 
-### Installation
+## Installation
 
-`mtail` uses a Makefile. To build `mtail`, type `make` at the commandline. See
-the [Build instructions](docs/Building.md) for more details.
+There are various ways of installing **mtail**.
 
-### Deployment
+### Precompiled binaries
+
+Precompiled binaries for released versions are available in the
+[Releases page](https://github.com/google/mtail/releases) on Github. Using the
+latest production release binary is the recommended way of installing **mtail**.
+
+Windows, OSX and Linux binaries are available.
+
+### Building from source
+
+To build **mtail** from the source code yourself you need to have a working
+Go environment with version 1.9 or greater installed.
+
+A `Dockerfile` is included in this repository for local development as an
+alternative to installing Go in your environment.
+
+See the [Build instructions](docs/Building.md) for more details.
+
+## Deployment
 
 `mtail` works best when it paired with a timeseries-based calculator and
 alerting tool, like [Prometheus](http://prometheus.io).
