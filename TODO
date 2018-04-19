@@ -11,10 +11,6 @@ parse tree/ast testing?
 
 mapping between progs and logs to reduce wasted processing
 
-Match against a variable requires simplifying binaryExpr grammar to elim the
-    concat_expr branch, fixing the id_expr problem above
-
-
 bytecode like
 [{push 1} {push 0} {cmp 1} {jm 6} {push 0} {jmp 7} {push 1} {jnm 13}
     {setmatched false} {mload 0} {dload 0} {inc <nil>} {setmatched true}]
