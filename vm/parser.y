@@ -271,6 +271,10 @@ match_expr
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
+  | primary_expr match_op opt_nl primary_expr
+  {
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+  }  
   ;
 
 match_op

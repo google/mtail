@@ -124,18 +124,18 @@ programs have no single-line statement conditionals like C.
 supported by the Go implementation of [Go's
 regexp/syntax](https://godoc.org/regexp).
 
-#### Single definition of constants
+#### Constant pattern fragments
 
-To re-use regular expressions, you can assign them to a `const` identifier:
+To re-use parts of regular expressions, you can assign them to a `const` identifier:
 
 ```
 const PREFIX /^\w+\W+\d+ /
 
-// + PREFIX {
+PREFIX {
   ACTION1
 }
 
-// + PREFIX + /foo/ {
+PREFIX + /foo/ {
   ACTION2
 }
 ```
@@ -144,9 +144,22 @@ In this example, ACTION1 is done for every line that starts with the prefix
 regex, and ACTION2 is done for the subset of those lines that also contain
 'foo'.
 
-> NOTE: Due to a parser bug, a `const` regular expression must not be the first
-> element in a pattern. (The examples above use the prefix `// +` as a
-> workaround.)
+Pattern fragments like this don't need to be prefixes, they can be anywhere in the expression.
+
+```
+counter maybe_ipv4
+
+const IPv4 /(?P<ip>\d+\.\d+\.\d+\.\d+)/
+
+/something with an / + IPv4 + / address/ {
+  maybe_ipv4++
+}
+```
+
+See [dhcpd.mtail](../examples/dhcpd.mtail) for more examples of this.
+
+See also the section on decorators below for improving readability of
+expressions that are only matched once.
 
 ### Conditionals
 

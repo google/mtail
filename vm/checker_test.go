@@ -259,6 +259,25 @@ gauge var
 /(?P<x>\d+) (\d+\.\d+)/ {
   var = $x + $2
 }`},
+
+	{"concat expr 1", `
+const X /foo/
+/bar/ + X {
+}`},
+	{"concat expr 2", `
+const X /foo/
+X {
+}`},
+	{"match expression 3", `
+const X /foo/
+"a" =~ X {
+}
+`},
+	{"match expr 4", `
+/(?P<foo>.{6}) (?P<bar>.*)/ {
+  $foo =~ $bar {
+  }
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

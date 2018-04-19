@@ -259,6 +259,15 @@ counter foo by a,b
 }
 `},
 
+	{"concat expr 1", `
+const X /foo/
+/bar/ + X {
+}`},
+	{"concat expr 2", `
+const X /foo/
+X {
+}`},
+
 	{"match expression 1", `
 $foo =~ /bar/ {
 }
@@ -268,9 +277,19 @@ $foo !~ /bar/ {
 	{"match expression 2", `
 $foo =~ /bar/ + X {
 }`},
+	{"match expression 3", `
+const X /foo/
+$foo =~ X {
+}`},
 
 	{"capref used in def", `
 /(?P<x>.*)/ && $x > 0 {
+}`},
+
+	{"match expr 4", `
+/(?P<foo>.{6}) (?P<bar>.*)/ {
+  $foo =~ $bar {
+  }
 }`},
 }
 
@@ -289,6 +308,9 @@ func TestParserRoundTrip(t *testing.T) {
 				}
 				t.Fatal()
 			}
+
+			s := Sexp{}
+			t.Log("AST:\n" + s.Dump(p.root))
 
 			u := Unparser{}
 			output := u.Unparse(p.root)

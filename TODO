@@ -11,31 +11,6 @@ parse tree/ast testing?
 
 mapping between progs and logs to reduce wasted processing
 
-conversion in vm.compare() crashes on $var == "string" when $var is
-    float (logical.mtail, input line "12.8") -- 
-
-Using a const pattern fragment as the first or only in a pattern expr is a
-    parse error.
-	{"concat expr 1", `
-/bar/ + X {
-}`},
-	{"concat expr 2", `
-X {
-}`},
-	// 	{"match expression 3", `
-	// $foo =~ X {
-	// }
-	// `},
-
-Match against a variable requires simplifying binaryExpr grammar to elim the
-    concat_expr branch, fixing the id_expr problem above
-	{"match expr 2", `
-/(?P<foo>.{6}) (?P<bar>.*)/ {
-  $foo =~ $bar {
-  }
-}`},
-
-
 bytecode like
 [{push 1} {push 0} {cmp 1} {jm 6} {push 0} {jmp 7} {push 1} {jnm 13}
     {setmatched false} {mload 0} {dload 0} {inc <nil>} {setmatched true}]
