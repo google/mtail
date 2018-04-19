@@ -11,9 +11,6 @@ parse tree/ast testing?
 
 mapping between progs and logs to reduce wasted processing
 
-conversion in vm.compare() crashes on $var == "string" when $var is
-    float (logical.mtail, input line "12.8") -- 
-
 Using a const pattern fragment as the first or only in a pattern expr is a
     parse error.
 	{"concat expr 1", `
