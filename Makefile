@@ -60,7 +60,7 @@ crossbuild: install_crossbuild $(GOFILES) .dep-stamp
 	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS)
 
 .PHONY: test check
-check test: $(GOFILES) $(GOTESTFILES) 
+check test: $(GOFILES) $(GOTESTFILES)
 	go test -timeout 10s ./...
 
 .PHONY: testrace
@@ -88,9 +88,9 @@ bench_mem:
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -bench=. -run=XXX --record_benchmark ./... 
+	go test -bench=. -run=XXX --record_benchmark ./...
 
-PACKAGES := $(shell find . -name '*.go' -printf '%h\n' | sort -u)
+PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
 
 PHONY: coverage
 coverage: gover.coverprofile
