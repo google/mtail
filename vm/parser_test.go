@@ -299,6 +299,9 @@ func TestParserRoundTrip(t *testing.T) {
 				t.Fatal()
 			}
 
+			s := Sexp{}
+			t.Log("AST:\n" + s.Dump(p.root))
+
 			u := Unparser{}
 			output := u.Unparse(p.root)
 
