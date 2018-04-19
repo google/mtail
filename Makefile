@@ -51,15 +51,13 @@ install_crossbuild: .crossbuild-dep-stamp
 	go get github.com/mitchellh/gox
 	touch $@
 
-GOX_OSARCH := "linux/amd64 windows/amd64 darwin/amd64"
+GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 #GOX_OSARCH := ""
-GOX_ARCH="amd64"
-#GOX_ARCH := ""
 
 .PHONY: crossbuild
 crossbuild: install_crossbuild $(GOFILES) .dep-stamp
 	mkdir -p build
-	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -arch=$(GOX_ARCH) -ldflags $(GO_LDFLAGS)
+	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS)
 
 .PHONY: test check
 check test: $(GOFILES) $(GOTESTFILES) 
