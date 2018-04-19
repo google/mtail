@@ -13,11 +13,6 @@ mapping between progs and logs to reduce wasted processing
 
 Match against a variable requires simplifying binaryExpr grammar to elim the
     concat_expr branch, fixing the id_expr problem above
-	{"match expr 2", `
-/(?P<foo>.{6}) (?P<bar>.*)/ {
-  $foo =~ $bar {
-  }
-}`},
 
 
 bytecode like

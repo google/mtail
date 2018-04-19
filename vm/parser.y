@@ -271,7 +271,7 @@ match_expr
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
-  | primary_expr match_op opt_nl id_expr
+  | primary_expr match_op opt_nl primary_expr
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }  
