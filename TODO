@@ -7,7 +7,8 @@ refactor fs and notify into single interface
 
 no trailing newline in parser test, requires changes to expr stmt
 
-parse tree/ast testing?
+parse tree/ast testing? - expected AST as result from parse/check instead of
+    merely getting a result
 
 mapping between progs and logs to reduce wasted processing
 
