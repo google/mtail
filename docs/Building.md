@@ -49,22 +49,50 @@ The resulting binary will be in `$GOPATH/bin`.
 
 The unit tests can be run with `make test`, which invokes `go test`.  The slower race-detector tests can be run with `make testrace`.
 
+### Cross-compilation
+
+The `Makefile` has a `crossbuild` target for building on different platforms.  By default it builds for a few `amd64` targets:
+
+```
+% make crossbuild
+mkdir -p build
+gox --output="./build/mtail_v3.0.0-rc10_{{.OS}}_{{.Arch}}" -osarch="linux/amd64 windows/amd64 darwin/amd64" -ldflags "-X main.Version=v3.0.0-rc10-72-gcbea8a8 -X main.Revision=cbea8a810942be1129d58c37b27a55987a384776"
+Number of parallel builds: 3
+
+-->     linux/amd64: github.com/google/mtail
+-->    darwin/amd64: github.com/google/mtail
+-->   windows/amd64: github.com/google/mtail
+```
+
+but you can override it with the environment variable `GOX_OSARCH` like so:
+
+```
+% make GOX_OSARCX=linux/arm crossbuild
+mkdir -p build
+gox --output="./build/mtail_v3.0.0-rc10_{{.OS}}_{{.Arch}}" -osarch="linux/amd64 windows/amd64 darwin/amd64" -ldflags "-X main.Version=v3.0.0-rc10-72-gcbea8a8 -X main.Revision=cbea8a810942be1129d58c37b27a55987a384776"
+Number of parallel builds: 3
+
+-->    darwin/amd64: github.com/google/mtail
+-->   windows/amd64: github.com/google/mtail
+-->     linux/amd64: github.com/google/mtail
+```
+
 ## No Go
 
-You can still build and develop with **mtail** with Docker.
+You can still build and develop **mtail** with Docker.
 
 ```
 docker build -t mtail .
 docker run -it --rm mtail --help
 ```
 
-**mtail** is not much use without a configuration file or logs to parse, you will need to mount those in.
+**mtail** is not much use without a configuration file or logs to parse, you will need to mount a path containing them into the container, like so:
 
 ```
 docker run -it --rm -v examples/linecount.mtail:/progs/linecount.mtail -v /var/log:/logs mtail -logtostderr -one_shot -progs /progs/linecount.mtail -logs /logs/messages.log
 ```
 
-Or via a simple `docker-compose.yml` snippet example.
+Or, via Docker Compose, e.g. this `docker-compose.yml` snippet example:
 
 ```yaml
 service:
