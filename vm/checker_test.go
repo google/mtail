@@ -273,6 +273,11 @@ const X /foo/
 "a" =~ X {
 }
 `},
+	{"match expr 4", `
+/(?P<foo>.{6}) (?P<bar>.*)/ {
+  $foo =~ $bar {
+  }
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

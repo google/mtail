@@ -373,6 +373,11 @@ func LeastUpperBound(a, b Type) Type {
 		(Equals(a1, Int) && Equals(b1, Bool)) {
 		return Int
 	}
+	// A string can be a pattern, but not vice versa.
+	if (Equals(a1, String) && Equals(b1, Pattern)) ||
+		(Equals(a1, Pattern) && Equals(b1, String)) {
+		return Pattern
+	}
 	return Error
 }
 
