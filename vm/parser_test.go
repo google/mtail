@@ -277,6 +277,10 @@ $foo !~ /bar/ {
 	{"match expression 2", `
 $foo =~ /bar/ + X {
 }`},
+	{"match expression 3", `
+const X /foo/
+$foo =~ X {
+}`},
 
 	{"capref used in def", `
 /(?P<x>.*)/ && $x > 0 {
