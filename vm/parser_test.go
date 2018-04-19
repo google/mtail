@@ -259,6 +259,15 @@ counter foo by a,b
 }
 `},
 
+	{"concat expr 1", `
+const X /foo/
+/bar/ + X {
+}`},
+	{"concat expr 2", `
+const X /foo/
+X {
+}`},
+
 	{"match expression 1", `
 $foo =~ /bar/ {
 }
