@@ -280,15 +280,14 @@ func (n *patternConstNode) Type() Type {
 
 // patternDefNode holds a named pattern expression
 type patternFragmentDefNode struct {
-	pos     position
-	name    string
+	id      astNode
 	expr    astNode
 	sym     *Symbol // Optional Symbol for a named pattern
 	pattern string  // If not empty, contains the complete evaluated pattern of the expr
 }
 
 func (n *patternFragmentDefNode) Pos() *position {
-	return &n.pos
+	return n.id.Pos()
 }
 
 func (n *patternFragmentDefNode) Type() Type {
@@ -385,4 +384,17 @@ func (n *convNode) SetType(t Type) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.typ = t
+}
+
+type errorNode struct {
+	pos      position
+	spelling string
+}
+
+func (n *errorNode) Pos() *position {
+	return &n.pos
+}
+
+func (n *errorNode) Type() Type {
+	return Error
 }

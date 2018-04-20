@@ -14,6 +14,19 @@ import (
 	"github.com/google/mtail/metrics/datum"
 )
 
+func TestCreateExporter(t *testing.T) {
+	o := Options{}
+	_, err := New(o)
+	if err == nil {
+		t.Error("expecting error, got nil")
+	}
+	o.Store = metrics.NewStore()
+	_, err = New(o)
+	if err != nil {
+		t.Errorf("unexpected error:%s", err)
+	}
+}
+
 func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
 	var ret []string
 	lc := make(chan *metrics.LabelSet)
@@ -98,15 +111,15 @@ func TestMetricToGraphite(t *testing.T) {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
-	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "l")
-	d, _ = dimensionedMetric.GetDatum("quux")
+	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "host")
+	d, _ = dimensionedMetric.GetDatum("quux.com")
 	datum.SetInt(d, 37, ts)
-	d, _ = dimensionedMetric.GetDatum("snuh")
+	d, _ = dimensionedMetric.GetDatum("snuh.teevee")
 	datum.SetInt(d, 37, ts)
 	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
 	expected = []string{
-		"prog.bar.l.quux 37 1343124840\n",
-		"prog.bar.l.snuh 37 1343124840\n"}
+		"prog.bar.host.quux_com 37 1343124840\n",
+		"prog.bar.host.snuh_teevee 37 1343124840\n"}
 	diff = cmp.Diff(expected, r)
 	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
@@ -115,8 +128,8 @@ func TestMetricToGraphite(t *testing.T) {
 	*graphitePrefix = "prefix"
 	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
 	expected = []string{
-		"prefixprog.bar.l.quux 37 1343124840\n",
-		"prefixprog.bar.l.snuh 37 1343124840\n"}
+		"prefixprog.bar.host.quux_com 37 1343124840\n",
+		"prefixprog.bar.host.snuh_teevee 37 1343124840\n"}
 	diff = cmp.Diff(expected, r)
 	if diff != "" {
 		t.Errorf("prefixed string didn't match:\n%s", diff)

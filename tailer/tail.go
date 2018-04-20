@@ -20,7 +20,6 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -55,6 +54,9 @@ type Tailer struct {
 	globPatterns   map[string]struct{}      // glob patterns to match newly created files in dir paths against
 	globPatternsMu sync.RWMutex             // protects `globPatterns'
 
+	stopForever chan struct{} // Signals termination to the readForever goroutine
+	runDone     chan struct{} // Signals termination of the run goroutine.
+
 	fs afero.Fs // mockable filesystem interface
 
 	oneShot bool
@@ -64,36 +66,32 @@ type Tailer struct {
 type Options struct {
 	Lines   chan<- *LogLine // output channel of lines read
 	OneShot bool            // if true, reads from start and exits after each file hits eof
-	W       watcher.Watcher // Not required, will use watcher.LogWatcher if it is zero.
-	FS      afero.Fs        // Not required, will use afero.OsFs if it is zero.
+	W       watcher.Watcher
+	FS      afero.Fs
 }
 
 // New returns a new Tailer, configured with the supplied Options
 func New(o Options) (*Tailer, error) {
 	if o.Lines == nil {
-		return nil, errors.New("tailer needs lines")
+		return nil, errors.New("can't create tailer without lines channel")
 	}
-	fs := o.FS
-	if fs == nil {
-		fs = &afero.OsFs{}
+	if o.FS == nil {
+		return nil, errors.New("can't create tailer without FS")
 	}
-	w := o.W
-	if w == nil {
-		var err error
-		w, err = watcher.NewLogWatcher()
-		if err != nil {
-			return nil, errors.Errorf("Couldn't create a watcher for tailer: %s", err)
-		}
+	if o.W == nil {
+		return nil, errors.New("can't create tailer without W")
 	}
 	t := &Tailer{
-		w:            w,
+		w:            o.W,
 		watched:      make(map[string]struct{}),
 		lines:        o.Lines,
 		files:        make(map[string]afero.File),
 		partials:     make(map[string]*bytes.Buffer),
 		globPatterns: make(map[string]struct{}),
-		fs:           fs,
+		fs:           o.FS,
 		oneShot:      o.OneShot,
+		stopForever:  make(chan struct{}),
+		runDone:      make(chan struct{}),
 	}
 	eventsChan := t.w.Events()
 	go t.run(eventsChan)
@@ -192,7 +190,8 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 // is past the end of the file based on its size, and if so seeks to
 // the start again.  Returns nil iff that happened.
 func (t *Tailer) handleTruncate(f afero.File) error {
-	offset, err := f.Seek(0, io.SeekCurrent)
+	currentOffset, err := f.Seek(0, io.SeekCurrent)
+	glog.V(2).Infof("current seek position at %d", currentOffset)
 	if err != nil {
 		return err
 	}
@@ -202,12 +201,14 @@ func (t *Tailer) handleTruncate(f afero.File) error {
 		return err
 	}
 
-	if offset == 0 || fi.Size() >= offset {
+	glog.V(2).Infof("File size is %d", fi.Size())
+	if currentOffset == 0 || fi.Size() >= currentOffset {
 		return fmt.Errorf("no truncate appears to have occurred")
 	}
 
-	_, err = f.Seek(0, io.SeekStart)
-	return err
+	p, serr := f.Seek(0, io.SeekStart)
+	glog.V(2).Infof("Truncated?  Seeked to %d: %v", p, serr)
+	return serr
 }
 
 // read reads blocks of 4096 bytes from the File, sending lines to the
@@ -218,12 +219,15 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 	ntotal := 0 // bytes read in this invocation
 	for {
 		n, err := f.Read(b[:cap(b)])
+		glog.V(2).Infof("Read: %v %v", n, err)
 		ntotal += n
 		b = b[:n]
 
 		if err == io.EOF && ntotal == 0 {
+			glog.V(2).Info("Suspected truncation.")
 			// If there was nothing to be read, perhaps the file just got truncated.
 			herr := t.handleTruncate(f)
+			glog.V(2).Infof("handletrunc with error '%v'", herr)
 			if herr == nil {
 				// Try again: offset was greater than filesize and now we've seeked to start.
 				continue
@@ -250,20 +254,6 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 				partial.Reset()
 			}
 		}
-	}
-}
-
-// inode returns the inode number of a file, or 0 if the file has no underlying Sys implementation.
-func inode(f os.FileInfo) uint64 {
-	s := f.Sys()
-	if s == nil {
-		return 0
-	}
-	switch s := s.(type) {
-	case *syscall.Stat_t:
-		return uint64(s.Ino)
-	default:
-		return 0
 	}
 }
 
@@ -294,7 +284,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 		glog.Infof("Stat failed on %q: %s", pathname, err)
 		return
 	}
-	if inode(s1) == inode(s2) {
+	if os.SameFile(s1, s2) {
 		glog.V(1).Infof("Path %s already being watched, and inode not changed.",
 			pathname)
 		return
@@ -392,9 +382,11 @@ Retry:
 	return nil
 }
 
-// startNewFile optionally seeks to the start or end of the file, then starts
-// the consumption of log lines. Rotated logs should read from the start, but
-// logs opened for the first time read from the end.
+// startNewFile optionally seeks to the start or end of the file f, then starts
+// the consumption of log lines. Rotated logs and logs read in oneshot mode
+// should read from the start, but logs opened for the first time read from the
+// "current point in time", which is the end of the file for logs being
+// appended to.
 func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	fi, err := f.Stat()
 	if err != nil {
@@ -450,7 +442,10 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 // It receives notification of log file changes from the watcher channel, and
 // handles them.
 func (t *Tailer) run(events <-chan watcher.Event) {
+	defer close(t.runDone)
+
 	for e := range events {
+		glog.V(2).Infof("Event type %#v", e)
 		switch e := e.(type) {
 		case watcher.UpdateEvent:
 			if t.isWatching(e.Pathname) {
@@ -494,19 +489,29 @@ func (t *Tailer) readForever(f afero.File) {
 	var err error
 	partial := bytes.NewBufferString("")
 	for {
-		err = t.read(f, partial)
-		// We want to exit at EOF, because the FD has been closed.
-		if err != nil {
-			glog.Infof("error on partial read of %s (fd %v): %s", f.Name(), f, err)
+		select {
+		case <-t.stopForever:
 			return
+		default:
+			err = t.read(f, partial)
+			// We want to exit at EOF, because the FD has been closed.
+			if err != nil {
+				glog.Infof("error on partial read of %s (fd %v): %s", f.Name(), f, err)
+				return
+			}
+			// TODO(jaq): nonblocking read, handle eagain, and do a little sleep if so, so the read can be interrupted
 		}
-		// TODO(jaq): nonblocking read, handle eagain, and do a little sleep if so, so the read can be interrupted
 	}
 }
 
 // Close signals termination to the watcher.
 func (t *Tailer) Close() error {
-	return t.w.Close()
+	close(t.stopForever)
+	if err := t.w.Close(); err != nil {
+		return err
+	}
+	<-t.runDone
+	return nil
 }
 
 const tailerTemplate = `

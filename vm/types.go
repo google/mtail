@@ -55,24 +55,24 @@ func Equals(t1, t2 Type) bool {
 }
 
 var (
-	nextVariableId   int
-	nextVariableIdMu sync.Mutex
+	nextVariableID   int
+	nextVariableIDMu sync.Mutex
 )
 
 // TypeVariable represents an unbound type variable in the type system.
 type TypeVariable struct {
-	Id         int
+	ID         int
 	Instance   *Type
 	instanceMu sync.RWMutex
 }
 
 // NewTypeVariable constructs a new unique TypeVariable.
 func NewTypeVariable() *TypeVariable {
-	nextVariableIdMu.Lock()
-	id := nextVariableId
-	nextVariableId += 1
-	nextVariableIdMu.Unlock()
-	return &TypeVariable{Id: id}
+	nextVariableIDMu.Lock()
+	id := nextVariableID
+	nextVariableID++
+	nextVariableIDMu.Unlock()
+	return &TypeVariable{ID: id}
 }
 
 func (t *TypeVariable) Root() Type {
@@ -80,11 +80,10 @@ func (t *TypeVariable) Root() Type {
 	defer t.instanceMu.Unlock()
 	if t.Instance == nil {
 		return t
-	} else {
-		r := (*t.Instance).Root()
-		t.Instance = &r
-		return r
 	}
+	r := (*t.Instance).Root()
+	t.Instance = &r
+	return r
 }
 
 func (t *TypeVariable) String() string {
@@ -93,7 +92,7 @@ func (t *TypeVariable) String() string {
 	if t.Instance != nil {
 		return (*t.Instance).String()
 	}
-	return fmt.Sprintf("typeVar%d", t.Id)
+	return fmt.Sprintf("typeVar%d", t.ID)
 
 }
 
@@ -288,7 +287,7 @@ func Unify(a, b Type) error {
 	case *TypeVariable:
 		switch b2 := b1.(type) {
 		case *TypeVariable:
-			if a2.Id != b2.Id {
+			if a2.ID != b2.ID {
 				glog.V(2).Infof("Making %q type %q", a2, b1)
 				a2.SetInstance(&b1)
 				return nil
@@ -319,9 +318,16 @@ func Unify(a, b Type) error {
 			}
 			if a2.Name != b2.Name {
 				t := LeastUpperBound(a, b)
+				glog.Infof("Got LUB = %q", t)
 				if t == Error {
 					return &TypeError{a2, b2}
 				}
+				// if !Equals(t, a2) {
+				// 	a2.SetInstance(&t)
+				// }
+				// if !Equals(t, b2) {
+				// 	b2.SetInstance(&t)
+				// }
 				return nil
 			}
 			for i, argA := range a2.Args {
@@ -337,6 +343,7 @@ func Unify(a, b Type) error {
 
 func LeastUpperBound(a, b Type) Type {
 	a1, b1 := a.Root(), b.Root()
+	glog.V(2).Infof("Computing LUB(%q, %q)", a1, b1)
 
 	if Equals(a1, b1) {
 		return a1
@@ -357,6 +364,19 @@ func LeastUpperBound(a, b Type) Type {
 		(Equals(a1, String) && Equals(b1, Float)) ||
 		(Equals(b1, String) && Equals(a1, Float)) {
 		return String
+	}
+	if (Equals(a1, Pattern) && Equals(b1, Bool)) ||
+		(Equals(a1, Bool) && Equals(b1, Pattern)) {
+		return Bool
+	}
+	if (Equals(a1, Bool) && Equals(b1, Int)) ||
+		(Equals(a1, Int) && Equals(b1, Bool)) {
+		return Int
+	}
+	// A string can be a pattern, but not vice versa.
+	if (Equals(a1, String) && Equals(b1, Pattern)) ||
+		(Equals(a1, Pattern) && Equals(b1, String)) {
+		return Pattern
 	}
 	return Error
 }

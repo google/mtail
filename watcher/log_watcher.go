@@ -5,6 +5,7 @@ package watcher
 
 import (
 	"expvar"
+	"fmt"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -22,6 +23,8 @@ type LogWatcher struct {
 
 	events   []chan Event
 	eventsMu sync.RWMutex
+
+	runDone chan struct{} // Channel to respond to Close
 }
 
 // NewLogWatcher returns a new LogWatcher, or returns an error.
@@ -30,7 +33,11 @@ func NewLogWatcher() (*LogWatcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	w := &LogWatcher{Watcher: f, events: make([]chan Event, 0)}
+	w := &LogWatcher{
+		Watcher: f,
+		events:  make([]chan Event, 0),
+		runDone: make(chan struct{}),
+	}
 	go w.run()
 	return w, nil
 }
@@ -53,6 +60,7 @@ func (w *LogWatcher) sendEvent(e Event) {
 }
 
 func (w *LogWatcher) run() {
+	defer close(w.runDone)
 	// Suck out errors and dump them to the error log.
 	go func() {
 		for err := range w.Watcher.Errors {
@@ -61,14 +69,21 @@ func (w *LogWatcher) run() {
 		}
 	}()
 	for e := range w.Watcher.Events {
+		glog.V(2).Infof("watcher event %v", e)
 		eventCount.Add(e.Name, 1)
 		switch {
 		case e.Op&fsnotify.Create == fsnotify.Create:
 			w.sendEvent(CreateEvent{e.Name})
-		case e.Op&fsnotify.Write == fsnotify.Write:
+		case e.Op&fsnotify.Write == fsnotify.Write,
+			e.Op&fsnotify.Chmod == fsnotify.Chmod:
 			w.sendEvent(UpdateEvent{e.Name})
 		case e.Op&fsnotify.Remove == fsnotify.Remove:
 			w.sendEvent(DeleteEvent{e.Name})
+		case e.Op&fsnotify.Rename == fsnotify.Rename:
+			// Rename is only issued on the original file path; the new name receives a Create event
+			w.sendEvent(DeleteEvent{e.Name})
+		default:
+			panic(fmt.Sprintf("unknown op type %v", e.Op))
 		}
 	}
 	glog.Infof("Shutting down log watcher.")
@@ -78,4 +93,11 @@ func (w *LogWatcher) run() {
 		close(c)
 	}
 	w.eventsMu.Unlock()
+}
+
+// Close shuts down the LogWatcher.  It is safe to call this from multiple clients because
+func (w *LogWatcher) Close() (err error) {
+	err = w.Watcher.Close()
+	<-w.runDone
+	return
 }

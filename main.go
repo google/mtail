@@ -57,8 +57,10 @@ var (
 	address = flag.String("address", "", "Host or IP address on which to bind HTTP listener")
 	progs   = flag.String("progs", "", "Name of the directory containing mtail programs")
 
+	version = flag.Bool("version", false, "Print mtail version information.")
+
 	// Compiler behaviour flags
-	oneShot        = flag.Bool("one_shot", false, "Run the contents of the provided logs until EOF and exit.")
+	oneShot        = flag.Bool("one_shot", false, "Compile the programs, then read the contents of the provided logs from start until EOF, print the values of the metrics store and exit. This is a debugging flag only, not for production use.")
 	oneShotMetrics = flag.Bool("one_shot_metrics", false, "DEPRECATED: Dump metrics (to stdout) after one shot mode.")
 	compileOnly    = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
 	dumpAst        = flag.Bool("dump_ast", false, "Dump AST of programs after parse (to INFO log).")
@@ -67,7 +69,7 @@ var (
 
 	// Runtime behaviour flags
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
-	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of the local zone.")
+	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of UTC.")
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 
 	// Debugging flags
@@ -99,6 +101,10 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	if *version {
+		fmt.Println(buildInfo())
+		os.Exit(1)
+	}
 	glog.Info(buildInfo())
 	glog.Infof("Commandline: %q", os.Args)
 	loc, err := time.LoadLocation(*overrideTimezone)

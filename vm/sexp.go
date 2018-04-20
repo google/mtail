@@ -59,7 +59,9 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	switch v := n.(type) {
 
 	case *patternFragmentDefNode:
-		s.emit(fmt.Sprintf("const %q ", v.name))
+		s.emit("const ")
+		Walk(s, v.id)
+		s.emit(" ")
 
 	case *patternConstNode:
 		s.emit(fmt.Sprintf("%q", v.pattern))
@@ -169,6 +171,12 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 		s.emit("otherwise")
 	case *delNode:
 		s.emit("del")
+
+	case *convNode:
+		s.emit("conv")
+
+	case *errorNode:
+		s.emit(fmt.Sprintf("error %q", v.spelling))
 
 	case *indexedExprNode, *stmtlistNode, *exprlistNode, *condNode, *decoDefNode, *decoNode, *patternExprNode: // normal walk
 

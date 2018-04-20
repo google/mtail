@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/watcher"
 
@@ -32,6 +33,9 @@ func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, a
 }
 
 func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *watcher.LogWatcher, afero.Fs, string) {
+	if testing.Short() {
+		t.Skip("skipping real fs test in short mode")
+	}
 	dir, err := ioutil.TempDir("", prefix)
 	if err != nil {
 		t.Fatalf("can't create tempdir: %v", err)
@@ -102,17 +106,18 @@ func TestHandleLogUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	wg.Add(4)
 	_, err = f.WriteString("a\nb\nc\nd\n")
 	if err != nil {
 		t.Fatal(err)
 	}
 	f.Seek(0, 0) // afero in-memory files share the same offset
-	wg.Add(4)
 	w.InjectUpdate(logfile)
 
-	// ugh
 	wg.Wait()
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
 	<-done
 
 	expected := []*LogLine{
@@ -173,9 +178,10 @@ func TestHandleLogTruncate(t *testing.T) {
 	wg.Add(2)
 	w.InjectUpdate(logfile)
 
-	// ugh
 	wg.Wait()
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
 	<-done
 
 	expected := []*LogLine{
@@ -290,7 +296,7 @@ func TestReadPartial(t *testing.T) {
 		t.Errorf("error returned not EOF: %v", err)
 	}
 	f.WriteString("\n")
-	f.Seek(-1, os.SEEK_END)
+	f.Seek(-1, io.SeekEnd)
 	p.Reset()
 	p.WriteString("ohi")
 	err = ta.read(f, p)
@@ -333,8 +339,14 @@ func TestReadPipe(t *testing.T) {
 }
 
 func TestOpenRetries(t *testing.T) {
+	// Use the real filesystem because afero doesn't implement correct
+	// permissions checking on OpenFile in the memfile implementation.
 	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
-	defer os.RemoveAll(dir)
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Log(err)
+		}
+	}()
 
 	logfile := filepath.Join(dir, "log")
 	if _, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
@@ -354,21 +366,53 @@ func TestOpenRetries(t *testing.T) {
 	if err := ta.TailPath(logfile); err == nil {
 		t.Fatal("Expected a permission denied error here.")
 	}
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("remove")
 	if err := fs.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("openfile")
 	f, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(10 * time.Millisecond)
+	glog.Info("chmod")
 	if err := fs.Chmod(logfile, 0666); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("write string")
 	if _, err := f.WriteString("\n"); err != nil {
 		t.Fatal(err)
 	}
 	wg.Wait()
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
 	<-done
+}
+
+func TestTailerInitErrors(t *testing.T) {
+	o := Options{}
+	_, err := New(o)
+	if err == nil {
+		t.Error("expected error")
+	}
+	o.Lines = make(chan *LogLine)
+	_, err = New(o)
+	if err == nil {
+		t.Error("expected error")
+	}
+	o.FS = afero.NewMemMapFs()
+	_, err = New(o)
+	if err == nil {
+		t.Error("expected error")
+	}
+	o.W = watcher.NewFakeWatcher()
+	_, err = New(o)
+	if err != nil {
+		t.Errorf("unexpected error %s", err)
+	}
 }

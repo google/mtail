@@ -3,10 +3,9 @@
 # mtail - extract whitebox monitoring data from application logs for collection into a timeseries database
 
 [![GoDoc](https://godoc.org/github.com/google/mtail?status.png)](http://godoc.org/github.com/google/mtail)
-[![Build
-Status](https://travis-ci.org/google/mtail.svg)](https://travis-ci.org/google/mtail)
-[![Coverage
-Status](https://coveralls.io/repos/github/google/mtail/badge.svg?branch=master)](https://coveralls.io/github/google/mtail?branch=master)
+[![Travis Build Status](https://travis-ci.org/google/mtail.svg)](https://travis-ci.org/google/mtail)
+[![CircleCI Build Status](https://circleci.com/gh/google/mtail.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/google/mtail)
+[![Coverage Status](https://coveralls.io/repos/github/google/mtail/badge.svg?branch=master)](https://coveralls.io/github/google/mtail?branch=master)
 
 `mtail` is a tool for extracting metrics from application logs to be exported
 into a timeseries database or timeseries calculator for alerting and
@@ -34,12 +33,36 @@ to write mtail programs.
 
 Mailing list: https://groups.google.com/forum/#!forum/mtail-users
 
-### Installation
+## Installation
 
-`mtail` uses a Makefile. To build `mtail`, type `make` at the commandline. See
-the [Build instructions](docs/Building.md) for more details.
+There are various ways of installing **mtail**.
 
-### Deployment
+### Precompiled binaries
 
-`mtail` works best when paired with a timeseries-based calculator and alerting
-tool, like [Prometheus](http://prometheus.io).
+Precompiled binaries for released versions are available in the
+[Releases page](https://github.com/google/mtail/releases) on Github. Using the
+latest production release binary is the recommended way of installing **mtail**.
+
+Windows, OSX and Linux binaries are available.
+
+### Building from source
+
+To build **mtail** from the source code yourself you need to have a working
+Go environment with version 1.9 or greater installed.
+
+A `Dockerfile` is included in this repository for local development as an
+alternative to installing Go in your environment.
+
+See the [Build instructions](docs/Building.md) for more details.
+
+## Deployment
+
+`mtail` works best when it paired with a timeseries-based calculator and
+alerting tool, like [Prometheus](http://prometheus.io).
+
+> So what you do is you take the metrics from the log files and
+> you bring them down to the monitoring system?
+
+[It deals with the instrumentation so the engineers don't have
+to!](http://www.imdb.com/title/tt0151804/quotes/qt0386890)  It has the
+extraction skills!  It is good at dealing with log files!!

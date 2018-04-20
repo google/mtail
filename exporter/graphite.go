@@ -27,7 +27,7 @@ func metricToGraphite(hostname string, m *metrics.Metric, l *metrics.LabelSet) s
 	return fmt.Sprintf("%s%s.%s %v %v\n",
 		*graphitePrefix,
 		m.Program,
-		formatLabels(m.Name, l.Labels, ".", "."),
+		formatLabels(m.Name, l.Labels, ".", ".", "_"),
 		l.Datum.ValueString(),
 		l.Datum.TimeString())
 }

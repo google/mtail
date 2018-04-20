@@ -1,4 +1,5 @@
 language: go
+sudo: false
 
 # Must generate the parser before installing deps or go get will error out on
 # undefined lexer tokens.
@@ -6,28 +7,21 @@ before_install:
  - make vm/parser.go
 
 # Default dependency installation command, which is disabled when Makefile
-# detected.  Also install three tools for measuring coverage and sending to
-# coveralls.io.
+# detected.
 install:
- - travis_retry make install_coverage_deps
+ - travis_retry make install_deps
 
 # Run all tests, under race detector.
-script: time make testrace
+script: make && go test
 
-# If the full suite passes, run again to collect coverage, merge all of the
-# packages reports, and send to coveralls.io.
-# Run the benchmarks, if applicable.
-after_success:
- - make coverage
- - goveralls -coverprofile=gover.coverprofile -service=travis-ci
- - make bench
-
-# Run tests at these Go versions.
+# Run tests at these Go versions.  YAML always attempts to autoconvert
+# numerics, which famously turns "1.10" into "1.1", so quote all our versions
+# here as strings.
 go:
-  - tip
-  - 1.9
-  - 1.8
-  - 1.7
+  - "tip"
+  - "1.10"
+  - "1.9"
+  - "1.8"
 
 # GOMAXPROCS=1 forces scheduling race bugs.
 env:
@@ -42,6 +36,15 @@ matrix:
   allow_failures:
     - go: tip
 
+before_deploy:
+  - make crossbuild
 
-# Not using sudo, can use containers.
-sudo: false
+deploy:
+  provider: releases
+  skip_cleanup: true
+  file_glob: true
+  file:
+    - build/*
+  on:
+    tags: true
+

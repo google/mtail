@@ -31,75 +31,70 @@ import (
 )
 
 var (
+	// LineCount counts the number of lines read by the program loader from the input channel.
+	LineCount = expvar.NewInt("line_count")
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
 	// ProgLoadErrors counts the number of program load errors.
 	ProgLoadErrors = expvar.NewMap("prog_load_errors")
 )
 
-var (
-	// LineCount counts the number of lines read by the virtual machine engine from the input channel.
-	LineCount = expvar.NewInt("line_count")
-)
-
 const (
 	fileExt = ".mtail"
 )
 
-// LoadProgs loads all programs in a directory and starts watching the
+// LoadAllPrograms loads all programs in a directory and starts watching the
 // directory for filesystem changes.  Any compile errors are stored for later retrieival.
 // This function returns an error if an internal error occurs.
-func (l *Loader) LoadProgs(programPath string) error {
-	s, err := os.Stat(programPath)
+func (l *Loader) LoadAllPrograms() error {
+	s, err := os.Stat(l.programPath)
 	if err != nil {
-		return errors.Wrapf(err, "failed to stat %q", programPath)
+		return errors.Wrapf(err, "failed to stat %q", l.programPath)
 	}
-	if err = l.w.Add(programPath); err != nil {
-		glog.Infof("Failed to add watch on %q but continuing: %s", programPath, err)
+	if err = l.w.Add(l.programPath); err != nil {
+		glog.Infof("Failed to add watch on %q but continuing: %s", l.programPath, err)
 	}
 	switch {
 	case s.IsDir():
-		fis, err := ioutil.ReadDir(programPath)
-		if err != nil {
-			return errors.Wrapf(err, "Failed to list programs in %q", programPath)
+		fis, rerr := ioutil.ReadDir(l.programPath)
+		if rerr != nil {
+			return errors.Wrapf(rerr, "Failed to list programs in %q", l.programPath)
 		}
 
 		for _, fi := range fis {
 			if fi.IsDir() {
 				continue
 			}
-			err = l.LoadProg(path.Join(programPath, fi.Name()))
+			err = l.LoadProgram(path.Join(l.programPath, fi.Name()))
 			if err != nil {
 				if l.errorsAbort {
 					return err
-				} else {
-					glog.Warning(err)
 				}
+				glog.Warning(err)
 			}
 		}
 	default:
-		err = l.LoadProg(programPath)
+		err = l.LoadProgram(l.programPath)
 		if err != nil {
 			if l.errorsAbort {
 				return err
-			} else {
-				glog.Warning(err)
 			}
+			glog.Warning(err)
 		}
 	}
 	return nil
 }
 
-// LoadProg loads or reloads a program from the path specified.  The name of
+// LoadProgram loads or reloads a program from the path specified.  The name of
 // the program is the basename of the file.
-func (l *Loader) LoadProg(programPath string) error {
+func (l *Loader) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)
 	if strings.HasPrefix(name, ".") {
-		glog.Infof("Skipping %s because it is a hidden file.", programPath)
+		glog.V(2).Infof("Skipping %s because it is a hidden file.", programPath)
 		return nil
 	}
 	if filepath.Ext(name) != fileExt {
-		glog.Infof("Skipping %s due to file extension.", programPath)
+		glog.V(2).Infof("Skipping %s due to file extension.", programPath)
 		return nil
 	}
 	f, err := l.fs.Open(programPath)
@@ -114,9 +109,8 @@ func (l *Loader) LoadProg(programPath string) error {
 	if l.programErrors[name] != nil {
 		if l.errorsAbort {
 			return l.programErrors[name]
-		} else {
-			glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
 		}
+		glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
 	}
 	return nil
 }
@@ -232,7 +226,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 }
 
 func nameToCode(name string) uint32 {
-	return uint32(uint32(name[0])<<24 | uint32(name[1])<<16 | uint32(name[2])<<8 | uint32(name[3]))
+	return uint32(name[0])<<24 | uint32(name[1])<<16 | uint32(name[2])<<8 | uint32(name[3])
 }
 
 // Loader handles the lifecycle of programs and virtual machines, by watching
@@ -244,22 +238,24 @@ type Loader struct {
 	fs afero.Fs        // filesystem interface
 	ms *metrics.Store  // pointer to store to pass to compiler
 
+	programPath string // Path that contains mtail programs.
+
 	handles  map[string]*vmHandle // map of program names to virtual machines
 	handleMu sync.RWMutex         // guards accesses to handles
 
 	programErrors  map[string]error // errors from the last compile attempt of the program
 	programErrorMu sync.RWMutex     // guards access to programErrors
 
-	watcherDone chan struct{} // Synchronise shutdown of the watcher and lines handlers.
+	watcherDone chan struct{} // Synchronise shutdown of the watcher processEvents goroutine
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
+	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
 	compileOnly          bool           // Only compile programs and report errors, do not load VMs.
 	errorsAbort          bool           // Compiler errors abort the loader.
 	dumpAst              bool           // print the AST after parse
 	dumpAstTypes         bool           // print the AST after type check
 	dumpBytecode         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
 	syslogUseCurrentYear bool           // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
-	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
 	omitMetricSource     bool
 }
 
@@ -269,16 +265,18 @@ type LoaderOptions struct {
 	Store *metrics.Store
 	Lines <-chan *tailer.LogLine
 
+	ProgramPath string // Path containing mtail programs
+
 	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 
+	OverrideLocation     *time.Location // if not nil, overrides the timezone in strptime().
 	CompileOnly          bool           // Compile, don't start execution.
 	ErrorsAbort          bool           // Compiler errors abort the loader.
 	DumpAst              bool           // print the AST after type check
 	DumpAstTypes         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
 	DumpBytecode         bool           // Instructs the loader to dump the program bytecode after compilation.
 	SyslogUseCurrentYear bool           // If true, override empty year with the current in strptime().
-	OverrideLocation     *time.Location // if not nil, overrides the timezone in strptime().
 	OmitMetricSource     bool           // Don't put the source in the metric when added to the Store.
 }
 
@@ -306,6 +304,7 @@ func NewLoader(o LoaderOptions) (*Loader, error) {
 		w:                    w,
 		ms:                   o.Store,
 		fs:                   fs,
+		programPath:          o.ProgramPath,
 		handles:              make(map[string]*vmHandle),
 		programErrors:        make(map[string]error),
 		watcherDone:          make(chan struct{}),
@@ -335,24 +334,29 @@ type vmHandle struct {
 // filesystem watcher.
 func (l *Loader) processEvents(events <-chan watcher.Event) {
 	defer close(l.watcherDone)
+
 	for event := range events {
 		switch event := event.(type) {
 		case watcher.DeleteEvent:
 			l.UnloadProgram(event.Pathname)
 		case watcher.UpdateEvent:
-			l.LoadProg(event.Pathname)
+			l.LoadProgram(event.Pathname)
 		case watcher.CreateEvent:
 			l.w.Add(event.Pathname)
 		default:
-			glog.V(1).Infof("Unexected event type %+#v", event)
+			glog.V(1).Infof("Unexpected event type %+#v", event)
 		}
 	}
 }
 
 // processLines provides fanout of the input log lines to each virtual machine
 // running.  Upon close of the incoming lines channel, it also communicates
-// shutdown to the target VMs via channel close.
+// shutdown to the target VMs via channel close.  At termination it signals via
+// VMsDone that the goroutine has finished, and thus all VMs are terminated.
 func (l *Loader) processLines(lines <-chan *tailer.LogLine) {
+	defer close(l.VMsDone)
+
+	// Copy all input LogLines to each VM's LogLine input channel.
 	for logline := range lines {
 		LineCount.Add(1)
 		l.handleMu.RLock()
@@ -361,27 +365,28 @@ func (l *Loader) processLines(lines <-chan *tailer.LogLine) {
 		}
 		l.handleMu.RUnlock()
 	}
+	// When lines is closed, the tailer has shut down which signals that it's
+	// time to shut down the program loader.
 	glog.Info("Shutting down loader.")
-	err := l.w.Close()
-	if err != nil {
+	if err := l.w.Close(); err != nil {
 		glog.Info("error closing watcher: %s", err)
 	}
 	<-l.watcherDone
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
 	for prog := range l.handles {
+		// Close the per-VM lines channel, and wait for it to signal it's done.
 		close(l.handles[prog].lines)
 		<-l.handles[prog].done
 		delete(l.handles, prog)
 	}
-	close(l.VMsDone)
 }
 
 // UnloadProgram removes the named program from the watcher to prevent future
 // updates, and terminates any currently running VM goroutine.
 func (l *Loader) UnloadProgram(pathname string) {
 	if err := l.w.Remove(pathname); err != nil {
-		glog.Infof("Remove watch on %s failed: %s", pathname, err)
+		glog.V(2).Infof("Remove watch on %s failed: %s", pathname, err)
 	}
 	name := filepath.Base(pathname)
 	l.handleMu.Lock()

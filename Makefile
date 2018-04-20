@@ -1,81 +1,42 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
+# Set the timeout for tests run under the race detector.
+timeout := 60s
 ifeq ($(TRAVIS),true)
 timeout := 5m
-else
-timeout := 60s
+endif
+ifeq ($(CIRCLECI),true)
+timeout := 5m
 endif
 
-GOFILES=\
-	exporter/collectd.go\
-	exporter/export.go\
-	exporter/graphite.go\
-	exporter/json.go\
-	exporter/prometheus.go\
-	exporter/statsd.go\
-	exporter/varz.go\
-	main.go\
-	metrics/datum/datum.go\
-	metrics/datum/int.go\
-	metrics/metric.go\
-	metrics/store.go\
-	mtail/mtail.go\
-	tailer/tail.go\
-	vm/ast.go\
-	vm/checker.go\
-	vm/compiler.go\
-	vm/driver.go\
-	vm/lexer.go\
-	vm/loader.go\
-	vm/parser.go\
-	vm/symtab.go\
-	vm/unparser.go\
-	vm/vm.go\
-	watcher/fake_watcher.go\
-	watcher/log_watcher.go\
-	watcher/watcher.go\
+GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
-GOTESTFILES=\
-	ex_test.go\
-	bench_test.go\
-	exporter/export_test.go\
-	exporter/json_test.go\
-	exporter/prometheus_test.go\
-	exporter/varz_test.go\
-	metrics/datum/int_test.go\
-	metrics/metric_test.go\
-	metrics/store_test.go\
-	mtail/mtail_test.go\
-	tailer/tail_test.go\
-	testdata/reader.go\
-	testdata/reader_test.go\
-	vm/checker_test.go\
-	vm/codegen_test.go\
-	vm/lexer_test.go\
-	vm/parser_test.go\
-	vm/symtab_test.go\
-	vm/types_test.go\
-	vm/vm_test.go\
-	watcher/fake_watcher_test.go\
-	watcher/log_watcher_test.go\
-
+GOTESTFILES=$(shell find . -name '*_test.go')
 
 CLEANFILES+=\
 	vm/parser.go\
 	vm/y.output\
 
+
 all: mtail
 
-.PHONY: clean
-clean:
+.PHONY: clean covclean crossclean
+clean: covclean crossclean
 	rm -f $(CLEANFILES) .*dep-stamp
+covclean:
+	rm -f *.coverprofile coverage.html
+crossclean:
+	rm -rf build
 
 version := $(shell git describe --tags)
 revision := $(shell git rev-parse HEAD)
+release := $(shell git describe --tags | cut -d"-" -f 1,2)
+
+GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 
 install mtail: $(GOFILES) .dep-stamp
-	go install -ldflags "-X main.Version=${version} -X main.Revision=${revision}"
+	go install -ldflags $(GO_LDFLAGS)
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
 	go generate -x ./vm
@@ -83,25 +44,40 @@ vm/parser.go: vm/parser.y .gen-dep-stamp
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
 
-.PHONY: test check 
-check test: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 10s ./... ./testdata
+.PHONY: install_crossbuild
+install_crossbuild: .crossbuild-dep-stamp
+
+.crossbuild-dep-stamp:
+	go get github.com/mitchellh/gox
+	touch $@
+
+GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
+#GOX_OSARCH := ""
+
+.PHONY: crossbuild
+crossbuild: install_crossbuild $(GOFILES) .dep-stamp
+	mkdir -p build
+	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS)
+
+.PHONY: test check
+check test: $(GOFILES) $(GOTESTFILES)
+	go test -timeout 10s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout ${timeout} -race ./... ./testdata
+testrace: $(GOFILES) $(GOTESTFILES)
+	go test -timeout ${timeout} -race -v ./...
 
 .PHONY: smoke
-smoke: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -v -timeout 1s -test.short ./... ./testdata
+smoke: $(GOFILES) $(GOTESTFILES)
+	go test -timeout 1s -test.short ./...
 
 .PHONY: ex_test
 ex_test: ex_test.go testdata/* examples/*
-	go test -run TestExamplePrograms -v --logtostderr
+	go test -run TestExamplePrograms --logtostderr
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -bench=. -timeout=60s -run=XXX ./... ./testdata
+	go test -bench=. -timeout=60s -run=XXX ./...
 
 .PHONY: bench_cpu
 bench_cpu:
@@ -112,13 +88,15 @@ bench_mem:
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	go test -bench=. -run=XXX --record_benchmark ./... ./testdata
+	go test -bench=. -run=XXX --record_benchmark ./...
 
-.PHONY: coverage
+PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
+
+PHONY: coverage
 coverage: gover.coverprofile
 gover.coverprofile: $(GOFILES) $(GOTESTFILES) .dep-stamp
-	for package in exporter metrics mtail tailer vm watcher; do\
-		go test -covermode=count -coverprofile=$$package.coverprofile ./$$package;\
+	for package in $(PACKAGES); do\
+		go test -covermode=count -coverprofile=$$(echo $$package | tr './' '__').coverprofile ./$$package;\
     done
 	gover
 
@@ -134,11 +112,11 @@ testall: testrace bench
 .PHONY: install_deps
 install_deps: .dep-stamp
 
-IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... ./testdata | sort | uniq | grep -v mtail)
-TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... ./testdata | sort | uniq | grep -v mtail)
+IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
+TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
 
-.dep-stamp:
-	# Install all dependencies, ensuring they're updated
+.dep-stamp: vm/parser.go
+	@echo "Install all dependencies, ensuring they're updated"
 	go get -u -v $(IMPORTS)
 	go get -u -v $(TESTIMPORTS)
 	touch $@
@@ -151,10 +129,25 @@ install_gen_deps: .gen-dep-stamp
 	touch $@
 
 .PHONY: install_coverage_deps
-install_coverage_deps: .cov-dep-stamp
+install_coverage_deps: .cov-dep-stamp vm/parser.go
 
 .cov-dep-stamp: install_deps
 	go get golang.org/x/tools/cmd/cover
-	go get github.com/modocache/gover
+	go get github.com/sozorogami/gover
 	go get github.com/mattn/goveralls
 	touch $@
+
+ifeq ($(CIRCLECI),true)
+  COVERALLS_SERVICE := circle-ci
+endif
+ifeq ($(TRAVIS),true)
+  COVERALLS_SERVICE := travis-ci
+endif
+
+upload_to_coveralls: gover.coverprofile
+	goveralls -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE)
+
+# Append the bin subdirs of every element of the GOPATH list to PATH, so we can find goyacc.
+empty :=
+space := $(empty) $(empty)
+export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPATH))))

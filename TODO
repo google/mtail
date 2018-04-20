@@ -7,41 +7,10 @@ refactor fs and notify into single interface
 
 no trailing newline in parser test, requires changes to expr stmt
 
-parse tree/ast testing, s-expressions to render expected?
+parse tree/ast testing? - expected AST as result from parse/check instead of
+    merely getting a result
 
 mapping between progs and logs to reduce wasted processing
-
-~ and !~ 
-
-define a capref in the same expression it's used: e.g.
-  /(?<x>.*)/ && $x > 0
-
-conversion in vm.compare() crashes on $var == "string" when $var is
-    float (logical.mtail, input line "12.8") -- 
-
-codegen for conditional and jmp is weird for 2-deep trees
-
-Using a const pattern fragment as the first or only in a pattern expr is a
-    parse error.
-	{"concat expr 1", `
-/bar/ + X {
-}`},
-	{"concat expr 2", `
-X {
-}`},
-	// 	{"match expression 3", `
-	// $foo =~ X {
-	// }
-	// `},
-
-Match against a variable requires simplifying binaryExpr grammar to elim the
-    concat_expr branch, fixing the id_expr problem above
-	{"match expr 2", `
-/(?P<foo>.{6}) (?P<bar>.*)/ {
-  $foo =~ $bar {
-  }
-}`},
-
 
 bytecode like
 [{push 1} {push 0} {cmp 1} {jm 6} {push 0} {jmp 7} {push 1} {jnm 13}
@@ -56,8 +25,16 @@ and we need to worry about the jump table too
 
 
 count stack size and preallocate stack
+-> counts of push/pop per instruction
+-> test to keep p/p counts updated
 
 
-Use capture group references to feed back to declaring regular expression,
-    noting unused caprefs,
-    possibly flipping back to noncapturing (and renumbering the caprefs?)
+Run and upload benchmarks to https://perfdata.golang.org/ from circleci
+
+
+# Won't do
+
+X Use capture group references to feed back to declaring regular expression,
+X     noting unused caprefs,
+X     possibly flipping back to noncapturing (and renumbering the caprefs?)
+X -> unlikely to implement, probably won't impact regexp speed

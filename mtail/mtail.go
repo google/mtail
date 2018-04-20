@@ -48,7 +48,7 @@ func (m *MtailServer) StartTailing() error {
 	var err error
 	m.t, err = tailer.New(o)
 	if err != nil {
-		return errors.Wrap(err, "couldn't create a log tailer")
+		return errors.Wrap(err, "tailer.New")
 	}
 
 	for _, pattern := range m.o.LogPathPatterns {
@@ -70,11 +70,12 @@ func (m *MtailServer) StartTailing() error {
 	return nil
 }
 
-// InitLoader constructs a new program loader and performs the inital load of program files in the program directory.
+// InitLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *MtailServer) InitLoader() error {
 	o := vm.LoaderOptions{
 		Store:                m.store,
 		Lines:                m.lines,
+		ProgramPath:          m.o.Progs,
 		CompileOnly:          m.o.CompileOnly,
 		ErrorsAbort:          m.o.CompileOnly || m.o.OneShot,
 		DumpAst:              m.o.DumpAst,
@@ -92,7 +93,7 @@ func (m *MtailServer) InitLoader() error {
 		return err
 	}
 	if m.o.Progs != "" {
-		errs := m.l.LoadProgs(m.o.Progs)
+		errs := m.l.LoadAllPrograms()
 		if errs != nil {
 			return errors.Errorf("Compile encountered errors:\n%s", errs)
 		}
@@ -143,33 +144,42 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Options contains all the parameters necessary for constructing a new MtailServer.
 type Options struct {
+	BindAddress          string
 	Progs                string
+	BuildInfo            string
 	LogPathPatterns      []string
 	LogFds               []int
-	BindAddress          string
 	OneShot              bool
 	CompileOnly          bool
 	DumpAst              bool
 	DumpAstTypes         bool
 	DumpBytecode         bool
 	SyslogUseCurrentYear bool
-	OverrideLocation     *time.Location
 	OmitMetricSource     bool
 	OmitProgLabel        bool
 
-	BuildInfo string
-
-	Store *metrics.Store
+	OverrideLocation *time.Location
+	Store            *metrics.Store
 
 	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
 	FS afero.Fs        // Not required, will use afero.OsFs if zero.
 }
 
-// New creates an MtailServer from the supplied Options.
+// New creates a MtailServer from the supplied Options.
 func New(o Options) (*MtailServer, error) {
 	store := o.Store
 	if store == nil {
 		store = metrics.NewStore()
+	}
+	if o.FS == nil {
+		o.FS = &afero.OsFs{}
+	}
+	if o.W == nil {
+		w, err := watcher.NewLogWatcher()
+		if err != nil {
+			return nil, err
+		}
+		o.W = w
 	}
 	m := &MtailServer{
 		lines:   make(chan *tailer.LogLine),
@@ -240,26 +250,35 @@ func (m *MtailServer) WaitForShutdown() {
 	case <-n:
 		glog.Info("Received SIGTERM, exiting...")
 	case <-m.webquit:
-		glog.Info("Received Quit from UI, exiting...")
+		glog.Info("Received Quit from HTTP, exiting...")
 	}
-	m.Close()
+	if err := m.Close(); err != nil {
+		glog.Warning(err)
+	}
 }
 
 // Close handles the graceful shutdown of this mtail instance, ensuring that it only occurs once.
 func (m *MtailServer) Close() error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
+		// If we have a tailer (i.e. not in test) then signal the tailer to
+		// shut down, which will cause the watcher to shut down and for the
+		// lines channel to close, causing the loader to start shutdown.
 		if m.t != nil {
 			err := m.t.Close()
 			if err != nil {
 				glog.Infof("tailer close failed: %s", err)
 			}
 		} else {
-			glog.Info("No tailer, closing lines channel.")
+			// Without a tailer, MtailServer has ownership of the lines channel.
+			glog.V(2).Info("No tailer, closing lines channel directly.")
 			close(m.lines)
 		}
+		// If we have a loader, wait for it to signal that it has completed shutdown.
 		if m.l != nil {
 			<-m.l.VMsDone
+		} else {
+			glog.V(2).Info("No loader, so not waiting for loader shutdown.")
 		}
 		glog.Info("All done.")
 	})

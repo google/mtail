@@ -259,6 +259,15 @@ counter foo by a,b
 }
 `},
 
+	{"concat expr 1", `
+const X /foo/
+/bar/ + X {
+}`},
+	{"concat expr 2", `
+const X /foo/
+X {
+}`},
+
 	{"match expression 1", `
 $foo =~ /bar/ {
 }
@@ -267,6 +276,20 @@ $foo !~ /bar/ {
 `},
 	{"match expression 2", `
 $foo =~ /bar/ + X {
+}`},
+	{"match expression 3", `
+const X /foo/
+$foo =~ X {
+}`},
+
+	{"capref used in def", `
+/(?P<x>.*)/ && $x > 0 {
+}`},
+
+	{"match expr 4", `
+/(?P<foo>.{6}) (?P<bar>.*)/ {
+  $foo =~ $bar {
+  }
 }`},
 }
 
@@ -285,6 +308,9 @@ func TestParserRoundTrip(t *testing.T) {
 				}
 				t.Fatal()
 			}
+
+			s := Sexp{}
+			t.Log("AST:\n" + s.Dump(p.root))
 
 			u := Unparser{}
 			output := u.Unparse(p.root)
@@ -325,7 +351,7 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	{"unterminated regex",
 		"/foo\n",
 		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\"",
-			"unterminated regex:1:2-4: syntax error"}},
+			"unterminated regex:1:2-4: syntax error: unexpected end of file"}},
 
 	{"unterminated string",
 		" \"foo }\n",
@@ -334,18 +360,18 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	{"unterminated const regex",
 		"const X /(?P<foo>",
 		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",
-			"unterminated const regex:1:10-17: syntax error"}},
+			"unterminated const regex:1:10-17: syntax error: unexpected end of file"}},
 
-	{"index of non-terminal",
+	{"index of non-terminal 1",
 		`// {
 	foo++[$1]++
 	}`,
-		[]string{"index of non-terminal:2:7: syntax error"}},
-	{"index of non-terminal",
+		[]string{"index of non-terminal 1:2:7: syntax error: unexpected LSQUARE, expecting NL"}},
+	{"index of non-terminal 2",
 		`// {
 	0[$1]++
 	}`,
-		[]string{"index of non-terminal:2:3: syntax error"}},
+		[]string{"index of non-terminal 2:2:3: syntax error: unexpected LSQUARE, expecting NL"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
@@ -364,4 +390,60 @@ func TestParseInvalidPrograms(t *testing.T) {
 			}
 		})
 	}
+}
+
+var parsePositionTests = []struct {
+	name      string
+	program   string
+	positions []*position
+}{
+	{
+		"empty",
+		"",
+		nil,
+	},
+	{
+		"variable",
+		`counter foo`,
+		[]*position{{"variable", 0, 8, 10}},
+	},
+	{
+		"pattern",
+		`const ID /foo/`,
+		[]*position{{"pattern", 0, 6, 13}},
+	},
+}
+
+func TestParsePositionTests(t *testing.T) {
+	for _, tc := range parsePositionTests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ast, err := Parse(tc.name, strings.NewReader(tc.program))
+			if err != nil {
+				t.Fatal(err)
+			}
+			p := &positionCollector{}
+			Walk(p, ast)
+			diff := go_cmp.Diff(tc.positions, p.positions, go_cmp.AllowUnexported(position{}))
+			if diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+}
+
+type positionCollector struct {
+	positions []*position
+}
+
+func (p *positionCollector) VisitBefore(node astNode) Visitor {
+	switch n := node.(type) {
+	case *declNode, *patternConstNode:
+		p.positions = append(p.positions, n.Pos())
+	}
+	return p
+}
+
+func (p *positionCollector) VisitAfter(node astNode) {
 }

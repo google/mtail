@@ -79,9 +79,9 @@ func (w *FakeWatcher) sendEvent(e Event) {
 func (w *FakeWatcher) InjectCreate(name string) {
 	dirname := path.Dir(name)
 	w.watchesMu.RLock()
-	dir_watched := w.watches[dirname]
+	dirWatched := w.watches[dirname]
 	w.watchesMu.RUnlock()
-	if !dir_watched {
+	if !dirWatched {
 		glog.Warningf("not watching %s to see %s", dirname, name)
 		return
 	}

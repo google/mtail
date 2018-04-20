@@ -5,6 +5,7 @@ package mtail
 
 import (
 	"errors"
+	"expvar"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
 )
@@ -36,14 +38,19 @@ func removeTempDir(t *testing.T, workdir string) {
 }
 
 func startMtailServer(t *testing.T, logPathnames []string, progPathname string) *MtailServer {
-	o := Options{LogPathPatterns: logPathnames}
+	o := Options{
+		LogPathPatterns: logPathnames,
+		Progs:           progPathname,
+	}
 	m, err := New(o)
 	if err != nil {
 		t.Fatalf("couldn't create mtail: %s", err)
 	}
 
 	if progPathname != "" {
-		m.l.LoadProgs(progPathname)
+		if lerr := m.l.LoadAllPrograms(); lerr != nil {
+			t.Errorf("Couldn't LoadProgs: %s", lerr)
+		}
 	} else {
 		if pErr := m.l.CompileAndRun("test", strings.NewReader(testProgram)); pErr != nil {
 			t.Errorf("Couldn't compile program: %s", pErr)
@@ -52,19 +59,20 @@ func startMtailServer(t *testing.T, logPathnames []string, progPathname string) 
 
 	vm.LineCount.Set(0)
 	tailer.LogCount.Set(0)
+	tailer.LogRotations.Init()
 
-	m.StartTailing()
+	if err := m.StartTailing(); err != nil {
+		t.Errorf("StartTailing failed: %s", err)
+	}
 	return m
 }
 
 func doOrTimeout(do func() (bool, error), deadline, interval time.Duration) (bool, error) {
-	timeout := time.After(deadline)
-	ticker := time.Tick(interval)
 	for {
 		select {
-		case <-timeout:
+		case <-time.After(deadline):
 			return false, errors.New("timeout")
-		case <-ticker:
+		case <-time.Tick(interval):
 			ok, err := do()
 			if err != nil {
 				return false, err
@@ -128,54 +136,68 @@ func TestHandleLogRotation(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not touch log file: %s", err)
 	}
-	defer logFile.Close()
 	// Create a logger
 	hup := make(chan bool, 1)
 	pathnames := []string{logFilepath}
 	m := startMtailServer(t, pathnames, "")
-	defer m.Close()
-
-	go func() {
-		for {
-			select {
-			case <-time.After(5 * 100 * time.Millisecond):
-				err = os.Rename(logFilepath, logFilepath+".1")
-				if err != nil {
-					t.Errorf("could not rename log file: %s", err)
-				}
-				hup <- true
-				return
-			}
+	defer func() {
+		if cerr := m.Close(); cerr != nil {
+			t.Fatal(cerr)
 		}
 	}()
+
+	// Rotate the log file after 500ms.
+	go func() {
+		<-time.After(5 * 100 * time.Millisecond)
+		err = os.Rename(logFilepath, logFilepath+".1")
+		if err != nil {
+			t.Errorf("could not rename log file: %s", err)
+		}
+		// "sighup" the "logging process"
+		hup <- true
+	}()
 	i := 0
-	running := true
-	for running {
+Loop:
+	for {
 		select {
 		case <-hup:
-			// touch log file
+			// Close to flush contents
+			if err = logFile.Close(); err != nil {
+				t.Fatal(err)
+			}
+			// Received a HUP so reopen the logfile.
 			logFile, err = os.OpenFile(logFilepath, os.O_RDWR|os.O_CREATE, 0)
 			if err != nil {
 				t.Errorf("could not create rotated log file: %s", err)
 			}
-			defer logFile.Close()
-			time.Sleep(1 * time.Millisecond)
 			err = logFile.Chmod(0666)
 			if err != nil {
 				t.Errorf("could not chmod log file to read: %s", err)
 			}
-		default:
-			logFile.WriteString(fmt.Sprintf("%d\n", i))
-			time.Sleep(100 * time.Millisecond)
-			i++
+		case <-time.Tick(100 * time.Millisecond):
 			if i >= 10 {
-				running = false
+				break Loop
 			}
+			if _, werr := logFile.WriteString(fmt.Sprintf("%d\n", i)); werr != nil {
+				t.Fatal(werr)
+			}
+			i++
 		}
 	}
+	// Close to flush contents.
+	if err = logFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = m.Close(); err != nil {
+		t.Fatal(err)
+	}
 	expected := "10"
-	if vm.LineCount.String() != expected {
-		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
+	if diff := cmp.Diff(expected, expvar.Get("line_count").String()); diff != "" {
+		t.Errorf("line_count metric didn't match\n%s", diff)
+	}
+	diff := cmp.Diff("1", expvar.Get("log_rotations_total").(*expvar.Map).Get(logFilepath).String())
+	if diff != "" {
+		t.Errorf("log_rotations_total metric didn't match\n%s", diff)
 	}
 }
 
@@ -469,7 +491,7 @@ func TestHandleLogDeletes(t *testing.T) {
 	m := startMtailServer(t, pathnames, "")
 	defer m.Close()
 
-	if err := os.Remove(logFilepath); err != nil {
+	if err = os.Remove(logFilepath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -490,5 +512,60 @@ func TestHandleLogDeletes(t *testing.T) {
 	}
 	if !ok {
 		t.Errorf("Log count not decreased\n\texpected: %s\n\treceived %s", expected, tailer.LogCount.String())
+	}
+}
+
+func TestHandleLogTruncate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
+
+	logFilepath := path.Join(workdir, "log")
+	logFile, err := os.Create(logFilepath)
+	if err != nil {
+		t.Errorf("could not touch log file: %s", err)
+	}
+	defer logFile.Close()
+	pathnames := []string{logFilepath}
+	m := startMtailServer(t, pathnames, "")
+	defer func() {
+		if cerr := m.Close(); cerr != nil {
+			t.Fatal(cerr)
+		}
+	}()
+
+	logFile.WriteString("x\n")
+	glog.Info("Write")
+	check := func() (bool, error) {
+		if expvar.Get("line_count").String() != "1" {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err := doOrTimeout(check, 10*time.Second, 10*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Errorf("log line count received %s, expected 1", tailer.LogCount.String())
+	}
+	logFile.Truncate(0)
+	glog.Infof("Truncate")
+	logFile.WriteString("x\n")
+	glog.Info("Write")
+	check2 := func() (bool, error) {
+		if expvar.Get("line_count").String() != "2" {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err = doOrTimeout(check2, 10*time.Second, 10*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Errorf("log line count received %s, expected 2", tailer.LogCount.String())
 	}
 }
