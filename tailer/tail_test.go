@@ -135,9 +135,12 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	ta, lines, w, fs := makeTestTail(t)
-
-	dir := "/"
+	ta, lines, w, fs, dir := makeTestTailReal(t, "truncate")
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Log(err)
+		}
+	}()
 
 	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
@@ -160,23 +163,23 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	wg.Add(3)
 	if _, err = f.WriteString("a\nb\nc\n"); err != nil {
 		t.Fatal(err)
 	}
-	wg.Add(3)
-	w.InjectUpdate(logfile)
+	time.Sleep(10 * time.Millisecond)
 	wg.Wait()
 
 	if err = f.Truncate(0); err != nil {
 		t.Fatal(err)
 	}
-	w.InjectUpdate(logfile)
+	time.Sleep(10 * time.Millisecond)
 
+	wg.Add(2)
 	if _, err = f.WriteString("d\ne\n"); err != nil {
 		t.Fatal(err)
 	}
-	wg.Add(2)
-	w.InjectUpdate(logfile)
+	time.Sleep(10 * time.Millisecond)
 
 	wg.Wait()
 	if err := w.Close(); err != nil {
