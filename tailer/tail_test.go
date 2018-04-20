@@ -173,6 +173,8 @@ func TestHandleLogTruncate(t *testing.T) {
 	if err = f.Truncate(0); err != nil {
 		t.Fatal(err)
 	}
+	// "File.Truncate" does not change the file offset.
+	f.Seek(0, 0)
 	time.Sleep(10 * time.Millisecond)
 
 	wg.Add(2)
