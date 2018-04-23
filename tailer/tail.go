@@ -316,7 +316,7 @@ func (t *Tailer) handleLogDelete(pathname string) {
 		glog.V(2).Infof("Delete without fd for %s", pathname)
 		return
 	}
-	// flush the old log, as pathname is stlil an index into t.files with the old inode still open
+	// flush the old log, as pathname is still an index into t.files with the old inode still open
 	t.handleLogUpdate(pathname)
 	if err := fd.Close(); err != nil {
 		glog.Warning(err)
