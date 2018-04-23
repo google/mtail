@@ -142,20 +142,36 @@ workflows:
           <<: *tag-filter
       - build-go1.10-2:
           <<: *tag-filter
+          requires:
+            - build-go1.10-4
       - build-go1.10-1:
           <<: *tag-filter
+          requires:
+            - build-go1.10-4
       - build-go1.9-4:
           <<: *tag-filter
+          requires:
+            - build-go1.10-4
       - build-go1.9-2:
           <<: *tag-filter
+          requires:
+            - build-go1.10-4
       - build-go1.9-1:
           <<: *tag-filter
+          requires:
+            - build-go1.10-4
       - build-go1.8-4:
           <<: *tag-filter
+          requires:
+            - build-go1.10-4
       - build-go1.8-2:
           <<: *tag-filter
+          requires:
+            - build-go1.10-4
       - build-go1.8-1:
           <<: *tag-filter
+          requires:
+            - build-go1.10-4
       - coverage:
           <<: *tag-filter
           requires:
