@@ -133,6 +133,31 @@ func (t *Tailer) isWatching(path string) bool {
 	return ok
 }
 
+// setFile sets a file descriptor under it's pathname
+func (t *Tailer) setFile(pathname string, f afero.File) error {
+	absPath, err := filepath.Abs(pathname)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to lookup abspath of %q", pathname)
+	}
+	t.filesMu.Lock()
+	defer t.filesMu.Unlock()
+	t.files[absPath] = f
+	return nil
+}
+
+// getFile retrives a file descriptor for a pathname.
+func (t *Tailer) getFile(pathname string) (afero.File, bool) {
+	absPath, err := filepath.Abs(pathname)
+	if err != nil {
+		glog.V(2).Infof("Couldn't resolve path %q: %s", pathname, err)
+		return nil, false
+	}
+	t.filesMu.Lock()
+	defer t.filesMu.Unlock()
+	fd, ok := t.files[absPath]
+	return fd, ok
+}
+
 // Tail registers a pattern to be tailed.  If pattern is a plain
 // file then it is watched for updates and opened.  If pattern is a glob, then
 // all paths that match the glob are opened and watched, and the directories
@@ -188,18 +213,19 @@ func (t *Tailer) TailFile(f afero.File) error {
 // identified by pathname, and sends them to be processed on the lines channel.
 func (t *Tailer) handleLogUpdate(pathname string) {
 	glog.V(2).Infof("handleLogUpdate %s", pathname)
-	t.filesMu.Lock()
-	fd, ok := t.files[pathname]
-	t.filesMu.Unlock()
+	fd, ok := t.getFile(pathname)
 	if !ok {
 		glog.Warningf("No file descriptor found for %q, but is being watched; opening", pathname)
 		// Try to open it, and because we have a watch set seenBefore.
 		t.openLogPath(pathname, true)
 		return
 	}
-	var err error
+	absPath, err := filepath.Abs(pathname)
+	if err != nil {
+		glog.Info(err)
+	}
 	t.partialsMu.Lock()
-	err = t.read(fd, t.partials[pathname])
+	err = t.read(fd, t.partials[absPath])
 	t.partialsMu.Unlock()
 	if err != nil && err != io.EOF {
 		glog.Info(err)
@@ -280,10 +306,7 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 // handleLogCreate handles both new and rotated log files.
 func (t *Tailer) handleLogCreate(pathname string) {
 	glog.V(2).Infof("handleLogCreate %s", pathname)
-	t.filesMu.Lock()
-	fd, ok := t.files[pathname]
-	t.filesMu.Unlock()
-
+	fd, ok := t.getFile(pathname)
 	if !ok {
 		// Freshly opened log file, never seen before.
 		t.openLogPath(pathname, false)
@@ -329,9 +352,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 
 func (t *Tailer) handleLogDelete(pathname string) {
 	glog.V(2).Infof("handleLogDelete %s", pathname)
-	t.filesMu.Lock()
-	fd, ok := t.files[pathname]
-	t.filesMu.Unlock()
+	fd, ok := t.getFile(pathname)
 	if !ok {
 		glog.V(2).Infof("Delete without fd for %s", pathname)
 		return
@@ -432,9 +453,13 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		}
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
+		absPath, err := filepath.Abs(f.Name())
+		if err != nil {
+			return err
+		}
 		t.partialsMu.Lock()
-		t.partials[f.Name()] = bytes.NewBufferString("")
-		err = t.read(f, t.partials[f.Name()])
+		t.partials[absPath] = bytes.NewBufferString("")
+		err = t.read(f, t.partials[absPath])
 		t.partialsMu.Unlock()
 		if err != nil {
 			if err == io.EOF {
@@ -447,18 +472,21 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 			return err
 		}
 	case m&os.ModeType == os.ModeNamedPipe:
+		absPath, err := filepath.Abs(f.Name())
+		if err != nil {
+			return err
+		}
 		t.partialsMu.Lock()
-		t.partials[f.Name()] = bytes.NewBufferString("")
+		t.partials[absPath] = bytes.NewBufferString("")
 		t.partialsMu.Unlock()
 		go t.readForever(f)
 	default:
 		return errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}
-	t.filesMu.Lock()
-	t.files[f.Name()] = f
-	t.filesMu.Unlock()
+	if err := t.setFile(f.Name(), f); err != nil {
+		return err
+	}
 	glog.Infof("Tailing %s", f.Name())
-
 	return nil
 }
 
