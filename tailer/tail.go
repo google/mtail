@@ -17,7 +17,6 @@ import (
 	"html/template"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"sync"
 	"time"
@@ -99,18 +98,38 @@ func New(o Options) (*Tailer, error) {
 }
 
 // addWatched adds a path to the list of watched items.
-func (t *Tailer) addWatched(path string) {
+func (t *Tailer) addWatched(path string) error {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to lookup absolutepath of %q", path)
+	}
+	glog.V(2).Infof("Adding a watch on resolved path %q", absPath)
+	err = t.w.Add(absPath)
+	if err != nil {
+		if os.IsPermission(err) {
+			glog.V(2).Infof("Skipping permission denied error on adding a watch.")
+		} else {
+			return errors.Wrapf(err, "Failed to create a new watch on %q", absPath)
+		}
+	}
 	t.watchedMu.Lock()
 	defer t.watchedMu.Unlock()
-	t.watched[path] = struct{}{}
+	t.watched[absPath] = struct{}{}
+	return nil
 }
 
 // isWatching indicates if the path is being watched. It includes both
 // filenames and directories.
 func (t *Tailer) isWatching(path string) bool {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		glog.V(2).Infof("Couldn't resolve path %q: %s", absPath, err)
+		return false
+	}
+	glog.V(2).Infof("Resolved path for lookup %q", absPath)
 	t.watchedMu.RLock()
 	defer t.watchedMu.RUnlock()
-	_, ok := t.watched[path]
+	_, ok := t.watched[absPath]
 	return ok
 }
 
@@ -138,20 +157,21 @@ func (t *Tailer) Tail(pattern string) error {
 			return errors.Wrapf(err, "attempting to tail %q", pathname)
 		}
 	}
-	t.watchDirname(pattern)
+	if err := t.watchDirname(pattern); err != nil {
+		return err
+	}
 	return nil
 }
 
 // TailPath registers a filesystem pathname to be tailed.
 func (t *Tailer) TailPath(pathname string) error {
-	fullpath, err := filepath.Abs(pathname)
-	if err != nil {
-		return errors.Wrapf(err, "find absolute path for %q", pathname)
-	}
-	if t.isWatching(fullpath) {
+	if t.isWatching(pathname) {
+		glog.V(2).Infof("already watching %q", pathname)
 		return nil
 	}
-	t.addWatched(fullpath)
+	if err := t.addWatched(pathname); err != nil {
+		return err
+	}
 	LogCount.Add(1)
 	// TODO(jaq): ex_test/filename.mtail requires we use the original pathname here, not fullpath
 	return t.openLogPath(pathname, false)
@@ -325,22 +345,25 @@ func (t *Tailer) handleLogDelete(pathname string) {
 	// Explicitly leave the filedescriptor invalid to test for log rotation in handleLogCreate
 }
 
-func (t *Tailer) watchDirname(pathname string) {
-	d := path.Dir(pathname)
-	if !t.isWatching(d) {
-		err := t.w.Add(d)
-		if err != nil {
-			glog.Infof("Failed to create new watch on directory %q: %s", pathname, err)
-			return
-		}
-		t.addWatched(d)
+// watchDirname adds the directory containing a path to be watched.
+func (t *Tailer) watchDirname(pathname string) error {
+	absPath, err := filepath.Abs(pathname)
+	if err != nil {
+		return err
 	}
+	d := filepath.Dir(absPath)
+	if !t.isWatching(d) {
+		return t.addWatched(d)
+	}
+	return nil
 }
 
 // openLogPath opens a log file named by pathname.
 func (t *Tailer) openLogPath(pathname string, seenBefore bool) error {
 	glog.V(2).Infof("openlogPath %s %v", pathname, seenBefore)
-	t.watchDirname(pathname)
+	if err := t.watchDirname(pathname); err != nil {
+		return err
+	}
 
 	retries := 3
 	retryDelay := 1 * time.Millisecond
@@ -403,8 +426,9 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		if _, err := f.Seek(0, seekWhence); err != nil {
 			return errors.Wrapf(err, "Seek failed on %q", f.Name())
 		}
-		if err := t.w.Add(f.Name()); err != nil {
-			return errors.Wrapf(err, "Adding a change watch failed on %q", f.Name())
+		glog.V(2).Infof("Adding a file watch on %q", f.Name())
+		if err := t.addWatched(f.Name()); err != nil {
+			return err
 		}
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
