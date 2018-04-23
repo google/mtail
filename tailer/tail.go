@@ -416,7 +416,8 @@ Retry:
 		goto Retry
 	}
 	if err != nil {
-		return errors.Wrap(err, "openLogPath failed all retries")
+		glog.Infof("openLogPath failed all retries")
+		return err
 	}
 	err = t.startNewFile(f, seenBefore)
 	if err != nil && err != io.EOF {
