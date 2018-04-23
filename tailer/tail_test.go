@@ -368,11 +368,8 @@ func TestOpenRetries(t *testing.T) {
 		close(done)
 	}()
 
-	if err := ta.TailPath(logfile); err == nil {
-		t.Fatal("Expected a permission denied error here.")
-	} else {
-		glog.Info(err)
-		t.Log("Got", err)
+	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
+		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
 	time.Sleep(10 * time.Millisecond)
 	glog.Info("remove")
