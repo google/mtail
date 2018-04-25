@@ -106,7 +106,7 @@ jobs:
           path: coverage.html
           destination: coverage
 
-  deploy:
+  delivery:
     working_directory: /go/src/github.com/google/mtail
     docker:
       - image: circleci/golang:1.10
@@ -184,7 +184,7 @@ workflows:
             - build-go1.8-4
             - build-go1.8-2
             - build-go1.8-1
-      - deliver:
+      - delivery:
           requires:
             - coverage
           filters:
