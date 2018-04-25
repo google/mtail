@@ -569,3 +569,61 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Errorf("log line count received %s, expected 2", tailer.LogCount.String())
 	}
 }
+
+func TestHandleRelativeLogAppend(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	glog.Infof("cwd is %q", cwd)
+
+	if err := os.Chdir(workdir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.Chdir(cwd); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	// touch log file
+	logFilepath := path.Join(workdir, "log")
+	logFile, err := os.Create(logFilepath)
+	if err != nil {
+		t.Errorf("could not touch log file: %s", err)
+	}
+	defer logFile.Close()
+	pathnames := []string{"log"}
+	m := startMtailServer(t, pathnames, "")
+	defer m.Close()
+	inputLines := []string{"hi", "hi2", "hi3"}
+	for i, x := range inputLines {
+		// write to log file
+		logFile.WriteString(x + "\n")
+		// check log line count increase
+		expected := fmt.Sprintf("%d", i+1)
+		check := func() (bool, error) {
+			if vm.LineCount.String() != expected {
+				return false, nil
+			}
+			return true, nil
+		}
+		ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
+			buf := make([]byte, 1<<16)
+			count := runtime.Stack(buf, true)
+			fmt.Println(string(buf[:count]))
+		}
+	}
+
+}
