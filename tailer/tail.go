@@ -31,9 +31,9 @@ import (
 )
 
 var (
-	LogCount     = expvar.NewInt("log_count")
-	LogErrors    = expvar.NewMap("log_errors_total")
-	LogRotations = expvar.NewMap("log_rotations_total")
+	logCount     = expvar.NewInt("log_count")
+	logErrors    = expvar.NewMap("log_errors_total")
+	logRotations = expvar.NewMap("log_rotations_total")
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
@@ -197,7 +197,7 @@ func (t *Tailer) TailPath(pathname string) error {
 	if err := t.addWatched(pathname); err != nil {
 		return err
 	}
-	LogCount.Add(1)
+	logCount.Add(1)
 	// TODO(jaq): ex_test/filename.mtail requires we use the original pathname here, not fullpath
 	return t.openLogPath(pathname, false)
 }
@@ -205,7 +205,7 @@ func (t *Tailer) TailPath(pathname string) error {
 // TailFile registers a file handle to be tailed.  There is no filesystem to
 // watch, so no watches are registered, and no file paths are opened.
 func (t *Tailer) TailFile(f afero.File) error {
-	LogCount.Add(1)
+	logCount.Add(1)
 	return t.startNewFile(f, false)
 }
 
@@ -317,8 +317,8 @@ func (t *Tailer) handleLogCreate(pathname string) {
 	if err != nil {
 		glog.Infof("Stat failed on %q: %s", t.files[pathname].Name(), err)
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
-		LogRotations.Add(pathname, 1)
-		LogCount.Add(1)
+		logRotations.Add(pathname, 1)
+		logCount.Add(1)
 		t.openLogPath(pathname, true)
 		return
 	}
@@ -334,7 +334,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 
 	}
 	glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
-	LogRotations.Add(pathname, 1)
+	logRotations.Add(pathname, 1)
 	// flush the old log, pathname is still an index into t.files with the old inode.
 	t.handleLogUpdate(pathname)
 	if err := fd.Close(); err != nil {
@@ -362,7 +362,7 @@ func (t *Tailer) handleLogDelete(pathname string) {
 	if err := fd.Close(); err != nil {
 		glog.Warning(err)
 	}
-	LogCount.Add(-1)
+	logCount.Add(-1)
 	// Explicitly leave the filedescriptor invalid to test for log rotation in handleLogCreate
 }
 
@@ -380,6 +380,7 @@ func (t *Tailer) watchDirname(pathname string) error {
 }
 
 // openLogPath opens a log file named by pathname.
+// TODO(jaq): seenBefore is incorrect for all log creatoin events received via fsnotify.
 func (t *Tailer) openLogPath(pathname string, seenBefore bool) error {
 	glog.V(2).Infof("openlogPath %s %v", pathname, seenBefore)
 	if err := t.watchDirname(pathname); err != nil {
@@ -408,7 +409,7 @@ Retry:
 		glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
 		return nil
 	}
-	LogErrors.Add(pathname, 1)
+	logErrors.Add(pathname, 1)
 	if shouldRetry() {
 		retries = retries - 1
 		time.Sleep(retryDelay)
@@ -436,7 +437,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	fi, err := f.Stat()
 	if err != nil {
 		// Stat failed, log error and return.
-		LogErrors.Add(f.Name(), 1)
+		logErrors.Add(f.Name(), 1)
 		return errors.Wrapf(err, "Failed to stat %q: %s", f.Name())
 	}
 	switch m := fi.Mode(); {
@@ -491,6 +492,34 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	return nil
 }
 
+// handleCreateGlob matches the pathname against the glob patterns and starts tailing the file.
+func (t *Tailer) handleCreateGlob(pathname string) {
+	t.globPatternsMu.RLock()
+	defer t.globPatternsMu.RUnlock()
+
+	for pattern := range t.globPatterns {
+		matched, err := filepath.Match(pattern, pathname)
+		if err != nil {
+			glog.Warningf("Unexpected bad pattern %q not detected earlier", pattern)
+			continue
+		}
+		if matched {
+			glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
+			// TODO(jaq): avoid code duplication with TailPath here.
+			// If this file was just created, read from the start.
+			if err := t.addWatched(pathname); err != nil {
+				glog.Infof("Failed to tail new file %q: %s", pathname, err)
+				continue
+			}
+			logCount.Add(1)
+			// Pretend seenBefore because we want to seek to start.
+			if err := t.openLogPath(pathname, true); err != nil {
+				glog.Infof("Failed to tail new file %q: %s", pathname, err)
+			}
+		}
+	}
+}
+
 // start is the main event loop for the Tailer.
 // It receives notification of log file changes from the watcher channel, and
 // handles them.
@@ -508,22 +537,7 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 			if t.isWatching(e.Pathname) {
 				t.handleLogCreate(e.Pathname)
 			} else {
-				t.globPatternsMu.RLock()
-				for pattern := range t.globPatterns {
-					matched, err := filepath.Match(pattern, e.Pathname)
-					if err != nil {
-						glog.Warningf("Unexpected bad pattern %q not detected earlier", pattern)
-						continue
-					}
-					if matched {
-						glog.V(1).Infof("New file %q matched existing glob %q", e.Pathname, pattern)
-						err := t.TailPath(e.Pathname)
-						if err != nil {
-							glog.Infof("Failed to tail new file %q: %s", e.Pathname, err)
-						}
-					}
-				}
-				t.globPatternsMu.RUnlock()
+				t.handleCreateGlob(e.Pathname)
 			}
 		case watcher.DeleteEvent:
 			if t.isWatching(e.Pathname) {
