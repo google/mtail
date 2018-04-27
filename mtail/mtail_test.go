@@ -4,7 +4,6 @@
 package mtail
 
 import (
-	"errors"
 	"expvar"
 	"fmt"
 	"io/ioutil"
@@ -19,6 +18,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
+	"github.com/pkg/errors"
 )
 
 const testProgram = "/$/ { }\n"
@@ -73,9 +73,11 @@ func doOrTimeout(do func() (bool, error), deadline, interval time.Duration) (boo
 	for {
 		select {
 		case <-timeout:
-			return false, errors.New("timeout")
+			return false, errors.Errorf("timeout after %s", deadline)
 		case <-ticker:
+			glog.V(2).Infof("tick")
 			ok, err := do()
+			glog.V(2).Infof("ok, err: %v %v", ok, err)
 			if err != nil {
 				return false, err
 			} else if ok {
@@ -89,12 +91,14 @@ func TestDoOrTimeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
+
 	ok, err := doOrTimeout(func() (bool, error) {
 		return false, nil
 	}, 10*time.Millisecond, time.Millisecond)
 	if ok || err == nil {
 		t.Errorf("Expected timeout, got %v, %v", ok, err)
 	}
+
 	i := 5
 	ok, err = doOrTimeout(func() (bool, error) {
 		i--
@@ -103,13 +107,14 @@ func TestDoOrTimeout(t *testing.T) {
 		}
 		return true, nil
 	}, 10*time.Millisecond, time.Millisecond)
-	if !ok {
+	if !ok || err != nil {
 		t.Errorf("Expected OK, got %v, %v", ok, err)
 	}
+
 	ok, err = doOrTimeout(func() (bool, error) {
 		return true, nil
 	}, 10*time.Millisecond, time.Millisecond)
-	if !ok {
+	if !ok || err != nil {
 		t.Errorf("Expected OK, got %v, %v", ok, err)
 	}
 }
@@ -257,32 +262,23 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	}
 
 	expectedLogCount := "1"
-	checkLog := func() (bool, error) {
+	expectedLineCount := "1"
+	check := func() (bool, error) {
 		if expvar.Get("log_count").String() != expectedLogCount {
 			return false, nil
 		}
-		return true, nil
-	}
-	ok, err := doOrTimeout(checkLog, 100*time.Millisecond, 10*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !ok {
-		t.Errorf("Log count not increased\n\texpected: %s\n\treceived: %s", expectedLogCount, tailer.LogCount.String())
-	}
-	expectedLineCount := "1"
-	checkLine := func() (bool, error) {
 		if expvar.Get("line_count").String() != expectedLineCount {
 			return false, nil
 		}
 		return true, nil
 	}
-	ok, err = doOrTimeout(checkLine, 100*time.Millisecond, 10*time.Millisecond)
+	ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	if !ok {
-		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expectedLineCount, tailer.LogCount.String())
+		t.Errorf("Log count\n\texpected: %s\n\treceived: %s", expectedLogCount, expvar.Get("log_count").String())
+		t.Errorf("Line count\n\texpected: %s\n\treceived: %s", expectedLineCount, expvar.Get("line_count").String())
 	}
 }
 
