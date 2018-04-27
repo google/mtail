@@ -380,6 +380,7 @@ func (t *Tailer) watchDirname(pathname string) error {
 }
 
 // openLogPath opens a log file named by pathname.
+// TODO(jaq): seenBefore is incorrect for all log creatoin events received via fsnotify.
 func (t *Tailer) openLogPath(pathname string, seenBefore bool) error {
 	glog.V(2).Infof("openlogPath %s %v", pathname, seenBefore)
 	if err := t.watchDirname(pathname); err != nil {

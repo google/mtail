@@ -31,9 +31,11 @@ count stack size and preallocate stack
 
 Run and upload benchmarks to https://perfdata.golang.org/ from circleci
 
-A log file newly created after mtail starts appears to miss the first line
-    logged because mtail seeks to eof, after the new line in the new file.
-    Expected that the whole log file known to mtail should be read.
+openLogPath's seenBefore in the tailer's handle* is incorrect because by
+    definition every file path that's new here shold be read from the start of
+    the file. Only files read at mtail startup should seek to EOF.  Otherwise
+    we miss the first lines of the file.  This is causing unnecessary
+    complexity in the tailer code.
 
 # Won't do
 
