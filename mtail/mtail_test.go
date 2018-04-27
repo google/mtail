@@ -68,11 +68,13 @@ func startMtailServer(t *testing.T, logPathnames []string, progPathname string) 
 }
 
 func doOrTimeout(do func() (bool, error), deadline, interval time.Duration) (bool, error) {
+	timeout := time.After(deadline)
+	ticker := time.Tick(interval)
 	for {
 		select {
-		case <-time.After(deadline):
+		case <-timeout:
 			return false, errors.New("timeout")
-		case <-time.Tick(interval):
+		case <-ticker:
 			ok, err := do()
 			if err != nil {
 				return false, err
@@ -80,6 +82,35 @@ func doOrTimeout(do func() (bool, error), deadline, interval time.Duration) (boo
 				return true, nil
 			}
 		}
+	}
+}
+
+func TestDoOrTimeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	ok, err := doOrTimeout(func() (bool, error) {
+		return false, nil
+	}, 10*time.Millisecond, time.Millisecond)
+	if ok || err == nil {
+		t.Errorf("Expected timeout, got %v, %v", ok, err)
+	}
+	i := 5
+	ok, err = doOrTimeout(func() (bool, error) {
+		i--
+		if i > 0 {
+			return false, nil
+		}
+		return true, nil
+	}, 10*time.Millisecond, time.Millisecond)
+	if !ok {
+		t.Errorf("Expected OK, got %v, %v", ok, err)
+	}
+	ok, err = doOrTimeout(func() (bool, error) {
+		return true, nil
+	}, 10*time.Millisecond, time.Millisecond)
+	if !ok {
+		t.Errorf("Expected OK, got %v, %v", ok, err)
 	}
 }
 
