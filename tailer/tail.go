@@ -491,6 +491,34 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	return nil
 }
 
+// handleCreateGlob matches the pathname against the glob patterns and starts tailing the file.
+func (t *Tailer) handleCreateGlob(pathname string) {
+	t.globPatternsMu.RLock()
+	defer t.globPatternsMu.RUnlock()
+
+	for pattern := range t.globPatterns {
+		matched, err := filepath.Match(pattern, pathname)
+		if err != nil {
+			glog.Warningf("Unexpected bad pattern %q not detected earlier", pattern)
+			continue
+		}
+		if matched {
+			glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
+			// TODO(jaq): avoid code duplication with TailPath here.
+			// If this file was just created, read from the start.
+			if err := t.addWatched(pathname); err != nil {
+				glog.Infof("Failed to tail new file %q: %s", pathname, err)
+				continue
+			}
+			logCount.Add(1)
+			// Pretend seenBefore because we want to seek to start.
+			if err := t.openLogPath(pathname, true); err != nil {
+				glog.Infof("Failed to tail new file %q: %s", pathname, err)
+			}
+		}
+	}
+}
+
 // start is the main event loop for the Tailer.
 // It receives notification of log file changes from the watcher channel, and
 // handles them.
@@ -508,22 +536,7 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 			if t.isWatching(e.Pathname) {
 				t.handleLogCreate(e.Pathname)
 			} else {
-				t.globPatternsMu.RLock()
-				for pattern := range t.globPatterns {
-					matched, err := filepath.Match(pattern, e.Pathname)
-					if err != nil {
-						glog.Warningf("Unexpected bad pattern %q not detected earlier", pattern)
-						continue
-					}
-					if matched {
-						glog.V(1).Infof("New file %q matched existing glob %q", e.Pathname, pattern)
-						err := t.TailPath(e.Pathname)
-						if err != nil {
-							glog.Infof("Failed to tail new file %q: %s", e.Pathname, err)
-						}
-					}
-				}
-				t.globPatternsMu.RUnlock()
+				t.handleCreateGlob(e.Pathname)
 			}
 		case watcher.DeleteEvent:
 			if t.isWatching(e.Pathname) {
