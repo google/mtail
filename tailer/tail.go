@@ -202,9 +202,9 @@ func (t *Tailer) TailPath(pathname string) error {
 	return t.openLogPath(pathname, false)
 }
 
-// TailFile registers a file handle to be tailed.  There is no filesystem to
+// TailHandle registers a file handle to be tailed.  There is no filesystem to
 // watch, so no watches are registered, and no file paths are opened.
-func (t *Tailer) TailFile(f afero.File) error {
+func (t *Tailer) TailHandle(f afero.File) error {
 	logCount.Add(1)
 	return t.startNewFile(f, false)
 }

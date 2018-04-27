@@ -63,7 +63,7 @@ func (m *MtailServer) StartTailing() error {
 			glog.Errorf("Attempt to reopen fd %q returned nil", fd)
 			continue
 		}
-		if err = m.t.TailFile(f); err != nil {
+		if err = m.t.TailHandle(f); err != nil {
 			glog.Error(err)
 		}
 	}

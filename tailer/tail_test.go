@@ -326,7 +326,7 @@ func TestReadPipe(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = ta.TailFile(r)
+	err = ta.TailHandle(r)
 	if err != nil {
 		t.Fatal(err)
 	}
