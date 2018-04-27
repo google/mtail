@@ -221,19 +221,37 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		t.Errorf("could not touch log file: %s", err)
 	}
 	defer logFile.Close()
-	expected := "1"
-	check := func() (bool, error) {
-		if tailer.LogCount.String() != expected {
+	if _, werr := logFile.WriteString("a\n"); werr != nil {
+		t.Error(werr)
+	}
+
+	expectedLogCount := "1"
+	checkLog := func() (bool, error) {
+		if expvar.Get("log_count").String() != expectedLogCount {
 			return false, nil
 		}
 		return true, nil
 	}
-	ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
+	ok, err := doOrTimeout(checkLog, 100*time.Millisecond, 10*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("Log count not increased\n\texpected: %s\n\treceived: %s", expected, tailer.LogCount.String())
+		t.Errorf("Log count not increased\n\texpected: %s\n\treceived: %s", expectedLogCount, tailer.LogCount.String())
+	}
+	expectedLineCount := "1"
+	checkLine := func() (bool, error) {
+		if expvar.Get("line_count").String() != expectedLineCount {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err = doOrTimeout(checkLine, 100*time.Millisecond, 10*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expectedLineCount, tailer.LogCount.String())
 	}
 }
 
