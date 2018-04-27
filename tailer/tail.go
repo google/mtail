@@ -46,8 +46,8 @@ type Tailer struct {
 
 	watched        map[string]struct{}      // Names of logs being watched.
 	watchedMu      sync.RWMutex             // protects `watched'
-	files          map[string]afero.File    // File handles for each pathname.
-	filesMu        sync.Mutex               // protects `files'
+	handles        map[string]afero.File    // File handles for each pathname.
+	handlesMu      sync.Mutex               // protects `handles'
 	partials       map[string]*bytes.Buffer // Accumulator for the currently read line for each pathname.
 	partialsMu     sync.Mutex               // protects 'partials'
 	globPatterns   map[string]struct{}      // glob patterns to match newly created files in dir paths against
@@ -84,7 +84,7 @@ func New(o Options) (*Tailer, error) {
 		w:            o.W,
 		watched:      make(map[string]struct{}),
 		lines:        o.Lines,
-		files:        make(map[string]afero.File),
+		handles:      make(map[string]afero.File),
 		partials:     make(map[string]*bytes.Buffer),
 		globPatterns: make(map[string]struct{}),
 		fs:           o.FS,
@@ -133,28 +133,28 @@ func (t *Tailer) isWatching(path string) bool {
 	return ok
 }
 
-// setFile sets a file descriptor under it's pathname
-func (t *Tailer) setFile(pathname string, f afero.File) error {
+// setHandle sets a file handle under it's pathname
+func (t *Tailer) setHandle(pathname string, f afero.File) error {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to lookup abspath of %q", pathname)
 	}
-	t.filesMu.Lock()
-	defer t.filesMu.Unlock()
-	t.files[absPath] = f
+	t.handlesMu.Lock()
+	defer t.handlesMu.Unlock()
+	t.handles[absPath] = f
 	return nil
 }
 
-// getFile retrives a file descriptor for a pathname.
-func (t *Tailer) getFile(pathname string) (afero.File, bool) {
+// handleForPath retrives a file handle for a pathname.
+func (t *Tailer) handleForPath(pathname string) (afero.File, bool) {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		glog.V(2).Infof("Couldn't resolve path %q: %s", pathname, err)
 		return nil, false
 	}
-	t.filesMu.Lock()
-	defer t.filesMu.Unlock()
-	fd, ok := t.files[absPath]
+	t.handlesMu.Lock()
+	defer t.handlesMu.Unlock()
+	fd, ok := t.handles[absPath]
 	return fd, ok
 }
 
@@ -213,9 +213,9 @@ func (t *Tailer) TailFile(f afero.File) error {
 // identified by pathname, and sends them to be processed on the lines channel.
 func (t *Tailer) handleLogUpdate(pathname string) {
 	glog.V(2).Infof("handleLogUpdate %s", pathname)
-	fd, ok := t.getFile(pathname)
+	fd, ok := t.handleForPath(pathname)
 	if !ok {
-		glog.Warningf("No file descriptor found for %q, but is being watched; opening", pathname)
+		glog.Warningf("No file handle found for %q, but is being watched; opening", pathname)
 		// Try to open it, and because we have a watch set seenBefore.
 		t.openLogPath(pathname, true)
 		return
@@ -306,7 +306,7 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 // handleLogCreate handles both new and rotated log files.
 func (t *Tailer) handleLogCreate(pathname string) {
 	glog.V(2).Infof("handleLogCreate %s", pathname)
-	fd, ok := t.getFile(pathname)
+	fd, ok := t.handleForPath(pathname)
 	if !ok {
 		// Freshly opened log file, never seen before.
 		t.openLogPath(pathname, false)
@@ -315,7 +315,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 
 	s1, err := fd.Stat()
 	if err != nil {
-		glog.Infof("Stat failed on %q: %s", t.files[pathname].Name(), err)
+		glog.Infof("Stat failed on %q: %s", t.handles[pathname].Name(), err)
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
 		logRotations.Add(pathname, 1)
 		logCount.Add(1)
@@ -335,7 +335,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 	}
 	glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
 	logRotations.Add(pathname, 1)
-	// flush the old log, pathname is still an index into t.files with the old inode.
+	// flush the old log, pathname is still an index into t.handles with the old inode.
 	t.handleLogUpdate(pathname)
 	if err := fd.Close(); err != nil {
 		glog.Info(err)
@@ -352,18 +352,18 @@ func (t *Tailer) handleLogCreate(pathname string) {
 
 func (t *Tailer) handleLogDelete(pathname string) {
 	glog.V(2).Infof("handleLogDelete %s", pathname)
-	fd, ok := t.getFile(pathname)
+	fd, ok := t.handleForPath(pathname)
 	if !ok {
 		glog.V(2).Infof("Delete without fd for %s", pathname)
 		return
 	}
-	// flush the old log, as pathname is still an index into t.files with the old inode still open
+	// flush the old log, as pathname is still an index into t.handles with the old inode still open
 	t.handleLogUpdate(pathname)
 	if err := fd.Close(); err != nil {
 		glog.Warning(err)
 	}
 	logCount.Add(-1)
-	// Explicitly leave the filedescriptor invalid to test for log rotation in handleLogCreate
+	// Explicitly leave the filehandle invalid to test for log rotation in handleLogCreate
 }
 
 // watchDirname adds the directory containing a path to be watched.
@@ -485,7 +485,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	default:
 		return errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}
-	if err := t.setFile(f.Name(), f); err != nil {
+	if err := t.setHandle(f.Name(), f); err != nil {
 		return err
 	}
 	glog.Infof("Tailing %s", f.Name())

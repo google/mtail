@@ -72,8 +72,8 @@ func TestTail(t *testing.T) {
 	}
 	// Tail also causes the log to be read, so no need to inject an event.
 
-	if _, ok := ta.files[logfile]; !ok {
-		t.Errorf("path not found in files map: %+#v", ta.files)
+	if _, ok := ta.handles[logfile]; !ok {
+		t.Errorf("path not found in files map: %+#v", ta.handles)
 	}
 }
 
