@@ -16,8 +16,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/mtail/tailer"
-	"github.com/google/mtail/vm"
 	"github.com/pkg/errors"
 )
 
@@ -57,9 +55,9 @@ func startMtailServer(t *testing.T, logPathnames []string, progPathname string) 
 		}
 	}
 
-	vm.LineCount.Set(0)
-	tailer.LogCount.Set(0)
-	tailer.LogRotations.Init()
+	expvar.Get("line_count").(*expvar.Int).Set(0)
+	expvar.Get("log_count").(*expvar.Int).Set(0)
+	expvar.Get("log_rotations_total").(*expvar.Map).Init()
 
 	if err := m.StartTailing(); err != nil {
 		t.Errorf("StartTailing failed: %s", err)
@@ -142,7 +140,7 @@ func TestHandleLogUpdates(t *testing.T) {
 		// check log line count increase
 		expected := fmt.Sprintf("%d", i+1)
 		check := func() (bool, error) {
-			if vm.LineCount.String() != expected {
+			if expvar.Get("line_count").String() != expected {
 				return false, nil
 			}
 			return true, nil
@@ -152,7 +150,7 @@ func TestHandleLogUpdates(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !ok {
-			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
+			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("line_count").String())
 			buf := make([]byte, 1<<16)
 			count := runtime.Stack(buf, true)
 			fmt.Println(string(buf[:count]))
@@ -303,8 +301,8 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	}
 	defer logFile.Close()
 	expected := "0"
-	if tailer.LogCount.String() != expected {
-		t.Errorf("Log count not increased\n\texpected: %s\n\treceived: %s", expected, tailer.LogCount.String())
+	if expvar.Get("log_count").String() != expected {
+		t.Errorf("Log count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("log_count").String())
 	}
 }
 
@@ -335,10 +333,10 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		trueLog1.Sync()
 	}
 	check3 := func() (bool, error) {
-		if tailer.LogCount.String() != "1" {
+		if expvar.Get("log_count").String() != "1" {
 			return false, nil
 		}
-		if tailer.LogRotations.Get(logFilepath) != nil {
+		if expvar.Get("log_rotations_total").(*expvar.Map).Get(logFilepath) != nil {
 			return false, nil
 		}
 		return true, nil
@@ -348,8 +346,8 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("log count: received %s, expected 1", tailer.LogCount.String())
-		t.Errorf("log rotatins: received %s, expected 0", tailer.LogRotations.String())
+		t.Errorf("log count: received %s, expected 1", expvar.Get("log_count").String())
+		t.Errorf("log rotatins: received %s, expected 0", expvar.Get("log_rotations_total").String())
 	}
 	trueLog2, err := os.Create(logFilepath + ".true2")
 	if err != nil {
@@ -369,13 +367,13 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		trueLog2.Sync()
 	}
 	check6 := func() (bool, error) {
-		if tailer.LogCount.String() != "1" {
+		if expvar.Get("log_count").String() != "1" {
 			return false, nil
 		}
-		if tailer.LogRotations.Get(logFilepath) == nil {
+		if expvar.Get("log_rotations_total").(*expvar.Map).Get(logFilepath) == nil {
 			return false, nil
 		}
-		if tailer.LogRotations.Get(logFilepath).String() != "1" {
+		if expvar.Get("log_rotations_total").(*expvar.Map).Get(logFilepath).String() != "1" {
 			return false, nil
 		}
 		return true, nil
@@ -389,8 +387,8 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("log count: received %s, expected 1", tailer.LogCount.String())
-		t.Errorf("log rotatins: received %s, expected 0", tailer.LogRotations.String())
+		t.Errorf("log count: received %s, expected 1", expvar.Get("log_count").String())
+		t.Errorf("log rotatins: received %s, expected 0", expvar.Get("log_rotations_total").String())
 	}
 	_, err = os.Stat(logFilepath + ".true1")
 	if err != nil {
@@ -444,8 +442,8 @@ func TestGlob(t *testing.T) {
 	m := startMtailServer(t, []string{path.Join(workdir, "log*")}, "")
 	defer m.Close()
 	check := func() (bool, error) {
-		if tailer.LogCount.String() != fmt.Sprintf("%d", count) {
-			glog.V(1).Infof("tailer is %q, count is %d", tailer.LogCount.String(), count)
+		if expvar.Get("log_count").String() != fmt.Sprintf("%d", count) {
+			glog.V(1).Infof("tailer is %q, count is %d", expvar.Get("log_count").String(), count)
 			return false, nil
 		}
 		return true, nil
@@ -455,7 +453,7 @@ func TestGlob(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, tailer.LogCount.String())
+		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
 	}
 }
 
@@ -504,8 +502,8 @@ func TestGlobAfterStart(t *testing.T) {
 	}
 	glog.Infof("count is %d", count)
 	check := func() (bool, error) {
-		if tailer.LogCount.String() != fmt.Sprintf("%d", count) {
-			glog.V(1).Infof("tailer is %q, count is %d", tailer.LogCount.String(), count)
+		if expvar.Get("log_count").String() != fmt.Sprintf("%d", count) {
+			glog.V(1).Infof("tailer is %q, count is %d", expvar.Get("log_count").String(), count)
 			return false, nil
 		}
 		return true, nil
@@ -515,7 +513,7 @@ func TestGlobAfterStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, tailer.LogCount.String())
+		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
 	}
 }
 
@@ -542,7 +540,7 @@ func TestHandleLogDeletes(t *testing.T) {
 
 	expected := "0"
 	check := func() (bool, error) {
-		if tailer.LogCount.String() != expected {
+		if expvar.Get("log_count").String() != expected {
 			return false, nil
 		}
 		return true, nil
@@ -556,7 +554,7 @@ func TestHandleLogDeletes(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("Log count not decreased\n\texpected: %s\n\treceived %s", expected, tailer.LogCount.String())
+		t.Errorf("Log count not decreased\n\texpected: %s\n\treceived %s", expected, expvar.Get("log_count").String())
 	}
 }
 
@@ -594,7 +592,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("log line count received %s, expected 1", tailer.LogCount.String())
+		t.Errorf("log line count received %s, expected 1", expvar.Get("log_count").String())
 	}
 	logFile.Truncate(0)
 	glog.Infof("Truncate")
@@ -611,7 +609,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ok {
-		t.Errorf("log line count received %s, expected 2", tailer.LogCount.String())
+		t.Errorf("log line count received %s, expected 2", expvar.Get("log_count").String())
 	}
 }
 
@@ -654,7 +652,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 		// check log line count increase
 		expected := fmt.Sprintf("%d", i+1)
 		check := func() (bool, error) {
-			if vm.LineCount.String() != expected {
+			if expvar.Get("line_count").String() != expected {
 				return false, nil
 			}
 			return true, nil
@@ -664,7 +662,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !ok {
-			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, vm.LineCount.String())
+			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("line_count").String())
 			buf := make([]byte, 1<<16)
 			count := runtime.Stack(buf, true)
 			fmt.Println(string(buf[:count]))
