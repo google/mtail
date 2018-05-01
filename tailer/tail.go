@@ -148,10 +148,10 @@ func (t *Tailer) TailPattern(pattern string) error {
 			return errors.Wrapf(err, "attempting to tail %q", pathname)
 		}
 	}
-	if err := t.watchDirname(pattern); err != nil {
-		return err
-	}
-	return nil
+	// Add a watch on the containing directory, so we know when a rotation
+	// occurs or something shows up that matches this pattern.  TODO(jaq): this
+	// seems fallible.
+	return t.watchDirname(pattern)
 }
 
 // TailPath registers a filesystem pathname to be tailed.
