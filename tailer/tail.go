@@ -124,11 +124,11 @@ func (t *Tailer) hasHandle(pathname string) bool {
 	return ok
 }
 
-// Tail registers a pattern to be tailed.  If pattern is a plain
+// TailPattern registers a pattern to be tailed.  If pattern is a plain
 // file then it is watched for updates and opened.  If pattern is a glob, then
 // all paths that match the glob are opened and watched, and the directories
 // containing those matches, if any, are watched.
-func (t *Tailer) Tail(pattern string) error {
+func (t *Tailer) TailPattern(pattern string) error {
 	matches, err := afero.Glob(t.fs, pattern)
 	if err != nil {
 		return err
