@@ -274,8 +274,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 	glog.V(2).Infof("handleLogCreate %s", pathname)
 	fd, ok := t.handleForPath(pathname)
 	if !ok {
-		// Freshly opened log file, never seen before.
-		t.openLogPath(pathname, false)
+		t.handleCreateGlob(pathname)
 		return
 	}
 
@@ -495,11 +494,7 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 		case watcher.UpdateEvent:
 			t.handleLogUpdate(e.Pathname)
 		case watcher.CreateEvent:
-			if t.hasHandle(e.Pathname) {
-				t.handleLogCreate(e.Pathname)
-			} else {
-				t.handleCreateGlob(e.Pathname)
-			}
+			t.handleLogCreate(e.Pathname)
 		case watcher.DeleteEvent:
 			t.handleLogDelete(e.Pathname)
 		default:
