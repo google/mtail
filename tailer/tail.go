@@ -44,10 +44,8 @@ type Tailer struct {
 
 	lines chan<- *LogLine // Logfile lines being emitted.
 
-	watched        map[string]struct{}      // Names of logs being watched.
-	watchedMu      sync.RWMutex             // protects `watched'
 	handles        map[string]afero.File    // File handles for each pathname.
-	handlesMu      sync.Mutex               // protects `handles'
+	handlesMu      sync.RWMutex             // protects `handles'
 	partials       map[string]*bytes.Buffer // Accumulator for the currently read line for each pathname.
 	partialsMu     sync.Mutex               // protects 'partials'
 	globPatterns   map[string]struct{}      // glob patterns to match newly created files in dir paths against
@@ -82,7 +80,6 @@ func New(o Options) (*Tailer, error) {
 	}
 	t := &Tailer{
 		w:            o.W,
-		watched:      make(map[string]struct{}),
 		lines:        o.Lines,
 		handles:      make(map[string]afero.File),
 		partials:     make(map[string]*bytes.Buffer),
@@ -95,42 +92,6 @@ func New(o Options) (*Tailer, error) {
 	eventsChan := t.w.Events()
 	go t.run(eventsChan)
 	return t, nil
-}
-
-// addWatched adds a path to the list of watched items.
-func (t *Tailer) addWatched(path string) error {
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to lookup absolutepath of %q", path)
-	}
-	glog.V(2).Infof("Adding a watch on resolved path %q", absPath)
-	err = t.w.Add(absPath)
-	if err != nil {
-		if os.IsPermission(err) {
-			glog.V(2).Infof("Skipping permission denied error on adding a watch.")
-		} else {
-			return errors.Wrapf(err, "Failed to create a new watch on %q", absPath)
-		}
-	}
-	t.watchedMu.Lock()
-	defer t.watchedMu.Unlock()
-	t.watched[absPath] = struct{}{}
-	return nil
-}
-
-// isWatching indicates if the path is being watched. It includes both
-// filenames and directories.
-func (t *Tailer) isWatching(path string) bool {
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		glog.V(2).Infof("Couldn't resolve path %q: %s", absPath, err)
-		return false
-	}
-	glog.V(2).Infof("Resolved path for lookup %q", absPath)
-	t.watchedMu.RLock()
-	defer t.watchedMu.RUnlock()
-	_, ok := t.watched[absPath]
-	return ok
 }
 
 // setHandle sets a file handle under it's pathname
@@ -156,6 +117,11 @@ func (t *Tailer) handleForPath(pathname string) (afero.File, bool) {
 	defer t.handlesMu.Unlock()
 	fd, ok := t.handles[absPath]
 	return fd, ok
+}
+
+func (t *Tailer) hasHandle(pathname string) bool {
+	_, ok := t.handleForPath(pathname)
+	return ok
 }
 
 // Tail registers a pattern to be tailed.  If pattern is a plain
@@ -190,11 +156,11 @@ func (t *Tailer) Tail(pattern string) error {
 
 // TailPath registers a filesystem pathname to be tailed.
 func (t *Tailer) TailPath(pathname string) error {
-	if t.isWatching(pathname) {
+	if t.hasHandle(pathname) {
 		glog.V(2).Infof("already watching %q", pathname)
 		return nil
 	}
-	if err := t.addWatched(pathname); err != nil {
+	if err := t.w.Add(pathname); err != nil {
 		return err
 	}
 	logCount.Add(1)
@@ -373,10 +339,7 @@ func (t *Tailer) watchDirname(pathname string) error {
 		return err
 	}
 	d := filepath.Dir(absPath)
-	if !t.isWatching(d) {
-		return t.addWatched(d)
-	}
-	return nil
+	return t.w.Add(d)
 }
 
 // openLogPath opens a log file named by pathname.
@@ -450,7 +413,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 			return errors.Wrapf(err, "Seek failed on %q", f.Name())
 		}
 		glog.V(2).Infof("Adding a file watch on %q", f.Name())
-		if err := t.addWatched(f.Name()); err != nil {
+		if err := t.w.Add(f.Name()); err != nil {
 			return err
 		}
 		// In case the new log has been written to already, attempt to read the
@@ -507,7 +470,7 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 			glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
 			// TODO(jaq): avoid code duplication with TailPath here.
 			// If this file was just created, read from the start.
-			if err := t.addWatched(pathname); err != nil {
+			if err := t.w.Add(pathname); err != nil {
 				glog.Infof("Failed to tail new file %q: %s", pathname, err)
 				continue
 			}
@@ -530,19 +493,15 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 		glog.V(2).Infof("Event type %#v", e)
 		switch e := e.(type) {
 		case watcher.UpdateEvent:
-			if t.isWatching(e.Pathname) {
-				t.handleLogUpdate(e.Pathname)
-			}
+			t.handleLogUpdate(e.Pathname)
 		case watcher.CreateEvent:
-			if t.isWatching(e.Pathname) {
+			if t.hasHandle(e.Pathname) {
 				t.handleLogCreate(e.Pathname)
 			} else {
 				t.handleCreateGlob(e.Pathname)
 			}
 		case watcher.DeleteEvent:
-			if t.isWatching(e.Pathname) {
-				t.handleLogDelete(e.Pathname)
-			}
+			t.handleLogDelete(e.Pathname)
 		default:
 			glog.Infof("Unexpected event %#v", e)
 		}
@@ -583,7 +542,7 @@ func (t *Tailer) Close() error {
 
 const tailerTemplate = `
 <h2 id="tailer">Log Tailer</h2>
-{{range $name, $val := $.Watched}}
+{{range $name, $val := $.Handles}}
 <p><b>{{$name}}</b></p>
 {{end}}
 `
@@ -593,12 +552,12 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	t.watchedMu.RLock()
-	defer t.watchedMu.RUnlock()
+	t.handlesMu.RLock()
+	defer t.handlesMu.RUnlock()
 	data := struct {
-		Watched map[string]struct{}
+		Handles map[string]afero.File
 	}{
-		t.watched,
+		t.handles,
 	}
 	return tpl.Execute(w, data)
 }

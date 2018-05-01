@@ -6,10 +6,13 @@ package watcher
 import (
 	"expvar"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -24,6 +27,9 @@ type LogWatcher struct {
 	events   []chan Event
 	eventsMu sync.RWMutex
 
+	watched   map[string]struct{} // Names of paths being watched
+	watchedMu sync.RWMutex        // protects `watched'
+
 	runDone chan struct{} // Channel to respond to Close
 }
 
@@ -36,6 +42,7 @@ func NewLogWatcher() (*LogWatcher, error) {
 	w := &LogWatcher{
 		Watcher: f,
 		events:  make([]chan Event, 0),
+		watched: make(map[string]struct{}),
 		runDone: make(chan struct{}),
 	}
 	go w.run()
@@ -100,4 +107,43 @@ func (w *LogWatcher) Close() (err error) {
 	err = w.Watcher.Close()
 	<-w.runDone
 	return
+}
+
+// Add adds a path to the list of watched items.
+func (w *LogWatcher) Add(path string) error {
+	if w.IsWatching(path) {
+		return nil
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to lookup absolutepath of %q", path)
+	}
+	glog.V(2).Infof("Adding a watch on resolved path %q", absPath)
+	err = w.Watcher.Add(absPath)
+	if err != nil {
+		if os.IsPermission(err) {
+			glog.V(2).Infof("Skipping permission denied error on adding a watch.")
+		} else {
+			return errors.Wrapf(err, "Failed to create a new watch on %q", absPath)
+		}
+	}
+	w.watchedMu.Lock()
+	defer w.watchedMu.Unlock()
+	w.watched[absPath] = struct{}{}
+	return nil
+}
+
+// isWatching indicates if the path is being watched. It includes both
+// filenames and directories.
+func (w *LogWatcher) IsWatching(path string) bool {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		glog.V(2).Infof("Couldn't resolve path %q: %s", absPath, err)
+		return false
+	}
+	glog.V(2).Infof("Resolved path for lookup %q", absPath)
+	w.watchedMu.RLock()
+	defer w.watchedMu.RUnlock()
+	_, ok := w.watched[absPath]
+	return ok
 }
