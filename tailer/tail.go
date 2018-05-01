@@ -183,7 +183,9 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	if !ok {
 		glog.Warningf("No file handle found for %q, but is being watched; opening", pathname)
 		// Try to open it, and because we have a watch set seenBefore.
-		t.openLogPath(pathname, true)
+		if err := t.openLogPath(pathname, true); err != nil {
+			glog.Warning(err)
+		}
 		return
 	}
 	absPath, err := filepath.Abs(pathname)
@@ -284,7 +286,9 @@ func (t *Tailer) handleLogCreate(pathname string) {
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
 		logRotations.Add(pathname, 1)
 		logCount.Add(1)
-		t.openLogPath(pathname, true)
+		if err := t.openLogPath(pathname, true); err != nil {
+			glog.Warning(err)
+		}
 		return
 	}
 	s2, err := t.fs.Stat(pathname)
@@ -311,7 +315,9 @@ func (t *Tailer) handleLogCreate(pathname string) {
 			glog.Infof("Failed removing watches on %s: %s", pathname, err)
 		}
 		// openLogPath readds the file to the watcher, so must be strictly after the Remove succeeds.
-		t.openLogPath(pathname, true)
+		if err := t.openLogPath(pathname, true); err != nil {
+			glog.Warning(err)
+		}
 	}()
 }
 
