@@ -548,6 +548,7 @@ const tailerTemplate = `
 {{end}}
 `
 
+// WriteStatusHTML emits the Tailer's state in HTML format to the io.Writer w.
 func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	tpl, err := template.New("tailer").Parse(tailerTemplate)
 	if err != nil {
