@@ -209,8 +209,8 @@ func (m *MtailServer) WriteMetrics(w io.Writer) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal metrics into json")
 	}
-	w.Write(b)
-	return nil
+	_, err = w.Write(b)
+	return err
 }
 
 // Serve begins the webserver and awaits a shutdown instruction.

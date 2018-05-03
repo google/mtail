@@ -133,7 +133,7 @@ func (w *LogWatcher) Add(path string) error {
 	return nil
 }
 
-// isWatching indicates if the path is being watched. It includes both
+// IsWatching indicates if the path is being watched. It includes both
 // filenames and directories.
 func (w *LogWatcher) IsWatching(path string) bool {
 	absPath, err := filepath.Abs(path)

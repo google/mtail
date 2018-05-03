@@ -249,7 +249,7 @@ func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 
 // State functions.
 
-// Start lexing a program.
+// lexProg starts lexing a program.
 func lexProg(l *lexer) stateFn {
 	if l.inRegex {
 		return lexRegex

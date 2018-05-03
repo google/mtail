@@ -45,7 +45,7 @@ func (n *exprlistNode) Type() Type {
 
 func (n *exprlistNode) SetType(t Type) {
 	n.typMu.Lock()
-	n.typMu.Unlock()
+	defer n.typMu.Unlock()
 	n.typ = t
 }
 

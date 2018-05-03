@@ -43,6 +43,7 @@ func (u *Unparser) newline() {
 	u.line = ""
 }
 
+// VisitBefore implements the astNode Visitor interface.
 func (u *Unparser) VisitBefore(n astNode) Visitor {
 	if u.emitTypes {
 		u.emit(fmt.Sprintf("<%s>(", n.Type()))
@@ -248,6 +249,7 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 	return nil
 }
 
+// VisitAfter implements the astNode Visitor interface.
 func (u *Unparser) VisitAfter(n astNode) {
 }
 

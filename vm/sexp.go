@@ -48,6 +48,7 @@ func (s *Sexp) newline() {
 	s.line = ""
 }
 
+// VisitBefore implements the astNode Visitor interface.
 func (s *Sexp) VisitBefore(n astNode) Visitor {
 	s.emit(fmt.Sprintf("( ;;%T ", n))
 	if s.emitTypes {
@@ -186,6 +187,7 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	return s
 }
 
+// VisitAfter implements the astNode Visitor interface.
 func (s *Sexp) VisitAfter(node astNode) {
 	switch node.(type) {
 	case *binaryExprNode:

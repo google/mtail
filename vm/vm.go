@@ -273,7 +273,7 @@ func (v *VM) ParseTime(layout, value string) (tm time.Time) {
 	return
 }
 
-// Execute performs an instruction cycle in the VM. acting on the instruction
+// execute performs an instruction cycle in the VM. acting on the instruction
 // i in thread t.
 func (v *VM) execute(t *thread, i instr) {
 	defer func() {

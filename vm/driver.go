@@ -12,6 +12,8 @@ import (
 	"github.com/golang/glog"
 )
 
+// Parse reads the program named name from the input, and if successful returns
+// an astNode for the root of the AST, or parser errors.
 func Parse(name string, input io.Reader) (astNode, error) {
 	p := newParser(name, input)
 	r := mtailParse(p)
@@ -21,6 +23,7 @@ func Parse(name string, input io.Reader) (astNode, error) {
 	return p.root, nil
 }
 
+// EOF is a marker for end of file.
 const EOF = 0
 
 type parser struct {

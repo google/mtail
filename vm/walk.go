@@ -20,6 +20,7 @@ func walknodelist(v Visitor, list []astNode) {
 	}
 }
 
+// Walk traverses (walks) an AST node with the provided Visitor v.
 func Walk(v Visitor, node astNode) {
 	// Returning nil from VisitBefore signals to Walk that the Visitor has
 	// handled the children of this node.  VisitAfter will not be called.

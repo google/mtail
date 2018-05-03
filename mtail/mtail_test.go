@@ -626,12 +626,12 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 	}
 	glog.Infof("cwd is %q", cwd)
 
-	if err := os.Chdir(workdir); err != nil {
-		t.Fatal(err)
+	if cerr := os.Chdir(workdir); cerr != nil {
+		t.Fatal(cerr)
 	}
 	defer func() {
-		if err := os.Chdir(cwd); err != nil {
-			t.Error(err)
+		if cerr := os.Chdir(cwd); err != nil {
+			t.Error(cerr)
 		}
 	}()
 

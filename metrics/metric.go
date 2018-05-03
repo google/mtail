@@ -15,25 +15,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-// // Counter is a monotonically nondecreasing metric.
-// type Counter interface {
-// 	IncBy(delta int64, ts time.Time)
-// }
-
-// // Gauge is a non-monotonic metric.
-// type Gauge interface {
-// 	Set(value int64, ts time.Time)
-// }
-
 // Kind enumerates the types of metrics supported.
 type Kind int
 
 const (
 	_ Kind = iota
+
+	// Counter is a monotonically nondecreasing metric.
 	Counter
+
 	// Gauge is a Kind that can take on any value, and may be set
 	// discontinuously from its previous value.
 	Gauge
+
 	// Timer is a specialisation of Gauge that can be used to store time
 	// intervals, such as latency and durations.  It enables certain behaviour
 	// in exporters that handle time intervals such as StatsD.
@@ -41,7 +35,9 @@ const (
 )
 
 const (
-	Int   = datum.Int
+	// Int indicates this metric is an integer metric type.
+	Int = datum.Int
+	// Float indicates this metric is a floating-point metric type.
 	Float = datum.Float
 )
 
@@ -136,6 +132,7 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	return d, nil
 }
 
+// RemoveDatum removes the Datum described by labelvalues from the Metric m.
 func (m *Metric) RemoveDatum(labelvalues ...string) error {
 	if len(labelvalues) != len(m.Keys) {
 		return errors.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
@@ -181,6 +178,7 @@ func (m *Metric) EmitLabelSets(c chan *LabelSet) {
 	close(c)
 }
 
+// UnmarshalJSON converts a JSON byte string into a LabelValue
 func (lv *LabelValue) UnmarshalJSON(b []byte) error {
 	var obj map[string]*json.RawMessage
 	err := json.Unmarshal(b, &obj)
@@ -222,6 +220,7 @@ func (m *Metric) String() string {
 	return fmt.Sprintf("Metric: name=%s program=%s kind=%s type=%s hidden=%v keys=%v labelvalues=%v source=%s", m.Name, m.Program, m.Kind, m.Type, m.Hidden, m.Keys, m.LabelValues, m.Source)
 }
 
+// SetSource sets the source of a metric, describing where in user programmes it was defined.
 func (m *Metric) SetSource(source string) {
 	m.Lock()
 	defer m.Unlock()

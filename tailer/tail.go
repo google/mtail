@@ -286,8 +286,8 @@ func (t *Tailer) handleLogCreate(pathname string) {
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
 		logRotations.Add(pathname, 1)
 		logCount.Add(1)
-		if err := t.openLogPath(pathname, true); err != nil {
-			glog.Warning(err)
+		if oerr := t.openLogPath(pathname, true); oerr != nil {
+			glog.Warning(oerr)
 		}
 		return
 	}

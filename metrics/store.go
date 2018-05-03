@@ -16,6 +16,7 @@ type Store struct {
 	Metrics map[string][]*Metric
 }
 
+// NewStore returns a new metric Store.
 func NewStore() (s *Store) {
 	s = &Store{}
 	s.ClearMetrics()
@@ -43,6 +44,7 @@ func (s *Store) ClearMetrics() {
 	s.Metrics = make(map[string][]*Metric)
 }
 
+// MarshalJSON returns a JSON byte string representing the Store.
 func (s *Store) MarshalJSON() (b []byte, err error) {
 	s.Lock()
 	defer s.Unlock()

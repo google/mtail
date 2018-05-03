@@ -102,7 +102,11 @@ func (l *Loader) LoadProgram(programPath string) error {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Wrapf(err, "Failed to read program %q", programPath)
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			glog.Warning(err)
+		}
+	}()
 	l.programErrorMu.Lock()
 	defer l.programErrorMu.Unlock()
 	l.programErrors[name] = l.CompileAndRun(name, f)
@@ -340,9 +344,13 @@ func (l *Loader) processEvents(events <-chan watcher.Event) {
 		case watcher.DeleteEvent:
 			l.UnloadProgram(event.Pathname)
 		case watcher.UpdateEvent:
-			l.LoadProgram(event.Pathname)
+			if err := l.LoadProgram(event.Pathname); err != nil {
+				glog.Info(err)
+			}
 		case watcher.CreateEvent:
-			l.w.Add(event.Pathname)
+			if err := l.w.Add(event.Pathname); err != nil {
+				glog.Info(err)
+			}
 		default:
 			glog.V(1).Infof("Unexpected event type %+#v", event)
 		}
