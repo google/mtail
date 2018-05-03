@@ -175,8 +175,9 @@ func (t *Tailer) TailHandle(f afero.File) error {
 	return t.startNewFile(f, false)
 }
 
-// handleLogUpdate reads all available bytes from an already opened file
-// identified by pathname, and sends them to be processed on the lines channel.
+// handleLogUpdate is dispatched when an UpdateEvent is received, causing the
+// tailer to read all available bytes from an already-opened file and send each
+// log line onto lines channel.
 func (t *Tailer) handleLogUpdate(pathname string) {
 	glog.V(2).Infof("handleLogUpdate %s", pathname)
 	fd, ok := t.handleForPath(pathname)
@@ -200,10 +201,10 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	}
 }
 
-// handleTruncate checks to see if the current offset into the file
+// checkForTruncate checks to see if the current offset into the file
 // is past the end of the file based on its size, and if so seeks to
 // the start again.  Returns nil iff that happened.
-func (t *Tailer) handleTruncate(f afero.File) error {
+func (t *Tailer) checkForTruncate(f afero.File) error {
 	currentOffset, err := f.Seek(0, io.SeekCurrent)
 	glog.V(2).Infof("current seek position at %d", currentOffset)
 	if err != nil {
@@ -240,7 +241,7 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 		if err == io.EOF && ntotal == 0 {
 			glog.V(2).Info("Suspected truncation.")
 			// If there was nothing to be read, perhaps the file just got truncated.
-			herr := t.handleTruncate(f)
+			herr := t.checkForTruncate(f)
 			glog.V(2).Infof("handletrunc with error '%v'", herr)
 			if herr == nil {
 				// Try again: offset was greater than filesize and now we've seeked to start.
