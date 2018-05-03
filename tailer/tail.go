@@ -165,7 +165,7 @@ func (t *Tailer) TailPath(pathname string) error {
 	}
 	logCount.Add(1)
 	// TODO(jaq): ex_test/filename.mtail requires we use the original pathname here, not fullpath
-	return t.openLogPath(pathname, false)
+	return t.openLogPath(pathname, false, false)
 }
 
 // TailHandle registers a file handle to be tailed.  There is no filesystem to
@@ -184,7 +184,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	if !ok {
 		glog.Warningf("No file handle found for %q, but is being watched; opening", pathname)
 		// Try to open it, and because we have a watch set seenBefore.
-		if err := t.openLogPath(pathname, true); err != nil {
+		if err := t.openLogPath(pathname, false, true); err != nil {
 			glog.Warning(err)
 		}
 		return
@@ -287,7 +287,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
 		logRotations.Add(pathname, 1)
 		logCount.Add(1)
-		if oerr := t.openLogPath(pathname, true); oerr != nil {
+		if oerr := t.openLogPath(pathname, true, true); oerr != nil {
 			glog.Warning(oerr)
 		}
 		return
@@ -316,7 +316,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 			glog.Infof("Failed removing watches on %s: %s", pathname, err)
 		}
 		// openLogPath readds the file to the watcher, so must be strictly after the Remove succeeds.
-		if err := t.openLogPath(pathname, true); err != nil {
+		if err := t.openLogPath(pathname, true, true); err != nil {
 			glog.Warning(err)
 		}
 	}()
@@ -349,9 +349,9 @@ func (t *Tailer) watchDirname(pathname string) error {
 }
 
 // openLogPath opens a log file named by pathname.
-// TODO(jaq): seenBefore is incorrect for all log creatoin events received via fsnotify.
-func (t *Tailer) openLogPath(pathname string, seenBefore bool) error {
-	glog.V(2).Infof("openlogPath %s %v", pathname, seenBefore)
+// TODO(jaq): seenBefore is incorrect for all log creation events received via fsnotify.
+func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) error {
+	glog.V(2).Infof("openlogPath %s %v %v", pathname, seenBefore, seekToStart)
 	if err := t.watchDirname(pathname); err != nil {
 		return err
 	}
@@ -389,7 +389,7 @@ Retry:
 		glog.Infof("openLogPath failed all retries")
 		return err
 	}
-	err = t.startNewFile(f, seenBefore)
+	err = t.startNewFile(f, seekToStart)
 	if err != nil && err != io.EOF {
 		glog.Error(err)
 		return err
@@ -482,7 +482,7 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 			}
 			logCount.Add(1)
 			// Pretend seenBefore because we want to seek to start.
-			if err := t.openLogPath(pathname, true); err != nil {
+			if err := t.openLogPath(pathname, false, true); err != nil {
 				glog.Infof("Failed to tail new file %q: %s", pathname, err)
 			}
 		}
