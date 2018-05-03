@@ -24,8 +24,7 @@ func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, a
 	fs := afero.NewMemMapFs()
 	w := watcher.NewFakeWatcher()
 	lines := make(chan *LogLine, 1)
-	o := Options{lines, false, w, fs}
-	ta, err := New(o)
+	ta, err := New(lines, fs, w)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,8 +46,7 @@ func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *wat
 		t.Fatalf("can't create watcher: %v", err)
 	}
 	lines := make(chan *LogLine, 1)
-	o := Options{lines, false, w, fs}
-	ta, err := New(o)
+	ta, err := New(lines, fs, w)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -400,23 +398,26 @@ func TestOpenRetries(t *testing.T) {
 }
 
 func TestTailerInitErrors(t *testing.T) {
-	o := Options{}
-	_, err := New(o)
+	_, err := New(nil, nil, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
-	o.Lines = make(chan *LogLine)
-	_, err = New(o)
+	lines := make(chan *LogLine)
+	_, err = New(lines, nil, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
-	o.FS = afero.NewMemMapFs()
-	_, err = New(o)
+	fs := afero.NewMemMapFs()
+	_, err = New(lines, fs, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
-	o.W = watcher.NewFakeWatcher()
-	_, err = New(o)
+	w := watcher.NewFakeWatcher()
+	_, err = New(lines, fs, w)
+	if err != nil {
+		t.Errorf("unexpected error %s", err)
+	}
+	_, err = New(lines, fs, w, OneShot)
 	if err != nil {
 		t.Errorf("unexpected error %s", err)
 	}

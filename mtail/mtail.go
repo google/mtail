@@ -44,9 +44,13 @@ type MtailServer struct {
 // StartTailing constructs a new Tailer and commences sending log lines into
 // the lines channel.
 func (m *MtailServer) StartTailing() error {
-	o := tailer.Options{Lines: m.lines, OneShot: m.o.OneShot, W: m.o.W, FS: m.o.FS}
 	var err error
-	m.t, err = tailer.New(o)
+	m.t, err = tailer.New(m.lines, m.o.FS, m.o.W)
+	if m.o.OneShot {
+		if err = m.t.SetOneShot(); err != nil {
+			return err
+		}
+	}
 	if err != nil {
 		return errors.Wrap(err, "tailer.New")
 	}

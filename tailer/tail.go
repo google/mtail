@@ -59,39 +59,54 @@ type Tailer struct {
 	oneShot bool
 }
 
-// Options configures a Tailer
-type Options struct {
-	Lines   chan<- *LogLine // output channel of lines read
-	OneShot bool            // if true, reads from start and exits after each file hits eof
-	W       watcher.Watcher
-	FS      afero.Fs
+// OneShot puts the tailer in one-shot mode.
+func OneShot(t *Tailer) error {
+	t.oneShot = true
+	return nil
 }
 
-// New returns a new Tailer, configured with the supplied Options
-func New(o Options) (*Tailer, error) {
-	if o.Lines == nil {
+// New creates a new Tailer.
+func New(lines chan<- *LogLine, fs afero.Fs, w watcher.Watcher, options ...func(*Tailer) error) (*Tailer, error) {
+	if lines == nil {
 		return nil, errors.New("can't create tailer without lines channel")
 	}
-	if o.FS == nil {
+	if fs == nil {
 		return nil, errors.New("can't create tailer without FS")
 	}
-	if o.W == nil {
+	if w == nil {
 		return nil, errors.New("can't create tailer without W")
 	}
 	t := &Tailer{
-		w:            o.W,
-		lines:        o.Lines,
+		w:            w,
+		lines:        lines,
 		handles:      make(map[string]afero.File),
 		partials:     make(map[string]*bytes.Buffer),
 		globPatterns: make(map[string]struct{}),
-		fs:           o.FS,
-		oneShot:      o.OneShot,
+		fs:           fs,
 		stopForever:  make(chan struct{}),
 		runDone:      make(chan struct{}),
+	}
+	if err := t.SetOption(options...); err != nil {
+		return nil, err
 	}
 	eventsChan := t.w.Events()
 	go t.run(eventsChan)
 	return t, nil
+}
+
+// SetOption takes one or more option functions and applies them in order to Tailer
+func (t *Tailer) SetOption(options ...func(*Tailer) error) error {
+	for _, option := range options {
+		if err := option(t); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SetOneShot sets the Tailer in oneshot mode.
+func (t *Tailer) SetOneShot() error {
+	return t.SetOption(OneShot)
 }
 
 // setHandle sets a file handle under it's pathname
