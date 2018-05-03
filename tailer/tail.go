@@ -287,6 +287,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
 		logRotations.Add(pathname, 1)
 		logCount.Add(1)
+		// TODO(jaq): openlogpath seenBefore is true, so retry.
 		if oerr := t.openLogPath(pathname, true, true); oerr != nil {
 			glog.Warning(oerr)
 		}
@@ -316,6 +317,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 			glog.Infof("Failed removing watches on %s: %s", pathname, err)
 		}
 		// openLogPath readds the file to the watcher, so must be strictly after the Remove succeeds.
+		// seenBefore is true, so retry
 		if err := t.openLogPath(pathname, true, true); err != nil {
 			glog.Warning(err)
 		}
