@@ -44,17 +44,15 @@ type MtailServer struct {
 // StartTailing constructs a new Tailer and commences sending log lines into
 // the lines channel.
 func (m *MtailServer) StartTailing() error {
-	var err error
-	m.t, err = tailer.New(m.lines, m.o.FS, m.o.W)
+	opts := []func(*tailer.Tailer) error{}
 	if m.o.OneShot {
-		if err = m.t.SetOneShot(); err != nil {
-			return err
-		}
+		opts = append(opts, tailer.OneShot)
 	}
+	var err error
+	m.t, err = tailer.New(m.lines, m.o.FS, m.o.W, opts...)
 	if err != nil {
 		return errors.Wrap(err, "tailer.New")
 	}
-
 	for _, pattern := range m.o.LogPathPatterns {
 		glog.V(1).Infof("Tail pattern %q", pattern)
 		if err = m.t.TailPattern(pattern); err != nil {

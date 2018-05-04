@@ -104,11 +104,6 @@ func (t *Tailer) SetOption(options ...func(*Tailer) error) error {
 	return nil
 }
 
-// SetOneShot sets the Tailer in oneshot mode.
-func (t *Tailer) SetOneShot() error {
-	return t.SetOption(OneShot)
-}
-
 // setHandle sets a file handle under it's pathname
 func (t *Tailer) setHandle(pathname string, f afero.File) error {
 	absPath, err := filepath.Abs(pathname)
