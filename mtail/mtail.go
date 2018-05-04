@@ -76,37 +76,44 @@ func (m *MtailServer) StartTailing() error {
 
 // InitLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *MtailServer) InitLoader() error {
-	var err error
-	m.l, err = vm.NewLoader(m.o.Progs, m.store, m.lines, vm.Watcher(m.o.W), vm.Filesystem(m.o.FS), vm.OverrideLocation(m.o.OverrideLocation))
+	opts := []func(*vm.Loader) error{
+		vm.Watcher(m.o.W),
+		vm.Filesystem(m.o.FS),
+	}
 	if m.o.CompileOnly {
-		m.l.SetOption(vm.CompileOnly)
+		opts = append(opts, vm.CompileOnly)
 		if m.o.OneShot {
-			m.l.SetOption(vm.ErrorsAbort)
+			opts = append(opts, vm.ErrorsAbort)
 		}
 	}
 	if m.o.DumpAst {
-		m.l.SetOption(vm.DumpAst)
+		opts = append(opts, vm.DumpAst)
 	}
 	if m.o.DumpAstTypes {
-		m.l.SetOption(vm.DumpAstTypes)
+		opts = append(opts, vm.DumpAstTypes)
 	}
 	if m.o.DumpBytecode {
-		m.l.SetOption(vm.DumpBytecode)
+		opts = append(opts, vm.DumpBytecode)
 	}
 	if m.o.SyslogUseCurrentYear {
-		m.l.SetOption(vm.SyslogUseCurrentYear)
+		opts = append(opts, vm.SyslogUseCurrentYear)
 	}
 	if m.o.OmitMetricSource {
-		m.l.SetOption(vm.OmitMetricSource)
+		opts = append(opts, vm.OmitMetricSource)
 	}
+	if m.o.OverrideLocation != nil {
+		opts = append(opts, vm.OverrideLocation(m.o.OverrideLocation))
+	}
+	var err error
+	m.l, err = vm.NewLoader(m.o.Progs, m.store, m.lines, opts...)
 	if err != nil {
 		return err
 	}
-	if m.o.Progs != "" {
-		errs := m.l.LoadAllPrograms()
-		if errs != nil {
-			return errors.Errorf("Compile encountered errors:\n%s", errs)
-		}
+	if m.o.Progs == "" {
+		return nil
+	}
+	if errs := m.l.LoadAllPrograms(); errs != nil {
+		return errors.Errorf("Compile encountered errors:\n%s", errs)
 	}
 	return nil
 }
