@@ -166,14 +166,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
-	o := &Options{
-		CompileOnly:          l.compileOnly,
-		EmitAst:              l.dumpAst,
-		EmitAstTypes:         l.dumpAstTypes,
-		SyslogUseCurrentYear: l.syslogUseCurrentYear,
-		OverrideLocation:     l.overrideLocation,
-	}
-	v, errs := Compile(name, input, o)
+	v, errs := Compile(name, input, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("compile failed for %s:\n%s", name, errs)
