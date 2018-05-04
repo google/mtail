@@ -76,23 +76,29 @@ func (m *MtailServer) StartTailing() error {
 
 // InitLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *MtailServer) InitLoader() error {
-	o := vm.LoaderOptions{
-		Store:                m.store,
-		Lines:                m.lines,
-		ProgramPath:          m.o.Progs,
-		CompileOnly:          m.o.CompileOnly,
-		ErrorsAbort:          m.o.CompileOnly || m.o.OneShot,
-		DumpAst:              m.o.DumpAst,
-		DumpAstTypes:         m.o.DumpAstTypes,
-		DumpBytecode:         m.o.DumpBytecode,
-		SyslogUseCurrentYear: m.o.SyslogUseCurrentYear,
-		OverrideLocation:     m.o.OverrideLocation,
-		OmitMetricSource:     m.o.OmitMetricSource,
-		W:                    m.o.W,
-		FS:                   m.o.FS,
-	}
 	var err error
-	m.l, err = vm.NewLoader(o)
+	m.l, err = vm.NewLoader(m.o.Progs, m.store, m.lines, vm.Watcher(m.o.W), vm.Filesystem(m.o.FS), vm.OverrideLocation(m.o.OverrideLocation))
+	if m.o.CompileOnly {
+		m.l.SetOption(vm.CompileOnly)
+		if m.o.OneShot {
+			m.l.SetOption(vm.ErrorsAbort)
+		}
+	}
+	if m.o.DumpAst {
+		m.l.SetOption(vm.DumpAst)
+	}
+	if m.o.DumpAstTypes {
+		m.l.SetOption(vm.DumpAstTypes)
+	}
+	if m.o.DumpBytecode {
+		m.l.SetOption(vm.DumpBytecode)
+	}
+	if m.o.SyslogUseCurrentYear {
+		m.l.SetOption(vm.SyslogUseCurrentYear)
+	}
+	if m.o.OmitMetricSource {
+		m.l.SetOption(vm.OmitMetricSource)
+	}
 	if err != nil {
 		return err
 	}
