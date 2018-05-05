@@ -132,17 +132,14 @@ func (m *MtailServer) InitLoader() error {
 	return nil
 }
 
-func (m *MtailServer) InitExporter() error {
+// InitExporter sets up an Exporter for this MtailServer.
+func (m *MtailServer) InitExporter() (err error) {
 	opts := []func(*exporter.Exporter) error{}
 	if m.omitProgLabel {
 		opts = append(opts, exporter.OmitProgLabel)
 	}
-	var err error
 	m.e, err = exporter.New(m.store, opts...)
-	if err != nil {
-		return err
-	}
-	return nil
+	return
 }
 
 const statusTemplate = `
@@ -413,6 +410,7 @@ func (m *MtailServer) Close() error {
 // pick up by the virtual machines. If OneShot mode is enabled, it will exit.
 func (m *MtailServer) Run() error {
 	if m.compileOnly {
+		glog.Info("compile-only is set, exiting")
 		return nil
 	}
 	err := m.StartTailing()
