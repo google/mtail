@@ -30,6 +30,8 @@ import (
 type MtailServer struct {
 	lines chan *tailer.LogLine // Channel of lines from tailer to VM engine.
 	store *metrics.Store       // Metrics storage.
+	w     watcher.Watcher
+	fs    afero.Fs
 
 	t *tailer.Tailer     // t tails the watched files and feeds lines to the VMs.
 	l *vm.Loader         // l loads programs and manages the VM lifecycle.
@@ -49,7 +51,7 @@ func (m *MtailServer) StartTailing() error {
 		opts = append(opts, tailer.OneShot)
 	}
 	var err error
-	m.t, err = tailer.New(m.lines, m.o.FS, m.o.W, opts...)
+	m.t, err = tailer.New(m.lines, m.fs, m.w, opts...)
 	if err != nil {
 		return errors.Wrap(err, "tailer.New")
 	}
@@ -100,7 +102,7 @@ func (m *MtailServer) InitLoader() error {
 		opts = append(opts, vm.OverrideLocation(m.o.OverrideLocation))
 	}
 	var err error
-	m.l, err = vm.NewLoader(m.o.Progs, m.store, m.lines, m.o.W, m.o.FS, opts...)
+	m.l, err = vm.NewLoader(m.o.Progs, m.store, m.lines, m.w, m.fs, opts...)
 	if err != nil {
 		return err
 	}
@@ -173,15 +175,17 @@ type Options struct {
 	OverrideLocation *time.Location
 	Store            *metrics.Store
 
-	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
-	FS afero.Fs        // Not required, will use afero.OsFs if zero.
+	// W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
+	// FS afero.Fs        // Not required, will use afero.OsFs if zero.
 }
 
 // New creates a MtailServer from the supplied Options.
-func New(o Options) (*MtailServer, error) {
+func New(w watcher.Watcher, fs afero.Fs, o Options) (*MtailServer, error) {
 	m := &MtailServer{
 		lines:   make(chan *tailer.LogLine),
 		store:   o.Store,
+		w:       w,
+		fs:      fs,
 		webquit: make(chan struct{}),
 		o:       o}
 

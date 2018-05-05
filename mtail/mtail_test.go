@@ -46,10 +46,8 @@ func startMtailServer(t *testing.T, logPathnames []string) *MtailServer {
 	o := Options{
 		LogPathPatterns: logPathnames,
 		Store:           metrics.NewStore(),
-		W:               w,
-		FS:              &afero.OsFs{},
 	}
-	m, err := New(o)
+	m, err := New(w, &afero.OsFs{}, o)
 	if err != nil {
 		t.Fatalf("couldn't create mtail: %s", err)
 	}

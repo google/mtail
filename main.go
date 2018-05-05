@@ -137,8 +137,6 @@ func main() {
 	}
 	o := mtail.Options{
 		Store:                metrics.NewStore(),
-		W:                    w,
-		FS:                   &afero.OsFs{},
 		Progs:                *progs,
 		LogPathPatterns:      logs,
 		LogFds:               logFds,
@@ -153,7 +151,7 @@ func main() {
 		OmitProgLabel:        !*emitProgLabel,
 		BuildInfo:            buildInfo(),
 	}
-	m, err := mtail.New(o)
+	m, err := mtail.New(w, &afero.OsFs{}, o)
 	if err != nil {
 		glog.Fatalf("couldn't start: %s", err)
 	}
