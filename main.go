@@ -14,7 +14,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
+	"github.com/google/mtail/watcher"
+	"github.com/spf13/afero"
 
 	_ "net/http/pprof"
 )
@@ -128,7 +131,14 @@ func main() {
 			glog.Exitf("No logs specified to tail; use -logs or -logfds")
 		}
 	}
+	w, err := watcher.NewLogWatcher()
+	if err != nil {
+		glog.Exitf("Failure to create log watcher: %s", err)
+	}
 	o := mtail.Options{
+		Store:                metrics.NewStore(),
+		W:                    w,
+		FS:                   &afero.OsFs{},
 		Progs:                *progs,
 		LogPathPatterns:      logs,
 		LogFds:               logFds,

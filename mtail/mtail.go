@@ -182,23 +182,9 @@ type Options struct {
 
 // New creates a MtailServer from the supplied Options.
 func New(o Options) (*MtailServer, error) {
-	store := o.Store
-	if store == nil {
-		store = metrics.NewStore()
-	}
-	if o.FS == nil {
-		o.FS = &afero.OsFs{}
-	}
-	if o.W == nil {
-		w, err := watcher.NewLogWatcher()
-		if err != nil {
-			return nil, err
-		}
-		o.W = w
-	}
 	m := &MtailServer{
 		lines:   make(chan *tailer.LogLine),
-		store:   store,
+		store:   o.Store,
 		webquit: make(chan struct{}),
 		o:       o}
 

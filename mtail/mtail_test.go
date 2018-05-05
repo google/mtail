@@ -16,7 +16,10 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/watcher"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 )
 
 const testProgram = "/$/ { }\n"
@@ -36,8 +39,15 @@ func removeTempDir(t *testing.T, workdir string) {
 }
 
 func startMtailServer(t *testing.T, logPathnames []string) *MtailServer {
+	w, err := watcher.NewLogWatcher()
+	if err != nil {
+		t.Errorf("Couodn't make a log watcher: %s", err)
+	}
 	o := Options{
 		LogPathPatterns: logPathnames,
+		Store:           metrics.NewStore(),
+		W:               w,
+		FS:              &afero.OsFs{},
 	}
 	m, err := New(o)
 	if err != nil {
