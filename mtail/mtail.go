@@ -419,8 +419,7 @@ func (m *MtailServer) Run() error {
 		glog.Info("compile-only is set, exiting")
 		return nil
 	}
-	err := m.StartTailing()
-	if err != nil {
+	if err := m.StartTailing(); err != nil {
 		glog.Exitf("tailing failed: %s", err)
 	}
 	if m.oneShot {
