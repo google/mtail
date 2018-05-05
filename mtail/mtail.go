@@ -185,14 +185,6 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Store sets the metric store in the MtailServer
-func Store(store *metrics.Store) func(*MtailServer) error {
-	return func(m *MtailServer) error {
-		m.store = store
-		return nil
-	}
-}
-
 // ProgramPath sets the path to find mtail programs in the MtailServer.
 func ProgramPath(path string) func(*MtailServer) error {
 	return func(m *MtailServer) error {
@@ -290,8 +282,9 @@ func OmitMetricSource(m *MtailServer) error {
 }
 
 // New creates a MtailServer from the supplied Options.
-func New(w watcher.Watcher, fs afero.Fs, options ...func(*MtailServer) error) (*MtailServer, error) {
+func New(store *metrics.Store, w watcher.Watcher, fs afero.Fs, options ...func(*MtailServer) error) (*MtailServer, error) {
 	m := &MtailServer{
+		store:   store,
 		lines:   make(chan *tailer.LogLine),
 		w:       w,
 		fs:      fs,

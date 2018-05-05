@@ -38,7 +38,7 @@ func BenchmarkProgram(b *testing.B) {
 			}
 			logs = []string{log.Name()}
 			store := metrics.NewStore()
-			mtail, err := mtail.New(w, fs, mtail.ProgramPath(bm.programfile), mtail.LogPathPatterns(logs), mtail.Store(store))
+			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(bm.programfile), mtail.LogPathPatterns(logs))
 			if err != nil {
 				b.Fatalf("Failed to create mtail: %s", err)
 			}

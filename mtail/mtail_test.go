@@ -43,7 +43,7 @@ func startMtailServer(t *testing.T, logPathnames []string) *MtailServer {
 	if err != nil {
 		t.Errorf("Couodn't make a log watcher: %s", err)
 	}
-	m, err := New(w, &afero.OsFs{}, LogPathPatterns(logPathnames), Store(metrics.NewStore()))
+	m, err := New(metrics.NewStore(), w, &afero.OsFs{}, LogPathPatterns(logPathnames))
 	if err != nil {
 		t.Fatalf("couldn't create mtail: %s", err)
 	}

@@ -135,7 +135,6 @@ func main() {
 		glog.Exitf("Failure to create log watcher: %s", err)
 	}
 	opts := []func(*mtail.MtailServer) error{
-		mtail.Store(metrics.NewStore()),
 		mtail.ProgramPath(*progs),
 		mtail.LogPathPatterns(logs),
 		mtail.LogFds(logFds),
@@ -164,7 +163,7 @@ func main() {
 	if !*emitProgLabel {
 		opts = append(opts, mtail.OmitProgLabel)
 	}
-	m, err := mtail.New(w, &afero.OsFs{}, opts...)
+	m, err := mtail.New(metrics.NewStore(), w, &afero.OsFs{}, opts...)
 	if err != nil {
 		glog.Fatalf("couldn't start: %s", err)
 	}
