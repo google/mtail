@@ -94,7 +94,7 @@ func New(lines chan<- *LogLine, fs afero.Fs, w watcher.Watcher, options ...func(
 	return t, nil
 }
 
-// SetOption takes one or more option functions and applies them in order to Tailer
+// SetOption takes one or more option functions and applies them in order to Tailer.
 func (t *Tailer) SetOption(options ...func(*Tailer) error) error {
 	for _, option := range options {
 		if err := option(t); err != nil {

@@ -29,32 +29,43 @@ var (
 
 // Exporter manages the export of metrics to passive and active collectors.
 type Exporter struct {
-	store       *metrics.Store
-	o           Options
-	pushTargets []pushOptions
+	store         *metrics.Store
+	hostname      string
+	omitProgLabel bool
+	pushTargets   []pushOptions
 }
 
-// Options contains the required and optional parameters for constructing an
-// Exporter.
-type Options struct {
-	Store         *metrics.Store
-	Hostname      string // Not required, uses os.Hostname if zero.
-	OmitProgLabel bool   // If true, don't emit the prog label that identifies the source program in variable exports.
+// Hostname is an option that specifies the mtail hostname to use in exported metrics.
+func Hostname(hostname string) func(*Exporter) error {
+	return func(e *Exporter) error {
+		e.hostname = hostname
+		return nil
+	}
+}
+
+// OmitProgLabel sets the Exporter to not put program names in metric labels.
+func OmitProgLabel(e *Exporter) error {
+	e.omitProgLabel = true
+	return nil
 }
 
 // New creates a new Exporter.
-func New(o Options) (*Exporter, error) {
-	if o.Store == nil {
+func New(store *metrics.Store, options ...func(*Exporter) error) (*Exporter, error) {
+	if store == nil {
 		return nil, errors.New("exporter needs a Store")
 	}
-	if o.Hostname == "" {
+	e := &Exporter{store: store}
+	if err := e.SetOption(options...); err != nil {
+		return nil, err
+	}
+	// defaults after options have been set
+	if e.hostname == "" {
 		var err error
-		o.Hostname, err = os.Hostname()
+		e.hostname, err = os.Hostname()
 		if err != nil {
 			return nil, errors.Wrap(err, "getting hostname")
 		}
 	}
-	e := &Exporter{store: o.Store, o: o}
 
 	if *collectdSocketPath != "" {
 		o := pushOptions{"unix", *collectdSocketPath, metricToCollectd, collectdExportTotal, collectdExportSuccess}
@@ -70,6 +81,16 @@ func New(o Options) (*Exporter, error) {
 	}
 
 	return e, nil
+}
+
+// SetOption takes one or more option functions and applies them in order to Exporter.
+func (e *Exporter) SetOption(options ...func(*Exporter) error) error {
+	for _, option := range options {
+		if err := option(e); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // formatLabels converts a metric name and key-value map of labels to a single
@@ -105,7 +126,7 @@ func (e *Exporter) writeSocketMetrics(c io.Writer, f formatter, exportTotal *exp
 			lc := make(chan *metrics.LabelSet)
 			go m.EmitLabelSets(lc)
 			for l := range lc {
-				line := f(e.o.Hostname, m, l)
+				line := f(e.hostname, m, l)
 				n, err := fmt.Fprint(c, line)
 				glog.V(2).Infof("Sent %d bytes\n", n)
 				if err == nil {

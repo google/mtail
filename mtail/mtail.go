@@ -207,7 +207,11 @@ func New(o Options) (*MtailServer, error) {
 		return nil, err
 	}
 
-	m.e, err = exporter.New(exporter.Options{Store: m.store, OmitProgLabel: o.OmitProgLabel})
+	opts := []func(*exporter.Exporter) error{}
+	if o.OmitProgLabel {
+		opts = append(opts, exporter.OmitProgLabel)
+	}
+	m.e, err = exporter.New(m.store, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -340,7 +340,7 @@ func NewLoader(programPath string, store *metrics.Store, lines <-chan *tailer.Lo
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
 	}
-	// Specify defaults after options are set.
+	// defaults after options have been set
 	if l.fs == nil {
 		l.fs = &afero.OsFs{}
 	}
@@ -358,6 +358,7 @@ func NewLoader(programPath string, store *metrics.Store, lines <-chan *tailer.Lo
 	return l, nil
 }
 
+// SetOption takes one or more option functions and applies them in order to Loader.
 func (l *Loader) SetOption(options ...func(*Loader) error) error {
 	for _, option := range options {
 		if err := option(l); err != nil {
