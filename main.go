@@ -6,7 +6,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"runtime"
 	"strconv"
@@ -135,23 +134,37 @@ func main() {
 	if err != nil {
 		glog.Exitf("Failure to create log watcher: %s", err)
 	}
-	o := mtail.Options{
-		Store:                metrics.NewStore(),
-		Progs:                *progs,
-		LogPathPatterns:      logs,
-		LogFds:               logFds,
-		BindAddress:          net.JoinHostPort(*address, *port),
-		OneShot:              *oneShot,
-		CompileOnly:          *compileOnly,
-		DumpAst:              *dumpAst,
-		DumpAstTypes:         *dumpAstTypes,
-		DumpBytecode:         *dumpBytecode,
-		SyslogUseCurrentYear: *syslogUseCurrentYear,
-		OverrideLocation:     loc,
-		OmitProgLabel:        !*emitProgLabel,
-		BuildInfo:            buildInfo(),
+	opts := []func(*mtail.MtailServer) error{
+		mtail.Store(metrics.NewStore()),
+		mtail.ProgramPath(*progs),
+		mtail.LogPathPatterns(logs),
+		mtail.LogFds(logFds),
+		mtail.BindAddress(*address, *port),
+		mtail.BuildInfo(buildInfo()),
+		mtail.OverrideLocation(loc),
 	}
-	m, err := mtail.New(w, &afero.OsFs{}, o)
+	if *oneShot {
+		opts = append(opts, mtail.OneShot)
+	}
+	if *compileOnly {
+		opts = append(opts, mtail.CompileOnly)
+	}
+	if *dumpAst {
+		opts = append(opts, mtail.DumpAst)
+	}
+	if *dumpAstTypes {
+		opts = append(opts, mtail.DumpAstTypes)
+	}
+	if *dumpBytecode {
+		opts = append(opts, mtail.DumpBytecode)
+	}
+	if *syslogUseCurrentYear {
+		opts = append(opts, mtail.SyslogUseCurrentYear)
+	}
+	if !*emitProgLabel {
+		opts = append(opts, mtail.OmitProgLabel)
+	}
+	m, err := mtail.New(w, &afero.OsFs{}, opts...)
 	if err != nil {
 		glog.Fatalf("couldn't start: %s", err)
 	}

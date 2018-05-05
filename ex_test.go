@@ -116,12 +116,7 @@ func TestExamplePrograms(t *testing.T) {
 			store := metrics.NewStore()
 			fs := &afero.OsFs{}
 			logs := []string{tc.logfile}
-			o := mtail.Options{Progs: tc.programfile, LogPathPatterns: logs, Store: store}
-			o.OneShot = true
-			o.OmitMetricSource = true
-			o.DumpAstTypes = true
-			o.DumpBytecode = true
-			mtail, err := mtail.New(w, fs, o)
+			mtail, err := mtail.New(w, fs, mtail.Store(store), mtail.ProgramPath(tc.programfile), mtail.LogPathPatterns(logs), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			if err != nil {
 				t.Fatalf("create mtail failed: %s", err)
 			}
@@ -171,12 +166,7 @@ func TestCompileExamplePrograms(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
 			fs := &afero.OsFs{}
-			o := mtail.Options{Progs: tc, Store: s}
-			o.CompileOnly = true
-			o.OmitMetricSource = true
-			o.DumpAstTypes = true
-			o.DumpBytecode = true
-			mtail, err := mtail.New(w, fs, o)
+			mtail, err := mtail.New(w, fs, mtail.ProgramPath(tc), mtail.Store(s), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			if err != nil {
 				t.Fatal(err)
 			}
