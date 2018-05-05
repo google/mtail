@@ -215,6 +215,15 @@ func New(o Options) (*MtailServer, error) {
 	return m, nil
 }
 
+func (m *MtailServer) SetOption(options ...func(*MtailServer) error) error {
+	for _, option := range options {
+		if err := option(m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // WriteMetrics dumps the current state of the metrics store in JSON format to
 // the io.Writer.
 func (m *MtailServer) WriteMetrics(w io.Writer) error {
