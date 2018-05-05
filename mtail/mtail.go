@@ -132,6 +132,19 @@ func (m *MtailServer) InitLoader() error {
 	return nil
 }
 
+func (m *MtailServer) InitExporter() error {
+	opts := []func(*exporter.Exporter) error{}
+	if m.omitProgLabel {
+		opts = append(opts, exporter.OmitProgLabel)
+	}
+	var err error
+	m.e, err = exporter.New(m.store, opts...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 const statusTemplate = `
 <html>
 <head>
@@ -288,21 +301,12 @@ func New(w watcher.Watcher, fs afero.Fs, options ...func(*MtailServer) error) (*
 	if err := m.SetOption(options...); err != nil {
 		return nil, err
 	}
-
+	if err := m.InitExporter(); err != nil {
+		return nil, err
+	}
 	if err := m.InitLoader(); err != nil {
 		return nil, err
 	}
-
-	opts := []func(*exporter.Exporter) error{}
-	if m.omitProgLabel {
-		opts = append(opts, exporter.OmitProgLabel)
-	}
-	var err error
-	m.e, err = exporter.New(m.store, opts...)
-	if err != nil {
-		return nil, err
-	}
-
 	return m, nil
 }
 
