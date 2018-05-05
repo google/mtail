@@ -63,15 +63,7 @@ type MtailServer struct {
 // StartTailing constructs a new Tailer and commences sending log lines into
 // the lines channel.
 func (m *MtailServer) StartTailing() error {
-	opts := []func(*tailer.Tailer) error{}
-	if m.oneShot {
-		opts = append(opts, tailer.OneShot)
-	}
 	var err error
-	m.t, err = tailer.New(m.lines, m.fs, m.w, opts...)
-	if err != nil {
-		return errors.Wrap(err, "tailer.New")
-	}
 	for _, pattern := range m.logPathPatterns {
 		glog.V(1).Infof("Tail pattern %q", pattern)
 		if err = m.t.TailPattern(pattern); err != nil {
@@ -91,8 +83,8 @@ func (m *MtailServer) StartTailing() error {
 	return nil
 }
 
-// InitLoader constructs a new program loader and performs the initial load of program files in the program directory.
-func (m *MtailServer) InitLoader() error {
+// initLoader constructs a new program loader and performs the initial load of program files in the program directory.
+func (m *MtailServer) initLoader() error {
 	opts := []func(*vm.Loader) error{}
 	if m.compileOnly {
 		opts = append(opts, vm.CompileOnly)
@@ -132,13 +124,23 @@ func (m *MtailServer) InitLoader() error {
 	return nil
 }
 
-// InitExporter sets up an Exporter for this MtailServer.
-func (m *MtailServer) InitExporter() (err error) {
+// initExporter sets up an Exporter for this MtailServer.
+func (m *MtailServer) initExporter() (err error) {
 	opts := []func(*exporter.Exporter) error{}
 	if m.omitProgLabel {
 		opts = append(opts, exporter.OmitProgLabel)
 	}
 	m.e, err = exporter.New(m.store, opts...)
+	return
+}
+
+// initTailer sets up a Tailer for this MtailServer.
+func (m *MtailServer) initTailer() (err error) {
+	opts := []func(*tailer.Tailer) error{}
+	if m.oneShot {
+		opts = append(opts, tailer.OneShot)
+	}
+	m.t, err = tailer.New(m.lines, m.fs, m.w, opts...)
 	return
 }
 
@@ -298,10 +300,13 @@ func New(w watcher.Watcher, fs afero.Fs, options ...func(*MtailServer) error) (*
 	if err := m.SetOption(options...); err != nil {
 		return nil, err
 	}
-	if err := m.InitExporter(); err != nil {
+	if err := m.initExporter(); err != nil {
 		return nil, err
 	}
-	if err := m.InitLoader(); err != nil {
+	if err := m.initLoader(); err != nil {
+		return nil, err
+	}
+	if err := m.initTailer(); err != nil {
 		return nil, err
 	}
 	return m, nil
