@@ -256,22 +256,6 @@ type Loader struct {
 	omitMetricSource     bool
 }
 
-// Watcher sets a custom file watcher for the Loader
-func Watcher(w watcher.Watcher) func(*Loader) error {
-	return func(l *Loader) error {
-		l.w = w
-		return nil
-	}
-}
-
-// Filesystem sets a filesystem layer for the Loader
-func Filesystem(fs afero.Fs) func(*Loader) error {
-	return func(l *Loader) error {
-		l.fs = fs
-		return nil
-	}
-}
-
 // OverrideLocation sets the timezone location for the VM.
 func OverrideLocation(loc *time.Location) func(*Loader) error {
 	return func(l *Loader) error {
@@ -322,15 +306,15 @@ func OmitMetricSource(l *Loader) error {
 	return nil
 }
 
-// NewLoader creates a new program loader.  It takes a filesystem watcher
-// and a filesystem interface as arguments.  If fs is nil, it will use the
-// default filesystem interface.
-func NewLoader(programPath string, store *metrics.Store, lines <-chan *tailer.LogLine, options ...func(*Loader) error) (*Loader, error) {
+// NewLoader creates a new program loader that reads programs from programPath.
+func NewLoader(programPath string, store *metrics.Store, lines <-chan *tailer.LogLine, w watcher.Watcher, fs afero.Fs, options ...func(*Loader) error) (*Loader, error) {
 	if store == nil || lines == nil {
 		return nil, errors.New("loader needs a store and lines")
 	}
 	l := &Loader{
 		ms:            store,
+		fs:            fs,
+		w:             w,
 		programPath:   programPath,
 		handles:       make(map[string]*vmHandle),
 		programErrors: make(map[string]error),
@@ -340,18 +324,6 @@ func NewLoader(programPath string, store *metrics.Store, lines <-chan *tailer.Lo
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
 	}
-	// defaults after options have been set
-	if l.fs == nil {
-		l.fs = &afero.OsFs{}
-	}
-	if l.w == nil {
-		var err error
-		l.w, err = watcher.NewLogWatcher()
-		if err != nil {
-			return nil, errors.Wrap(err, "Couldn't create a watcher for loader")
-		}
-	}
-
 	eventsChan := l.w.Events()
 	go l.processEvents(eventsChan)
 	go l.processLines(lines)

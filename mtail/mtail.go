@@ -74,10 +74,7 @@ func (m *MtailServer) StartTailing() error {
 
 // InitLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *MtailServer) InitLoader() error {
-	opts := []func(*vm.Loader) error{
-		vm.Watcher(m.o.W),
-		vm.Filesystem(m.o.FS),
-	}
+	opts := []func(*vm.Loader) error{}
 	if m.o.CompileOnly {
 		opts = append(opts, vm.CompileOnly)
 		if m.o.OneShot {
@@ -103,7 +100,7 @@ func (m *MtailServer) InitLoader() error {
 		opts = append(opts, vm.OverrideLocation(m.o.OverrideLocation))
 	}
 	var err error
-	m.l, err = vm.NewLoader(m.o.Progs, m.store, m.lines, opts...)
+	m.l, err = vm.NewLoader(m.o.Progs, m.store, m.lines, m.o.W, m.o.FS, opts...)
 	if err != nil {
 		return err
 	}
