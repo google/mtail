@@ -19,7 +19,7 @@ import (
 
 var varRe = regexp.MustCompile(`^(counter|gauge|timer) ([^ ]+)(?: {([^}]+)})?(?: ([+-]?\d+(?:\.\d+(?:[eE]-?\d+)?)?))?(?: (.+))?`)
 
-// Find a metric in a store
+// FindMetricOrNil returns a metric in a store, or returns nil if not found.
 func FindMetricOrNil(store *metrics.Store, name string) *metrics.Metric {
 	store.RLock()
 	defer store.RUnlock()
@@ -31,6 +31,7 @@ func FindMetricOrNil(store *metrics.Store, name string) *metrics.Metric {
 	return nil
 }
 
+// ReadTestData loads a "golden" test data file, for a programfile, into the provided store.
 func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 	prog := filepath.Base(programfile)
 	scanner := bufio.NewScanner(file)
@@ -108,7 +109,9 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 				}
 			}
 			glog.V(2).Infof("making a new %v\n", m)
-			store.Add(m)
+			if err := store.Add(m); err != nil {
+				glog.Infof("Failed to add metric %v to store: %s", m, err)
+			}
 		}
 
 		if match[4] != "" {

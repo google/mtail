@@ -14,9 +14,11 @@ import (
 type FakeWatcher struct {
 	watchesMu sync.RWMutex
 	watches   map[string]bool
-	eventsMu  sync.RWMutex // locks events and isClosed
-	events    []chan Event
-	isClosed  bool
+
+	eventsMu sync.RWMutex // locks events and isClosed
+	events   []chan Event
+
+	isClosed bool
 }
 
 // NewFakeWatcher returns a fake Watcher for use in tests.
@@ -86,7 +88,9 @@ func (w *FakeWatcher) InjectCreate(name string) {
 		return
 	}
 	w.sendEvent(CreateEvent{name})
-	w.Add(name)
+	if err := w.Add(name); err != nil {
+		glog.Warning(err)
+	}
 }
 
 // InjectUpdate lets a test inject a fake update event.
@@ -111,5 +115,7 @@ func (w *FakeWatcher) InjectDelete(name string) {
 		return
 	}
 	w.sendEvent(DeleteEvent{name})
-	w.Remove(name)
+	if err := w.Remove(name); err != nil {
+		glog.Warning(err)
+	}
 }

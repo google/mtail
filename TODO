@@ -37,6 +37,9 @@ openLogPath's seenBefore in the tailer's handle* is incorrect because by
     we miss the first lines of the file.  This is causing unnecessary
     complexity in the tailer code.
 
+GC in the tailer to remove handles on files that haven't been updated in 24h,
+    when log files rotate with a timestamp-like pattern
+
 # Won't do
 
 X Use capture group references to feed back to declaring regular expression,

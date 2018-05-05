@@ -21,4 +21,6 @@ sleep 2
 
 wget -q -O- http://localhost:3903/debug/vars | grep count
 
+# expecting 2 line_count, 1 log_count
+
 kill $pid

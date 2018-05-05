@@ -15,13 +15,12 @@ import (
 )
 
 func TestCreateExporter(t *testing.T) {
-	o := Options{}
-	_, err := New(o)
+	_, err := New(nil)
 	if err == nil {
 		t.Error("expecting error, got nil")
 	}
-	o.Store = metrics.NewStore()
-	_, err = New(o)
+	store := metrics.NewStore()
+	_, err = New(store)
 	if err != nil {
 		t.Errorf("unexpected error:%s", err)
 	}

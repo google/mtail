@@ -8,6 +8,7 @@ import (
 	"fmt"
 )
 
+// SymbolKind enumerates the kind of a Symbol.
 type SymbolKind int
 
 // SymbolKind enumerates the kinds of symbols found in the program text.

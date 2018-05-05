@@ -102,7 +102,11 @@ func (l *Loader) LoadProgram(programPath string) error {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Wrapf(err, "Failed to read program %q", programPath)
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			glog.Warning(err)
+		}
+	}()
 	l.programErrorMu.Lock()
 	defer l.programErrorMu.Unlock()
 	l.programErrors[name] = l.CompileAndRun(name, f)
@@ -162,14 +166,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
-	o := &Options{
-		CompileOnly:          l.compileOnly,
-		EmitAst:              l.dumpAst,
-		EmitAstTypes:         l.dumpAstTypes,
-		SyslogUseCurrentYear: l.syslogUseCurrentYear,
-		OverrideLocation:     l.overrideLocation,
-	}
-	v, errs := Compile(name, input, o)
+	v, errs := Compile(name, input, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("compile failed for %s:\n%s", name, errs)
@@ -234,17 +231,16 @@ func nameToCode(name string) uint32 {
 // managing the running virtual machines that receive input from the lines
 // channel.
 type Loader struct {
-	w  watcher.Watcher // watches for program changes
-	fs afero.Fs        // filesystem interface
-	ms *metrics.Store  // pointer to store to pass to compiler
+	ms          *metrics.Store  // pointer to metrics.Store to pass to compiler
+	w           watcher.Watcher // watches for program changes
+	fs          afero.Fs        // filesystem interface
+	programPath string          // Path that contains mtail programs.
 
-	programPath string // Path that contains mtail programs.
-
-	handles  map[string]*vmHandle // map of program names to virtual machines
 	handleMu sync.RWMutex         // guards accesses to handles
+	handles  map[string]*vmHandle // map of program names to virtual machines
 
-	programErrors  map[string]error // errors from the last compile attempt of the program
 	programErrorMu sync.RWMutex     // guards access to programErrors
+	programErrors  map[string]error // errors from the last compile attempt of the program
 
 	watcherDone chan struct{} // Synchronise shutdown of the watcher processEvents goroutine
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
@@ -259,70 +255,88 @@ type Loader struct {
 	omitMetricSource     bool
 }
 
-// LoaderOptions contains the required and optional parameters for creating a
-// new Loader.
-type LoaderOptions struct {
-	Store *metrics.Store
-	Lines <-chan *tailer.LogLine
-
-	ProgramPath string // Path containing mtail programs
-
-	W  watcher.Watcher // Not required, will use watcher.LogWatcher if zero.
-	FS afero.Fs        // Not required, will use afero.OsFs if zero.
-
-	OverrideLocation     *time.Location // if not nil, overrides the timezone in strptime().
-	CompileOnly          bool           // Compile, don't start execution.
-	ErrorsAbort          bool           // Compiler errors abort the loader.
-	DumpAst              bool           // print the AST after type check
-	DumpAstTypes         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
-	DumpBytecode         bool           // Instructs the loader to dump the program bytecode after compilation.
-	SyslogUseCurrentYear bool           // If true, override empty year with the current in strptime().
-	OmitMetricSource     bool           // Don't put the source in the metric when added to the Store.
+// OverrideLocation sets the timezone location for the VM.
+func OverrideLocation(loc *time.Location) func(*Loader) error {
+	return func(l *Loader) error {
+		l.overrideLocation = loc
+		return nil
+	}
 }
 
-// NewLoader creates a new program loader.  It takes a filesystem watcher
-// and a filesystem interface as arguments.  If fs is nil, it will use the
-// default filesystem interface.
-func NewLoader(o LoaderOptions) (*Loader, error) {
-	if o.Store == nil || o.Lines == nil {
+// CompileOnly sets the Loader to compile programs only, without executing them.
+func CompileOnly(l *Loader) error {
+	l.compileOnly = true
+	return nil
+}
+
+// ErrorsAbort sets the Loader to abort the Loader on compile errors.
+func ErrorsAbort(l *Loader) error {
+	l.errorsAbort = true
+	return nil
+}
+
+// DumpAst instructs the Loader to print the AST after program compilation.
+func DumpAst(l *Loader) error {
+	l.dumpAst = true
+	return nil
+}
+
+// DumpAstTypes instructs the Loader to print the AST after type checking.
+func DumpAstTypes(l *Loader) error {
+	l.dumpAstTypes = true
+	return nil
+}
+
+// DumpBytecode instructs the loader to print the compiled bytecode after code generation.
+func DumpBytecode(l *Loader) error {
+	l.dumpBytecode = true
+	return nil
+}
+
+// SyslogUseCurrentYear instructs the VM to annotate yearless timestamps with the current year.
+func SyslogUseCurrentYear(l *Loader) error {
+	l.syslogUseCurrentYear = true
+	return nil
+}
+
+// OmitMetricSource instructs the Loader to not annotate metrics with their program source when added to the metric store.
+func OmitMetricSource(l *Loader) error {
+	l.omitMetricSource = true
+	return nil
+}
+
+// NewLoader creates a new program loader that reads programs from programPath.
+func NewLoader(programPath string, store *metrics.Store, lines <-chan *tailer.LogLine, w watcher.Watcher, fs afero.Fs, options ...func(*Loader) error) (*Loader, error) {
+	if store == nil || lines == nil {
 		return nil, errors.New("loader needs a store and lines")
 	}
-	fs := o.FS
-	if fs == nil {
-		fs = &afero.OsFs{}
-	}
-	w := o.W
-	if w == nil {
-		var err error
-		w, err = watcher.NewLogWatcher()
-		if err != nil {
-			return nil, errors.Wrap(err, "Couldn't create a watcher for loader")
-		}
-	}
-
 	l := &Loader{
-		w:                    w,
-		ms:                   o.Store,
-		fs:                   fs,
-		programPath:          o.ProgramPath,
-		handles:              make(map[string]*vmHandle),
-		programErrors:        make(map[string]error),
-		watcherDone:          make(chan struct{}),
-		VMsDone:              make(chan struct{}),
-		compileOnly:          o.CompileOnly,
-		errorsAbort:          o.ErrorsAbort,
-		dumpAst:              o.DumpAst,
-		dumpAstTypes:         o.DumpAstTypes,
-		dumpBytecode:         o.DumpBytecode,
-		syslogUseCurrentYear: o.SyslogUseCurrentYear,
-		overrideLocation:     o.OverrideLocation,
-		omitMetricSource:     o.OmitMetricSource,
+		ms:            store,
+		fs:            fs,
+		w:             w,
+		programPath:   programPath,
+		handles:       make(map[string]*vmHandle),
+		programErrors: make(map[string]error),
+		watcherDone:   make(chan struct{}),
+		VMsDone:       make(chan struct{}),
 	}
-
+	if err := l.SetOption(options...); err != nil {
+		return nil, err
+	}
 	eventsChan := l.w.Events()
 	go l.processEvents(eventsChan)
-	go l.processLines(o.Lines)
+	go l.processLines(lines)
 	return l, nil
+}
+
+// SetOption takes one or more option functions and applies them in order to Loader.
+func (l *Loader) SetOption(options ...func(*Loader) error) error {
+	for _, option := range options {
+		if err := option(l); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type vmHandle struct {
@@ -340,9 +354,13 @@ func (l *Loader) processEvents(events <-chan watcher.Event) {
 		case watcher.DeleteEvent:
 			l.UnloadProgram(event.Pathname)
 		case watcher.UpdateEvent:
-			l.LoadProgram(event.Pathname)
+			if err := l.LoadProgram(event.Pathname); err != nil {
+				glog.Info(err)
+			}
 		case watcher.CreateEvent:
-			l.w.Add(event.Pathname)
+			if err := l.w.Add(event.Pathname); err != nil {
+				glog.Info(err)
+			}
 		default:
 			glog.V(1).Infof("Unexpected event type %+#v", event)
 		}

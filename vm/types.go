@@ -55,15 +55,16 @@ func Equals(t1, t2 Type) bool {
 }
 
 var (
-	nextVariableID   int
 	nextVariableIDMu sync.Mutex
+	nextVariableID   int
 )
 
 // TypeVariable represents an unbound type variable in the type system.
 type TypeVariable struct {
-	ID         int
-	Instance   *Type
+	ID int
+
 	instanceMu sync.RWMutex
+	Instance   *Type
 }
 
 // NewTypeVariable constructs a new unique TypeVariable.
@@ -75,6 +76,7 @@ func NewTypeVariable() *TypeVariable {
 	return &TypeVariable{ID: id}
 }
 
+// Root returns an exemplar of this TypeVariable, in this case the root of the unification tree.
 func (t *TypeVariable) Root() Type {
 	t.instanceMu.Lock()
 	defer t.instanceMu.Unlock()
@@ -115,6 +117,7 @@ type TypeOperator struct {
 	Args []Type
 }
 
+// Root returns an exemplar of a TypeOperator, i.e. itself.
 func (t *TypeOperator) Root() Type {
 	return t
 }
@@ -254,6 +257,7 @@ func occursInType(v *TypeVariable, t2 Type) bool {
 	return false
 }
 
+// TypeError describes an error in which a type was expected, but another was encountered.
 type TypeError struct {
 	expected Type
 	received Type
@@ -341,6 +345,7 @@ func Unify(a, b Type) error {
 	return nil
 }
 
+// LeastUpperBound returns the smallest type that may contain both parameter types.
 func LeastUpperBound(a, b Type) Type {
 	a1, b1 := a.Root(), b.Root()
 	glog.V(2).Infof("Computing LUB(%q, %q)", a1, b1)

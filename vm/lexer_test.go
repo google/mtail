@@ -218,14 +218,14 @@ func collect(t *lexerTest) (tokens []token) {
 	inRegexSet := false
 	l := newLexer(t.name, strings.NewReader(t.input))
 	for {
-		token := l.nextToken()
+		tok := l.nextToken()
 		// Hack to simulate context signal from parser.
-		if token.kind == DIV && (strings.Contains(t.name, "regex") || strings.HasPrefix(t.name, "large program")) && !inRegexSet {
+		if tok.kind == DIV && (strings.Contains(t.name, "regex") || strings.HasPrefix(t.name, "large program")) && !inRegexSet {
 			l.inRegex = true
 			inRegexSet = true
 		}
-		tokens = append(tokens, token)
-		if token.kind == EOF {
+		tokens = append(tokens, tok)
+		if tok.kind == EOF {
 			return
 		}
 	}

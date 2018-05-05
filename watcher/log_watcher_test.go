@@ -187,6 +187,40 @@ func TestLogWatcherAddError(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping log watcher test in short mode")
 	}
+
+	workdir, err := ioutil.TempDir("", "log_watcher_test")
+	if err != nil {
+		t.Fatalf("could not create temporary working directory: %s", err)
+	}
+
+	defer func() {
+		err = os.RemoveAll(workdir)
+		if err != nil {
+			t.Fatalf("could not remove temp dir %s: %s:", workdir, err)
+		}
+	}()
+
+	w, err := NewLogWatcher()
+	if err != nil {
+		t.Fatalf("couldn't create a watcher: %s\n", err)
+	}
+	defer func() {
+		if err = w.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	filename := filepath.Join(workdir, "test")
+	err = w.Add(filename)
+	if err == nil {
+		t.Errorf("did not receive an error for nonexistent file")
+	}
+}
+
+func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping log watcher test in short mode")
+	}
 	u, err := user.Current()
 	if err != nil {
 		t.Skip(fmt.Sprintf("Couldn't determine current user id: %s", err))
@@ -225,8 +259,8 @@ func TestLogWatcherAddError(t *testing.T) {
 		t.Fatalf("couldn't chmod file: %s", err)
 	}
 	err = w.Add(filename)
-	if err == nil {
-		t.Errorf("didn't fail to add file")
+	if err != nil {
+		t.Errorf("failed to add watch on permission denied")
 	}
 	if err := os.Chmod(filename, 0777); err != nil {
 		t.Fatalf("couldn't reset file perms: %s", err)

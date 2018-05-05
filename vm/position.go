@@ -21,6 +21,7 @@ func (p position) String() string {
 	return r
 }
 
+// MergePosition returns the union of two positions such that the result contains both inputs.
 func MergePosition(a, b *position) *position {
 	if a == nil {
 		return b

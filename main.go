@@ -6,7 +6,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"runtime"
 	"strconv"
@@ -14,7 +13,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
+	"github.com/google/mtail/watcher"
+	"github.com/spf13/afero"
 
 	_ "net/http/pprof"
 )
@@ -128,22 +130,41 @@ func main() {
 			glog.Exitf("No logs specified to tail; use -logs or -logfds")
 		}
 	}
-	o := mtail.Options{
-		Progs:                *progs,
-		LogPathPatterns:      logs,
-		LogFds:               logFds,
-		BindAddress:          net.JoinHostPort(*address, *port),
-		OneShot:              *oneShot,
-		CompileOnly:          *compileOnly,
-		DumpAst:              *dumpAst,
-		DumpAstTypes:         *dumpAstTypes,
-		DumpBytecode:         *dumpBytecode,
-		SyslogUseCurrentYear: *syslogUseCurrentYear,
-		OverrideLocation:     loc,
-		OmitProgLabel:        !*emitProgLabel,
-		BuildInfo:            buildInfo(),
+	w, err := watcher.NewLogWatcher()
+	if err != nil {
+		glog.Exitf("Failure to create log watcher: %s", err)
 	}
-	m, err := mtail.New(o)
+	opts := []func(*mtail.MtailServer) error{
+		mtail.Store(metrics.NewStore()),
+		mtail.ProgramPath(*progs),
+		mtail.LogPathPatterns(logs),
+		mtail.LogFds(logFds),
+		mtail.BindAddress(*address, *port),
+		mtail.BuildInfo(buildInfo()),
+		mtail.OverrideLocation(loc),
+	}
+	if *oneShot {
+		opts = append(opts, mtail.OneShot)
+	}
+	if *compileOnly {
+		opts = append(opts, mtail.CompileOnly)
+	}
+	if *dumpAst {
+		opts = append(opts, mtail.DumpAst)
+	}
+	if *dumpAstTypes {
+		opts = append(opts, mtail.DumpAstTypes)
+	}
+	if *dumpBytecode {
+		opts = append(opts, mtail.DumpBytecode)
+	}
+	if *syslogUseCurrentYear {
+		opts = append(opts, mtail.SyslogUseCurrentYear)
+	}
+	if !*emitProgLabel {
+		opts = append(opts, mtail.OmitProgLabel)
+	}
+	m, err := mtail.New(w, &afero.OsFs{}, opts...)
 	if err != nil {
 		glog.Fatalf("couldn't start: %s", err)
 	}

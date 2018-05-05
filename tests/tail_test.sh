@@ -46,9 +46,11 @@ sleep 2
 
 echo "debug/vars:"
 wget --no-netrc -q -O- http://localhost:3903/debug/vars | grep count
+# expecting 3 line count, 1 log count
 
 echo "metrics:"
 wget --no-netrc -q -O- http://localhost:3903/metrics
+# 3xpecting line_count = 3
 
 
 teardown
