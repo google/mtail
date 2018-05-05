@@ -14,9 +14,11 @@ import (
 type FakeWatcher struct {
 	watchesMu sync.RWMutex
 	watches   map[string]bool
-	eventsMu  sync.RWMutex // locks events and isClosed
-	events    []chan Event
-	isClosed  bool
+
+	eventsMu sync.RWMutex // locks events and isClosed
+	events   []chan Event
+
+	isClosed bool
 }
 
 // NewFakeWatcher returns a fake Watcher for use in tests.

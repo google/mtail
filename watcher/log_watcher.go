@@ -24,11 +24,11 @@ var (
 type LogWatcher struct {
 	*fsnotify.Watcher
 
-	events   []chan Event
 	eventsMu sync.RWMutex
+	events   []chan Event
 
-	watched   map[string]struct{} // Names of paths being watched
 	watchedMu sync.RWMutex        // protects `watched'
+	watched   map[string]struct{} // Names of paths being watched
 
 	runDone chan struct{} // Channel to respond to Close
 }

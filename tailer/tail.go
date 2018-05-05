@@ -44,12 +44,14 @@ type Tailer struct {
 	w     watcher.Watcher
 	fs    afero.Fs // mockable filesystem interface
 
-	handles        map[string]afero.File    // File handles for each pathname.
-	handlesMu      sync.RWMutex             // protects `handles'
-	partials       map[string]*bytes.Buffer // Accumulator for the currently read line for each pathname.
-	partialsMu     sync.Mutex               // protects 'partials'
-	globPatterns   map[string]struct{}      // glob patterns to match newly created files in dir paths against
-	globPatternsMu sync.RWMutex             // protects `globPatterns'
+	handlesMu sync.RWMutex          // protects `handles'
+	handles   map[string]afero.File // File handles for each pathname.
+
+	partialsMu sync.Mutex               // protects 'partials'
+	partials   map[string]*bytes.Buffer // Accumulator for the currently read line for each pathname.
+
+	globPatternsMu sync.RWMutex        // protects `globPatterns'
+	globPatterns   map[string]struct{} // glob patterns to match newly created files in dir paths against
 
 	stopForever chan struct{} // Signals termination to the readForever goroutine
 	runDone     chan struct{} // Signals termination of the run goroutine.

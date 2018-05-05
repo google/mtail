@@ -231,17 +231,16 @@ func nameToCode(name string) uint32 {
 // managing the running virtual machines that receive input from the lines
 // channel.
 type Loader struct {
-	w  watcher.Watcher // watches for program changes
-	fs afero.Fs        // filesystem interface
-	ms *metrics.Store  // pointer to store to pass to compiler
+	ms          *metrics.Store  // pointer to metrics.Store to pass to compiler
+	w           watcher.Watcher // watches for program changes
+	fs          afero.Fs        // filesystem interface
+	programPath string          // Path that contains mtail programs.
 
-	programPath string // Path that contains mtail programs.
-
-	handles  map[string]*vmHandle // map of program names to virtual machines
 	handleMu sync.RWMutex         // guards accesses to handles
+	handles  map[string]*vmHandle // map of program names to virtual machines
 
-	programErrors  map[string]error // errors from the last compile attempt of the program
 	programErrorMu sync.RWMutex     // guards access to programErrors
+	programErrors  map[string]error // errors from the last compile attempt of the program
 
 	watcherDone chan struct{} // Synchronise shutdown of the watcher processEvents goroutine
 	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.

@@ -55,15 +55,16 @@ func Equals(t1, t2 Type) bool {
 }
 
 var (
-	nextVariableID   int
 	nextVariableIDMu sync.Mutex
+	nextVariableID   int
 )
 
 // TypeVariable represents an unbound type variable in the type system.
 type TypeVariable struct {
-	ID         int
-	Instance   *Type
+	ID int
+
 	instanceMu sync.RWMutex
+	Instance   *Type
 }
 
 // NewTypeVariable constructs a new unique TypeVariable.

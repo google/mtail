@@ -29,8 +29,9 @@ func (n *stmtlistNode) Type() Type {
 
 type exprlistNode struct {
 	children []astNode
-	typMu    sync.RWMutex
-	typ      Type
+
+	typMu sync.RWMutex
+	typ   Type
 }
 
 func (n *exprlistNode) Pos() *position {
@@ -100,9 +101,10 @@ func (n *caprefNode) Type() Type {
 }
 
 type builtinNode struct {
-	pos   position
-	name  string
-	args  astNode
+	pos  position
+	name string
+	args astNode
+
 	typMu sync.RWMutex
 	typ   Type
 }
@@ -126,8 +128,9 @@ func (n *builtinNode) SetType(t Type) {
 type binaryExprNode struct {
 	lhs, rhs astNode
 	op       int
-	typ      Type
-	typMu    sync.RWMutex
+
+	typMu sync.RWMutex
+	typ   Type
 }
 
 func (n *binaryExprNode) Pos() *position {
@@ -147,11 +150,12 @@ func (n *binaryExprNode) SetType(t Type) {
 }
 
 type unaryExprNode struct {
-	pos   position // pos is the position of the op
-	expr  astNode
-	op    int
-	typ   Type
+	pos  position // pos is the position of the op
+	expr astNode
+	op   int
+
 	typMu sync.RWMutex
+	typ   Type
 }
 
 func (n *unaryExprNode) Pos() *position {
@@ -172,8 +176,9 @@ func (n *unaryExprNode) SetType(t Type) {
 
 type indexedExprNode struct {
 	lhs, index astNode
-	typ        Type
-	typMu      sync.RWMutex
+
+	typMu sync.RWMutex
+	typ   Type
 }
 
 func (n *indexedExprNode) Pos() *position {
@@ -365,7 +370,8 @@ func (d *delNode) Type() Type {
 }
 
 type convNode struct {
-	n   astNode
+	n astNode
+
 	mu  sync.RWMutex
 	typ Type
 }
