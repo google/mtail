@@ -307,6 +307,7 @@ func New(w watcher.Watcher, fs afero.Fs, options ...func(*MtailServer) error) (*
 	return m, nil
 }
 
+// SetOption takes one or more option functions and applies them in order to MtailServer.
 func (m *MtailServer) SetOption(options ...func(*MtailServer) error) error {
 	for _, option := range options {
 		if err := option(m); err != nil {
