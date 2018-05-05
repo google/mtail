@@ -40,9 +40,9 @@ var (
 // lines from files. It also handles new log file creation events and log
 // rotations.
 type Tailer struct {
-	w watcher.Watcher
-
 	lines chan<- *LogLine // Logfile lines being emitted.
+	w     watcher.Watcher
+	fs    afero.Fs // mockable filesystem interface
 
 	handles        map[string]afero.File    // File handles for each pathname.
 	handlesMu      sync.RWMutex             // protects `handles'
@@ -53,8 +53,6 @@ type Tailer struct {
 
 	stopForever chan struct{} // Signals termination to the readForever goroutine
 	runDone     chan struct{} // Signals termination of the run goroutine.
-
-	fs afero.Fs // mockable filesystem interface
 
 	oneShot bool
 }
@@ -77,12 +75,12 @@ func New(lines chan<- *LogLine, fs afero.Fs, w watcher.Watcher, options ...func(
 		return nil, errors.New("can't create tailer without W")
 	}
 	t := &Tailer{
-		w:            w,
 		lines:        lines,
+		w:            w,
+		fs:           fs,
 		handles:      make(map[string]afero.File),
 		partials:     make(map[string]*bytes.Buffer),
 		globPatterns: make(map[string]struct{}),
-		fs:           fs,
 		stopForever:  make(chan struct{}),
 		runDone:      make(chan struct{}),
 	}
