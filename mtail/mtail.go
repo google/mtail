@@ -329,7 +329,10 @@ func (m *MtailServer) WriteMetrics(w io.Writer) error {
 }
 
 // Serve begins the webserver and awaits a shutdown instruction.
-func (m *MtailServer) Serve() {
+func (m *MtailServer) Serve() error {
+	if m.bindAddress == "" {
+		return errors.Errorf("No bind address provided.")
+	}
 	http.Handle("/", m)
 	http.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	http.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
@@ -345,6 +348,7 @@ func (m *MtailServer) Serve() {
 		}
 	}()
 	m.WaitForShutdown()
+	return nil
 }
 
 func (m *MtailServer) handleQuit(w http.ResponseWriter, r *http.Request) {
@@ -421,7 +425,9 @@ func (m *MtailServer) Run() error {
 			return err
 		}
 	} else {
-		m.Serve()
+		if err := m.Serve(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
