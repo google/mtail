@@ -37,6 +37,11 @@ openLogPath's seenBefore in the tailer's handle* is incorrect because by
 GC in the tailer to remove handles on files that haven't been updated in 24h,
     when log files rotate with a timestamp-like pattern
 
+
+Add coverage from regtest
+- perhaps with https://blog.cloudflare.com/go-coverage-with-external-tests/
+- or just a flag to mtail?
+
 # Won't do
 
 X Use capture group references to feed back to declaring regular expression,
