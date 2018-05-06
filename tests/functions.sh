@@ -77,7 +77,7 @@ start_server() {
     extra_args=$*
     MTAIL_PORT=$(pick_random_unused_tcp_port)
     MTAIL_ARGS="--port ${MTAIL_PORT} $MTAIL_ARGS"
-    mtail $MTAIL_ARGS $extra_args &
+    ${MTAIL_BIN:-mtail} $MTAIL_ARGS $extra_args &
     MTAIL_PID=$!
     # wait for http port to respond, or sleep 1
     sleep 1

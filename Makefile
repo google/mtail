@@ -91,7 +91,7 @@ recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: regtest
-regtest: mtail
+regtest:
 	tests/regtest.sh
 
 PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
