@@ -16,5 +16,3 @@ sleep 1
 
 uri_get /metrics
 expect_str_in 'line_count{prog="linecount.mtail"} 3' "${WGET_DATA}"
-
-pass

@@ -98,11 +98,6 @@ expect_str_in () {
     fi
 }
 
-pass() {
-    echo "PASSED"
-    exit 0
-}
-
 get_json_field() {
     local field_name="$1"
     local json="$2"
@@ -113,8 +108,15 @@ expect_eq() {
     local expected="$1"
     local received="$2"
     if [[ "$expected" -ne "$received" ]]; then
-        fail "$3: expected $received received $received"
+        fail "$3: expected $expected received $received"
     fi
+}
+
+expect_json_field_eq() {
+    local expected="$1"
+    local field_name="$2"
+    local json="$3"
+    expect_eq "$expected" $(get_json_field ${field_name} "${json}") ${field_name}
 }
 
 fi  # include guard

@@ -17,7 +17,5 @@ echo 2 >> $LOGS/log
 sleep 1
 
 uri_get /debug/vars
-expect_eq 2 $(get_json_field line_count "${WGET_DATA}") "line_count"
-expect_eq 1 $(get_json_field log_count "${WGET_DATA}") "log_count"
-
-pass
+expect_json_field_eq 2 line_count "${WGET_DATA}"
+expect_json_field_eq 1 log_count "${WGET_DATA}"
