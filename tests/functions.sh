@@ -132,7 +132,7 @@ skip_without() {
 expect_eq() {
     local expected="$1"
     local received="$2"
-    if [[ "$expected" -ne "$received" ]]; then
+    if [[ "$expected" != "$received" ]]; then
         fail "$3: expected $expected received $received"
     fi
 }
@@ -142,7 +142,7 @@ expect_json_field_eq() {
     local expected="$1"
     local field_name="$2"
     local json="$3"
-    expect_eq "$expected" $(get_json_field ${field_name} "${json}") ${field_name}
+    expect_eq "$expected" "$(get_json_field ${field_name} "${json}" | tr -d '\n')" ${field_name}
 }
 
 fi  # include guard
