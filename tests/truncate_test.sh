@@ -1,26 +1,25 @@
-#!/bin/sh
+#!/bin/bash
 
-mkdir /tmp/test
+source $(dirname $0)/functions.sh
 
-mkdir /tmp/test/logs
-mkdir /tmp/test/progs
+skip_without jq
 
-mtail --logtostderr --vmodule=tail=2,log_watcher=2 --progs /tmp/test/progs --logs /tmp/test/logs/log &
-pid=$!
-# wait for http port to respond, or sleep 1
+LOGS=${TEST_TMPDIR}/logs
+PROGS=${TEST_TMPDIR}/logs
+mkdir -p $LOGS $PROGS
+
+start_server --vmodule=tail=2,log_watcher=2 --progs $PROGS --logs $LOGS/log
+
+echo 1 >> $LOGS/log
 sleep 1
-echo 1 >> /tmp/test/logs/log
+cat /dev/null > $LOGS/log
 sleep 1
-echo "Starting truncate"
-cat /dev/null > /tmp/test/logs/log
-echo "Actual truncate done"
+echo 2 >> $LOGS/log
+
 sleep 1
-echo 2 >> /tmp/test/logs/log
 
-sleep 2
+uri_get /debug/vars
+expect_json_field_eq 2 line_count "${WGET_DATA}"
+expect_json_field_eq 1 log_count "${WGET_DATA}"
 
-wget -q -O- http://localhost:3903/debug/vars | grep count
-
-# expecting 2 line_count, 1 log_count
-
-kill $pid
+pass

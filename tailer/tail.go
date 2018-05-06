@@ -31,9 +31,14 @@ import (
 )
 
 var (
-	logCount     = expvar.NewInt("log_count")
-	logErrors    = expvar.NewMap("log_errors_total")
+	// logCount records the number of logs that are being tailed
+	logCount = expvar.NewInt("log_count")
+	// logErrors counts the number of IO errors per log file
+	logErrors = expvar.NewMap("log_errors_total")
+	// logRotations counts the number of rotations per log file
 	logRotations = expvar.NewMap("log_rotations_total")
+	// lineCount counts the numbre of lines read per log file
+	lineCount = expvar.NewMap("log_lines_total")
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
@@ -275,6 +280,7 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 			default:
 				// send off line for processing, blocks if not ready
 				t.lines <- NewLogLine(f.Name(), partial.String())
+				lineCount.Add(f.Name(), 1)
 				// reset accumulator
 				partial.Reset()
 			}

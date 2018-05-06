@@ -90,6 +90,10 @@ bench_mem:
 recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 	go test -bench=. -run=XXX --record_benchmark ./...
 
+.PHONY: regtest
+regtest: mtail
+	tests/regtest.sh
+
 PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
 
 PHONY: coverage
