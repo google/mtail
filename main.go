@@ -120,7 +120,7 @@ func main() {
 	}
 	if *mutexProfileFraction > 0 {
 		glog.Infof("Setting mutex profile fraction to %d", *mutexProfileFraction)
-		SetMutexProfileFraction(*mutexProfileFraction)
+		runtime.SetMutexProfileFraction(*mutexProfileFraction)
 	}
 	if *progs == "" {
 		glog.Exitf("No mtail program directory specified; use -progs")
