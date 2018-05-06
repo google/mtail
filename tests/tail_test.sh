@@ -1,30 +1,37 @@
 #!/bin/bash
 
-TEST_TMPDIR=/tmp/test
-LOGS=$TEST_TMPDIR/logs
+ATEXIT="${ATEXIT-}"
+atexit () {
+    if [ -z "$ATEXIT" ]; then
+        ATEXIT="$1"
+    else
+        ATEXIT="$1 ; $ATEXIT"
+    fi
+    trap "$ATEXIT" EXIT
+}
+
+if [ -z "${TEST_TMPDIR:-}" ]; then
+    export TEST_TMPDIR="$(mktemp -d ${TMPDIR:-/tmp}/mtail-test.XXXXXXXX)"
+fi
+if [ ! -e "${TEST_TMPDIR}" ]; then
+  mkdir -p -m 0700 "${TEST_TMPDIR}"
+  # Clean TEST_TMPDIR on exit
+  atexit "rm -fr ${TEST_TMPDIR}"
+fi
+
+LOGS=${TEST_TMPDIR}/logs
+mkdir -p $LOGS
 MTAIL_ARGS="\
     --progs examples/linecount.mtail \
     --logs $LOGS/* \
-    --logtostderr \
+    --log_dir ${TEST_TMPDIR} \
     -v 1 \
 "
 
 append() {
-    echo "APPENDING"
-    echo "$*" >> $LOGS/log
+    local line="$*"
+    echo "$line" >> $LOGS/log
 }
-
-
-setup() {
-mkdir -p $LOGS
-}
-
-teardown() {
-    kill ${MTAIL_PID?}
-    rm -rf ${TEST_TMPDIR?}
-}
-
-trap teardown EXIT INT KILL
 
 #
 # Find a random unused TCP port
@@ -55,6 +62,12 @@ exit 1;
 '
 }
 
+fail() {
+    local msg="$*"
+    echo "FAILED: $msg"
+    exit 1
+}
+
 start_server() {
     extra_args=$*
     MTAIL_PORT=$(pick_random_unused_tcp_port)
@@ -63,6 +76,7 @@ start_server() {
     MTAIL_PID=$!
     # wait for http port to respond, or sleep 1
     sleep 1
+    atexit 'kill ${MTAIL_PID:?}'
 }
 
 WGET_ARGS="\
@@ -73,12 +87,24 @@ WGET_ARGS="\
 "
 
 uri_get() {
-    uri="http://localhost:${MTAIL_PORT}$1"
+    local path=$1
+    local uri="http://localhost:${MTAIL_PORT}${path}"
     WGET_DATA=$(wget ${WGET_ARGS} ${uri})
     result=$?
+    if [ $result -ne 0 ]; then
+        fail "wget failed with error $result"
+    fi
 }
 
-setup
+expect_str_in () {
+    local needle="$1"
+    local haystack="$2"
+    echo "${haystack:?}" | grep -F -q "${needle:?}"
+    if [ $? -ne 0 ]; then
+        fail "\"$needle\" not found in \"$haystack\""
+    fi
+}
+
 start_server --vmodule=tail=2,log_watcher=2
 
 append 1
@@ -88,17 +114,7 @@ sleep 1
 append 3
 sleep 2
 
-echo "debug/vars:"
-uri_get /debug/vars
-echo ${WGET_DATA} | grep line_count
-echo ${WGET_DATA} | grep log_count
-# expecting 3 line count, 1 log count
+uri_get "/metrics"
+expect_str_in 'line_count{prog="linecount.mtail"} 3' "${WGET_DATA}"
 
-echo "metrics:"
-uri_get /metrics
-echo ${WGET_DATA} | grep line_count
-
-# 3xpecting line_count = 3
-
-
-teardown
+echo "PASSED"
