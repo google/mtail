@@ -1,6 +1,3 @@
-
-copy flag tests from mtail_test.sh
-
 standard library, search path
 
 refactor fs and notify into single interface
