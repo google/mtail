@@ -92,7 +92,7 @@ recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
 
 .PHONY: regtest
 regtest: mtail
-	@tests/run_tests.sh
+	tests/regtest.sh
 
 PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
 
