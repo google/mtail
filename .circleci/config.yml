@@ -26,6 +26,7 @@ common-build: &common-build
         root: workspace
         paths:
           - "*.coverprofile"
+    - run: make regtest
     - run: make bench
     - store_test_results:
         path: /tmp/test-results
