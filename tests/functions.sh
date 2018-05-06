@@ -84,9 +84,8 @@ start_server() {
     atexit 'kill ${MTAIL_PID:?}'
 }
 
-# Defalut prameters for wget
+# Default parameters for wget
 WGET_ARGS="\
---no-netrc \
 --quiet \
 --tries=1 \
 --output-document=- \
