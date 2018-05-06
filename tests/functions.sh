@@ -21,19 +21,10 @@ if [ ! -e "${TEST_TMPDIR}" ]; then
   atexit "rm -fr ${TEST_TMPDIR}"
 fi
 
-LOGS=${TEST_TMPDIR}/logs
-mkdir -p $LOGS
 MTAIL_ARGS="\
-    --progs examples/linecount.mtail \
-    --logs $LOGS/* \
     --log_dir ${TEST_TMPDIR} \
     -v 1 \
 "
-
-append() {
-    local line="$*"
-    echo "$line" >> $LOGS/log
-}
 
 #
 # Find a random unused TCP port
@@ -110,6 +101,20 @@ expect_str_in () {
 pass() {
     echo "PASSED"
     exit 0
+}
+
+get_json_field() {
+    local field_name="$1"
+    local json="$2"
+    echo "${json}" | jq ".${field_name}"
+}
+
+expect_eq() {
+    local expected="$1"
+    local received="$2"
+    if [[ "$expected" -ne "$received" ]]; then
+        fail "$3: expected $received received $received"
+    fi
 }
 
 fi  # include guard
