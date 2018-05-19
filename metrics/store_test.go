@@ -19,6 +19,44 @@ func TestMatchingKind(t *testing.T) {
 	}
 }
 
+func TestDuplicateMetric(t *testing.T) {
+	expectedMetrics := 0
+	s := NewStore()
+	_ = s.Add(NewMetric("foo", "prog", Counter, Int, "user", "host"))
+	_ = s.Add(NewMetric("foo", "prog", Counter, Int))
+	expectedMetrics++
+	if len(s.Metrics["foo"]) != expectedMetrics {
+		t.Fatalf("should not add duplicate metric. Store: %v", s)
+	}
+
+	_ = s.Add(NewMetric("foo", "prog", Counter, Float))
+	t.Logf("Store: %v", s)
+	expectedMetrics++
+	if len(s.Metrics["foo"]) != expectedMetrics {
+		t.Fatalf("should add metric of a different type: %v", s)
+	}
+
+	_ = s.Add(NewMetric("foo", "prog", Counter, Int, "user", "host", "zone", "domain"))
+	t.Logf("Store: %v", s)
+	if len(s.Metrics["foo"]) != expectedMetrics {
+		t.Fatalf("should not add duplicate metric, but replace the old one. Store: %v", s)
+	}
+
+	_ = s.Add(NewMetric("foo", "prog1", Counter, Int))
+	t.Logf("Store: %v", s)
+	expectedMetrics++
+	if len(s.Metrics["foo"]) != expectedMetrics {
+		t.Fatalf("should add metric with a different prog: %v", s)
+	}
+
+	_ = s.Add(NewMetric("foo", "prog1", Counter, Float))
+	t.Logf("Store: %v", s)
+	expectedMetrics++
+	if len(s.Metrics["foo"]) != expectedMetrics {
+		t.Fatalf("should add metric of a different type: %v", s)
+	}
+}
+
 /* A program can add a metric with the same name and
    of different type.
    Prometheus behavior in this case is undefined.

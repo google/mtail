@@ -34,25 +34,25 @@ func (f *seqStringFlag) Set(value string) error {
 	return nil
 }
 
-type seqIntFlag []int
+type seqUIntFlag []uintptr
 
-func (f *seqIntFlag) String() string {
+func (f *seqUIntFlag) String() string {
 	return fmt.Sprint(*f)
 }
 
-func (f *seqIntFlag) Set(value string) error {
+func (f *seqUIntFlag) Set(value string) error {
 	for _, v := range strings.Split(value, ",") {
-		val, err := strconv.Atoi(v)
+		val, err := strconv.ParseUint(v, 10, 64)
 		if err != nil {
 			return err
 		}
-		*f = append(*f, val)
+		*f = append(*f, uintptr(val))
 	}
 	return nil
 }
 
 var logs seqStringFlag
-var logFds seqIntFlag
+var logFds seqUIntFlag
 
 var (
 	port    = flag.String("port", "3903", "HTTP port to listen on.")
@@ -137,7 +137,7 @@ func main() {
 	opts := []func(*mtail.MtailServer) error{
 		mtail.ProgramPath(*progs),
 		mtail.LogPathPatterns(logs),
-		mtail.LogFds(logFds),
+		mtail.LogFds(logFds...),
 		mtail.BindAddress(*address, *port),
 		mtail.BuildInfo(buildInfo()),
 		mtail.OverrideLocation(loc),

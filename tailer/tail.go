@@ -187,7 +187,8 @@ func (t *Tailer) TailPath(pathname string) error {
 // watch, so no watches are registered, and no file paths are opened.
 func (t *Tailer) TailHandle(f afero.File) error {
 	logCount.Add(1)
-	return t.startNewFile(f, false)
+	go t.readForever(f)
+	return nil
 }
 
 // handleLogUpdate is dispatched when an UpdateEvent is received, causing the
@@ -460,15 +461,6 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 			}
 			return err
 		}
-	case m&os.ModeType == os.ModeNamedPipe:
-		absPath, err := filepath.Abs(f.Name())
-		if err != nil {
-			return err
-		}
-		t.partialsMu.Lock()
-		t.partials[absPath] = bytes.NewBufferString("")
-		t.partialsMu.Unlock()
-		go t.readForever(f)
 	default:
 		return errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}

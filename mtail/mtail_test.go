@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -38,12 +39,12 @@ func removeTempDir(t *testing.T, workdir string) {
 	}
 }
 
-func startMtailServer(t *testing.T, logPathnames []string) *MtailServer {
+func startMtailServer(t *testing.T, options ...func(*MtailServer) error) *MtailServer {
 	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		t.Errorf("Couodn't make a log watcher: %s", err)
 	}
-	m, err := New(metrics.NewStore(), w, &afero.OsFs{}, LogPathPatterns(logPathnames))
+	m, err := New(metrics.NewStore(), w, &afero.OsFs{}, options...)
 	if err != nil {
 		t.Fatalf("couldn't create mtail: %s", err)
 	}
@@ -54,6 +55,7 @@ func startMtailServer(t *testing.T, logPathnames []string) *MtailServer {
 	expvar.Get("line_count").(*expvar.Int).Set(0)
 	expvar.Get("log_count").(*expvar.Int).Set(0)
 	expvar.Get("log_rotations_total").(*expvar.Map).Init()
+	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
 	if err := m.StartTailing(); err != nil {
 		t.Errorf("StartTailing failed: %s", err)
@@ -127,7 +129,7 @@ func TestHandleLogUpdates(t *testing.T) {
 	}
 	defer logFile.Close()
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
@@ -169,7 +171,7 @@ func TestHandleLogRotation(t *testing.T) {
 	// Create a logger
 	hup := make(chan bool, 1)
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer func() {
 		if cerr := m.Close(); cerr != nil {
 			t.Fatal(cerr)
@@ -241,7 +243,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	// Start up mtail
 	logFilepath := path.Join(workdir, "log")
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 	time.Sleep(10 * time.Millisecond)
 
@@ -285,7 +287,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	// Start mtail
 	logFilepath := path.Join(workdir, "log")
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 
 	// touch log file
@@ -311,7 +313,7 @@ func TestHandleSoftLinkChange(t *testing.T) {
 
 	logFilepath := path.Join(workdir, "log")
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 
 	trueLog1, err := os.Create(logFilepath + ".true1")
@@ -435,7 +437,7 @@ func TestGlob(t *testing.T) {
 		log.WriteString("\n")
 		log.Sync()
 	}
-	m := startMtailServer(t, []string{path.Join(workdir, "log*")})
+	m := startMtailServer(t, LogPathPatterns([]string{path.Join(workdir, "log*")}))
 	defer m.Close()
 	check := func() (bool, error) {
 		if expvar.Get("log_count").String() != fmt.Sprintf("%d", count) {
@@ -478,7 +480,7 @@ func TestGlobAfterStart(t *testing.T) {
 			false,
 		},
 	}
-	m := startMtailServer(t, []string{path.Join(workdir, "log*")})
+	m := startMtailServer(t, LogPathPatterns([]string{path.Join(workdir, "log*")}))
 	defer m.Close()
 	glog.Infof("Pausing for mtail startup.")
 	time.Sleep(100 * time.Millisecond)
@@ -527,7 +529,7 @@ func TestHandleLogDeletes(t *testing.T) {
 	}
 	defer logFile.Close()
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 
 	if err = os.Remove(logFilepath); err != nil {
@@ -568,7 +570,7 @@ func TestHandleLogTruncate(t *testing.T) {
 	}
 	defer logFile.Close()
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer func() {
 		if cerr := m.Close(); cerr != nil {
 			t.Fatal(cerr)
@@ -639,7 +641,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 	}
 	defer logFile.Close()
 	pathnames := []string{"log"}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
@@ -663,6 +665,103 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 			count := runtime.Stack(buf, true)
 			fmt.Println(string(buf[:count]))
 		}
+	}
+
+}
+
+func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in shor tmode")
+	}
+
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
+
+	piper, pipew, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := startMtailServer(t, ProgramPath(workdir), LogFds(piper.Fd()))
+	defer m.Close()
+	store := m.store
+
+	progpath := path.Join(workdir, "program.mtail")
+	p, err := os.Create(progpath)
+	if err != nil {
+		t.Fatalf("couldn't open program file: %s", err)
+	}
+	p.WriteString("counter foo\n/^foo$/ {\n foo++\n }\n")
+	p.Close()
+
+	check := func() (bool, error) {
+		v := expvar.Get("prog_loads_total").(*expvar.Map).Get("program.mtail")
+		if v.String() != "1" {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err := doOrTimeout(check, time.Second, 10*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("program loads didn't increase")
+	}
+	if len(store.Metrics["foo"]) != 1 {
+		t.Errorf("Unexpected number of metrics: expected 1, but got all this %v", store.Metrics["foo"])
+	}
+
+	pipew.WriteString("foo\n")
+	time.Sleep(100 * time.Millisecond)
+
+	checkFoo := func() (bool, error) {
+		v := store.Metrics["foo"][0]
+		d, err := v.GetDatum()
+		if err != nil {
+			return false, err
+		}
+		if d.ValueString() != "1" {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err = doOrTimeout(checkFoo, time.Second, 10*time.Millisecond)
+	if err != nil {
+		t.Error(err)
+	}
+	if !ok {
+		t.Fatal("foo didn't increase")
+	}
+
+	p, err = os.Create(progpath)
+	if err != nil {
+		t.Fatalf("couldn't open program file: %s", err)
+	}
+	p.WriteString("counter foo\n/^foo$/ {\n foo++\n }\n")
+	p.Close()
+
+	check2 := func() (bool, error) {
+		v := expvar.Get("prog_loads_total")
+		v = v.(*expvar.Map).Get("program.mtail")
+		n, err := strconv.Atoi(v.String())
+		if err != nil {
+			return false, err
+		}
+		if n < 2 {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err = doOrTimeout(check2, time.Second, 10*time.Millisecond)
+	if err != nil {
+		t.Error(err)
+	}
+	if !ok {
+		t.Error("program loads didn't increase")
+	}
+	if len(store.Metrics["foo"]) != 1 {
+		t.Errorf("Unexpected number of metrics: expected 1, but got %d\n%v", len(store.Metrics["foo"]), store.Metrics["foo"])
 	}
 
 }
