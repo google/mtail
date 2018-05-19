@@ -46,7 +46,7 @@ func (f *seqUIntFlag) Set(value string) error {
 		if err != nil {
 			return err
 		}
-		*f = append(*f, val)
+		*f = append(*f, uintptr(val))
 	}
 	return nil
 }
@@ -137,7 +137,7 @@ func main() {
 	opts := []func(*mtail.MtailServer) error{
 		mtail.ProgramPath(*progs),
 		mtail.LogPathPatterns(logs),
-		mtail.LogFds(logFds),
+		mtail.LogFds(logFds...),
 		mtail.BindAddress(*address, *port),
 		mtail.BuildInfo(buildInfo()),
 		mtail.OverrideLocation(loc),
