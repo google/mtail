@@ -45,9 +45,9 @@ type MtailServer struct {
 	bindAddress      string         // address to bind HTTP server
 	buildInfo        string         // go build information
 
-	programPath     string   // path to programs to load
-	logPathPatterns []string // list of patterns to watch for log files to tail
-	logFds          []int    // list of file descriptors to tail
+	programPath     string    // path to programs to load
+	logPathPatterns []string  // list of patterns to watch for log files to tail
+	logFds          []uintptr // list of file descriptors to tail
 
 	oneShot      bool // if set, mtail reads log files from the beginning, once, then exits
 	compileOnly  bool // if set, mtail compiles programs then exits
@@ -71,7 +71,7 @@ func (m *MtailServer) StartTailing() error {
 		}
 	}
 	for _, fd := range m.logFds {
-		f := os.NewFile(uintptr(fd), strconv.Itoa(fd))
+		f := os.NewFile(fd, strconv.FormatUint(uint64(fd), 10))
 		if f == nil {
 			glog.Errorf("Attempt to reopen fd %q returned nil", fd)
 			continue
@@ -202,7 +202,7 @@ func LogPathPatterns(patterns []string) func(*MtailServer) error {
 }
 
 // LogFds sets the file descriptors to read log lines directly in the MtailServer.
-func LogFds(fds []int) func(*MtailServer) error {
+func LogFds(fds ...uintptr) func(*MtailServer) error {
 	return func(m *MtailServer) error {
 		m.logFds = fds
 		return nil
