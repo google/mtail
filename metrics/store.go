@@ -29,6 +29,7 @@ func NewStore() (s *Store) {
 func (s *Store) Add(m *Metric) error {
 	s.Lock()
 	defer s.Unlock()
+	glog.Infof("Adding a new metric %v", m)
 	dupeIndex := -1
 	if len(s.Metrics[m.Name]) > 0 {
 		t := s.Metrics[m.Name][0].Kind
@@ -47,7 +48,8 @@ func (s *Store) Add(m *Metric) error {
 			if v.Type != m.Type {
 				continue
 			}
-			if reflect.DeepEqual(v.Keys, m.Keys) {
+			glog.Infof("v keys: %v m.keys: %v", v.Keys, m.Keys)
+			if len(v.Keys) > 0 && len(m.Keys) > 0 && reflect.DeepEqual(v.Keys, m.Keys) {
 				continue
 			}
 			dupeIndex = i
