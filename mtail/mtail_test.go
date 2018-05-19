@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -54,6 +55,7 @@ func startMtailServer(t *testing.T, options ...func(*MtailServer) error) *MtailS
 	expvar.Get("line_count").(*expvar.Int).Set(0)
 	expvar.Get("log_count").(*expvar.Int).Set(0)
 	expvar.Get("log_rotations_total").(*expvar.Map).Init()
+	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
 	if err := m.StartTailing(); err != nil {
 		t.Errorf("StartTailing failed: %s", err)
@@ -663,6 +665,111 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 			count := runtime.Stack(buf, true)
 			fmt.Println(string(buf[:count]))
 		}
+	}
+
+}
+
+func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in shor tmode")
+	}
+
+	workdir := makeTempDir(t)
+	defer removeTempDir(t, workdir)
+
+	piper, pipew, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := startMtailServer(t, ProgramPath(workdir), LogFds(piper.Fd()))
+	defer m.Close()
+	store := m.store
+
+	progpath := path.Join(workdir, "program.mtail")
+	p, err := os.Create(progpath)
+	if err != nil {
+		t.Fatalf("couldn't open program file: %s", err)
+	}
+	p.WriteString("counter foo\n/^foo$/ {\n foo++\n }\n")
+	p.Close()
+
+	check := func() (bool, error) {
+		v := expvar.Get("prog_loads_total").(*expvar.Map).Get("program.mtail")
+		t.Log(v)
+		if v.String() != "1" {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("program loads didn't increase")
+	}
+	if len(store.Metrics["foo"]) != 1 {
+		t.Errorf("Unexpected number of metrics: expected 1, but got all this %v", store.Metrics["foo"])
+	}
+
+	t.Log("program loaded")
+
+	pipew.WriteString("foo\n")
+	time.Sleep(100 * time.Millisecond)
+
+	checkFoo := func() (bool, error) {
+		v := store.Metrics["foo"][0]
+		t.Log(v)
+		d, err := v.GetDatum()
+		t.Log(d)
+		if err != nil {
+			return false, err
+		}
+		if d.ValueString() != "1" {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err = doOrTimeout(checkFoo, 100*time.Millisecond, 10*time.Millisecond)
+	if err != nil {
+		t.Error(err)
+	}
+	if !ok {
+		t.Fatal("foo didn't increase")
+	}
+
+	t.Log("line read")
+
+	p, err = os.Create(progpath)
+	if err != nil {
+		t.Fatalf("couldn't open program file: %s", err)
+	}
+	p.WriteString("counter foo\n/^foo$/ {\n foo++\n }\n")
+	p.Close()
+
+	check2 := func() (bool, error) {
+		v := expvar.Get("prog_loads_total")
+		t.Log(v)
+		v = v.(*expvar.Map).Get("program.mtail")
+		n, err := strconv.Atoi(v.String())
+		if err != nil {
+			return false, err
+		}
+		if n < 2 {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err = doOrTimeout(check2, 100*time.Millisecond, 10*time.Millisecond)
+	if err != nil {
+		t.Error(err)
+	}
+	if !ok {
+		t.Error("program loads didn't increase")
+	}
+	if len(store.Metrics["foo"]) != 1 {
+		t.Errorf("Unexpected number of metrics: expected 1, but got %d\n%v", len(store.Metrics["foo"]), store.Metrics["foo"])
 	}
 
 }
