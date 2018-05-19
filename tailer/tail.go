@@ -461,13 +461,6 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 			return err
 		}
 	case m&os.ModeType == os.ModeNamedPipe:
-		absPath, err := filepath.Abs(f.Name())
-		if err != nil {
-			return err
-		}
-		t.partialsMu.Lock()
-		t.partials[absPath] = bytes.NewBufferString("")
-		t.partialsMu.Unlock()
 		go t.readForever(f)
 	default:
 		return errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
