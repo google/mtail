@@ -6,7 +6,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"runtime"
 	"strconv"
@@ -14,7 +13,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
+	"github.com/google/mtail/watcher"
+	"github.com/spf13/afero"
 
 	_ "net/http/pprof"
 )
@@ -57,8 +59,10 @@ var (
 	address = flag.String("address", "", "Host or IP address on which to bind HTTP listener")
 	progs   = flag.String("progs", "", "Name of the directory containing mtail programs")
 
+	version = flag.Bool("version", false, "Print mtail version information.")
+
 	// Compiler behaviour flags
-	oneShot        = flag.Bool("one_shot", false, "Run the contents of the provided logs until EOF and exit.")
+	oneShot        = flag.Bool("one_shot", false, "Compile the programs, then read the contents of the provided logs from start until EOF, print the values of the metrics store and exit. This is a debugging flag only, not for production use.")
 	oneShotMetrics = flag.Bool("one_shot_metrics", false, "DEPRECATED: Dump metrics (to stdout) after one shot mode.")
 	compileOnly    = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
 	dumpAst        = flag.Bool("dump_ast", false, "Dump AST of programs after parse (to INFO log).")
@@ -67,7 +71,7 @@ var (
 
 	// Runtime behaviour flags
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
-	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of the local zone.")
+	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of UTC.")
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 
 	// Debugging flags
@@ -99,6 +103,10 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	if *version {
+		fmt.Println(buildInfo())
+		os.Exit(1)
+	}
 	glog.Info(buildInfo())
 	glog.Infof("Commandline: %q", os.Args)
 	loc, err := time.LoadLocation(*overrideTimezone)
@@ -112,7 +120,7 @@ func main() {
 	}
 	if *mutexProfileFraction > 0 {
 		glog.Infof("Setting mutex profile fraction to %d", *mutexProfileFraction)
-		SetMutexProfileFraction(*mutexProfileFraction)
+		runtime.SetMutexProfileFraction(*mutexProfileFraction)
 	}
 	if *progs == "" {
 		glog.Exitf("No mtail program directory specified; use -progs")
@@ -122,22 +130,40 @@ func main() {
 			glog.Exitf("No logs specified to tail; use -logs or -logfds")
 		}
 	}
-	o := mtail.Options{
-		Progs:                *progs,
-		LogPathPatterns:      logs,
-		LogFds:               logFds,
-		BindAddress:          net.JoinHostPort(*address, *port),
-		OneShot:              *oneShot,
-		CompileOnly:          *compileOnly,
-		DumpAst:              *dumpAst,
-		DumpAstTypes:         *dumpAstTypes,
-		DumpBytecode:         *dumpBytecode,
-		SyslogUseCurrentYear: *syslogUseCurrentYear,
-		OverrideLocation:     loc,
-		OmitProgLabel:        !*emitProgLabel,
-		BuildInfo:            buildInfo(),
+	w, err := watcher.NewLogWatcher()
+	if err != nil {
+		glog.Exitf("Failure to create log watcher: %s", err)
 	}
-	m, err := mtail.New(o)
+	opts := []func(*mtail.MtailServer) error{
+		mtail.ProgramPath(*progs),
+		mtail.LogPathPatterns(logs),
+		mtail.LogFds(logFds),
+		mtail.BindAddress(*address, *port),
+		mtail.BuildInfo(buildInfo()),
+		mtail.OverrideLocation(loc),
+	}
+	if *oneShot {
+		opts = append(opts, mtail.OneShot)
+	}
+	if *compileOnly {
+		opts = append(opts, mtail.CompileOnly)
+	}
+	if *dumpAst {
+		opts = append(opts, mtail.DumpAst)
+	}
+	if *dumpAstTypes {
+		opts = append(opts, mtail.DumpAstTypes)
+	}
+	if *dumpBytecode {
+		opts = append(opts, mtail.DumpBytecode)
+	}
+	if *syslogUseCurrentYear {
+		opts = append(opts, mtail.SyslogUseCurrentYear)
+	}
+	if !*emitProgLabel {
+		opts = append(opts, mtail.OmitProgLabel)
+	}
+	m, err := mtail.New(metrics.NewStore(), w, &afero.OsFs{}, opts...)
 	if err != nil {
 		glog.Fatalf("couldn't start: %s", err)
 	}

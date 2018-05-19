@@ -34,7 +34,7 @@ hidden gauge connection_time by pid
     # Sum total bytes across all sessions for this process
     bytes_total["sent"] += $sent
     bytes_total["received"] += $received
-    
+
     # Count total time spent with connections open, according to the log timestamp.
     connection_time_total += timestamp() - connection_time[$pid]
 

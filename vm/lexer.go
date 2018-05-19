@@ -249,7 +249,7 @@ func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 
 // State functions.
 
-// Start lexing a program.
+// lexProg starts lexing a program.
 func lexProg(l *lexer) stateFn {
 	if l.inRegex {
 		return lexRegex
@@ -498,7 +498,7 @@ Loop:
 }
 
 // Lex a capture group reference. These are local variable references to
-// capture groups in the preceeding regular expression.
+// capture groups in the preceding regular expression.
 func lexCapref(l *lexer) stateFn {
 	l.skip() // Skip the leading $
 	named := false
@@ -553,7 +553,7 @@ func lexRegex(l *lexer) stateFn {
 	// Exit regex mode when leaving this function.
 	defer func() {
 		glog.V(2).Info("Exiting regex")
-		glog.V(2).Infof("Regex at startcol %d, col %d line %d", l.startcol, l.col, l.line)
+		glog.V(2).Infof("Regex at line %d, startcol %d, col %d", l.line, l.startcol, l.col)
 		l.inRegex = false
 	}()
 Loop:

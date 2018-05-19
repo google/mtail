@@ -65,6 +65,10 @@ import (
 %token NL
 
 %start start
+
+// The %error directive takes a list of tokens describing a parser state in error, and an error message.
+// See "Generating LR syntax error messages from examples", Jeffery, ACM TOPLAS Volume 24 Issue 5 Sep 2003.
+%error stmt_list stmt expression_statement mark_pos DIV in_regex INVALID  : "unexpected end of file"
 %%
 
 start
@@ -103,13 +107,17 @@ stmt
   {
     $$ = &nextNode{tokenpos(mtaillex)}
   }
-  | CONST ID concat_expr
+  | CONST id_expr concat_expr
   {
-    $$ = &patternFragmentDefNode{pos: tokenpos(mtaillex), name: $2, expr: $3}
+    $$ = &patternFragmentDefNode{id: $2, expr: $3}
   }
   | DEL postfix_expr
   {
     $$ = &delNode{tokenpos(mtaillex), $2}
+  }
+  | INVALID
+  {
+    $$ = &errorNode{tokenpos(mtaillex), $1}
   }
   ;
 
@@ -263,6 +271,10 @@ match_expr
   {
     $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
   }
+  | primary_expr match_op opt_nl primary_expr
+  {
+    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+  }  
   ;
 
 match_op
@@ -526,7 +538,7 @@ decoration_statement
   ;
 
 // mark_pos is an epsilon (marker nonterminal) that records the current token
-// position as the parser position.  Use markerpos() to fetch the position and
+// position as the parser position.  Use markedpos() to fetch the position and
 // merge with tokenpos for exotic productions.
 mark_pos
   : /* empty */
@@ -552,6 +564,7 @@ opt_nl
   : /* empty */
   | NL
   ;
+
 
 %%
 

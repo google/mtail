@@ -24,7 +24,7 @@ counter rails_requests_completed_milliseconds_bucket by le, status
 /^Completed (?P<status>\d{3}) .+ in (?P<request_milliseconds>\d+)ms .*$/ {
   ###
   # Total numer of completed requests by status
-  # 
+  #
   rails_requests_completed_total++
   rails_requests_completed[$status]++
 

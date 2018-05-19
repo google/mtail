@@ -431,6 +431,27 @@ var instructions = []struct {
 		[]interface{}{"first", "second"},
 		[]interface{}{"firstsecond"},
 		thread{pc: 0, matches: map[int][]string{}}},
+	{"icmp gt false",
+		instr{icmp, 1},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1, 2},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"fcmp gt false",
+		instr{fcmp, 1},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1.0, 2.0},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"scmp eq false",
+		instr{scmp, 0},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"abc", "def"},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
 }
 
 const testFilename = "test"
@@ -642,6 +663,19 @@ func TestStrptimeWithTimezone(t *testing.T) {
 	vm.t.Push("2006/01/02 15:04:05")
 	vm.execute(vm.t, obj.prog[0])
 	if vm.t.time != time.Date(2012, 01, 18, 06, 25, 00, 00, loc) {
+		t.Errorf("Time didn't parse with location: %s received", vm.t.time)
+	}
+}
+
+func TestStrptimeWithoutTimezone(t *testing.T) {
+	obj := &object{prog: []instr{{strptime, 0}}}
+	vm := New("strptimezone", obj, true, nil)
+	vm.t = new(thread)
+	vm.t.stack = make([]interface{}, 0)
+	vm.t.Push("2012/01/18 06:25:00")
+	vm.t.Push("2006/01/02 15:04:05")
+	vm.execute(vm.t, obj.prog[0])
+	if vm.t.time != time.Date(2012, 01, 18, 06, 25, 00, 00, time.UTC) {
 		t.Errorf("Time didn't parse with location: %s received", vm.t.time)
 	}
 }

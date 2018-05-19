@@ -1,18 +1,119 @@
-# Introduction
+# Building mtail
 
 mtail is implemented in [Go](http://golang.org).
 
 You will need to install Go 1.7 or higher.
 
-# Details
+## Go
 
-[Clone](http://github.com/google/mtail) the source from GitHub.
+[Clone](http://github.com/google/mtail) the source from GitHub into your `$GOPATH`.  If you don't have a `$GOPATH`, see the next section.
 
-mtail uses `make` to build.  Type `make` at the commandline to install all the dependencies, and then build `mtail`.  This assumes that your Go environment is already set up.
+```
+cd $GOPATH/src
+go get github.com/google/mtail
+cd github.com/google/mtail
+make
+```
 
-Run the unit tests with `make test`, which invokes `gotest`.
+### For Go First-Timers
+
+An excellent starting guide for people new to Go entirely is here: https://github.com/alco/gostart
+
+If you want to skip the guide, these two references are short but to the point
+on setting up the `$GOPATH` workspace:
+
+* https://github.com/golang/go/wiki/SettingGOPATH
+* https://github.com/golang/go/wiki/GOPATH#repository-integration-and-creating-go-gettable-projects
+
+Finally, https://golang.org/doc/code.html is the original Go project
+documentation for the philosophy on Go workspaces.
+
+#### No Really, What is the TLDR
+
+Put `export GOPATH=$HOME/go` in your `~/.profile`.
+
+```
+export GOPATH=$HOME/go
+mkdir -p $GOPATH/src
+```
+
+then back up to the Details above.
+
+### Building
+
+Unlike the recommendation for Go projects, `mtail` uses a `Makefile` to build the source.
+
+Having fetched the source, use `make` from the top of the source tree.  This will install all the dependencies, and then build `mtail`.  This assumes that your Go environment is already set up -- see above for hints on setting it up.
 
 The resulting binary will be in `$GOPATH/bin`.
+
+The unit tests can be run with `make test`, which invokes `go test`.  The slower race-detector tests can be run with `make testrace`.
+
+### Cross-compilation
+
+The `Makefile` has a `crossbuild` target for building on different platforms.  By default it builds for a few `amd64` targets:
+
+```
+% make crossbuild
+mkdir -p build
+gox --output="./build/mtail_v3.0.0-rc10_{{.OS}}_{{.Arch}}" -osarch="linux/amd64 windows/amd64 darwin/amd64" -ldflags "-X main.Version=v3.0.0-rc10-72-gcbea8a8 -X main.Revision=cbea8a810942be1129d58c37b27a55987a384776"
+Number of parallel builds: 3
+
+-->     linux/amd64: github.com/google/mtail
+-->    darwin/amd64: github.com/google/mtail
+-->   windows/amd64: github.com/google/mtail
+```
+
+but you can override it with the environment variable `GOX_OSARCH` like so:
+
+```
+% make GOX_OSARCX=linux/arm crossbuild
+mkdir -p build
+gox --output="./build/mtail_v3.0.0-rc10_{{.OS}}_{{.Arch}}" -osarch="linux/amd64 windows/amd64 darwin/amd64" -ldflags "-X main.Version=v3.0.0-rc10-72-gcbea8a8 -X main.Revision=cbea8a810942be1129d58c37b27a55987a384776"
+Number of parallel builds: 3
+
+-->    darwin/amd64: github.com/google/mtail
+-->   windows/amd64: github.com/google/mtail
+-->     linux/amd64: github.com/google/mtail
+```
+
+## No Go
+
+You can still build and develop **mtail** with Docker.
+
+```
+docker build -t mtail .
+docker run -it --rm mtail --help
+```
+
+**mtail** is not much use without a configuration file or logs to parse, you will need to mount a path containing them into the container, like so:
+
+```
+docker run -it --rm -v examples/linecount.mtail:/progs/linecount.mtail -v /var/log:/logs mtail -logtostderr -one_shot -progs /progs/linecount.mtail -logs /logs/messages.log
+```
+
+Or, via Docker Compose, e.g. this `docker-compose.yml` snippet example:
+
+```yaml
+service:
+  mtail:
+    image: mtail
+    command:
+      - -logtostderr
+      - -one_shot
+      - -progs
+      - /progs/linecount.mtail
+      - -logs
+      - /logs/messages.log
+    volume:
+      - type: bind
+        source: /var/log
+        target: /logs
+        readonly: true
+      - type: bind
+        source: examples/linecount.mtail
+        target: /progs/linecount.mtail
+```
 
 ## Contributing
 

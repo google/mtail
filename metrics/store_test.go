@@ -56,3 +56,35 @@ func TestDuplicateMetric(t *testing.T) {
 		t.Fatalf("should add metric of a different type: %v", s)
 	}
 }
+
+/* A program can add a metric with the same name and
+   of different type.
+   Prometheus behavior in this case is undefined.
+   @see https://github.com/google/mtail/issues/130
+*/
+func TestAddMetricDifferentType(t *testing.T) {
+	expected := 2
+	s := NewStore()
+	err := s.Add(NewMetric("foo", "prog", Counter, Int))
+	if err != nil {
+		t.Fatalf("should be nil: %s", err)
+	}
+	// Duplicate metric of different type from *the same program
+	err = s.Add(NewMetric("foo", "prog", Counter, Float))
+	if err != nil {
+		t.Fatalf("should add a new metric to the store: %s. Store: %s", err, s.Metrics)
+	}
+	if len(s.Metrics["foo"]) != expected {
+		t.Fatalf("should have %d metrics of different Type: %s", expected, s.Metrics)
+	}
+
+	// Duplicate metric of different type from a different program
+	err = s.Add(NewMetric("foo", "prog1", Counter, Float))
+	expected++
+	if err != nil {
+		t.Fatalf("should add a new metric to the store: %s. Store: %s", err, s.Metrics)
+	}
+	if len(s.Metrics["foo"]) != expected {
+		t.Fatalf("should have %d metrics of different Type: %s", expected, s.Metrics)
+	}
+}

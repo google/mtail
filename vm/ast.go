@@ -29,8 +29,9 @@ func (n *stmtlistNode) Type() Type {
 
 type exprlistNode struct {
 	children []astNode
-	typMu    sync.RWMutex
-	typ      Type
+
+	typMu sync.RWMutex
+	typ   Type
 }
 
 func (n *exprlistNode) Pos() *position {
@@ -45,7 +46,7 @@ func (n *exprlistNode) Type() Type {
 
 func (n *exprlistNode) SetType(t Type) {
 	n.typMu.Lock()
-	n.typMu.Unlock()
+	defer n.typMu.Unlock()
 	n.typ = t
 }
 
@@ -100,9 +101,10 @@ func (n *caprefNode) Type() Type {
 }
 
 type builtinNode struct {
-	pos   position
-	name  string
-	args  astNode
+	pos  position
+	name string
+	args astNode
+
 	typMu sync.RWMutex
 	typ   Type
 }
@@ -126,8 +128,9 @@ func (n *builtinNode) SetType(t Type) {
 type binaryExprNode struct {
 	lhs, rhs astNode
 	op       int
-	typ      Type
-	typMu    sync.RWMutex
+
+	typMu sync.RWMutex
+	typ   Type
 }
 
 func (n *binaryExprNode) Pos() *position {
@@ -147,11 +150,12 @@ func (n *binaryExprNode) SetType(t Type) {
 }
 
 type unaryExprNode struct {
-	pos   position // pos is the position of the op
-	expr  astNode
-	op    int
-	typ   Type
+	pos  position // pos is the position of the op
+	expr astNode
+	op   int
+
 	typMu sync.RWMutex
+	typ   Type
 }
 
 func (n *unaryExprNode) Pos() *position {
@@ -172,8 +176,9 @@ func (n *unaryExprNode) SetType(t Type) {
 
 type indexedExprNode struct {
 	lhs, index astNode
-	typ        Type
-	typMu      sync.RWMutex
+
+	typMu sync.RWMutex
+	typ   Type
 }
 
 func (n *indexedExprNode) Pos() *position {
@@ -280,15 +285,14 @@ func (n *patternConstNode) Type() Type {
 
 // patternDefNode holds a named pattern expression
 type patternFragmentDefNode struct {
-	pos     position
-	name    string
+	id      astNode
 	expr    astNode
 	sym     *Symbol // Optional Symbol for a named pattern
 	pattern string  // If not empty, contains the complete evaluated pattern of the expr
 }
 
 func (n *patternFragmentDefNode) Pos() *position {
-	return &n.pos
+	return n.id.Pos()
 }
 
 func (n *patternFragmentDefNode) Type() Type {
@@ -366,7 +370,8 @@ func (d *delNode) Type() Type {
 }
 
 type convNode struct {
-	n   astNode
+	n astNode
+
 	mu  sync.RWMutex
 	typ Type
 }
@@ -385,4 +390,17 @@ func (n *convNode) SetType(t Type) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.typ = t
+}
+
+type errorNode struct {
+	pos      position
+	spelling string
+}
+
+func (n *errorNode) Pos() *position {
+	return &n.pos
+}
+
+func (n *errorNode) Type() Type {
+	return Error
 }

@@ -48,7 +48,7 @@ const IP /\d+(\.\d+){3}/
 const MATCH_IP /(?P<ip>/ + IP + /)/
 const MATCH_NETWORK /(?P<network>\d+(\.\d+){1,3}\/\d+)/
 const MATCH_MAC /(?P<mac>([\da-f]{2}:){5}[\da-f]{2})/
-    
+
 @syslog {
     # Request
     /(balanced|balancing|BOOTREPLY|BOOTREQUEST|DHCPACK|DHCPDECLINE|DHCPDISCOVER|DHCPINFORM|DHCPNAK|DHCPOFFER|DHCPRELEASE|DHCPREQUEST)/ {
@@ -112,19 +112,19 @@ const MATCH_MAC /(?P<mac>([\da-f]{2}:){5}[\da-f]{2})/
     /bind update on \S+ from \S+ rejected: incoming update is less critical than the outgoing update/ {
         update_rejected++
     }
-    
+
     /timeout waiting for failover peer \S+/ {
         failover_peer_timeout++
     }
-    
+
     /ICMP Echo reply while lease / + IP + /valid/ {
         ip_already_in_use++
     }
-    
+
     /unexpected ICMP Echo reply from / + IP {
         ip_already_in_use++
     }
-    
+
     /Abandoning IP address / + IP + /: (?P<reason>.*)/ {
         ip_abandoned[$reason]++
     }

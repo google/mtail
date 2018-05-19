@@ -13,6 +13,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
 	"github.com/google/mtail/watcher"
 	"github.com/spf13/afero"
@@ -36,8 +37,8 @@ func BenchmarkProgram(b *testing.B) {
 				b.Fatalf("failed to create test file descriptor")
 			}
 			logs = []string{log.Name()}
-			o := mtail.Options{Progs: bm.programfile, LogPathPatterns: logs, W: w, FS: fs}
-			mtail, err := mtail.New(o)
+			store := metrics.NewStore()
+			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(bm.programfile), mtail.LogPathPatterns(logs))
 			if err != nil {
 				b.Fatalf("Failed to create mtail: %s", err)
 			}

@@ -19,8 +19,7 @@ func TestNewLoader(t *testing.T) {
 	store := metrics.NewStore()
 	inLines := make(chan *tailer.LogLine)
 	fs := afero.NewMemMapFs()
-	o := LoaderOptions{store, inLines, w, fs, false, false, false, false, false, true, nil, false}
-	l, err := NewLoader(o)
+	l, err := NewLoader("", store, inLines, w, fs)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
@@ -45,8 +44,7 @@ func TestCompileAndRun(t *testing.T) {
 	lines := make(chan *tailer.LogLine)
 	w := watcher.NewFakeWatcher()
 	fs := afero.NewMemMapFs()
-	o := LoaderOptions{store, lines, w, fs, false, false, false, false, false, true, nil, false}
-	l, err := NewLoader(o)
+	l, err := NewLoader("", store, lines, w, fs)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
@@ -121,8 +119,7 @@ func TestProcessEvents(t *testing.T) {
 			store := metrics.NewStore()
 			lines := make(chan *tailer.LogLine)
 			fs := afero.NewMemMapFs()
-			o := LoaderOptions{store, lines, w, fs, false, false, false, false, false, true, nil, false}
-			l, err := NewLoader(o)
+			l, err := NewLoader("", store, lines, w, fs)
 			if err != nil {
 				t.Fatalf("couldn't create loader: %s", err)
 			}
@@ -189,15 +186,14 @@ func TestLoadProg(t *testing.T) {
 	store := metrics.NewStore()
 	inLines := make(chan *tailer.LogLine)
 	fs := afero.NewMemMapFs()
-	o := LoaderOptions{store, inLines, w, fs, false, false, false, false, false, true, nil, false}
-	l, err := NewLoader(o)
+	l, err := NewLoader("", store, inLines, w, fs)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
 
 	for _, f := range testProgFiles {
 		afero.WriteFile(fs, f, []byte(testProgram), 0644)
-		err = l.LoadProg(f)
+		err = l.LoadProgram(f)
 		if err != nil {
 			t.Fatalf("couldn't load file: %s error: %s", f, err)
 		}

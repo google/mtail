@@ -43,6 +43,7 @@ func (u *Unparser) newline() {
 	u.line = ""
 }
 
+// VisitBefore implements the astNode Visitor interface.
 func (u *Unparser) VisitBefore(n astNode) Visitor {
 	if u.emitTypes {
 		u.emit(fmt.Sprintf("<%s>(", n.Type()))
@@ -81,7 +82,9 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 		u.emit("}")
 
 	case *patternFragmentDefNode:
-		u.emit("const " + v.name + " ")
+		u.emit("const ")
+		Walk(u, v.id)
+		u.emit(" ")
 		Walk(u, v.expr)
 
 	case *patternConstNode:
@@ -232,6 +235,11 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 	case *patternExprNode:
 		Walk(u, v.expr)
 
+	case *errorNode:
+		u.emit("// error")
+		u.newline()
+		u.emit(v.spelling)
+
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}
@@ -241,6 +249,7 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 	return nil
 }
 
+// VisitAfter implements the astNode Visitor interface.
 func (u *Unparser) VisitAfter(n astNode) {
 }
 

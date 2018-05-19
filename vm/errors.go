@@ -22,6 +22,7 @@ func (p *ErrorList) Add(pos *position, msg string) {
 	*p = append(*p, &compileError{*pos, msg})
 }
 
+// Append puts an ErrorList on the end of this ErrorList.
 func (p *ErrorList) Append(l ErrorList) {
 	*p = append(*p, l...)
 }

@@ -1,0 +1,28 @@
+# Parser for the common apache log format as follow.
+# LogFormat "%h %l %u %t \"%r\" %>s %b %D \"%{Referer}i\" \"%{User-agent}i\"
+counter apache_http_requests_total by request_method, http_version, status_code
+counter apache_http_bytes_total by request_method, http_version, status_code
+gauge apache_http_response_time by remote_host, request_method, request_uri, status_code, user_agent
+gauge apache_http_response_size by remote_host, request_method, request_uri, status_code, user_agent
+
+/^/ +
+/(?P<remote_host>[0-9A-Za-z\.:-]+) / + # %h
+/(?P<remote_logname>[0-9A-Za-z-]+) / + # %l
+/(?P<remote_username>[0-9A-Za-z-]+) / + # %u
+/\[(?P<timestamp>\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2} (\+|-)\d{4})\] / + # %u
+/"(?P<request_method>[A-Z]+) (?P<request_uri>\S+) (?P<http_version>HTTP\/[0-9\.]+)" / + # \"%r\"
+/(?P<status_code>\d{3}) / + # %>s
+/((?P<response_size>\d+)|-) / + # %b
+/(?P<response_time>\d+) / + # %D
+/"(?P<referer>\S+)" / + # \"%{Referer}i\"
+/"(?P<user_agent>[[:print:]]+)"/ + # \"%{User-agent}i\"
+/$/ {
+  strptime($timestamp, "02/Jan/2006:15:04:05 -0700") # for tests
+
+  apache_http_requests_total[$request_method][$http_version][$status_code]++
+  $response_size > 0 {
+      apache_http_bytes_total[$request_method][$http_version][$status_code] += $response_size
+      apache_http_response_size[$remote_host][$request_method][$request_uri][$status_code][$user_agent] += $response_size
+  }
+  apache_http_response_time[$remote_host][$request_method][$request_uri][$status_code][$user_agent] = $response_time
+}

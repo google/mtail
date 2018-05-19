@@ -48,6 +48,7 @@ func (s *Sexp) newline() {
 	s.line = ""
 }
 
+// VisitBefore implements the astNode Visitor interface.
 func (s *Sexp) VisitBefore(n astNode) Visitor {
 	s.emit(fmt.Sprintf("( ;;%T ", n))
 	if s.emitTypes {
@@ -59,7 +60,9 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	switch v := n.(type) {
 
 	case *patternFragmentDefNode:
-		s.emit(fmt.Sprintf("const %q ", v.name))
+		s.emit("const ")
+		Walk(s, v.id)
+		s.emit(" ")
 
 	case *patternConstNode:
 		s.emit(fmt.Sprintf("%q", v.pattern))
@@ -170,6 +173,12 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	case *delNode:
 		s.emit("del")
 
+	case *convNode:
+		s.emit("conv")
+
+	case *errorNode:
+		s.emit(fmt.Sprintf("error %q", v.spelling))
+
 	case *indexedExprNode, *stmtlistNode, *exprlistNode, *condNode, *decoDefNode, *decoNode, *patternExprNode: // normal walk
 
 	default:
@@ -178,6 +187,7 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	return s
 }
 
+// VisitAfter implements the astNode Visitor interface.
 func (s *Sexp) VisitAfter(node astNode) {
 	switch node.(type) {
 	case *binaryExprNode:

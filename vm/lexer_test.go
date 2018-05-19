@@ -215,17 +215,17 @@ var lexerTests = []lexerTest{
 // collect gathers the emitted items into a slice.
 func collect(t *lexerTest) (tokens []token) {
 	// Hack to count divs seen for regex tests.
-	in_regex_set := false
+	inRegexSet := false
 	l := newLexer(t.name, strings.NewReader(t.input))
 	for {
-		token := l.nextToken()
+		tok := l.nextToken()
 		// Hack to simulate context signal from parser.
-		if token.kind == DIV && (strings.Contains(t.name, "regex") || strings.HasPrefix(t.name, "large program")) && !in_regex_set {
+		if tok.kind == DIV && (strings.Contains(t.name, "regex") || strings.HasPrefix(t.name, "large program")) && !inRegexSet {
 			l.inRegex = true
-			in_regex_set = true
+			inRegexSet = true
 		}
-		tokens = append(tokens, token)
-		if token.kind == EOF {
+		tokens = append(tokens, tok)
+		if tok.kind == EOF {
 			return
 		}
 	}

@@ -79,3 +79,12 @@ Obvious problems seen in the goroutine stack dump are long-waiting gorotines, us
 (they show their block time in minutes, e.g. `goroutine 38 [semacquire, 1580
 minutes]:`) which usually also manifest as a logjam (no pun intended) in the
 loader, tailer, and watcher goroutines (in state 'chan send').
+
+## Deployment problems
+
+The INFO log at `/tmp/mtail.INFO` by default contains lots of information about
+any errors encountered.  Adding the `-v=2` flag raises the verbosity.  See the
+[glog](https://github.com/golang/glog) manual for more logging flag options.
+
+The `one_shot` and `logtostderr` flags may come in helpful for quickly
+launching mtail in non-daemon mode in order to flush out deployment issues.

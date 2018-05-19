@@ -33,7 +33,7 @@ func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
 			lc := make(chan *metrics.LabelSet)
 			go m.EmitLabelSets(lc)
 			for l := range lc {
-				line := metricToVarz(e.o, m, l)
+				line := metricToVarz(m, l, e.omitProgLabel, e.hostname)
 				fmt.Fprint(w, line)
 			}
 			m.RUnlock()
@@ -41,16 +41,16 @@ func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func metricToVarz(o Options, m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToVarz(m *metrics.Metric, l *metrics.LabelSet, omitProgLabel bool, hostname string) string {
 	var s []string
 	for k, v := range l.Labels {
 		s = append(s, fmt.Sprintf("%s=%s", k, v))
 	}
 	sort.Strings(s)
-	if !o.OmitProgLabel {
+	if !omitProgLabel {
 		s = append(s, fmt.Sprintf("prog=%s", m.Program))
 	}
-	s = append(s, fmt.Sprintf("instance=%s", o.Hostname))
+	s = append(s, fmt.Sprintf("instance=%s", hostname))
 	return fmt.Sprintf(varzFormat,
 		m.Name,
 		strings.Join(s, ","),
