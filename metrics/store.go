@@ -48,6 +48,9 @@ func (s *Store) Add(m *Metric) error {
 			if v.Type != m.Type {
 				continue
 			}
+			if v.Source != m.Source {
+				continue
+			}
 			glog.Infof("v keys: %v m.keys: %v", v.Keys, m.Keys)
 			if len(v.Keys) > 0 && len(m.Keys) > 0 && reflect.DeepEqual(v.Keys, m.Keys) {
 				continue
