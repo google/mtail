@@ -26,33 +26,33 @@ func TestDuplicateMetric(t *testing.T) {
 	_ = s.Add(NewMetric("foo", "prog", Counter, Int))
 	expectedMetrics++
 	if len(s.Metrics["foo"]) != expectedMetrics {
-		t.Fatalf("should not add duplicate metric. Store: %s", s)
+		t.Fatalf("should not add duplicate metric. Store: %v", s)
 	}
 
 	_ = s.Add(NewMetric("foo", "prog", Counter, Float))
-	t.Logf("Store: %s", s)
+	t.Logf("Store: %v", s)
 	expectedMetrics++
 	if len(s.Metrics["foo"]) != expectedMetrics {
-		t.Fatalf("should add metric of a different type: %s", s)
+		t.Fatalf("should add metric of a different type: %v", s)
 	}
 
 	_ = s.Add(NewMetric("foo", "prog", Counter, Int, "user", "host", "zone", "domain"))
-	t.Logf("Store: %s", s)
+	t.Logf("Store: %v", s)
 	if len(s.Metrics["foo"]) != expectedMetrics {
-		t.Fatalf("should not add duplicate metric, but replace the old one. Store: %s", s)
+		t.Fatalf("should not add duplicate metric, but replace the old one. Store: %v", s)
 	}
 
 	_ = s.Add(NewMetric("foo", "prog1", Counter, Int))
-	t.Logf("Store: %s", s)
+	t.Logf("Store: %v", s)
 	expectedMetrics++
 	if len(s.Metrics["foo"]) != expectedMetrics {
-		t.Fatalf("should add metric with a different prog: %s", s)
+		t.Fatalf("should add metric with a different prog: %v", s)
 	}
 
 	_ = s.Add(NewMetric("foo", "prog1", Counter, Float))
-	t.Logf("Store: %s", s)
+	t.Logf("Store: %v", s)
 	expectedMetrics++
 	if len(s.Metrics["foo"]) != expectedMetrics {
-		t.Fatalf("should add metric of a different type: %s", s)
+		t.Fatalf("should add metric of a different type: %v", s)
 	}
 }
