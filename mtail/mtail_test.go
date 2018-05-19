@@ -38,12 +38,12 @@ func removeTempDir(t *testing.T, workdir string) {
 	}
 }
 
-func startMtailServer(t *testing.T, logPathnames []string) *MtailServer {
+func startMtailServer(t *testing.T, options ...func(*MtailServer) error) *MtailServer {
 	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		t.Errorf("Couodn't make a log watcher: %s", err)
 	}
-	m, err := New(metrics.NewStore(), w, &afero.OsFs{}, LogPathPatterns(logPathnames))
+	m, err := New(metrics.NewStore(), w, &afero.OsFs{}, options...)
 	if err != nil {
 		t.Fatalf("couldn't create mtail: %s", err)
 	}
@@ -127,7 +127,7 @@ func TestHandleLogUpdates(t *testing.T) {
 	}
 	defer logFile.Close()
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
@@ -169,7 +169,7 @@ func TestHandleLogRotation(t *testing.T) {
 	// Create a logger
 	hup := make(chan bool, 1)
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer func() {
 		if cerr := m.Close(); cerr != nil {
 			t.Fatal(cerr)
@@ -241,7 +241,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	// Start up mtail
 	logFilepath := path.Join(workdir, "log")
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 	time.Sleep(10 * time.Millisecond)
 
@@ -285,7 +285,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	// Start mtail
 	logFilepath := path.Join(workdir, "log")
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 
 	// touch log file
@@ -311,7 +311,7 @@ func TestHandleSoftLinkChange(t *testing.T) {
 
 	logFilepath := path.Join(workdir, "log")
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 
 	trueLog1, err := os.Create(logFilepath + ".true1")
@@ -435,7 +435,7 @@ func TestGlob(t *testing.T) {
 		log.WriteString("\n")
 		log.Sync()
 	}
-	m := startMtailServer(t, []string{path.Join(workdir, "log*")})
+	m := startMtailServer(t, LogPathPatterns([]string{path.Join(workdir, "log*")}))
 	defer m.Close()
 	check := func() (bool, error) {
 		if expvar.Get("log_count").String() != fmt.Sprintf("%d", count) {
@@ -478,7 +478,7 @@ func TestGlobAfterStart(t *testing.T) {
 			false,
 		},
 	}
-	m := startMtailServer(t, []string{path.Join(workdir, "log*")})
+	m := startMtailServer(t, LogPathPatterns([]string{path.Join(workdir, "log*")}))
 	defer m.Close()
 	glog.Infof("Pausing for mtail startup.")
 	time.Sleep(100 * time.Millisecond)
@@ -527,7 +527,7 @@ func TestHandleLogDeletes(t *testing.T) {
 	}
 	defer logFile.Close()
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 
 	if err = os.Remove(logFilepath); err != nil {
@@ -568,7 +568,7 @@ func TestHandleLogTruncate(t *testing.T) {
 	}
 	defer logFile.Close()
 	pathnames := []string{logFilepath}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer func() {
 		if cerr := m.Close(); cerr != nil {
 			t.Fatal(cerr)
@@ -639,7 +639,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 	}
 	defer logFile.Close()
 	pathnames := []string{"log"}
-	m := startMtailServer(t, pathnames)
+	m := startMtailServer(t, LogPathPatterns(pathnames))
 	defer m.Close()
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
