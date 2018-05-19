@@ -696,13 +696,12 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 
 	check := func() (bool, error) {
 		v := expvar.Get("prog_loads_total").(*expvar.Map).Get("program.mtail")
-		t.Log(v)
 		if v.String() != "1" {
 			return false, nil
 		}
 		return true, nil
 	}
-	ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
+	ok, err := doOrTimeout(check, time.Second, 10*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -713,16 +712,12 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		t.Errorf("Unexpected number of metrics: expected 1, but got all this %v", store.Metrics["foo"])
 	}
 
-	t.Log("program loaded")
-
 	pipew.WriteString("foo\n")
 	time.Sleep(100 * time.Millisecond)
 
 	checkFoo := func() (bool, error) {
 		v := store.Metrics["foo"][0]
-		t.Log(v)
 		d, err := v.GetDatum()
-		t.Log(d)
 		if err != nil {
 			return false, err
 		}
@@ -731,15 +726,13 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err = doOrTimeout(checkFoo, 100*time.Millisecond, 10*time.Millisecond)
+	ok, err = doOrTimeout(checkFoo, time.Second, 10*time.Millisecond)
 	if err != nil {
 		t.Error(err)
 	}
 	if !ok {
 		t.Fatal("foo didn't increase")
 	}
-
-	t.Log("line read")
 
 	p, err = os.Create(progpath)
 	if err != nil {
@@ -750,7 +743,6 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 
 	check2 := func() (bool, error) {
 		v := expvar.Get("prog_loads_total")
-		t.Log(v)
 		v = v.(*expvar.Map).Get("program.mtail")
 		n, err := strconv.Atoi(v.String())
 		if err != nil {
@@ -761,7 +753,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err = doOrTimeout(check2, 100*time.Millisecond, 10*time.Millisecond)
+	ok, err = doOrTimeout(check2, time.Second, 10*time.Millisecond)
 	if err != nil {
 		t.Error(err)
 	}
