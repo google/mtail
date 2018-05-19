@@ -42,6 +42,8 @@ Add coverage from regtest
 - perhaps with https://blog.cloudflare.com/go-coverage-with-external-tests/
 - or just a flag to mtail?
 
+Why does adding a program with no log path patterns cause tailer to tail the program file?
+
 # Won't do
 
 X Use capture group references to feed back to declaring regular expression,
