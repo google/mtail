@@ -461,6 +461,8 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 			}
 			return err
 		}
+	case m&os.ModeType == os.ModeNamedPipe:
+		go t.readForever(f)
 	default:
 		return errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}
