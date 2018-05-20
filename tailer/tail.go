@@ -534,6 +534,9 @@ func (t *Tailer) readForever(f afero.File) {
 			err = t.read(f, partial)
 			// We want to exit at EOF, because the FD has been closed.
 			if err != nil {
+				if err == io.EOF {
+					return
+				}
 				glog.Infof("error on partial read of %s (fd %v): %s", f.Name(), f, err)
 				return
 			}
