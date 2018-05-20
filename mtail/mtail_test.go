@@ -40,6 +40,11 @@ func removeTempDir(t *testing.T, workdir string) {
 }
 
 func startMtailServer(t *testing.T, options ...func(*MtailServer) error) *MtailServer {
+	expvar.Get("line_count").(*expvar.Int).Set(0)
+	expvar.Get("log_count").(*expvar.Int).Set(0)
+	expvar.Get("log_rotations_total").(*expvar.Map).Init()
+	expvar.Get("prog_loads_total").(*expvar.Map).Init()
+
 	w, err := watcher.NewLogWatcher()
 	if err != nil {
 		t.Errorf("Couodn't make a log watcher: %s", err)
@@ -51,11 +56,6 @@ func startMtailServer(t *testing.T, options ...func(*MtailServer) error) *MtailS
 	if pErr := m.l.CompileAndRun("test", strings.NewReader(testProgram)); pErr != nil {
 		t.Errorf("Couldn't compile program: %s", pErr)
 	}
-
-	expvar.Get("line_count").(*expvar.Int).Set(0)
-	expvar.Get("log_count").(*expvar.Int).Set(0)
-	expvar.Get("log_rotations_total").(*expvar.Map).Init()
-	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
 	if err := m.StartTailing(); err != nil {
 		t.Errorf("StartTailing failed: %s", err)
@@ -681,10 +681,16 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer pipew.Close()
 
 	m := startMtailServer(t, ProgramPath(workdir), LogFds(piper.Fd()))
 	defer m.Close()
 	store := m.store
+
+	v := expvar.Get("prog_loads_total").(*expvar.Map).Get("program.mtail")
+	if v != nil {
+		t.Log(v)
+	}
 
 	progpath := path.Join(workdir, "program.mtail")
 	p, err := os.Create(progpath)
@@ -696,7 +702,14 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 
 	check := func() (bool, error) {
 		v := expvar.Get("prog_loads_total").(*expvar.Map).Get("program.mtail")
-		if v.String() != "1" {
+		if v == nil {
+			return false, nil
+		}
+		n, err := strconv.Atoi(v.String())
+		if err != nil {
+			return false, err
+		}
+		if n < 1 {
 			return false, nil
 		}
 		return true, nil
@@ -712,7 +725,13 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		t.Errorf("Unexpected number of metrics: expected 1, but got all this %v", store.Metrics["foo"])
 	}
 
-	pipew.WriteString("foo\n")
+	n, err := pipew.WriteString("foo\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n < 4 {
+		t.Fatalf("only wrote %d", n)
+	}
 	time.Sleep(100 * time.Millisecond)
 
 	checkFoo := func() (bool, error) {
@@ -722,6 +741,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 			return false, err
 		}
 		if d.ValueString() != "1" {
+			t.Log(d)
 			return false, nil
 		}
 		return true, nil
@@ -744,6 +764,9 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	check2 := func() (bool, error) {
 		v := expvar.Get("prog_loads_total")
 		v = v.(*expvar.Map).Get("program.mtail")
+		if v == nil {
+			return false, nil
+		}
 		n, err := strconv.Atoi(v.String())
 		if err != nil {
 			return false, err
