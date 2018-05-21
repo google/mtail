@@ -323,5 +323,5 @@ ANNOTATIONS {
 
 In this example, prometheus computes a service level indicator of the ratio of
 requests at or below the target of 200ms against the total count, and then
-fires an alert if the indicator drops below five nines.
+fires an alert if the indicator drops below nine fives.
 
