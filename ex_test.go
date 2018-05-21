@@ -115,8 +115,7 @@ func TestExamplePrograms(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			fs := &afero.OsFs{}
-			logs := []string{tc.logfile}
-			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(tc.programfile), mtail.LogPathPatterns(logs), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
+			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(tc.programfile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			if err != nil {
 				t.Fatalf("create mtail failed: %s", err)
 			}

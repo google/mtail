@@ -45,6 +45,10 @@ Add coverage from regtest
 Why does adding a program with no log path patterns cause tailer to tail the program file?
  - it's because tail.go:201 in handleLogUpdate gets same watch notifications as loader
         does, but we don't filter them.
+
+There's a race in shutdown if both tailer and loader are trying to read the
+    same file, because both are watching the progs dir, an there's a write just
+    before shutdown, causing a deadlock.
         
 # Won't do
 

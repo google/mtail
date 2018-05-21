@@ -136,7 +136,7 @@ func main() {
 	}
 	opts := []func(*mtail.MtailServer) error{
 		mtail.ProgramPath(*progs),
-		mtail.LogPathPatterns(logs),
+		mtail.LogPathPatterns(logs...),
 		mtail.LogFds(logFds...),
 		mtail.BindAddress(*address, *port),
 		mtail.BuildInfo(buildInfo()),

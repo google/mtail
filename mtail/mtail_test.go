@@ -128,8 +128,7 @@ func TestHandleLogUpdates(t *testing.T) {
 		t.Errorf("could not touch log file: %s", err)
 	}
 	defer logFile.Close()
-	pathnames := []string{logFilepath}
-	m := startMtailServer(t, LogPathPatterns(pathnames))
+	m := startMtailServer(t, LogPathPatterns(logFilepath))
 	defer m.Close()
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
@@ -170,8 +169,7 @@ func TestHandleLogRotation(t *testing.T) {
 	}
 	// Create a logger
 	hup := make(chan bool, 1)
-	pathnames := []string{logFilepath}
-	m := startMtailServer(t, LogPathPatterns(pathnames))
+	m := startMtailServer(t, LogPathPatterns(logFilepath))
 	defer func() {
 		if cerr := m.Close(); cerr != nil {
 			t.Fatal(cerr)
@@ -242,8 +240,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	defer removeTempDir(t, workdir)
 	// Start up mtail
 	logFilepath := path.Join(workdir, "log")
-	pathnames := []string{logFilepath}
-	m := startMtailServer(t, LogPathPatterns(pathnames))
+	m := startMtailServer(t, LogPathPatterns(logFilepath))
 	defer m.Close()
 	time.Sleep(10 * time.Millisecond)
 
@@ -286,8 +283,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	defer removeTempDir(t, workdir)
 	// Start mtail
 	logFilepath := path.Join(workdir, "log")
-	pathnames := []string{logFilepath}
-	m := startMtailServer(t, LogPathPatterns(pathnames))
+	m := startMtailServer(t, LogPathPatterns(logFilepath))
 	defer m.Close()
 
 	// touch log file
@@ -312,8 +308,7 @@ func TestHandleSoftLinkChange(t *testing.T) {
 	defer removeTempDir(t, workdir)
 
 	logFilepath := path.Join(workdir, "log")
-	pathnames := []string{logFilepath}
-	m := startMtailServer(t, LogPathPatterns(pathnames))
+	m := startMtailServer(t, LogPathPatterns(logFilepath))
 	defer m.Close()
 
 	trueLog1, err := os.Create(logFilepath + ".true1")
@@ -437,7 +432,7 @@ func TestGlob(t *testing.T) {
 		log.WriteString("\n")
 		log.Sync()
 	}
-	m := startMtailServer(t, LogPathPatterns([]string{path.Join(workdir, "log*")}))
+	m := startMtailServer(t, LogPathPatterns(path.Join(workdir, "log*")))
 	defer m.Close()
 	check := func() (bool, error) {
 		if expvar.Get("log_count").String() != fmt.Sprintf("%d", count) {
@@ -480,7 +475,7 @@ func TestGlobAfterStart(t *testing.T) {
 			false,
 		},
 	}
-	m := startMtailServer(t, LogPathPatterns([]string{path.Join(workdir, "log*")}))
+	m := startMtailServer(t, LogPathPatterns(path.Join(workdir, "log*")))
 	defer m.Close()
 	glog.Infof("Pausing for mtail startup.")
 	time.Sleep(100 * time.Millisecond)
@@ -528,8 +523,7 @@ func TestHandleLogDeletes(t *testing.T) {
 		t.Errorf("could not touch log file: %s", err)
 	}
 	defer logFile.Close()
-	pathnames := []string{logFilepath}
-	m := startMtailServer(t, LogPathPatterns(pathnames))
+	m := startMtailServer(t, LogPathPatterns(logFilepath))
 	defer m.Close()
 
 	if err = os.Remove(logFilepath); err != nil {
@@ -569,8 +563,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Errorf("could not touch log file: %s", err)
 	}
 	defer logFile.Close()
-	pathnames := []string{logFilepath}
-	m := startMtailServer(t, LogPathPatterns(pathnames))
+	m := startMtailServer(t, LogPathPatterns(logFilepath))
 	defer func() {
 		if cerr := m.Close(); cerr != nil {
 			t.Fatal(cerr)
@@ -641,7 +634,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 	}
 	defer logFile.Close()
 	pathnames := []string{"log"}
-	m := startMtailServer(t, LogPathPatterns(pathnames))
+	m := startMtailServer(t, LogPathPatterns(pathnames...))
 	defer m.Close()
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
@@ -669,6 +662,9 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 
 }
 
+// TODO(jaq): Two known flakes in this test.
+// 1) occasionally EBADF reading or writing from the pipe
+// 2) shutdown hangs but a program is still being loaded?  always in the lexer.  Seems to be due to sync issue between loader and the next write
 func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in shor tmode")
@@ -677,13 +673,22 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	workdir := makeTempDir(t)
 	defer removeTempDir(t, workdir)
 
+	logDir := path.Join(workdir, "logs")
+	if err := os.Mkdir(logDir, 0777); err != nil {
+		t.Fatal(err)
+	}
+	progDir := path.Join(workdir, "progs")
+	if err := os.Mkdir(progDir, 0777); err != nil {
+		t.Fatal(err)
+	}
+
 	piper, pipew, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer pipew.Close()
 
-	m := startMtailServer(t, ProgramPath(workdir), LogFds(piper.Fd()))
+	m := startMtailServer(t, ProgramPath(progDir), LogPathPatterns(logDir+"/*"), LogFds(piper.Fd()))
 	defer m.Close()
 	store := m.store
 
@@ -692,7 +697,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		t.Log(v)
 	}
 
-	progpath := path.Join(workdir, "program.mtail")
+	progpath := path.Join(progDir, "program.mtail")
 	p, err := os.Create(progpath)
 	if err != nil {
 		t.Fatalf("couldn't open program file: %s", err)
@@ -727,6 +732,8 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 
 	n, err := pipew.WriteString("foo\n")
 	if err != nil {
+		glog.Info(pipew.Fd())
+		glog.Info(err)
 		t.Fatal(err)
 	}
 	if n < 4 {

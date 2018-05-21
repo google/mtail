@@ -194,7 +194,7 @@ func ProgramPath(path string) func(*MtailServer) error {
 }
 
 // LogPathPatterns sets the patterns to find log paths in the MtailServer.
-func LogPathPatterns(patterns []string) func(*MtailServer) error {
+func LogPathPatterns(patterns ...string) func(*MtailServer) error {
 	return func(m *MtailServer) error {
 		m.logPathPatterns = patterns
 		return nil

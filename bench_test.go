@@ -36,9 +36,8 @@ func BenchmarkProgram(b *testing.B) {
 			if err != nil {
 				b.Fatalf("failed to create test file descriptor")
 			}
-			logs = []string{log.Name()}
 			store := metrics.NewStore()
-			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(bm.programfile), mtail.LogPathPatterns(logs))
+			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(bm.programfile), mtail.LogPathPatterns(log.Name()))
 			if err != nil {
 				b.Fatalf("Failed to create mtail: %s", err)
 			}
