@@ -20,7 +20,7 @@ fi
 if [ ! -e "${TEST_TMPDIR}" ]; then
   mkdir -p -m 0700 "${TEST_TMPDIR}"
   # Clean TEST_TMPDIR on exit
-  atexit "rm -fr ${TEST_TMPDIR}"
+  #atexit "rm -fr ${TEST_TMPDIR}"
 fi
 
 # Default mtail parameters for start_server
@@ -84,21 +84,19 @@ start_server() {
     atexit 'kill ${MTAIL_PID:?}'
 }
 
-# Default parameters for wget
-WGET_ARGS="\
---quiet \
---tries=1 \
---output-document=- \
+# Default parameters for curl
+CURL_ARGS="\
+--silent \
 "
 
-# Get a page from mtail's http server, storing it in $WGET_DATA
+# Get a page from mtail's http server, storing it in $DATA
 uri_get() {
     local path=$1
     local uri="http://localhost:${MTAIL_PORT}${path}"
-    WGET_DATA=$(wget ${WGET_ARGS} ${uri})
+    DATA=$(curl ${CURL_ARGS} ${uri})
     result=$?
     if [ $result -ne 0 ]; then
-        fail "wget failed with error $result"
+        fail "curl failed with error $result"
     fi
 }
 

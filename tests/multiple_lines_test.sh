@@ -13,7 +13,7 @@ start_server  --logs $LOGS/log --progs $PROGS
 echo 1 >> $LOGS/log
 
 uri_get /debug/vars
-expect_json_field_eq 1 line_count "${WGET_DATA}"
+expect_json_field_eq 1 line_count "${DATA}"
 
 cat >> $LOGS/log <<EOF
 2
@@ -21,6 +21,6 @@ cat >> $LOGS/log <<EOF
 EOF
 
 uri_get /debug/vars
-expect_json_field_eq 3 line_count "${WGET_DATA}"
+expect_json_field_eq 3 line_count "${DATA}"
 
 pass

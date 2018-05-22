@@ -14,6 +14,6 @@ atexit 'chmod u+r $LOGS/log'
 start_server  --logs $LOGS/log --progs $PROGS --stderrthreshold=FATAL
 
 uri_get /debug/vars
-expect_json_field_eq "{  \"$LOGS/log\": 1}" log_errors_total "${WGET_DATA}"
+expect_json_field_eq "{  \"$LOGS/log\": 1}" log_errors_total "${DATA}"
 
 pass
