@@ -662,9 +662,6 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 
 }
 
-// TODO(jaq): Two known flakes in this test.
-// 1) occasionally EBADF reading or writing from the pipe
-// 2) shutdown hangs but a program is still being loaded?  always in the lexer.  Seems to be due to sync issue between loader and the next write
 func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in shor tmode")
@@ -682,13 +679,14 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	piper, pipew, err := os.Pipe()
+	logFilepath := path.Join(logDir, "log")
+	logFile, err := os.Create(logFilepath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pipew.Close()
+	defer logFile.Close()
 
-	m := startMtailServer(t, ProgramPath(progDir), LogPathPatterns(logDir+"/*"), LogFds(piper.Fd()))
+	m := startMtailServer(t, ProgramPath(progDir), LogPathPatterns(logDir+"/*"))
 	defer m.Close()
 	store := m.store
 
@@ -730,10 +728,8 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		t.Errorf("Unexpected number of metrics: expected 1, but got all this %v", store.Metrics["foo"])
 	}
 
-	n, err := pipew.WriteString("foo\n")
+	n, err := logFile.WriteString("foo\n")
 	if err != nil {
-		glog.Info(pipew.Fd())
-		glog.Info(err)
 		t.Fatal(err)
 	}
 	if n < 4 {
