@@ -51,14 +51,14 @@ func (s *Store) Add(m *Metric) error {
 			if v.Source != m.Source {
 				continue
 			}
-			glog.Infof("v keys: %v m.keys: %v", v.Keys, m.Keys)
+			glog.V(2).Infof("v keys: %v m.keys: %v", v.Keys, m.Keys)
 			if len(v.Keys) > 0 && len(m.Keys) > 0 && reflect.DeepEqual(v.Keys, m.Keys) {
 				continue
 			}
 			dupeIndex = i
-			glog.Infof("Found duped metric: %d", dupeIndex)
+			glog.V(2).Infof("Found duped metric: %d", dupeIndex)
 			for j, oldLabel := range v.LabelValues {
-				glog.Warningf("Labels: %d %s", j, oldLabel.Labels)
+				glog.V(2).Infof("Labels: %d %s", j, oldLabel.Labels)
 				d, err := v.GetDatum(oldLabel.Labels...)
 				if err == nil {
 					m.LabelValues = append(m.LabelValues, &LabelValue{oldLabel.Labels, d})
