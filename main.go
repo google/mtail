@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -34,25 +33,7 @@ func (f *seqStringFlag) Set(value string) error {
 	return nil
 }
 
-type seqUIntFlag []uintptr
-
-func (f *seqUIntFlag) String() string {
-	return fmt.Sprint(*f)
-}
-
-func (f *seqUIntFlag) Set(value string) error {
-	for _, v := range strings.Split(value, ",") {
-		val, err := strconv.ParseUint(v, 10, 64)
-		if err != nil {
-			return err
-		}
-		*f = append(*f, uintptr(val))
-	}
-	return nil
-}
-
 var logs seqStringFlag
-var logFds seqUIntFlag
 
 var (
 	port    = flag.String("port", "3903", "HTTP port to listen on.")
@@ -81,7 +62,6 @@ var (
 
 func init() {
 	flag.Var(&logs, "logs", "List of log files to monitor, separated by commas.  This flag may be specified multiple times.")
-	flag.Var(&logFds, "logfds", "List of file descriptor numbers to monitor, separated by commas.  This flag may be specified multiple times.")
 }
 
 var (
@@ -123,11 +103,11 @@ func main() {
 		runtime.SetMutexProfileFraction(*mutexProfileFraction)
 	}
 	if *progs == "" {
-		glog.Exitf("No mtail program directory specified; use -progs")
+		glog.Exitf("No mtail program directory specified; please use -progs")
 	}
 	if !(*dumpBytecode || *dumpAst || *dumpAstTypes || *compileOnly) {
-		if len(logs) == 0 && len(logFds) == 0 {
-			glog.Exitf("No logs specified to tail; use -logs or -logfds")
+		if len(logs) == 0 {
+			glog.Exitf("No logs specified to tail; please use -logs")
 		}
 	}
 	w, err := watcher.NewLogWatcher()
@@ -137,7 +117,6 @@ func main() {
 	opts := []func(*mtail.MtailServer) error{
 		mtail.ProgramPath(*progs),
 		mtail.LogPathPatterns(logs...),
-		mtail.LogFds(logFds...),
 		mtail.BindAddress(*address, *port),
 		mtail.BuildInfo(buildInfo()),
 		mtail.OverrideLocation(loc),
