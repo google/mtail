@@ -437,30 +437,8 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		if _, err := f.Seek(0, seekWhence); err != nil {
 			return errors.Wrapf(err, "Seek failed on %q", f.Name())
 		}
-		glog.V(2).Infof("Adding a file watch on %q", f.Name())
-		if err := t.w.Add(f.Name()); err != nil {
-			return err
-		}
-		// In case the new log has been written to already, attempt to read the
-		// first lines.
-		absPath, err := filepath.Abs(f.Name())
-		if err != nil {
-			return err
-		}
-		t.partialsMu.Lock()
-		t.partials[absPath] = bytes.NewBufferString("")
-		err = t.read(f, t.partials[absPath])
-		t.partialsMu.Unlock()
-		if err != nil {
-			if err == io.EOF {
-				glog.V(1).Info("EOF on first read")
-				if !t.oneShot {
-					// Don't worry about EOF on first read, that's expected due to SEEK_END.
-					break
-				}
-			}
-			return err
-		}
+		// Named pipes are the same as far as we're concerned, but we can't seek them.
+		fallthrough
 	case m&os.ModeType == os.ModeNamedPipe:
 		glog.V(2).Infof("Adding a file watch on %q", f.Name())
 		if err := t.w.Add(f.Name()); err != nil {
