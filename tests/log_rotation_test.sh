@@ -14,19 +14,19 @@ echo "line 1" >> $LOGS/log
 sleep 1
 
 uri_get /debug/vars
-expect_json_field_eq "{  \"$LOGS/log\": 1}" log_lines_total "${WGET_DATA}"
+expect_json_field_eq "{  \"$LOGS/log\": 1}" log_lines_total "${DATA}"
 
 echo "line 2" >> $LOGS/log
 sleep 1
 
 uri_get /debug/vars
-expect_json_field_eq "{  \"$LOGS/log\": 2}" log_lines_total "${WGET_DATA}"
+expect_json_field_eq "{  \"$LOGS/log\": 2}" log_lines_total "${DATA}"
 
 mv $LOGS/log $LOGS/log.1
 echo "line 3" >> $LOGS/log
 sleep 1
 
 uri_get /debug/vars
-expect_json_field_eq "{  \"$LOGS/log\": 3}" log_lines_total "${WGET_DATA}"
+expect_json_field_eq "{  \"$LOGS/log\": 3}" log_lines_total "${DATA}"
 
 pass

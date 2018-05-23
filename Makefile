@@ -111,7 +111,7 @@ coverage.html: gover.coverprofile
 	go tool cover -html=$< -o $@
 
 .PHONY: testall
-testall: testrace bench
+testall: testrace bench regtest
 
 .PHONY: install_deps
 install_deps: .dep-stamp

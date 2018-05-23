@@ -58,8 +58,7 @@ type Tailer struct {
 	globPatternsMu sync.RWMutex        // protects `globPatterns'
 	globPatterns   map[string]struct{} // glob patterns to match newly created files in dir paths against
 
-	stopForever chan struct{} // Signals termination to the readForever goroutine
-	runDone     chan struct{} // Signals termination of the run goroutine.
+	runDone chan struct{} // Signals termination of the run goroutine.
 
 	oneShot bool
 }
@@ -88,7 +87,6 @@ func New(lines chan<- *LogLine, fs afero.Fs, w watcher.Watcher, options ...func(
 		handles:      make(map[string]afero.File),
 		partials:     make(map[string]*bytes.Buffer),
 		globPatterns: make(map[string]struct{}),
-		stopForever:  make(chan struct{}),
 		runDone:      make(chan struct{}),
 	}
 	if err := t.SetOption(options...); err != nil {
@@ -181,14 +179,6 @@ func (t *Tailer) TailPath(pathname string) error {
 	logCount.Add(1)
 	// TODO(jaq): ex_test/filename.mtail requires we use the original pathname here, not fullpath
 	return t.openLogPath(pathname, false, false)
-}
-
-// TailHandle registers a file handle to be tailed.  There is no filesystem to
-// watch, so no watches are registered, and no file paths are opened.
-func (t *Tailer) TailHandle(f afero.File) error {
-	logCount.Add(1)
-	go t.readForever(f)
-	return nil
 }
 
 // handleLogUpdate is dispatched when an UpdateEvent is received, causing the
@@ -437,6 +427,9 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		if _, err := f.Seek(0, seekWhence); err != nil {
 			return errors.Wrapf(err, "Seek failed on %q", f.Name())
 		}
+		// Named pipes are the same as far as we're concerned, but we can't seek them.
+		fallthrough
+	case m&os.ModeType == os.ModeNamedPipe:
 		glog.V(2).Infof("Adding a file watch on %q", f.Name())
 		if err := t.w.Add(f.Name()); err != nil {
 			return err
@@ -461,8 +454,6 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 			}
 			return err
 		}
-	case m&os.ModeType == os.ModeNamedPipe:
-		go t.readForever(f)
 	default:
 		return errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}
@@ -524,32 +515,8 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 	close(t.lines)
 }
 
-// readForever handles non-logfile inputs by reading from the File until it is closed.
-func (t *Tailer) readForever(f afero.File) {
-	var err error
-	partial := bytes.NewBufferString("")
-	for {
-		select {
-		case <-t.stopForever:
-			return
-		default:
-			err = t.read(f, partial)
-			// We want to exit at EOF, because the FD has been closed.
-			if err != nil {
-				if err == io.EOF {
-					return
-				}
-				glog.Infof("error on partial read of %s (fd %v): %s", f.Name(), f, err)
-				return
-			}
-			// TODO(jaq): nonblocking read, handle eagain, and do a little sleep if so, so the read can be interrupted
-		}
-	}
-}
-
 // Close signals termination to the watcher.
 func (t *Tailer) Close() error {
-	close(t.stopForever)
 	if err := t.w.Close(); err != nil {
 		return err
 	}

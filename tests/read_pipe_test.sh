@@ -6,16 +6,16 @@ LOGS=${TEST_TMPDIR}/logs
 PROGS=${TEST_TMPDIR}/progs
 mkdir -p $LOGS $PROGS
 
-touch $LOGS/log
+mkfifo $LOGS/logpipe
 
-start_server  --logs $LOGS/log --progs $PROGS
+start_server --progs $PROGS --logs $LOGS/*
 
-echo 1 >> $LOGS/log
+echo 1 >> $LOGS/logpipe
 
 uri_get /debug/vars
 expect_json_field_eq 1 line_count "${DATA}"
 
-cat >> $LOGS/log <<EOF
+cat >> $LOGS/logpipe <<EOF
 2
 3
 EOF

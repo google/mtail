@@ -315,32 +315,6 @@ func TestReadPartial(t *testing.T) {
 	}
 }
 
-func TestReadPipe(t *testing.T) {
-	ta, lines, wa, _ := makeTestTail(t)
-	defer wa.Close()
-
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = ta.TailHandle(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	n, err := w.WriteString("hi\n")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n < 2 {
-		t.Fatalf("Didn't write enough bytes: %d", n)
-	}
-	l := <-lines
-	if l.Line != "hi" {
-		t.Errorf("line not expected: %q", l)
-	}
-}
-
 func TestOpenRetries(t *testing.T) {
 	// Use the real filesystem because afero doesn't implement correct
 	// permissions checking on OpenFile in the memfile implementation.
