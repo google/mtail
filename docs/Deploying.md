@@ -12,7 +12,7 @@ The `--help` flag will print a list of flags for configuring `mtail`.
 
 Basic flags necessary to start `mtail`:
 
-  * `--logs` is a comma separated list of filenames to extract from, but can also be used multiple times, and each filename can be a [glob pattern](http://godoc.org/path/filepath#Match).
+  * `--logs` is a comma separated list of filenames to extract from, but can also be used multiple times, and each filename can be a [glob pattern](http://godoc.org/path/filepath#Match).  Named pipes can be read from when passed as a filename to this flag.
   * `--progs` is a directory path containing [mtail programs](Language.md). Programs must have the `.mtail` suffix.
 
 mtail runs an HTTP server on port 3903, which can be changed with the `--port` flag.
@@ -29,6 +29,10 @@ mtail --progs /etc/mtail --logs /var/log/syslog --logs /var/log/ntp/peerstats
 and read new updates appended to these logs as they arrive.  It will attempt to
 correctly handle log files that have been rotated by renaming or symlink
 changes.
+
+### Getting the logs in
+
+Use `--logs` multiple times to pass in glob patterns that match the logs you want to tail.  This includes named pipes.
 
 ## Writing the programme
 
