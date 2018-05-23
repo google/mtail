@@ -35,7 +35,7 @@ type MtailServer struct {
 	fs    afero.Fs
 
 	t *tailer.Tailer     // t tails the watched files and feeds lines to the VMs.
-	l *vm.Loader         // l loads programs and manages the VM lifecycle.
+	l *vm.MasterControl  // l loads programs and manages the VM lifecycle.
 	e *exporter.Exporter // e manages the export of metrics from the store.
 
 	webquit   chan struct{} // Channel to signal shutdown from web UI.
@@ -85,7 +85,7 @@ func (m *MtailServer) StartTailing() error {
 
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *MtailServer) initLoader() error {
-	opts := []func(*vm.Loader) error{}
+	opts := []func(*vm.MasterControl) error{}
 	if m.compileOnly {
 		opts = append(opts, vm.CompileOnly)
 		if m.oneShot {
