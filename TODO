@@ -50,8 +50,6 @@ There's a race in shutdown if both tailer and loader are trying to read the
     same file, because both are watching the progs dir, an there's a write just
         before shutdown, causing a deadlock.
 
-Reads from named pipes basically don't work.
-        
 # Won't do
 
 X Use capture group references to feed back to declaring regular expression,
