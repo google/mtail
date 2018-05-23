@@ -1,4 +1,4 @@
-#!/bin/bash -x 
+#!/bin/bash
 
 source $(dirname $0)/functions.sh
 
@@ -8,7 +8,7 @@ mkdir -p $LOGS $PROGS
 
 mkfifo $LOGS/logpipe
 
-start_server --logtostderr -vmodule=tail=2 --progs $PROGS --logs $LOGS/*
+start_server --progs $PROGS --logs $LOGS/*
 
 echo 1 >> $LOGS/logpipe
 
