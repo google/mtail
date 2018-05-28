@@ -14,6 +14,7 @@ test:
   stage: test
   allow_failure: true
   script:
+    - make install_deps
     - make test
 
 build:
