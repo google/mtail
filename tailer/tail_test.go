@@ -5,9 +5,11 @@ package tailer
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -316,6 +318,14 @@ func TestReadPartial(t *testing.T) {
 }
 
 func TestOpenRetries(t *testing.T) {
+	// Can't force a permission denied error if run as root.
+	u, err := user.Current()
+	if err != nil {
+		t.Skip(fmt.Sprintf("Couldn't determine current user id: %s", err))
+	}
+	if u.Uid == "0" {
+		t.Skip("Skipping test when run as root")
+	}
 	// Use the real filesystem because afero doesn't implement correct
 	// permissions checking on OpenFile in the memfile implementation.
 	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
