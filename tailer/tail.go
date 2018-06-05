@@ -500,12 +500,12 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 
 	for e := range events {
 		glog.V(2).Infof("Event type %#v", e)
-		switch e := e.(type) {
-		case watcher.UpdateEvent:
+		switch e.Op {
+		case watcher.Update:
 			t.handleLogUpdate(e.Pathname)
-		case watcher.CreateEvent:
+		case watcher.Create:
 			t.handleLogCreate(e.Pathname)
-		case watcher.DeleteEvent:
+		case watcher.Delete:
 			t.handleLogDelete(e.Pathname)
 		default:
 			glog.Infof("Unexpected event %#v", e)

@@ -60,8 +60,8 @@ func TestLogWatcher(t *testing.T) {
 	eventsChannel := w.Events()
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case CreateEvent:
+		switch e.Op {
+		case Create:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
 				t.Errorf("create doesn't match")
 			}
@@ -82,8 +82,8 @@ func TestLogWatcher(t *testing.T) {
 	}
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case UpdateEvent:
+		switch e.Op {
+		case Update:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
 				t.Errorf("update doesn't match")
 			}
@@ -98,8 +98,8 @@ func TestLogWatcher(t *testing.T) {
 	}
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case DeleteEvent:
+		switch e.Op {
+		case Delete:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
 				t.Errorf("delete doesn't match")
 			}
@@ -112,8 +112,8 @@ func TestLogWatcher(t *testing.T) {
 	}
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case CreateEvent:
+		switch e.Op {
+		case Create:
 			if e.Pathname != filepath.Join(workdir, "logfile2") {
 				t.Errorf("create doesn't match")
 			}
@@ -129,8 +129,8 @@ func TestLogWatcher(t *testing.T) {
 	}
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case UpdateEvent:
+		switch e.Op {
+		case Update:
 			if e.Pathname != filepath.Join(workdir, "logfile2") {
 				t.Errorf("update doesn't match")
 			}
@@ -146,8 +146,8 @@ func TestLogWatcher(t *testing.T) {
 	}
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case DeleteEvent:
+		switch e.Op {
+		case Delete:
 			if e.Pathname != filepath.Join(workdir, "logfile2") {
 				t.Errorf("delete doesn't match")
 			}

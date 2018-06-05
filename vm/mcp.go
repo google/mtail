@@ -352,14 +352,14 @@ func (l *MasterControl) processEvents(events <-chan watcher.Event) {
 	defer close(l.watcherDone)
 
 	for event := range events {
-		switch event := event.(type) {
-		case watcher.DeleteEvent:
+		switch event.Op {
+		case watcher.Delete:
 			l.UnloadProgram(event.Pathname)
-		case watcher.UpdateEvent:
+		case watcher.Update:
 			if err := l.LoadProgram(event.Pathname); err != nil {
 				glog.Info(err)
 			}
-		case watcher.CreateEvent:
+		case watcher.Create:
 			if err := l.w.Add(event.Pathname); err != nil {
 				glog.Info(err)
 			}

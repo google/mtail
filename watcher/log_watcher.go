@@ -80,15 +80,15 @@ func (w *LogWatcher) run() {
 		eventCount.Add(e.Name, 1)
 		switch {
 		case e.Op&fsnotify.Create == fsnotify.Create:
-			w.sendEvent(CreateEvent{e.Name})
+			w.sendEvent(Event{Create, e.Name})
 		case e.Op&fsnotify.Write == fsnotify.Write,
 			e.Op&fsnotify.Chmod == fsnotify.Chmod:
-			w.sendEvent(UpdateEvent{e.Name})
+			w.sendEvent(Event{Update, e.Name})
 		case e.Op&fsnotify.Remove == fsnotify.Remove:
-			w.sendEvent(DeleteEvent{e.Name})
+			w.sendEvent(Event{Delete, e.Name})
 		case e.Op&fsnotify.Rename == fsnotify.Rename:
 			// Rename is only issued on the original file path; the new name receives a Create event
-			w.sendEvent(DeleteEvent{e.Name})
+			w.sendEvent(Event{Delete, e.Name})
 		default:
 			panic(fmt.Sprintf("unknown op type %v", e.Op))
 		}

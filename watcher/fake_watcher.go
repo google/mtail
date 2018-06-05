@@ -87,7 +87,7 @@ func (w *FakeWatcher) InjectCreate(name string) {
 		glog.Warningf("not watching %s to see %s", dirname, name)
 		return
 	}
-	w.sendEvent(CreateEvent{name})
+	w.sendEvent(Event{Create, name})
 	if err := w.Add(name); err != nil {
 		glog.Warning(err)
 	}
@@ -102,7 +102,7 @@ func (w *FakeWatcher) InjectUpdate(name string) {
 		glog.Warningf("can't update: not watching %s", name)
 		return
 	}
-	w.sendEvent(UpdateEvent{name})
+	w.sendEvent(Event{Update, name})
 }
 
 // InjectDelete lets a test inject a fake deletion event.
@@ -114,7 +114,7 @@ func (w *FakeWatcher) InjectDelete(name string) {
 		glog.Warningf("can't delete: not watching %s", name)
 		return
 	}
-	w.sendEvent(DeleteEvent{name})
+	w.sendEvent(Event{Delete, name})
 	if err := w.Remove(name); err != nil {
 		glog.Warning(err)
 	}

@@ -30,8 +30,8 @@ func TestFakeWatcher(t *testing.T) {
 
 	go func() {
 		e := <-eventsChannel
-		switch e := e.(type) {
-		case CreateEvent:
+		switch e.Op {
+		case Create:
 			if e.Pathname != "/tmp/log" {
 				t.Errorf("event doesn't match: %q\n", e)
 			}
@@ -48,8 +48,8 @@ func TestFakeWatcher(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		e := <-eventsChannel
-		switch e := e.(type) {
-		case UpdateEvent:
+		switch e.Op {
+		case Update:
 			if e.Pathname != "/tmp/foo" {
 				t.Errorf("event doesn't match name: %q\n", e)
 			}
@@ -65,8 +65,8 @@ func TestFakeWatcher(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		e := <-eventsChannel
-		switch e := e.(type) {
-		case DeleteEvent:
+		switch e.Op {
+		case Delete:
 			if e.Pathname != "/tmp/foo" {
 				t.Errorf("event doesn't match name: %q\n", e)
 			}
@@ -86,8 +86,8 @@ func TestFakeWatcherUnwatchedFiles(t *testing.T) {
 	eventsChannel := w.Events()
 	go func() {
 		for e := range eventsChannel {
-			switch e := e.(type) {
-			case CreateEvent, DeleteEvent, UpdateEvent:
+			switch e.Op {
+			case Create, Delete, Update:
 				t.Errorf("Received an event, expecting nothing: %q", e)
 			default:
 			}
@@ -103,8 +103,8 @@ func TestFakeWatcherUnwatchedFiles(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		for e := range eventsChannel {
-			switch e := e.(type) {
-			case CreateEvent, DeleteEvent, UpdateEvent:
+			switch e.Op {
+			case Create, Delete, Update:
 				t.Errorf("Received an event, expecting nothing: %q", e)
 			default:
 			}
@@ -120,8 +120,8 @@ func TestFakeWatcherUnwatchedFiles(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		for e := range eventsChannel {
-			switch e := e.(type) {
-			case CreateEvent, DeleteEvent, UpdateEvent:
+			switch e.Op {
+			case Create, Delete, Update:
 				t.Errorf("Received an event, expecting nothing: %q", e)
 			default:
 			}
