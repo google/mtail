@@ -49,15 +49,15 @@ func TestLogWatcher(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
+	handle, eventsChannel := w.Events()
 
-	if err = w.Add(workdir); err != nil {
+	if err = w.Add(workdir, handle); err != nil {
 		t.Fatal(err)
 	}
 	f, err := os.Create(filepath.Join(workdir, "logfile"))
 	if err != nil {
 		t.Fatalf("couldn't make a logfile in temp dir: %s\n", err)
 	}
-	eventsChannel := w.Events()
 	select {
 	case e := <-eventsChannel:
 		switch e.Op {
@@ -209,9 +209,9 @@ func TestLogWatcherAddError(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-
+	handle, _ := w.Events()
 	filename := filepath.Join(workdir, "test")
-	err = w.Add(filename)
+	err = w.Add(filename, handle)
 	if err == nil {
 		t.Errorf("did not receive an error for nonexistent file")
 	}
@@ -258,7 +258,8 @@ func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
 	if err = os.Chmod(filename, 0); err != nil {
 		t.Fatalf("couldn't chmod file: %s", err)
 	}
-	err = w.Add(filename)
+	handle, _ := w.Events()
+	err = w.Add(filename, handle)
 	if err != nil {
 		t.Errorf("failed to add watch on permission denied")
 	}

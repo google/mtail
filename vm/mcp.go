@@ -52,7 +52,7 @@ func (l *MasterControl) LoadAllPrograms() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to stat %q", l.programPath)
 	}
-	if err = l.w.Add(l.programPath); err != nil {
+	if err = l.w.Add(l.programPath, l.eventsHandle); err != nil {
 		glog.Infof("Failed to add watch on %q but continuing: %s", l.programPath, err)
 	}
 	switch {
@@ -238,6 +238,8 @@ type MasterControl struct {
 	fs          afero.Fs        // filesystem interface
 	programPath string          // Path that contains mtail programs.
 
+	eventsHandle int // record the handle with which to add programs to the watcher
+
 	handleMu sync.RWMutex         // guards accesses to handles
 	handles  map[string]*vmHandle // map of program names to virtual machines
 
@@ -325,7 +327,8 @@ func NewLoader(programPath string, store *metrics.Store, lines <-chan *tailer.Lo
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
 	}
-	eventsChan := l.w.Events()
+	handle, eventsChan := l.w.Events()
+	l.eventsHandle = handle
 	go l.processEvents(eventsChan)
 	go l.processLines(lines)
 	return l, nil
@@ -360,7 +363,7 @@ func (l *MasterControl) processEvents(events <-chan watcher.Event) {
 				glog.Info(err)
 			}
 		case watcher.Create:
-			if err := l.w.Add(event.Pathname); err != nil {
+			if err := l.w.Add(event.Pathname, l.eventsHandle); err != nil {
 				glog.Info(err)
 			}
 		default:

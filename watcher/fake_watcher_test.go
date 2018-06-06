@@ -12,7 +12,9 @@ func TestFakeWatcher(t *testing.T) {
 	w := NewFakeWatcher()
 	defer w.Close()
 
-	w.Add("/tmp")
+	handle, eventsChannel := w.Events()
+
+	w.Add("/tmp", handle)
 	if _, ok := w.watches["/tmp"]; !ok {
 		t.Errorf("Not watching /tmp, w contains: %+#v", w.watches)
 	}
@@ -22,11 +24,9 @@ func TestFakeWatcher(t *testing.T) {
 		t.Errorf("Still watching /tmp, w contains: %+#v", w.watches)
 	}
 
-	w.Add("/tmp")
+	w.Add("/tmp", handle)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-
-	eventsChannel := w.Events()
 
 	go func() {
 		e := <-eventsChannel
@@ -43,7 +43,7 @@ func TestFakeWatcher(t *testing.T) {
 	w.InjectCreate("/tmp/log")
 	wg.Wait()
 
-	w.Add("/tmp/foo")
+	w.Add("/tmp/foo", handle)
 	wg = sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
@@ -83,7 +83,7 @@ func TestFakeWatcherUnwatchedFiles(t *testing.T) {
 	w := NewFakeWatcher()
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	eventsChannel := w.Events()
+	_, eventsChannel := w.Events()
 	go func() {
 		for e := range eventsChannel {
 			switch e.Op {
@@ -131,4 +131,12 @@ func TestFakeWatcherUnwatchedFiles(t *testing.T) {
 	w.InjectDelete("/tmp/foo")
 	w.Close()
 	wg.Wait()
+}
+
+func TestNoSuchHandle(t *testing.T) {
+	w := NewFakeWatcher()
+	err := w.Add("foo", 1)
+	if err == nil {
+		t.Error("expecting error, got nil")
+	}
 }

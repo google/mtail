@@ -115,14 +115,14 @@ func TestProcessEvents(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			w := watcher.NewFakeWatcher()
-			w.Add(".")
 			store := metrics.NewStore()
 			lines := make(chan *tailer.LogLine)
 			fs := afero.NewMemMapFs()
-			l, err := NewLoader("", store, lines, w, fs)
+			l, err := NewLoader(".", store, lines, w, fs)
 			if err != nil {
 				t.Fatalf("couldn't create loader: %s", err)
 			}
+			l.LoadAllPrograms()
 			for i := range tt.events {
 				e := tt.events[i]
 				switch e.Op {

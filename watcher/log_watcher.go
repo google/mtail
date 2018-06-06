@@ -27,8 +27,8 @@ type LogWatcher struct {
 	eventsMu sync.RWMutex
 	events   []chan Event
 
-	watchedMu sync.RWMutex        // protects `watched'
-	watched   map[string]struct{} // Names of paths being watched
+	watchedMu sync.RWMutex          // protects `watched'
+	watched   map[string]chan Event // Names of paths being watched
 
 	runDone chan struct{} // Channel to respond to Close
 }
@@ -42,7 +42,7 @@ func NewLogWatcher() (*LogWatcher, error) {
 	w := &LogWatcher{
 		Watcher: f,
 		events:  make([]chan Event, 0),
-		watched: make(map[string]struct{}),
+		watched: make(map[string]chan Event),
 		runDone: make(chan struct{}),
 	}
 	go w.run()
@@ -50,20 +50,28 @@ func NewLogWatcher() (*LogWatcher, error) {
 }
 
 // Events returns a new readable channel of events from this watcher.
-func (w *LogWatcher) Events() <-chan Event {
+func (w *LogWatcher) Events() (int, <-chan Event) {
 	w.eventsMu.Lock()
 	defer w.eventsMu.Unlock()
-	r := make(chan Event, 1)
-	w.events = append(w.events, r)
-	return r
+	handle := len(w.events)
+	ch := make(chan Event, 1)
+	w.events = append(w.events, ch)
+	return handle, ch
 }
 
 func (w *LogWatcher) sendEvent(e Event) {
-	w.eventsMu.RLock()
-	for _, c := range w.events {
+	w.watchedMu.RLock()
+	defer w.watchedMu.RUnlock()
+	if c, ok := w.watched[e.Pathname]; ok {
 		c <- e
+		return
 	}
-	w.eventsMu.RUnlock()
+	d := filepath.Dir(e.Pathname)
+	if c, ok := w.watched[d]; ok {
+		c <- e
+		return
+	}
+	glog.V(2).Infof("No channel for path %q", e.Pathname)
 }
 
 func (w *LogWatcher) run() {
@@ -110,7 +118,12 @@ func (w *LogWatcher) Close() (err error) {
 }
 
 // Add adds a path to the list of watched items.
-func (w *LogWatcher) Add(path string) error {
+func (w *LogWatcher) Add(path string, handle int) error {
+	w.eventsMu.RLock()
+	defer w.eventsMu.RUnlock()
+	if handle > len(w.events) {
+		return errors.Errorf("no such event handle %d", handle)
+	}
 	if w.IsWatching(path) {
 		return nil
 	}
@@ -129,7 +142,7 @@ func (w *LogWatcher) Add(path string) error {
 	}
 	w.watchedMu.Lock()
 	defer w.watchedMu.Unlock()
-	w.watched[absPath] = struct{}{}
+	w.watched[absPath] = w.events[handle]
 	return nil
 }
 
