@@ -5,7 +5,7 @@ source $(dirname $0)/functions.sh
 skip_without jq
 
 LOGS=${TEST_TMPDIR}/logs
-PROGS=${TEST_TMPDIR}/logs
+PROGS=${TEST_TMPDIR}/progs
 mkdir -p $LOGS $PROGS
 
 start_server --vmodule=tail=2,log_watcher=2 --progs $PROGS --logs $LOGS/log

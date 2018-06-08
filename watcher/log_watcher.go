@@ -27,8 +27,8 @@ type LogWatcher struct {
 	eventsMu sync.RWMutex
 	events   []chan Event
 
-	watchedMu sync.RWMutex        // protects `watched'
-	watched   map[string]struct{} // Names of paths being watched
+	watchedMu sync.RWMutex          // protects `watched'
+	watched   map[string]chan Event // Names of paths being watched
 
 	runDone chan struct{} // Channel to respond to Close
 }
@@ -42,7 +42,7 @@ func NewLogWatcher() (*LogWatcher, error) {
 	w := &LogWatcher{
 		Watcher: f,
 		events:  make([]chan Event, 0),
-		watched: make(map[string]struct{}),
+		watched: make(map[string]chan Event),
 		runDone: make(chan struct{}),
 	}
 	go w.run()
@@ -50,20 +50,30 @@ func NewLogWatcher() (*LogWatcher, error) {
 }
 
 // Events returns a new readable channel of events from this watcher.
-func (w *LogWatcher) Events() <-chan Event {
+func (w *LogWatcher) Events() (int, <-chan Event) {
 	w.eventsMu.Lock()
-	defer w.eventsMu.Unlock()
-	r := make(chan Event, 1)
-	w.events = append(w.events, r)
-	return r
+	handle := len(w.events)
+	ch := make(chan Event, 0)
+	w.events = append(w.events, ch)
+	w.eventsMu.Unlock()
+	return handle, ch
 }
 
 func (w *LogWatcher) sendEvent(e Event) {
-	w.eventsMu.RLock()
-	for _, c := range w.events {
-		c <- e
+	w.watchedMu.RLock()
+	c, ok := w.watched[e.Pathname]
+	w.watchedMu.RUnlock()
+	if !ok {
+		d := filepath.Dir(e.Pathname)
+		w.watchedMu.RLock()
+		c, ok = w.watched[d]
+		w.watchedMu.RUnlock()
 	}
-	w.eventsMu.RUnlock()
+	if ok {
+		c <- e
+		return
+	}
+	glog.V(2).Infof("No channel for path %q", e.Pathname)
 }
 
 func (w *LogWatcher) run() {
@@ -80,15 +90,15 @@ func (w *LogWatcher) run() {
 		eventCount.Add(e.Name, 1)
 		switch {
 		case e.Op&fsnotify.Create == fsnotify.Create:
-			w.sendEvent(CreateEvent{e.Name})
+			w.sendEvent(Event{Create, e.Name})
 		case e.Op&fsnotify.Write == fsnotify.Write,
 			e.Op&fsnotify.Chmod == fsnotify.Chmod:
-			w.sendEvent(UpdateEvent{e.Name})
+			w.sendEvent(Event{Update, e.Name})
 		case e.Op&fsnotify.Remove == fsnotify.Remove:
-			w.sendEvent(DeleteEvent{e.Name})
+			w.sendEvent(Event{Delete, e.Name})
 		case e.Op&fsnotify.Rename == fsnotify.Rename:
 			// Rename is only issued on the original file path; the new name receives a Create event
-			w.sendEvent(DeleteEvent{e.Name})
+			w.sendEvent(Event{Delete, e.Name})
 		default:
 			panic(fmt.Sprintf("unknown op type %v", e.Op))
 		}
@@ -110,7 +120,13 @@ func (w *LogWatcher) Close() (err error) {
 }
 
 // Add adds a path to the list of watched items.
-func (w *LogWatcher) Add(path string) error {
+// If the path is already being watched, then nothing is changed -- the new handle does not replace the old one.
+func (w *LogWatcher) Add(path string, handle int) error {
+	w.eventsMu.RLock()
+	if handle > len(w.events) {
+		return errors.Errorf("no such event handle %d", handle)
+	}
+	w.eventsMu.RUnlock()
 	if w.IsWatching(path) {
 		return nil
 	}
@@ -128,8 +144,10 @@ func (w *LogWatcher) Add(path string) error {
 		}
 	}
 	w.watchedMu.Lock()
-	defer w.watchedMu.Unlock()
-	w.watched[absPath] = struct{}{}
+	w.eventsMu.RLock()
+	w.watched[absPath] = w.events[handle]
+	w.eventsMu.RUnlock()
+	w.watchedMu.Unlock()
 	return nil
 }
 
@@ -143,7 +161,7 @@ func (w *LogWatcher) IsWatching(path string) bool {
 	}
 	glog.V(2).Infof("Resolved path for lookup %q", absPath)
 	w.watchedMu.RLock()
-	defer w.watchedMu.RUnlock()
 	_, ok := w.watched[absPath]
+	w.watchedMu.RUnlock()
 	return ok
 }

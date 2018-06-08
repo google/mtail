@@ -60,6 +60,8 @@ type Tailer struct {
 
 	runDone chan struct{} // Signals termination of the run goroutine.
 
+	eventsHandle int // record the handle with which to add new log files to the watcher
+
 	oneShot bool
 }
 
@@ -92,7 +94,8 @@ func New(lines chan<- *LogLine, fs afero.Fs, w watcher.Watcher, options ...func(
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
-	eventsChan := t.w.Events()
+	handle, eventsChan := t.w.Events()
+	t.eventsHandle = handle
 	go t.run(eventsChan)
 	return t, nil
 }
@@ -173,7 +176,7 @@ func (t *Tailer) TailPath(pathname string) error {
 		glog.V(2).Infof("already watching %q", pathname)
 		return nil
 	}
-	if err := t.w.Add(pathname); err != nil {
+	if err := t.w.Add(pathname, t.eventsHandle); err != nil {
 		return err
 	}
 	logCount.Add(1)
@@ -354,7 +357,7 @@ func (t *Tailer) watchDirname(pathname string) error {
 		return err
 	}
 	d := filepath.Dir(absPath)
-	return t.w.Add(d)
+	return t.w.Add(d, t.eventsHandle)
 }
 
 // openLogPath opens a log file named by pathname.
@@ -431,7 +434,7 @@ func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 		fallthrough
 	case m&os.ModeType == os.ModeNamedPipe:
 		glog.V(2).Infof("Adding a file watch on %q", f.Name())
-		if err := t.w.Add(f.Name()); err != nil {
+		if err := t.w.Add(f.Name(), t.eventsHandle); err != nil {
 			return err
 		}
 		// In case the new log has been written to already, attempt to read the
@@ -479,7 +482,7 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 			glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
 			// TODO(jaq): avoid code duplication with TailPath here.
 			// If this file was just created, read from the start.
-			if err := t.w.Add(pathname); err != nil {
+			if err := t.w.Add(pathname, t.eventsHandle); err != nil {
 				glog.Infof("Failed to tail new file %q: %s", pathname, err)
 				continue
 			}
@@ -500,12 +503,12 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 
 	for e := range events {
 		glog.V(2).Infof("Event type %#v", e)
-		switch e := e.(type) {
-		case watcher.UpdateEvent:
+		switch e.Op {
+		case watcher.Update:
 			t.handleLogUpdate(e.Pathname)
-		case watcher.CreateEvent:
+		case watcher.Create:
 			t.handleLogCreate(e.Pathname)
-		case watcher.DeleteEvent:
+		case watcher.Delete:
 			t.handleLogDelete(e.Pathname)
 		default:
 			glog.Infof("Unexpected event %#v", e)

@@ -80,30 +80,30 @@ var testProcessEvents = []struct {
 }{
 	{"load",
 		[]watcher.Event{
-			watcher.CreateEvent{Pathname: "foo.mtail"},
-			watcher.UpdateEvent{Pathname: "foo.mtail"}},
+			watcher.Event{watcher.Create, "foo.mtail"},
+			watcher.Event{watcher.Update, "foo.mtail"}},
 		[]string{"foo.mtail"}},
 	{"unload",
 		[]watcher.Event{
-			watcher.CreateEvent{Pathname: "foo.mtail"},
-			watcher.UpdateEvent{Pathname: "foo.mtail"},
-			watcher.DeleteEvent{Pathname: "foo.mtail"}},
+			watcher.Event{watcher.Create, "foo.mtail"},
+			watcher.Event{watcher.Update, "foo.mtail"},
+			watcher.Event{watcher.Delete, "foo.mtail"}},
 		[]string{}},
 	{"reload",
 		[]watcher.Event{
-			watcher.CreateEvent{Pathname: "foo.mtail"},
-			watcher.UpdateEvent{Pathname: "foo.mtail"},
-			watcher.UpdateEvent{Pathname: "foo.mtail"}},
+			watcher.Event{watcher.Create, "foo.mtail"},
+			watcher.Event{watcher.Update, "foo.mtail"},
+			watcher.Event{watcher.Update, "foo.mtail"}},
 		[]string{"foo.mtail"}},
 	{"bad extension",
 		[]watcher.Event{
-			watcher.CreateEvent{Pathname: "foo.mtail.dpkg-dist"},
-			watcher.UpdateEvent{Pathname: "foo.mtail.dpkg-dist"}},
+			watcher.Event{watcher.Create, "foo.mtail.dpkg-dist"},
+			watcher.Event{watcher.Update, "foo.mtail.dpkg-dist"}},
 		[]string{}},
 	{"not exist",
 		[]watcher.Event{
-			watcher.CreateEvent{Pathname: "notexist.mtail"},
-			watcher.UpdateEvent{Pathname: "notexist.mtail"}},
+			watcher.Event{watcher.Create, "notexist.mtail"},
+			watcher.Event{watcher.Update, "notexist.mtail"}},
 		[]string{}},
 }
 
@@ -115,18 +115,18 @@ func TestProcessEvents(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			w := watcher.NewFakeWatcher()
-			w.Add(".")
 			store := metrics.NewStore()
 			lines := make(chan *tailer.LogLine)
 			fs := afero.NewMemMapFs()
-			l, err := NewLoader("", store, lines, w, fs)
+			l, err := NewLoader(".", store, lines, w, fs)
 			if err != nil {
 				t.Fatalf("couldn't create loader: %s", err)
 			}
+			l.LoadAllPrograms()
 			for i := range tt.events {
 				e := tt.events[i]
-				switch e := e.(type) {
-				case watcher.CreateEvent:
+				switch e.Op {
+				case watcher.Create:
 					if e.Pathname != "notexist.mtail" {
 						_, err := fs.Create(e.Pathname)
 						if err != nil {
@@ -134,13 +134,13 @@ func TestProcessEvents(t *testing.T) {
 						}
 					}
 					w.InjectCreate(e.Pathname)
-				case watcher.DeleteEvent:
+				case watcher.Delete:
 					err := fs.Remove(e.Pathname)
 					if err != nil {
 						t.Fatalf("Remove failed for %s: %s", e.Pathname, err)
 					}
 					w.InjectDelete(e.Pathname)
-				case watcher.UpdateEvent:
+				case watcher.Update:
 					if e.Pathname != "notexist.mtail" {
 						f, err := fs.Create(e.Pathname)
 						if err != nil {

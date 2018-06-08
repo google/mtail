@@ -49,19 +49,19 @@ func TestLogWatcher(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
+	handle, eventsChannel := w.Events()
 
-	if err = w.Add(workdir); err != nil {
+	if err = w.Add(workdir, handle); err != nil {
 		t.Fatal(err)
 	}
 	f, err := os.Create(filepath.Join(workdir, "logfile"))
 	if err != nil {
 		t.Fatalf("couldn't make a logfile in temp dir: %s\n", err)
 	}
-	eventsChannel := w.Events()
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case CreateEvent:
+		switch e.Op {
+		case Create:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
 				t.Errorf("create doesn't match")
 			}
@@ -82,8 +82,8 @@ func TestLogWatcher(t *testing.T) {
 	}
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case UpdateEvent:
+		switch e.Op {
+		case Update:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
 				t.Errorf("update doesn't match")
 			}
@@ -98,8 +98,8 @@ func TestLogWatcher(t *testing.T) {
 	}
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case DeleteEvent:
+		switch e.Op {
+		case Delete:
 			if e.Pathname != filepath.Join(workdir, "logfile") {
 				t.Errorf("delete doesn't match")
 			}
@@ -112,8 +112,8 @@ func TestLogWatcher(t *testing.T) {
 	}
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case CreateEvent:
+		switch e.Op {
+		case Create:
 			if e.Pathname != filepath.Join(workdir, "logfile2") {
 				t.Errorf("create doesn't match")
 			}
@@ -129,8 +129,8 @@ func TestLogWatcher(t *testing.T) {
 	}
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case UpdateEvent:
+		switch e.Op {
+		case Update:
 			if e.Pathname != filepath.Join(workdir, "logfile2") {
 				t.Errorf("update doesn't match")
 			}
@@ -146,8 +146,8 @@ func TestLogWatcher(t *testing.T) {
 	}
 	select {
 	case e := <-eventsChannel:
-		switch e := e.(type) {
-		case DeleteEvent:
+		switch e.Op {
+		case Delete:
 			if e.Pathname != filepath.Join(workdir, "logfile2") {
 				t.Errorf("delete doesn't match")
 			}
@@ -209,9 +209,9 @@ func TestLogWatcherAddError(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-
+	handle, _ := w.Events()
 	filename := filepath.Join(workdir, "test")
-	err = w.Add(filename)
+	err = w.Add(filename, handle)
 	if err == nil {
 		t.Errorf("did not receive an error for nonexistent file")
 	}
@@ -258,7 +258,8 @@ func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
 	if err = os.Chmod(filename, 0); err != nil {
 		t.Fatalf("couldn't chmod file: %s", err)
 	}
-	err = w.Add(filename)
+	handle, _ := w.Events()
+	err = w.Add(filename, handle)
 	if err != nil {
 		t.Errorf("failed to add watch on permission denied")
 	}
