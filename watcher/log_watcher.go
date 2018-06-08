@@ -52,22 +52,24 @@ func NewLogWatcher() (*LogWatcher, error) {
 // Events returns a new readable channel of events from this watcher.
 func (w *LogWatcher) Events() (int, <-chan Event) {
 	w.eventsMu.Lock()
-	defer w.eventsMu.Unlock()
 	handle := len(w.events)
-	ch := make(chan Event, 1)
+	ch := make(chan Event, 0)
 	w.events = append(w.events, ch)
+	w.eventsMu.Unlock()
 	return handle, ch
 }
 
 func (w *LogWatcher) sendEvent(e Event) {
 	w.watchedMu.RLock()
-	defer w.watchedMu.RUnlock()
-	if c, ok := w.watched[e.Pathname]; ok {
-		c <- e
-		return
+	c, ok := w.watched[e.Pathname]
+	w.watchedMu.RUnlock()
+	if !ok {
+		d := filepath.Dir(e.Pathname)
+		w.watchedMu.RLock()
+		c, ok = w.watched[d]
+		w.watchedMu.RUnlock()
 	}
-	d := filepath.Dir(e.Pathname)
-	if c, ok := w.watched[d]; ok {
+	if ok {
 		c <- e
 		return
 	}
@@ -121,10 +123,10 @@ func (w *LogWatcher) Close() (err error) {
 // If the path is already being watched, then nothing is changed -- the new handle does not replace the old one.
 func (w *LogWatcher) Add(path string, handle int) error {
 	w.eventsMu.RLock()
-	defer w.eventsMu.RUnlock()
 	if handle > len(w.events) {
 		return errors.Errorf("no such event handle %d", handle)
 	}
+	w.eventsMu.RUnlock()
 	if w.IsWatching(path) {
 		return nil
 	}
@@ -142,8 +144,10 @@ func (w *LogWatcher) Add(path string, handle int) error {
 		}
 	}
 	w.watchedMu.Lock()
-	defer w.watchedMu.Unlock()
+	w.eventsMu.RLock()
 	w.watched[absPath] = w.events[handle]
+	w.eventsMu.RUnlock()
+	w.watchedMu.Unlock()
 	return nil
 }
 
@@ -157,7 +161,7 @@ func (w *LogWatcher) IsWatching(path string) bool {
 	}
 	glog.V(2).Infof("Resolved path for lookup %q", absPath)
 	w.watchedMu.RLock()
-	defer w.watchedMu.RUnlock()
 	_, ok := w.watched[absPath]
+	w.watchedMu.RUnlock()
 	return ok
 }
