@@ -118,6 +118,7 @@ func (w *LogWatcher) Close() (err error) {
 }
 
 // Add adds a path to the list of watched items.
+// If the path is already being watched, then nothing is changed -- the new handle does not replace the old one.
 func (w *LogWatcher) Add(path string, handle int) error {
 	w.eventsMu.RLock()
 	defer w.eventsMu.RUnlock()
