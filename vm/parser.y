@@ -402,7 +402,7 @@ indexed_expr
 id_expr
   : ID
   {
-    $$ = &idNode{tokenpos(mtaillex), $1, nil}
+    $$ = &idNode{tokenpos(mtaillex), $1, nil, false}
   }
   ;
 

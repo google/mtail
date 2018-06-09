@@ -168,6 +168,22 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		m := n.sym.Binding.(*metrics.Metric)
 		c.emit(instr{dload, len(m.Keys)})
 
+		if !n.lvalue {
+			t := n.Type()
+			if IsDimension(t) {
+				l := len(t.(*TypeOperator).Args)
+				t = t.(*TypeOperator).Args[l-1]
+			}
+
+			if Equals(t, Float) {
+				c.emit(instr{fget, nil})
+			} else if Equals(t, Int) {
+				c.emit(instr{iget, nil})
+			} else {
+				c.errorf(n.Pos(), "invalid type for get %q in %#v", n.Type(), n)
+			}
+		}
+
 	case *caprefNode:
 		if n.sym == nil || n.sym.Binding == nil {
 			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.name)
