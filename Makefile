@@ -67,6 +67,10 @@ check test: $(GOFILES) $(GOTESTFILES)
 testrace: $(GOFILES) $(GOTESTFILES)
 	go test -timeout ${timeout} -race -v ./...
 
+.PHONY: testex
+testex:
+	go test -timeout ${timeout} -run Test.*ExamplePrograms -v
+
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES)
 	go test -timeout 1s -test.short ./...
