@@ -5,19 +5,44 @@ package metrics
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"reflect"
+	"sync"
 	"testing"
 	"testing/quick"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics/datum"
 )
 
+func TestKindType(t *testing.T) {
+	v := Kind(0)
+	if s := v.String(); s != "Unknown" {
+		t.Errorf("Kind.String() returned %q not Unknown", s)
+	}
+	v = Counter
+	if s := v.String(); s != "Counter" {
+		t.Errorf("Kind.String() returned %q not Counter", s)
+	}
+	v = Gauge
+	if s := v.String(); s != "Gauge" {
+		t.Errorf("Kind.String() returned %q not Gauge", s)
+	}
+	v = Timer
+	if s := v.String(); s != "Timer" {
+		t.Errorf("Kind.String() returned %q not Timer", s)
+	}
+}
+
 func TestScalarMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, Int)
-	d, _ := v.GetDatum()
+	d, err := v.GetDatum()
+	if err != nil {
+		t.Errorf("no datum: %s", err)
+	}
 	datum.IncIntBy(d, 1, time.Now().UTC())
 	lv := v.findLabelValueOrNil([]string{})
 	if lv == nil {
@@ -27,31 +52,34 @@ func TestScalarMetric(t *testing.T) {
 	if newD == nil {
 		t.Errorf("new_d is nil")
 	}
-	if newD.Value() != "1" {
+	if newD.ValueString() != "1" {
 		t.Errorf("value not 1")
 	}
-	// TODO: try setting datum with labels on scalar
+	d2, err := v.GetDatum("a", "b")
+	if err == nil {
+		t.Errorf("datum with keys sohuld have returned no value, got %v", d2)
+	}
 }
 
 func TestDimensionedMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, Int, "foo")
 	d, _ := v.GetDatum("a")
 	datum.IncIntBy(d, 1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a"}).Value.Value() != "1" {
+	if v.findLabelValueOrNil([]string{"a"}).Value.ValueString() != "1" {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, Int, "foo", "bar")
 	d, _ = v.GetDatum("a", "b")
 	datum.IncIntBy(d, 1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a", "b"}).Value.Value() != "1" {
+	if v.findLabelValueOrNil([]string{"a", "b"}).Value.ValueString() != "1" {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, Int, "foo", "bar", "quux")
 	d, _ = v.GetDatum("a", "b", "c")
 	datum.IncIntBy(d, 1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a", "b", "c"}).Value.Value() != "1" {
+	if v.findLabelValueOrNil([]string{"a", "b", "c"}).Value.ValueString() != "1" {
 		t.Errorf("fail")
 	}
 }
@@ -71,28 +99,26 @@ var labelSetTests = []struct {
 }
 
 func TestEmitLabelSet(t *testing.T) {
-	m := NewMetric("test", "prog", Gauge, Int, "foo", "bar", "quux")
-	c := make(chan *LabelSet)
-
 	ts := time.Now().UTC()
-
-	var expectedLabels []map[string]string
 	for _, tc := range labelSetTests {
-		d, _ := m.GetDatum(tc.values...)
-		datum.SetInt(d, 37, ts)
-		expectedLabels = append(expectedLabels, tc.expectedLabels)
-	}
+		tc := tc
+		t.Run(fmt.Sprintf("%v", tc.values), func(t *testing.T) {
+			t.Parallel()
+			m := NewMetric("test", "prog", Gauge, Int, "foo", "bar", "quux")
+			d, _ := m.GetDatum(tc.values...)
+			datum.SetInt(d, 37, ts)
 
-	go m.EmitLabelSets(c)
+			c := make(chan *LabelSet)
 
-	var labels []map[string]string
-	for ls := range c {
-		labels = append(labels, ls.Labels)
-	}
+			go m.EmitLabelSets(c)
 
-	diff := deep.Equal(labels, expectedLabels)
-	if diff != nil {
-		t.Errorf("Labels don't match:\n%s", diff)
+			ls := <-c
+
+			diff := cmp.Diff(tc.expectedLabels, ls.Labels)
+			if diff != "" {
+				t.Error(diff)
+			}
+		})
 	}
 }
 
@@ -146,7 +172,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 	f := func(name, prog string, kind Kind, keys []string, val, ti, tns int64) bool {
 		m := NewMetric(name, prog, kind, Int, keys...)
 		labels := make([]string, 0)
-		for _ = range keys {
+		for range keys {
 			if l, ok := quick.Value(reflect.TypeOf(name), rand); ok {
 				labels = append(labels, l.String())
 			} else {
@@ -170,7 +196,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 			return false
 		}
 
-		if diff := deep.Equal(m, r); diff != nil {
+		if diff := cmp.Diff(m, r, cmpopts.IgnoreUnexported(sync.RWMutex{})); diff != "" {
 			t.Errorf("Round trip wasn't stable:\n%s", diff)
 			return false
 		}
@@ -188,8 +214,8 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 func TestTimer(t *testing.T) {
 	m := NewMetric("test", "prog", Timer, Int)
 	n := NewMetric("test", "prog", Timer, Int)
-	diff := deep.Equal(m, n)
-	if diff != nil {
+	diff := cmp.Diff(m, n, cmpopts.IgnoreUnexported(sync.RWMutex{}))
+	if diff != "" {
 		t.Errorf("Identical metrics not the same:\n%s", diff)
 	}
 	d, _ := m.GetDatum()
@@ -202,7 +228,7 @@ func TestTimer(t *testing.T) {
 	if newD == nil {
 		t.Errorf("new_d is nil")
 	}
-	if newD.Value() != "1" {
+	if newD.ValueString() != "1" {
 		t.Errorf("value not 1")
 	}
 }

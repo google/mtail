@@ -1,0 +1,29 @@
+image: golang:1.8
+
+stages:
+  - test
+  - build
+
+before_script:
+  - mkdir ${CI_PROJECT_DIR}/build
+  - mkdir -p ${GOPATH}/src/github.com/google/
+  - ln -s $(pwd) ${GOPATH}/src/github.com/google/mtail
+  - cd ${GOPATH}/src/github.com/google/mtail
+
+test:
+  stage: test
+  allow_failure: true
+  script:
+    - make install_deps
+    - make test
+
+build:
+  stage: build
+  script:
+    - make install
+    - cp -v ${GOPATH}/bin/mtail ${CI_PROJECT_DIR}/build/mtail
+  artifacts:
+    expire_in: 1 week
+    when: on_success
+    paths:
+      - build

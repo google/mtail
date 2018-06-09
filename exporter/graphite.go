@@ -21,13 +21,13 @@ var (
 	graphiteExportSuccess = expvar.NewInt("graphite_export_success")
 )
 
+// metricToGraphite encodes a metric in the graphite text protocol format.  The
+// metric lock is held before entering this function.
 func metricToGraphite(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
-	m.RLock()
-	defer m.RUnlock()
 	return fmt.Sprintf("%s%s.%s %v %v\n",
 		*graphitePrefix,
 		m.Program,
-		formatLabels(m.Name, l.Labels, ".", "."),
-		l.Datum.Value(),
-		l.Datum.Time())
+		formatLabels(m.Name, l.Labels, ".", ".", "_"),
+		l.Datum.ValueString(),
+		l.Datum.TimeString())
 }

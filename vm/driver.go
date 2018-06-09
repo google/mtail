@@ -8,8 +8,12 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+
+	"github.com/golang/glog"
 )
 
+// Parse reads the program named name from the input, and if successful returns
+// an astNode for the root of the AST, or parser errors.
 func Parse(name string, input io.Reader) (astNode, error) {
 	p := newParser(name, input)
 	r := mtailParse(p)
@@ -19,6 +23,7 @@ func Parse(name string, input io.Reader) (astNode, error) {
 	return p.root, nil
 }
 
+// EOF is a marker for end of file.
 const EOF = 0
 
 type parser struct {
@@ -26,15 +31,12 @@ type parser struct {
 	root   astNode
 	errors ErrorList
 	l      *lexer
-	t      token             // Most recently lexed token.
-	pos    position          // Maybe contains the position of the start of a node when the parser is doing preprocessor concatenation.
-	endPos position          // Maybe contains the position of the end of a node when the parser is doing preprocessor concatenation.
-	res    map[string]string // Mapping of regex constants to patterns.
+	t      token    // Most recently lexed token.
+	pos    position // Optionally contains the position of the start of a production
 }
 
 func newParser(name string, input io.Reader) *parser {
-	mtailDebug = *mtailDebugFlag
-	return &parser{name: name, l: newLexer(name, input), res: make(map[string]string)}
+	return &parser{name: name, l: newLexer(name, input)}
 }
 
 func (p *parser) ErrorP(s string, pos *position) {
@@ -50,7 +52,8 @@ func (p *parser) Lex(lval *mtailSymType) int {
 	switch p.t.kind {
 	case INVALID:
 		p.Error(p.t.text)
-		return EOF
+		lval.text = p.t.text
+		return INVALID
 	case INTLITERAL:
 		var err error
 		lval.intVal, err = strconv.ParseInt(p.t.text, 10, 64)
@@ -65,7 +68,7 @@ func (p *parser) Lex(lval *mtailSymType) int {
 			p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
 			return INVALID
 		}
-	case LT, GT, LE, GE, NE, EQ, SHL, SHR, AND, OR, XOR, NOT, INC, DIV, MUL, MINUS, PLUS, ASSIGN, ADD_ASSIGN, POW:
+	case LT, GT, LE, GE, NE, EQ, SHL, SHR, BITAND, BITOR, AND, OR, XOR, NOT, INC, DIV, MUL, MINUS, PLUS, ASSIGN, ADD_ASSIGN, POW, MOD, CONCAT, MATCH, NOT_MATCH:
 		lval.op = int(p.t.kind)
 	default:
 		lval.text = p.t.text
@@ -74,7 +77,11 @@ func (p *parser) Lex(lval *mtailSymType) int {
 }
 
 func (p *parser) inRegex() {
-	p.l.in_regex = true
+	glog.V(2).Info("Entering regex")
+	p.l.inRegex = true
 }
 
-var mtailDebugFlag = flag.Int("mtailDebug", 0, "Set parser debug level.")
+func init() {
+	flag.IntVar(&mtailDebug, "mtailDebug", 0, "Set parser debug level.")
+	mtailErrorVerbose = true
+}

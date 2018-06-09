@@ -1,0 +1,83 @@
+# Copyright 2017 Pablo Carranza <pcarranza@gmail.com>. All Rights Reserved.
+# This file is available under the Apache license.
+#
+# Rails production log parsing
+
+counter rails_requests_started_total
+counter rails_requests_started by verb
+
+counter rails_requests_completed_total
+counter rails_requests_completed by status
+
+counter rails_requests_completed_milliseconds_sum by status
+counter rails_requests_completed_milliseconds_count by status
+counter rails_requests_completed_milliseconds_bucket by le, status
+
+/^Started (?P<verb>[A-Z]+) .*/ {
+  ###
+  # Started HTTP requests by verb (GET, POST, etc.)
+  #
+  rails_requests_started_total++
+  rails_requests_started[$verb]++
+}
+
+/^Completed (?P<status>\d{3}) .+ in (?P<request_milliseconds>\d+)ms .*$/ {
+  ###
+  # Total numer of completed requests by status
+  #
+  rails_requests_completed_total++
+  rails_requests_completed[$status]++
+
+  ###
+  # Completed requests by status with histogram buckets
+  #
+  # These statements "fall through", so the histogram is cumulative.  The
+  # collecting system can compute the percentile bands by taking the ratio of
+  # each bucket value over the final bucket.
+
+  rails_requests_completed_milliseconds_sum[$status] += $request_milliseconds
+  rails_requests_completed_milliseconds_count[$status]++
+
+  # 5ms bucket
+  $request_milliseconds <= 5 {
+    rails_requests_completed_milliseconds_bucket["5"][$status]++
+  }
+  # 10ms bucket
+  $request_milliseconds <= 10 {
+    rails_requests_completed_milliseconds_bucket["10"][$status]++
+  }
+  # 50ms bucket
+  $request_milliseconds <= 50 {
+    rails_requests_completed_milliseconds_bucket["50"][$status]++
+  }
+  # 100ms bucket
+  $request_milliseconds <= 100 {
+    rails_requests_completed_milliseconds_bucket["100"][$status]++
+  }
+  # 250ms bucket
+  $request_milliseconds <= 250 {
+    rails_requests_completed_milliseconds_bucket["250"][$status]++
+  }
+  # 500ms bucket
+  $request_milliseconds <= 500 {
+    rails_requests_completed_milliseconds_bucket["500"][$status]++
+  }
+  # 1s bucket
+  $request_milliseconds <= 1000 {
+    rails_requests_completed_milliseconds_bucket["1000"][$status]++
+  }
+  # 2.5s bucket
+  $request_milliseconds <= 2500 {
+    rails_requests_completed_milliseconds_bucket["2500"][$status]++
+  }
+  # 5s bucket
+  $request_milliseconds <= 5000 {
+    rails_requests_completed_milliseconds_bucket["5000"][$status]++
+  }
+  # 15s bucket
+  $request_milliseconds <= 15000 {
+    rails_requests_completed_milliseconds_bucket["15000"][$status]++
+  }
+  # "inf" bucket, also the total number of requests
+  rails_requests_completed_milliseconds_bucket["+Inf"][$status]++
+}

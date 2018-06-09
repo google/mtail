@@ -25,5 +25,8 @@ func (e *Exporter) HandleJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("content-type", "application/json")
-	w.Write(b)
+	if _, err := w.Write(b); err != nil {
+		glog.Error(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

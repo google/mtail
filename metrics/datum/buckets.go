@@ -28,7 +28,7 @@ func (r *Range) Contains(v float64) bool {
 
 // BucketsDatum describes a floating point value at a given timestamp.
 type BucketsDatum struct {
-	datum
+	BaseDatum
 	sync.RWMutex
 	buckets []bucketCount
 	count   uint64
@@ -66,7 +66,7 @@ func (d *BucketsDatum) Get() float64 {
 }
 
 func (d *BucketsDatum) String() string {
-	return fmt.Sprintf("%g@%d", d.Get(), atomic.LoadInt64(&d.time))
+	return fmt.Sprintf("%g@%d", d.Get(), atomic.LoadInt64(&d.Time))
 }
 
 func (d *BucketsDatum) Count() uint64 {
@@ -113,7 +113,7 @@ func (d *BucketsDatum) MarshalJSON() ([]byte, error) {
 		Count   uint64
 		Sum     float64
 		Time    int64
-	}{bs, d.count, d.sum, atomic.LoadInt64(&d.time)}
+	}{bs, d.count, d.sum, atomic.LoadInt64(&d.Time)}
 
 	return json.Marshal(j)
 }

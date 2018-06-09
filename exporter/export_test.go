@@ -9,10 +9,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
 )
+
+func TestCreateExporter(t *testing.T) {
+	_, err := New(nil)
+	if err == nil {
+		t.Error("expecting error, got nil")
+	}
+	store := metrics.NewStore()
+	_, err = New(store)
+	if err != nil {
+		t.Errorf("unexpected error:%s", err)
+	}
+}
 
 func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
 	var ret []string
@@ -39,8 +51,8 @@ func TestMetricToCollectd(t *testing.T) {
 
 	r := FakeSocketWrite(metricToCollectd, scalarMetric)
 	expected := []string{"PUTVAL \"gunstar/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
-	diff := deep.Equal(expected, r)
-	if diff != nil {
+	diff := cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
@@ -56,8 +68,8 @@ func TestMetricToCollectd(t *testing.T) {
 	expected = []string{
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
-	diff = deep.Equal(expected, r)
-	if diff != nil {
+	diff = cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
@@ -68,16 +80,16 @@ func TestMetricToCollectd(t *testing.T) {
 
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/mtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
-	diff = deep.Equal(expected, r)
-	if diff != nil {
+	diff = cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
 	*collectdPrefix = "prefix"
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/prefixmtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
-	diff = deep.Equal(expected, r)
-	if diff != nil {
+	diff = cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("prefixed string didn't match:\n%s", diff)
 	}
 }
@@ -93,32 +105,32 @@ func TestMetricToGraphite(t *testing.T) {
 	datum.SetInt(d, 37, ts)
 	r := FakeSocketWrite(metricToGraphite, scalarMetric)
 	expected := []string{"prog.foo 37 1343124840\n"}
-	diff := deep.Equal(expected, r)
-	if diff != nil {
+	diff := cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
-	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "l")
-	d, _ = dimensionedMetric.GetDatum("quux")
+	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "host")
+	d, _ = dimensionedMetric.GetDatum("quux.com")
 	datum.SetInt(d, 37, ts)
-	d, _ = dimensionedMetric.GetDatum("snuh")
+	d, _ = dimensionedMetric.GetDatum("snuh.teevee")
 	datum.SetInt(d, 37, ts)
 	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
 	expected = []string{
-		"prog.bar.l.quux 37 1343124840\n",
-		"prog.bar.l.snuh 37 1343124840\n"}
-	diff = deep.Equal(expected, r)
-	if diff != nil {
+		"prog.bar.host.quux_com 37 1343124840\n",
+		"prog.bar.host.snuh_teevee 37 1343124840\n"}
+	diff = cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
 	*graphitePrefix = "prefix"
 	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
 	expected = []string{
-		"prefixprog.bar.l.quux 37 1343124840\n",
-		"prefixprog.bar.l.snuh 37 1343124840\n"}
-	diff = deep.Equal(expected, r)
-	if diff != nil {
+		"prefixprog.bar.host.quux_com 37 1343124840\n",
+		"prefixprog.bar.host.snuh_teevee 37 1343124840\n"}
+	diff = cmp.Diff(expected, r)
+	if diff != "" {
 		t.Errorf("prefixed string didn't match:\n%s", diff)
 	}
 }

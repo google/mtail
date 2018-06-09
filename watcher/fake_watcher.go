@@ -8,86 +8,119 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 )
 
 // FakeWatcher implements an in-memory Watcher.
 type FakeWatcher struct {
-	sync.RWMutex
-	watches  map[string]bool
-	events   chan Event
+	watchesMu sync.RWMutex
+	watches   map[string]int
+
+	eventsMu sync.RWMutex // locks events and isClosed
+	events   []chan Event
+
 	isClosed bool
 }
 
 // NewFakeWatcher returns a fake Watcher for use in tests.
 func NewFakeWatcher() *FakeWatcher {
 	return &FakeWatcher{
-		watches: make(map[string]bool),
-		events:  make(chan Event, 1)}
+		watches: make(map[string]int)}
 }
 
 // Add adds a watch to the FakeWatcher
-func (w *FakeWatcher) Add(name string) error {
-	w.Lock()
-	w.watches[name] = true
-	w.Unlock()
+func (w *FakeWatcher) Add(name string, handle int) error {
+	w.eventsMu.RLock()
+	if handle > len(w.events) {
+		return errors.Errorf("no such event handle %d", handle)
+	}
+	w.watchesMu.Lock()
+	w.watches[name] = handle
+	w.watchesMu.Unlock()
+	w.eventsMu.RUnlock()
 	return nil
 }
 
 // Close closes down the FakeWatcher
 func (w *FakeWatcher) Close() error {
-	if !w.isClosed {
-		close(w.events)
-		w.isClosed = true
+	w.eventsMu.Lock()
+	defer w.eventsMu.Unlock()
+	if w.isClosed {
+		return nil
 	}
+	for _, c := range w.events {
+		close(c)
+	}
+	w.isClosed = true
 	return nil
 }
 
 // Remove removes a watch from the FakeWatcher
 func (w *FakeWatcher) Remove(name string) error {
-	w.Lock()
+	w.watchesMu.Lock()
 	delete(w.watches, name)
-	w.Unlock()
+	w.watchesMu.Unlock()
 	return nil
 }
 
-// Events returns the channel of messages.
-func (w *FakeWatcher) Events() <-chan Event { return w.events }
+// Events returns a new channel of messages.
+func (w *FakeWatcher) Events() (int, <-chan Event) {
+	w.eventsMu.Lock()
+	defer w.eventsMu.Unlock()
+	if w.isClosed {
+		panic("closed")
+	}
+	ch := make(chan Event, 1)
+	handle := len(w.events)
+	w.events = append(w.events, ch)
+	return handle, ch
+}
 
 // InjectCreate lets a test inject a fake creation event.
 func (w *FakeWatcher) InjectCreate(name string) {
 	dirname := path.Dir(name)
-	w.RLock()
-	dir_watched := w.watches[dirname]
-	w.RUnlock()
-	if dir_watched {
-		w.events <- CreateEvent{name}
-		w.Add(name)
-	} else {
+	w.watchesMu.RLock()
+	h, dirWatched := w.watches[dirname]
+	w.watchesMu.RUnlock()
+	if !dirWatched {
 		glog.Warningf("not watching %s to see %s", dirname, name)
+		return
+	}
+	w.eventsMu.RLock()
+	w.events[h] <- Event{Create, name}
+	w.eventsMu.RUnlock()
+	if err := w.Add(name, h); err != nil {
+		glog.Warning(err)
 	}
 }
 
 // InjectUpdate lets a test inject a fake update event.
 func (w *FakeWatcher) InjectUpdate(name string) {
-	w.RLock()
-	watched := w.watches[name]
-	w.RUnlock()
-	if watched {
-		w.events <- UpdateEvent{name}
-	} else {
+	w.watchesMu.RLock()
+	h, watched := w.watches[name]
+	w.watchesMu.RUnlock()
+	if !watched {
 		glog.Warningf("can't update: not watching %s", name)
+		return
 	}
+	w.eventsMu.RLock()
+	w.events[h] <- Event{Update, name}
+	w.eventsMu.RUnlock()
 }
 
 // InjectDelete lets a test inject a fake deletion event.
 func (w *FakeWatcher) InjectDelete(name string) {
-	w.RLock()
-	watched := w.watches[name]
-	w.RUnlock()
-	if watched {
-		w.events <- DeleteEvent{name}
-		w.Remove(name)
-	} else {
+	w.watchesMu.RLock()
+	h, watched := w.watches[name]
+	w.watchesMu.RUnlock()
+	if !watched {
 		glog.Warningf("can't delete: not watching %s", name)
+		return
+	}
+	w.eventsMu.RLock()
+	w.events[h] <- Event{Delete, name}
+	w.eventsMu.RUnlock()
+	if err := w.Remove(name); err != nil {
+		glog.Warning(err)
 	}
 }

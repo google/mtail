@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestDatumSetAndValue(t *testing.T) {
@@ -16,20 +16,20 @@ func TestDatumSetAndValue(t *testing.T) {
 	if r := GetInt(d); r != 12 {
 		t.Errorf("d ditn't return 12, got %v", r)
 	}
-	if r := d.Value(); r != "12" {
+	if r := d.ValueString(); r != "12" {
 		t.Errorf("d value is not 12, got %v", r)
 	}
-	if r := d.Time(); r != "37" {
+	if r := d.TimeString(); r != "37" {
 		t.Errorf("d Time not correct, got %v", r)
 	}
 	d = MakeFloat(1.2, time.Unix(37, 42))
 	if r := GetFloat(d); r != 1.2 {
 		t.Errorf("d ditn't return 12, got %v", r)
 	}
-	if r := d.Value(); r != "1.2" {
+	if r := d.ValueString(); r != "1.2" {
 		t.Errorf("d value is not 12, got %v", r)
 	}
-	if r := d.Time(); r != "37" {
+	if r := d.TimeString(); r != "37" {
 		t.Errorf("d Time not correct, got %v", r)
 	}
 }
@@ -55,7 +55,7 @@ func TestMarshalJSON(t *testing.T) {
 		if err != nil {
 			t.Errorf("%d: Marshal failed: %v", i, err)
 		}
-		if diff := deep.Equal(tc.expected, string(b)); len(diff) > 0 {
+		if diff := cmp.Diff(tc.expected, string(b)); diff != "" {
 			t.Errorf("%d: JSON didn't match:\n%s", i, diff)
 		}
 	}

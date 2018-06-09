@@ -7,15 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 )
 
-type validProgram struct {
+var parserTests = []struct {
 	name    string
 	program string
-}
-
-var mtailPrograms = []validProgram{
+}{
 	{"empty",
 		""},
 
@@ -201,6 +199,12 @@ var mtailPrograms = []validProgram{
   ~ 1
 }`},
 
+	{"logical",
+		`0 || 1 && 0 {
+}
+`,
+	},
+
 	{"floats",
 		`gauge foo
 /foo/ {
@@ -235,42 +239,101 @@ foo = 3.14
 /foo/ {
   del foo[$1]
 }`},
+
+	{"getfilename", `
+getfilename()
+`},
+
+	{"indexed expression arg list", `
+counter foo by a,b
+/(\d) (\d+)/ {
+  foo[$1,$2]++
+}`},
+
+	{"paren expr", `
+(0) || (1 && 3) {
+}`},
+
+	{"regex cond expr", `
+/(\d)/ && 1 {
+}
+`},
+
+	{"concat expr 1", `
+const X /foo/
+/bar/ + X {
+}`},
+	{"concat expr 2", `
+const X /foo/
+X {
+}`},
+
+	{"match expression 1", `
+$foo =~ /bar/ {
+}
+$foo !~ /bar/ {
+}
+`},
+	{"match expression 2", `
+$foo =~ /bar/ + X {
+}`},
+	{"match expression 3", `
+const X /foo/
+$foo =~ X {
+}`},
+
+	{"capref used in def", `
+/(?P<x>.*)/ && $x > 0 {
+}`},
+
+	{"match expr 4", `
+/(?P<foo>.{6}) (?P<bar>.*)/ {
+  $foo =~ $bar {
+  }
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {
-	for _, tc := range mtailPrograms {
-		t.Logf("Starting %s", tc.name)
-		p := newParser(tc.name, strings.NewReader(tc.program))
-		r := mtailParse(p)
+	for _, tc := range parserTests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			p := newParser(tc.name, strings.NewReader(tc.program))
+			r := mtailParse(p)
 
-		if r != 0 || p.root == nil || len(p.errors) > 0 {
-			t.Errorf("1st pass parse errors:\n")
-			for _, e := range p.errors {
-				t.Errorf("\t%s\n", e)
+			if r != 0 || p.root == nil || len(p.errors) > 0 {
+				t.Error("1st pass parse errors:\n")
+				for _, e := range p.errors {
+					t.Errorf("\t%s\n", e)
+				}
+				t.Fatal()
 			}
-			continue
-		}
 
-		u := Unparser{}
-		output := u.Unparse(p.root)
+			s := Sexp{}
+			t.Log("AST:\n" + s.Dump(p.root))
 
-		p2 := newParser(tc.name+" 2", strings.NewReader(output))
-		r = mtailParse(p2)
-		if r != 0 || p2.root == nil || len(p2.errors) > 0 {
-			t.Errorf("2nd pass parse errors:\n")
-			for _, e := range p2.errors {
-				t.Errorf("\t%s\n", e)
+			u := Unparser{}
+			output := u.Unparse(p.root)
+
+			p2 := newParser(tc.name+" 2", strings.NewReader(output))
+			r = mtailParse(p2)
+			if r != 0 || p2.root == nil || len(p2.errors) > 0 {
+				t.Errorf("2nd pass parse errors:\n")
+				for _, e := range p2.errors {
+					t.Errorf("\t%s\n", e)
+				}
+				t.Logf("2nd pass input was:\n%s", output)
+				t.Logf("2nd pass diff:\n%s", go_cmp.Diff(tc.program, output))
+				t.Fatal()
 			}
-			t.Errorf("2nd pass input was:\n%s", output)
-			continue
-		}
 
-		u = Unparser{}
-		output2 := u.Unparse(p2.root)
+			u = Unparser{}
+			output2 := u.Unparse(p2.root)
 
-		if diff := deep.Equal(output2, output); diff != nil {
-			t.Errorf("Round trip failed to generate same output.\n%s", diff)
-		}
+			if diff := go_cmp.Diff(output2, output); diff != "" {
+				t.Error(diff)
+			}
+		})
 	}
 }
 
@@ -288,7 +351,7 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	{"unterminated regex",
 		"/foo\n",
 		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\"",
-			"unterminated regex:1:2-4: syntax error"}},
+			"unterminated regex:1:2-4: syntax error: unexpected end of file"}},
 
 	{"unterminated string",
 		" \"foo }\n",
@@ -297,24 +360,90 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	{"unterminated const regex",
 		"const X /(?P<foo>",
 		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",
-			"unterminated const regex:1:10-17: syntax error"}},
+			"unterminated const regex:1:10-17: syntax error: unexpected end of file"}},
 
-	{"undefined const regex",
-		"/foo / + X + / bar/ {}\n",
-		[]string{"undefined const regex:1:10: Constant 'X' not defined.\n\tTry adding `const X /.../' earlier in the program."}},
+	{"index of non-terminal 1",
+		`// {
+	foo++[$1]++
+	}`,
+		[]string{"index of non-terminal 1:2:7: syntax error: unexpected LSQUARE, expecting NL"}},
+	{"index of non-terminal 2",
+		`// {
+	0[$1]++
+	}`,
+		[]string{"index of non-terminal 2:2:3: syntax error: unexpected LSQUARE, expecting NL"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
 	for _, tc := range parserInvalidPrograms {
-		t.Logf("Starting %s", tc.name)
-		p := newParser(tc.name, strings.NewReader(tc.program))
-		mtailParse(p)
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			p := newParser(tc.name, strings.NewReader(tc.program))
+			mtailParse(p)
 
-		diff := deep.Equal(
-			strings.Join(tc.errors, "\n"),             // want
-			strings.TrimRight(p.errors.Error(), "\n")) // got
-		if diff != nil {
-			t.Errorf("Incorrect error for '%s'\n%s", tc.name, diff)
-		}
+			diff := go_cmp.Diff(
+				strings.Join(tc.errors, "\n"),             // want
+				strings.TrimRight(p.errors.Error(), "\n")) // got
+			if diff != "" {
+				t.Error(diff)
+			}
+		})
 	}
+}
+
+var parsePositionTests = []struct {
+	name      string
+	program   string
+	positions []*position
+}{
+	{
+		"empty",
+		"",
+		nil,
+	},
+	{
+		"variable",
+		`counter foo`,
+		[]*position{{"variable", 0, 8, 10}},
+	},
+	{
+		"pattern",
+		`const ID /foo/`,
+		[]*position{{"pattern", 0, 6, 13}},
+	},
+}
+
+func TestParsePositionTests(t *testing.T) {
+	for _, tc := range parsePositionTests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ast, err := Parse(tc.name, strings.NewReader(tc.program))
+			if err != nil {
+				t.Fatal(err)
+			}
+			p := &positionCollector{}
+			Walk(p, ast)
+			diff := go_cmp.Diff(tc.positions, p.positions, go_cmp.AllowUnexported(position{}))
+			if diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+}
+
+type positionCollector struct {
+	positions []*position
+}
+
+func (p *positionCollector) VisitBefore(node astNode) Visitor {
+	switch n := node.(type) {
+	case *declNode, *patternConstNode:
+		p.positions = append(p.positions, n.Pos())
+	}
+	return p
+}
+
+func (p *positionCollector) VisitAfter(node astNode) {
 }

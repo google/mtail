@@ -11,19 +11,19 @@ package tailer
 // directory.
 
 import (
-	"errors"
+	"bytes"
 	"expvar"
 	"fmt"
+	"html/template"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 	"unicode/utf8"
 
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 
 	"github.com/google/mtail/watcher"
 
@@ -31,307 +31,485 @@ import (
 )
 
 var (
-	logCount     = expvar.NewInt("log_count")
-	logErrors    = expvar.NewMap("log_errors_total")
+	// logCount records the number of logs that are being tailed
+	logCount = expvar.NewInt("log_count")
+	// logErrors counts the number of IO errors per log file
+	logErrors = expvar.NewMap("log_errors_total")
+	// logRotations counts the number of rotations per log file
 	logRotations = expvar.NewMap("log_rotations_total")
+	// lineCount counts the numbre of lines read per log file
+	lineCount = expvar.NewMap("log_lines_total")
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
 // lines from files. It also handles new log file creation events and log
 // rotations.
 type Tailer struct {
-	w watcher.Watcher
+	lines chan<- *LogLine // Logfile lines being emitted.
+	w     watcher.Watcher
+	fs    afero.Fs // mockable filesystem interface
 
-	watched      map[string]struct{}   // Names of logs being watched.
-	watchedLock  sync.RWMutex          // protects `watched'
-	lines        chan<- string         // Logfile lines being emitted.
-	files        map[string]afero.File // File handles for each pathname.
-	filesLock    sync.Mutex            // protects `files'
-	partials     map[string]string     // Accumulator for the currently read line for each pathname.
-	partialsLock sync.Mutex            // protects 'partials'
+	handlesMu sync.RWMutex          // protects `handles'
+	handles   map[string]afero.File // File handles for each pathname.
 
-	fs afero.Fs // mockable filesystem interface
+	partialsMu sync.Mutex               // protects 'partials'
+	partials   map[string]*bytes.Buffer // Accumulator for the currently read line for each pathname.
+
+	globPatternsMu sync.RWMutex        // protects `globPatterns'
+	globPatterns   map[string]struct{} // glob patterns to match newly created files in dir paths against
+
+	runDone chan struct{} // Signals termination of the run goroutine.
+
+	eventsHandle int // record the handle with which to add new log files to the watcher
+
+	oneShot bool
 }
 
-// Options configures a Tailer
-type Options struct {
-	Lines chan<- string
-	W     watcher.Watcher // Not required, will use watcher.LogWatcher if it is zero.
-	FS    afero.Fs        // Not required, will use afero.OsFs if it is zero.
+// OneShot puts the tailer in one-shot mode.
+func OneShot(t *Tailer) error {
+	t.oneShot = true
+	return nil
 }
 
-// New returns a new Tailer, configured with the supplied Options
-func New(o Options) (*Tailer, error) {
-	if o.Lines == nil {
-		return nil, errors.New("tailer needs lines")
+// New creates a new Tailer.
+func New(lines chan<- *LogLine, fs afero.Fs, w watcher.Watcher, options ...func(*Tailer) error) (*Tailer, error) {
+	if lines == nil {
+		return nil, errors.New("can't create tailer without lines channel")
 	}
-	fs := o.FS
 	if fs == nil {
-		fs = &afero.OsFs{}
+		return nil, errors.New("can't create tailer without FS")
 	}
-	w := o.W
 	if w == nil {
-		var err error
-		w, err = watcher.NewLogWatcher()
-		if err != nil {
-			return nil, fmt.Errorf("Couldn't create a watcher for tailer: %s", err)
-		}
+		return nil, errors.New("can't create tailer without W")
 	}
 	t := &Tailer{
-		w:        w,
-		watched:  make(map[string]struct{}),
-		lines:    o.Lines,
-		files:    make(map[string]afero.File),
-		partials: make(map[string]string),
-		fs:       fs,
+		lines:        lines,
+		w:            w,
+		fs:           fs,
+		handles:      make(map[string]afero.File),
+		partials:     make(map[string]*bytes.Buffer),
+		globPatterns: make(map[string]struct{}),
+		runDone:      make(chan struct{}),
 	}
-	go t.run()
+	if err := t.SetOption(options...); err != nil {
+		return nil, err
+	}
+	handle, eventsChan := t.w.Events()
+	t.eventsHandle = handle
+	go t.run(eventsChan)
 	return t, nil
 }
 
-// addWatched adds a path to the list of watched items.
-func (t *Tailer) addWatched(path string) {
-	t.watchedLock.Lock()
-	defer t.watchedLock.Unlock()
-	t.watched[path] = struct{}{}
+// SetOption takes one or more option functions and applies them in order to Tailer.
+func (t *Tailer) SetOption(options ...func(*Tailer) error) error {
+	for _, option := range options {
+		if err := option(t); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// isWatching indicates if the path is being watched. It includes both
-// filenames and directories.
-func (t *Tailer) isWatching(path string) bool {
-	t.watchedLock.RLock()
-	defer t.watchedLock.RUnlock()
-	_, ok := t.watched[path]
+// setHandle sets a file handle under it's pathname
+func (t *Tailer) setHandle(pathname string, f afero.File) error {
+	absPath, err := filepath.Abs(pathname)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to lookup abspath of %q", pathname)
+	}
+	t.handlesMu.Lock()
+	defer t.handlesMu.Unlock()
+	t.handles[absPath] = f
+	return nil
+}
+
+// handleForPath retrives a file handle for a pathname.
+func (t *Tailer) handleForPath(pathname string) (afero.File, bool) {
+	absPath, err := filepath.Abs(pathname)
+	if err != nil {
+		glog.V(2).Infof("Couldn't resolve path %q: %s", pathname, err)
+		return nil, false
+	}
+	t.handlesMu.Lock()
+	defer t.handlesMu.Unlock()
+	fd, ok := t.handles[absPath]
+	return fd, ok
+}
+
+func (t *Tailer) hasHandle(pathname string) bool {
+	_, ok := t.handleForPath(pathname)
 	return ok
 }
 
-// Tail registers a file path to be tailed.
-func (t *Tailer) Tail(pathname string) {
-	fullpath, err := filepath.Abs(pathname)
+// TailPattern registers a pattern to be tailed.  If pattern is a plain
+// file then it is watched for updates and opened.  If pattern is a glob, then
+// all paths that match the glob are opened and watched, and the directories
+// containing those matches, if any, are watched.
+func (t *Tailer) TailPattern(pattern string) error {
+	matches, err := afero.Glob(t.fs, pattern)
 	if err != nil {
-		glog.Infof("Failed to find absolute path for %q: %s\n", pathname, err)
-		return
+		return err
 	}
-	if !t.isWatching(fullpath) {
-		t.addWatched(fullpath)
-		logCount.Add(1)
-		t.openLogPath(fullpath, false)
+	t.globPatternsMu.Lock()
+	t.globPatterns[pattern] = struct{}{}
+	t.globPatternsMu.Unlock()
+	glog.V(1).Infof("glob matches: %v", matches)
+	// TODO(jaq): Error if there are no matches, or do we just assume that it's OK?
+	// mtail_test.go assumes that it's ok.  Figure out why.
+	// if len(matches) == 0 {
+	// 	return errors.Errorf("No matches for pattern %q", pattern)
+	// }
+	for _, pathname := range matches {
+		err := t.TailPath(pathname)
+		if err != nil {
+			return errors.Wrapf(err, "attempting to tail %q", pathname)
+		}
 	}
+	// Add a watch on the containing directory, so we know when a rotation
+	// occurs or something shows up that matches this pattern.  TODO(jaq): this
+	// seems fallible.
+	return t.watchDirname(pattern)
 }
 
-// TailFile registers a file handle to be tailed.  There is no filesystem to
-// watch, so no watches are registered, and no file paths are opened.
-func (t *Tailer) TailFile(f afero.File) error {
+// TailPath registers a filesystem pathname to be tailed.
+func (t *Tailer) TailPath(pathname string) error {
+	if t.hasHandle(pathname) {
+		glog.V(2).Infof("already watching %q", pathname)
+		return nil
+	}
+	if err := t.w.Add(pathname, t.eventsHandle); err != nil {
+		return err
+	}
 	logCount.Add(1)
-	return t.startNewFile(f, false)
+	// TODO(jaq): ex_test/filename.mtail requires we use the original pathname here, not fullpath
+	return t.openLogPath(pathname, false, false)
 }
 
-// handleLogUpdate reads all available bytes from an already opened file
-// identified by pathname, and sends them to be processed on the lines channel.
+// handleLogUpdate is dispatched when an UpdateEvent is received, causing the
+// tailer to read all available bytes from an already-opened file and send each
+// log line onto lines channel.
 func (t *Tailer) handleLogUpdate(pathname string) {
-	t.filesLock.Lock()
-	fd, ok := t.files[pathname]
-	t.filesLock.Unlock()
+	glog.V(2).Infof("handleLogUpdate %s", pathname)
+	fd, ok := t.handleForPath(pathname)
 	if !ok {
-		glog.Warningf("No file descriptor found for %q, but is being watched", pathname)
+		glog.Warningf("No file handle found for %q, but is being watched; opening", pathname)
+		// Try to open it, and because we have a watch set seenBefore.
+		if err := t.openLogPath(pathname, false, true); err != nil {
+			glog.Warning(err)
+		}
 		return
 	}
-	var err error
-	t.partialsLock.Lock()
-	t.partials[pathname], err = t.read(fd, t.partials[pathname])
-	t.partialsLock.Unlock()
+	absPath, err := filepath.Abs(pathname)
+	if err != nil {
+		glog.Info(err)
+	}
+	t.partialsMu.Lock()
+	err = t.read(fd, t.partials[absPath])
+	t.partialsMu.Unlock()
 	if err != nil && err != io.EOF {
 		glog.Info(err)
 	}
 }
 
+// checkForTruncate checks to see if the current offset into the file
+// is past the end of the file based on its size, and if so seeks to
+// the start again.  Returns nil iff that happened.
+func (t *Tailer) checkForTruncate(f afero.File) error {
+	currentOffset, err := f.Seek(0, io.SeekCurrent)
+	glog.V(2).Infof("current seek position at %d", currentOffset)
+	if err != nil {
+		return err
+	}
+
+	fi, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
+	glog.V(2).Infof("File size is %d", fi.Size())
+	if currentOffset == 0 || fi.Size() >= currentOffset {
+		return fmt.Errorf("no truncate appears to have occurred")
+	}
+
+	p, serr := f.Seek(0, io.SeekStart)
+	glog.V(2).Infof("Truncated?  Seeked to %d: %v", p, serr)
+	return serr
+}
+
 // read reads blocks of 4096 bytes from the File, sending lines to the
 // channel as it encounters newlines.  If EOF is encountered, the partial line
 // is returned to be concatenated with on the next call.
-func (t *Tailer) read(f afero.File, partialIn string) (partialOut string, err error) {
-	partial := partialIn
+func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 	b := make([]byte, 0, 4096)
+	ntotal := 0 // bytes read in this invocation
 	for {
 		n, err := f.Read(b[:cap(b)])
+		glog.V(2).Infof("Read: %v %v", n, err)
+		ntotal += n
 		b = b[:n]
-		if err != nil {
-			return partial, err
+
+		if err == io.EOF && ntotal == 0 {
+			glog.V(2).Info("Suspected truncation.")
+			// If there was nothing to be read, perhaps the file just got truncated.
+			herr := t.checkForTruncate(f)
+			glog.V(2).Infof("handletrunc with error '%v'", herr)
+			if herr == nil {
+				// Try again: offset was greater than filesize and now we've seeked to start.
+				continue
+			}
 		}
 
-		for i, width := 0, 0; i < len(b) && i < n; i += width {
-			var rune rune
+		if err != nil {
+			return err
+		}
+
+		var (
+			rune  rune
+			width int
+		)
+		for i := 0; i < len(b) && i < n; i += width {
 			rune, width = utf8.DecodeRune(b[i:])
 			switch {
 			case rune != '\n':
-				partial += string(rune)
+				partial.WriteRune(rune)
 			default:
 				// send off line for processing, blocks if not ready
-				t.lines <- partial
+				t.lines <- NewLogLine(f.Name(), partial.String())
+				lineCount.Add(f.Name(), 1)
 				// reset accumulator
-				partial = ""
+				partial.Reset()
 			}
 		}
-	}
-}
-
-// inode returns the inode number of a file, or 0 if the file has no underlying Sys implementation.
-func inode(f os.FileInfo) uint64 {
-	s := f.Sys()
-	if s == nil {
-		return 0
-	}
-	switch s := s.(type) {
-	case *syscall.Stat_t:
-		return uint64(s.Ino)
-	default:
-		return 0
 	}
 }
 
 // handleLogCreate handles both new and rotated log files.
 func (t *Tailer) handleLogCreate(pathname string) {
-	t.filesLock.Lock()
-	fd, ok := t.files[pathname]
-	t.filesLock.Unlock()
-	if ok {
-		s1, err := fd.Stat()
-		if err != nil {
-			glog.Infof("Stat failed on %q: %s", t.files[pathname].Name(), err)
-			return
-		}
-		s2, err := t.fs.Stat(pathname)
-		if err != nil {
-			glog.Infof("Stat failed on %q: %s", pathname, err)
-			return
-		}
-		if inode(s1) != inode(s2) {
-			glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
-			logRotations.Add(pathname, 1)
-			// flush the old log, pathname is still an index into t.files with the old inode.
-			t.handleLogUpdate(pathname)
-			fd.Close()
-			go func() {
-				// Run in goroutine as Remove may block waiting on event processing.
-				err := t.w.Remove(pathname)
-				if err != nil {
-					glog.Infof("Failed removing watches on %s: %s", pathname, err)
-				}
-				// openLogPath readds the file to the watcher, so must be strictly after the Remove succeeds.
-				t.openLogPath(pathname, true)
-			}()
-		} else {
-			glog.V(1).Infof("Path %s already being watched, and inode not changed.",
-				pathname)
-		}
-	} else {
-		// Freshly opened log file, never seen before.
-		t.openLogPath(pathname, true)
+	glog.V(2).Infof("handleLogCreate %s", pathname)
+	fd, ok := t.handleForPath(pathname)
+	if !ok {
+		t.handleCreateGlob(pathname)
+		return
 	}
+
+	s1, err := fd.Stat()
+	if err != nil {
+		glog.Infof("Stat failed on %q: %s", t.handles[pathname].Name(), err)
+		// We have a fd but it's invalid, handle as a rotation (delete/create)
+		logRotations.Add(pathname, 1)
+		logCount.Add(1)
+		// TODO(jaq): openlogpath seenBefore is true, so retry.
+		if oerr := t.openLogPath(pathname, true, true); oerr != nil {
+			glog.Warning(oerr)
+		}
+		return
+	}
+	s2, err := t.fs.Stat(pathname)
+	if err != nil {
+		glog.Infof("Stat failed on %q: %s", pathname, err)
+		return
+	}
+	if os.SameFile(s1, s2) {
+		glog.V(1).Infof("Path %s already being watched, and inode not changed.",
+			pathname)
+		return
+
+	}
+	glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
+	logRotations.Add(pathname, 1)
+	// flush the old log, pathname is still an index into t.handles with the old inode.
+	t.handleLogUpdate(pathname)
+	if err := fd.Close(); err != nil {
+		glog.Info(err)
+	}
+	go func() {
+		// Run in goroutine as Remove may block waiting on event processing.
+		if err := t.w.Remove(pathname); err != nil {
+			glog.Infof("Failed removing watches on %s: %s", pathname, err)
+		}
+		// openLogPath readds the file to the watcher, so must be strictly after the Remove succeeds.
+		// seenBefore is true, so retry
+		if err := t.openLogPath(pathname, true, true); err != nil {
+			glog.Warning(err)
+		}
+	}()
+}
+
+func (t *Tailer) handleLogDelete(pathname string) {
+	glog.V(2).Infof("handleLogDelete %s", pathname)
+	fd, ok := t.handleForPath(pathname)
+	if !ok {
+		glog.V(2).Infof("Delete without fd for %s", pathname)
+		return
+	}
+	// flush the old log, as pathname is still an index into t.handles with the old inode still open
+	t.handleLogUpdate(pathname)
+	if err := fd.Close(); err != nil {
+		glog.Warning(err)
+	}
+	logCount.Add(-1)
+	// Explicitly leave the filehandle invalid to test for log rotation in handleLogCreate
+}
+
+// watchDirname adds the directory containing a path to be watched.
+func (t *Tailer) watchDirname(pathname string) error {
+	absPath, err := filepath.Abs(pathname)
+	if err != nil {
+		return err
+	}
+	d := filepath.Dir(absPath)
+	return t.w.Add(d, t.eventsHandle)
 }
 
 // openLogPath opens a log file named by pathname.
-func (t *Tailer) openLogPath(pathname string, seenBefore bool) {
-	d := path.Dir(pathname)
-	if !t.isWatching(d) {
-		err := t.w.Add(d)
-		if err != nil {
-			glog.Infof("Failed to create new watch on directory %q: %s", d, err)
-		}
-		t.addWatched(d)
+// TODO(jaq): seenBefore is incorrect for all log creation events received via fsnotify.
+func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) error {
+	glog.V(2).Infof("openlogPath %s %v %v", pathname, seenBefore, seekToStart)
+	if err := t.watchDirname(pathname); err != nil {
+		return err
 	}
 
 	retries := 3
 	retryDelay := 1 * time.Millisecond
+	shouldRetry := func() bool {
+		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
+		if !seenBefore {
+			return false
+		}
+		return retries > 0
+	}
 	var f afero.File
 	var err error
-	for retries > 0 {
-		f, err = t.fs.Open(pathname)
-		if err == nil {
-			break
-		}
-		// Doesn't exist yet. We're watching the directory, so we'll pick it up
-		// again on create; return successfully.
-		if os.IsNotExist(err) {
-			return
-		}
-		glog.Infof("Failed to open %q for reading: %s", pathname, err)
-		logErrors.Add(pathname, 1)
-		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
-		if seenBefore {
-			retries = retries - 1
-			time.Sleep(retryDelay)
-			retryDelay = retryDelay + retryDelay
-		} else {
-			return
-		}
+Retry:
+	f, err = t.fs.Open(pathname)
+	if err == nil {
+		glog.V(2).Infof("open succeeded %s", pathname)
 	}
-	err = t.startNewFile(f, seenBefore)
+	// Doesn't exist yet. We're watching the directory, so we'll pick it up
+	// again on create; return successfully.
+	if os.IsNotExist(err) {
+		glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
+		return nil
+	}
+	logErrors.Add(pathname, 1)
+	if shouldRetry() {
+		retries = retries - 1
+		time.Sleep(retryDelay)
+		retryDelay = retryDelay + retryDelay
+		goto Retry
+	}
 	if err != nil {
-		glog.Error(err)
+		glog.Infof("openLogPath failed all retries")
+		return err
 	}
+	err = t.startNewFile(f, seekToStart)
+	if err != nil && err != io.EOF {
+		glog.Error(err)
+		return err
+	}
+	return nil
 }
 
-// startNewFile optionally seeks to the start or end of the file, then starts
-// the consumption of log lines. Rotated logs should read from the start, but
-// logs opened for the first time read from the end.
+// startNewFile optionally seeks to the start or end of the file f, then starts
+// the consumption of log lines. Rotated logs and logs read in oneshot mode
+// should read from the start, but logs opened for the first time read from the
+// "current point in time", which is the end of the file for logs being
+// appended to.
 func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
 	fi, err := f.Stat()
 	if err != nil {
 		// Stat failed, log error and return.
 		logErrors.Add(f.Name(), 1)
-		return fmt.Errorf("Failed to stat %q: %s", f.Name(), err)
+		return errors.Wrapf(err, "Failed to stat %q: %s", f.Name())
 	}
 	switch m := fi.Mode(); {
-	case m&os.ModeType == 0:
-		if seekStart {
-			f.Seek(0, os.SEEK_SET)
-		} else {
-			f.Seek(0, os.SEEK_END)
+	case m.IsRegular():
+		seekWhence := io.SeekEnd
+		if seekStart || t.oneShot {
+			seekWhence = io.SeekCurrent
 		}
-		err = t.w.Add(f.Name())
-		if err != nil {
-			return fmt.Errorf("Adding a change watch failed on %q: %s", f.Name(), err)
+		if _, err := f.Seek(0, seekWhence); err != nil {
+			return errors.Wrapf(err, "Seek failed on %q", f.Name())
+		}
+		// Named pipes are the same as far as we're concerned, but we can't seek them.
+		fallthrough
+	case m&os.ModeType == os.ModeNamedPipe:
+		glog.V(2).Infof("Adding a file watch on %q", f.Name())
+		if err := t.w.Add(f.Name(), t.eventsHandle); err != nil {
+			return err
 		}
 		// In case the new log has been written to already, attempt to read the
 		// first lines.
-		t.partialsLock.Lock()
-		t.partials[f.Name()], err = t.read(f, "")
-		t.partialsLock.Unlock()
+		absPath, err := filepath.Abs(f.Name())
+		if err != nil {
+			return err
+		}
+		t.partialsMu.Lock()
+		t.partials[absPath] = bytes.NewBufferString("")
+		err = t.read(f, t.partials[absPath])
+		t.partialsMu.Unlock()
 		if err != nil {
 			if err == io.EOF {
-				// Don't worry about EOF on first read, that's expected.
-				break
+				glog.V(1).Info("EOF on first read")
+				if !t.oneShot {
+					// Don't worry about EOF on first read, that's expected due to SEEK_END.
+					break
+				}
 			}
 			return err
 		}
-	case m&os.ModeType == os.ModeNamedPipe:
-		go t.readForever(f)
 	default:
-		return fmt.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
+		return errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
 	}
-	t.filesLock.Lock()
-	t.files[f.Name()] = f
-	t.filesLock.Unlock()
+	if err := t.setHandle(f.Name(), f); err != nil {
+		return err
+	}
 	glog.Infof("Tailing %s", f.Name())
-
 	return nil
+}
+
+// handleCreateGlob matches the pathname against the glob patterns and starts tailing the file.
+func (t *Tailer) handleCreateGlob(pathname string) {
+	t.globPatternsMu.RLock()
+	defer t.globPatternsMu.RUnlock()
+
+	for pattern := range t.globPatterns {
+		matched, err := filepath.Match(pattern, pathname)
+		if err != nil {
+			glog.Warningf("Unexpected bad pattern %q not detected earlier", pattern)
+			continue
+		}
+		if matched {
+			glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
+			// TODO(jaq): avoid code duplication with TailPath here.
+			// If this file was just created, read from the start.
+			if err := t.w.Add(pathname, t.eventsHandle); err != nil {
+				glog.Infof("Failed to tail new file %q: %s", pathname, err)
+				continue
+			}
+			logCount.Add(1)
+			// Pretend seenBefore because we want to seek to start.
+			if err := t.openLogPath(pathname, false, true); err != nil {
+				glog.Infof("Failed to tail new file %q: %s", pathname, err)
+			}
+		}
+	}
 }
 
 // start is the main event loop for the Tailer.
 // It receives notification of log file changes from the watcher channel, and
 // handles them.
-func (t *Tailer) run() {
-	for e := range t.w.Events() {
-		switch e := e.(type) {
-		case watcher.UpdateEvent:
-			if t.isWatching(e.Pathname) {
-				t.handleLogUpdate(e.Pathname)
-			}
-		case watcher.CreateEvent:
-			if t.isWatching(e.Pathname) {
-				t.handleLogCreate(e.Pathname)
-			}
-		case watcher.DeleteEvent:
+func (t *Tailer) run(events <-chan watcher.Event) {
+	defer close(t.runDone)
+
+	for e := range events {
+		glog.V(2).Infof("Event type %#v", e)
+		switch e.Op {
+		case watcher.Update:
+			t.handleLogUpdate(e.Pathname)
+		case watcher.Create:
+			t.handleLogCreate(e.Pathname)
+		case watcher.Delete:
+			t.handleLogDelete(e.Pathname)
 		default:
 			glog.Infof("Unexpected event %#v", e)
 		}
@@ -340,22 +518,34 @@ func (t *Tailer) run() {
 	close(t.lines)
 }
 
-// readForever handles non-logfile inputs by reading from the File until it is closed.
-func (t *Tailer) readForever(f afero.File) {
-	var err error
-	partial := ""
-	for {
-		partial, err = t.read(f, partial)
-		// We want to exit at EOF, because the FD has been closed.
-		if err != nil {
-			glog.Infof("%s: %s", err, f.Name())
-			return
-		}
-		// TODO(jaq): nonblocking read, handle eagain, and do a little sleep if so, so the read can be interrupted
-	}
-}
-
 // Close signals termination to the watcher.
 func (t *Tailer) Close() error {
-	return t.w.Close()
+	if err := t.w.Close(); err != nil {
+		return err
+	}
+	<-t.runDone
+	return nil
+}
+
+const tailerTemplate = `
+<h2 id="tailer">Log Tailer</h2>
+{{range $name, $val := $.Handles}}
+<p><b>{{$name}}</b></p>
+{{end}}
+`
+
+// WriteStatusHTML emits the Tailer's state in HTML format to the io.Writer w.
+func (t *Tailer) WriteStatusHTML(w io.Writer) error {
+	tpl, err := template.New("tailer").Parse(tailerTemplate)
+	if err != nil {
+		return err
+	}
+	t.handlesMu.RLock()
+	defer t.handlesMu.RUnlock()
+	data := struct {
+		Handles map[string]afero.File
+	}{
+		t.handles,
+	}
+	return tpl.Execute(w, data)
 }

@@ -17,8 +17,22 @@ frustration later on.
 
 ### Code reviews
 All submissions, including submissions by project members, require review. We
-use Github pull requests for this purpose.
+use GitHub pull requests for this purpose.
+
+Please read the [style guide](docs/style.md) for tips on the project coding
+guidelines.
+
+### Response Time
+
+This repository is maintained as a best effort service.
+
+Response times to issues and PRs may vary with the availability of the
+maintainers.  We appreciate your patience.
+
+PRs with unit tests will be merged promptly.  All other requests (issues and
+PRs) may take longer to be responded to.
 
 ### The small print
 Contributions made by corporations are covered by a different agreement than
 the one above, the Software Grant and Corporate Contributor License Agreement.
+

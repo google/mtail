@@ -8,16 +8,31 @@ import (
 	"fmt"
 )
 
+// SymbolKind enumerates the kind of a Symbol.
 type SymbolKind int
 
 // SymbolKind enumerates the kinds of symbols found in the program text.
 const (
-	VarSymbol    SymbolKind = iota // Variables
-	CaprefSymbol                   // Capture group references
-	DecoSymbol                     // Decorators
-
-	endSymbol
+	VarSymbol     SymbolKind = iota // Variables
+	CaprefSymbol                    // Capture group references
+	DecoSymbol                      // Decorators
+	PatternSymbol                   // Named pattern constants
 )
+
+func (k SymbolKind) String() string {
+	switch k {
+	case VarSymbol:
+		return "variable"
+	case CaprefSymbol:
+		return "capture group reference"
+	case DecoSymbol:
+		return "decorator"
+	case PatternSymbol:
+		return "named pattern constant"
+	default:
+		panic("unexpected symbolkind")
+	}
+}
 
 // Symbol describes a named program object.
 type Symbol struct {
@@ -27,11 +42,12 @@ type Symbol struct {
 	Pos     *position   // Source file position of definition
 	Binding interface{} // binding to storage allocated in runtime
 	Addr    int         // Address offset in another structure, object specific
+	Used    bool        // Optional marker that this symbol is used after declaration.
 }
 
 // NewSymbol creates a record of a given symbol kind, named name, found at loc
 func NewSymbol(name string, kind SymbolKind, pos *position) (sym *Symbol) {
-	return &Symbol{name, kind, Undef, pos, nil, 0}
+	return &Symbol{name, kind, Undef, pos, nil, 0, false}
 }
 
 // Scope maintains a record of the identifiers declared in the current program
@@ -56,11 +72,22 @@ func (s *Scope) Insert(sym *Symbol) (alt *Symbol) {
 	return
 }
 
-// lookup returns the symbol with the given name if it is found in this or any
+// InsertAlias attempts to insert a duplicate name for an existing symbol into
+// the scope.  If the scope already contains an object alt with the alias, the
+// scope is unchanged and the function returns alt.  Otherwise, the symbol is
+// inserted and the function returns nil.
+func (s *Scope) InsertAlias(sym *Symbol, alias string) (alt *Symbol) {
+	if alt := s.Symbols[alias]; alt == nil {
+		s.Symbols[alias] = sym
+	}
+	return
+}
+
+// Lookup returns the symbol with the given name if it is found in this or any
 // parent scope, otherwise nil.
-func (s *Scope) Lookup(name string) *Symbol {
+func (s *Scope) Lookup(name string, kind SymbolKind) *Symbol {
 	for scope := s; scope != nil; scope = scope.Parent {
-		if sym := scope.Symbols[name]; sym != nil {
+		if sym := scope.Symbols[name]; sym != nil && sym.Kind == kind {
 			return sym
 		}
 	}
@@ -75,8 +102,8 @@ func (s *Scope) String() string {
 	if s != nil {
 		fmt.Fprintln(&buf)
 		if len(s.Symbols) > 0 {
-			for _, sym := range s.Symbols {
-				fmt.Fprintf(&buf, "\t%#v %s\n", sym.Kind, sym.Name)
+			for name, sym := range s.Symbols {
+				fmt.Fprintf(&buf, "\t%q: %s %q %v\n", name, sym.Kind, sym.Name, sym.Used)
 			}
 		}
 		if s.Parent != nil {

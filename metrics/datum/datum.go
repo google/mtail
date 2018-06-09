@@ -9,10 +9,13 @@ import (
 	"time"
 )
 
+// Type describes the type of value stored in a Datum.
 type Type int
 
 const (
+	// Int describes an integer datum
 	Int Type = iota
+	// Float describes a floating point datum
 	Float
 	Buckets
 )
@@ -29,38 +32,44 @@ func (t Type) String() string {
 	return "?"
 }
 
-// Datum
+// Datum is an interface for metric datums, with a type, value and timestamp to be exported.
 type Datum interface {
 	// Type returns the Datum type.
 	Type() Type
 
-	Value() string
+	// ValueString returns the value of a Datum as a string.
+	ValueString() string
 
-	Time() string
+	// TimeString returns the timestamp of a Datum as a string.
+	TimeString() string
 }
 
-type datum struct {
-	time int64 // nanoseconds since unix epoch
+// BaseDatum is a struct used to record timestamps across all Datum implementations.
+type BaseDatum struct {
+	Time int64 // nanoseconds since unix epoch
 }
 
 var zeroTime time.Time
 
-func (d *datum) stamp(timestamp time.Time) {
+func (d *BaseDatum) stamp(timestamp time.Time) {
 	if timestamp.IsZero() {
-		atomic.StoreInt64(&d.time, time.Now().UTC().UnixNano())
+		atomic.StoreInt64(&d.Time, time.Now().UTC().UnixNano())
 	} else {
-		atomic.StoreInt64(&d.time, timestamp.UnixNano())
+		atomic.StoreInt64(&d.Time, timestamp.UnixNano())
 	}
 }
 
-func (d *datum) Time() string {
-	return fmt.Sprintf("%d", atomic.LoadInt64(&d.time)/1e9)
+// TimeString returns the timestamp of this Datum as a string.
+func (d *BaseDatum) TimeString() string {
+	return fmt.Sprintf("%d", atomic.LoadInt64(&d.Time)/1e9)
 }
 
+// NewInt creates a new zero integer datum.
 func NewInt() Datum {
 	return MakeInt(0, zeroTime)
 }
 
+// NewFloat creates a new zero floating-point datum.
 func NewFloat() Datum {
 	return MakeFloat(0., zeroTime)
 }
@@ -69,14 +78,16 @@ func NewBuckets(buckets []Range) Datum {
 	return MakeBuckets(0., buckets, zeroTime)
 }
 
+// MakeInt creates a new integer datum with the provided value and timestamp.
 func MakeInt(v int64, ts time.Time) Datum {
-	d := &intDatum{}
+	d := &IntDatum{}
 	d.Set(v, ts)
 	return d
 }
 
+// MakeFloat creates a new floating-point datum with the provided value and timestamp.
 func MakeFloat(v float64, ts time.Time) Datum {
-	d := &floatDatum{}
+	d := &FloatDatum{}
 	d.Set(v, ts)
 	return d
 }
@@ -92,27 +103,30 @@ func MakeBuckets(v float64, buckets []Range, ts time.Time) Datum {
 	return d
 }
 
+// GetInt returns the integer value of a datum, or error.
 func GetInt(d Datum) int64 {
 	switch d := d.(type) {
-	case *intDatum:
+	case *IntDatum:
 		return d.Get()
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
 	}
 }
 
+// GetFloat returns the floating-point value of a datum, or error.
 func GetFloat(d Datum) float64 {
 	switch d := d.(type) {
-	case *floatDatum:
+	case *FloatDatum:
 		return d.Get()
 	default:
 		panic(fmt.Sprintf("datum %v is not a Float", d))
 	}
 }
 
+// SetInt sets an integer datum to the provided value and timestamp, or panics if the Datum is not an IntDatum.
 func SetInt(d Datum, v int64, ts time.Time) {
 	switch d := d.(type) {
-	case *intDatum:
+	case *IntDatum:
 		d.Set(v, ts)
 	case *BucketsDatum:
 		d.Set(float64(v), ts)
@@ -121,9 +135,10 @@ func SetInt(d Datum, v int64, ts time.Time) {
 	}
 }
 
+// SetFloat sets a floating-point Datum to the provided value and timestamp, or panics if the Datum is not a FloatDatum.
 func SetFloat(d Datum, v float64, ts time.Time) {
 	switch d := d.(type) {
-	case *floatDatum:
+	case *FloatDatum:
 		d.Set(v, ts)
 	case *BucketsDatum:
 		d.Set(float64(v), ts)
@@ -132,9 +147,10 @@ func SetFloat(d Datum, v float64, ts time.Time) {
 	}
 }
 
+// IncIntBy increments an integer Datum by the provided value, at time ts, or panics if the Datum is not an IntDatum.
 func IncIntBy(d Datum, v int64, ts time.Time) {
 	switch d := d.(type) {
-	case *intDatum:
+	case *IntDatum:
 		d.IncBy(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))

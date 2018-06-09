@@ -4,28 +4,55 @@
 package tailer
 
 import (
+	"bytes"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"os/user"
+	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
-	"github.com/go-test/deep"
 	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/watcher"
 
 	"github.com/spf13/afero"
 )
 
-func makeTestTail(t *testing.T) (*Tailer, chan string, *watcher.FakeWatcher, afero.Fs) {
+func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, afero.Fs) {
 	fs := afero.NewMemMapFs()
 	w := watcher.NewFakeWatcher()
-	lines := make(chan string, 1)
-	o := Options{lines, w, fs}
-	ta, err := New(o)
+	lines := make(chan *LogLine, 1)
+	ta, err := New(lines, fs, w)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return ta, lines, w, fs
+}
+
+func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *watcher.LogWatcher, afero.Fs, string) {
+	if testing.Short() {
+		t.Skip("skipping real fs test in short mode")
+	}
+	dir, err := ioutil.TempDir("", prefix)
+	if err != nil {
+		t.Fatalf("can't create tempdir: %v", err)
+	}
+
+	fs := afero.NewOsFs()
+	w, err := watcher.NewLogWatcher()
+	if err != nil {
+		t.Fatalf("can't create watcher: %v", err)
+	}
+	lines := make(chan *LogLine, 1)
+	ta, err := New(lines, fs, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ta, lines, w, fs, dir
 }
 
 func TestTail(t *testing.T) {
@@ -39,11 +66,14 @@ func TestTail(t *testing.T) {
 	defer f.Close()
 	defer w.Close()
 
-	ta.Tail(logfile)
+	err = ta.TailPath(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// Tail also causes the log to be read, so no need to inject an event.
 
-	if _, ok := ta.files[logfile]; !ok {
-		t.Errorf("path not found in files map: %+#v", ta.files)
+	if _, ok := ta.handles[logfile]; !ok {
+		t.Errorf("path not found in files map: %+#v", ta.handles)
 	}
 }
 
@@ -60,35 +90,113 @@ func TestHandleLogUpdate(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []string{}
+	result := []*LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	go func() {
 		for line := range lines {
-			glog.Infof("line: %q\n", line)
 			result = append(result, line)
 			wg.Done()
 		}
 		close(done)
 	}()
 
-	ta.Tail(logfile)
+	err = ta.TailPath(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	wg.Add(4)
 	_, err = f.WriteString("a\nb\nc\nd\n")
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Seek(0, 0) // In memory files share the same offset
-	wg.Add(4)
+	f.Seek(0, 0) // afero in-memory files share the same offset
 	w.InjectUpdate(logfile)
 
-	// ugh
 	wg.Wait()
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
 	<-done
 
-	expected := []string{"a", "b", "c", "d"}
-	if diff := deep.Equal(result, expected); diff != nil {
+	expected := []*LogLine{
+		{logfile, "a"},
+		{logfile, "b"},
+		{logfile, "c"},
+		{logfile, "d"},
+	}
+	if diff := cmp.Diff(expected, result); diff != "" {
+		t.Errorf("result didn't match:\n%s", diff)
+	}
+}
+
+// TestHandleLogTruncate writes to a file, waits for those
+// writes to be seen, then truncates the file and writes some more.
+// At the end all lines written must be reported by the tailer.
+func TestHandleLogTruncate(t *testing.T) {
+	ta, lines, w, fs, dir := makeTestTailReal(t, "truncate")
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Log(err)
+		}
+	}()
+
+	logfile := filepath.Join(dir, "log")
+	f, err := fs.Create(logfile)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	result := []*LogLine{}
+	done := make(chan struct{})
+	wg := sync.WaitGroup{}
+	go func() {
+		for line := range lines {
+			result = append(result, line)
+			wg.Done()
+		}
+		close(done)
+	}()
+
+	if err = ta.TailPath(logfile); err != nil {
+		t.Fatal(err)
+	}
+
+	wg.Add(3)
+	if _, err = f.WriteString("a\nb\nc\n"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	wg.Wait()
+
+	if err = f.Truncate(0); err != nil {
+		t.Fatal(err)
+	}
+	// "File.Truncate" does not change the file offset.
+	f.Seek(0, 0)
+	time.Sleep(10 * time.Millisecond)
+
+	wg.Add(2)
+	if _, err = f.WriteString("d\ne\n"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(10 * time.Millisecond)
+
+	wg.Wait()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
+	<-done
+
+	expected := []*LogLine{
+		{logfile, "a"},
+		{logfile, "b"},
+		{logfile, "c"},
+		{logfile, "d"},
+		{logfile, "e"},
+	}
+	if diff := cmp.Diff(expected, result); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
@@ -106,20 +214,22 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []string{}
+	result := []*LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		for line := range lines {
-			glog.Infof("line: %q\n", line)
 			result = append(result, line)
 			wg.Done()
 		}
 		close(done)
 	}()
 
-	ta.Tail(logfile)
+	err = ta.TailPath(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = f.WriteString("a")
 	if err != nil {
@@ -148,9 +258,11 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	w.Close()
 	<-done
 
-	expected := []string{"ab"}
-	diff := deep.Equal(result, expected)
-	if diff != nil {
+	expected := []*LogLine{
+		{logfile, "ab"},
+	}
+	diff := cmp.Diff(expected, result)
+	if diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 
@@ -164,34 +276,40 @@ func TestReadPartial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := ta.read(f, "")
-	if p != "" {
+	p := bytes.NewBufferString("")
+	err = ta.read(f, p)
+	if p.String() != "" {
 		t.Errorf("partial line returned not empty: %q", p)
 	}
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
+	p.Reset()
+	p.WriteString("o")
 	f.WriteString("hi")
 	f.Seek(0, 0)
-	p, err = ta.read(f, "o")
-	if p != "ohi" {
+	err = ta.read(f, p)
+	if p.String() != "ohi" {
 		t.Errorf("partial line returned not expected: %q", p)
 	}
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
-	p, err = ta.read(f, "")
+	p.Reset()
+	err = ta.read(f, p)
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
 	f.WriteString("\n")
-	f.Seek(-1, os.SEEK_END)
-	p, err = ta.read(f, "ohi")
+	f.Seek(-1, io.SeekEnd)
+	p.Reset()
+	p.WriteString("ohi")
+	err = ta.read(f, p)
 	l := <-lines
-	if l != "ohi" {
+	if l.Line != "ohi" {
 		t.Errorf("line emitted not ohi: %q", l)
 	}
-	if p != "" {
+	if p.String() != "" {
 		t.Errorf("partial not empty: %q", p)
 	}
 	if err != io.EOF {
@@ -199,28 +317,92 @@ func TestReadPartial(t *testing.T) {
 	}
 }
 
-func TestReadPipe(t *testing.T) {
-	ta, lines, wa, _ := makeTestTail(t)
-	defer wa.Close()
+func TestOpenRetries(t *testing.T) {
+	// Can't force a permission denied error if run as root.
+	u, err := user.Current()
+	if err != nil {
+		t.Skip(fmt.Sprintf("Couldn't determine current user id: %s", err))
+	}
+	if u.Uid == "0" {
+		t.Skip("Skipping test when run as root")
+	}
+	// Use the real filesystem because afero doesn't implement correct
+	// permissions checking on OpenFile in the memfile implementation.
+	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Log(err)
+		}
+	}()
 
-	r, w, err := os.Pipe()
-	if err != nil {
+	logfile := filepath.Join(dir, "log")
+	if _, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
 		t.Fatal(err)
 	}
 
-	err = ta.TailFile(r)
+	done := make(chan struct{})
+	wg := sync.WaitGroup{}
+	wg.Add(1) // lines written
+	go func() {
+		for range lines {
+			wg.Done()
+		}
+		close(done)
+	}()
+
+	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
+		t.Fatalf("Expected a permission denied error here: %s", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("remove")
+	if err := fs.Remove(logfile); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("openfile")
+	f, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	n, err := w.WriteString("hi\n")
-	if err != nil {
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("chmod")
+	if err := fs.Chmod(logfile, 0666); err != nil {
 		t.Fatal(err)
 	}
-	if n < 2 {
-		t.Fatalf("Didn't write enough bytes: %d", n)
+	time.Sleep(10 * time.Millisecond)
+	glog.Info("write string")
+	if _, err := f.WriteString("\n"); err != nil {
+		t.Fatal(err)
 	}
-	l := <-lines
-	if l != "hi" {
-		t.Errorf("line not expected: %q", l)
+	wg.Wait()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
+	<-done
+}
+
+func TestTailerInitErrors(t *testing.T) {
+	_, err := New(nil, nil, nil)
+	if err == nil {
+		t.Error("expected error")
+	}
+	lines := make(chan *LogLine)
+	_, err = New(lines, nil, nil)
+	if err == nil {
+		t.Error("expected error")
+	}
+	fs := afero.NewMemMapFs()
+	_, err = New(lines, fs, nil)
+	if err == nil {
+		t.Error("expected error")
+	}
+	w := watcher.NewFakeWatcher()
+	_, err = New(lines, fs, w)
+	if err != nil {
+		t.Errorf("unexpected error %s", err)
+	}
+	_, err = New(lines, fs, w, OneShot)
+	if err != nil {
+		t.Errorf("unexpected error %s", err)
 	}
 }

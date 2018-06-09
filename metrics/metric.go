@@ -12,27 +12,22 @@ import (
 	"time"
 
 	"github.com/google/mtail/metrics/datum"
+	"github.com/pkg/errors"
 )
-
-// // Counter is a monotonically nondecreasing metric.
-// type Counter interface {
-// 	IncBy(delta int64, ts time.Time)
-// }
-
-// // Gauge is a non-monotonic metric.
-// type Gauge interface {
-// 	Set(value int64, ts time.Time)
-// }
 
 // Kind enumerates the types of metrics supported.
 type Kind int
 
 const (
 	_ Kind = iota
+
+	// Counter is a monotonically nondecreasing metric.
 	Counter
+
 	// Gauge is a Kind that can take on any value, and may be set
 	// discontinuously from its previous value.
 	Gauge
+
 	// Timer is a specialisation of Gauge that can be used to store time
 	// intervals, such as latency and durations.  It enables certain behaviour
 	// in exporters that handle time intervals such as StatsD.
@@ -43,8 +38,11 @@ const (
 )
 
 const (
-	Int     = datum.Int
-	Float   = datum.Float
+	// Int indicates this metric is an integer metric type.
+	Int = datum.Int
+	// Float indicates this metric is a floating-point metric type.
+	Float = datum.Float
+	// Buckets indicates this metric is a histogram metric type.
 	Buckets = datum.Buckets
 )
 
@@ -86,6 +84,7 @@ type Metric struct {
 	Hidden      bool          `json:",omitempty"`
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
+	Source      string        `json:"-"`
 	Buckets     []datum.Range
 }
 
@@ -103,7 +102,7 @@ func NewMetric(name string, prog string, kind Kind, typ datum.Type, keys ...stri
 
 // newMetric returns a new empty Metric
 func newMetric(len int) *Metric {
-	return &Metric{Keys: make([]string, len, len),
+	return &Metric{Keys: make([]string, len),
 		LabelValues: make([]*LabelValue, 0)}
 }
 
@@ -124,7 +123,7 @@ Loop:
 // Metric.  If the sequence of label values does not yet exist, it is created.
 func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	if len(labelvalues) != len(m.Keys) {
-		return nil, fmt.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
+		return nil, errors.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
 	}
 	m.Lock()
 	defer m.Unlock()
@@ -144,9 +143,10 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	return d, nil
 }
 
+// RemoveDatum removes the Datum described by labelvalues from the Metric m.
 func (m *Metric) RemoveDatum(labelvalues ...string) error {
 	if len(labelvalues) != len(m.Keys) {
-		return fmt.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
+		return errors.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
 	}
 	m.Lock()
 	defer m.Unlock()
@@ -171,7 +171,7 @@ type LabelSet struct {
 }
 
 func zip(keys []string, values []string) map[string]string {
-	r := make(map[string]string, 0)
+	r := make(map[string]string)
 	for i, v := range values {
 		r[keys[i]] = v
 	}
@@ -189,6 +189,7 @@ func (m *Metric) EmitLabelSets(c chan *LabelSet) {
 	close(c)
 }
 
+// UnmarshalJSON converts a JSON byte string into a LabelValue
 func (lv *LabelValue) UnmarshalJSON(b []byte) error {
 	var obj map[string]*json.RawMessage
 	err := json.Unmarshal(b, &obj)
@@ -227,5 +228,12 @@ func (lv *LabelValue) UnmarshalJSON(b []byte) error {
 func (m *Metric) String() string {
 	m.RLock()
 	defer m.RUnlock()
-	return fmt.Sprintf("Metric: name=%s program=%s kind=%s type=%s hidden=%v keys=%v labelvalues=%v", m.Name, m.Program, m.Kind, m.Type, m.Hidden, m.Keys, m.LabelValues)
+	return fmt.Sprintf("Metric: name=%s program=%s kind=%s type=%s hidden=%v keys=%v labelvalues=%v source=%s", m.Name, m.Program, m.Kind, m.Type, m.Hidden, m.Keys, m.LabelValues, m.Source)
+}
+
+// SetSource sets the source of a metric, describing where in user programmes it was defined.
+func (m *Metric) SetSource(source string) {
+	m.Lock()
+	defer m.Unlock()
+	m.Source = source
 }

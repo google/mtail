@@ -8,11 +8,15 @@ package main
 
 import (
 	"flag"
-	"path/filepath"
+	"fmt"
+	"io"
+	"os"
 	"testing"
 
+	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/mtail"
 	"github.com/google/mtail/watcher"
+	"github.com/spf13/afero"
 )
 
 var (
@@ -22,34 +26,43 @@ var (
 func BenchmarkProgram(b *testing.B) {
 	// exampleProgramTests live in ex_test.go
 	for _, bm := range exampleProgramTests {
-		prog := filepath.Base(bm.programfile)
-		log := filepath.Base(bm.logfile)
-		b.Run(prog+"+"+log, func(b *testing.B) {
+		bm := bm
+		b.Run(fmt.Sprintf("%s on %s", bm.programfile, bm.logfile), func(b *testing.B) {
 			b.ReportAllocs()
-
 			w := watcher.NewFakeWatcher()
-			o := mtail.Options{Progs: bm.programfile, W: w}
-			mtail, err := mtail.New(o)
+			fs := afero.NewOsFs()
+			fs = afero.NewCopyOnWriteFs(fs, afero.NewMemMapFs())
+			log, err := fs.Create("/tmp/test.log")
+			if err != nil {
+				b.Fatalf("failed to create test file descriptor")
+			}
+			store := metrics.NewStore()
+			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(bm.programfile), mtail.LogPathPatterns(log.Name()))
 			if err != nil {
 				b.Fatalf("Failed to create mtail: %s", err)
 			}
+			err = mtail.StartTailing()
+			if err != nil {
+				b.Fatalf("starttailing failed: %s", err)
+			}
 
-			var lines int64
+			var total int64
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				count, err := mtail.OneShot(bm.logfile, false)
+				l, err := os.Open(bm.logfile)
 				if err != nil {
-					b.Errorf("OneShot log parse failed: %s", err)
+					b.Fatalf("Couldn't open logfile: %s", err)
 				}
-				lines += count
+				count, err := io.Copy(log, l)
+				if err != nil {
+					b.Fatalf("Write of test data failed to test file: %s", err)
+				}
+				total += count
+				w.InjectUpdate(log.Name())
 			}
-			b.StopTimer()
 			mtail.Close()
-			if err != nil {
-				b.Fatalf("strconv.ParseInt failed: %s", err)
-				return
-			}
-			b.SetBytes(lines)
+			b.StopTimer()
+			b.SetBytes(total)
 		})
 	}
 }

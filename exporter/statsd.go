@@ -21,9 +21,9 @@ var (
 	statsdExportSuccess = expvar.NewInt("statsd_export_success")
 )
 
+// metricToStatsd encodes a metric in the statsd text protocol format.  The
+// metric lock is held before entering this function.
 func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
-	m.RLock()
-	defer m.RUnlock()
 	var t string
 	switch m.Kind {
 	case metrics.Counter:
@@ -36,6 +36,6 @@ func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet) str
 	return fmt.Sprintf("%s%s.%s:%s|%s",
 		*statsdPrefix,
 		m.Program,
-		formatLabels(m.Name, l.Labels, ".", "."),
-		l.Datum.Value(), t)
+		formatLabels(m.Name, l.Labels, ".", ".", "_"),
+		l.Datum.ValueString(), t)
 }

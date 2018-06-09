@@ -1,7 +1,7 @@
 // Copyright 2016 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package testdata
+package testutil
 
 import (
 	"bufio"
@@ -17,9 +17,9 @@ import (
 	"github.com/google/mtail/metrics/datum"
 )
 
-var var_re = regexp.MustCompile(`^(counter|gauge|timer|histogram) ([^ ]+)(?: {([^}]+)})?(?: ([+-]?\d+(?:\.\d+(?:[eE]-?\d+)?)?))?(?: (.+))?`)
+var varRe = regexp.MustCompile(`^(counter|gauge|timer|histogram) ([^ ]+)(?: {([^}]+)})?(?: ([+-]?\d+(?:\.\d+(?:[eE]-?\d+)?)?))?(?: (.+))?`)
 
-// Find a metric in a store
+// FindMetricOrNil returns a metric in a store, or returns nil if not found.
 func FindMetricOrNil(store *metrics.Store, name string) *metrics.Metric {
 	store.RLock()
 	defer store.RUnlock()
@@ -31,12 +31,13 @@ func FindMetricOrNil(store *metrics.Store, name string) *metrics.Metric {
 	return nil
 }
 
+// ReadTestData loads a "golden" test data file, for a programfile, into the provided store.
 func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 	prog := filepath.Base(programfile)
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		glog.V(2).Infof("'%s'\n", scanner.Text())
-		match := var_re.FindStringSubmatch(scanner.Text())
+		match := varRe.FindStringSubmatch(scanner.Text())
 		glog.V(2).Infof("len match: %d\n", len(match))
 		if len(match) == 0 {
 			continue
@@ -110,7 +111,9 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 				}
 			}
 			glog.V(2).Infof("making a new %v\n", m)
-			store.Add(m)
+			if err := store.Add(m); err != nil {
+				glog.Infof("Failed to add metric %v to store: %s", m, err)
+			}
 		}
 
 		if match[4] != "" {

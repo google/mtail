@@ -1,0 +1,9 @@
+counter apache_http_bytes_total {request_method=GET,http_version=HTTP/1.1,status_code=200} 1880 2018-04-04T10:29:11.000000000Z
+counter apache_http_bytes_total {request_method=GET,http_version=HTTP/1.1,status_code=404} 19 2018-04-04T10:29:16.000000000Z
+counter apache_http_requests_total {request_method=GET,http_version=HTTP/1.1,status_code=304} 1 2018-04-04T10:28:24.000000000Z
+counter apache_http_requests_total {request_method=GET,http_version=HTTP/1.1,status_code=200} 1 2018-04-04T10:29:11.000000000Z
+counter apache_http_requests_total {request_method=GET,http_version=HTTP/1.1,status_code=404} 1 2018-04-04T10:29:16.000000000Z
+gauge apache_http_response_size {remote_host=192.168.74.9,request_method=GET,request_uri=/docs/,status_code=200,user_agent=Mozilla/5.0} 1880 2018-04-04T10:29:11.000000000Z
+gauge apache_http_response_size {remote_host=2001:db8::1,request_method=GET,request_uri=/docs/nx,status_code=404,user_agent=Mozilla/5.0} 19 2018-04-04T10:29:16.000000000Z
+gauge apache_http_response_time {remote_host=192.168.74.9,request_method=GET,request_uri=/docs/,status_code=200,user_agent=Mozilla/5.0} 8680 2018-04-04T10:29:11.000000000Z
+gauge apache_http_response_time {remote_host=2001:db8::1,request_method=GET,request_uri=/docs/nx,status_code=404,user_agent=Mozilla/5.0} 2167 2018-04-04T10:29:16.000000000Z

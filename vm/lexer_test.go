@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	go_cmp "github.com/google/go-cmp/cmp"
 )
 
 type lexerTest struct {
@@ -18,207 +18,232 @@ type lexerTest struct {
 
 var lexerTests = []lexerTest{
 	{"empty", "", []token{
-		token{EOF, "", position{"empty", 0, 0, 0}}}},
+		{EOF, "", position{"empty", 0, 0, 0}}}},
 	{"spaces", " \t", []token{
-		token{EOF, "", position{"spaces", 0, 2, 2}}}},
+		{EOF, "", position{"spaces", 0, 2, 2}}}},
 	{"newlines", "\n", []token{
-		token{NL, "\n", position{"newlines", 1, 0, -1}},
-		token{EOF, "", position{"newlines", 1, 0, 0}}}},
+		{NL, "\n", position{"newlines", 1, 0, -1}},
+		{EOF, "", position{"newlines", 1, 0, 0}}}},
 	{"comment", "# comment", []token{
-		token{EOF, "", position{"comment", 0, 9, 9}}}},
+		{EOF, "", position{"comment", 0, 9, 9}}}},
 	{"comment not at col 1", "  # comment", []token{
-		token{EOF, "", position{"comment not at col 1", 0, 11, 11}}}},
+		{EOF, "", position{"comment not at col 1", 0, 11, 11}}}},
 	{"punctuation", "{}()[],", []token{
-		token{LCURLY, "{", position{"punctuation", 0, 0, 0}},
-		token{RCURLY, "}", position{"punctuation", 0, 1, 1}},
-		token{LPAREN, "(", position{"punctuation", 0, 2, 2}},
-		token{RPAREN, ")", position{"punctuation", 0, 3, 3}},
-		token{LSQUARE, "[", position{"punctuation", 0, 4, 4}},
-		token{RSQUARE, "]", position{"punctuation", 0, 5, 5}},
-		token{COMMA, ",", position{"punctuation", 0, 6, 6}},
-		token{EOF, "", position{"punctuation", 0, 7, 7}}}},
-	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~ ** %", []token{
-		token{MINUS, "-", position{"operators", 0, 0, 0}},
-		token{PLUS, "+", position{"operators", 0, 2, 2}},
-		token{ASSIGN, "=", position{"operators", 0, 4, 4}},
-		token{INC, "++", position{"operators", 0, 6, 7}},
-		token{ADD_ASSIGN, "+=", position{"operators", 0, 9, 10}},
-		token{LT, "<", position{"operators", 0, 12, 12}},
-		token{GT, ">", position{"operators", 0, 14, 14}},
-		token{LE, "<=", position{"operators", 0, 16, 17}},
-		token{GE, ">=", position{"operators", 0, 19, 20}},
-		token{EQ, "==", position{"operators", 0, 22, 23}},
-		token{NE, "!=", position{"operators", 0, 25, 26}},
-		token{MUL, "*", position{"operators", 0, 28, 28}},
-		token{DIV, "/", position{"operators", 0, 30, 30}},
-		token{SHL, "<<", position{"operators", 0, 32, 33}},
-		token{SHR, ">>", position{"operators", 0, 35, 36}},
-		token{AND, "&", position{"operators", 0, 38, 38}},
-		token{OR, "|", position{"operators", 0, 40, 40}},
-		token{XOR, "^", position{"operators", 0, 42, 42}},
-		token{NOT, "~", position{"operators", 0, 44, 44}},
-		token{POW, "**", position{"operators", 0, 46, 47}},
-		token{MOD, "%", position{"operators", 0, 49, 49}},
-		token{EOF, "", position{"operators", 0, 50, 50}}}},
+		{LCURLY, "{", position{"punctuation", 0, 0, 0}},
+		{RCURLY, "}", position{"punctuation", 0, 1, 1}},
+		{LPAREN, "(", position{"punctuation", 0, 2, 2}},
+		{RPAREN, ")", position{"punctuation", 0, 3, 3}},
+		{LSQUARE, "[", position{"punctuation", 0, 4, 4}},
+		{RSQUARE, "]", position{"punctuation", 0, 5, 5}},
+		{COMMA, ",", position{"punctuation", 0, 6, 6}},
+		{EOF, "", position{"punctuation", 0, 7, 7}}}},
+	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~ ** % || && =~ !~", []token{
+		{MINUS, "-", position{"operators", 0, 0, 0}},
+		{PLUS, "+", position{"operators", 0, 2, 2}},
+		{ASSIGN, "=", position{"operators", 0, 4, 4}},
+		{INC, "++", position{"operators", 0, 6, 7}},
+		{ADD_ASSIGN, "+=", position{"operators", 0, 9, 10}},
+		{LT, "<", position{"operators", 0, 12, 12}},
+		{GT, ">", position{"operators", 0, 14, 14}},
+		{LE, "<=", position{"operators", 0, 16, 17}},
+		{GE, ">=", position{"operators", 0, 19, 20}},
+		{EQ, "==", position{"operators", 0, 22, 23}},
+		{NE, "!=", position{"operators", 0, 25, 26}},
+		{MUL, "*", position{"operators", 0, 28, 28}},
+		{DIV, "/", position{"operators", 0, 30, 30}},
+		{SHL, "<<", position{"operators", 0, 32, 33}},
+		{SHR, ">>", position{"operators", 0, 35, 36}},
+		{BITAND, "&", position{"operators", 0, 38, 38}},
+		{BITOR, "|", position{"operators", 0, 40, 40}},
+		{XOR, "^", position{"operators", 0, 42, 42}},
+		{NOT, "~", position{"operators", 0, 44, 44}},
+		{POW, "**", position{"operators", 0, 46, 47}},
+		{MOD, "%", position{"operators", 0, 49, 49}},
+		{OR, "||", position{"operators", 0, 51, 52}},
+		{AND, "&&", position{"operators", 0, 54, 55}},
+		{MATCH, "=~", position{"operators", 0, 57, 58}},
+		{NOT_MATCH, "!~", position{"operators", 0, 60, 61}},
+		{EOF, "", position{"operators", 0, 62, 62}}}},
 	{"keywords",
 		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\nhistogram\n", []token{
-			token{COUNTER, "counter", position{"keywords", 0, 0, 6}},
-			token{NL, "\n", position{"keywords", 1, 7, -1}},
-			token{GAUGE, "gauge", position{"keywords", 1, 0, 4}},
-			token{NL, "\n", position{"keywords", 2, 5, -1}},
-			token{AS, "as", position{"keywords", 2, 0, 1}},
-			token{NL, "\n", position{"keywords", 3, 2, -1}},
-			token{BY, "by", position{"keywords", 3, 0, 1}},
-			token{NL, "\n", position{"keywords", 4, 2, -1}},
-			token{HIDDEN, "hidden", position{"keywords", 4, 0, 5}},
-			token{NL, "\n", position{"keywords", 5, 6, -1}},
-			token{DEF, "def", position{"keywords", 5, 0, 2}},
-			token{NL, "\n", position{"keywords", 6, 3, -1}},
-			token{NEXT, "next", position{"keywords", 6, 0, 3}},
-			token{NL, "\n", position{"keywords", 7, 4, -1}},
-			token{CONST, "const", position{"keywords", 7, 0, 4}},
-			token{NL, "\n", position{"keywords", 8, 5, -1}},
-			token{TIMER, "timer", position{"keywords", 8, 0, 4}},
-			token{NL, "\n", position{"keywords", 9, 5, -1}},
-			token{OTHERWISE, "otherwise", position{"keywords", 9, 0, 8}},
-			token{NL, "\n", position{"keywords", 10, 9, -1}},
-			token{ELSE, "else", position{"keywords", 10, 0, 3}},
-			token{NL, "\n", position{"keywords", 11, 4, -1}},
-			token{DEL, "del", position{"keywords", 11, 0, 2}},
-			token{NL, "\n", position{"keywords", 12, 3, -1}},
-			token{HISTOGRAM, "histogram", position{"keywords", 12, 0, 8}},
-			token{NL, "\n", position{"keywords", 13, 9, -1}},
-			token{EOF, "", position{"keywords", 13, 0, 0}}}},
+			{COUNTER, "counter", position{"keywords", 0, 0, 6}},
+			{NL, "\n", position{"keywords", 1, 7, -1}},
+			{GAUGE, "gauge", position{"keywords", 1, 0, 4}},
+			{NL, "\n", position{"keywords", 2, 5, -1}},
+			{AS, "as", position{"keywords", 2, 0, 1}},
+			{NL, "\n", position{"keywords", 3, 2, -1}},
+			{BY, "by", position{"keywords", 3, 0, 1}},
+			{NL, "\n", position{"keywords", 4, 2, -1}},
+			{HIDDEN, "hidden", position{"keywords", 4, 0, 5}},
+			{NL, "\n", position{"keywords", 5, 6, -1}},
+			{DEF, "def", position{"keywords", 5, 0, 2}},
+			{NL, "\n", position{"keywords", 6, 3, -1}},
+			{NEXT, "next", position{"keywords", 6, 0, 3}},
+			{NL, "\n", position{"keywords", 7, 4, -1}},
+			{CONST, "const", position{"keywords", 7, 0, 4}},
+			{NL, "\n", position{"keywords", 8, 5, -1}},
+			{TIMER, "timer", position{"keywords", 8, 0, 4}},
+			{NL, "\n", position{"keywords", 9, 5, -1}},
+			{OTHERWISE, "otherwise", position{"keywords", 9, 0, 8}},
+			{NL, "\n", position{"keywords", 10, 9, -1}},
+			{ELSE, "else", position{"keywords", 10, 0, 3}},
+			{NL, "\n", position{"keywords", 11, 4, -1}},
+			{DEL, "del", position{"keywords", 11, 0, 2}},
+			{NL, "\n", position{"keywords", 12, 3, -1}},
+			{HISTOGRAM, "histogram", position{"keywords", 12, 0, 8}},
+			{NL, "\n", position{"keywords", 13, 9, -1}},
+			{EOF, "", position{"keywords", 13, 0, 0}}}},
 	{"builtins",
-		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\n", []token{
-			token{BUILTIN, "strptime", position{"builtins", 0, 0, 7}},
-			token{NL, "\n", position{"builtins", 1, 8, -1}},
-			token{BUILTIN, "timestamp", position{"builtins", 1, 0, 8}},
-			token{NL, "\n", position{"builtins", 2, 9, -1}},
-			token{BUILTIN, "tolower", position{"builtins", 2, 0, 6}},
-			token{NL, "\n", position{"builtins", 3, 7, -1}},
-			token{BUILTIN, "len", position{"builtins", 3, 0, 2}},
-			token{NL, "\n", position{"builtins", 4, 3, -1}},
-			token{BUILTIN, "strtol", position{"builtins", 4, 0, 5}},
-			token{NL, "\n", position{"builtins", 5, 6, -1}},
-			token{BUILTIN, "settime", position{"builtins", 5, 0, 6}},
-			token{NL, "\n", position{"builtins", 6, 7, -1}},
-			token{EOF, "", position{"builtins", 6, 0, 0}}}},
-	{"numeric", "1 23 3.14 1.61.1", []token{
-		token{INTLITERAL, "1", position{"numeric", 0, 0, 0}},
-		token{INTLITERAL, "23", position{"numeric", 0, 2, 3}},
-		token{FLOATLITERAL, "3.14", position{"numeric", 0, 5, 8}},
-		token{FLOATLITERAL, "1.61", position{"numeric", 0, 10, 13}},
-		token{INVALID, "Unexpected input: '.'", position{"numeric", 0, 14, 14}}}},
+		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\n", []token{
+			{BUILTIN, "strptime", position{"builtins", 0, 0, 7}},
+			{NL, "\n", position{"builtins", 1, 8, -1}},
+			{BUILTIN, "timestamp", position{"builtins", 1, 0, 8}},
+			{NL, "\n", position{"builtins", 2, 9, -1}},
+			{BUILTIN, "tolower", position{"builtins", 2, 0, 6}},
+			{NL, "\n", position{"builtins", 3, 7, -1}},
+			{BUILTIN, "len", position{"builtins", 3, 0, 2}},
+			{NL, "\n", position{"builtins", 4, 3, -1}},
+			{BUILTIN, "strtol", position{"builtins", 4, 0, 5}},
+			{NL, "\n", position{"builtins", 5, 6, -1}},
+			{BUILTIN, "settime", position{"builtins", 5, 0, 6}},
+			{NL, "\n", position{"builtins", 6, 7, -1}},
+			{BUILTIN, "getfilename", position{"builtins", 6, 0, 10}},
+			{NL, "\n", position{"builtins", 7, 11, -1}},
+			{BUILTIN, "int", position{"builtins", 7, 0, 2}},
+			{NL, "\n", position{"builtins", 8, 3, -1}},
+			{BUILTIN, "bool", position{"builtins", 8, 0, 3}},
+			{NL, "\n", position{"builtins", 9, 4, -1}},
+			{BUILTIN, "float", position{"builtins", 9, 0, 4}},
+			{NL, "\n", position{"builtins", 10, 5, -1}},
+			{BUILTIN, "string", position{"builtins", 10, 0, 5}},
+			{NL, "\n", position{"builtins", 11, 6, -1}},
+			{EOF, "", position{"builtins", 11, 0, 0}}}},
+	{"numbers", "1 23 3.14 1.61.1 -1 -1.0", []token{
+		{INTLITERAL, "1", position{"numbers", 0, 0, 0}},
+		{INTLITERAL, "23", position{"numbers", 0, 2, 3}},
+		{FLOATLITERAL, "3.14", position{"numbers", 0, 5, 8}},
+		{FLOATLITERAL, "1.61", position{"numbers", 0, 10, 13}},
+		{FLOATLITERAL, ".1", position{"numbers", 0, 14, 15}},
+		{INTLITERAL, "-1", position{"numbers", 0, 17, 18}},
+		{FLOATLITERAL, "-1.0", position{"numbers", 0, 20, 23}},
+		{EOF, "", position{"numbers", 0, 24, 24}},
+	}},
 	{"identifier", "a be foo\nquux line-count", []token{
-		token{ID, "a", position{"identifier", 0, 0, 0}},
-		token{ID, "be", position{"identifier", 0, 2, 3}},
-		token{ID, "foo", position{"identifier", 0, 5, 7}},
-		token{NL, "\n", position{"identifier", 1, 8, -1}},
-		token{ID, "quux", position{"identifier", 1, 0, 3}},
-		token{ID, "line-count", position{"identifier", 1, 5, 14}},
-		token{EOF, "", position{"identifier", 1, 15, 15}}}},
+		{ID, "a", position{"identifier", 0, 0, 0}},
+		{ID, "be", position{"identifier", 0, 2, 3}},
+		{ID, "foo", position{"identifier", 0, 5, 7}},
+		{NL, "\n", position{"identifier", 1, 8, -1}},
+		{ID, "quux", position{"identifier", 1, 0, 3}},
+		{ID, "line-count", position{"identifier", 1, 5, 14}},
+		{EOF, "", position{"identifier", 1, 15, 15}}}},
 	{"regex", "/asdf/", []token{
-		token{DIV, "/", position{"regex", 0, 0, 0}},
-		token{REGEX, "asdf", position{"regex", 0, 1, 4}},
-		token{DIV, "/", position{"regex", 0, 5, 5}},
-		token{EOF, "", position{"regex", 0, 6, 6}}}},
+		{DIV, "/", position{"regex", 0, 0, 0}},
+		{REGEX, "asdf", position{"regex", 0, 1, 4}},
+		{DIV, "/", position{"regex", 0, 5, 5}},
+		{EOF, "", position{"regex", 0, 6, 6}}}},
 	{"regex with escape", `/asdf\//`, []token{
-		token{DIV, "/", position{"regex with escape", 0, 0, 0}},
-		token{REGEX, `asdf/`, position{"regex with escape", 0, 1, 6}},
-		token{DIV, "/", position{"regex with escape", 0, 7, 7}},
-		token{EOF, "", position{"regex with escape", 0, 8, 8}}}},
+		{DIV, "/", position{"regex with escape", 0, 0, 0}},
+		{REGEX, `asdf/`, position{"regex with escape", 0, 1, 6}},
+		{DIV, "/", position{"regex with escape", 0, 7, 7}},
+		{EOF, "", position{"regex with escape", 0, 8, 8}}}},
 	{"regex with escape and special char", `/foo\d\//`, []token{
-		token{DIV, "/", position{"regex with escape and special char", 0, 0, 0}},
-		token{REGEX, `foo\d/`, position{"regex with escape and special char", 0, 1, 7}},
-		token{DIV, "/", position{"regex with escape and special char", 0, 8, 8}},
-		token{EOF, "", position{"regex with escape and special char", 0, 9, 9}}}},
+		{DIV, "/", position{"regex with escape and special char", 0, 0, 0}},
+		{REGEX, `foo\d/`, position{"regex with escape and special char", 0, 1, 7}},
+		{DIV, "/", position{"regex with escape and special char", 0, 8, 8}},
+		{EOF, "", position{"regex with escape and special char", 0, 9, 9}}}},
 	{"capref", "$foo $1", []token{
-		token{CAPREF_NAMED, "foo", position{"capref", 0, 0, 3}},
-		token{CAPREF, "1", position{"capref", 0, 5, 6}},
-		token{EOF, "", position{"capref", 0, 7, 7}}}},
+		{CAPREF_NAMED, "foo", position{"capref", 0, 0, 3}},
+		{CAPREF, "1", position{"capref", 0, 5, 6}},
+		{EOF, "", position{"capref", 0, 7, 7}}}},
 	{"numerical capref", "$1", []token{
-		token{CAPREF, "1", position{"numerical capref", 0, 0, 1}},
-		token{EOF, "", position{"numerical capref", 0, 2, 2}}}},
+		{CAPREF, "1", position{"numerical capref", 0, 0, 1}},
+		{EOF, "", position{"numerical capref", 0, 2, 2}}}},
 	{"capref with trailing punc", "$foo,", []token{
-		token{CAPREF, "foo", position{"capref with trailing punc", 0, 0, 3}},
-		token{COMMA, ",", position{"capref with trailing punc", 0, 4, 4}},
-		token{EOF, "", position{"capref with trailing punc", 0, 5, 5}}}},
+		{CAPREF_NAMED, "foo", position{"capref with trailing punc", 0, 0, 3}},
+		{COMMA, ",", position{"capref with trailing punc", 0, 4, 4}},
+		{EOF, "", position{"capref with trailing punc", 0, 5, 5}}}},
 	{"quoted string", `"asdf"`, []token{
-		token{STRING, `asdf`, position{"quoted string", 0, 0, 5}},
-		token{EOF, "", position{"quoted string", 0, 6, 6}}}},
+		{STRING, `asdf`, position{"quoted string", 0, 0, 5}},
+		{EOF, "", position{"quoted string", 0, 6, 6}}}},
 	{"escaped quote in quoted string", `"\""`, []token{
-		token{STRING, `"`, position{"escaped quote in quoted string", 0, 0, 3}},
-		token{EOF, "", position{"escaped quote in quoted string", 0, 4, 4}}}},
+		{STRING, `"`, position{"escaped quote in quoted string", 0, 0, 3}},
+		{EOF, "", position{"escaped quote in quoted string", 0, 4, 4}}}},
 	{"decorator", `@foo`, []token{
-		token{DECO, "foo", position{"decorator", 0, 0, 3}},
-		token{EOF, "", position{"decorator", 0, 4, 4}}}},
+		{DECO, "foo", position{"decorator", 0, 0, 3}},
+		{EOF, "", position{"decorator", 0, 4, 4}}}},
 	{"large program",
 		"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
 			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
 			"  foo++\n" +
 			"}", []token{
-			token{DIV, "/", position{"large program", 0, 0, 0}},
-			token{REGEX, "(?P<date>[[:digit:]-/ ])", position{"large program", 0, 1, 25}},
-			token{DIV, "/", position{"large program", 0, 26, 26}},
-			token{LCURLY, "{", position{"large program", 0, 28, 28}},
-			token{NL, "\n", position{"large program", 1, 29, -1}},
-			token{BUILTIN, "strptime", position{"large program", 1, 2, 9}},
-			token{LPAREN, "(", position{"large program", 1, 10, 10}},
-			token{CAPREF, "date", position{"large program", 1, 11, 15}},
-			token{COMMA, ",", position{"large program", 1, 16, 16}},
-			token{STRING, "%Y/%m/%d %H:%M:%S", position{"large program", 1, 18, 36}},
-			token{RPAREN, ")", position{"large program", 1, 37, 37}},
-			token{NL, "\n", position{"large program", 2, 38, -1}},
-			token{ID, "foo", position{"large program", 2, 2, 4}},
-			token{INC, "++", position{"large program", 2, 5, 6}},
-			token{NL, "\n", position{"large program", 3, 7, -1}},
-			token{RCURLY, "}", position{"large program", 3, 0, 0}},
-			token{EOF, "", position{"large program", 3, 1, 1}}}},
+			{DIV, "/", position{"large program", 0, 0, 0}},
+			{REGEX, "(?P<date>[[:digit:]-/ ])", position{"large program", 0, 1, 25}},
+			{DIV, "/", position{"large program", 0, 26, 26}},
+			{LCURLY, "{", position{"large program", 0, 28, 28}},
+			{NL, "\n", position{"large program", 1, 29, -1}},
+			{BUILTIN, "strptime", position{"large program", 1, 2, 9}},
+			{LPAREN, "(", position{"large program", 1, 10, 10}},
+			{CAPREF_NAMED, "date", position{"large program", 1, 11, 15}},
+			{COMMA, ",", position{"large program", 1, 16, 16}},
+			{STRING, "%Y/%m/%d %H:%M:%S", position{"large program", 1, 18, 36}},
+			{RPAREN, ")", position{"large program", 1, 37, 37}},
+			{NL, "\n", position{"large program", 2, 38, -1}},
+			{ID, "foo", position{"large program", 2, 2, 4}},
+			{INC, "++", position{"large program", 2, 5, 6}},
+			{NL, "\n", position{"large program", 3, 7, -1}},
+			{RCURLY, "}", position{"large program", 3, 0, 0}},
+			{EOF, "", position{"large program", 3, 1, 1}}}},
 	{"linecount",
 		"# comment\n" +
 			"# blank line\n" +
 			"\n" +
 			"foo", []token{
-			token{NL, "\n", position{"linecount", 3, 12, -1}},
-			token{ID, "foo", position{"linecount", 3, 0, 2}},
-			token{EOF, "", position{"linecount", 3, 3, 3}}}},
+			{NL, "\n", position{"linecount", 3, 12, -1}},
+			{ID, "foo", position{"linecount", 3, 0, 2}},
+			{EOF, "", position{"linecount", 3, 3, 3}}}},
 	// errors
 	{"unexpected char", "?", []token{
-		token{INVALID, "Unexpected input: '?'", position{"unexpected char", 0, 0, 0}}}},
+		{INVALID, "Unexpected input: '?'", position{"unexpected char", 0, 0, 0}},
+		{EOF, "", position{"unexpected char", 0, 1, 1}}}},
 	{"unterminated regex", "/foo\n", []token{
-		token{DIV, "/", position{"unterminated regex", 0, 0, 0}},
-		token{INVALID, "Unterminated regular expression: \"/foo\"", position{"unterminated regex", 0, 1, 3}}}},
+		{DIV, "/", position{"unterminated regex", 0, 0, 0}},
+		{INVALID, "Unterminated regular expression: \"/foo\"", position{"unterminated regex", 0, 1, 3}},
+		{EOF, "", position{"unterminated regex", 0, 4, 4}}}},
 	{"unterminated quoted string", "\"foo\n", []token{
-		token{INVALID, "Unterminated quoted string: \"\\\"foo\"", position{"unterminated quoted string", 0, 0, 3}}}},
+		{INVALID, "Unterminated quoted string: \"\\\"foo\"", position{"unterminated quoted string", 0, 0, 3}},
+		{EOF, "", position{"unterminated quoted string", 0, 4, 4}}}},
 }
 
 // collect gathers the emitted items into a slice.
 func collect(t *lexerTest) (tokens []token) {
 	// Hack to count divs seen for regex tests.
-	in_regex_set := false
+	inRegexSet := false
 	l := newLexer(t.name, strings.NewReader(t.input))
 	for {
-		token := l.nextToken()
+		tok := l.nextToken()
 		// Hack to simulate context signal from parser.
-		if token.kind == DIV && (strings.Contains(t.name, "regex") || strings.HasPrefix(t.name, "large program")) && !in_regex_set {
-			l.in_regex = true
-			in_regex_set = true
+		if tok.kind == DIV && (strings.Contains(t.name, "regex") || strings.HasPrefix(t.name, "large program")) && !inRegexSet {
+			l.inRegex = true
+			inRegexSet = true
 		}
-		tokens = append(tokens, token)
-		if token.kind == EOF || token.kind == INVALID {
-			break
+		tokens = append(tokens, tok)
+		if tok.kind == EOF {
+			return
 		}
 	}
-	return
 }
 
 func TestLex(t *testing.T) {
 	for _, tc := range lexerTests {
-		t.Logf("Starting %s", tc.name)
-		tokens := collect(&tc)
-		if diff := deep.Equal(tc.tokens, tokens); diff != nil {
-			t.Errorf("%s tokens didn't match:\n%s:", tc.name, diff)
-		}
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tokens := collect(&tc)
+
+			if diff := go_cmp.Diff(tc.tokens, tokens, go_cmp.AllowUnexported(token{}, position{})); diff != "" {
+				t.Errorf("-expected +received\n%s", diff)
+				t.Logf("received: %v", tokens)
+			}
+		})
 	}
 }

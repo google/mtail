@@ -9,6 +9,8 @@ import (
 	"io"
 	"sort"
 	"unicode"
+
+	"github.com/golang/glog"
 )
 
 // Lexeme enumerates the types of lexical tokens in a mtail program.
@@ -16,53 +18,62 @@ type lexeme int
 
 // Printable names for lexemes.
 var lexemeName = map[lexeme]string{
-	EOF:        "EOF",
-	INVALID:    "INVALID",
-	LCURLY:     "LCURLY",
-	RCURLY:     "RCURLY",
-	LPAREN:     "LPAREN",
-	RPAREN:     "RPAREN",
-	LSQUARE:    "LSQUARE",
-	RSQUARE:    "RSQUARE",
-	COMMA:      "COMMA",
-	INC:        "INC",
-	MINUS:      "MINUS",
-	PLUS:       "PLUS",
-	MUL:        "MUL",
-	DIV:        "DIV",
-	POW:        "POW",
-	SHL:        "SHL",
-	SHR:        "SHR",
-	AND:        "AND",
-	OR:         "OR",
-	ADD_ASSIGN: "ADD_ASSIGN",
-	ASSIGN:     "ASSIGN",
-	LT:         "LT",
-	GT:         "GT",
-	LE:         "LE",
-	GE:         "GE",
-	EQ:         "EQ",
-	NE:         "NE",
-	REGEX:      "REGEX",
-	ID:         "ID",
-	CAPREF:     "CAPREF",
-	STRING:     "STRING",
-	BUILTIN:    "BUILTIN",
-	COUNTER:    "COUNTER",
-	GAUGE:      "GAUGE",
-	TIMER:      "TIMER",
-	HISTOGRAM:  "HISTOGRAM",
-	AS:         "AS",
-	BY:         "BY",
-	HIDDEN:     "HIDDEN",
-	DEF:        "DEF",
-	DECO:       "DECO",
-	NEXT:       "NEXT",
-	CONST:      "CONST",
-	OTHERWISE:  "OTHERWISE",
-	ELSE:       "ELSE",
-	DEL:        "DEL",
-	WITH:       "WITH",
+	EOF:          "EOF",
+	INVALID:      "INVALID",
+	LCURLY:       "LCURLY",
+	RCURLY:       "RCURLY",
+	LPAREN:       "LPAREN",
+	RPAREN:       "RPAREN",
+	LSQUARE:      "LSQUARE",
+	RSQUARE:      "RSQUARE",
+	COMMA:        "COMMA",
+	INC:          "INC",
+	MINUS:        "MINUS",
+	PLUS:         "PLUS",
+	MUL:          "MUL",
+	DIV:          "DIV",
+	MOD:          "MOD",
+	POW:          "POW",
+	SHL:          "SHL",
+	SHR:          "SHR",
+	BITAND:       "BITAND",
+	BITOR:        "BITOR",
+	AND:          "AND",
+	OR:           "OR",
+	ADD_ASSIGN:   "ADD_ASSIGN",
+	ASSIGN:       "ASSIGN",
+	LT:           "LT",
+	GT:           "GT",
+	LE:           "LE",
+	GE:           "GE",
+	EQ:           "EQ",
+	NE:           "NE",
+	REGEX:        "REGEX",
+	ID:           "ID",
+	CAPREF:       "CAPREF",
+	CAPREF_NAMED: "CAPREF_NAMED",
+	STRING:       "STRING",
+	BUILTIN:      "BUILTIN",
+	COUNTER:      "COUNTER",
+	GAUGE:        "GAUGE",
+	TIMER:        "TIMER",
+	AS:           "AS",
+	BY:           "BY",
+	HIDDEN:       "HIDDEN",
+	DEF:          "DEF",
+	DECO:         "DECO",
+	NEXT:         "NEXT",
+	CONST:        "CONST",
+	OTHERWISE:    "OTHERWISE",
+	ELSE:         "ELSE",
+	DEL:          "DEL",
+	INTLITERAL:   "INTLITERAL",
+	FLOATLITERAL: "FLOATLITERAL",
+	NL:           "NL",
+	CONCAT:       "CONCAT",
+	MATCH:        "MATCH",
+	NOT_MATCH:    "NOT_MATCH",
+	HISTOGRAM:    "HISTOGRAM",
 }
 
 func (t lexeme) String() string {
@@ -92,8 +103,13 @@ var keywords = map[string]lexeme{
 
 // List of builtin functions.  Keep this list sorted!
 var builtins = []string{
+	"bool",
+	"float",
+	"getfilename",
+	"int",
 	"len",
 	"settime",
+	"string",
 	"strptime",
 	"strtol",
 	"timestamp",
@@ -127,7 +143,7 @@ type lexer struct {
 	line  int  // The line position of the current rune.
 	col   int  // The column position of the current rune.
 
-	in_regex bool // Context aware flag from parser to say we're in a regex
+	inRegex bool // Context aware flag from parser to say we're in a regex
 
 	// The currently being lexed token.
 	startcol int    // Starting column of the current token.
@@ -152,8 +168,8 @@ func newLexer(name string, input io.Reader) *lexer {
 func (l *lexer) nextToken() token {
 	for {
 		select {
-		case token := <-l.tokens:
-			return token
+		case tok := <-l.tokens:
+			return tok
 		default:
 			l.state = l.state(l)
 		}
@@ -163,6 +179,7 @@ func (l *lexer) nextToken() token {
 // emit passes a token to the client.
 func (l *lexer) emit(kind lexeme) {
 	pos := position{l.name, l.line, l.startcol, l.col - 1}
+	glog.V(2).Infof("Emitting %v at %v", kind, pos)
 	l.tokens <- token{kind, l.text, pos}
 	// Reset the current token
 	l.text = ""
@@ -221,21 +238,23 @@ func (l *lexer) ignore() {
 	l.startcol = l.col
 }
 
-// errorf returns an error token and terminates the scanner by passing back a
-// nil state function to the state machine.
+// errorf returns an error token and resets the scanner
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 	pos := position{l.name, l.line, l.startcol, l.col - 1}
 	l.tokens <- token{kind: INVALID,
 		text: fmt.Sprintf(format, args...),
 		pos:  pos}
-	return nil
+	// Reset the current token
+	l.text = ""
+	l.startcol = l.col
+	return lexProg
 }
 
 // State functions.
 
-// Start lexing a program.
+// lexProg starts lexing a program.
 func lexProg(l *lexer) stateFn {
-	if l.in_regex {
+	if l.inRegex {
 		return lexRegex
 	}
 	switch r := l.next(); {
@@ -269,7 +288,14 @@ func lexProg(l *lexer) stateFn {
 		l.emit(COMMA)
 	case r == '-':
 		l.accept()
-		l.emit(MINUS)
+		switch r = l.next(); {
+		case isDigit(r):
+			l.backup()
+			return lexNumeric
+		default:
+			l.backup()
+			l.emit(MINUS)
+		}
 	case r == '+':
 		l.accept()
 		switch l.next() {
@@ -299,6 +325,9 @@ func lexProg(l *lexer) stateFn {
 		case '=':
 			l.accept()
 			l.emit(EQ)
+		case '~':
+			l.accept()
+			l.emit(MATCH)
 		default:
 			l.backup()
 			l.emit(ASSIGN)
@@ -335,6 +364,9 @@ func lexProg(l *lexer) stateFn {
 		case '=':
 			l.accept()
 			l.emit(NE)
+		case '~':
+			l.accept()
+			l.emit(NOT_MATCH)
 		default:
 			l.backup()
 			return l.errorf("Unexpected input: %q", r)
@@ -347,10 +379,24 @@ func lexProg(l *lexer) stateFn {
 		l.emit(MOD)
 	case r == '&':
 		l.accept()
-		l.emit(AND)
+		switch l.next() {
+		case '&':
+			l.accept()
+			l.emit(AND)
+		default:
+			l.backup()
+			l.emit(BITAND)
+		}
 	case r == '|':
 		l.accept()
-		l.emit(OR)
+		switch l.next() {
+		case '|':
+			l.accept()
+			l.emit(OR)
+		default:
+			l.backup()
+			l.emit(BITOR)
+		}
 	case r == '^':
 		l.accept()
 		l.emit(XOR)
@@ -364,6 +410,7 @@ func lexProg(l *lexer) stateFn {
 	case r == '@':
 		return lexDecorator
 	case isDigit(r):
+		l.backup()
 		return lexNumeric
 	case isAlpha(r):
 		return lexIdentifier
@@ -372,6 +419,9 @@ func lexProg(l *lexer) stateFn {
 		l.emit(EOF)
 		// Stop the machine, we're done.
 		return nil
+	case r == '.':
+		l.backup()
+		return lexNumeric
 	default:
 		l.accept()
 		return l.errorf("Unexpected input: %q", r)
@@ -400,7 +450,6 @@ Loop:
 // Lex a numerical constant.
 func lexNumeric(l *lexer) stateFn {
 	kind := INTLITERAL
-	l.accept()
 Loop:
 	for {
 		switch r := l.next(); {
@@ -452,7 +501,7 @@ Loop:
 }
 
 // Lex a capture group reference. These are local variable references to
-// capture groups in the preceeding regular expression.
+// capture groups in the preceding regular expression.
 func lexCapref(l *lexer) stateFn {
 	l.skip() // Skip the leading $
 	named := false
@@ -501,11 +550,15 @@ Loop:
 
 }
 
-// Lex a regular expression. The text of the regular expression does not
-// include the '/' quotes.
+// Lex a regular expression pattern. The text of the regular expression does
+// not include the '/' quotes.
 func lexRegex(l *lexer) stateFn {
 	// Exit regex mode when leaving this function.
-	defer func() { l.in_regex = false }()
+	defer func() {
+		glog.V(2).Info("Exiting regex")
+		glog.V(2).Infof("Regex at line %d, startcol %d, col %d", l.line, l.startcol, l.col)
+		l.inRegex = false
+	}()
 Loop:
 	for {
 		switch l.next() {

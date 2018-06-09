@@ -52,7 +52,10 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 			lc := make(chan *metrics.LabelSet)
 			go m.EmitLabelSets(lc)
 			for l := range lc {
-				line := metricToPrometheus(e.hostname, m, l)
+				if m.Source != "" {
+					fmt.Fprintf(w, "# %s defined at %s\n", noHyphens(m.Name), m.Source)
+				}
+				line := metricToPrometheus(m, l, e.omitProgLabel)
 				fmt.Fprint(w, line)
 			}
 			m.RUnlock()
@@ -64,16 +67,16 @@ func prometheusMetricLine(name, value string, labels ...string) string {
 	return fmt.Sprintf(prometheusFormat, noHyphens(name), strings.Join(labels, ","), value)
 }
 
-func metricToPrometheus(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToPrometheus(m *metrics.Metric, l *metrics.LabelSet, omitProgLabel bool) string {
 	var s []string
 	for k, v := range l.Labels {
 		// Prometheus quotes the value of each label=value pair.
 		s = append(s, fmt.Sprintf("%s=%q", k, v))
 	}
 	sort.Strings(s)
-	s = append(s, fmt.Sprintf("prog=\"%s\"", m.Program))
-	s = append(s, fmt.Sprintf("instance=\"%s\"", hostname))
-
+	if !omitProgLabel {
+		s = append(s, fmt.Sprintf("prog=\"%s\"", m.Program))
+	}
 	switch m.Kind {
 	case metrics.Histogram:
 		lines := []string{}

@@ -21,6 +21,7 @@ func (p position) String() string {
 	return r
 }
 
+// MergePosition returns the union of two positions such that the result contains both inputs.
 func MergePosition(a, b *position) *position {
 	if a == nil {
 		return b
@@ -53,9 +54,8 @@ func mergepositionlist(l []astNode) *position {
 	if len(l) == 1 {
 		if l[0] != nil {
 			return l[0].Pos()
-		} else {
-			return nil
 		}
+		return nil
 	}
 	return MergePosition(l[0].Pos(), mergepositionlist(l[1:]))
 }
