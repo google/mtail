@@ -185,7 +185,7 @@ func (c *checker) VisitAfter(node astNode) {
 		c.scope = n.s.Parent
 
 	case *decoNode:
-		c.checkSymbolUsage()
+		// Don't check symbol usage here because the decorator is only partially defined.
 		c.scope = n.scope.Parent
 
 	case *nextNode:
