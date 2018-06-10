@@ -140,6 +140,13 @@ func (t *Tailer) hasHandle(pathname string) bool {
 	return ok
 }
 
+// AddPattern adds a pattern to the list of patterns to filter filenames against.
+func (t *Tailer) AddPattern(pattern string) {
+	t.globPatternsMu.Lock()
+	t.globPatterns[pattern] = struct{}{}
+	t.globPatternsMu.Unlock()
+}
+
 // TailPattern registers a pattern to be tailed.  If pattern is a plain
 // file then it is watched for updates and opened.  If pattern is a glob, then
 // all paths that match the glob are opened and watched, and the directories
@@ -149,9 +156,7 @@ func (t *Tailer) TailPattern(pattern string) error {
 	if err != nil {
 		return err
 	}
-	t.globPatternsMu.Lock()
-	t.globPatterns[pattern] = struct{}{}
-	t.globPatternsMu.Unlock()
+	t.AddPattern(pattern)
 	glog.V(1).Infof("glob matches: %v", matches)
 	// TODO(jaq): Error if there are no matches, or do we just assume that it's OK?
 	// mtail_test.go assumes that it's ok.  Figure out why.
@@ -191,11 +196,12 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	glog.V(2).Infof("handleLogUpdate %s", pathname)
 	fd, ok := t.handleForPath(pathname)
 	if !ok {
-		glog.Warningf("No file handle found for %q, but is being watched; opening", pathname)
-		// Try to open it, and because we have a watch set seenBefore.
-		if err := t.openLogPath(pathname, false, true); err != nil {
-			glog.Warning(err)
-		}
+		glog.Warningf("No file handle found for %q, but is being watched", pathname)
+		// We want to open files we have watches on in case the file was
+		// unreadable before now; but we have to copmare against the glob to be
+		// sure we don't just add all the files in a watched directory as they
+		// get modified.
+		t.handleCreateGlob(pathname)
 		return
 	}
 	absPath, err := filepath.Abs(pathname)
@@ -478,19 +484,21 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 			glog.Warningf("Unexpected bad pattern %q not detected earlier", pattern)
 			continue
 		}
-		if matched {
-			glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
-			// TODO(jaq): avoid code duplication with TailPath here.
-			// If this file was just created, read from the start.
-			if err := t.w.Add(pathname, t.eventsHandle); err != nil {
-				glog.Infof("Failed to tail new file %q: %s", pathname, err)
-				continue
-			}
-			logCount.Add(1)
-			// Pretend seenBefore because we want to seek to start.
-			if err := t.openLogPath(pathname, false, true); err != nil {
-				glog.Infof("Failed to tail new file %q: %s", pathname, err)
-			}
+		if !matched {
+			glog.V(2).Infof("No match for %q", pathname)
+			continue
+		}
+		glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
+		// TODO(jaq): avoid code duplication with TailPath here.
+		// If this file was just created, read from the start.
+		if err := t.w.Add(pathname, t.eventsHandle); err != nil {
+			glog.Infof("Failed to tail new file %q: %s", pathname, err)
+			continue
+		}
+		logCount.Add(1)
+		// Pretend seenBefore because we want to seek to start.
+		if err := t.openLogPath(pathname, false, true); err != nil {
+			glog.Infof("Failed to tail new file %q: %s", pathname, err)
 		}
 	}
 }

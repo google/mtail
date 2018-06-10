@@ -349,6 +349,7 @@ func TestOpenRetries(t *testing.T) {
 		}
 		close(done)
 	}()
+	ta.AddPattern(logfile)
 
 	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)

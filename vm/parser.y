@@ -402,7 +402,7 @@ indexed_expr
 id_expr
   : ID
   {
-    $$ = &idNode{tokenpos(mtaillex), $1, nil}
+    $$ = &idNode{tokenpos(mtaillex), $1, nil, false}
   }
   ;
 
@@ -533,7 +533,7 @@ definition
 decoration_statement
   : mark_pos DECO compound_statement
   {
-    $$ = &decoNode{markedpos(mtaillex), $2, $3, nil}
+    $$ = &decoNode{markedpos(mtaillex), $2, $3, nil, nil}
   }
   ;
 
