@@ -286,6 +286,19 @@ const X /foo/
   $foo =~ $bar {
   }
 }`},
+	{"decorator scopes", `
+counter a
+def decorator {
+  /(.).*/ {
+    next
+  }
+}
+@decorator {
+  $1 == "A" {
+    a++
+  }
+}
+`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

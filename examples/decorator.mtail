@@ -17,7 +17,7 @@ def decoratorb {
   }
 }
 
-# This tests that the variables
+# This tests that the variables in the decorator are visible to the decoratedo block.
 @decoratora {
   $1 == "Dec" {
     a++

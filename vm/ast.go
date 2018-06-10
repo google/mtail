@@ -306,6 +306,7 @@ type decoDefNode struct {
 	name  string
 	block astNode
 	sym   *Symbol
+	scope *Scope
 }
 
 func (n *decoDefNode) Pos() *position {
@@ -324,6 +325,7 @@ type decoNode struct {
 	name  string
 	block astNode
 	def   *decoDefNode
+	scope *Scope
 }
 
 func (n *decoNode) Pos() *position {
