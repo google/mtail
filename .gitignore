@@ -23,3 +23,4 @@ foo.log
 /mem.out
 /build
 /.crossbuild-dep-stamp
+/.ghi.yml
