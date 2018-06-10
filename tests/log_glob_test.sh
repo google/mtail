@@ -1,4 +1,4 @@
-#!/bin/bash -x 
+#!/bin/bash
 
 source $(dirname $0)/functions.sh
 
@@ -8,7 +8,7 @@ mkdir -p $LOGS $PROGS
 
 touch $LOGS/log
 
-start_server  --logs $LOGS/log --progs $PROGS --logtostderr --vmodule=log_watcher=2
+start_server  --logs $LOGS/log --progs $PROGS
 
 echo "line 1" >> $LOGS/log
 sleep 1
