@@ -118,6 +118,14 @@ const ID /bar/
 `,
 		[]string{"unused symbols:1:9-11: Declaration of variable `foo' is never used",
 			"unused symbols:2:7-8: Declaration of named pattern constant `ID' is never used"}},
+	{"invalid del index count",
+		`gauge t by x, y
+/.*/ {
+  del t["x"]
+  t["x"]["y"]
+}
+`,
+		[]string{"invalid del index count:3:7-11: Not enough keys for indexed expression: expecting 2, received 1"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

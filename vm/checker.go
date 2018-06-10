@@ -285,6 +285,12 @@ func (c *checker) VisitAfter(node astNode) {
 				n.SetType(Error)
 				return
 			}
+			switch v := n.lhs.(type) {
+			case *idNode:
+				v.lvalue = true
+			case *indexedExprNode:
+				v.lhs.(*idNode).lvalue = true
+			}
 
 		case CONCAT:
 			rType = Pattern
@@ -341,6 +347,13 @@ func (c *checker) VisitAfter(node astNode) {
 				return
 			}
 			n.SetType(rType)
+			switch v := n.expr.(type) {
+			case *idNode:
+				v.lvalue = true
+			case *indexedExprNode:
+				v.lhs.(*idNode).lvalue = true
+			}
+
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary expr %v", n))
 			n.SetType(Error)
@@ -488,6 +501,8 @@ func (c *checker) VisitAfter(node astNode) {
 		}
 		n.pattern = pe.pattern
 
+	case *delNode:
+		n.n.(*indexedExprNode).lhs.(*idNode).lvalue = true
 	}
 }
 

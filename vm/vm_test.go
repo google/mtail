@@ -10,6 +10,7 @@ import (
 
 	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/metrics/datum"
 	"github.com/google/mtail/tailer"
 )
 
@@ -677,5 +678,57 @@ func TestStrptimeWithoutTimezone(t *testing.T) {
 	vm.execute(vm.t, obj.prog[0])
 	if vm.t.time != time.Date(2012, 01, 18, 06, 25, 00, 00, time.UTC) {
 		t.Errorf("Time didn't parse with location: %s received", vm.t.time)
+	}
+}
+
+// Instructions with datum retrieve
+func TestDatumFetchInstrs(t *testing.T) {
+	var m []*metrics.Metric
+	m = append(m,
+		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int),
+		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float))
+
+	{
+		// iget
+		v := makeVM(instr{iget, nil}, m)
+		d, err := m[0].GetDatum()
+		if err != nil {
+			t.Fatal(err)
+		}
+		datum.SetInt(d, 37, time.Now())
+		v.t.Push(d)
+		v.execute(v.t, v.prog[0])
+		if v.terminate {
+			t.Fatalf("Execution failed, see info log.")
+		}
+		i, err := v.t.PopInt()
+		if err != nil {
+			t.Fatalf("Execution failed, see info")
+		}
+		if i != 37 {
+			t.Errorf("unexpected value %d", i)
+		}
+	}
+
+	{
+		// fget
+		v := makeVM(instr{fget, nil}, m)
+		d, err := m[1].GetDatum()
+		if err != nil {
+			t.Fatal(err)
+		}
+		datum.SetFloat(d, 12.1, time.Now())
+		v.t.Push(d)
+		v.execute(v.t, v.prog[0])
+		if v.terminate {
+			t.Fatalf("Execution failed, see info log.")
+		}
+		i, err := v.t.PopFloat()
+		if err != nil {
+			t.Fatalf("Execution failed, see info")
+		}
+		if i != 12.1 {
+			t.Errorf("unexpected value %f", i)
+		}
 	}
 }

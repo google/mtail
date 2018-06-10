@@ -66,9 +66,11 @@ func (n *condNode) Type() Type {
 }
 
 type idNode struct {
-	pos  position
-	name string
-	sym  *Symbol
+	pos    position
+	name   string
+	sym    *Symbol
+	lvalue bool // If set, then this node appears on the left side of an
+	// assignment and needs to have its address taken only.
 }
 
 func (n *idNode) Pos() *position {

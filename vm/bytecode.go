@@ -40,6 +40,8 @@ const (
 	shr                      // Shift TOS right, push result
 	mload                    // Load metric at operand onto top of stack
 	dload                    // Pop `operand` keys and metric off stack, and push datum at metric[key,...] onto stack.
+	iget                     // Pop a datum off the stack, and push its integer value back on the stack.
+	fget                     // Pop a datum off the stack, and push its float value back on the stack.
 	tolower                  // Convert the string at the top of the stack to lowercase.
 	length                   // Compute the length of a string.
 	cat                      // string concatenation
@@ -101,6 +103,8 @@ var opNames = map[opcode]string{
 	neg:         "neg",
 	mload:       "mload",
 	dload:       "dload",
+	iget:        "iget",
+	fget:        "fget",
 	tolower:     "tolower",
 	length:      "length",
 	cat:         "cat",
