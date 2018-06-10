@@ -109,6 +109,11 @@ var exampleProgramTests = []struct {
 		"testdata/metric-as-rvalue.log",
 		"testdata/metric-as-rvalue.golden",
 	},
+	{
+		"examples/decorator.mtail",
+		"testdata/decorator.log",
+		"testdata/decorator.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
