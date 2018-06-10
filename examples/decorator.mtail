@@ -1,0 +1,37 @@
+counter a
+counter b
+counter c
+
+# To make ex_test.go happy
+strptime("2018-06-10T00:32:42Z", "2006-01-02T15:04:05Z07:00")
+
+def decoratora {
+  /(...).*/ {
+    next
+  }
+}
+
+def decoratorb {
+  /(?P<x>...).*/ {
+    next
+  }
+}
+
+# This tests that the variables in the decorator are visible to the decoratedo block.
+@decoratora {
+  $1 == "Dec" {
+    a++
+  }
+}
+
+@decoratorb {
+  $x == "Dec" {
+    b++
+  }
+}
+
+/(...).*/ {
+  $1 == "Dec" {
+     c++
+  }
+}

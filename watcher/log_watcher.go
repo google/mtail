@@ -53,7 +53,7 @@ func NewLogWatcher() (*LogWatcher, error) {
 func (w *LogWatcher) Events() (int, <-chan Event) {
 	w.eventsMu.Lock()
 	handle := len(w.events)
-	ch := make(chan Event, 0)
+	ch := make(chan Event)
 	w.events = append(w.events, ch)
 	w.eventsMu.Unlock()
 	return handle, ch

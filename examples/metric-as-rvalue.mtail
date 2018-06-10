@@ -1,0 +1,15 @@
+gauge response_time
+counter hit
+counter miss
+
+# To make ex_test.go happy
+strptime("2016-04-25T20:14:42Z", "2006-01-02T15:04:05Z07:00")
+
+/seconds = (?P<response_seconds>\d+)/ {
+    response_time = $response_seconds * 1000
+    response_time < 100000 {
+        hit++
+    } else {
+        miss++
+    }
+}

@@ -557,6 +557,18 @@ func (v *VM) execute(t *thread, i instr) {
 		//fmt.Printf("Found %v\n", d)
 		t.Push(d)
 
+	case iget, fget:
+		d, ok := t.Pop().(datum.Datum)
+		if !ok {
+			v.errorf("Unexpected value on stack: %q", d)
+		}
+		switch i.op {
+		case iget:
+			t.Push(datum.GetInt(d))
+		case fget:
+			t.Push(datum.GetFloat(d))
+		}
+
 	case del:
 		m := t.Pop().(*metrics.Metric)
 		index := i.opnd.(int)
