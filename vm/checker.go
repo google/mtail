@@ -290,7 +290,6 @@ func (c *checker) VisitAfter(node astNode) {
 				v.lvalue = true
 			case *indexedExprNode:
 				v.lhs.(*idNode).lvalue = true
-				glog.Infof("set lvalue true on %#v", v.lhs)
 			}
 
 		case CONCAT:
