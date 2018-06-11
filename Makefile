@@ -155,6 +155,15 @@ endif
 upload_to_coveralls: gover.coverprofile
 	goveralls -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE)
 
+## make u a container
+.PHONY: container
+container: Dockerfile
+	docker build -t mtail \
+		--build-arg version=${version} \
+	    --build-arg commit_hash=${revision} \
+	    --build-arg build_date=$(shell date -Iseconds --utc) \
+	    .
+
 # Append the bin subdirs of every element of the GOPATH list to PATH, so we can find goyacc.
 empty :=
 space := $(empty) $(empty)
