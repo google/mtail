@@ -39,6 +39,8 @@ const (
 	Int = datum.Int
 	// Float indicates this metric is a floating-point metric type.
 	Float = datum.Float
+	// String indicates this metric contains string values
+	String = datum.String
 )
 
 func (m Kind) String() string {
@@ -126,6 +128,8 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 			d = datum.NewInt()
 		case datum.Float:
 			d = datum.NewFloat()
+		case datum.String:
+			d = datum.NewString()
 		}
 		m.LabelValues = append(m.LabelValues, &LabelValue{labelvalues, d})
 	}

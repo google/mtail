@@ -17,6 +17,8 @@ const (
 	Int Type = iota
 	// Float describes a floating point datum
 	Float
+	// String describes printable strings of text
+	String
 )
 
 func (t Type) String() string {
@@ -25,6 +27,8 @@ func (t Type) String() string {
 		return "Int"
 	case Float:
 		return "Float"
+	case String:
+		return "String"
 	}
 	return "?"
 }
@@ -71,6 +75,11 @@ func NewFloat() Datum {
 	return MakeFloat(0., zeroTime)
 }
 
+// NewString creates a new zero string datum.
+func NewString() Datum {
+	return MakeString("", zeroTime)
+}
+
 // MakeInt creates a new integer datum with the provided value and timestamp.
 func MakeInt(v int64, ts time.Time) Datum {
 	d := &IntDatum{}
@@ -81,6 +90,13 @@ func MakeInt(v int64, ts time.Time) Datum {
 // MakeFloat creates a new floating-point datum with the provided value and timestamp.
 func MakeFloat(v float64, ts time.Time) Datum {
 	d := &FloatDatum{}
+	d.Set(v, ts)
+	return d
+}
+
+// MakeString creates a new string datum with the provided value and timestamp
+func MakeString(v string, ts time.Time) Datum {
+	d := &StringDatum{}
 	d.Set(v, ts)
 	return d
 }
@@ -105,6 +121,16 @@ func GetFloat(d Datum) float64 {
 	}
 }
 
+// GetString returns the string of a datum, or error.
+func GetString(d Datum) string {
+	switch d := d.(type) {
+	case *StringDatum:
+		return d.Get()
+	default:
+		panic(fmt.Sprintf("datum %v is not a String", d))
+	}
+}
+
 // SetInt sets an integer datum to the provided value and timestamp, or panics if the Datum is not an IntDatum.
 func SetInt(d Datum, v int64, ts time.Time) {
 	switch d := d.(type) {
@@ -122,6 +148,16 @@ func SetFloat(d Datum, v float64, ts time.Time) {
 		d.Set(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not a Float", d))
+	}
+}
+
+// SetString sets a string Datum to the provided value and timestamp, or panics if the Datym is not a String Datum
+func SetString(d Datum, v string, ts time.Time) {
+	switch d := d.(type) {
+	case *StringDatum:
+		d.Set(v, ts)
+	default:
+		panic(fmt.Sprintf("datum %v is not a String", d))
 	}
 }
 

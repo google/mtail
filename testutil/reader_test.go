@@ -98,6 +98,21 @@ var expectedMetrics = map[string][]*metrics.Metric{
 			},
 		},
 	},
+	"stringy": {
+		&metrics.Metric{
+			Name:    "stringy",
+			Program: "reader_test",
+			Kind:    metrics.Gauge,
+			Type:    datum.String,
+			Keys:    []string{},
+			LabelValues: []*metrics.LabelValue{
+				{
+					Labels: []string{},
+					Value:  datum.MakeString("hi", time.Date(2018, 6, 16, 18, 04, 0, 0, time.UTC)),
+				},
+			},
+		},
+	},
 }
 
 func TestReadTestData(t *testing.T) {
@@ -108,7 +123,7 @@ func TestReadTestData(t *testing.T) {
 	defer f.Close()
 	store := metrics.NewStore()
 	ReadTestData(f, "reader_test", store)
-	diff := cmp.Diff(expectedMetrics, store.Metrics, cmpopts.IgnoreUnexported(sync.RWMutex{}))
+	diff := cmp.Diff(expectedMetrics, store.Metrics, cmpopts.IgnoreUnexported(sync.RWMutex{}, datum.StringDatum{}))
 	if diff != "" {
 		t.Error(diff)
 		t.Logf("store contains %s", store.Metrics)
