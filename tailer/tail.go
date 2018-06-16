@@ -196,7 +196,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	glog.V(2).Infof("handleLogUpdate %s", pathname)
 	fd, ok := t.handleForPath(pathname)
 	if !ok {
-		glog.Warningf("No file handle found for %q, but is being watched", pathname)
+		glog.V(1).Infof("No file handle found for %q, but is being watched", pathname)
 		// We want to open files we have watches on in case the file was
 		// unreadable before now; but we have to copmare against the glob to be
 		// sure we don't just add all the files in a watched directory as they
@@ -500,6 +500,7 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 		if err := t.openLogPath(pathname, false, true); err != nil {
 			glog.Infof("Failed to tail new file %q: %s", pathname, err)
 		}
+		glog.V(2).Infof("Started tailing %q", pathname)
 	}
 }
 
@@ -537,9 +538,18 @@ func (t *Tailer) Close() error {
 
 const tailerTemplate = `
 <h2 id="tailer">Log Tailer</h2>
-{{range $name, $val := $.Handles}}
-<p><b>{{$name}}</b></p>
+<h3>Patterns</h3>
+<ul>
+{{range $name, $val := $.Patterns}}
+<li><pre>{{$name}}</pre></li>
 {{end}}
+</ul>
+<h3>Log files watched</h3>
+<ul>
+{{range $name, $val := $.Handles}}
+<li><pre>{{$name}}</pre></li>
+{{end}}
+</ul>
 `
 
 // WriteStatusHTML emits the Tailer's state in HTML format to the io.Writer w.
@@ -550,10 +560,14 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	}
 	t.handlesMu.RLock()
 	defer t.handlesMu.RUnlock()
+	t.globPatternsMu.RLock()
+	defer t.globPatternsMu.RUnlock()
 	data := struct {
-		Handles map[string]afero.File
+		Handles  map[string]afero.File
+		Patterns map[string]struct{}
 	}{
 		t.handles,
+		t.globPatterns,
 	}
 	return tpl.Execute(w, data)
 }

@@ -35,7 +35,8 @@ release := $(shell git describe --tags | cut -d"-" -f 1,2)
 
 GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 
-install mtail: $(GOFILES) .dep-stamp
+.PHONY: install mtail
+install mtail: $(GOFILES)
 	go install -ldflags $(GO_LDFLAGS)
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
