@@ -38,16 +38,12 @@ func (d *StringDatum) Get() string {
 
 // String returns a string representation of the StringDatum.
 func (d *StringDatum) String() string {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return fmt.Sprintf("%q@%d", d.Value, atomic.LoadInt64(&d.Time))
+	return fmt.Sprintf("%q@%d", d.Get(), atomic.LoadInt64(&d.Time))
 }
 
 // ValueString returns the value of the StringDatum as a string.
 func (d *StringDatum) ValueString() string {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return d.Value
+	return d.Get()
 }
 
 // MarshalJSON returns a JSON encoding of the StringDatum.
