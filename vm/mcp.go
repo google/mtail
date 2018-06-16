@@ -122,15 +122,28 @@ func (l *MasterControl) LoadProgram(programPath string) error {
 
 const loaderTemplate = `
 <h2 id="loader">Program Loader</h2>
+<table border=1>
+<tr>
+<th>program name</th>
+<th>errors</th>
+<th>load errors</th>
+<th>load successes</th>
+</tr>
+<tr>
 {{range $name, $errors := $.Errors}}
-<p><b>{{$name}}</b></p>
+<td>{{$name}}</td>
+<td>
 {{if $errors}}
-<pre>{{$errors}}</pre>
+{{$errors}}
 {{else}}
-<p>No compile errors</p>
+No compile errors
 {{end}}
-<p>Total load errors {{index $.Loaderrors $name}}; successes: {{index $.Loadsuccess $name}}</p>
+</td>
+<td>{{index $.Loaderrors $name}}</td>
+<td>{{index $.Loadsuccess $name}}</td>
+</tr>
 {{end}}
+</table>
 `
 
 // WriteStatusHTML writes the current state of the loader as HTML to the given writer w.

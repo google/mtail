@@ -39,6 +39,8 @@ var (
 	logRotations = expvar.NewMap("log_rotations_total")
 	// lineCount counts the numbre of lines read per log file
 	lineCount = expvar.NewMap("log_lines_total")
+
+	// TODO: count truncations
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
@@ -545,10 +547,22 @@ const tailerTemplate = `
 {{end}}
 </ul>
 <h3>Log files watched</h3>
-<ul>
+<table border=1>
+<tr>
+<th>pathname</th>
+<th>errors</th>
+<th>rotations</th>
+<th>lines read</th>
+</tr>
 {{range $name, $val := $.Handles}}
-<li><pre>{{$name}}</pre></li>
+<tr>
+<td><pre>{{$name}}</pre></td>
+<td>{{index $.Errors $name}}</td>
+<td>{{index $.Rotations $name}}</td>
+<td>{{index $.Lines $name}}</td>
+</tr>
 {{end}}
+</table>
 </ul>
 `
 
@@ -563,11 +577,28 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	t.globPatternsMu.RLock()
 	defer t.globPatternsMu.RUnlock()
 	data := struct {
-		Handles  map[string]afero.File
-		Patterns map[string]struct{}
+		Handles   map[string]afero.File
+		Patterns  map[string]struct{}
+		Rotations map[string]string
+		Lines     map[string]string
+		Errors    map[string]string
 	}{
 		t.handles,
 		t.globPatterns,
+		make(map[string]string),
+		make(map[string]string),
+		make(map[string]string),
+	}
+	for name := range t.handles {
+		if logErrors.Get(name) != nil {
+			data.Errors[name] = logErrors.Get(name).String()
+		}
+		if logRotations.Get(name) != nil {
+			data.Rotations[name] = logRotations.Get(name).String()
+		}
+		if lineCount.Get(name) != nil {
+			data.Lines[name] = lineCount.Get(name).String()
+		}
 	}
 	return tpl.Execute(w, data)
 }
