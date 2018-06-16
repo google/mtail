@@ -114,6 +114,11 @@ var exampleProgramTests = []struct {
 		"testdata/decorator.log",
 		"testdata/decorator.golden",
 	},
+	{
+		"examples/stringy.mtail",
+		"testdata/stringy.log",
+		"testdata/stringy.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
