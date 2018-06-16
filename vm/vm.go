@@ -413,6 +413,18 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("Unexpected type to fset: %T %q", n, n)
 		}
 
+	case sset:
+		// Set a string datum
+		value, ok := t.Pop().(string)
+		if !ok {
+			v.errorf("Value on stack was not a string: %T %q", value, value)
+		}
+		if n, ok := t.Pop().(datum.Datum); ok {
+			datum.SetString(n, value, t.time)
+		} else {
+			v.errorf("Unexpected type to sset: %T %q", n, n)
+		}
+
 	case strptime:
 		// Parse a time string into the time register
 		layout := t.Pop().(string)

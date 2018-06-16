@@ -518,7 +518,9 @@ func TestDatumSetInstrs(t *testing.T) {
 	var m []*metrics.Metric
 	m = append(m,
 		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int),
-		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float))
+		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float),
+		metrics.NewMetric("c", "tst", metrics.Gauge, metrics.String),
+	)
 
 	// simple inc
 	v := makeVM(instr{inc, nil}, m)
@@ -636,6 +638,26 @@ func TestDatumSetInstrs(t *testing.T) {
 	// fset str
 	v = makeVM(instr{fset, nil}, m)
 	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push("4.1")
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "4.1" {
+		t.Errorf("Unexpected value %v", d)
+	}
+
+	// sset
+	v = makeVM(instr{sset, nil}, m)
+	d, err = m[2].GetDatum()
 	if err != nil {
 		t.Fatal(err)
 	}

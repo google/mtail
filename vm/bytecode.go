@@ -24,6 +24,7 @@ const (
 	push                     // Push operand onto stack
 	capref                   // Push capture group reference at operand onto stack
 	str                      // Push string constant at operand onto stack
+	sset                     // Set a string variable value.
 	iset                     // Set a variable value
 	iadd                     // Add top values on stack and push to stack
 	isub                     // Subtract top value from second top value on stack, and push to stack.
@@ -87,6 +88,7 @@ var opNames = map[opcode]string{
 	push:        "push",
 	capref:      "capref",
 	str:         "str",
+	sset:        "sset",
 	iset:        "iset",
 	iadd:        "iadd",
 	isub:        "isub",
