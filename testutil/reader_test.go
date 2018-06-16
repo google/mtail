@@ -102,7 +102,7 @@ var expectedMetrics = map[string][]*metrics.Metric{
 		&metrics.Metric{
 			Name:    "stringy",
 			Program: "reader_test",
-			Kind:    metrics.Gauge,
+			Kind:    metrics.Text,
 			Type:    datum.String,
 			Keys:    []string{},
 			LabelValues: []*metrics.LabelValue{

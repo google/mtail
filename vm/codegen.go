@@ -83,6 +83,8 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		switch {
 		case Equals(Float, t):
 			dtyp = metrics.Float
+		case Equals(String, t):
+			dtyp = metrics.String
 		default:
 			if !IsComplete(t) {
 				glog.Infof("Incomplete type %v for %#v", t, n)

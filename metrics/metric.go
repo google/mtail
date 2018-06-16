@@ -32,6 +32,9 @@ const (
 	// intervals, such as latency and durations.  It enables certain behaviour
 	// in exporters that handle time intervals such as StatsD.
 	Timer
+
+	// Text is a special metric type for free text, usually for operating as a 'hidden' metric, as often these values cannot be exported.
+	Text
 )
 
 const (
@@ -51,6 +54,8 @@ func (m Kind) String() string {
 		return "Gauge"
 	case Timer:
 		return "Timer"
+	case Text:
+		return "Text"
 	}
 	return "Unknown"
 }
