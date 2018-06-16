@@ -569,7 +569,7 @@ func (v *VM) execute(t *thread, i instr) {
 		//fmt.Printf("Found %v\n", d)
 		t.Push(d)
 
-	case iget, fget:
+	case iget, fget, sget:
 		d, ok := t.Pop().(datum.Datum)
 		if !ok {
 			v.errorf("Unexpected value on stack: %q", d)
@@ -579,6 +579,8 @@ func (v *VM) execute(t *thread, i instr) {
 			t.Push(datum.GetInt(d))
 		case fget:
 			t.Push(datum.GetFloat(d))
+		case sget:
+			t.Push(datum.GetString(d))
 		}
 
 	case del:

@@ -708,7 +708,8 @@ func TestDatumFetchInstrs(t *testing.T) {
 	var m []*metrics.Metric
 	m = append(m,
 		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int),
-		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float))
+		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float),
+		metrics.NewMetric("c", "tst", metrics.Text, metrics.String))
 
 	{
 		// iget
@@ -751,6 +752,28 @@ func TestDatumFetchInstrs(t *testing.T) {
 		}
 		if i != 12.1 {
 			t.Errorf("unexpected value %f", i)
+		}
+	}
+
+	{
+		// sget
+		v := makeVM(instr{sget, nil}, m)
+		d, err := m[2].GetDatum()
+		if err != nil {
+			t.Fatal(err)
+		}
+		datum.SetString(d, "aba", time.Now())
+		v.t.Push(d)
+		v.execute(v.t, v.prog[0])
+		if v.terminate {
+			t.Fatalf("Execution failed, see info log.")
+		}
+		i, ok := v.t.Pop().(string)
+		if !ok {
+			t.Fatalf("Execution failed, see info")
+		}
+		if i != "aba" {
+			t.Errorf("unexpected value %q", i)
 		}
 	}
 }

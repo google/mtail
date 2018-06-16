@@ -182,7 +182,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			} else if Equals(t, Int) {
 				c.emit(instr{iget, nil})
 			} else if Equals(t, String) {
-				c.emit(instr{sset, nil})
+				c.emit(instr{sget, nil})
 			} else {
 				c.errorf(n.Pos(), "invalid type for get %q in %#v", n.Type(), n)
 			}
