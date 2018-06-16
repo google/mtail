@@ -181,6 +181,8 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 				c.emit(instr{fget, nil})
 			} else if Equals(t, Int) {
 				c.emit(instr{iget, nil})
+			} else if Equals(t, String) {
+				c.emit(instr{sset, nil})
 			} else {
 				c.errorf(n.Pos(), "invalid type for get %q in %#v", n.Type(), n)
 			}
@@ -290,7 +292,8 @@ var typedOperators = map[int]map[Type]opcode{
 	POW: {Int: ipow,
 		Float: fpow},
 	ASSIGN: {Int: iset,
-		Float: fset},
+		Float:  fset,
+		String: sset},
 }
 
 func (c *codegen) VisitAfter(node astNode) {

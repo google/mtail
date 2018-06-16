@@ -73,6 +73,7 @@ var lexemeName = map[lexeme]string{
 	CONCAT:       "CONCAT",
 	MATCH:        "MATCH",
 	NOT_MATCH:    "NOT_MATCH",
+	TEXT:         "TEXT",
 }
 
 func (t lexeme) String() string {
@@ -95,6 +96,7 @@ var keywords = map[string]lexeme{
 	"hidden":    HIDDEN,
 	"next":      NEXT,
 	"otherwise": OTHERWISE,
+	"text":      TEXT,
 	"timer":     TIMER,
 }
 
