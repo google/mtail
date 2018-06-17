@@ -39,8 +39,8 @@ var (
 	logRotations = expvar.NewMap("log_rotations_total")
 	// lineCount counts the numbre of lines read per log file
 	lineCount = expvar.NewMap("log_lines_total")
-
-	// TODO: count truncations
+	// logTruncs counts the number of log truncation events per log
+	logTruncs = expvar.NewMap("log_truncates_total")
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
@@ -240,6 +240,7 @@ func (t *Tailer) checkForTruncate(f afero.File) error {
 
 	p, serr := f.Seek(0, io.SeekStart)
 	glog.V(2).Infof("Truncated?  Seeked to %d: %v", p, serr)
+	logTruncs.Add(f.Name(), 1)
 	return serr
 }
 
@@ -389,26 +390,26 @@ func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) erro
 	var err error
 Retry:
 	f, err = t.fs.Open(pathname)
-	if err == nil {
-		glog.V(2).Infof("open succeeded %s", pathname)
-	}
-	// Doesn't exist yet. We're watching the directory, so we'll pick it up
-	// again on create; return successfully.
-	if os.IsNotExist(err) {
-		glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
-		return nil
-	}
-	logErrors.Add(pathname, 1)
-	if shouldRetry() {
-		retries = retries - 1
-		time.Sleep(retryDelay)
-		retryDelay = retryDelay + retryDelay
-		goto Retry
+	if err != nil {
+		// Doesn't exist yet. We're watching the directory, so we'll pick it up
+		// again on create; return successfully.
+		if os.IsNotExist(err) {
+			glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
+			return nil
+		}
+		logErrors.Add(pathname, 1)
+		if shouldRetry() {
+			retries = retries - 1
+			time.Sleep(retryDelay)
+			retryDelay = retryDelay + retryDelay
+			goto Retry
+		}
 	}
 	if err != nil {
 		glog.Infof("openLogPath failed all retries")
 		return err
 	}
+	glog.V(2).Infof("open succeeded %s", pathname)
 	err = t.startNewFile(f, seekToStart)
 	if err != nil && err != io.EOF {
 		glog.Error(err)
@@ -552,6 +553,7 @@ const tailerTemplate = `
 <th>pathname</th>
 <th>errors</th>
 <th>rotations</th>
+<th>truncations</th>
 <th>lines read</th>
 </tr>
 {{range $name, $val := $.Handles}}
@@ -559,6 +561,7 @@ const tailerTemplate = `
 <td><pre>{{$name}}</pre></td>
 <td>{{index $.Errors $name}}</td>
 <td>{{index $.Rotations $name}}</td>
+<td>{{index $.Truncs $name}}</td>
 <td>{{index $.Lines $name}}</td>
 </tr>
 {{end}}
@@ -582,9 +585,11 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 		Rotations map[string]string
 		Lines     map[string]string
 		Errors    map[string]string
+		Truncs    map[string]string
 	}{
 		t.handles,
 		t.globPatterns,
+		make(map[string]string),
 		make(map[string]string),
 		make(map[string]string),
 		make(map[string]string),
@@ -598,6 +603,9 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 		}
 		if lineCount.Get(name) != nil {
 			data.Lines[name] = lineCount.Get(name).String()
+		}
+		if logTruncs.Get(name) != nil {
+			data.Truncs[name] = logTruncs.Get(name).String()
 		}
 	}
 	return tpl.Execute(w, data)

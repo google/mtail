@@ -37,7 +37,8 @@ var (
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
 	// ProgLoadErrors counts the number of program load errors.
-	ProgLoadErrors = expvar.NewMap("prog_load_errors")
+	ProgLoadErrors    = expvar.NewMap("prog_load_errors")
+	progRuntimeErrors = expvar.NewMap("prog_runtime_errors")
 )
 
 const (
@@ -128,6 +129,7 @@ const loaderTemplate = `
 <th>errors</th>
 <th>load errors</th>
 <th>load successes</th>
+<th>runtime errors</th>
 </tr>
 <tr>
 {{range $name, $errors := $.Errors}}
@@ -141,6 +143,7 @@ No compile errors
 </td>
 <td>{{index $.Loaderrors $name}}</td>
 <td>{{index $.Loadsuccess $name}}</td>
+<td>{{index $.RuntimeErrors $name}}</td>
 </tr>
 {{end}}
 </table>
@@ -155,11 +158,13 @@ func (l *MasterControl) WriteStatusHTML(w io.Writer) error {
 	l.programErrorMu.RLock()
 	defer l.programErrorMu.RUnlock()
 	data := struct {
-		Errors      map[string]error
-		Loaderrors  map[string]string
-		Loadsuccess map[string]string
+		Errors        map[string]error
+		Loaderrors    map[string]string
+		Loadsuccess   map[string]string
+		RuntimeErrors map[string]string
 	}{
 		l.programErrors,
+		make(map[string]string),
 		make(map[string]string),
 		make(map[string]string),
 	}
@@ -169,6 +174,9 @@ func (l *MasterControl) WriteStatusHTML(w io.Writer) error {
 		}
 		if ProgLoads.Get(name) != nil {
 			data.Loadsuccess[name] = ProgLoads.Get(name).String()
+		}
+		if progRuntimeErrors.Get(name) != nil {
+			data.RuntimeErrors[name] = progRuntimeErrors.Get(name).String()
 		}
 	}
 	return t.Execute(w, data)
