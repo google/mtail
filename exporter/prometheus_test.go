@@ -74,6 +74,16 @@ foo{} 1
 foo{} 1
 `,
 	},
+	{"text",
+		[]*metrics.Metric{
+			{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Text,
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeString("hi", time.Unix(0, 0))}}},
+		},
+		"",
+	},
 	{"quotes",
 		[]*metrics.Metric{
 			{

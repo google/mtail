@@ -7,4 +7,4 @@ counter transfers_total {operation=send,module=repo} 25 2011-02-23T05:51:14Z
 gauge foo {label=}
 counter bar
 gauge floaty 37.1 2017-06-15T18:09:37Z
-
+text stringy hi 2018-06-16T18:04:00Z

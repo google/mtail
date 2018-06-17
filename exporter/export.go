@@ -122,6 +122,11 @@ func (e *Exporter) writeSocketMetrics(c io.Writer, f formatter, exportTotal *exp
 	for _, ml := range e.store.Metrics {
 		for _, m := range ml {
 			m.RLock()
+			// Don't try to send text metrics to any push service.
+			if m.Kind == metrics.Text {
+				m.RUnlock()
+				continue
+			}
 			exportTotal.Add(1)
 			lc := make(chan *metrics.LabelSet)
 			go m.EmitLabelSets(lc)

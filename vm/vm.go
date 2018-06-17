@@ -72,6 +72,7 @@ func (t *thread) Pop() (value interface{}) {
 
 // Log a runtime error and terminate the program
 func (v *VM) errorf(format string, args ...interface{}) {
+	progRuntimeErrors.Add(v.name, 1)
 	glog.Infof(v.name+": Runtime error: "+format+"\n", args...)
 	glog.Infof("VM stack:\n%s", debug.Stack())
 	glog.Infof("Dumping vm state")
@@ -413,6 +414,18 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("Unexpected type to fset: %T %q", n, n)
 		}
 
+	case sset:
+		// Set a string datum
+		value, ok := t.Pop().(string)
+		if !ok {
+			v.errorf("Value on stack was not a string: %T %q", value, value)
+		}
+		if n, ok := t.Pop().(datum.Datum); ok {
+			datum.SetString(n, value, t.time)
+		} else {
+			v.errorf("Unexpected type to sset: %T %q", n, n)
+		}
+
 	case strptime:
 		// Parse a time string into the time register
 		layout := t.Pop().(string)
@@ -557,7 +570,7 @@ func (v *VM) execute(t *thread, i instr) {
 		//fmt.Printf("Found %v\n", d)
 		t.Push(d)
 
-	case iget, fget:
+	case iget, fget, sget:
 		d, ok := t.Pop().(datum.Datum)
 		if !ok {
 			v.errorf("Unexpected value on stack: %q", d)
@@ -567,6 +580,8 @@ func (v *VM) execute(t *thread, i instr) {
 			t.Push(datum.GetInt(d))
 		case fget:
 			t.Push(datum.GetFloat(d))
+		case sget:
+			t.Push(datum.GetString(d))
 		}
 
 	case del:

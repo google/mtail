@@ -177,6 +177,8 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 			u.emit("gauge ")
 		case metrics.Timer:
 			u.emit("timer ")
+		case metrics.Text:
+			u.emit("text ")
 		}
 		u.emit(v.name)
 		if len(v.keys) > 0 {

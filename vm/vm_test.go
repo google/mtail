@@ -518,7 +518,9 @@ func TestDatumSetInstrs(t *testing.T) {
 	var m []*metrics.Metric
 	m = append(m,
 		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int),
-		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float))
+		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float),
+		metrics.NewMetric("c", "tst", metrics.Gauge, metrics.String),
+	)
 
 	// simple inc
 	v := makeVM(instr{inc, nil}, m)
@@ -652,6 +654,26 @@ func TestDatumSetInstrs(t *testing.T) {
 	if d.ValueString() != "4.1" {
 		t.Errorf("Unexpected value %v", d)
 	}
+
+	// sset
+	v = makeVM(instr{sset, nil}, m)
+	d, err = m[2].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push("4.1")
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "4.1" {
+		t.Errorf("Unexpected value %v", d)
+	}
 }
 
 func TestStrptimeWithTimezone(t *testing.T) {
@@ -686,7 +708,8 @@ func TestDatumFetchInstrs(t *testing.T) {
 	var m []*metrics.Metric
 	m = append(m,
 		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int),
-		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float))
+		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float),
+		metrics.NewMetric("c", "tst", metrics.Text, metrics.String))
 
 	{
 		// iget
@@ -729,6 +752,28 @@ func TestDatumFetchInstrs(t *testing.T) {
 		}
 		if i != 12.1 {
 			t.Errorf("unexpected value %f", i)
+		}
+	}
+
+	{
+		// sget
+		v := makeVM(instr{sget, nil}, m)
+		d, err := m[2].GetDatum()
+		if err != nil {
+			t.Fatal(err)
+		}
+		datum.SetString(d, "aba", time.Now())
+		v.t.Push(d)
+		v.execute(v.t, v.prog[0])
+		if v.terminate {
+			t.Fatalf("Execution failed, see info log.")
+		}
+		i, ok := v.t.Pop().(string)
+		if !ok {
+			t.Fatalf("Execution failed, see info")
+		}
+		if i != "aba" {
+			t.Errorf("unexpected value %q", i)
 		}
 	}
 }
