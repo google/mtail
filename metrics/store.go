@@ -61,7 +61,9 @@ func (s *Store) Add(m *Metric) error {
 				glog.V(2).Infof("Labels: %d %s", j, oldLabel.Labels)
 				d, err := v.GetDatum(oldLabel.Labels...)
 				if err == nil {
-					m.LabelValues = append(m.LabelValues, &LabelValue{oldLabel.Labels, d})
+					if err = m.RemoveDatum(oldLabel.Labels...); err == nil {
+						m.LabelValues = append(m.LabelValues, &LabelValue{oldLabel.Labels, d})
+					}
 				}
 			}
 		}
