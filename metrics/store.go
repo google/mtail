@@ -51,11 +51,15 @@ func (s *Store) Add(m *Metric) error {
 			if v.Source != m.Source {
 				continue
 			}
-			glog.V(2).Infof("v keys: %v m.keys: %v", v.Keys, m.Keys)
-			if len(v.Keys) > 0 && len(m.Keys) > 0 && reflect.DeepEqual(v.Keys, m.Keys) {
-				continue
-			}
 			dupeIndex = i
+			glog.V(2).Infof("v keys: %v m.keys: %v", v.Keys, m.Keys)
+			// If a set of label keys has changed, discard
+			// old metric completely, w/o even copying old
+			// data, as they are now incompatible.
+			if len(v.Keys) != len(m.Keys) || !reflect.DeepEqual(v.Keys, m.Keys) {
+				break
+			}
+			// Otherwise, copy everything into the new metric
 			glog.V(2).Infof("Found duped metric: %d", dupeIndex)
 			for j, oldLabel := range v.LabelValues {
 				glog.V(2).Infof("Labels: %d %s", j, oldLabel.Labels)
