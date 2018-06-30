@@ -386,6 +386,10 @@ func (l *MasterControl) processEvents(events <-chan watcher.Event) {
 		case watcher.Create:
 			if err := l.w.Add(event.Pathname, l.eventsHandle); err != nil {
 				glog.Info(err)
+				continue
+			}
+			if err := l.LoadProgram(event.Pathname); err != nil {
+				glog.Info(err)
 			}
 		default:
 			glog.V(1).Infof("Unexpected event type %+#v", event)
