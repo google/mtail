@@ -17,7 +17,7 @@ import (
 	"github.com/google/mtail/metrics/datum"
 )
 
-var varRe = regexp.MustCompile(`^(counter|gauge|timer|text|histogram) ([^ ]+)(?: {([^}]+)})?(?: ([+-]?\d+(?:\.\d+(?:[eE]-?\d+)?)?))?(?: (.+))?`)
+var varRe = regexp.MustCompile(`^(counter|gauge|timer|text|histogram) ([^ ]+)(?: {([^}]+)})?(?: (\S+))?(?: (.+))?`)
 
 // FindMetricOrNil returns a metric in a store, or returns nil if not found.
 func FindMetricOrNil(store *metrics.Store, name string) *metrics.Metric {
@@ -86,6 +86,7 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 					typ = datum.String
 				}
 			}
+			glog.V(2).Infof("type is %q", typ)
 		}
 		var timestamp time.Time
 		glog.V(2).Infof("match 5: %q\n", match[5])

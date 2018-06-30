@@ -113,7 +113,7 @@ func metricToPrometheus(m *metrics.Metric, l *metrics.LabelSet, omitProgLabel bo
 
 		return strings.Join(lines, "")
 	default:
-		return prometheusMetricLine(m.Name, l.Datum.Value(), s...)
+		return prometheusMetricLine(m.Name, l.Datum.ValueString(), s...)
 	}
 }
 

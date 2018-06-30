@@ -57,6 +57,8 @@ var lexemeName = map[lexeme]string{
 	COUNTER:      "COUNTER",
 	GAUGE:        "GAUGE",
 	TIMER:        "TIMER",
+	TEXT:         "TEXT",
+	HISTOGRAM:    "HISTOGRAM",
 	AS:           "AS",
 	BY:           "BY",
 	HIDDEN:       "HIDDEN",
@@ -73,8 +75,6 @@ var lexemeName = map[lexeme]string{
 	CONCAT:       "CONCAT",
 	MATCH:        "MATCH",
 	NOT_MATCH:    "NOT_MATCH",
-	TEXT:         "TEXT",
-	HISTOGRAM:    "HISTOGRAM",
 }
 
 func (t lexeme) String() string {
@@ -94,8 +94,8 @@ var keywords = map[string]lexeme{
 	"del":       DEL,
 	"else":      ELSE,
 	"gauge":     GAUGE,
-	"histogram": HISTOGRAM,
 	"hidden":    HIDDEN,
+	"histogram": HISTOGRAM,
 	"next":      NEXT,
 	"otherwise": OTHERWISE,
 	"text":      TEXT,

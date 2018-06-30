@@ -192,6 +192,7 @@ var (
 	Float   = &TypeOperator{"Float", []Type{}}
 	String  = &TypeOperator{"String", []Type{}}
 	Pattern = &TypeOperator{"Pattern", []Type{}}
+	// TODO(jaq): use composite type so we can typecheck the bucket directly, e.g. hist[j] = i
 	Buckets = &TypeOperator{"Buckets", []Type{}}
 )
 

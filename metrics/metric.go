@@ -93,7 +93,7 @@ type Metric struct {
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
 	Source      string        `json:"-"`
-	Buckets     []datum.Range
+	Buckets     []datum.Range `json:",omitempty"`
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).
@@ -103,7 +103,6 @@ func NewMetric(name string, prog string, kind Kind, typ datum.Type, keys ...stri
 	m.Program = prog
 	m.Kind = kind
 	m.Type = typ
-	m.Buckets = make([]datum.Range, 0)
 	copy(m.Keys, keys)
 	return m
 }
@@ -146,7 +145,11 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 		case datum.String:
 			d = datum.NewString()
 		case datum.Buckets:
-			d = datum.NewBuckets(m.Buckets)
+			buckets := m.Buckets
+			if buckets == nil {
+				buckets = make([]datum.Range, 0)
+			}
+			d = datum.NewBuckets(buckets)
 		}
 		m.LabelValues = append(m.LabelValues, &LabelValue{labelvalues, d})
 	}

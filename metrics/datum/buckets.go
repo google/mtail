@@ -37,7 +37,7 @@ type BucketsDatum struct {
 
 func (*BucketsDatum) Type() Type { return Buckets }
 
-func (d *BucketsDatum) Value() string {
+func (d *BucketsDatum) ValueString() string {
 	return fmt.Sprintf("%g", d.Get())
 }
 
