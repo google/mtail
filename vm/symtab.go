@@ -113,3 +113,14 @@ func (s *Scope) String() string {
 	fmt.Fprintf(&buf, "}\n")
 	return buf.String()
 }
+
+// CopyFrom copies all the symbols from another scope object into this one.
+// It recurses up the input scope copying all visible symbols into one.
+func (s *Scope) CopyFrom(o *Scope) {
+	for _, sym := range o.Symbols {
+		s.Insert(sym)
+	}
+	if o.Parent != nil {
+		s.CopyFrom(o.Parent)
+	}
+}

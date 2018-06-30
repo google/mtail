@@ -13,6 +13,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/metrics/datum"
 	"github.com/google/mtail/mtail"
 	"github.com/google/mtail/testutil"
 	"github.com/google/mtail/watcher"
@@ -104,6 +105,21 @@ var exampleProgramTests = []struct {
 		"testdata/apache-common.log",
 		"testdata/apache-common.golden",
 	},
+	{
+		"examples/metric-as-rvalue.mtail",
+		"testdata/metric-as-rvalue.log",
+		"testdata/metric-as-rvalue.golden",
+	},
+	{
+		"examples/decorator.mtail",
+		"testdata/decorator.log",
+		"testdata/decorator.golden",
+	},
+	{
+		"examples/stringy.mtail",
+		"testdata/stringy.log",
+		"testdata/stringy.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -139,12 +155,13 @@ func TestExamplePrograms(t *testing.T) {
 				t.Error(err)
 			}
 
-			diff := cmp.Diff(goldenStore, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
+			diff := cmp.Diff(goldenStore, store, cmpopts.IgnoreUnexported(sync.RWMutex{}, datum.StringDatum{}))
 
 			if diff != "" {
 				t.Error(diff)
 				t.Logf(" Golden metrics: %s", goldenStore.Metrics)
 				t.Logf("Program metrics: %s", store.Metrics)
+				t.Logf("yar\n%+v", store.Metrics)
 			}
 		})
 	}

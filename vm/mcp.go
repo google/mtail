@@ -37,7 +37,8 @@ var (
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
 	// ProgLoadErrors counts the number of program load errors.
-	ProgLoadErrors = expvar.NewMap("prog_load_errors")
+	ProgLoadErrors    = expvar.NewMap("prog_load_errors")
+	progRuntimeErrors = expvar.NewMap("prog_runtime_errors")
 )
 
 const (
@@ -122,15 +123,30 @@ func (l *MasterControl) LoadProgram(programPath string) error {
 
 const loaderTemplate = `
 <h2 id="loader">Program Loader</h2>
+<table border=1>
+<tr>
+<th>program name</th>
+<th>errors</th>
+<th>load errors</th>
+<th>load successes</th>
+<th>runtime errors</th>
+</tr>
+<tr>
 {{range $name, $errors := $.Errors}}
-<p><b>{{$name}}</b></p>
+<td>{{$name}}</td>
+<td>
 {{if $errors}}
-<pre>{{$errors}}</pre>
+{{$errors}}
 {{else}}
-<p>No compile errors</p>
+No compile errors
 {{end}}
-<p>Total load errors {{index $.Loaderrors $name}}; successes: {{index $.Loadsuccess $name}}</p>
+</td>
+<td>{{index $.Loaderrors $name}}</td>
+<td>{{index $.Loadsuccess $name}}</td>
+<td>{{index $.RuntimeErrors $name}}</td>
+</tr>
 {{end}}
+</table>
 `
 
 // WriteStatusHTML writes the current state of the loader as HTML to the given writer w.
@@ -142,11 +158,13 @@ func (l *MasterControl) WriteStatusHTML(w io.Writer) error {
 	l.programErrorMu.RLock()
 	defer l.programErrorMu.RUnlock()
 	data := struct {
-		Errors      map[string]error
-		Loaderrors  map[string]string
-		Loadsuccess map[string]string
+		Errors        map[string]error
+		Loaderrors    map[string]string
+		Loadsuccess   map[string]string
+		RuntimeErrors map[string]string
 	}{
 		l.programErrors,
+		make(map[string]string),
 		make(map[string]string),
 		make(map[string]string),
 	}
@@ -156,6 +174,9 @@ func (l *MasterControl) WriteStatusHTML(w io.Writer) error {
 		}
 		if ProgLoads.Get(name) != nil {
 			data.Loadsuccess[name] = ProgLoads.Get(name).String()
+		}
+		if progRuntimeErrors.Get(name) != nil {
+			data.RuntimeErrors[name] = progRuntimeErrors.Get(name).String()
 		}
 	}
 	return t.Execute(w, data)
@@ -364,6 +385,10 @@ func (l *MasterControl) processEvents(events <-chan watcher.Event) {
 			}
 		case watcher.Create:
 			if err := l.w.Add(event.Pathname, l.eventsHandle); err != nil {
+				glog.Info(err)
+				continue
+			}
+			if err := l.LoadProgram(event.Pathname); err != nil {
 				glog.Info(err)
 			}
 		default:

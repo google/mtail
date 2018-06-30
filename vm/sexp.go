@@ -141,6 +141,8 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 			s.emit("gauge ")
 		case metrics.Timer:
 			s.emit("timer ")
+		case metrics.Text:
+			s.emit("text ")
 		}
 		s.emit(v.name)
 		if len(v.keys) > 0 {

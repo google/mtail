@@ -41,6 +41,9 @@ var parserTests = []struct {
 	{"declare timer",
 		"timer foo\n"},
 
+	{"declare text",
+		"text stringy\n"},
+
 	{"simple pattern action",
 		"/foo/ {}\n"},
 

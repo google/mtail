@@ -39,6 +39,11 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 		emittype := true
 		for _, m := range ml {
 			m.RLock()
+			// We don't have a way of converting text metrics to prometheus format.
+			if m.Kind == metrics.Text {
+				m.RUnlock()
+				continue
+			}
 			metricExportTotal.Add(1)
 
 			if emittype {

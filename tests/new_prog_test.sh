@@ -13,6 +13,6 @@ expect_json_field_eq '{}' prog_loads_total "${DATA}"
 
 touch $PROGS/nocode.mtail
 uri_get /debug/vars
-expect_json_field_eq '{  "nocode.mtail": 1}' prog_loads_total "${DATA}"
+expect_json_field_eq '{  "nocode.mtail": 2}' prog_loads_total "${DATA}"
 
 pass

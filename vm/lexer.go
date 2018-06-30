@@ -73,6 +73,7 @@ var lexemeName = map[lexeme]string{
 	CONCAT:       "CONCAT",
 	MATCH:        "MATCH",
 	NOT_MATCH:    "NOT_MATCH",
+	TEXT:         "TEXT",
 	HISTOGRAM:    "HISTOGRAM",
 }
 
@@ -97,6 +98,7 @@ var keywords = map[string]lexeme{
 	"hidden":    HIDDEN,
 	"next":      NEXT,
 	"otherwise": OTHERWISE,
+	"text":      TEXT,
 	"timer":     TIMER,
 	"with":      WITH,
 }

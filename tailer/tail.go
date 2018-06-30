@@ -39,6 +39,8 @@ var (
 	logRotations = expvar.NewMap("log_rotations_total")
 	// lineCount counts the numbre of lines read per log file
 	lineCount = expvar.NewMap("log_lines_total")
+	// logTruncs counts the number of log truncation events per log
+	logTruncs = expvar.NewMap("log_truncates_total")
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
@@ -140,6 +142,13 @@ func (t *Tailer) hasHandle(pathname string) bool {
 	return ok
 }
 
+// AddPattern adds a pattern to the list of patterns to filter filenames against.
+func (t *Tailer) AddPattern(pattern string) {
+	t.globPatternsMu.Lock()
+	t.globPatterns[pattern] = struct{}{}
+	t.globPatternsMu.Unlock()
+}
+
 // TailPattern registers a pattern to be tailed.  If pattern is a plain
 // file then it is watched for updates and opened.  If pattern is a glob, then
 // all paths that match the glob are opened and watched, and the directories
@@ -149,9 +158,7 @@ func (t *Tailer) TailPattern(pattern string) error {
 	if err != nil {
 		return err
 	}
-	t.globPatternsMu.Lock()
-	t.globPatterns[pattern] = struct{}{}
-	t.globPatternsMu.Unlock()
+	t.AddPattern(pattern)
 	glog.V(1).Infof("glob matches: %v", matches)
 	// TODO(jaq): Error if there are no matches, or do we just assume that it's OK?
 	// mtail_test.go assumes that it's ok.  Figure out why.
@@ -191,11 +198,12 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	glog.V(2).Infof("handleLogUpdate %s", pathname)
 	fd, ok := t.handleForPath(pathname)
 	if !ok {
-		glog.Warningf("No file handle found for %q, but is being watched; opening", pathname)
-		// Try to open it, and because we have a watch set seenBefore.
-		if err := t.openLogPath(pathname, false, true); err != nil {
-			glog.Warning(err)
-		}
+		glog.V(1).Infof("No file handle found for %q, but is being watched", pathname)
+		// We want to open files we have watches on in case the file was
+		// unreadable before now; but we have to copmare against the glob to be
+		// sure we don't just add all the files in a watched directory as they
+		// get modified.
+		t.handleCreateGlob(pathname)
 		return
 	}
 	absPath, err := filepath.Abs(pathname)
@@ -232,6 +240,7 @@ func (t *Tailer) checkForTruncate(f afero.File) error {
 
 	p, serr := f.Seek(0, io.SeekStart)
 	glog.V(2).Infof("Truncated?  Seeked to %d: %v", p, serr)
+	logTruncs.Add(f.Name(), 1)
 	return serr
 }
 
@@ -381,26 +390,26 @@ func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) erro
 	var err error
 Retry:
 	f, err = t.fs.Open(pathname)
-	if err == nil {
-		glog.V(2).Infof("open succeeded %s", pathname)
-	}
-	// Doesn't exist yet. We're watching the directory, so we'll pick it up
-	// again on create; return successfully.
-	if os.IsNotExist(err) {
-		glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
-		return nil
-	}
-	logErrors.Add(pathname, 1)
-	if shouldRetry() {
-		retries = retries - 1
-		time.Sleep(retryDelay)
-		retryDelay = retryDelay + retryDelay
-		goto Retry
+	if err != nil {
+		// Doesn't exist yet. We're watching the directory, so we'll pick it up
+		// again on create; return successfully.
+		if os.IsNotExist(err) {
+			glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
+			return nil
+		}
+		logErrors.Add(pathname, 1)
+		if shouldRetry() {
+			retries = retries - 1
+			time.Sleep(retryDelay)
+			retryDelay = retryDelay + retryDelay
+			goto Retry
+		}
 	}
 	if err != nil {
 		glog.Infof("openLogPath failed all retries")
 		return err
 	}
+	glog.V(2).Infof("open succeeded %s", pathname)
 	err = t.startNewFile(f, seekToStart)
 	if err != nil && err != io.EOF {
 		glog.Error(err)
@@ -478,20 +487,23 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 			glog.Warningf("Unexpected bad pattern %q not detected earlier", pattern)
 			continue
 		}
-		if matched {
-			glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
-			// TODO(jaq): avoid code duplication with TailPath here.
-			// If this file was just created, read from the start.
-			if err := t.w.Add(pathname, t.eventsHandle); err != nil {
-				glog.Infof("Failed to tail new file %q: %s", pathname, err)
-				continue
-			}
-			logCount.Add(1)
-			// Pretend seenBefore because we want to seek to start.
-			if err := t.openLogPath(pathname, false, true); err != nil {
-				glog.Infof("Failed to tail new file %q: %s", pathname, err)
-			}
+		if !matched {
+			glog.V(2).Infof("No match for %q", pathname)
+			continue
 		}
+		glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
+		// TODO(jaq): avoid code duplication with TailPath here.
+		// If this file was just created, read from the start.
+		if err := t.w.Add(pathname, t.eventsHandle); err != nil {
+			glog.Infof("Failed to tail new file %q: %s", pathname, err)
+			continue
+		}
+		logCount.Add(1)
+		// Pretend seenBefore because we want to seek to start.
+		if err := t.openLogPath(pathname, false, true); err != nil {
+			glog.Infof("Failed to tail new file %q: %s", pathname, err)
+		}
+		glog.V(2).Infof("Started tailing %q", pathname)
 	}
 }
 
@@ -529,9 +541,32 @@ func (t *Tailer) Close() error {
 
 const tailerTemplate = `
 <h2 id="tailer">Log Tailer</h2>
-{{range $name, $val := $.Handles}}
-<p><b>{{$name}}</b></p>
+<h3>Patterns</h3>
+<ul>
+{{range $name, $val := $.Patterns}}
+<li><pre>{{$name}}</pre></li>
 {{end}}
+</ul>
+<h3>Log files watched</h3>
+<table border=1>
+<tr>
+<th>pathname</th>
+<th>errors</th>
+<th>rotations</th>
+<th>truncations</th>
+<th>lines read</th>
+</tr>
+{{range $name, $val := $.Handles}}
+<tr>
+<td><pre>{{$name}}</pre></td>
+<td>{{index $.Errors $name}}</td>
+<td>{{index $.Rotations $name}}</td>
+<td>{{index $.Truncs $name}}</td>
+<td>{{index $.Lines $name}}</td>
+</tr>
+{{end}}
+</table>
+</ul>
 `
 
 // WriteStatusHTML emits the Tailer's state in HTML format to the io.Writer w.
@@ -542,10 +577,36 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	}
 	t.handlesMu.RLock()
 	defer t.handlesMu.RUnlock()
+	t.globPatternsMu.RLock()
+	defer t.globPatternsMu.RUnlock()
 	data := struct {
-		Handles map[string]afero.File
+		Handles   map[string]afero.File
+		Patterns  map[string]struct{}
+		Rotations map[string]string
+		Lines     map[string]string
+		Errors    map[string]string
+		Truncs    map[string]string
 	}{
 		t.handles,
+		t.globPatterns,
+		make(map[string]string),
+		make(map[string]string),
+		make(map[string]string),
+		make(map[string]string),
+	}
+	for name := range t.handles {
+		if logErrors.Get(name) != nil {
+			data.Errors[name] = logErrors.Get(name).String()
+		}
+		if logRotations.Get(name) != nil {
+			data.Rotations[name] = logRotations.Get(name).String()
+		}
+		if lineCount.Get(name) != nil {
+			data.Lines[name] = lineCount.Get(name).String()
+		}
+		if logTruncs.Get(name) != nil {
+			data.Truncs[name] = logTruncs.Get(name).String()
+		}
 	}
 	return tpl.Execute(w, data)
 }

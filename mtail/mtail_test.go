@@ -724,8 +724,9 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if !ok {
 		t.Fatal("program loads didn't increase")
 	}
-	if len(store.Metrics["foo"]) != 1 {
-		t.Errorf("Unexpected number of metrics: expected 1, but got all this %v", store.Metrics["foo"])
+	mfoo := store.Metrics["foo"]
+	if len(mfoo) != 1 || len(mfoo[0].LabelValues) != 1 {
+		t.Errorf("Unexpected metrics content: expected a single metric with no labels, but got all this %v", mfoo)
 	}
 
 	n, err := logFile.WriteString("foo\n")
@@ -786,8 +787,9 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if !ok {
 		t.Error("program loads didn't increase")
 	}
-	if len(store.Metrics["foo"]) != 1 {
-		t.Errorf("Unexpected number of metrics: expected 1, but got %d\n%v", len(store.Metrics["foo"]), store.Metrics["foo"])
+	mfoo = store.Metrics["foo"]
+	if len(mfoo) != 1 || len(mfoo[0].LabelValues) != 1 {
+		t.Errorf("Unexpected metrics content: expected a single metric with no labels, but got all this: %v", mfoo)
 	}
 
 }

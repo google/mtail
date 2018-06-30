@@ -32,6 +32,10 @@ const (
 	// intervals, such as latency and durations.  It enables certain behaviour
 	// in exporters that handle time intervals such as StatsD.
 	Timer
+
+	// Text is a special metric type for free text, usually for operating as a 'hidden' metric, as often these values cannot be exported.
+	Text
+
 	// Histogram is a Kind that observes a value and stores the value
 	// in a bucket.
 	Histogram
@@ -42,6 +46,8 @@ const (
 	Int = datum.Int
 	// Float indicates this metric is a floating-point metric type.
 	Float = datum.Float
+	// String indicates this metric contains string values
+	String = datum.String
 	// Buckets indicates this metric is a histogram metric type.
 	Buckets = datum.Buckets
 )
@@ -54,6 +60,8 @@ func (m Kind) String() string {
 		return "Gauge"
 	case Timer:
 		return "Timer"
+	case Text:
+		return "Text"
 	case Histogram:
 		return "Histogram"
 	}
@@ -135,6 +143,8 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 			d = datum.NewInt()
 		case datum.Float:
 			d = datum.NewFloat()
+		case datum.String:
+			d = datum.NewString()
 		case datum.Buckets:
 			d = datum.NewBuckets(m.Buckets)
 		}

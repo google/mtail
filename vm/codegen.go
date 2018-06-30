@@ -83,6 +83,8 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		switch {
 		case Equals(Float, t):
 			dtyp = metrics.Float
+		case Equals(String, t):
+			dtyp = metrics.String
 		default:
 			if !IsComplete(t) {
 				glog.Infof("Incomplete type %v for %#v", t, n)
@@ -197,6 +199,24 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		m := n.sym.Binding.(*metrics.Metric)
 		c.emit(instr{dload, len(m.Keys)})
 
+		if !n.lvalue {
+			t := n.Type()
+			if IsDimension(t) {
+				l := len(t.(*TypeOperator).Args)
+				t = t.(*TypeOperator).Args[l-1]
+			}
+
+			if Equals(t, Float) {
+				c.emit(instr{fget, nil})
+			} else if Equals(t, Int) {
+				c.emit(instr{iget, nil})
+			} else if Equals(t, String) {
+				c.emit(instr{sget, nil})
+			} else {
+				c.errorf(n.Pos(), "invalid type for get %q in %#v", n.Type(), n)
+			}
+		}
+
 	case *caprefNode:
 		if n.sym == nil || n.sym.Binding == nil {
 			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.name)
@@ -301,7 +321,8 @@ var typedOperators = map[int]map[Type]opcode{
 	POW: {Int: ipow,
 		Float: fpow},
 	ASSIGN: {Int: iset,
-		Float: fset},
+		Float:  fset,
+		String: sset},
 }
 
 func (c *codegen) VisitAfter(node astNode) {
@@ -452,7 +473,7 @@ func (c *codegen) VisitAfter(node astNode) {
 }
 
 func (c *codegen) emitConversion(inType, outType Type) error {
-	glog.Infof("Conversion: %q to %q", inType, outType)
+	glog.V(2).Infof("Conversion: %q to %q", inType, outType)
 	if Equals(Int, inType) && Equals(Float, outType) {
 		c.emit(instr{op: i2f})
 	} else if Equals(String, inType) && Equals(Float, outType) {

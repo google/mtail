@@ -17,6 +17,9 @@ const (
 	Int Type = iota
 	// Float describes a floating point datum
 	Float
+	// String describes printable strings of text
+	String
+	// Buckets describes histograms
 	Buckets
 )
 
@@ -26,6 +29,8 @@ func (t Type) String() string {
 		return "Int"
 	case Float:
 		return "Float"
+	case String:
+		return "String"
 	case Buckets:
 		return "Buckets"
 	}
@@ -74,6 +79,12 @@ func NewFloat() Datum {
 	return MakeFloat(0., zeroTime)
 }
 
+// NewString creates a new zero string datum.
+func NewString() Datum {
+	return MakeString("", zeroTime)
+}
+
+// NewBuckets creates a new zero bucket datum.
 func NewBuckets(buckets []Range) Datum {
 	return MakeBuckets(0., buckets, zeroTime)
 }
@@ -92,6 +103,14 @@ func MakeFloat(v float64, ts time.Time) Datum {
 	return d
 }
 
+// MakeString creates a new string datum with the provided value and timestamp
+func MakeString(v string, ts time.Time) Datum {
+	d := &StringDatum{}
+	d.Set(v, ts)
+	return d
+}
+
+// MakeBuckets creates a new bucket datum with the provided value and timestamp
 func MakeBuckets(v float64, buckets []Range, ts time.Time) Datum {
 	d := &BucketsDatum{}
 
@@ -123,6 +142,16 @@ func GetFloat(d Datum) float64 {
 	}
 }
 
+// GetString returns the string of a datum, or error.
+func GetString(d Datum) string {
+	switch d := d.(type) {
+	case *StringDatum:
+		return d.Get()
+	default:
+		panic(fmt.Sprintf("datum %v is not a String", d))
+	}
+}
+
 // SetInt sets an integer datum to the provided value and timestamp, or panics if the Datum is not an IntDatum.
 func SetInt(d Datum, v int64, ts time.Time) {
 	switch d := d.(type) {
@@ -144,6 +173,16 @@ func SetFloat(d Datum, v float64, ts time.Time) {
 		d.Set(float64(v), ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not a Float", d))
+	}
+}
+
+// SetString sets a string Datum to the provided value and timestamp, or panics if the Datym is not a String Datum
+func SetString(d Datum, v string, ts time.Time) {
+	switch d := d.(type) {
+	case *StringDatum:
+		d.Set(v, ts)
+	default:
+		panic(fmt.Sprintf("datum %v is not a String", d))
 	}
 }
 

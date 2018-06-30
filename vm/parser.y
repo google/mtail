@@ -38,7 +38,7 @@ import (
 // Invalid input
 %token <text> INVALID
 // Types
-%token COUNTER GAUGE TIMER HISTOGRAM
+%token COUNTER GAUGE TIMER TEXT HISTOGRAM
 // Reserved words
 %token AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE WITH
 // Builtins
@@ -404,7 +404,7 @@ indexed_expr
 id_expr
   : ID
   {
-    $$ = &idNode{tokenpos(mtaillex), $1, nil}
+    $$ = &idNode{tokenpos(mtaillex), $1, nil, false}
   }
   ;
 
@@ -494,6 +494,11 @@ type_spec
   {
     $$ = metrics.Timer
   }
+  | TEXT
+  {
+    $$ = metrics.Text
+  }
+  ;
 
 hist_spec
   : HISTOGRAM
@@ -567,7 +572,7 @@ definition
 decoration_statement
   : mark_pos DECO compound_statement
   {
-    $$ = &decoNode{markedpos(mtaillex), $2, $3, nil}
+    $$ = &decoNode{markedpos(mtaillex), $2, $3, nil, nil}
   }
   ;
 

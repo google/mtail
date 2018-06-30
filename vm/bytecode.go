@@ -24,6 +24,7 @@ const (
 	push                     // Push operand onto stack
 	capref                   // Push capture group reference at operand onto stack
 	str                      // Push string constant at operand onto stack
+	sset                     // Set a string variable value.
 	iset                     // Set a variable value
 	iadd                     // Add top values on stack and push to stack
 	isub                     // Subtract top value from second top value on stack, and push to stack.
@@ -40,6 +41,9 @@ const (
 	shr                      // Shift TOS right, push result
 	mload                    // Load metric at operand onto top of stack
 	dload                    // Pop `operand` keys and metric off stack, and push datum at metric[key,...] onto stack.
+	iget                     // Pop a datum off the stack, and push its integer value back on the stack.
+	fget                     // Pop a datum off the stack, and push its float value back on the stack.
+	sget                     // Pop a datum off the stack, and push its string value back on the stack.
 	tolower                  // Convert the string at the top of the stack to lowercase.
 	length                   // Compute the length of a string.
 	cat                      // string concatenation
@@ -85,6 +89,7 @@ var opNames = map[opcode]string{
 	push:        "push",
 	capref:      "capref",
 	str:         "str",
+	sset:        "sset",
 	iset:        "iset",
 	iadd:        "iadd",
 	isub:        "isub",
@@ -101,6 +106,9 @@ var opNames = map[opcode]string{
 	neg:         "neg",
 	mload:       "mload",
 	dload:       "dload",
+	iget:        "iget",
+	fget:        "fget",
+	sget:        "sget",
 	tolower:     "tolower",
 	length:      "length",
 	cat:         "cat",

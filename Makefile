@@ -35,7 +35,8 @@ release := $(shell git describe --tags | cut -d"-" -f 1,2)
 
 GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 
-install mtail: $(GOFILES) .dep-stamp
+.PHONY: install mtail
+install mtail: $(GOFILES)
 	go install -ldflags $(GO_LDFLAGS)
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
@@ -67,6 +68,10 @@ check test: $(GOFILES) $(GOTESTFILES)
 testrace: $(GOFILES) $(GOTESTFILES)
 	go test -timeout ${timeout} -race -v ./...
 
+.PHONY: testex
+testex:
+	go test -timeout ${timeout} -run Test.*ExamplePrograms -v
+
 .PHONY: smoke
 smoke: $(GOFILES) $(GOTESTFILES)
 	go test -timeout 1s -test.short ./...
@@ -76,7 +81,7 @@ ex_test: ex_test.go testdata/* examples/*
 	go test -run TestExamplePrograms --logtostderr
 
 .PHONY: bench
-bench: $(GOFILES) $(GOTESTFILES) .dep-stamp
+bench: $(GOFILES) $(GOTESTFILES)
 	go test -bench=. -timeout=60s -run=XXX ./...
 
 .PHONY: bench_cpu
@@ -87,7 +92,7 @@ bench_mem:
 	go test -bench=. -run=XXX -timeout=60s -memprofile=mem.out
 
 .PHONY: recbench
-recbench: $(GOFILES) $(GOTESTFILES) .dep-stamp
+recbench: $(GOFILES) $(GOTESTFILES)
 	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: regtest
@@ -98,7 +103,7 @@ PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
 
 PHONY: coverage
 coverage: gover.coverprofile
-gover.coverprofile: $(GOFILES) $(GOTESTFILES) .dep-stamp
+gover.coverprofile: $(GOFILES) $(GOTESTFILES)
 	for package in $(PACKAGES); do\
 		go test -covermode=count -coverprofile=$$(echo $$package | tr './' '__').coverprofile ./$$package;\
     done
@@ -150,6 +155,15 @@ endif
 
 upload_to_coveralls: gover.coverprofile
 	goveralls -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE)
+
+## make u a container
+.PHONY: container
+container: Dockerfile
+	docker build -t mtail \
+		--build-arg version=${version} \
+	    --build-arg commit_hash=${revision} \
+	    --build-arg build_date=$(shell date -Iseconds --utc) \
+	    .
 
 # Append the bin subdirs of every element of the GOPATH list to PATH, so we can find goyacc.
 empty :=

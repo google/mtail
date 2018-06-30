@@ -16,6 +16,8 @@ import (
 type checker struct {
 	scope *Scope // the current scope
 
+	decoScopes []*Scope // A stack of scopes used for resolving symbols in decorated nodes
+
 	errors ErrorList
 }
 
@@ -121,6 +123,10 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.name, n.name))
 			return nil
 		}
+		n.scope = NewScope(c.scope)
+		// Insert all of n.def.scope into this scope
+		n.scope.CopyFrom(n.def.scope)
+		c.scope = n.scope
 
 	case *patternFragmentDefNode:
 		id, ok := n.id.(*idNode)
@@ -177,6 +183,20 @@ func (c *checker) VisitAfter(node astNode) {
 		c.checkSymbolUsage()
 		// Pop the scope
 		c.scope = n.s.Parent
+
+	case *decoNode:
+		// Don't check symbol usage here because the decorator is only partially defined.
+		c.scope = n.scope.Parent
+
+	case *nextNode:
+		// Put the current scope on a decorator-specific scoe stack for unwinding
+		c.decoScopes = append(c.decoScopes, c.scope)
+
+	case *decoDefNode:
+		// Pop a decorator scope off the stack from the enclosed nextNode.
+		last := len(c.decoScopes) - 1
+		n.scope = c.decoScopes[last]
+		c.decoScopes = c.decoScopes[:last]
 
 	case *binaryExprNode:
 		var rType Type
@@ -266,12 +286,12 @@ func (c *checker) VisitAfter(node astNode) {
 			if !Equals(t, lT) {
 				conv := &convNode{n: n.lhs, typ: t}
 				n.lhs = conv
-				glog.Infof("Emitting convnode %+v", conv)
+				glog.V(2).Infof("Emitting convnode %+v", conv)
 			}
 			if !Equals(t, rT) {
 				conv := &convNode{n: n.rhs, typ: t}
 				n.rhs = conv
-				glog.Infof("Emitting convnode %+v", conv)
+				glog.V(2).Infof("Emitting convnode %+v", conv)
 			}
 
 		case ASSIGN, ADD_ASSIGN:
@@ -284,6 +304,12 @@ func (c *checker) VisitAfter(node astNode) {
 				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(Error)
 				return
+			}
+			switch v := n.lhs.(type) {
+			case *idNode:
+				v.lvalue = true
+			case *indexedExprNode:
+				v.lhs.(*idNode).lvalue = true
 			}
 
 		case CONCAT:
@@ -341,6 +367,13 @@ func (c *checker) VisitAfter(node astNode) {
 				return
 			}
 			n.SetType(rType)
+			switch v := n.expr.(type) {
+			case *idNode:
+				v.lvalue = true
+			case *indexedExprNode:
+				v.lhs.(*idNode).lvalue = true
+			}
+
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary expr %v", n))
 			n.SetType(Error)
@@ -488,6 +521,8 @@ func (c *checker) VisitAfter(node astNode) {
 		}
 		n.pattern = pe.pattern
 
+	case *delNode:
+		n.n.(*indexedExprNode).lhs.(*idNode).lvalue = true
 	}
 }
 

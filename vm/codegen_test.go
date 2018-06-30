@@ -723,6 +723,22 @@ counter var
 			{setmatched, true},
 			{setmatched, true},
 		}},
+	{"set string", `
+text foo
+/(.*)/ {
+  foo = $1
+}
+`, []instr{
+		{match, 0},
+		{jnm, 9},
+		{setmatched, false},
+		{mload, 0},
+		{dload, 0},
+		{push, 0},
+		{capref, 1},
+		{sset, nil},
+		{setmatched, true},
+	}},
 }
 
 func TestCodegen(t *testing.T) {

@@ -32,7 +32,33 @@ changes.
 
 ### Getting the logs in
 
-Use `--logs` multiple times to pass in glob patterns that match the logs you want to tail.  This includes named pipes.
+Use `--logs` multiple times to pass in glob patterns that match the logs you
+want to tail.  This includes named pipes.
+
+### Launching under Docker
+
+`mtail` can be run as a sidecar process if you expose an application container's logs with a volume.
+
+`docker run -d --name myapp -v /var/log/myapp myapp`
+
+for example exports a volume called `/var/log/myapp` (named the same as the
+hypothetical path where `myapp`s logs are written.
+
+Then launch the `mtail` docker image and pass in the volume:
+
+    docker run -dP \
+       --name myapp-mtail \
+       --volumes-from myapp \
+       -v examples:/etc/mtail \
+       mtail --logs /var/log/myapp --progs /etc/mtail
+
+This example fetches the volumes from the `myapp` container, and mounts them in
+the mtail container (which we've called `myapp-mtail`).  We also mount the
+`examples` directory as `/etc/mtail` in the container.  We launch `mtail` with
+the `logs` and `progs` flags to point to our two mounted volumes.
+
+The `-P` flag ensures `mtail-myapp`'s port 3903 is exposed for collection,
+refer to `docker ps` to find out where it's mapped to on the host.
 
 ## Writing the programme
 

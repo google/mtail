@@ -17,7 +17,7 @@ import (
 	"github.com/google/mtail/metrics/datum"
 )
 
-var varRe = regexp.MustCompile(`^(counter|gauge|timer|histogram) ([^ ]+)(?: {([^}]+)})?(?: ([+-]?\d+(?:\.\d+(?:[eE]-?\d+)?)?))?(?: (.+))?`)
+var varRe = regexp.MustCompile(`^(counter|gauge|timer|text|histogram) ([^ ]+)(?: {([^}]+)})?(?: ([+-]?\d+(?:\.\d+(?:[eE]-?\d+)?)?))?(?: (.+))?`)
 
 // FindMetricOrNil returns a metric in a store, or returns nil if not found.
 func FindMetricOrNil(store *metrics.Store, name string) *metrics.Metric {
@@ -62,6 +62,8 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 			kind = metrics.Gauge
 		case "timer":
 			kind = metrics.Timer
+		case "text":
+			kind = metrics.Text
 		case "histogram":
 			kind = metrics.Histogram
 		}
@@ -70,16 +72,19 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 		var (
 			ival int64
 			fval float64
+			sval string
 			err  error
 		)
 		if match[4] != "" {
 			ival, err = strconv.ParseInt(match[4], 10, 64)
 			if err != nil {
 				fval, err = strconv.ParseFloat(match[4], 64)
-				if err != nil {
-					glog.Fatalf("parse failed for '%s': %s", match[4], err)
-				}
 				typ = datum.Float
+				if err != nil || fval == 0.0 {
+					sval = match[4]
+					err = nil
+					typ = datum.String
+				}
 			}
 		}
 		var timestamp time.Time
@@ -104,9 +109,10 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 					glog.Fatal(err)
 				}
 				// Initialize to zero at the zero time.
-				if typ == metrics.Int {
+				switch typ {
+				case metrics.Int:
 					datum.SetInt(d, 0, time.Unix(0, 0))
-				} else {
+				case metrics.Float:
 					datum.SetFloat(d, 0, time.Unix(0, 0))
 				}
 			}
@@ -124,12 +130,16 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 			}
 			glog.V(2).Infof("got datum %v", d)
 
-			if typ == metrics.Int {
+			switch typ {
+			case metrics.Int:
 				glog.V(2).Infof("setting %v with vals %v to %v at %v\n", d, vals, ival, timestamp)
 				datum.SetInt(d, ival, timestamp)
-			} else {
+			case metrics.Float:
 				glog.V(2).Infof("setting %v with vals %v to %v at %v\n", d, vals, fval, timestamp)
 				datum.SetFloat(d, fval, timestamp)
+			case metrics.String:
+				glog.V(2).Infof("setting %v with vals %v to %v at %v\n", d, vals, sval, timestamp)
+				datum.SetString(d, sval, timestamp)
 			}
 		}
 		glog.V(2).Infof("Metric is now %s", m)

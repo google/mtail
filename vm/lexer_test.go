@@ -65,7 +65,7 @@ var lexerTests = []lexerTest{
 		{NOT_MATCH, "!~", position{"operators", 0, 60, 61}},
 		{EOF, "", position{"operators", 0, 62, 62}}}},
 	{"keywords",
-		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\nhistogram\n", []token{
+		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\nhistogram\n", []token{
 			{COUNTER, "counter", position{"keywords", 0, 0, 6}},
 			{NL, "\n", position{"keywords", 1, 7, -1}},
 			{GAUGE, "gauge", position{"keywords", 1, 0, 4}},
@@ -90,9 +90,11 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position{"keywords", 11, 4, -1}},
 			{DEL, "del", position{"keywords", 11, 0, 2}},
 			{NL, "\n", position{"keywords", 12, 3, -1}},
-			{HISTOGRAM, "histogram", position{"keywords", 12, 0, 8}},
-			{NL, "\n", position{"keywords", 13, 9, -1}},
-			{EOF, "", position{"keywords", 13, 0, 0}}}},
+			{TEXT, "text", position{"keywords", 12, 0, 3}},
+			{NL, "\n", position{"keywords", 13, 4, -1}},
+			{HISTOGRAM, "histogram", position{"keywords", 13, 0, 8}},
+			{NL, "\n", position{"keywords", 14, 9, -1}},
+			{EOF, "", position{"keywords", 14, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\n", []token{
 			{BUILTIN, "strptime", position{"builtins", 0, 0, 7}},

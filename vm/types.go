@@ -323,7 +323,7 @@ func Unify(a, b Type) error {
 			}
 			if a2.Name != b2.Name {
 				t := LeastUpperBound(a, b)
-				glog.Infof("Got LUB = %q", t)
+				glog.V(2).Infof("Got LUB = %q", t)
 				if t == Error {
 					return &TypeError{a2, b2}
 				}
