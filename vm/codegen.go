@@ -444,7 +444,7 @@ func (c *codegen) VisitAfter(node astNode) {
 }
 
 func (c *codegen) emitConversion(inType, outType Type) error {
-	glog.Infof("Conversion: %q to %q", inType, outType)
+	glog.V(2).Infof("Conversion: %q to %q", inType, outType)
 	if Equals(Int, inType) && Equals(Float, outType) {
 		c.emit(instr{op: i2f})
 	} else if Equals(String, inType) && Equals(Float, outType) {

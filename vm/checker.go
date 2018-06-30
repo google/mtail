@@ -286,12 +286,12 @@ func (c *checker) VisitAfter(node astNode) {
 			if !Equals(t, lT) {
 				conv := &convNode{n: n.lhs, typ: t}
 				n.lhs = conv
-				glog.Infof("Emitting convnode %+v", conv)
+				glog.V(2).Infof("Emitting convnode %+v", conv)
 			}
 			if !Equals(t, rT) {
 				conv := &convNode{n: n.rhs, typ: t}
 				n.rhs = conv
-				glog.Infof("Emitting convnode %+v", conv)
+				glog.V(2).Infof("Emitting convnode %+v", conv)
 			}
 
 		case ASSIGN, ADD_ASSIGN:
