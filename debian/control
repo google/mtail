@@ -4,7 +4,7 @@ Uploaders: Martín Ferrari <tincho@debian.org>,
 Section: net
 Testsuite: autopkgtest-pkg-go
 Priority: optional
-Build-Depends: debhelper (>= 9.0.0),
+Build-Depends: debhelper (>= 11),
                dh-golang (>= 1.17~),
                golang-any,
                golang-github-fsnotify-fsnotify-dev,
