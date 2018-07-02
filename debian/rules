@@ -4,7 +4,8 @@ include /usr/share/dpkg/pkg-info.mk
 #export DH_VERBOSE=1
 export DH_GOPKG := github.com/google/mtail
 export DH_GOLANG_EXCLUDES := /emgen
-export DH_GOLANG_INSTALL_EXTRA := examples/ testdata/ vm/parser.y
+export DH_GOLANG_INSTALL_EXTRA := examples/ testdata/ \
+    testutil/reader_test.golden vm/parser.y
 # Build parser.go
 export DH_GOLANG_GO_GENERATE := 1
 
