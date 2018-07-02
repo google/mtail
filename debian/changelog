@@ -1,4 +1,4 @@
-mtail (3.0.0~rc15-1) UNRELEASED; urgency=medium
+mtail (3.0.0~rc15-1) unstable; urgency=medium
 
   [ Alexandre Viau ]
   * Point Vcs-* urls to salsa.debian.org.
@@ -19,7 +19,7 @@ mtail (3.0.0~rc15-1) UNRELEASED; urgency=medium
     flags.
   * Patch a test that might timeout under load.
 
- -- Martín Ferrari <tincho@debian.org>  Mon, 02 Jul 2018 02:10:27 +0000
+ -- Martín Ferrari <tincho@debian.org>  Mon, 02 Jul 2018 03:38:21 +0000
 
 mtail (3.0.0~rc5-1) unstable; urgency=medium
 
