@@ -33,7 +33,7 @@ case "$1" in
             adduser --quiet mtail adm
         fi
     fi
-    chown -R mtail:mtail /var/log/mtail || true
+    chown mtail:mtail /var/log/mtail || true
   ;;
 
   abort-upgrade|abort-remove|abort-deconfigure)
