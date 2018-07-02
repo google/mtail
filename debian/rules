@@ -28,5 +28,8 @@ ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
             GOPATH=$(BUILDDIR) go test -v -timeout 5m -race $(DH_GOPKG)
 endif
 
+override_dh_installinit:
+	dh_installinit --no-enable --no-start
+
 override_dh_auto_install:
 	dh_auto_install -- --no-source

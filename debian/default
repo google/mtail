@@ -1,8 +1,3 @@
-# Set to 1 to start Mtail at boot.
-ENABLED=0
-
-## Log processing.
-
 # List of files to monitor (mandatory).
 #LOGS=/var/log/daemon.log,/var/log/mail.info
 
