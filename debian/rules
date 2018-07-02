@@ -31,10 +31,12 @@ override_dh_auto_build:
 	dh_auto_build -- $(BUILDFLAGS)
 
 override_dh_auto_test:
-	GOPATH=$(BUILDDIR) go test -v -timeout 60s $(DH_GOPKG)
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	dh_auto_test
 	# Only run race tests on amd64.
 	test "$(DEB_HOST_ARCH_CPU)" != amd64 || \
             GOPATH=$(BUILDDIR) go test -v -timeout 5m -race $(DH_GOPKG)
+endif
 
 override_dh_auto_install:
 	dh_auto_install -- --no-source
