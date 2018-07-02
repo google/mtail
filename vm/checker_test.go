@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 var checkerInvalidPrograms = []struct {
@@ -48,7 +49,8 @@ var checkerInvalidPrograms = []struct {
 
 	{"duplicate declaration",
 		"counter foo\ncounter foo\n",
-		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11"}},
+		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11",
+			"duplicate declaration:1:9-11: Declaration of variable `foo' is never used"}},
 
 	{"indexedExpr parameter count",
 		`counter n
@@ -89,10 +91,10 @@ counter bar by a, b
 		}},
 
 	{"builtin parameter mismatch",
-		`/(\d+)/ {
+		`/\d+/ {
 	  strptime()
 	}
-    /(\d+)/ {
+    /\d+/ {
 	  timestamp()
 	}
 	`,
@@ -107,6 +109,23 @@ counter bar by a, b
 	{"undefined const regex",
 		"/foo / + X + / bar/ {}\n",
 		[]string{"undefined const regex:1:10: Identifier `X' not declared.", "\tTry adding `const X /.../' earlier in the program."}},
+
+	{"unused symbols",
+		`counter foo
+const ID /bar/
+/asdf/ {
+}
+`,
+		[]string{"unused symbols:1:9-11: Declaration of variable `foo' is never used",
+			"unused symbols:2:7-8: Declaration of named pattern constant `ID' is never used"}},
+	{"invalid del index count",
+		`gauge t by x, y
+/.*/ {
+  del t["x"]
+  t["x"]["y"]
+}
+`,
+		[]string{"invalid del index count:3:7-11: Not enough keys for indexed expression: expecting 2, received 1"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
@@ -128,7 +147,8 @@ func TestCheckInvalidPrograms(t *testing.T) {
 
 			diff := go_cmp.Diff(
 				tc.errors,                        // want
-				strings.Split(err.Error(), "\n")) // got
+				strings.Split(err.Error(), "\n"), // got
+				cmpopts.SortSlices(func(x, y string) bool { return x < y }))
 			if diff != "" {
 				t.Errorf("Diff %s", diff)
 				t.Logf("Got: %s", err.Error())
@@ -233,6 +253,52 @@ counter test
   $foo =~ /bar/ {
   }
 }`},
+
+	{"capref used in def", `
+/(?P<x>\d+)/ && $x > 0 {
+}`},
+	{"binop compare type conversion", `
+gauge var
+/(?P<x>\d+) (\d+\.\d+)/ {
+  var = $x + $2
+}`},
+	{"binop arith type conversion", `
+gauge var
+/(?P<x>\d+) (\d+\.\d+)/ {
+  var = $x + $2
+}`},
+
+	{"concat expr 1", `
+const X /foo/
+/bar/ + X {
+}`},
+	{"concat expr 2", `
+const X /foo/
+X {
+}`},
+	{"match expression 3", `
+const X /foo/
+"a" =~ X {
+}
+`},
+	{"match expr 4", `
+/(?P<foo>.{6}) (?P<bar>.*)/ {
+  $foo =~ $bar {
+  }
+}`},
+	{"decorator scopes", `
+counter a
+def decorator {
+  /(.).*/ {
+    next
+  }
+}
+@decorator {
+  $1 == "A" {
+    a++
+  }
+}
+`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

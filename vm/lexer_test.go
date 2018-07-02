@@ -65,7 +65,7 @@ var lexerTests = []lexerTest{
 		{NOT_MATCH, "!~", position{"operators", 0, 60, 61}},
 		{EOF, "", position{"operators", 0, 62, 62}}}},
 	{"keywords",
-		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\n", []token{
+		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\n", []token{
 			{COUNTER, "counter", position{"keywords", 0, 0, 6}},
 			{NL, "\n", position{"keywords", 1, 7, -1}},
 			{GAUGE, "gauge", position{"keywords", 1, 0, 4}},
@@ -90,7 +90,9 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position{"keywords", 11, 4, -1}},
 			{DEL, "del", position{"keywords", 11, 0, 2}},
 			{NL, "\n", position{"keywords", 12, 3, -1}},
-			{EOF, "", position{"keywords", 12, 0, 0}}}},
+			{TEXT, "text", position{"keywords", 12, 0, 3}},
+			{NL, "\n", position{"keywords", 13, 4, -1}},
+			{EOF, "", position{"keywords", 13, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\n", []token{
 			{BUILTIN, "strptime", position{"builtins", 0, 0, 7}},
@@ -215,17 +217,17 @@ var lexerTests = []lexerTest{
 // collect gathers the emitted items into a slice.
 func collect(t *lexerTest) (tokens []token) {
 	// Hack to count divs seen for regex tests.
-	in_regex_set := false
+	inRegexSet := false
 	l := newLexer(t.name, strings.NewReader(t.input))
 	for {
-		token := l.nextToken()
+		tok := l.nextToken()
 		// Hack to simulate context signal from parser.
-		if token.kind == DIV && (strings.Contains(t.name, "regex") || strings.HasPrefix(t.name, "large program")) && !in_regex_set {
+		if tok.kind == DIV && (strings.Contains(t.name, "regex") || strings.HasPrefix(t.name, "large program")) && !inRegexSet {
 			l.inRegex = true
-			in_regex_set = true
+			inRegexSet = true
 		}
-		tokens = append(tokens, token)
-		if token.kind == EOF {
+		tokens = append(tokens, tok)
+		if tok.kind == EOF {
 			return
 		}
 	}

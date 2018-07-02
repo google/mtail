@@ -77,7 +77,7 @@ def syslog {
         }
         # If the RFC3339 style matched, parse it this way.
         len($rfc3339_date) > 0 {
-            strptime($rfc3339_date, "2006-01-02T03:04:05-0700")
+            strptime($rfc3339_date, "2006-01-02T15:04:05-0700")
         }
         # Call into the decorated block
         next
@@ -323,5 +323,5 @@ ANNOTATIONS {
 
 In this example, prometheus computes a service level indicator of the ratio of
 requests at or below the target of 200ms against the total count, and then
-fires an alert if the indicator drops below five nines.
+fires an alert if the indicator drops below nine fives.
 

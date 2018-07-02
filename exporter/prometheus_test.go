@@ -74,6 +74,16 @@ foo{} 1
 foo{} 1
 `,
 	},
+	{"text",
+		[]*metrics.Metric{
+			{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Text,
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeString("hi", time.Unix(0, 0))}}},
+		},
+		"",
+	},
 	{"quotes",
 		[]*metrics.Metric{
 			{
@@ -138,8 +148,7 @@ func TestHandlePrometheus(t *testing.T) {
 			for _, metric := range tc.metrics {
 				ms.Add(metric)
 			}
-			o := Options{ms, "gunstar", true}
-			e, err := New(o)
+			e, err := New(ms, Hostname("gunstar"), OmitProgLabel)
 			if err != nil {
 				t.Fatalf("couldn't make exporter: %s", err)
 			}

@@ -1,0 +1,13 @@
+text str
+counter b by foo
+
+# To make ex_test.go happy
+strptime("2018-06-16T03:37:54Z", "2006-01-02T15:04:05Z07:00")
+
+/(.*)/ {
+  str = $1
+}
+
+/b/ {
+  b[str]++
+}

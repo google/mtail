@@ -1,0 +1,6 @@
+# This is an example mtail programme for exporting no code instrumentation
+#
+# No code has no instrumentation, thus requires an external program to sift
+# and export metrics from other sources; in this case with mtail from any log
+# files.
+

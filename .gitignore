@@ -21,3 +21,6 @@ foo.log
 /.gen-dep-stamp
 /cpu.out
 /mem.out
+/build
+/.crossbuild-dep-stamp
+/.ghi.yml

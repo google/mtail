@@ -49,6 +49,18 @@ var handleVarzTests = []struct {
 		`foo{a=1,b=2,prog=test,instance=gunstar} 1
 `,
 	},
+	{"text",
+		[]*metrics.Metric{
+			{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Text,
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeString("hi", time.Unix(1397586900, 0))}},
+			},
+		},
+		`foo{prog=test,instance=gunstar} hi
+`,
+	},
 }
 
 func TestHandleVarz(t *testing.T) {
@@ -60,8 +72,7 @@ func TestHandleVarz(t *testing.T) {
 			for _, metric := range tc.metrics {
 				ms.Add(metric)
 			}
-			o := Options{ms, "gunstar", false}
-			e, err := New(o)
+			e, err := New(ms, Hostname("gunstar"))
 			if err != nil {
 				t.Fatalf("couldn't make exporter: %s", err)
 			}

@@ -16,12 +16,14 @@ import (
 type checker struct {
 	scope *Scope // the current scope
 
+	decoScopes []*Scope // A stack of scopes used for resolving symbols in decorated nodes
+
 	errors ErrorList
 }
 
-// Check performs a semantic check of the ast node, and returns a list of
-// errors found, or nil if the program is semantically valid.  At the
-// completion of Check, the symbol table and type annotation is also complete.
+// Check performs a semantic check of the astNode, and returns a list of errors
+// found, or nil if the program is semantically valid.  At the completion of
+// Check, the symbol table and type annotation are also complete.
 func Check(node astNode) error {
 	c := &checker{}
 	Walk(c, node)
@@ -31,6 +33,8 @@ func Check(node astNode) error {
 	return nil
 }
 
+// VisitBefore performs most of the symbol table construction, so that symbols
+// are guaranteed to exist before their use.
 func (c *checker) VisitBefore(node astNode) Visitor {
 	switch n := node.(type) {
 
@@ -54,12 +58,13 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 				c.errors.Add(n.Pos(), msg)
 				return nil
 			} else {
+				sym.Used = true
 				n.sym = sym
 			}
 		}
 
 	case *declNode:
-		n.sym = NewSymbol(n.name, VarSymbol, &n.pos)
+		n.sym = NewSymbol(n.name, VarSymbol, n.Pos())
 		if alt := c.scope.Insert(n.sym); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
@@ -79,9 +84,11 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		if n.sym == nil {
 			if sym := c.scope.Lookup(n.name, VarSymbol); sym != nil {
 				glog.V(2).Infof("found sym %v", sym)
+				sym.Used = true
 				n.sym = sym
 			} else if sym := c.scope.Lookup(n.name, PatternSymbol); sym != nil {
 				glog.V(2).Infof("Found Sym %v", sym)
+				sym.Used = true
 				n.sym = sym
 			} else {
 				// Apply a terribly bad heuristic to choose a suggestion.
@@ -97,7 +104,7 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 		}
 
 	case *decoDefNode:
-		n.sym = NewSymbol(n.name, DecoSymbol, &n.pos)
+		n.sym = NewSymbol(n.name, DecoSymbol, n.Pos())
 		(*n.sym).Binding = n
 		if alt := c.scope.Insert(n.sym); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `%s' previously declared at %s", n.name, alt.Pos))
@@ -110,16 +117,26 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.name))
 				return nil
 			}
+			sym.Used = true
 			n.def = sym.Binding.(*decoDefNode)
 		} else {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.name, n.name))
 			return nil
 		}
+		n.scope = NewScope(c.scope)
+		// Insert all of n.def.scope into this scope
+		n.scope.CopyFrom(n.def.scope)
+		c.scope = n.scope
 
 	case *patternFragmentDefNode:
-		n.sym = NewSymbol(n.name, PatternSymbol, &n.pos)
+		id, ok := n.id.(*idNode)
+		if !ok {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no identifier attache to pattern fragment %#v", n))
+			return nil
+		}
+		n.sym = NewSymbol(id.name, PatternSymbol, id.Pos())
 		if alt := c.scope.Insert(n.sym); alt != nil {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", n.name, alt.Pos))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", id.name, alt.Pos))
 			return nil
 		}
 		n.sym.Binding = n
@@ -132,14 +149,54 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 	return c
 }
 
+// checkSymbolUsage emits errors if any eligible symbols in the current scope
+// are not marked as used.
+func (c *checker) checkSymbolUsage() {
+	for _, sym := range c.scope.Symbols {
+		if !sym.Used {
+			// Users don't have control over the patterns given from decorators
+			// so this should never be an error; but it can be useful to know
+			// if a program is doing unnecessary work.
+			if sym.Kind == CaprefSymbol {
+				if sym.Addr == 0 {
+					// Don't warn about the zeroth capture group; it's not user-defined.
+					continue
+				}
+				glog.Infof("declaration of capture group reference `%s' at %s appears to be unused", sym.Name, sym.Pos)
+				continue
+			}
+			c.errors.Add(sym.Pos, fmt.Sprintf("Declaration of %s `%s' is never used", sym.Kind, sym.Name))
+		}
+	}
+}
+
+// VisitAfter performs the type annotation and checking, once the child nodes of
+// expressions have been annotated and checked.
 func (c *checker) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *stmtlistNode:
+		c.checkSymbolUsage()
+		// Pop the scope
 		c.scope = n.s.Parent
 
 	case *condNode:
+		c.checkSymbolUsage()
 		// Pop the scope
 		c.scope = n.s.Parent
+
+	case *decoNode:
+		// Don't check symbol usage here because the decorator is only partially defined.
+		c.scope = n.scope.Parent
+
+	case *nextNode:
+		// Put the current scope on a decorator-specific scoe stack for unwinding
+		c.decoScopes = append(c.decoScopes, c.scope)
+
+	case *decoDefNode:
+		// Pop a decorator scope off the stack from the enclosed nextNode.
+		last := len(c.decoScopes) - 1
+		n.scope = c.decoScopes[last]
+		c.decoScopes = c.decoScopes[:last]
 
 	case *binaryExprNode:
 		var rType Type
@@ -179,6 +236,16 @@ func (c *checker) VisitAfter(node astNode) {
 				n.SetType(Error)
 				return
 			}
+			// Implicit type conversion for non-comparisons, promoting each
+			// half to the return type of the op.
+			if !Equals(rType, lT) {
+				conv := &convNode{n: n.lhs, typ: rType}
+				n.lhs = conv
+			}
+			if !Equals(rType, rT) {
+				conv := &convNode{n: n.rhs, typ: rType}
+				n.rhs = conv
+			}
 
 		case SHL, SHR, BITAND, BITOR, XOR, NOT:
 			// bitwise
@@ -198,8 +265,8 @@ func (c *checker) VisitAfter(node astNode) {
 			// comparable, logical
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
-			// ⇒ O ⊢ e : lub(Tl, Tr)
-			rType = LeastUpperBound(lT, rT)
+			// ⇒ O ⊢ e : Bool
+			rType = Bool
 			if isErrorType(rType) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
 				n.SetType(rType)
@@ -207,13 +274,24 @@ func (c *checker) VisitAfter(node astNode) {
 			}
 			astType := Function(lT, rT, rType)
 
-			t := NewTypeVariable()
-			exprType := Function(t, t, Int)
+			t := LeastUpperBound(lT, rT)
+			exprType := Function(t, t, Bool)
 			err := Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
 				n.SetType(Error)
 				return
+			}
+			// Promote types if the ast types are not the same as the expression type.
+			if !Equals(t, lT) {
+				conv := &convNode{n: n.lhs, typ: t}
+				n.lhs = conv
+				glog.V(2).Infof("Emitting convnode %+v", conv)
+			}
+			if !Equals(t, rT) {
+				conv := &convNode{n: n.rhs, typ: t}
+				n.rhs = conv
+				glog.V(2).Infof("Emitting convnode %+v", conv)
 			}
 
 		case ASSIGN, ADD_ASSIGN:
@@ -226,6 +304,12 @@ func (c *checker) VisitAfter(node astNode) {
 				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(Error)
 				return
+			}
+			switch v := n.lhs.(type) {
+			case *idNode:
+				v.lvalue = true
+			case *indexedExprNode:
+				v.lhs.(*idNode).lvalue = true
 			}
 
 		case CONCAT:
@@ -283,6 +367,13 @@ func (c *checker) VisitAfter(node astNode) {
 				return
 			}
 			n.SetType(rType)
+			switch v := n.expr.(type) {
+			case *idNode:
+				v.lvalue = true
+			case *indexedExprNode:
+				v.lhs.(*idNode).lvalue = true
+			}
+
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary expr %v", n))
 			n.SetType(Error)
@@ -430,16 +521,20 @@ func (c *checker) VisitAfter(node astNode) {
 		}
 		n.pattern = pe.pattern
 
+	case *delNode:
+		n.n.(*indexedExprNode).lhs.(*idNode).lvalue = true
 	}
 }
 
+// checkRegex is a helper method to compile and check a regular expression, and
+// to generate its capture groups as symbols.
 func (c *checker) checkRegex(pattern string, n astNode) {
 	if reAst, err := syntax.Parse(pattern, syntax.Perl); err == nil {
 		// We reserve the names of the capturing groups as declarations
 		// of those symbols, so that future CAPREF tokens parsed can
 		// retrieve their value.  By recording them in the symbol table, we
 		// can warn the user about unknown capture group references.
-		for i := 1; i <= reAst.MaxCap(); i++ {
+		for i, capref := range reAst.CapNames() {
 			sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
 			sym.Type = inferCaprefType(reAst, i)
 			sym.Binding = n
@@ -448,14 +543,9 @@ func (c *checker) checkRegex(pattern string, n astNode) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
 				// No return, let this loop collect all errors
 			}
-		}
-		for i, capref := range reAst.CapNames() {
 			if capref != "" {
-				sym := NewSymbol(capref, CaprefSymbol, n.Pos())
-				sym.Type = inferCaprefType(reAst, i)
-				sym.Binding = n
-				sym.Addr = i
-				if alt := c.scope.Insert(sym); alt != nil {
+				sym.Name = capref
+				if alt := c.scope.InsertAlias(sym, capref); alt != nil {
 					c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of capture group `%s' previously declared at %s", sym.Name, alt.Pos))
 					// No return, let this loop collect all errors
 				}
@@ -467,6 +557,8 @@ func (c *checker) checkRegex(pattern string, n astNode) {
 	}
 }
 
+// patternEvaluator is a helper that performs concatenation of pattern
+// fragments so that they can be compiled as whole regular expression patterns.
 type patternEvaluator struct {
 	scope   *Scope
 	errors  *ErrorList

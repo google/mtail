@@ -10,6 +10,7 @@ import (
 
 	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/metrics/datum"
 	"github.com/google/mtail/tailer"
 )
 
@@ -431,6 +432,27 @@ var instructions = []struct {
 		[]interface{}{"first", "second"},
 		[]interface{}{"firstsecond"},
 		thread{pc: 0, matches: map[int][]string{}}},
+	{"icmp gt false",
+		instr{icmp, 1},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1, 2},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"fcmp gt false",
+		instr{fcmp, 1},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{1.0, 2.0},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
+	{"scmp eq false",
+		instr{scmp, 0},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"abc", "def"},
+		[]interface{}{false},
+		thread{pc: 0, matches: map[int][]string{}}},
 }
 
 const testFilename = "test"
@@ -496,7 +518,9 @@ func TestDatumSetInstrs(t *testing.T) {
 	var m []*metrics.Metric
 	m = append(m,
 		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int),
-		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float))
+		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float),
+		metrics.NewMetric("c", "tst", metrics.Gauge, metrics.String),
+	)
 
 	// simple inc
 	v := makeVM(instr{inc, nil}, m)
@@ -630,6 +654,26 @@ func TestDatumSetInstrs(t *testing.T) {
 	if d.ValueString() != "4.1" {
 		t.Errorf("Unexpected value %v", d)
 	}
+
+	// sset
+	v = makeVM(instr{sset, nil}, m)
+	d, err = m[2].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.t.Push(d)
+	v.t.Push("4.1")
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[1].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "4.1" {
+		t.Errorf("Unexpected value %v", d)
+	}
 }
 
 func TestStrptimeWithTimezone(t *testing.T) {
@@ -643,5 +687,93 @@ func TestStrptimeWithTimezone(t *testing.T) {
 	vm.execute(vm.t, obj.prog[0])
 	if vm.t.time != time.Date(2012, 01, 18, 06, 25, 00, 00, loc) {
 		t.Errorf("Time didn't parse with location: %s received", vm.t.time)
+	}
+}
+
+func TestStrptimeWithoutTimezone(t *testing.T) {
+	obj := &object{prog: []instr{{strptime, 0}}}
+	vm := New("strptimezone", obj, true, nil)
+	vm.t = new(thread)
+	vm.t.stack = make([]interface{}, 0)
+	vm.t.Push("2012/01/18 06:25:00")
+	vm.t.Push("2006/01/02 15:04:05")
+	vm.execute(vm.t, obj.prog[0])
+	if vm.t.time != time.Date(2012, 01, 18, 06, 25, 00, 00, time.UTC) {
+		t.Errorf("Time didn't parse with location: %s received", vm.t.time)
+	}
+}
+
+// Instructions with datum retrieve
+func TestDatumFetchInstrs(t *testing.T) {
+	var m []*metrics.Metric
+	m = append(m,
+		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int),
+		metrics.NewMetric("b", "tst", metrics.Counter, metrics.Float),
+		metrics.NewMetric("c", "tst", metrics.Text, metrics.String))
+
+	{
+		// iget
+		v := makeVM(instr{iget, nil}, m)
+		d, err := m[0].GetDatum()
+		if err != nil {
+			t.Fatal(err)
+		}
+		datum.SetInt(d, 37, time.Now())
+		v.t.Push(d)
+		v.execute(v.t, v.prog[0])
+		if v.terminate {
+			t.Fatalf("Execution failed, see info log.")
+		}
+		i, err := v.t.PopInt()
+		if err != nil {
+			t.Fatalf("Execution failed, see info")
+		}
+		if i != 37 {
+			t.Errorf("unexpected value %d", i)
+		}
+	}
+
+	{
+		// fget
+		v := makeVM(instr{fget, nil}, m)
+		d, err := m[1].GetDatum()
+		if err != nil {
+			t.Fatal(err)
+		}
+		datum.SetFloat(d, 12.1, time.Now())
+		v.t.Push(d)
+		v.execute(v.t, v.prog[0])
+		if v.terminate {
+			t.Fatalf("Execution failed, see info log.")
+		}
+		i, err := v.t.PopFloat()
+		if err != nil {
+			t.Fatalf("Execution failed, see info")
+		}
+		if i != 12.1 {
+			t.Errorf("unexpected value %f", i)
+		}
+	}
+
+	{
+		// sget
+		v := makeVM(instr{sget, nil}, m)
+		d, err := m[2].GetDatum()
+		if err != nil {
+			t.Fatal(err)
+		}
+		datum.SetString(d, "aba", time.Now())
+		v.t.Push(d)
+		v.execute(v.t, v.prog[0])
+		if v.terminate {
+			t.Fatalf("Execution failed, see info log.")
+		}
+		i, ok := v.t.Pop().(string)
+		if !ok {
+			t.Fatalf("Execution failed, see info")
+		}
+		if i != "aba" {
+			t.Errorf("unexpected value %q", i)
+		}
 	}
 }

@@ -97,7 +97,7 @@ var testCodeGenPrograms = []struct {
 		[]instr{
 			{push, int64(1)},
 			{push, int64(0)},
-			{cmp, 1},
+			{icmp, 1},
 			{jnm, 6},
 			{push, true},
 			{jmp, 7},
@@ -116,7 +116,7 @@ var testCodeGenPrograms = []struct {
 		[]instr{
 			{push, int64(1)},
 			{push, int64(0)},
-			{cmp, -1},
+			{icmp, -1},
 			{jnm, 6},
 			{push, true},
 			{jmp, 7},
@@ -135,7 +135,7 @@ var testCodeGenPrograms = []struct {
 		[]instr{
 			{push, int64(1)},
 			{push, int64(0)},
-			{cmp, 0},
+			{icmp, 0},
 			{jnm, 6},
 			{push, true},
 			{jmp, 7},
@@ -154,7 +154,7 @@ var testCodeGenPrograms = []struct {
 		[]instr{
 			{push, int64(1)},
 			{push, int64(0)},
-			{cmp, 1},
+			{icmp, 1},
 			{jm, 6},
 			{push, true},
 			{jmp, 7},
@@ -173,7 +173,7 @@ var testCodeGenPrograms = []struct {
 		[]instr{
 			{push, int64(1)},
 			{push, int64(0)},
-			{cmp, -1},
+			{icmp, -1},
 			{jm, 6},
 			{push, true},
 			{jmp, 7},
@@ -192,7 +192,7 @@ var testCodeGenPrograms = []struct {
 		[]instr{
 			{push, int64(1)},
 			{push, int64(0)},
-			{cmp, 0},
+			{icmp, 0},
 			{jm, 6},
 			{push, true},
 			{jmp, 7},
@@ -205,7 +205,7 @@ var testCodeGenPrograms = []struct {
 			{setmatched, true}}},
 	{"nested cond",
 		"counter foo\n" +
-			"/(.*)/ {\n" +
+			"/(\\d+)/ {\n" +
 			"  $1 <= 1 {\n" +
 			"    foo++\n" +
 			"  }\n" +
@@ -217,7 +217,7 @@ var testCodeGenPrograms = []struct {
 			{push, 0},
 			{capref, 1},
 			{push, int64(1)},
-			{cmp, 1},
+			{icmp, 1},
 			{jm, 10},
 			{push, true},
 			{jmp, 11},
@@ -347,7 +347,7 @@ counter bar
 		[]instr{
 			{push, int64(1)},
 			{push, int64(0)},
-			{cmp, 1},
+			{icmp, 1},
 			{jnm, 6},
 			{push, true},
 			{jmp, 7},
@@ -542,7 +542,7 @@ getfilename()
 			{push, 0},
 			{capref, 1},
 			{str, 0},
-			{cmp, 0},
+			{scmp, 0},
 			{jnm, 10},
 			{push, true},
 			{jmp, 11},
@@ -551,7 +551,7 @@ getfilename()
 			{push, 0},
 			{capref, 1},
 			{str, 1},
-			{cmp, 0},
+			{scmp, 0},
 			{jnm, 19},
 			{push, true},
 			{jmp, 20},
@@ -652,6 +652,93 @@ gauge foo
 			{setmatched, true},
 			{setmatched, true},
 		}},
+	{"capref used in def", `
+/(?P<x>\d+)/ && $x > 5 {
+}`,
+		[]instr{
+			{match, 0},
+			{jnm, 13},
+			{push, 0},
+			{capref, 1},
+			{push, int64(5)},
+			{icmp, 1},
+			{jnm, 9},
+			{push, true},
+			{jmp, 10},
+			{push, false},
+			{jnm, 13},
+			{push, true},
+			{jmp, 14},
+			{push, false},
+			{jnm, 17},
+			{setmatched, false},
+			{setmatched, true},
+		}},
+	{"binop arith type conversion", `
+gauge var
+/(?P<x>\d+) (\d+\.\d+)/ {
+  var = $x + $2
+}`,
+		[]instr{
+			{match, 0},
+			{jnm, 13},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{i2f, nil},
+			{push, 0},
+			{capref, 2},
+			{fadd, nil},
+			{fset, nil},
+			{setmatched, true},
+		}},
+	{"binop compare type conversion", `
+counter var
+/(?P<x>\d+) (\d+\.\d+)/ {
+  $x > $2 {
+    var++
+  }
+}`,
+		[]instr{
+			{match, 0},
+			{jnm, 20},
+			{setmatched, false},
+			{push, 0},
+			{capref, 1},
+			{i2f, nil},
+			{push, 0},
+			{capref, 2},
+			{fcmp, 1},
+			{jnm, 12},
+			{push, true},
+			{jmp, 13},
+			{push, false},
+			{jnm, 19},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{inc, nil},
+			{setmatched, true},
+			{setmatched, true},
+		}},
+	{"set string", `
+text foo
+/(.*)/ {
+  foo = $1
+}
+`, []instr{
+		{match, 0},
+		{jnm, 9},
+		{setmatched, false},
+		{mload, 0},
+		{dload, 0},
+		{push, 0},
+		{capref, 1},
+		{sset, nil},
+		{setmatched, true},
+	}},
 }
 
 func TestCodegen(t *testing.T) {

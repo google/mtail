@@ -24,136 +24,6 @@ import (
 	"github.com/google/mtail/tailer"
 )
 
-type opcode int
-
-const (
-	bad        opcode = iota // Invalid instruction, indicates a bug in the generator.
-	match                    // Match a regular expression against input, and set the match register.
-	smatch                   // Match a regular expression against top of stack, and set the match register.
-	cmp                      // Compare two values on the stack and set the match register.
-	jnm                      // Jump if no match.
-	jm                       // Jump if match.
-	jmp                      // Unconditional jump
-	inc                      // Increment a variable value
-	strptime                 // Parse into the timestamp register
-	timestamp                // Return value of timestamp register onto TOS.
-	settime                  // Set timestamp register to value at TOS.
-	push                     // Push operand onto stack
-	capref                   // Push capture group reference at operand onto stack
-	str                      // Push string constant at operand onto stack
-	iset                     // Set a variable value
-	iadd                     // Add top values on stack and push to stack
-	isub                     // Subtract top value from second top value on stack, and push to stack.
-	imul                     // Multiply top values on stack and push to stack
-	idiv                     // Divide top value into second top on stack, and push
-	imod                     // Integer divide top value into second top on stack, and push remainder
-	ipow                     // Put second TOS to power of TOS, and push.
-	and                      // Bitwise AND the 2 at top of stack, and push result
-	or                       // Bitwise OR the 2 at top of stack, and push result
-	xor                      // Bitwise XOR the 2 at top of stack, and push result
-	neg                      // Bitwise NOT the top of stack, and push result
-	not                      // Boolean NOT the top of stack, and push result
-	shl                      // Shift TOS left, push result
-	shr                      // Shift TOS right, push result
-	mload                    // Load metric at operand onto top of stack
-	dload                    // Pop `operand` keys and metric off stack, and push datum at metric[key,...] onto stack.
-	tolower                  // Convert the string at the top of the stack to lowercase.
-	length                   // Compute the length of a string.
-	cat                      // string concatenation
-	setmatched               // Set "matched" flag
-	otherwise                // Only match if "matched" flag is false.
-	del                      //  Pop `operand` keys and metric off stack, and remove the datum at metric[key,...] from memory
-
-	// Floating point ops
-	fadd
-	fsub
-	fmul
-	fdiv
-	fmod
-	fpow
-	fset // Floating point assignment
-
-	getfilename // Push input.Filename onto the stack.
-
-	// Conversions
-	i2f // int to float
-	s2i // string to int
-	s2f // string to float
-	i2s // int to string
-	f2s // float to string
-)
-
-var opNames = map[opcode]string{
-	match:       "match",
-	smatch:      "smatch",
-	cmp:         "cmp",
-	jnm:         "jnm",
-	jm:          "jm",
-	jmp:         "jmp",
-	inc:         "inc",
-	strptime:    "strptime",
-	timestamp:   "timestamp",
-	settime:     "settime",
-	push:        "push",
-	capref:      "capref",
-	str:         "str",
-	iset:        "iset",
-	iadd:        "iadd",
-	isub:        "isub",
-	imul:        "imul",
-	idiv:        "idiv",
-	imod:        "imod",
-	ipow:        "ipow",
-	shl:         "shl",
-	shr:         "shr",
-	and:         "and",
-	or:          "or",
-	xor:         "xor",
-	not:         "not",
-	neg:         "neg",
-	mload:       "mload",
-	dload:       "dload",
-	tolower:     "tolower",
-	length:      "length",
-	cat:         "cat",
-	setmatched:  "setmatched",
-	otherwise:   "otherwise",
-	del:         "del",
-	fadd:        "fadd",
-	fsub:        "fsub",
-	fmul:        "fmul",
-	fdiv:        "fdiv",
-	fmod:        "fmod",
-	fpow:        "fpow",
-	fset:        "fset",
-	getfilename: "getfilename",
-	i2f:         "i2f",
-	s2i:         "s2i",
-	s2f:         "s2f",
-	i2s:         "i2s",
-	f2s:         "f2s",
-}
-
-var builtin = map[string]opcode{
-	"getfilename": getfilename,
-	"len":         length,
-	"settime":     settime,
-	"strptime":    strptime,
-	"strtol":      s2i,
-	"timestamp":   timestamp,
-	"tolower":     tolower,
-}
-
-type instr struct {
-	op   opcode
-	opnd interface{}
-}
-
-// debug print for instructions
-func (i instr) String() string {
-	return fmt.Sprintf("{%s %v}", opNames[i.op], i.opnd)
-}
-
 type thread struct {
 	pc      int              // Program counter.
 	matched bool             // Flag set if any match has been found.
@@ -202,6 +72,7 @@ func (t *thread) Pop() (value interface{}) {
 
 // Log a runtime error and terminate the program
 func (v *VM) errorf(format string, args ...interface{}) {
+	progRuntimeErrors.Add(v.name, 1)
 	glog.Infof(v.name+": Runtime error: "+format+"\n", args...)
 	glog.Infof("VM stack:\n%s", debug.Stack())
 	glog.Infof("Dumping vm state")
@@ -403,9 +274,8 @@ func (v *VM) ParseTime(layout, value string) (tm time.Time) {
 	return
 }
 
-// Execute performs an instruction cycle in the VM -- acting on the current
-// instruction, and returns a boolean indicating if the current thread should
-// terminate.
+// execute performs an instruction cycle in the VM. acting on the instruction
+// i in thread t.
 func (v *VM) execute(t *thread, i instr) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -442,6 +312,46 @@ func (v *VM) execute(t *thread, i instr) {
 		a := t.Pop()
 
 		match, err := compare(a, b, i.opnd.(int))
+		if err != nil {
+			v.errorf("%+v", err)
+		}
+
+		t.Push(match)
+
+	case icmp:
+		b, berr := t.PopInt()
+		if berr != nil {
+			v.errorf("%v", berr)
+		}
+		a, aerr := t.PopInt()
+		if aerr != nil {
+			v.errorf("%v", aerr)
+		}
+		match, err := compareInt(a, b, i.opnd.(int))
+		if err != nil {
+			v.errorf("%+v", err)
+		}
+
+		t.Push(match)
+	case fcmp:
+		b, berr := t.PopFloat()
+		if berr != nil {
+			v.errorf("%v", berr)
+		}
+		a, aerr := t.PopFloat()
+		if aerr != nil {
+			v.errorf("%v", aerr)
+		}
+		match, err := compareFloat(a, b, i.opnd.(int))
+		if err != nil {
+			v.errorf("%+v", err)
+		}
+
+		t.Push(match)
+	case scmp:
+		b := t.Pop().(string)
+		a := t.Pop().(string)
+		match, err := compareString(a, b, i.opnd.(int))
 		if err != nil {
 			v.errorf("%+v", err)
 		}
@@ -502,6 +412,18 @@ func (v *VM) execute(t *thread, i instr) {
 			datum.SetFloat(n, value, t.time)
 		} else {
 			v.errorf("Unexpected type to fset: %T %q", n, n)
+		}
+
+	case sset:
+		// Set a string datum
+		value, ok := t.Pop().(string)
+		if !ok {
+			v.errorf("Value on stack was not a string: %T %q", value, value)
+		}
+		if n, ok := t.Pop().(datum.Datum); ok {
+			datum.SetString(n, value, t.time)
+		} else {
+			v.errorf("Unexpected type to sset: %T %q", n, n)
 		}
 
 	case strptime:
@@ -648,6 +570,20 @@ func (v *VM) execute(t *thread, i instr) {
 		//fmt.Printf("Found %v\n", d)
 		t.Push(d)
 
+	case iget, fget, sget:
+		d, ok := t.Pop().(datum.Datum)
+		if !ok {
+			v.errorf("Unexpected value on stack: %q", d)
+		}
+		switch i.op {
+		case iget:
+			t.Push(datum.GetInt(d))
+		case fget:
+			t.Push(datum.GetFloat(d))
+		case sget:
+			t.Push(datum.GetString(d))
+		}
+
 	case del:
 		m := t.Pop().(*metrics.Metric)
 		index := i.opnd.(int)
@@ -766,8 +702,9 @@ func (v *VM) processLine(logline *tailer.LogLine) {
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
 func (v *VM) Run(_ uint32, lines <-chan *tailer.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
-	glog.Infof("Starting program %s", v.name)
 	defer close(shutdown)
+
+	glog.Infof("Starting program %s", v.name)
 	close(started)
 	for line := range lines {
 		// TODO(jaq): measure and export the processLine runtime per VM as a histo.
@@ -791,7 +728,7 @@ func New(name string, obj *object, syslogUseCurrentYear bool, loc *time.Location
 	}
 }
 
-// DumpByteCode emits the program disassembly and program objects to string.
+// DumpByteCode emits the program disassembly and program objects to a string.
 func (v *VM) DumpByteCode(name string) string {
 	b := new(bytes.Buffer)
 	fmt.Fprintf(b, "Prog: %s\n", name)

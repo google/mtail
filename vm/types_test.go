@@ -32,8 +32,8 @@ var typeUnificationTests = []struct {
 		Float,
 	},
 	{
-		&TypeVariable{Id: 0}, &TypeVariable{Id: 0},
-		&TypeVariable{Id: 0},
+		&TypeVariable{ID: 0}, &TypeVariable{ID: 0},
+		&TypeVariable{ID: 0},
 	},
 	// The unification of any type operator with a type variable is the type operator
 	{
@@ -94,6 +94,33 @@ var typeUnificationTests = []struct {
 	{
 		String, Float,
 		String,
+	},
+	// Implicitly, a Pattern by itself returns the value of its' match
+	{
+		Pattern, Bool,
+		Bool,
+	},
+	{
+		Bool, Pattern,
+		Bool,
+	},
+	// lub of Bool and Int is an Int.
+	{
+		Bool, Int,
+		Int,
+	},
+	{
+		Int, Bool,
+		Int,
+	},
+	// Strings can be Patterns.
+	{
+		Pattern, String,
+		Pattern,
+	},
+	{
+		String, Pattern,
+		Pattern,
 	},
 }
 
@@ -169,6 +196,9 @@ var inferCaprefTypeTests = []struct {
 		Float,
 	},
 	{`-?\d+\.\d+`,
+		Float,
+	},
+	{`(\d+\.\d+)`,
 		Float,
 	},
 	{`\d+\.\d+\.\d+\.\d+`,

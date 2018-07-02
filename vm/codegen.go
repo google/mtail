@@ -14,15 +14,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-// compiler is data for the code generator.
+// codegen represents a code generator.
 type codegen struct {
 	name string // Name of the program.
 
-	errors ErrorList // Compile errors.
-	obj    object    // The object to return
-	l      []int     // jump table
+	errors ErrorList // Any compile errors detected are accumulated here.
+	obj    object    // The object to return, if successful.
 
-	decos []*decoNode // Decorator stack to unwind
+	l     []int       // Label table for recording jump destinations.
+	decos []*decoNode // Decorator stack to unwind when entering decorated blocks.
 }
 
 // CodeGen is the function that compiles the program to bytecode and data.
@@ -83,6 +83,8 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		switch {
 		case Equals(Float, t):
 			dtyp = metrics.Float
+		case Equals(String, t):
+			dtyp = metrics.String
 		default:
 			if !IsComplete(t) {
 				glog.Infof("Incomplete type %v for %#v", t, n)
@@ -167,6 +169,24 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		c.emit(instr{mload, n.sym.Addr})
 		m := n.sym.Binding.(*metrics.Metric)
 		c.emit(instr{dload, len(m.Keys)})
+
+		if !n.lvalue {
+			t := n.Type()
+			if IsDimension(t) {
+				l := len(t.(*TypeOperator).Args)
+				t = t.(*TypeOperator).Args[l-1]
+			}
+
+			if Equals(t, Float) {
+				c.emit(instr{fget, nil})
+			} else if Equals(t, Int) {
+				c.emit(instr{iget, nil})
+			} else if Equals(t, String) {
+				c.emit(instr{sget, nil})
+			} else {
+				c.errorf(n.Pos(), "invalid type for get %q in %#v", n.Type(), n)
+			}
+		}
 
 	case *caprefNode:
 		if n.sym == nil || n.sym.Binding == nil {
@@ -272,7 +292,8 @@ var typedOperators = map[int]map[Type]opcode{
 	POW: {Int: ipow,
 		Float: fpow},
 	ASSIGN: {Int: iset,
-		Float: fset},
+		Float:  fset,
+		String: sset},
 }
 
 func (c *codegen) VisitAfter(node astNode) {
@@ -334,7 +355,20 @@ func (c *codegen) VisitAfter(node astNode) {
 				cmpArg = 0
 				jumpOp = jm
 			}
-			c.emit(instr{cmp, cmpArg})
+			cmpOp := cmp
+			if Equals(n.lhs.Type(), n.rhs.Type()) {
+				switch n.lhs.Type() {
+				case Float:
+					cmpOp = fcmp
+				case Int:
+					cmpOp = icmp
+				case String:
+					cmpOp = scmp
+				default:
+					cmpOp = cmp
+				}
+			}
+			c.emit(instr{cmpOp, cmpArg})
 			c.emit(instr{jumpOp, lFail})
 			c.emit(instr{push, true})
 			c.emit(instr{jmp, lEnd})
@@ -410,7 +444,7 @@ func (c *codegen) VisitAfter(node astNode) {
 }
 
 func (c *codegen) emitConversion(inType, outType Type) error {
-	glog.Infof("Conversion: %q to %q", inType, outType)
+	glog.V(2).Infof("Conversion: %q to %q", inType, outType)
 	if Equals(Int, inType) && Equals(Float, outType) {
 		c.emit(instr{op: i2f})
 	} else if Equals(String, inType) && Equals(Float, outType) {
@@ -421,6 +455,8 @@ func (c *codegen) emitConversion(inType, outType Type) error {
 		c.emit(instr{op: f2s})
 	} else if Equals(Int, inType) && Equals(String, outType) {
 		c.emit(instr{op: i2s})
+	} else if Equals(Pattern, inType) && Equals(Bool, outType) {
+		// nothing, pattern is implicit bool
 	} else {
 		return errors.Errorf("can't convert %q to %q", inType, outType)
 	}

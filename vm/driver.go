@@ -12,6 +12,8 @@ import (
 	"github.com/golang/glog"
 )
 
+// Parse reads the program named name from the input, and if successful returns
+// an astNode for the root of the AST, or parser errors.
 func Parse(name string, input io.Reader) (astNode, error) {
 	p := newParser(name, input)
 	r := mtailParse(p)
@@ -21,6 +23,7 @@ func Parse(name string, input io.Reader) (astNode, error) {
 	return p.root, nil
 }
 
+// EOF is a marker for end of file.
 const EOF = 0
 
 type parser struct {
@@ -49,7 +52,8 @@ func (p *parser) Lex(lval *mtailSymType) int {
 	switch p.t.kind {
 	case INVALID:
 		p.Error(p.t.text)
-		return EOF
+		lval.text = p.t.text
+		return INVALID
 	case INTLITERAL:
 		var err error
 		lval.intVal, err = strconv.ParseInt(p.t.text, 10, 64)
@@ -79,4 +83,5 @@ func (p *parser) inRegex() {
 
 func init() {
 	flag.IntVar(&mtailDebug, "mtailDebug", 0, "Set parser debug level.")
+	mtailErrorVerbose = true
 }

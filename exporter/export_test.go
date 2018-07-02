@@ -14,6 +14,18 @@ import (
 	"github.com/google/mtail/metrics/datum"
 )
 
+func TestCreateExporter(t *testing.T) {
+	_, err := New(nil)
+	if err == nil {
+		t.Error("expecting error, got nil")
+	}
+	store := metrics.NewStore()
+	_, err = New(store)
+	if err != nil {
+		t.Errorf("unexpected error:%s", err)
+	}
+}
+
 func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
 	var ret []string
 	lc := make(chan *metrics.LabelSet)

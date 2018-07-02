@@ -13,8 +13,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/metrics/datum"
 	"github.com/google/mtail/mtail"
-	"github.com/google/mtail/testdata"
+	"github.com/google/mtail/testutil"
 	"github.com/google/mtail/watcher"
 	"github.com/spf13/afero"
 )
@@ -94,6 +95,31 @@ var exampleProgramTests = []struct {
 		"testdata/match-expression.log",
 		"testdata/match-expression.golden",
 	},
+	{
+		"examples/apache_combined.mtail",
+		"testdata/apache-combined.log",
+		"testdata/apache-combined.golden",
+	},
+	{
+		"examples/apache_common.mtail",
+		"testdata/apache-common.log",
+		"testdata/apache-common.golden",
+	},
+	{
+		"examples/metric-as-rvalue.mtail",
+		"testdata/metric-as-rvalue.log",
+		"testdata/metric-as-rvalue.golden",
+	},
+	{
+		"examples/decorator.mtail",
+		"testdata/decorator.log",
+		"testdata/decorator.golden",
+	},
+	{
+		"examples/stringy.mtail",
+		"testdata/stringy.log",
+		"testdata/stringy.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
@@ -105,13 +131,7 @@ func TestExamplePrograms(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			fs := &afero.OsFs{}
-			logs := []string{tc.logfile}
-			o := mtail.Options{Progs: tc.programfile, LogPathPatterns: logs, W: w, FS: fs, Store: store}
-			o.OneShot = true
-			o.OmitMetricSource = true
-			o.DumpAstTypes = true
-			o.DumpBytecode = true
-			mtail, err := mtail.New(o)
+			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(tc.programfile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			if err != nil {
 				t.Fatalf("create mtail failed: %s", err)
 			}
@@ -127,20 +147,21 @@ func TestExamplePrograms(t *testing.T) {
 			}
 			defer g.Close()
 
-			golden_store := metrics.NewStore()
-			testdata.ReadTestData(g, tc.programfile, golden_store)
+			goldenStore := metrics.NewStore()
+			testutil.ReadTestData(g, tc.programfile, goldenStore)
 
 			err = mtail.Close()
 			if err != nil {
 				t.Error(err)
 			}
 
-			diff := cmp.Diff(golden_store, store, cmpopts.IgnoreUnexported(sync.RWMutex{}))
+			diff := cmp.Diff(goldenStore, store, cmpopts.IgnoreUnexported(sync.RWMutex{}, datum.StringDatum{}))
 
 			if diff != "" {
 				t.Error(diff)
-				t.Logf(" Golden metrics: %s", golden_store.Metrics)
+				t.Logf(" Golden metrics: %s", goldenStore.Metrics)
 				t.Logf("Program metrics: %s", store.Metrics)
+				t.Logf("yar\n%+v", store.Metrics)
 			}
 		})
 	}
@@ -161,12 +182,7 @@ func TestCompileExamplePrograms(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
 			fs := &afero.OsFs{}
-			o := mtail.Options{Progs: tc, W: w, FS: fs, Store: s}
-			o.CompileOnly = true
-			o.OmitMetricSource = true
-			o.DumpAstTypes = true
-			o.DumpBytecode = true
-			mtail, err := mtail.New(o)
+			mtail, err := mtail.New(s, w, fs, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			if err != nil {
 				t.Fatal(err)
 			}

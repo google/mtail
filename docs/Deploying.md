@@ -12,8 +12,8 @@ The `--help` flag will print a list of flags for configuring `mtail`.
 
 Basic flags necessary to start `mtail`:
 
-  * `--logs` is a comma separated list of filenames to extract from, but can also be used multiple times, and each filename can be a [glob pattern](http://godoc.org/path/filepath#Match).
-  * `--progs` is a directory path containing [mtail programs](Language). Programs must have the `.mtail` suffix.
+  * `--logs` is a comma separated list of filenames to extract from, but can also be used multiple times, and each filename can be a [glob pattern](http://godoc.org/path/filepath#Match).  Named pipes can be read from when passed as a filename to this flag.
+  * `--progs` is a directory path containing [mtail programs](Language.md). Programs must have the `.mtail` suffix.
 
 mtail runs an HTTP server on port 3903, which can be changed with the `--port` flag.
 
@@ -24,6 +24,45 @@ mtail runs an HTTP server on port 3903, which can be changed with the `--port` f
 ```
 mtail --progs /etc/mtail --logs /var/log/syslog --logs /var/log/ntp/peerstats
 ```
+
+`mtail` will start to read the specified logs from their current end-of-file,
+and read new updates appended to these logs as they arrive.  It will attempt to
+correctly handle log files that have been rotated by renaming or symlink
+changes.
+
+### Getting the logs in
+
+Use `--logs` multiple times to pass in glob patterns that match the logs you
+want to tail.  This includes named pipes.
+
+### Launching under Docker
+
+`mtail` can be run as a sidecar process if you expose an application container's logs with a volume.
+
+`docker run -d --name myapp -v /var/log/myapp myapp`
+
+for example exports a volume called `/var/log/myapp` (named the same as the
+hypothetical path where `myapp`s logs are written.
+
+Then launch the `mtail` docker image and pass in the volume:
+
+    docker run -dP \
+       --name myapp-mtail \
+       --volumes-from myapp \
+       -v examples:/etc/mtail \
+       mtail --logs /var/log/myapp --progs /etc/mtail
+
+This example fetches the volumes from the `myapp` container, and mounts them in
+the mtail container (which we've called `myapp-mtail`).  We also mount the
+`examples` directory as `/etc/mtail` in the container.  We launch `mtail` with
+the `logs` and `progs` flags to point to our two mounted volumes.
+
+The `-P` flag ensures `mtail-myapp`'s port 3903 is exposed for collection,
+refer to `docker ps` to find out where it's mapped to on the host.
+
+## Writing the programme
+
+Read the [Programming Guide](Programming-Guide.md) for instructions on how to write an `mtail` program.
 
 ## Getting the Metrics Out
 
@@ -53,6 +92,26 @@ Likewise, set `statsd_hostport` to the host:port of the statsd server.
 
 Additionally, the flag `metric_push_interval_seconds` can be used to configure the push frequency.  It defaults to 60, i.e. a push every minute.
 
+## Setting a default timezone
+
+The `--override_timezone` flag sets the timezone that `mtail` uses for timestamp conversion.  By default, `mtail` assumes timestamps are in UTC.
+
+To use the machine's local timezone, `--override_timezone=Local` can be used.
+
 ## Troubleshooting
 
-Lots of state is logged to the log file, by default in `/tmp/mtail.INFO`.  See [Troubleshooting](Troubleshooting) for more information.
+Lots of state is logged to the log file, by default in `/tmp/mtail.INFO`.  See [Troubleshooting](Troubleshooting.md) for more information.
+
+N.B. Oneshot mode (the `one_shot` flag on the commandline) can be used to check
+that a program is correctly reading metrics from a log, but with the following
+caveats:
+
+* Unlike normal operations, oneshot mode will read the logs from the start of
+  the file to the end, then close them -- it does not continuously tail the
+  file
+* The metrics will be printed to standard out when the logs are finished being
+  read from.
+* mtail will exit after the metrics are printed out.
+
+This mode is useful for debugging the behaviour of `mtail` programs and
+possibly for permissions checking.
