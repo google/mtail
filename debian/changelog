@@ -1,8 +1,12 @@
-mtail (3.0.0~rc5-2) UNRELEASED; urgency=medium
+mtail (3.0.0~rc15-1) UNRELEASED; urgency=medium
 
+  [ Alexandre Viau ]
   * Point Vcs-* urls to salsa.debian.org.
 
- -- Alexandre Viau <aviau@debian.org>  Mon, 02 Apr 2018 23:24:47 -0400
+  [ Martín Ferrari ]
+  * New upstream release candidate.
+
+ -- Martín Ferrari <tincho@debian.org>  Mon, 02 Jul 2018 02:09:27 +0000
 
 mtail (3.0.0~rc5-1) unstable; urgency=medium
 
