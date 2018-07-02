@@ -1,2 +1,0 @@
-# The Go compiler is currently unable to produce read-only relocations
-mtail: hardening-no-relro usr/bin/mtail
