@@ -46,13 +46,17 @@ Windows, OSX and Linux binaries are available.
 
 ### Building from source
 
-To build **mtail** from the source code yourself you need to have a working
-Go environment with version 1.9 or greater installed.
-
-A `Dockerfile` is included in this repository for local development as an
-alternative to installing Go in your environment.
+To build `mtail` from the source code yourself you need to have a working Go
+environment with version 1.9 or greater installed, also some additional tools
+like `goyacc`.  You can't `go get` the software and have it build straight away.
+Sorry.
 
 See the [Build instructions](docs/Building.md) for more details.
+
+A `Dockerfile` is included in this repository for local development as an
+alternative to installing Go in your environment, and takes care of all the
+build dependency installation, if you don't care for that.
+
 
 ## Deployment
 
