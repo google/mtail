@@ -1,0 +1,12 @@
+Description: Patch a test that might timeout under load.
+--- a/mtail/mtail_test.go
++++ b/mtail/mtail_test.go
+@@ -102,7 +102,7 @@
+ 			return false, nil
+ 		}
+ 		return true, nil
+-	}, 10*time.Millisecond, time.Millisecond)
++	}, 100*time.Millisecond, time.Millisecond)
+ 	if !ok || err != nil {
+ 		t.Errorf("Expected OK, got %v, %v", ok, err)
+ 	}

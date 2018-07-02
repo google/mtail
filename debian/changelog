@@ -17,6 +17,7 @@ mtail (3.0.0~rc15-1) UNRELEASED; urgency=medium
   * debian/rules: Add tzdata as dependency.
   * Initscripts: Do not use ENABLED flag, instead use dh_installinit
     flags.
+  * Patch a test that might timeout under load.
 
  -- Martín Ferrari <tincho@debian.org>  Mon, 02 Jul 2018 02:10:27 +0000
 
