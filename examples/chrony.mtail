@@ -1,0 +1,319 @@
+#  chrony.mtail
+#
+# this is an mtail-program for parsing
+# chrony-statistics to metrics for prometheus
+#
+
+counter chrony_stats_line_count by filename
+gauge chrony_stats_last_read_timestamp by filename
+#counter debug by label
+text last_sync_peer_ip
+text sync_peer_ip
+
+# text last_referenceID
+# text last_ntpmode
+# text last_ts_src_tx
+# text last_ts_src_rx
+# text last_rfc5905
+# text last_tstbits
+#          del chrony_measurement_peer_ntpmode[sync_peer_ip,$referenceID,$ntpmode,$ts_src_tx,$ts_src_rx]
+#          chrony_measurement_peer_ntp_check[sync_peer_ip,$referenceID,$rfc5905_123 + " " + del $rfc5905_567,$testbits]
+
+const IPV4 /\d+\.\d+\.\d+\.\d+/
+#const IPV6 /[0-9a-fA-F][0-9a-fA-F:]+/
+#const MATCH_IPV4 /(?P<ipv4>/ + IPV4 + /)/
+
+def isChronyLogdir{
+  getfilename() =~ /^\/var\/log\/chrony\/.+/ {
+    next
+  }
+}
+
+def hasTS{
+  /^(?P<ts>\d+-\d+-\d+\s+\d+:\d+:\d+) / {
+    strptime($ts,"2006-01-02 15:04:05")
+    next
+  }
+}
+
+def hasIPv4{
+  /(?P<ipv4>/ + IPV4 + /)/ {
+    sync_peer_ip=$ipv4
+    next
+  }
+}
+#def hasIPv6{
+#  /(?P<ipv6>/ + IPV6 + /)/ {
+#    debug["IPv6: $ipv6"]++
+#    sync_peer_ip=$ipv6
+#    next
+#  }
+#}
+#
+#def hasIP {
+#  @hasIPv4 {
+#    last_sync=sync_peer_ip
+#    next
+#  }
+#  @hasIPv6 {
+#    last_sync=sync_peer_ip
+#    next
+#  }
+#}
+
+@isChronyLogdir {
+  @hasTS {
+    chrony_stats_last_read_timestamp[getfilename()]=timestamp()
+    @hasIPv4 {
+      chrony_stats_line_count[getfilename()]++
+
+      getfilename() =~ /.*tracking\.log/ {
+        #==> tracking.log <==
+        #===================================================================================================================================
+        #   Date (UTC) Time     IP Address   St   Freq ppm   Skew ppm     Offset L Co  Offset sd Rem. corr. Root delay Root disp. Max. error
+        #===================================================================================================================================
+        #2018-07-05 11:44:24 0.0.0.0          0    -11.863      1.108  0.000e+00 ?  0  0.000e+00  2.084e-16  1.000e+00  1.000e+00  1.500e+00
+        #2018-07-05 11:44:29 193.141.27.6     3    -11.855      1.348  7.459e-05 N  4  2.352e-03  5.353e-11  1.903e-02  2.406e-02  1.500e+00
+        #2018-07-05 11:44:31 193.141.27.6     3    -11.845      1.668  1.223e-06 N  4  2.338e-03 -1.774e-11  1.907e-02  2.408e-02  3.366e-02
+        #2018-07-05 11:45:35 193.141.27.6     3    -11.367      1.747  2.339e-05 N  4  2.398e-03 -1.209e-06  1.905e-02  2.465e-02  3.405e-02
+        #2018-07-05 11:46:41 193.141.27.6     3    -11.099      0.606  2.938e-05 N  4  2.372e-03 -2.443e-05  1.905e-02  2.418e-02  3.439e-02
+        #2018-07-05 11:47:45 193.141.27.6     3    -11.207      0.424 -2.208e-05 N  4  2.368e-03 -5.300e-05  1.905e-02  2.415e-02  3.386e-02
+        #2018-07-05 11:48:50 193.141.27.6     3    -11.262      0.255 -2.365e-04 N  5  2.188e-03 -3.066e-05  1.905e-02  2.413e-02  3.380e-02
+        # from chronyd.conf:
+        # The columns are as follows (the quantities in square brackets are examples) :
+        # - Date [2017-08-22] Hour:Minute:Second.
+        #   Note that the date-time pair is expressed in UTC, not the local time zone. [13:22:36]
+        # - The IP address of the server or peer to which the local system is synchronised. [203.0.113.15]
+        # - The stratum of the local system. [2]
+        # - The local system frequency (in ppm, positive means the local system runs fast of UTC). [-3.541]
+        # - The error bounds on the frequency (in ppm). [0.075]
+        # - The estimated local offset at the epoch, which is normally corrected by slewing the local
+        #   clock (in seconds, positive indicates the clock is fast of UTC). [-8.621e-06]
+        # - Leap status (
+        #     N means normal,
+        #     + means that the last minute of this month has 61 seconds,
+        #     - means that the last minute of the month has 59 seconds,
+        #     ? means the clock is not currently synchronised.) [N]
+        # - The number of combined sources. [2]
+        # - The estimated standard deviation of the combined offset (in seconds). [2.940e-03]
+        # - The remaining offset correction from the previous update (in seconds, positive means
+        #   the system clock is slow of UTC). [-2.084e-04]
+        # - The total of the network path delays to the reference clock to which the local clock
+        #   is ultimately synchronised (in seconds). [1.534e-02]
+        # - The total dispersion accumulated through all the servers back to the reference clock to which the
+        #   local clock is ultimately synchronised (in seconds). [3.472e-04]
+        # - The maximum estimated error of the system clock in the interval since the previous update (in seconds).
+        #   It includes the offset, remaining offset correction, root delay, and dispersion from the previous
+        #   update with the dispersion which accumulated in the interval. [8.304e-03]
+
+        gauge chrony_tracking_stratum  by synced_peer,leapstatus
+        gauge chrony_tracking_local_frequency_ppm by synced_peer,leapstatus
+        gauge chrony_tracking_local_skew_ppm by synced_peer,leapstatus
+        gauge chrony_tracking_local_offset_seconds by synced_peer,leapstatus
+        gauge chrony_tracking_combined_sources_count by synced_peer, leapstatus
+        gauge chrony_tracking_offset_stddev_seconds by synced_peer,leapstatus
+        gauge chrony_tracking_remaining_offset_seconds by synced_peer,leapstatus
+        gauge chrony_tracking_root_delay_seconds by synced_peer,leapstatus
+        gauge chrony_tracking_root_dispersion_seconds by synced_peer,leapstatus
+        gauge chrony_tracking_max_estimated_error_seconds by synced_peer,leapstatus
+
+        /^\S+\s+\S+\s+\S+\s+(?P<lstrat>\d+)\s+(?P<lfreq>\S+)\s+(?P<lskew>[+-]?\S+)\s+(?P<loffset>[-+]?\S+)\s+(?P<leapstat>\S)\s+(?P<CoS>\d+)\s+(?P<OffsDev>\S+)\s+(?P<RemCorr>\S+)\s+(?P<rootdelay>\S+)\s+(?P<rootdisp>\S+)\s+(?P<maxerr>\S+)/ {
+
+          chrony_tracking_stratum[sync_peer_ip,$leapstat]=$lstrat
+          chrony_tracking_local_frequency_ppm[sync_peer_ip,$leapstat]=$lfreq
+          chrony_tracking_local_skew_ppm[sync_peer_ip,$leapstat]=$lskew
+          chrony_tracking_local_offset_seconds[sync_peer_ip,$leapstat]=$loffset
+          chrony_tracking_combined_sources_count[sync_peer_ip,$leapstat]=$CoS
+          chrony_tracking_offset_stddev_seconds[sync_peer_ip,$leapstat]=$OffsDev
+          chrony_tracking_remaining_offset_seconds[sync_peer_ip,$leapstat]=$RemCorr
+          chrony_tracking_root_delay_seconds[sync_peer_ip,$leapstat]=$rootdelay
+          chrony_tracking_root_dispersion_seconds[sync_peer_ip,$leapstat]=$rootdisp
+          chrony_tracking_max_estimated_error_seconds[sync_peer_ip,$leapstat]=$maxerr
+
+          # If the sync-peer-ip has changed remove all the metrics for the peer to not stuck around
+          sync_peer_ip != last_sync_peer_ip {
+              del chrony_tracking_stratum[last_sync_peer_ip,""]
+              del chrony_tracking_local_frequency_ppm[last_sync_peer_ip,""]
+              del chrony_tracking_local_skew_ppm[last_sync_peer_ip,""]
+              del chrony_tracking_local_offset_seconds[last_sync_peer_ip,""]
+              del chrony_tracking_combined_sources_count[last_sync_peer_ip,""]
+              del chrony_tracking_offset_stddev_seconds[last_sync_peer_ip,""]
+              del chrony_tracking_remaining_offset_seconds[last_sync_peer_ip,""]
+              del chrony_tracking_root_delay_seconds[last_sync_peer_ip,""]
+              del chrony_tracking_root_dispersion_seconds[last_sync_peer_ip,""]
+              del chrony_tracking_max_estimated_error_seconds[last_sync_peer_ip,""]
+
+              del chrony_tracking_stratum[last_sync_peer_ip,"N"]
+              del chrony_tracking_local_frequency_ppm[last_sync_peer_ip,"N"]
+              del chrony_tracking_local_skew_ppm[last_sync_peer_ip,"N"]
+              del chrony_tracking_local_offset_seconds[last_sync_peer_ip,"N"]
+              del chrony_tracking_combined_sources_count[last_sync_peer_ip,"N"]
+              del chrony_tracking_offset_stddev_seconds[last_sync_peer_ip,"N"]
+              del chrony_tracking_remaining_offset_seconds[last_sync_peer_ip,"N"]
+              del chrony_tracking_root_delay_seconds[last_sync_peer_ip,"N"]
+              del chrony_tracking_root_dispersion_seconds[last_sync_peer_ip,"N"]
+              del chrony_tracking_max_estimated_error_seconds[last_sync_peer_ip,"N"]
+
+              del chrony_tracking_stratum[last_sync_peer_ip,"+"]
+              del chrony_tracking_local_frequency_ppm[last_sync_peer_ip,"+"]
+              del chrony_tracking_local_skew_ppm[last_sync_peer_ip,"+"]
+              del chrony_tracking_local_offset_seconds[last_sync_peer_ip,"+"]
+              del chrony_tracking_combined_sources_count[last_sync_peer_ip,"+"]
+              del chrony_tracking_offset_stddev_seconds[last_sync_peer_ip,"+"]
+              del chrony_tracking_remaining_offset_seconds[last_sync_peer_ip,"+"]
+              del chrony_tracking_root_delay_seconds[last_sync_peer_ip,"+"]
+              del chrony_tracking_root_dispersion_seconds[last_sync_peer_ip,"+"]
+              del chrony_tracking_max_estimated_error_seconds[last_sync_peer_ip,"+"]
+
+              del chrony_tracking_stratum[last_sync_peer_ip,"-"]
+              del chrony_tracking_local_frequency_ppm[last_sync_peer_ip,"-"]
+              del chrony_tracking_local_skew_ppm[last_sync_peer_ip,"-"]
+              del chrony_tracking_local_offset_seconds[last_sync_peer_ip,"-"]
+              del chrony_tracking_combined_sources_count[last_sync_peer_ip,"-"]
+              del chrony_tracking_offset_stddev_seconds[last_sync_peer_ip,"-"]
+              del chrony_tracking_remaining_offset_seconds[last_sync_peer_ip,"-"]
+              del chrony_tracking_root_delay_seconds[last_sync_peer_ip,"-"]
+              del chrony_tracking_root_dispersion_seconds[last_sync_peer_ip,"-"]
+              del chrony_tracking_max_estimated_error_seconds[last_sync_peer_ip,"-"]
+              last_sync_peer_ip=sync_peer_ip
+          }
+        }
+      }
+      getfilename() =~ /.*measurements\.log/ {
+        #==> measurements.log <==
+        #========================================================================================================================================
+        #   Date (UTC) Time     IP Address   L St 123 567 ABCD  LP RP Score    Offset  Peer del. Peer disp.  Root del. Root disp. Refid     MTxRx
+        #========================================================================================================================================
+        #2018-07-05 11:44:24 165.227.159.15  N  2 111 111 1111   6  6 0.00  9.515e-04  6.743e-04  1.574e-06  1.363e-02  2.771e-02 A18F188D 4B K K
+        #2018-07-05 11:44:24 85.236.36.4     N  2 111 111 1111   6  6 0.00 -1.820e-03  1.039e-02  2.101e-05  1.657e-02  3.529e-02 C0356768 4B K K
+        #2018-07-05 11:44:24 62.116.162.126  N  2 111 111 1111   6  6 0.00 -1.890e-03  1.022e-02  2.070e-05  1.685e-02  2.692e-02 C0356768 4B K K
+        #2018-07-05 11:44:24 193.141.27.6    N  2 111 111 1111   6  6 0.00  1.706e-03  3.121e-03  6.502e-06  1.593e-02  2.399e-02 82951115 4B K K
+        #2018-07-05 11:44:26 165.227.159.15  N  2 111 111 1111   6  6 0.00  9.512e-04  7.658e-04  1.762e-06  1.363e-02  2.774e-02 A18F188D 4B K K
+        #2018-07-05 11:44:26 85.236.36.4     N  2 111 111 1111   6  6 0.00 -1.820e-03  1.039e-02  2.100e-05  1.657e-02  3.532e-02 C0356768 4B K K
+        #2018-07-05 11:44:26 62.116.162.126  N  2 111 111 1111   6  6 0.00 -1.841e-03  1.026e-02  2.077e-05  1.685e-02  2.695e-02 C0356768 4B K K
+        #
+        # from chronyd.conf:
+        # The columns are as follows (the quantities in square brackets are examples):
+        # - Date [2015-10-13] Hour:Minute:Second. Note that the date-time pair is expressed in UTC,
+        #   not the local time zone. [05:40:50]
+        # - IP address of server or peer from which measurement came [203.0.113.15]
+        # - Leap status (N means normal, + means that the last minute of the current month has 61 seconds
+        #     - means that the last minute of the month has 59 seconds,
+        #     ? means the remote computer is not currently synchronised.) [N]
+        # - Stratum of remote computer. [2]
+        # - RFC 5905 tests 1 through 3 (1=pass, 0=fail) [111]
+        # - RFC 5905 tests 5 through 7 (1=pass, 0=fail) [111]
+        # - Tests for maximum delay, maximum delay ratio and maximum delay dev ratio,
+        #   against defined parameters, and a test for synchronisation loop (1=pass, 0=fail) [1111]
+        # - Local poll [10]
+        # - Remote poll [10]
+        # - ‘Score’ (an internal score within each polling level used to decide when
+        #   to increase or decrease the polling level. This is adjusted based on number
+        #   of measurements currently being used for the regression algorithm). [1.0]
+        # - The estimated local clock error (theta in RFC 5905). Positive indicates
+        #   that the local clock is slow of the remote source. [-4.966e-03]
+        # - The peer delay (delta in RFC 5905). [2.296e-01]
+        # - The peer dispersion (epsilon in RFC 5905). [1.577e-05]
+        # - The root delay (DELTA in RFC 5905). [1.615e-01]
+        # - The root dispersion (EPSILON in RFC 5905). [7.446e-03]
+        # - Reference ID of the server’s source as a hexadecimal number. [CB00717B]
+        # - NTP mode of the received packet (1=active peer, 2=passive peer, 4=server, B=basic, I=interleaved). [4B]
+        # - Source of the local transmit timestamp (D=daemon, K=kernel, H=hardware). [D]
+        # - Source of the local receive timestamp (D=daemon, K=kernel, H=hardware). [K]
+
+        gauge chrony_measurement_peer_lastseen by peer,peer_reference_id
+        gauge chrony_measurement_peer_stratum by peer,peer_reference_id
+        gauge chrony_measurement_peer_local_poll by peer,peer_reference_id
+        gauge chrony_measurement_peer_remote_poll by peer,peer_reference_id
+        gauge chrony_measurement_peer_score by peer,peer_reference_id
+        gauge chrony_measurement_peer_localerror by peer,peer_reference_id
+        gauge chrony_measurement_peer_peer_delay by peer,peer_reference_id
+        gauge chrony_measurement_peer_peer_dispersion by peer,peer_reference_id
+        gauge chrony_measurement_peer_root_delay by peer,peer_reference_id
+        gauge chrony_measurement_peer_root_dispersion by peer,peer_reference_id
+        gauge chrony_measurement_peer_ntpmode by peer,peer_reference_id,ntpmode,timestamp_source_tx,timestamp_source_rx
+        gauge chrony_measurement_peer_ntp_check by peer,peer_reference_id,rfc5905_checks,ntp_testbits
+
+        /^\S+\s+\S+\s+\S+\s+(?P<leapstat>\S)\s+(?P<rstrat>\d+)\s+(?P<rfc5905_123>\d\d\d)\s+(?P<rfc5905_567>\d\d\d)\s+(?P<testbits>\d\d\d\d)\s+(?P<localpoll>\d+)\s+(?P<remotepoll>\d+)\s+(?P<score>\d+.\d+)\s+(?P<localerror>\S+)\s+(?P<peerdelay>\S+)\s+(?P<peerdispersion>\S+)\s+(?P<rootdelay>\S+)\s+(?P<rootdispersion>\S+)\s+(?P<referenceID>\S+)\s+(?P<ntpmode>\S+)\s+(?P<ts_src_tx>\S)\s+(?P<ts_src_rx>\S)/ {
+          chrony_measurement_peer_stratum[sync_peer_ip,$referenceID]=$rstrat
+          chrony_measurement_peer_local_poll[sync_peer_ip,$referenceID]=$localpoll
+          chrony_measurement_peer_remote_poll[sync_peer_ip,$referenceID]=$remotepoll
+          chrony_measurement_peer_score[sync_peer_ip,$referenceID]=$score
+          chrony_measurement_peer_localerror[sync_peer_ip,$referenceID]=$localerror
+          chrony_measurement_peer_peer_delay[sync_peer_ip,$referenceID]=$peerdelay
+          chrony_measurement_peer_peer_dispersion[sync_peer_ip,$referenceID]=$peerdispersion
+          chrony_measurement_peer_root_delay[sync_peer_ip,$referenceID]=$rootdelay
+          chrony_measurement_peer_root_dispersion[sync_peer_ip,$referenceID]=$rootdispersion
+          chrony_measurement_peer_lastseen[sync_peer_ip,$referenceID]=timestamp()
+          chrony_measurement_peer_ntpmode[sync_peer_ip,$referenceID,$ntpmode,$ts_src_tx,$ts_src_rx]=timestamp()
+          chrony_measurement_peer_ntp_check[sync_peer_ip,$referenceID,$rfc5905_123 + " " + $rfc5905_567,$testbits]=timestamp()
+        }
+      }
+      getfilename() =~ /.*statistics\.log/ {
+
+        #==> statistics.log <==
+        #====================================================================================================================
+        #   Date (UTC) Time     IP Address    Std dev'n Est offset  Offset sd  Diff freq   Est skew  Stress  Ns  Bs  Nr  Asym
+        #====================================================================================================================
+        #2018-07-05 11:44:28 165.227.159.15   1.162e-05 -9.233e-04  1.369e-05  7.502e-06  2.662e-03 3.8e-03   3   0   3  0.00
+        #2018-07-05 11:44:28 85.236.36.4      6.451e-08  1.819e-03  1.184e-07 -3.321e-07  2.341e-05 1.7e-04   3   0   3  0.00
+        #2018-07-05 11:44:28 62.116.162.126   2.439e-05  1.867e-03  1.734e-05 -2.728e-06  5.357e-03 1.4e-03   3   0   3  0.00
+        #2018-07-05 11:44:29 193.141.27.6     9.580e-07 -1.661e-03  7.063e-07  2.237e-05  3.544e-04 1.1e-02   3   0   3  0.00
+        #2018-07-05 11:44:30 165.227.159.15   1.190e-05 -1.006e-03  1.081e-05  3.223e-06  7.389e-05 1.6e-03   4   0   3  0.00
+        #2018-07-05 11:44:30 85.236.36.4      9.446e-06  1.774e-03  6.279e-06  5.842e-06  6.319e-05 2.6e-01   4   0   3  0.00
+        #2018-07-05 11:44:30 62.116.162.126   2.169e-05  1.770e-03  1.751e-05 -7.160e-06  1.772e-04 8.3e-04   4   0   4  0.00
+        #
+        # from chronyd.conf:
+        # The columns are as follows (the quantities in square brackets are examples):
+        # - Date [2015-10-13] Hour:Minute:Second. Note that the date-time pair is expressed in UTC,
+        # - IP address of server or peer from which measurement comes [203.0.113.15]
+        # - The estimated standard deviation of the measurements from the source (in seconds). [6.261e-03]
+        # - The estimated offset of the source (in seconds, positive means the local clock is estimated to be fast, in
+        #   this case). [-3.247e-03]
+        # - The estimated standard deviation of the offset estimate (in seconds). [2.220e-03]
+        # - The estimated rate at which the local clock is gaining or losing time relative to the source (in seconds
+        #   per second, positive means the local clock is gaining). This is relative to the compensation currently
+        #   being applied to the local clock, not to the local clock without any compensation. [1.874e-06]
+        # - The estimated error in the rate value (in seconds per second). [1.080e-06].
+        # - The ratio of |old_rate - new_rate| / old_rate_error. Large values indicate the statistics are not modelling
+        #   the source very well. [7.8e-02]
+        # - The number of measurements currently being used for the regression algorithm. [16]
+        # - The new starting index (the oldest sample has index 0; this is the method used to prune old samples when it
+        #   no longer looks like the measurements fit a linear model). [0, i.e. no samples discarded this time]
+        # - The number of runs. The number of runs of regression residuals with the same sign is computed. If this is
+        #   too small it indicates that the measurements are no longer represented well by a linear model and that
+        #   some older samples need to be discarded. The number of runs for the data that is being retained is
+        #   tabulated. Values of approximately half the number of samples are expected. [8]
+        # - The estimated or configured asymmetry of network jitter on the path to the source which was used to
+        #   correct the measured offsets. The asymmetry can be between -0.5 and +0.5. A negative value means
+        #   the delay of packets sent to the source is more variable than the delay of packets sent from the
+        #   source back. [0.00, i.e. no correction for asymmetry]
+
+        gauge chrony_statistics_peer_stddev_seconds by peer
+        gauge chrony_statistics_peer_offset_seconds by peer
+        gauge chrony_statistics_peer_offset_deviation_seconds by peer
+        gauge chrony_statistics_peer_diff_freq_rate by peer
+        gauge chrony_statistics_peer_est_skew_rate by peer
+        gauge chrony_statistics_peer_stress by peer
+        gauge chrony_statistics_peer_used_measurements_count by peer
+        gauge chrony_statistics_peer_starting_index by peer
+        gauge chrony_statistics_peer_number_of_runs_count by peer
+        gauge chrony_statistics_peer_asymmetry by peer
+
+        /^\S+\s+\S+\s+\S+\s+(?P<stddev>\S+)\s+(?P<offset>\S+)\s+(?P<offset_sd>\S+)\s+(?P<diff_freq>\S+)\s+(?P<est_skew>\S+)\s+(?P<stress>\S+)\s+(?P<measurements>\S+)\s+(?P<startindex>\S+)\s+(?P<number_runs>\S+)\s+(?P<est_jitter>\S+)/ {
+          chrony_statistics_peer_stddev_seconds[sync_peer_ip]=$stddev
+          chrony_statistics_peer_offset_seconds[sync_peer_ip]=$offset
+          chrony_statistics_peer_offset_deviation_seconds[sync_peer_ip]=$offset_sd
+          chrony_statistics_peer_diff_freq_rate[sync_peer_ip]=$diff_freq
+          chrony_statistics_peer_est_skew_rate[sync_peer_ip]=$est_skew
+          chrony_statistics_peer_stress[sync_peer_ip]=$stress
+          chrony_statistics_peer_used_measurements_count[sync_peer_ip]=$measurements
+          chrony_statistics_peer_starting_index[sync_peer_ip]=$startindex
+          chrony_statistics_peer_number_of_runs_count[sync_peer_ip]=$number_runs
+          chrony_statistics_peer_asymmetry[sync_peer_ip]=$est_jitter
+
+        }
+      }
+    }
+  }
+}
