@@ -2,9 +2,27 @@
 
 Original date: 2018-08-13
 
+## Overview
+
+Implement a hybrid polling and notify based filesystem watcher.
+
+## Background
+
 Tracking issue #169
 
-Some users want a polling option instead of fsnotify as their platforms don't support fsnotify, e.g. mipsel (bug in fsnotify) or no kernel support? (using on AIX).
+`mtail` has a filesystem watcher which is used to watch the state of programme
+files and log files; if they change, then programmes are reloaded and log files
+are read.  `mtail` uses the [fsnotify](https://github.com/fsnotify/fsnotify)
+package to implement the filesystem watcher.  fsnotify, which uses the
+`inotify(7)` system in Linux, lets `mtail` offload the work of polling the
+filesystem for changes to one where it is notified by the kernel instead,
+reducing the amount of work done.
+
+Some users want a polling option instead of fsnotify as their platforms don't
+support fsnotify, e.g. mipsel (bug in fsnotify) or no kernel support? (using on
+AIX).
+
+This design attempts to determine how to support a hy
 
 To the best of our ability, users shoud not have to configure poll- or fsnotify-based filesystem watching.
 
