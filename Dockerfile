@@ -2,7 +2,7 @@ FROM golang:1.10.1-alpine3.7 AS builder
 RUN apk add --update git make
 WORKDIR /go/src/github.com/google/mtail
 COPY . /go/src/github.com/google/mtail
-RUN make install
+RUN make install_deps && make install
 
 
 FROM alpine:3.7
