@@ -1,0 +1,6 @@
+vm/parser.go -diff -merge
+vm/parser.go linguist-generated=true
+logo.png binary
+.gitattributes export-ignore
+.gitignore export-ignore
+docs/* linguist-documentation
