@@ -214,7 +214,11 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	err = t.read(fd, t.partials[absPath])
 	t.partialsMu.Unlock()
 	if err != nil && err != io.EOF {
-		glog.Info(err)
+		if e, ok := err.(*os.PathError); ok && e.Err == os.ErrClosed {
+			t.handleLogCreate(pathname)
+		} else {
+			glog.Info(err)
+		}
 	}
 }
 
