@@ -28,6 +28,7 @@ import (
 	"github.com/google/mtail/watcher"
 
 	"github.com/spf13/afero"
+	"github.com/spf13/afero/mem"
 )
 
 var (
@@ -114,6 +115,7 @@ func (t *Tailer) SetOption(options ...func(*Tailer) error) error {
 
 // setHandle sets a file handle under it's pathname
 func (t *Tailer) setHandle(pathname string, f afero.File) error {
+	glog.V(2).Infof("setHandle %s", pathname)
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to lookup abspath of %q", pathname)
@@ -126,6 +128,7 @@ func (t *Tailer) setHandle(pathname string, f afero.File) error {
 
 // handleForPath retrives a file handle for a pathname.
 func (t *Tailer) handleForPath(pathname string) (afero.File, bool) {
+	glog.V(2).Infof("handleForPath %s", pathname)
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		glog.V(2).Infof("Couldn't resolve path %q: %s", pathname, err)
@@ -144,6 +147,7 @@ func (t *Tailer) hasHandle(pathname string) bool {
 
 // AddPattern adds a pattern to the list of patterns to filter filenames against.
 func (t *Tailer) AddPattern(pattern string) {
+	glog.V(2).Infof("AddPattern: %s", pattern)
 	t.globPatternsMu.Lock()
 	t.globPatterns[pattern] = struct{}{}
 	t.globPatternsMu.Unlock()
@@ -206,6 +210,8 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 		t.handleCreateGlob(pathname)
 		return
 	}
+	glog.V(2).Infof("u handleForPath %s is %s", pathname, fd.Name())
+	//glog.V(2).Infof("Fileinfo: %#V", fd.(*mem.File).Info())
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		glog.Info(err)
@@ -214,10 +220,13 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	err = t.read(fd, t.partials[absPath])
 	t.partialsMu.Unlock()
 	if err != nil && err != io.EOF {
-		if e, ok := err.(*os.PathError); ok && e.Err == os.ErrClosed {
-			t.handleLogCreate(pathname)
-		} else {
-			glog.Info(err)
+		// If the error is a patherror, and is because the file is closed, then
+		// we're here because the file was rotated but we saw the CREATE before
+		// the REMOVE.
+		glog.Infof("%#V", err)
+		if isFileClosedError(err) {
+			t.handleCreateGlob(pathname)
+			return
 		}
 	}
 }
@@ -248,6 +257,18 @@ func (t *Tailer) checkForTruncate(f afero.File) error {
 	return serr
 }
 
+func isFileClosedError(err error) bool {
+	if err == mem.ErrFileClosed {
+		return true
+	}
+	if e, ok := err.(*os.PathError); ok {
+		if e.Err == os.ErrClosed {
+			return true
+		}
+	}
+	return false
+}
+
 // read reads blocks of 4096 bytes from the File, sending lines to the
 // channel as it encounters newlines.  If EOF is encountered, the partial line
 // is returned to be concatenated with on the next call.
@@ -256,7 +277,7 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 	ntotal := 0 // bytes read in this invocation
 	for {
 		n, err := f.Read(b[:cap(b)])
-		glog.V(2).Infof("Read: %v %v", n, err)
+		glog.V(2).Infof("Read count %v err %v", n, err)
 		ntotal += n
 		b = b[:n]
 
@@ -286,6 +307,7 @@ func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
 				partial.WriteRune(rune)
 			default:
 				// send off line for processing, blocks if not ready
+				// f.Name() is buggy when using afero memory filesystem
 				t.lines <- NewLogLine(f.Name(), partial.String())
 				lineCount.Add(f.Name(), 1)
 				// reset accumulator
@@ -304,9 +326,18 @@ func (t *Tailer) handleLogCreate(pathname string) {
 		return
 	}
 
+	glog.V(2).Infof("c handleforPath %s is %s", pathname, fd.Name())
+	if pathname != fd.Name() {
+		glog.V(1).Infof("created name %s doesn't match name in handle %s", pathname, fd.Name())
+		t.handleLogDelete(pathname)
+		glog.V(2).Info("finished delete")
+		t.handleCreateGlob(pathname)
+		return
+	}
+
 	s1, err := fd.Stat()
 	if err != nil {
-		glog.Infof("Stat failed on %q: %s", t.handles[pathname].Name(), err)
+		glog.Infof("Stat failed on %q: %s", fd.Name(), err)
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
 		logRotations.Add(pathname, 1)
 		logCount.Add(1)
@@ -525,7 +556,7 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 		case watcher.Create:
 			t.handleLogCreate(e.Pathname)
 		case watcher.Delete:
-			t.handleLogDelete(e.Pathname)
+			//t.handleLogDelete(e.Pathname)
 		default:
 			glog.Infof("Unexpected event %#v", e)
 		}

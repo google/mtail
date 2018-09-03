@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, afero.Fs) {
+func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, afero.Fs, string, func()) {
 	fs := afero.NewMemMapFs()
 	w := watcher.NewFakeWatcher()
 	lines := make(chan *LogLine, 1)
@@ -30,10 +30,11 @@ func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, a
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ta, lines, w, fs
+	fs.Mkdir("tail_test", os.ModePerm)
+	return ta, lines, w, fs, "/tail_test", func() {}
 }
 
-func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *watcher.LogWatcher, afero.Fs, string) {
+func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *watcher.LogWatcher, afero.Fs, string, func()) {
 	if testing.Short() {
 		t.Skip("skipping real fs test in short mode")
 	}
@@ -52,13 +53,19 @@ func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *wat
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ta, lines, w, fs, dir
+	cleanup := func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Log(err)
+		}
+	}
+	return ta, lines, w, fs, dir, cleanup
 }
 
 func TestTail(t *testing.T) {
-	ta, _, w, fs := makeTestTail(t)
-	fs.Mkdir("tail_test", os.ModePerm)
-	logfile := "/tmp/log"
+	ta, _, w, fs, dir, cleanup := makeTestTail(t)
+	defer cleanup()
+
+	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
 	if err != nil {
 		t.Error(err)
@@ -78,13 +85,10 @@ func TestTail(t *testing.T) {
 }
 
 func TestHandleLogUpdate(t *testing.T) {
-	ta, lines, w, fs := makeTestTail(t)
+	ta, lines, w, fs, dir, cleanup := makeTestTail(t)
+	defer cleanup()
 
-	err := fs.Mkdir("/tail_test", os.ModePerm)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	logfile := "/tail_test/log"
+	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -135,12 +139,8 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	ta, lines, w, fs, dir := makeTestTailReal(t, "truncate")
-	defer func() {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Log(err)
-		}
-	}()
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "truncate")
+	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
@@ -202,13 +202,10 @@ func TestHandleLogTruncate(t *testing.T) {
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
-	ta, lines, w, fs := makeTestTail(t)
+	ta, lines, w, fs, dir, cleanup := makeTestTail(t)
+	defer cleanup()
 
-	err := fs.Mkdir("/tail_test", os.ModePerm)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	logfile := "/tail_test/log"
+	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -269,7 +266,8 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 }
 
 func TestReadPartial(t *testing.T) {
-	ta, lines, w, fs := makeTestTail(t)
+	ta, lines, w, fs, _, cleanup := makeTestTail(t)
+	defer cleanup()
 	defer w.Close()
 
 	f, err := fs.Create("t")
@@ -328,12 +326,8 @@ func TestOpenRetries(t *testing.T) {
 	}
 	// Use the real filesystem because afero doesn't implement correct
 	// permissions checking on OpenFile in the memfile implementation.
-	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
-	defer func() {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Log(err)
-		}
-	}()
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "retries")
+	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	if _, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
@@ -407,3 +401,142 @@ func TestTailerInitErrors(t *testing.T) {
 		t.Errorf("unexpected error %s", err)
 	}
 }
+
+func TestHandleLogRotate(t *testing.T) {
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "rotate")
+	defer cleanup()
+
+	logfile := filepath.Join(dir, "log")
+	f, err := fs.Create(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result := []*LogLine{}
+	done := make(chan struct{})
+	wg := sync.WaitGroup{}
+	go func() {
+		for line := range lines {
+			result = append(result, line)
+			wg.Done()
+		}
+		close(done)
+	}()
+
+	if err := ta.TailPath(logfile); err != nil {
+		t.Fatal(err)
+	}
+	wg.Add(2)
+	if _, err = f.WriteString("1\n"); err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("update")
+	//w.InjectUpdate(logfile)
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = fs.Rename(logfile, logfile+".1"); err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("delete")
+	//w.InjectDelete(logfile)
+	//w.InjectCreate(logfile + ".1")
+	f, err = fs.Create(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("create")
+	//w.InjectCreate(logfile)
+	if _, err = f.WriteString("2\n"); err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("update")
+	//w.InjectUpdate(logfile)
+
+	wg.Wait()
+	w.Close()
+	<-done
+
+	expected := []*LogLine{
+		{logfile, "1"},
+		{logfile, "2"},
+	}
+	diff := cmp.Diff(expected, result)
+	if diff != "" {
+		t.Errorf("result didn't match expected:\n%s", diff)
+	}
+}
+
+// func TestHandleLogRotateSignalsWrong(t *testing.T) {
+// 	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "rotate wrong")
+// 	defer cleanup()
+// 	logfile := filepath.Join(dir, "log")
+// 	f, err := fs.Create(logfile)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	glog.V(2).Infof("Fileinfo: %#V", f.(*mem.File).Info())
+
+// 	result := []*LogLine{}
+// 	done := make(chan struct{})
+// 	wg := sync.WaitGroup{}
+// 	go func() {
+// 		for line := range lines {
+// 			result = append(result, line)
+// 			wg.Done()
+// 		}
+// 		close(done)
+// 	}()
+
+// 	if err := ta.TailPath(logfile); err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	wg.Add(2)
+// 	if _, err = f.WriteString("1\n"); err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	glog.V(2).Info("update")
+// 	w.InjectUpdate(logfile)
+// 	if err = f.Close(); err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	if err = fs.Rename(logfile, logfile+".1"); err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	glog.V(2).Infof("Fileinfo: %#V", f.(*mem.File).Info())
+// 	// Forcibly remove it from the fake filesystem because afero bugs
+// 	fs.Remove(logfile)
+// 	glog.V(2).Infof("Fileinfo: %#V", f.(*mem.File).Info())
+// 	// No delete signal yet
+// 	f, err = fs.Create(logfile)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	glog.V(2).Infof("Fileinfo: %#V", f.(*mem.File).Info())
+// 	glog.V(2).Info("create")
+// 	// Out-of-order delivery of a log rotation.
+// 	w.InjectCreate(logfile)
+
+// 	time.Sleep(1 * time.Millisecond)
+// 	glog.V(2).Info("delete")
+// 	w.InjectDelete(logfile)
+
+// 	if _, err = f.WriteString("2\n"); err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	glog.V(2).Info("update")
+// 	w.InjectUpdate(logfile)
+
+// 	wg.Wait()
+// 	w.Close()
+// 	<-done
+
+// 	expected := []*LogLine{
+// 		{logfile, "1"},
+// 		{logfile, "2"},
+// 	}
+// 	diff := cmp.Diff(expected, result)
+// 	if diff != "" {
+// 		t.Errorf("result didn't match expected:\n%s", diff)
+// 	}
+// }

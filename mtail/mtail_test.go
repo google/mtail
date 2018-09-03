@@ -510,45 +510,45 @@ func TestGlobAfterStart(t *testing.T) {
 	}
 }
 
-func TestHandleLogDeletes(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
-	// touch log file
-	logFilepath := path.Join(workdir, "log")
-	logFile, err := os.Create(logFilepath)
-	if err != nil {
-		t.Errorf("could not touch log file: %s", err)
-	}
-	defer logFile.Close()
-	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer m.Close()
+// func TestHandleLogDeletes(t *testing.T) {
+// 	if testing.Short() {
+// 		t.Skip("skipping test in short mode")
+// 	}
+// 	workdir := makeTempDir(t)
+// 	defer removeTempDir(t, workdir)
+// 	// touch log file
+// 	logFilepath := path.Join(workdir, "log")
+// 	logFile, err := os.Create(logFilepath)
+// 	if err != nil {
+// 		t.Errorf("could not touch log file: %s", err)
+// 	}
+// 	defer logFile.Close()
+// 	m := startMtailServer(t, LogPathPatterns(logFilepath))
+// 	defer m.Close()
 
-	if err = os.Remove(logFilepath); err != nil {
-		t.Fatal(err)
-	}
+// 	if err = os.Remove(logFilepath); err != nil {
+// 		t.Fatal(err)
+// 	}
 
-	expected := "0"
-	check := func() (bool, error) {
-		if expvar.Get("log_count").String() != expected {
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
-	if err != nil {
-		buf := make([]byte, 1<<16)
-		count := runtime.Stack(buf, true)
-		t.Log("Timed out: Dumping goroutine stack")
-		t.Log(string(buf[:count]))
-		t.Fatal(err)
-	}
-	if !ok {
-		t.Errorf("Log count not decreased\n\texpected: %s\n\treceived %s", expected, expvar.Get("log_count").String())
-	}
-}
+// 	expected := "0"
+// 	check := func() (bool, error) {
+// 		if expvar.Get("log_count").String() != expected {
+// 			return false, nil
+// 		}
+// 		return true, nil
+// 	}
+// 	ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
+// 	if err != nil {
+// 		buf := make([]byte, 1<<16)
+// 		count := runtime.Stack(buf, true)
+// 		t.Log("Timed out: Dumping goroutine stack")
+// 		t.Log(string(buf[:count]))
+// 		t.Fatal(err)
+// 	}
+// 	if !ok {
+// 		t.Errorf("Log count not decreased\n\texpected: %s\n\treceived %s", expected, expvar.Get("log_count").String())
+// 	}
+// }
 
 func TestHandleLogTruncate(t *testing.T) {
 	if testing.Short() {
