@@ -456,19 +456,19 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 		make(map[string]string),
 		make(map[string]string),
 	}
-	// for name := range t.handles {
-	// 	if logErrors.Get(name) != nil {
-	// 		data.Errors[name] = logErrors.Get(name).String()
-	// 	}
-	// 	if logRotations.Get(name) != nil {
-	// 		data.Rotations[name] = logRotations.Get(name).String()
-	// 	}
-	// 	if lineCount.Get(name) != nil {
-	// 		data.Lines[name] = lineCount.Get(name).String()
-	// 	}
-	// 	if logTruncs.Get(name) != nil {
-	// 		data.Truncs[name] = logTruncs.Get(name).String()
-	// 	}
-	// }
+	for name := range t.handles {
+		if v := expvar.Get("log_errors_total").(*expvar.Map).Get(name); v != nil {
+			data.Errors[name] = v.String()
+		}
+		if v := expvar.Get("log_rotations_total").(*expvar.Map).Get(name); v != nil {
+			data.Rotations[name] = v.String()
+		}
+		if v := expvar.Get("log_lines_total").(*expvar.Map).Get(name); v != nil {
+			data.Errors[name] = v.String()
+		}
+		if v := expvar.Get("log_truncates_total").(*expvar.Map).Get(name); v != nil {
+			data.Errors[name] = v.String()
+		}
+	}
 	return tpl.Execute(w, data)
 }
