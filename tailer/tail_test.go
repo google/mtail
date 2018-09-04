@@ -4,9 +4,7 @@
 package tailer
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -17,6 +15,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/logline"
 	"github.com/google/mtail/watcher"
 
 	"github.com/spf13/afero"
@@ -25,7 +24,7 @@ import (
 func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, afero.Fs, string, func()) {
 	fs := afero.NewMemMapFs()
 	w := watcher.NewFakeWatcher()
-	lines := make(chan *LogLine, 1)
+	lines := make(chan *logline.LogLine, 1)
 	ta, err := New(lines, fs, w)
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +33,7 @@ func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, a
 	return ta, lines, w, fs, "/tail_test", func() {}
 }
 
-func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *watcher.LogWatcher, afero.Fs, string, func()) {
+func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *logline.LogLine, *watcher.LogWatcher, afero.Fs, string) {
 	if testing.Short() {
 		t.Skip("skipping real fs test in short mode")
 	}
@@ -48,7 +47,7 @@ func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *wat
 	if err != nil {
 		t.Fatalf("can't create watcher: %v", err)
 	}
-	lines := make(chan *LogLine, 1)
+	lines := make(chan *logline.LogLine, 1)
 	ta, err := New(lines, fs, w)
 	if err != nil {
 		t.Fatal(err)
@@ -94,7 +93,7 @@ func TestHandleLogUpdate(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []*LogLine{}
+	result := []*logline.LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	go func() {
@@ -124,7 +123,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	}
 	<-done
 
-	expected := []*LogLine{
+	expected := []*logline.LogLine{
 		{logfile, "a"},
 		{logfile, "b"},
 		{logfile, "c"},
@@ -148,7 +147,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []*LogLine{}
+	result := []*logline.LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	go func() {
@@ -189,7 +188,7 @@ func TestHandleLogTruncate(t *testing.T) {
 	}
 	<-done
 
-	expected := []*LogLine{
+	expected := []*logline.LogLine{
 		{logfile, "a"},
 		{logfile, "b"},
 		{logfile, "c"},
@@ -211,7 +210,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []*LogLine{}
+	result := []*logline.LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -255,7 +254,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	w.Close()
 	<-done
 
-	expected := []*LogLine{
+	expected := []*logline.LogLine{
 		{logfile, "ab"},
 	}
 	diff := cmp.Diff(expected, result)
@@ -263,56 +262,6 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 
-}
-
-func TestReadPartial(t *testing.T) {
-	ta, lines, w, fs, _, cleanup := makeTestTail(t)
-	defer cleanup()
-	defer w.Close()
-
-	f, err := fs.Create("t")
-	if err != nil {
-		t.Fatal(err)
-	}
-	p := bytes.NewBufferString("")
-	err = ta.read(f, p)
-	if p.String() != "" {
-		t.Errorf("partial line returned not empty: %q", p)
-	}
-	if err != io.EOF {
-		t.Errorf("error returned not EOF: %v", err)
-	}
-	p.Reset()
-	p.WriteString("o")
-	f.WriteString("hi")
-	f.Seek(0, 0)
-	err = ta.read(f, p)
-	if p.String() != "ohi" {
-		t.Errorf("partial line returned not expected: %q", p)
-	}
-	if err != io.EOF {
-		t.Errorf("error returned not EOF: %v", err)
-	}
-	p.Reset()
-	err = ta.read(f, p)
-	if err != io.EOF {
-		t.Errorf("error returned not EOF: %v", err)
-	}
-	f.WriteString("\n")
-	f.Seek(-1, io.SeekEnd)
-	p.Reset()
-	p.WriteString("ohi")
-	err = ta.read(f, p)
-	l := <-lines
-	if l.Line != "ohi" {
-		t.Errorf("line emitted not ohi: %q", l)
-	}
-	if p.String() != "" {
-		t.Errorf("partial not empty: %q", p)
-	}
-	if err != io.EOF {
-		t.Errorf("error returned not EOF: %v", err)
-	}
 }
 
 func TestOpenRetries(t *testing.T) {
@@ -381,7 +330,7 @@ func TestTailerInitErrors(t *testing.T) {
 	if err == nil {
 		t.Error("expected error")
 	}
-	lines := make(chan *LogLine)
+	lines := make(chan *logline.LogLine)
 	_, err = New(lines, nil, nil)
 	if err == nil {
 		t.Error("expected error")

@@ -11,7 +11,6 @@ package tailer
 // directory.
 
 import (
-	"bytes"
 	"expvar"
 	"html/template"
 	"io"
@@ -42,8 +41,8 @@ type Tailer struct {
 	w     watcher.Watcher
 	fs    afero.Fs // mockable filesystem interface
 
-	handlesMu sync.RWMutex         // protects `handles'
-	handles   map[string]file.File // File handles for each pathname.
+	handlesMu sync.RWMutex          // protects `handles'
+	handles   map[string]*file.File // File handles for each pathname.
 
 	globPatternsMu sync.RWMutex        // protects `globPatterns'
 	globPatterns   map[string]struct{} // glob patterns to match newly created files in dir paths against
@@ -76,8 +75,7 @@ func New(lines chan<- *logline.LogLine, fs afero.Fs, w watcher.Watcher, options 
 		lines:        lines,
 		w:            w,
 		fs:           fs,
-		handles:      make(map[string]afero.File),
-		partials:     make(map[string]*bytes.Buffer),
+		handles:      make(map[string]*file.File),
 		globPatterns: make(map[string]struct{}),
 		runDone:      make(chan struct{}),
 	}
@@ -101,7 +99,7 @@ func (t *Tailer) SetOption(options ...func(*Tailer) error) error {
 }
 
 // setHandle sets a file handle under it's pathname
-func (t *Tailer) setHandle(pathname string, f file.File) error {
+func (t *Tailer) setHandle(pathname string, f *file.File) error {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to lookup abspath of %q", pathname)
@@ -113,7 +111,7 @@ func (t *Tailer) setHandle(pathname string, f file.File) error {
 }
 
 // handleForPath retrives a file handle for a pathname.
-func (t *Tailer) handleForPath(pathname string) (file.File, bool) {
+func (t *Tailer) handleForPath(pathname string) (*file.File, bool) {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		glog.V(2).Infof("Couldn't resolve path %q: %s", pathname, err)
@@ -195,15 +193,11 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 		t.handleCreateGlob(pathname)
 		return
 	}
-	glog.V(2).Infof("u handleForPath %s is %s", pathname, fd.Name())
-	//glog.V(2).Infof("Fileinfo: %#V", fd.(*mem.File).Info())
-	absPath, err := filepath.Abs(pathname)
-	if err != nil {
-		glog.Info(err)
-	}
-	t.partialsMu.Lock()
-	err = t.read(fd, t.partials[absPath])
-	t.partialsMu.Unlock()
+	// absPath, err := filepath.Abs(pathname)
+	// if err != nil {
+	// 	glog.Info(err)
+	// }
+	err := fd.Read(t.lines)
 	if err != nil && err != io.EOF {
 		// If the error is a patherror, and is because the file is closed, then
 		// we're here because the file was rotated but we saw the CREATE before
@@ -236,10 +230,10 @@ func (t *Tailer) handleLogCreate(pathname string) {
 
 	s1, err := fd.Stat()
 	if err != nil {
-		glog.Infof("Stat failed on %q: %s", fd.Name(), err)
+		glog.Infof("Stat failed on %q: %s", fd.Pathname, err)
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
-		logRotations.Add(pathname, 1)
-		logCount.Add(1)
+		// logRotations.Add(pathname, 1)
+		// logCount.Add(1)
 		// TODO(jaq): openlogpath seenBefore is true, so retry.
 		if oerr := t.openLogPath(pathname, true, true); oerr != nil {
 			glog.Warning(oerr)
@@ -258,7 +252,7 @@ func (t *Tailer) handleLogCreate(pathname string) {
 
 	}
 	glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
-	logRotations.Add(pathname, 1)
+	//logRotations.Add(pathname, 1)
 	// flush the old log, pathname is still an index into t.handles with the old inode.
 	t.handleLogUpdate(pathname)
 	if err := fd.Close(); err != nil {
@@ -315,7 +309,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) erro
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
 		if os.IsNotExist(err) {
-			glog.V(1).Infof("AbsPath %q doesn't exist (yet?)", absPath)
+			glog.V(1).Infof("AbsPath %q doesn't exist (yet?)", f.Pathname)
 			return nil
 		}
 		return err
@@ -331,15 +325,14 @@ func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) erro
 	if err := t.setHandle(pathname, f); err != nil {
 		return err
 	}
-	if err := f.read(t.lines); err != nil {
+	if err := f.Read(t.lines); err != nil {
 		if err == io.EOF {
 			glog.V(1).Info("EOF on first read")
-			if !t.oneShot {
-				// Don't worry about EOF on first read, that's expected due to SEEK_END.
-				break
+			// Don't worry about EOF on first read, that's expected due to SEEK_END.
+			if t.oneShot {
+				return err
 			}
 		}
-		return err
 	}
 	glog.Infof("Tailing %s", f.Pathname)
 	return nil
@@ -449,7 +442,7 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	t.globPatternsMu.RLock()
 	defer t.globPatternsMu.RUnlock()
 	data := struct {
-		Handles   map[string]afero.File
+		Handles   map[string]*file.File
 		Patterns  map[string]struct{}
 		Rotations map[string]string
 		Lines     map[string]string
@@ -463,19 +456,19 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 		make(map[string]string),
 		make(map[string]string),
 	}
-	for name := range t.handles {
-		if logErrors.Get(name) != nil {
-			data.Errors[name] = logErrors.Get(name).String()
-		}
-		if logRotations.Get(name) != nil {
-			data.Rotations[name] = logRotations.Get(name).String()
-		}
-		if lineCount.Get(name) != nil {
-			data.Lines[name] = lineCount.Get(name).String()
-		}
-		if logTruncs.Get(name) != nil {
-			data.Truncs[name] = logTruncs.Get(name).String()
-		}
-	}
+	// for name := range t.handles {
+	// 	if logErrors.Get(name) != nil {
+	// 		data.Errors[name] = logErrors.Get(name).String()
+	// 	}
+	// 	if logRotations.Get(name) != nil {
+	// 		data.Rotations[name] = logRotations.Get(name).String()
+	// 	}
+	// 	if lineCount.Get(name) != nil {
+	// 		data.Lines[name] = lineCount.Get(name).String()
+	// 	}
+	// 	if logTruncs.Get(name) != nil {
+	// 		data.Truncs[name] = logTruncs.Get(name).String()
+	// 	}
+	// }
 	return tpl.Execute(w, data)
 }
