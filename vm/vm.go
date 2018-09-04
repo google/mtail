@@ -19,9 +19,9 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
+	"github.com/google/mtail/logline"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
-	"github.com/google/mtail/tailer"
 )
 
 type thread struct {
@@ -48,7 +48,7 @@ type VM struct {
 
 	t *thread // Current thread of execution
 
-	input *tailer.LogLine // Log line input to this round of execution.
+	input *logline.LogLine // Log line input to this round of execution.
 
 	terminate bool // Flag to stop the VM on this line of input.
 	abort     bool // Flag to abort the VM.
@@ -676,11 +676,11 @@ func (v *VM) execute(t *thread, i instr) {
 // processLine handles the incoming lines from the input channel, by running a
 // fetch-execute cycle on the VM bytecode with the line as input to the
 // program, until termination.
-func (v *VM) processLine(logline *tailer.LogLine) {
+func (v *VM) processLine(line *logline.LogLine) {
 	t := new(thread)
 	t.matched = false
 	v.t = t
-	v.input = logline
+	v.input = line
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, len(v.re))
 	for {
@@ -701,7 +701,7 @@ func (v *VM) processLine(logline *tailer.LogLine) {
 // Run executes the virtual machine on each line of input received.  When the
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
-func (v *VM) Run(_ uint32, lines <-chan *tailer.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
+func (v *VM) Run(_ uint32, lines <-chan *logline.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
 	defer close(shutdown)
 
 	glog.Infof("Starting program %s", v.name)

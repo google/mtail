@@ -13,50 +13,37 @@ package tailer
 import (
 	"bytes"
 	"expvar"
-	"fmt"
 	"html/template"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
-	"unicode/utf8"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
+	"github.com/google/mtail/logline"
+	"github.com/google/mtail/tailer/file"
 	"github.com/google/mtail/watcher"
 
 	"github.com/spf13/afero"
-	"github.com/spf13/afero/mem"
 )
 
 var (
 	// logCount records the number of logs that are being tailed
 	logCount = expvar.NewInt("log_count")
-	// logErrors counts the number of IO errors per log file
-	logErrors = expvar.NewMap("log_errors_total")
-	// logRotations counts the number of rotations per log file
-	logRotations = expvar.NewMap("log_rotations_total")
-	// lineCount counts the numbre of lines read per log file
-	lineCount = expvar.NewMap("log_lines_total")
-	// logTruncs counts the number of log truncation events per log
-	logTruncs = expvar.NewMap("log_truncates_total")
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
 // lines from files. It also handles new log file creation events and log
 // rotations.
 type Tailer struct {
-	lines chan<- *LogLine // Logfile lines being emitted.
+	lines chan<- *logline.LogLine // Logfile lines being emitted.
 	w     watcher.Watcher
 	fs    afero.Fs // mockable filesystem interface
 
-	handlesMu sync.RWMutex          // protects `handles'
-	handles   map[string]afero.File // File handles for each pathname.
-
-	partialsMu sync.Mutex               // protects 'partials'
-	partials   map[string]*bytes.Buffer // Accumulator for the currently read line for each pathname.
+	handlesMu sync.RWMutex         // protects `handles'
+	handles   map[string]file.File // File handles for each pathname.
 
 	globPatternsMu sync.RWMutex        // protects `globPatterns'
 	globPatterns   map[string]struct{} // glob patterns to match newly created files in dir paths against
@@ -75,7 +62,7 @@ func OneShot(t *Tailer) error {
 }
 
 // New creates a new Tailer.
-func New(lines chan<- *LogLine, fs afero.Fs, w watcher.Watcher, options ...func(*Tailer) error) (*Tailer, error) {
+func New(lines chan<- *logline.LogLine, fs afero.Fs, w watcher.Watcher, options ...func(*Tailer) error) (*Tailer, error) {
 	if lines == nil {
 		return nil, errors.New("can't create tailer without lines channel")
 	}
@@ -114,8 +101,7 @@ func (t *Tailer) SetOption(options ...func(*Tailer) error) error {
 }
 
 // setHandle sets a file handle under it's pathname
-func (t *Tailer) setHandle(pathname string, f afero.File) error {
-	glog.V(2).Infof("setHandle %s", pathname)
+func (t *Tailer) setHandle(pathname string, f file.File) error {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to lookup abspath of %q", pathname)
@@ -127,8 +113,7 @@ func (t *Tailer) setHandle(pathname string, f afero.File) error {
 }
 
 // handleForPath retrives a file handle for a pathname.
-func (t *Tailer) handleForPath(pathname string) (afero.File, bool) {
-	glog.V(2).Infof("handleForPath %s", pathname)
+func (t *Tailer) handleForPath(pathname string) (file.File, bool) {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		glog.V(2).Infof("Couldn't resolve path %q: %s", pathname, err)
@@ -231,92 +216,6 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	}
 }
 
-// checkForTruncate checks to see if the current offset into the file
-// is past the end of the file based on its size, and if so seeks to
-// the start again.  Returns nil iff that happened.
-func (t *Tailer) checkForTruncate(f afero.File) error {
-	currentOffset, err := f.Seek(0, io.SeekCurrent)
-	glog.V(2).Infof("current seek position at %d", currentOffset)
-	if err != nil {
-		return err
-	}
-
-	fi, err := f.Stat()
-	if err != nil {
-		return err
-	}
-
-	glog.V(2).Infof("File size is %d", fi.Size())
-	if currentOffset == 0 || fi.Size() >= currentOffset {
-		return fmt.Errorf("no truncate appears to have occurred")
-	}
-
-	p, serr := f.Seek(0, io.SeekStart)
-	glog.V(2).Infof("Truncated?  Seeked to %d: %v", p, serr)
-	logTruncs.Add(f.Name(), 1)
-	return serr
-}
-
-func isFileClosedError(err error) bool {
-	if err == mem.ErrFileClosed {
-		return true
-	}
-	if e, ok := err.(*os.PathError); ok {
-		if e.Err == os.ErrClosed {
-			return true
-		}
-	}
-	return false
-}
-
-// read reads blocks of 4096 bytes from the File, sending lines to the
-// channel as it encounters newlines.  If EOF is encountered, the partial line
-// is returned to be concatenated with on the next call.
-func (t *Tailer) read(f afero.File, partial *bytes.Buffer) error {
-	b := make([]byte, 0, 4096)
-	ntotal := 0 // bytes read in this invocation
-	for {
-		n, err := f.Read(b[:cap(b)])
-		glog.V(2).Infof("Read count %v err %v", n, err)
-		ntotal += n
-		b = b[:n]
-
-		if err == io.EOF && ntotal == 0 {
-			glog.V(2).Info("Suspected truncation.")
-			// If there was nothing to be read, perhaps the file just got truncated.
-			herr := t.checkForTruncate(f)
-			glog.V(2).Infof("handletrunc with error '%v'", herr)
-			if herr == nil {
-				// Try again: offset was greater than filesize and now we've seeked to start.
-				continue
-			}
-		}
-
-		if err != nil {
-			return err
-		}
-
-		var (
-			rune  rune
-			width int
-		)
-		for i := 0; i < len(b) && i < n; i += width {
-			rune, width = utf8.DecodeRune(b[i:])
-			switch {
-			case rune != '\n':
-				partial.WriteRune(rune)
-			default:
-				// send off line for processing, blocks if not ready
-				// f.Name() is buggy when using afero memory filesystem
-				t.lines <- NewLogLine(f.Name(), partial.String())
-				lineCount.Add(f.Name(), 1)
-				// reset accumulator
-				partial.Reset()
-			}
-		}
-	}
-}
-
 // handleLogCreate handles both new and rotated log files.
 func (t *Tailer) handleLogCreate(pathname string) {
 	glog.V(2).Infof("handleLogCreate %s", pathname)
@@ -411,103 +310,38 @@ func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) erro
 	if err := t.watchDirname(pathname); err != nil {
 		return err
 	}
-
-	retries := 3
-	retryDelay := 1 * time.Millisecond
-	shouldRetry := func() bool {
-		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
-		if !seenBefore {
-			return false
-		}
-		return retries > 0
-	}
-	var f afero.File
-	var err error
-Retry:
-	f, err = t.fs.Open(pathname)
+	f, err := file.New(t.fs, pathname, seenBefore, seekToStart || t.oneShot)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
 		if os.IsNotExist(err) {
-			glog.V(1).Infof("Pathname %q doesn't exist (yet?)", pathname)
+			glog.V(1).Infof("AbsPath %q doesn't exist (yet?)", absPath)
 			return nil
 		}
-		logErrors.Add(pathname, 1)
-		if shouldRetry() {
-			retries = retries - 1
-			time.Sleep(retryDelay)
-			retryDelay = retryDelay + retryDelay
-			goto Retry
-		}
-	}
-	if err != nil {
-		glog.Infof("openLogPath failed all retries")
 		return err
 	}
-	glog.V(2).Infof("open succeeded %s", pathname)
-	err = t.startNewFile(f, seekToStart)
-	if err != nil && err != io.EOF {
-		glog.Error(err)
+	// The file did not exist when
+	if f == nil {
+		return nil
+	}
+	glog.V(2).Infof("Adding a file watch on %q", f.Pathname)
+	if err := t.w.Add(f.Pathname, t.eventsHandle); err != nil {
 		return err
 	}
-	return nil
-}
-
-// startNewFile optionally seeks to the start or end of the file f, then starts
-// the consumption of log lines. Rotated logs and logs read in oneshot mode
-// should read from the start, but logs opened for the first time read from the
-// "current point in time", which is the end of the file for logs being
-// appended to.
-func (t *Tailer) startNewFile(f afero.File, seekStart bool) error {
-	fi, err := f.Stat()
-	if err != nil {
-		// Stat failed, log error and return.
-		logErrors.Add(f.Name(), 1)
-		return errors.Wrapf(err, "Failed to stat %q: %s", f.Name())
+	if err := t.setHandle(pathname, f); err != nil {
+		return err
 	}
-	switch m := fi.Mode(); {
-	case m.IsRegular():
-		seekWhence := io.SeekEnd
-		if seekStart || t.oneShot {
-			seekWhence = io.SeekCurrent
-		}
-		if _, err := f.Seek(0, seekWhence); err != nil {
-			return errors.Wrapf(err, "Seek failed on %q", f.Name())
-		}
-		// Named pipes are the same as far as we're concerned, but we can't seek them.
-		fallthrough
-	case m&os.ModeType == os.ModeNamedPipe:
-		glog.V(2).Infof("Adding a file watch on %q", f.Name())
-		if err := t.w.Add(f.Name(), t.eventsHandle); err != nil {
-			return err
-		}
-		// In case the new log has been written to already, attempt to read the
-		// first lines.
-		absPath, err := filepath.Abs(f.Name())
-		if err != nil {
-			return err
-		}
-		t.partialsMu.Lock()
-		t.partials[absPath] = bytes.NewBufferString("")
-		err = t.read(f, t.partials[absPath])
-		t.partialsMu.Unlock()
-		if err != nil {
-			if err == io.EOF {
-				glog.V(1).Info("EOF on first read")
-				if !t.oneShot {
-					// Don't worry about EOF on first read, that's expected due to SEEK_END.
-					break
-				}
+	if err := f.read(t.lines); err != nil {
+		if err == io.EOF {
+			glog.V(1).Info("EOF on first read")
+			if !t.oneShot {
+				// Don't worry about EOF on first read, that's expected due to SEEK_END.
+				break
 			}
-			return err
 		}
-	default:
-		return errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, f.Name())
-	}
-	if err := t.setHandle(f.Name(), f); err != nil {
 		return err
 	}
-	glog.Infof("Tailing %s", f.Name())
+	glog.Infof("Tailing %s", f.Pathname)
 	return nil
 }
 

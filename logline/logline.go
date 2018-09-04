@@ -1,7 +1,7 @@
 // Copyright 2017 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package tailer
+package logline
 
 // LogLine contains all the information about a line just read from a log.
 type LogLine struct {

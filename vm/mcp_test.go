@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/logline"
 	"github.com/google/mtail/metrics"
-	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/watcher"
 	"github.com/spf13/afero"
 )
@@ -17,14 +17,14 @@ import (
 func TestNewLoader(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
-	inLines := make(chan *tailer.LogLine)
+	inLines := make(chan *logline.LogLine)
 	fs := afero.NewMemMapFs()
 	l, err := NewLoader("", store, inLines, w, fs)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
 	done := make(chan struct{})
-	outLines := make(chan *tailer.LogLine)
+	outLines := make(chan *logline.LogLine)
 	handle := &vmHandle{outLines, done}
 	l.handleMu.Lock()
 	l.handles["test"] = handle
@@ -41,7 +41,7 @@ func TestNewLoader(t *testing.T) {
 func TestCompileAndRun(t *testing.T) {
 	var testProgram = "/$/ {}\n"
 	store := metrics.NewStore()
-	lines := make(chan *tailer.LogLine)
+	lines := make(chan *logline.LogLine)
 	w := watcher.NewFakeWatcher()
 	fs := afero.NewMemMapFs()
 	l, err := NewLoader("", store, lines, w, fs)
@@ -116,7 +116,7 @@ func TestProcessEvents(t *testing.T) {
 			t.Parallel()
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
-			lines := make(chan *tailer.LogLine)
+			lines := make(chan *logline.LogLine)
 			fs := afero.NewMemMapFs()
 			l, err := NewLoader(".", store, lines, w, fs)
 			if err != nil {
@@ -184,7 +184,7 @@ var testProgFiles = []string{
 func TestLoadProg(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
-	inLines := make(chan *tailer.LogLine)
+	inLines := make(chan *logline.LogLine)
 	fs := afero.NewMemMapFs()
 	l, err := NewLoader("", store, inLines, w, fs)
 	if err != nil {
