@@ -42,11 +42,11 @@ type MtailServer struct {
 	closeOnce sync.Once     // Ensure shutdown happens only once.
 
 	overrideLocation *time.Location // Timezone location to use when parsing timestamps
+	pollInterval     time.Duration  // Interval between polls of the filesystem
 	bindAddress      string         // address to bind HTTP server
 	buildInfo        string         // go build information
-
-	programPath     string   // path to programs to load
-	logPathPatterns []string // list of patterns to watch for log files to tail
+	programPath      string         // path to programs to load
+	logPathPatterns  []string       // list of patterns to watch for log files to tail
 
 	oneShot      bool // if set, mtail reads log files from the beginning, once, then exits
 	compileOnly  bool // if set, mtail compiles programs then exits
@@ -125,7 +125,9 @@ func (m *MtailServer) initExporter() (err error) {
 
 // initTailer sets up a Tailer for this MtailServer.
 func (m *MtailServer) initTailer() (err error) {
-	opts := []func(*tailer.Tailer) error{}
+	opts := []func(*tailer.Tailer) error{
+		tailer.PollInterval(m.pollInterval),
+	}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
 	}
@@ -210,6 +212,14 @@ func BuildInfo(info string) func(*MtailServer) error {
 func OverrideLocation(loc *time.Location) func(*MtailServer) error {
 	return func(m *MtailServer) error {
 		m.overrideLocation = loc
+		return nil
+	}
+}
+
+// PollInterval sets the polling interval to use on a Tailer.
+func PollInterval(interval time.Duration) func(*MtailServer) error {
+	return func(m *MtailServer) error {
+		m.pollInterval = interval
 		return nil
 	}
 }

@@ -50,10 +50,13 @@ var (
 	dumpAstTypes   = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck (to INFO log).")
 	dumpBytecode   = flag.Bool("dump_bytecode", false, "Dump bytecode of programs (to INFO log).")
 
-	// Runtime behaviour flags
+	// VM Runtime behaviour flags
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of UTC.")
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
+
+	// Ops flags
+	pollInterval = flag.Duration("poll_interval", time.Duration(time.Minute), "Set the interval to poll all log files for data.")
 
 	// Debugging flags
 	blockProfileRate     = flag.Int("block_profile_rate", 0, "Nanoseconds of block time before goroutine blocking events reported. 0 turns off.  See https://golang.org/pkg/runtime/#SetBlockProfileRate")
@@ -120,6 +123,7 @@ func main() {
 		mtail.BindAddress(*address, *port),
 		mtail.BuildInfo(buildInfo()),
 		mtail.OverrideLocation(loc),
+		mtail.PollInterval(*pollInterval),
 	}
 	if *oneShot {
 		opts = append(opts, mtail.OneShot)
