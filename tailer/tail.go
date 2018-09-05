@@ -66,7 +66,9 @@ func OneShot(t *Tailer) error {
 // PollInterval sets the time interval between polls of the watched log files.
 func PollInterval(interval time.Duration) func(*Tailer) error {
 	return func(t *Tailer) error {
-		t.pollTicker = time.NewTicker(interval)
+		if interval > 0 {
+			t.pollTicker = time.NewTicker(interval)
+		}
 		return nil
 	}
 }
@@ -293,18 +295,35 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 // handler.
 func (t *Tailer) run(events <-chan watcher.Event) {
 	defer close(t.runDone)
+	defer close(t.lines)
 
-	for e := range events {
-		glog.V(2).Infof("Event type %#v", e)
-		t.handleLogEvent(e.Pathname)
+	var ticks <-chan time.Time
+	if t.pollTicker != nil {
+		ticks = t.pollTicker.C
+		defer t.pollTicker.Stop()
 	}
-	glog.Infof("Shutting down tailer.")
-	close(t.lines)
+
+	for {
+		select {
+		case e, ok := <-events:
+			if !ok {
+				glog.Infof("Shutting down tailer.")
+				return
+			}
+
+			glog.V(2).Infof("Event type %#v", e)
+			t.handleLogEvent(e.Pathname)
+
+		case <-ticks:
+			// Something.
+			glog.Info("tick")
+
+		}
+	}
 }
 
 // Close signals termination to the watcher.
 func (t *Tailer) Close() error {
-	t.pollTicker.Stop()
 	if err := t.w.Close(); err != nil {
 		return err
 	}
