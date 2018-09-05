@@ -35,16 +35,3 @@ matrix:
   fast_finish: true
   allow_failures:
     - go: tip
-
-before_deploy:
-  - make crossbuild
-
-deploy:
-  provider: releases
-  skip_cleanup: true
-  file_glob: true
-  file:
-    - build/*
-  on:
-    tags: true
-
