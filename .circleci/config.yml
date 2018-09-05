@@ -157,7 +157,7 @@ workflows:
           <<: *tag-filter
           requires:
             - build-go1.11-4
-      - build-go1.11-1:
+      - build-go1.10-1:
           <<: *tag-filter
           requires:
             - build-go1.11-4
