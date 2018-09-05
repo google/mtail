@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -51,6 +52,8 @@ type Tailer struct {
 
 	eventsHandle int // record the handle with which to add new log files to the watcher
 
+	pollTicker *time.Ticker
+
 	oneShot bool
 }
 
@@ -58,6 +61,14 @@ type Tailer struct {
 func OneShot(t *Tailer) error {
 	t.oneShot = true
 	return nil
+}
+
+// PollInterval sets the time interval between polls of the watched log files.
+func PollInterval(interval time.Duration) func(*Tailer) error {
+	return func(t *Tailer) error {
+		t.pollTicker = time.NewTicker(interval)
+		return nil
+	}
 }
 
 // New creates a new Tailer.
@@ -299,6 +310,7 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 
 // Close signals termination to the watcher.
 func (t *Tailer) Close() error {
+	t.pollTicker.Stop()
 	if err := t.w.Close(); err != nil {
 		return err
 	}
