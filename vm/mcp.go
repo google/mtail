@@ -26,8 +26,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 
+	"github.com/google/mtail/logline"
 	"github.com/google/mtail/metrics"
-	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/watcher"
 )
 
@@ -234,7 +234,7 @@ func (l *MasterControl) CompileAndRun(name string, input io.Reader) error {
 		glog.Infof("Stopped %s", name)
 	}
 
-	l.handles[name] = &vmHandle{make(chan *tailer.LogLine), make(chan struct{})}
+	l.handles[name] = &vmHandle{make(chan *logline.LogLine), make(chan struct{})}
 	nameCode := nameToCode(name)
 	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
 	started := make(chan struct{})
@@ -331,7 +331,7 @@ func OmitMetricSource(l *MasterControl) error {
 }
 
 // NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(programPath string, store *metrics.Store, lines <-chan *tailer.LogLine, w watcher.Watcher, fs afero.Fs, options ...func(*MasterControl) error) (*MasterControl, error) {
+func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.LogLine, w watcher.Watcher, fs afero.Fs, options ...func(*MasterControl) error) (*MasterControl, error) {
 	if store == nil || lines == nil {
 		return nil, errors.New("loader needs a store and lines")
 	}
@@ -366,7 +366,7 @@ func (l *MasterControl) SetOption(options ...func(*MasterControl) error) error {
 }
 
 type vmHandle struct {
-	lines chan *tailer.LogLine
+	lines chan *logline.LogLine
 	done  chan struct{}
 }
 
@@ -401,7 +401,7 @@ func (l *MasterControl) processEvents(events <-chan watcher.Event) {
 // running.  Upon close of the incoming lines channel, it also communicates
 // shutdown to the target VMs via channel close.  At termination it signals via
 // VMsDone that the goroutine has finished, and thus all VMs are terminated.
-func (l *MasterControl) processLines(lines <-chan *tailer.LogLine) {
+func (l *MasterControl) processLines(lines <-chan *logline.LogLine) {
 	defer close(l.VMsDone)
 
 	// Copy all input LogLines to each VM's LogLine input channel.

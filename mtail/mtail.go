@@ -18,6 +18,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/exporter"
+	"github.com/google/mtail/logline"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
@@ -28,8 +29,8 @@ import (
 
 // MtailServer contains the state of the main program object.
 type MtailServer struct {
-	lines chan *tailer.LogLine // Channel of lines from tailer to VM engine.
-	store *metrics.Store       // Metrics storage.
+	lines chan *logline.LogLine // Channel of lines from tailer to VM engine.
+	store *metrics.Store        // Metrics storage.
 	w     watcher.Watcher
 	fs    afero.Fs
 
@@ -265,7 +266,7 @@ func OmitMetricSource(m *MtailServer) error {
 func New(store *metrics.Store, w watcher.Watcher, fs afero.Fs, options ...func(*MtailServer) error) (*MtailServer, error) {
 	m := &MtailServer{
 		store:   store,
-		lines:   make(chan *tailer.LogLine),
+		lines:   make(chan *logline.LogLine),
 		w:       w,
 		fs:      fs,
 		webquit: make(chan struct{}),
