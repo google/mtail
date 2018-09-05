@@ -24,8 +24,6 @@ import (
 var (
 	// logErrors counts the number of IO errors per log file
 	logErrors = expvar.NewMap("log_errors_total")
-	// logRotations counts the number of rotations per log file
-	logRotations = expvar.NewMap("log_rotations_total")
 	// lineCount counts the numbre of lines read per log file
 	lineCount = expvar.NewMap("log_lines_total")
 	// logTruncs counts the number of log truncation events per log
@@ -34,7 +32,8 @@ var (
 
 // File contains the state for a tailed file.
 type File struct {
-	Pathname string
+	Name     string // Given name for the file (possibly relative, used for displau)
+	Pathname string // Full absolute path of the file used internally
 	file     afero.File
 	partial  *bytes.Buffer
 }
@@ -95,7 +94,7 @@ Retry:
 	default:
 		return nil, errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, absPath)
 	}
-	return &File{absPath, f, bytes.NewBufferString("")}, nil
+	return &File{pathname, absPath, f, bytes.NewBufferString("")}, nil
 }
 
 // Read blocks of 4096 butes from the File, sending LogLines to the given
@@ -137,8 +136,8 @@ func (f *File) Read(lines chan<- *logline.LogLine) error {
 			default:
 				// send off line for processing, blocks if not ready
 				// f.Name)( is buggy when using afero memory filesystem
-				lines <- logline.NewLogLine(f.Pathname, f.partial.String())
-				lineCount.Add(f.Pathname, 1)
+				lines <- logline.NewLogLine(f.Name, f.partial.String())
+				lineCount.Add(f.Name, 1)
 				// reset accumulator
 				f.partial.Reset()
 			}
@@ -168,7 +167,7 @@ func (f *File) checkForTruncate() error {
 
 	p, serr := f.file.Seek(0, io.SeekStart)
 	glog.V(2).Infof("Truncated?  Seeked to %d: %v", p, serr)
-	logTruncs.Add(f.Pathname, 1)
+	logTruncs.Add(f.Name, 1)
 	return serr
 }
 

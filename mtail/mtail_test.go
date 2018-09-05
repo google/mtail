@@ -225,7 +225,12 @@ Loop:
 	if diff := cmp.Diff(expected, expvar.Get("line_count").String()); diff != "" {
 		t.Errorf("line_count metric didn't match\n%s", diff)
 	}
-	diff := cmp.Diff("1", expvar.Get("log_rotations_total").(*expvar.Map).Get(logFilepath).String())
+	rotationsMap := expvar.Get("log_rotations_total").(*expvar.Map)
+	v := rotationsMap.Get(logFilepath)
+	if v == nil {
+		t.Errorf("path %q not found in map: %v", logFilepath, rotationsMap)
+	}
+	diff := cmp.Diff("1", v.String())
 	if diff != "" {
 		t.Errorf("log_rotations_total metric didn't match\n%s", diff)
 	}

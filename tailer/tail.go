@@ -31,6 +31,8 @@ import (
 var (
 	// logCount records the number of logs that are being tailed
 	logCount = expvar.NewInt("log_count")
+	// logRotations counts the number of rotations per log file
+	logRotations = expvar.NewMap("log_rotations_total")
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
@@ -230,10 +232,10 @@ func (t *Tailer) handleLogCreate(pathname string) {
 
 	s1, err := fd.Stat()
 	if err != nil {
-		glog.Infof("Stat failed on %q: %s", fd.Pathname, err)
+		glog.Infof("Stat failed on %q: %s", fd.Name, err)
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
-		// logRotations.Add(pathname, 1)
-		// logCount.Add(1)
+		logRotations.Add(pathname, 1)
+		logCount.Add(1)
 		// TODO(jaq): openlogpath seenBefore is true, so retry.
 		if oerr := t.openLogPath(pathname, true, true); oerr != nil {
 			glog.Warning(oerr)
