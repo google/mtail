@@ -56,7 +56,7 @@ var (
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 
 	// Ops flags
-	pollInterval = flag.Duration("poll_interval", time.Duration(time.Minute), "Set the interval to poll all log files for data.")
+	pollInterval = flag.Duration("poll_interval", 0, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.")
 
 	// Debugging flags
 	blockProfileRate     = flag.Int("block_profile_rate", 0, "Nanoseconds of block time before goroutine blocking events reported. 0 turns off.  See https://golang.org/pkg/runtime/#SetBlockProfileRate")
