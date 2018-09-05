@@ -239,14 +239,8 @@ func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) erro
 	if err := t.setHandle(pathname, f); err != nil {
 		return err
 	}
-	if err := f.Read(); err != nil {
-		if err == io.EOF {
-			glog.V(1).Info("EOF on first read")
-			// Don't worry about EOF on first read, that's expected due to SEEK_END.
-			if t.oneShot {
-				return err
-			}
-		}
+	if err := f.Read(); err != nil && err != io.EOF {
+		return err
 	}
 	glog.Infof("Tailing %s", f.Pathname)
 	return nil
