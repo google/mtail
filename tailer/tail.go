@@ -208,9 +208,23 @@ func (t *Tailer) handleLogEvent(pathname string) {
 		t.handleCreateGlob(pathname)
 		return
 	}
+	doFollow(fd)
+}
+
+// doFollow performs the Follow on an existing file descriptor, logging any errors
+func doFollow(fd *file.File) {
 	err := fd.Follow()
 	if err != nil && err != io.EOF {
 		glog.Info(err)
+	}
+}
+
+// pollHandles walks the handles map and polls them all in series.
+func (t *Tailer) pollHandles() {
+	t.handlesMu.RLock()
+	defer t.handlesMu.RUnlock()
+	for _, fd := range t.handles {
+		doFollow(fd)
 	}
 }
 
@@ -317,6 +331,8 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 		case <-ticks:
 			// Something.
 			glog.Info("tick")
+
+			t.pollHandles()
 
 		}
 	}
