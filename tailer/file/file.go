@@ -58,7 +58,7 @@ func New(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seenBefore
 	if err != nil {
 		// Stat failed, log error and return.
 		logErrors.Add(absPath, 1)
-		return nil, errors.Wrapf(err, "Failed to stat %q: %s", absPath)
+		return nil, errors.Wrapf(err, "Failed to stat %q", absPath)
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():

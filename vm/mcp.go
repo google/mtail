@@ -417,7 +417,7 @@ func (l *MasterControl) processLines(lines <-chan *logline.LogLine) {
 	// time to shut down the program loader.
 	glog.Info("Shutting down loader.")
 	if err := l.w.Close(); err != nil {
-		glog.Info("error closing watcher: %s", err)
+		glog.Infof("error closing watcher: %s", err)
 	}
 	<-l.watcherDone
 	l.handleMu.Lock()
