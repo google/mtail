@@ -249,14 +249,10 @@ func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) erro
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
 		if os.IsNotExist(err) {
-			glog.V(1).Infof("AbsPath %q doesn't exist (yet?)", f.Pathname)
+			glog.V(1).Infof("pathname %q doesn't exist (yet?)", f.Pathname)
 			return nil
 		}
 		return err
-	}
-	// The file did not exist when
-	if f == nil {
-		return nil
 	}
 	glog.V(2).Infof("Adding a file watch on %q", f.Pathname)
 	if err := t.w.Add(f.Pathname, t.eventsHandle); err != nil {
