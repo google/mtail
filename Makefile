@@ -9,6 +9,9 @@ endif
 ifeq ($(CIRCLECI),true)
 timeout := 5m
 endif
+# Let the benchmarks run for a long time.  The timeout is for the total time of
+# all benchmarks, not per bench.
+benchtimeout := 10m
 
 GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
@@ -82,14 +85,14 @@ ex_test: ex_test.go testdata/* examples/*
 
 .PHONY: bench
 bench: $(GOFILES) $(GOTESTFILES)
-	go test -bench=. -timeout=60s -run=XXX ./...
+	go test -bench=. -timeout=${benchtimeout} -run=XXX ./...
 
 .PHONY: bench_cpu
 bench_cpu:
-	go test -bench=. -run=XXX -timeout=60s -cpuprofile=cpu.out
+	go test -bench=. -run=XXX -timeout=${benchtimeout} -cpuprofile=cpu.out
 .PHONY: bench_mem
 bench_mem:
-	go test -bench=. -run=XXX -timeout=60s -memprofile=mem.out
+	go test -bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOTESTFILES)
