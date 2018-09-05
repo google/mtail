@@ -41,9 +41,11 @@ type File struct {
 	lines    chan<- *logline.LogLine // output channel for lines read
 }
 
-// New returns a new File named by the given pathname.  seenBefore indicates
-// thta mtail believes it's seen this pathname nbefore, and seekToStart
-// indicates that the file should be tailed from offset 0, not EOF.
+// New returns a new File named by the given pathname.  `seenBefore` indicates
+// that mtail believes it's seen this pathname before, indicating we should
+// retry on error to open the file. `seekToStart` indicates that the file
+// should be tailed from offset 0, not EOF; the latter is true for rotated
+// files and for files opened when mtail is in oneshot mode.
 func New(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seenBefore, seekToStart bool) (*File, error) {
 	glog.V(2).Infof("file.New(%s, %v, %v)", pathname, seenBefore, seekToStart)
 	absPath, err := filepath.Abs(pathname)
@@ -144,7 +146,7 @@ func (f *File) doRotation() error {
 	glog.V(2).Info("doing the rotation flush read")
 	f.Read()
 	logRotations.Add(f.Name, 1)
-	newFile, err := open(f.fs, f.Pathname, true)
+	newFile, err := open(f.fs, f.Pathname, true /*seenBefore*/)
 	if err != nil {
 		return err
 	}

@@ -186,7 +186,6 @@ func (t *Tailer) TailPath(pathname string) error {
 	if err := t.w.Add(pathname, t.eventsHandle); err != nil {
 		return err
 	}
-	logCount.Add(1)
 	// TODO(jaq): ex_test/filename.mtail requires we use the original pathname here, not fullpath
 	return t.openLogPath(pathname, false, false)
 }
@@ -270,6 +269,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) erro
 		return err
 	}
 	glog.Infof("Tailing %s", f.Pathname)
+	logCount.Add(1)
 	return nil
 }
 
@@ -289,14 +289,7 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 			continue
 		}
 		glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
-		// TODO(jaq): avoid code duplication with TailPath here.
-		// If this file was just created, read from the start.
-		if err := t.w.Add(pathname, t.eventsHandle); err != nil {
-			glog.Infof("Failed to tail new file %q: %s", pathname, err)
-			continue
-		}
-		logCount.Add(1)
-		// Pretend seenBefore because we want to seek to start.
+		// If this file was just created, read from the start of the file.
 		if err := t.openLogPath(pathname, false, true); err != nil {
 			glog.Infof("Failed to tail new file %q: %s", pathname, err)
 		}
