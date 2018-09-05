@@ -178,9 +178,11 @@ func (t *Tailer) TailPath(pathname string) error {
 	return t.openLogPath(pathname, false, false)
 }
 
-// handleLogEvent is dispatched when an Event is received, causing the
-// tailer to read all available bytes from an already-opened file and send each
-// log line onto lines channel.
+// handleLogEvent is dispatched when an Event is received, causing the tailer
+// to read all available bytes from an already-opened file and send each log
+// line onto lines channel.  Because we handle rotations and truncates when
+// reaching EOF in the file reader itself, we don't care what the signal is
+// from the filewatcher.
 func (t *Tailer) handleLogEvent(pathname string) {
 	glog.V(2).Infof("handleLogUpdate %s", pathname)
 	fd, ok := t.handleForPath(pathname)
@@ -281,9 +283,9 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 	}
 }
 
-// start is the main event loop for the Tailer.
-// It receives notification of log file changes from the watcher channel, and
-// handles them.
+// run the main event loop for the Tailer.  It receives notification of
+// log file changes from the watcher channel, and dispatches the log event
+// handler.
 func (t *Tailer) run(events <-chan watcher.Event) {
 	defer close(t.runDone)
 
