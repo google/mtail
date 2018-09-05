@@ -792,9 +792,10 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if !ok {
 		t.Error("program loads didn't increase")
 	}
+	store.Lock()
 	mfoo = store.Metrics["foo"]
 	if len(mfoo) != 1 || len(mfoo[0].LabelValues) != 1 {
 		t.Errorf("Unexpected metrics content: expected a single metric with no labels, but got all this: %v", mfoo)
 	}
-
+	store.Unlock()
 }
