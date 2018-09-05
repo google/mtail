@@ -8,7 +8,6 @@ package file
 import (
 	"bytes"
 	"expvar"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -36,12 +35,13 @@ type File struct {
 	Pathname string // Full absolute path of the file used internally
 	file     afero.File
 	partial  *bytes.Buffer
+	lines    chan<- *logline.LogLine // output channel for lines read
 }
 
 // New returns a new File named by the given pathname.  seenBefore indicates
 // thta mtail believes it's seen this pathname nbefore, and seekToStart
 // indicates that the file should be tailed from offset 0, not EOF.
-func New(fs afero.Fs, pathname string, seenBefore, seekToStart bool) (*File, error) {
+func New(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seenBefore, seekToStart bool) (*File, error) {
 	glog.V(2).Infof("file.New(%s, %v, %v)", pathname, seenBefore, seekToStart)
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
@@ -94,13 +94,14 @@ Retry:
 	default:
 		return nil, errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, absPath)
 	}
-	return &File{pathname, absPath, f, bytes.NewBufferString("")}, nil
+	return &File{pathname, absPath, f, bytes.NewBufferString(""), lines}, nil
 }
 
-// Read blocks of 4096 butes from the File, sending LogLines to the given
+// Read blocks of 4096 bytes from the File, sending LogLines to the given
 // channel as newlines are encountered.  If EOF is read, the partial line is
-// stored to be concatenated to on the next call.
-func (f *File) Read(lines chan<- *logline.LogLine) error {
+// stored to be concatenated to on the next call.  At EOF, checks for
+// truncation and resets the file offset if so.
+func (f *File) Read() error {
 	b := make([]byte, 0, 4096)
 	totalBytes := 0
 	for {
@@ -112,16 +113,14 @@ func (f *File) Read(lines chan<- *logline.LogLine) error {
 		if err == io.EOF && totalBytes == 0 {
 			glog.V(2).Info("Suspected truncation.")
 			// If there was nothing to be read, perhaps the file just got truncated.
-			terr := f.checkForTruncate()
-			glog.V(2).Infof("checkForTruncate returned with error '%v'", terr)
-			if terr == nil {
+			truncated, terr := f.checkForTruncate()
+			if terr != nil {
+				glog.Infof("checkForTruncate returned with error '%v'", terr)
+			}
+			if truncated {
 				// Try again: offset was greater than filesize and now we've seeked to start.
 				continue
 			}
-		}
-
-		if err != nil {
-			return err
 		}
 
 		var (
@@ -134,41 +133,52 @@ func (f *File) Read(lines chan<- *logline.LogLine) error {
 			case rune != '\n':
 				f.partial.WriteRune(rune)
 			default:
-				// send off line for processing, blocks if not ready
-				// f.Name)( is buggy when using afero memory filesystem
-				lines <- logline.NewLogLine(f.Name, f.partial.String())
-				lineCount.Add(f.Name, 1)
-				// reset accumulator
-				f.partial.Reset()
+				f.sendLine()
 			}
+		}
+
+		// Return on any error, including EOF.
+		if err != nil {
+			return err
 		}
 	}
 }
 
+// sendLine sends the contents of the partial buffer off for processing.
+func (f *File) sendLine() {
+	f.lines <- logline.NewLogLine(f.Name, f.partial.String())
+	lineCount.Add(f.Name, 1)
+	// reset partial accumulator
+	f.partial.Reset()
+}
+
 // checkForTruncate checks to see if the current offset into the file
 // is past the end of the file based on its size, and if so seeks to
-// the start again.  Returns nil iff that happened.
-func (f *File) checkForTruncate() error {
+// the start again.
+func (f *File) checkForTruncate() (bool, error) {
 	currentOffset, err := f.file.Seek(0, io.SeekCurrent)
 	glog.V(2).Infof("current seek position at %d", currentOffset)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	fi, err := f.file.Stat()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	glog.V(2).Infof("File size is %d", fi.Size())
 	if currentOffset == 0 || fi.Size() >= currentOffset {
-		return fmt.Errorf("no truncate appears to have occurred")
+		glog.V(2).Info("no truncate appears to have occurred")
+		return false, nil
 	}
+
+	f.partial.Reset()
 
 	p, serr := f.file.Seek(0, io.SeekStart)
 	glog.V(2).Infof("Truncated?  Seeked to %d: %v", p, serr)
 	logTruncs.Add(f.Name, 1)
-	return serr
+	return true, serr
 }
 
 func (f *File) Stat() (os.FileInfo, error) {

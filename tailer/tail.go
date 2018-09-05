@@ -199,7 +199,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 	// if err != nil {
 	// 	glog.Info(err)
 	// }
-	err := fd.Read(t.lines)
+	err := fd.Read()
 	if err != nil && err != io.EOF {
 		// If the error is a patherror, and is because the file is closed, then
 		// we're here because the file was rotated but we saw the CREATE before
@@ -306,7 +306,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) erro
 	if err := t.watchDirname(pathname); err != nil {
 		return err
 	}
-	f, err := file.New(t.fs, pathname, seenBefore, seekToStart || t.oneShot)
+	f, err := file.New(t.fs, pathname, t.lines, seenBefore, seekToStart || t.oneShot)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
@@ -327,7 +327,7 @@ func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) erro
 	if err := t.setHandle(pathname, f); err != nil {
 		return err
 	}
-	if err := f.Read(t.lines); err != nil {
+	if err := f.Read(); err != nil {
 		if err == io.EOF {
 			glog.V(1).Info("EOF on first read")
 			// Don't worry about EOF on first read, that's expected due to SEEK_END.

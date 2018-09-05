@@ -28,7 +28,7 @@ func TestReadPartial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := New(fs, logfile, false, false)
+	f, err := New(fs, logfile, lines, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestReadPartial(t *testing.T) {
 		}
 		close(done)
 	}()
-	err = f.Read(lines)
+	err = f.Read()
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestReadPartial(t *testing.T) {
 	fd.WriteString("hi")
 	// memmapfs shares data structure here and in code under test so reset the file offset
 	fd.Seek(0, 0)
-	err = f.Read(lines)
+	err = f.Read()
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestReadPartial(t *testing.T) {
 	fd.Seek(3, io.SeekStart)
 	fd.WriteString("\n")
 	fd.Seek(-1, io.SeekEnd)
-	err = f.Read(lines)
+	err = f.Read()
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := New(fs, logfile, false, false); err == nil || !os.IsPermission(err) {
+	if _, err := New(fs, logfile, nil, false, false); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
 }
