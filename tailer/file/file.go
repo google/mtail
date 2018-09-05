@@ -23,16 +23,19 @@ import (
 var (
 	// logErrors counts the number of IO errors per log file
 	logErrors = expvar.NewMap("log_errors_total")
-	// lineCount counts the numbre of lines read per log file
-	lineCount = expvar.NewMap("log_lines_total")
+	// logRotations counts the number of rotations per log file
+	logRotations = expvar.NewMap("log_rotations_total")
 	// logTruncs counts the number of log truncation events per log
 	logTruncs = expvar.NewMap("log_truncates_total")
+	// lineCount counts the numbre of lines read per log file
+	lineCount = expvar.NewMap("log_lines_total")
 )
 
 // File contains the state for a tailed file.
 type File struct {
 	Name     string // Given name for the file (possibly relative, used for displau)
 	Pathname string // Full absolute path of the file used internally
+	fs       afero.Fs
 	file     afero.File
 	partial  *bytes.Buffer
 	lines    chan<- *logline.LogLine // output channel for lines read
@@ -47,32 +50,10 @@ func New(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seenBefore
 	if err != nil {
 		return nil, err
 	}
-	retries := 3
-	retryDelay := 1 * time.Millisecond
-	shouldRetry := func() bool {
-		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
-		if !seenBefore {
-			return false
-		}
-		return retries > 0
-	}
-	var f afero.File
-Retry:
-	f, err = fs.Open(absPath)
+	f, err := open(fs, absPath, seenBefore)
 	if err != nil {
-		logErrors.Add(absPath, 1)
-		if shouldRetry() {
-			retries = retries - 1
-			time.Sleep(retryDelay)
-			retryDelay = retryDelay + retryDelay
-			goto Retry
-		}
-	}
-	if err != nil {
-		glog.Infof("openLogPath failed all retries")
 		return nil, err
 	}
-	glog.V(2).Infof("open succeeded %s", absPath)
 	fi, err := f.Stat()
 	if err != nil {
 		// Stat failed, log error and return.
@@ -94,7 +75,81 @@ Retry:
 	default:
 		return nil, errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, absPath)
 	}
-	return &File{pathname, absPath, f, bytes.NewBufferString(""), lines}, nil
+	return &File{pathname, absPath, fs, f, bytes.NewBufferString(""), lines}, nil
+}
+
+func open(fs afero.Fs, pathname string, seenBefore bool) (afero.File, error) {
+	retries := 3
+	retryDelay := 1 * time.Millisecond
+	shouldRetry := func() bool {
+		// seenBefore indicates also that we're rotating a file that previously worked, so retry.
+		if !seenBefore {
+			return false
+		}
+		return retries > 0
+	}
+	var f afero.File
+Retry:
+	f, err := fs.Open(pathname)
+	if err != nil {
+		logErrors.Add(pathname, 1)
+		if shouldRetry() {
+			retries = retries - 1
+			time.Sleep(retryDelay)
+			retryDelay = retryDelay + retryDelay
+			goto Retry
+		}
+	}
+	if err != nil {
+		glog.Infof("open failed all retries")
+		return nil, err
+	}
+	glog.V(2).Infof("open succeeded %s", pathname)
+	return f, nil
+}
+
+// Follow reads from the file until EOF.  It tracks log rotations (i.e new inode or device).
+func (f *File) Follow() error {
+	s1, err := f.file.Stat()
+	if err != nil {
+		glog.Infof("Stat failed on %q: %s", f.Name, err)
+		// We have a fd but it's invalid, handle as a rotation (delete/create)
+		err := f.doRotation()
+		if err != nil {
+			return err
+		}
+	}
+	s2, err := f.fs.Stat(f.Pathname)
+	if err != nil {
+		glog.Infof("Stat failed on %q: %s", f.Pathname, err)
+		return nil
+	}
+	if !os.SameFile(s1, s2) {
+		glog.V(1).Infof("New inode detected for %s, treating as rotation", f.Pathname)
+		err = f.doRotation()
+		if err != nil {
+			return err
+		}
+	} else {
+		glog.V(1).Infof("Path %s already being watched, and inode not changed.",
+			f.Pathname)
+	}
+
+	glog.V(2).Info("doing the normal read")
+	return f.Read()
+}
+
+// doRotation reads the remaining content of the currently opened file, then reopens the new one.
+func (f *File) doRotation() error {
+	glog.V(2).Info("doing the rotation flush read")
+	f.Read()
+	logRotations.Add(f.Name, 1)
+	newFile, err := open(f.fs, f.Pathname, true)
+	if err != nil {
+		return err
+	}
+	f.file = newFile
+	return nil
 }
 
 // Read blocks of 4096 bytes from the File, sending LogLines to the given

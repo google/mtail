@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
@@ -33,7 +32,7 @@ func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, a
 	return ta, lines, w, fs, "/tail_test", func() {}
 }
 
-func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *logline.LogLine, *watcher.LogWatcher, afero.Fs, string) {
+func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *logline.LogLine, *watcher.FakeWatcher, afero.Fs, string, func()) {
 	if testing.Short() {
 		t.Skip("skipping real fs test in short mode")
 	}
@@ -43,10 +42,7 @@ func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *logline.LogLi
 	}
 
 	fs := afero.NewOsFs()
-	w, err := watcher.NewLogWatcher()
-	if err != nil {
-		t.Fatalf("can't create watcher: %v", err)
-	}
+	w := watcher.NewFakeWatcher()
 	lines := make(chan *logline.LogLine, 1)
 	ta, err := New(lines, fs, w)
 	if err != nil {
@@ -84,7 +80,7 @@ func TestTail(t *testing.T) {
 }
 
 func TestHandleLogUpdate(t *testing.T) {
-	ta, lines, w, fs, dir, cleanup := makeTestTail(t)
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "handle_log_update")
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -98,6 +94,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	wg := sync.WaitGroup{}
 	go func() {
 		for line := range lines {
+			glog.V(2).Infof("line %v", line)
 			result = append(result, line)
 			wg.Done()
 		}
@@ -114,7 +111,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Seek(0, 0) // afero in-memory files share the same offset
+	// f.Seek(0, 0) // afero in-memory files share the same offset
 	w.InjectUpdate(logfile)
 
 	wg.Wait()
@@ -166,7 +163,8 @@ func TestHandleLogTruncate(t *testing.T) {
 	if _, err = f.WriteString("a\nb\nc\n"); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	//time.Sleep(10 * time.Millisecond)
+	w.InjectUpdate(logfile)
 	wg.Wait()
 
 	if err = f.Truncate(0); err != nil {
@@ -174,13 +172,15 @@ func TestHandleLogTruncate(t *testing.T) {
 	}
 	// "File.Truncate" does not change the file offset.
 	f.Seek(0, 0)
-	time.Sleep(10 * time.Millisecond)
+	w.InjectUpdate(logfile)
+	//time.Sleep(10 * time.Millisecond)
 
 	wg.Add(2)
 	if _, err = f.WriteString("d\ne\n"); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	w.InjectUpdate(logfile)
+	//time.Sleep(10 * time.Millisecond)
 
 	wg.Wait()
 	if err := w.Close(); err != nil {
@@ -201,7 +201,7 @@ func TestHandleLogTruncate(t *testing.T) {
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
-	ta, lines, w, fs, dir, cleanup := makeTestTail(t)
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "log_update_partial_line")
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -231,23 +231,23 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Seek(0, 0)
+	//f.Seek(0, 0)
 	w.InjectUpdate(logfile)
 
-	f.Seek(1, 0)
+	//f.Seek(1, 0)
 	_, err = f.WriteString("b")
 	if err != nil {
 		t.Error(err)
 	}
-	f.Seek(1, 0)
+	// f.Seek(1, 0)
 	w.InjectUpdate(logfile)
 
-	f.Seek(2, 0)
+	//f.Seek(2, 0)
 	_, err = f.WriteString("\n")
 	if err != nil {
 		t.Error(err)
 	}
-	f.Seek(2, 0)
+	//f.Seek(2, 0)
 	w.InjectUpdate(logfile)
 
 	wg.Wait()
@@ -297,27 +297,33 @@ func TestOpenRetries(t *testing.T) {
 	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	//w.InjectUpdate(logfile)
+	//time.Sleep(10 * time.Millisecond)
 	glog.Info("remove")
 	if err := fs.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	w.InjectDelete(logfile)
+	//time.Sleep(10 * time.Millisecond)
 	glog.Info("openfile")
 	f, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	w.InjectCreate(logfile)
+	//	time.Sleep(10 * time.Millisecond)
 	glog.Info("chmod")
 	if err := fs.Chmod(logfile, 0666); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	w.InjectUpdate(logfile)
+	//time.Sleep(10 * time.Millisecond)
 	glog.Info("write string")
 	if _, err := f.WriteString("\n"); err != nil {
 		t.Fatal(err)
 	}
+	w.InjectUpdate(logfile)
+
 	wg.Wait()
 	if err := w.Close(); err != nil {
 		t.Log(err)

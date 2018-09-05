@@ -31,8 +31,6 @@ import (
 var (
 	// logCount records the number of logs that are being tailed
 	logCount = expvar.NewInt("log_count")
-	// logRotations counts the number of rotations per log file
-	logRotations = expvar.NewMap("log_rotations_total")
 )
 
 // Tailer receives notification of changes from a Watcher and extracts new log
@@ -180,10 +178,10 @@ func (t *Tailer) TailPath(pathname string) error {
 	return t.openLogPath(pathname, false, false)
 }
 
-// handleLogUpdate is dispatched when an UpdateEvent is received, causing the
+// handleLogEvent is dispatched when an Event is received, causing the
 // tailer to read all available bytes from an already-opened file and send each
 // log line onto lines channel.
-func (t *Tailer) handleLogUpdate(pathname string) {
+func (t *Tailer) handleLogEvent(pathname string) {
 	glog.V(2).Infof("handleLogUpdate %s", pathname)
 	fd, ok := t.handleForPath(pathname)
 	if !ok {
@@ -195,11 +193,7 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 		t.handleCreateGlob(pathname)
 		return
 	}
-	// absPath, err := filepath.Abs(pathname)
-	// if err != nil {
-	// 	glog.Info(err)
-	// }
-	err := fd.Read()
+	err := fd.Follow()
 	if err != nil && err != io.EOF {
 		// If the error is a patherror, and is because the file is closed, then
 		// we're here because the file was rotated but we saw the CREATE before
@@ -210,83 +204,6 @@ func (t *Tailer) handleLogUpdate(pathname string) {
 			return
 		}
 	}
-}
-
-// handleLogCreate handles both new and rotated log files.
-func (t *Tailer) handleLogCreate(pathname string) {
-	glog.V(2).Infof("handleLogCreate %s", pathname)
-	fd, ok := t.handleForPath(pathname)
-	if !ok {
-		t.handleCreateGlob(pathname)
-		return
-	}
-
-	glog.V(2).Infof("c handleforPath %s is %s", pathname, fd.Name())
-	if pathname != fd.Name() {
-		glog.V(1).Infof("created name %s doesn't match name in handle %s", pathname, fd.Name())
-		t.handleLogDelete(pathname)
-		glog.V(2).Info("finished delete")
-		t.handleCreateGlob(pathname)
-		return
-	}
-
-	s1, err := fd.Stat()
-	if err != nil {
-		glog.Infof("Stat failed on %q: %s", fd.Name, err)
-		// We have a fd but it's invalid, handle as a rotation (delete/create)
-		logRotations.Add(pathname, 1)
-		logCount.Add(1)
-		// TODO(jaq): openlogpath seenBefore is true, so retry.
-		if oerr := t.openLogPath(pathname, true, true); oerr != nil {
-			glog.Warning(oerr)
-		}
-		return
-	}
-	s2, err := t.fs.Stat(pathname)
-	if err != nil {
-		glog.Infof("Stat failed on %q: %s", pathname, err)
-		return
-	}
-	if os.SameFile(s1, s2) {
-		glog.V(1).Infof("Path %s already being watched, and inode not changed.",
-			pathname)
-		return
-
-	}
-	glog.V(1).Infof("New inode detected for %s, treating as rotation.", pathname)
-	//logRotations.Add(pathname, 1)
-	// flush the old log, pathname is still an index into t.handles with the old inode.
-	t.handleLogUpdate(pathname)
-	if err := fd.Close(); err != nil {
-		glog.Info(err)
-	}
-	go func() {
-		// Run in goroutine as Remove may block waiting on event processing.
-		if err := t.w.Remove(pathname); err != nil {
-			glog.Infof("Failed removing watches on %s: %s", pathname, err)
-		}
-		// openLogPath readds the file to the watcher, so must be strictly after the Remove succeeds.
-		// seenBefore is true, so retry
-		if err := t.openLogPath(pathname, true, true); err != nil {
-			glog.Warning(err)
-		}
-	}()
-}
-
-func (t *Tailer) handleLogDelete(pathname string) {
-	glog.V(2).Infof("handleLogDelete %s", pathname)
-	fd, ok := t.handleForPath(pathname)
-	if !ok {
-		glog.V(2).Infof("Delete without fd for %s", pathname)
-		return
-	}
-	// flush the old log, as pathname is still an index into t.handles with the old inode still open
-	t.handleLogUpdate(pathname)
-	if err := fd.Close(); err != nil {
-		glog.Warning(err)
-	}
-	logCount.Add(-1)
-	// Explicitly leave the filehandle invalid to test for log rotation in handleLogCreate
 }
 
 // watchDirname adds the directory containing a path to be watched.
@@ -379,16 +296,7 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 
 	for e := range events {
 		glog.V(2).Infof("Event type %#v", e)
-		switch e.Op {
-		case watcher.Update:
-			t.handleLogUpdate(e.Pathname)
-		case watcher.Create:
-			t.handleLogCreate(e.Pathname)
-		case watcher.Delete:
-			//t.handleLogDelete(e.Pathname)
-		default:
-			glog.Infof("Unexpected event %#v", e)
-		}
+		t.handleLogEvent(e.Pathname)
 	}
 	glog.Infof("Shutting down tailer.")
 	close(t.lines)
