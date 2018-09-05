@@ -329,11 +329,7 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 			t.handleLogEvent(e.Pathname)
 
 		case <-ticks:
-			// Something.
-			glog.Info("tick")
-
 			t.pollHandles()
-
 		}
 	}
 }
