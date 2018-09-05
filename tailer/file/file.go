@@ -173,7 +173,11 @@ func (f *File) checkForTruncate() (bool, error) {
 		return false, nil
 	}
 
-	f.partial.Reset()
+	// We're about to lose all data because of the truncate so if there's
+	// anything in the buffer, send it out.
+	if f.partial.Len() > 0 {
+		f.sendLine()
+	}
 
 	p, serr := f.file.Seek(0, io.SeekStart)
 	glog.V(2).Infof("Truncated?  Seeked to %d: %v", p, serr)
