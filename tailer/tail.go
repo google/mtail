@@ -195,14 +195,7 @@ func (t *Tailer) handleLogEvent(pathname string) {
 	}
 	err := fd.Follow()
 	if err != nil && err != io.EOF {
-		// If the error is a patherror, and is because the file is closed, then
-		// we're here because the file was rotated but we saw the CREATE before
-		// the REMOVE.
-		glog.Infof("%#V", err)
-		if isFileClosedError(err) {
-			t.handleCreateGlob(pathname)
-			return
-		}
+		glog.Info(err)
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
@@ -20,7 +21,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, afero.Fs, string, func()) {
+func makeTestTail(t *testing.T) (*Tailer, chan *logline.LogLine, *watcher.FakeWatcher, afero.Fs, string, func()) {
 	fs := afero.NewMemMapFs()
 	w := watcher.NewFakeWatcher()
 	lines := make(chan *logline.LogLine, 1)
@@ -367,7 +368,7 @@ func TestHandleLogRotate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := []*LogLine{}
+	result := []*logline.LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	go func() {
@@ -386,7 +387,7 @@ func TestHandleLogRotate(t *testing.T) {
 		t.Fatal(err)
 	}
 	glog.V(2).Info("update")
-	//w.InjectUpdate(logfile)
+	w.InjectUpdate(logfile)
 	if err = f.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -394,25 +395,25 @@ func TestHandleLogRotate(t *testing.T) {
 		t.Fatal(err)
 	}
 	glog.V(2).Info("delete")
-	//w.InjectDelete(logfile)
-	//w.InjectCreate(logfile + ".1")
+	w.InjectDelete(logfile)
+	w.InjectCreate(logfile + ".1")
 	f, err = fs.Create(logfile)
 	if err != nil {
 		t.Fatal(err)
 	}
 	glog.V(2).Info("create")
-	//w.InjectCreate(logfile)
+	w.InjectCreate(logfile)
 	if _, err = f.WriteString("2\n"); err != nil {
 		t.Fatal(err)
 	}
 	glog.V(2).Info("update")
-	//w.InjectUpdate(logfile)
+	w.InjectUpdate(logfile)
 
 	wg.Wait()
 	w.Close()
 	<-done
 
-	expected := []*LogLine{
+	expected := []*logline.LogLine{
 		{logfile, "1"},
 		{logfile, "2"},
 	}
@@ -422,76 +423,71 @@ func TestHandleLogRotate(t *testing.T) {
 	}
 }
 
-// func TestHandleLogRotateSignalsWrong(t *testing.T) {
-// 	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "rotate wrong")
-// 	defer cleanup()
-// 	logfile := filepath.Join(dir, "log")
-// 	f, err := fs.Create(logfile)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	glog.V(2).Infof("Fileinfo: %#V", f.(*mem.File).Info())
+func TestHandleLogRotateSignalsWrong(t *testing.T) {
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "rotate wrong")
+	defer cleanup()
+	logfile := filepath.Join(dir, "log")
+	f, err := fs.Create(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	result := []*LogLine{}
-// 	done := make(chan struct{})
-// 	wg := sync.WaitGroup{}
-// 	go func() {
-// 		for line := range lines {
-// 			result = append(result, line)
-// 			wg.Done()
-// 		}
-// 		close(done)
-// 	}()
+	result := []*logline.LogLine{}
+	done := make(chan struct{})
+	wg := sync.WaitGroup{}
+	go func() {
+		for line := range lines {
+			result = append(result, line)
+			wg.Done()
+		}
+		close(done)
+	}()
 
-// 	if err := ta.TailPath(logfile); err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	wg.Add(2)
-// 	if _, err = f.WriteString("1\n"); err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	glog.V(2).Info("update")
-// 	w.InjectUpdate(logfile)
-// 	if err = f.Close(); err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	if err = fs.Rename(logfile, logfile+".1"); err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	glog.V(2).Infof("Fileinfo: %#V", f.(*mem.File).Info())
-// 	// Forcibly remove it from the fake filesystem because afero bugs
-// 	fs.Remove(logfile)
-// 	glog.V(2).Infof("Fileinfo: %#V", f.(*mem.File).Info())
-// 	// No delete signal yet
-// 	f, err = fs.Create(logfile)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	glog.V(2).Infof("Fileinfo: %#V", f.(*mem.File).Info())
-// 	glog.V(2).Info("create")
-// 	// Out-of-order delivery of a log rotation.
-// 	w.InjectCreate(logfile)
+	if err := ta.TailPath(logfile); err != nil {
+		t.Fatal(err)
+	}
+	wg.Add(2)
+	if _, err = f.WriteString("1\n"); err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("update")
+	w.InjectUpdate(logfile)
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = fs.Rename(logfile, logfile+".1"); err != nil {
+		t.Fatal(err)
+	}
+	// Forcibly remove it from the fake filesystem because afero bugs
+	fs.Remove(logfile)
+	// No delete signal yet
+	f, err = fs.Create(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("create")
+	w.InjectCreate(logfile)
 
-// 	time.Sleep(1 * time.Millisecond)
-// 	glog.V(2).Info("delete")
-// 	w.InjectDelete(logfile)
+	time.Sleep(1 * time.Millisecond)
+	glog.V(2).Info("delete")
+	w.InjectDelete(logfile)
 
-// 	if _, err = f.WriteString("2\n"); err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	glog.V(2).Info("update")
-// 	w.InjectUpdate(logfile)
+	if _, err = f.WriteString("2\n"); err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("update")
+	w.InjectUpdate(logfile)
 
-// 	wg.Wait()
-// 	w.Close()
-// 	<-done
+	wg.Wait()
+	w.Close()
+	<-done
 
-// 	expected := []*LogLine{
-// 		{logfile, "1"},
-// 		{logfile, "2"},
-// 	}
-// 	diff := cmp.Diff(expected, result)
-// 	if diff != "" {
-// 		t.Errorf("result didn't match expected:\n%s", diff)
-// 	}
-// }
+	expected := []*logline.LogLine{
+		{logfile, "1"},
+		{logfile, "2"},
+	}
+	diff := cmp.Diff(expected, result)
+	if diff != "" {
+		t.Errorf("result didn't match expected:\n%s", diff)
+	}
+}
