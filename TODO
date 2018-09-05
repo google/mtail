@@ -28,12 +28,6 @@ count stack size and preallocate stack
 
 Run and upload benchmarks to https://perfdata.golang.org/ from circleci
 
-openLogPath's seenBefore in the tailer's handle* is incorrect because by
-    definition every file path that's new here shold be read from the start of
-    the file. Only files read at mtail startup should seek to EOF.  Otherwise
-    we miss the first lines of the file.  This is causing unnecessary
-    complexity in the tailer code.
-
 GC in the tailer to remove handles on files that haven't been updated in 24h,
     when log files rotate with a timestamp-like pattern
 

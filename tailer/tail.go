@@ -187,7 +187,8 @@ func (t *Tailer) TailPath(pathname string) error {
 		return err
 	}
 	// TODO(jaq): ex_test/filename.mtail requires we use the original pathname here, not fullpath
-	return t.openLogPath(pathname, false, false)
+	// New file at start of program, seek to EOF.
+	return t.openLogPath(pathname, false)
 }
 
 // handleLogEvent is dispatched when an Event is received, causing the tailer
@@ -238,13 +239,12 @@ func (t *Tailer) watchDirname(pathname string) error {
 }
 
 // openLogPath opens a log file named by pathname.
-// TODO(jaq): seenBefore is incorrect for all log creation events received via fsnotify.
-func (t *Tailer) openLogPath(pathname string, seenBefore, seekToStart bool) error {
-	glog.V(2).Infof("openlogPath %s %v %v", pathname, seenBefore, seekToStart)
+func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
+	glog.V(2).Infof("openlogPath %s %v", pathname, seekToStart)
 	if err := t.watchDirname(pathname); err != nil {
 		return err
 	}
-	f, err := file.New(t.fs, pathname, t.lines, seenBefore, seekToStart || t.oneShot)
+	f, err := file.New(t.fs, pathname, t.lines, false, seekToStart || t.oneShot)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
@@ -286,7 +286,7 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 		}
 		glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
 		// If this file was just created, read from the start of the file.
-		if err := t.openLogPath(pathname, false, true); err != nil {
+		if err := t.openLogPath(pathname, true); err != nil {
 			glog.Infof("Failed to tail new file %q: %s", pathname, err)
 		}
 		glog.V(2).Infof("Started tailing %q", pathname)
