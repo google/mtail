@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -51,6 +52,8 @@ type Tailer struct {
 
 	eventsHandle int // record the handle with which to add new log files to the watcher
 
+	pollTicker *time.Ticker
+
 	oneShot bool
 }
 
@@ -58,6 +61,16 @@ type Tailer struct {
 func OneShot(t *Tailer) error {
 	t.oneShot = true
 	return nil
+}
+
+// PollInterval sets the time interval between polls of the watched log files.
+func PollInterval(interval time.Duration) func(*Tailer) error {
+	return func(t *Tailer) error {
+		if interval > 0 {
+			t.pollTicker = time.NewTicker(interval)
+		}
+		return nil
+	}
 }
 
 // New creates a new Tailer.
@@ -195,9 +208,23 @@ func (t *Tailer) handleLogEvent(pathname string) {
 		t.handleCreateGlob(pathname)
 		return
 	}
+	doFollow(fd)
+}
+
+// doFollow performs the Follow on an existing file descriptor, logging any errors
+func doFollow(fd *file.File) {
 	err := fd.Follow()
 	if err != nil && err != io.EOF {
 		glog.Info(err)
+	}
+}
+
+// pollHandles walks the handles map and polls them all in series.
+func (t *Tailer) pollHandles() {
+	t.handlesMu.RLock()
+	defer t.handlesMu.RUnlock()
+	for _, fd := range t.handles {
+		doFollow(fd)
 	}
 }
 
@@ -282,13 +309,33 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 // handler.
 func (t *Tailer) run(events <-chan watcher.Event) {
 	defer close(t.runDone)
+	defer close(t.lines)
 
-	for e := range events {
-		glog.V(2).Infof("Event type %#v", e)
-		t.handleLogEvent(e.Pathname)
+	var ticks <-chan time.Time
+	if t.pollTicker != nil {
+		ticks = t.pollTicker.C
+		defer t.pollTicker.Stop()
 	}
-	glog.Infof("Shutting down tailer.")
-	close(t.lines)
+
+	for {
+		select {
+		case e, ok := <-events:
+			if !ok {
+				glog.Infof("Shutting down tailer.")
+				return
+			}
+
+			glog.V(2).Infof("Event type %#v", e)
+			t.handleLogEvent(e.Pathname)
+
+		case <-ticks:
+			// Something.
+			glog.Info("tick")
+
+			t.pollHandles()
+
+		}
+	}
 }
 
 // Close signals termination to the watcher.
