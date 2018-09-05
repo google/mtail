@@ -456,19 +456,18 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 		make(map[string]string),
 		make(map[string]string),
 	}
-	for name := range t.handles {
-		if v := expvar.Get("log_errors_total").(*expvar.Map).Get(name); v != nil {
-			data.Errors[name] = v.String()
-		}
-		if v := expvar.Get("log_rotations_total").(*expvar.Map).Get(name); v != nil {
-			data.Rotations[name] = v.String()
-		}
-		if v := expvar.Get("log_lines_total").(*expvar.Map).Get(name); v != nil {
-			data.Errors[name] = v.String()
-		}
-		if v := expvar.Get("log_truncates_total").(*expvar.Map).Get(name); v != nil {
-			data.Errors[name] = v.String()
-		}
+	for _, pair := range []struct {
+		v string
+		m map[string]string
+	}{
+		{"log_errors_total", data.Errors},
+		{"log_rotations_total", data.Rotations},
+		{"log_lines_total", data.Lines},
+		{"log_truncates_total", data.Truncs},
+	} {
+		expvar.Get(pair.v).(*expvar.Map).Do(func(kv expvar.KeyValue) {
+			pair.m[kv.Key] = kv.Value.String()
+		})
 	}
 	return tpl.Execute(w, data)
 }
