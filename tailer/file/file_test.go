@@ -28,7 +28,7 @@ func TestReadPartial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := New(fs, logfile, lines, false, false)
+	f, err := New(fs, logfile, lines, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := New(fs, logfile, nil, false, false); err == nil || !os.IsPermission(err) {
+	if _, err := New(fs, logfile, nil, false); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
 }

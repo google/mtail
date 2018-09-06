@@ -46,13 +46,13 @@ type File struct {
 // retry on error to open the file. `seekToStart` indicates that the file
 // should be tailed from offset 0, not EOF; the latter is true for rotated
 // files and for files opened when mtail is in oneshot mode.
-func New(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seenBefore, seekToStart bool) (*File, error) {
-	glog.V(2).Infof("file.New(%s, %v, %v)", pathname, seenBefore, seekToStart)
+func New(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seekToStart bool) (*File, error) {
+	glog.V(2).Infof("file.New(%s, %v)", pathname, seekToStart)
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		return nil, err
 	}
-	f, err := open(fs, absPath, seenBefore)
+	f, err := open(fs, absPath, false)
 	if err != nil {
 		return nil, err
 	}

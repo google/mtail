@@ -244,7 +244,7 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	if err := t.watchDirname(pathname); err != nil {
 		return err
 	}
-	f, err := file.New(t.fs, pathname, t.lines, false, seekToStart || t.oneShot)
+	f, err := file.New(t.fs, pathname, t.lines, seekToStart || t.oneShot)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
