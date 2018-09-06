@@ -1,9 +1,7 @@
 // Copyright 2018 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-// Package file provides an abstraction over files and named pipes being tailed
-// by `mtail`.
-package file
+package tailer
 
 import (
 	"bytes"
@@ -31,7 +29,8 @@ var (
 	lineCount = expvar.NewMap("log_lines_total")
 )
 
-// File contains the state for a tailed file.
+// File provides an abstraction over files and named pipes being tailed
+// by `mtail`.
 type File struct {
 	Name     string // Given name for the file (possibly relative, used for displau)
 	Pathname string // Full absolute path of the file used internally
@@ -41,12 +40,12 @@ type File struct {
 	lines    chan<- *logline.LogLine // output channel for lines read
 }
 
-// New returns a new File named by the given pathname.  `seenBefore` indicates
+// NewFile returns a new File named by the given pathname.  `seenBefore` indicates
 // that mtail believes it's seen this pathname before, indicating we should
 // retry on error to open the file. `seekToStart` indicates that the file
 // should be tailed from offset 0, not EOF; the latter is true for rotated
 // files and for files opened when mtail is in oneshot mode.
-func New(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seekToStart bool) (*File, error) {
+func NewFile(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seekToStart bool) (*File, error) {
 	glog.V(2).Infof("file.New(%s, %v)", pathname, seekToStart)
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {

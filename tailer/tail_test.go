@@ -265,7 +265,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 
 }
 
-func TestOpenRetries(t *testing.T) {
+func TestTailerOpenRetries(t *testing.T) {
 	// Can't force a permission denied error if run as root.
 	u, err := user.Current()
 	if err != nil {

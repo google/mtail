@@ -1,7 +1,7 @@
 // Copyright 2018 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package file
+package tailer
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ func TestReadPartial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := New(fs, logfile, lines, false)
+	f, err := NewFile(fs, logfile, lines, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := New(fs, logfile, nil, false); err == nil || !os.IsPermission(err) {
+	if _, err := NewFile(fs, logfile, nil, false); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
 }

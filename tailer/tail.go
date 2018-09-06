@@ -23,7 +23,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/google/mtail/logline"
-	"github.com/google/mtail/tailer/file"
 	"github.com/google/mtail/watcher"
 
 	"github.com/spf13/afero"
@@ -42,8 +41,8 @@ type Tailer struct {
 	w     watcher.Watcher
 	fs    afero.Fs // mockable filesystem interface
 
-	handlesMu sync.RWMutex          // protects `handles'
-	handles   map[string]*file.File // File handles for each pathname.
+	handlesMu sync.RWMutex     // protects `handles'
+	handles   map[string]*File // File handles for each pathname.
 
 	globPatternsMu sync.RWMutex        // protects `globPatterns'
 	globPatterns   map[string]struct{} // glob patterns to match newly created files in dir paths against
@@ -88,7 +87,7 @@ func New(lines chan<- *logline.LogLine, fs afero.Fs, w watcher.Watcher, options 
 		lines:        lines,
 		w:            w,
 		fs:           fs,
-		handles:      make(map[string]*file.File),
+		handles:      make(map[string]*File),
 		globPatterns: make(map[string]struct{}),
 		runDone:      make(chan struct{}),
 	}
@@ -112,7 +111,7 @@ func (t *Tailer) SetOption(options ...func(*Tailer) error) error {
 }
 
 // setHandle sets a file handle under it's pathname
-func (t *Tailer) setHandle(pathname string, f *file.File) error {
+func (t *Tailer) setHandle(pathname string, f *File) error {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to lookup abspath of %q", pathname)
@@ -124,7 +123,7 @@ func (t *Tailer) setHandle(pathname string, f *file.File) error {
 }
 
 // handleForPath retrives a file handle for a pathname.
-func (t *Tailer) handleForPath(pathname string) (*file.File, bool) {
+func (t *Tailer) handleForPath(pathname string) (*File, bool) {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		glog.V(2).Infof("Couldn't resolve path %q: %s", pathname, err)
@@ -211,7 +210,7 @@ func (t *Tailer) handleLogEvent(pathname string) {
 }
 
 // doFollow performs the Follow on an existing file descriptor, logging any errors
-func doFollow(fd *file.File) {
+func doFollow(fd *File) {
 	err := fd.Follow()
 	if err != nil && err != io.EOF {
 		glog.Info(err)
@@ -243,7 +242,7 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	if err := t.watchDirname(pathname); err != nil {
 		return err
 	}
-	f, err := file.New(t.fs, pathname, t.lines, seekToStart || t.oneShot)
+	f, err := NewFile(t.fs, pathname, t.lines, seekToStart || t.oneShot)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
@@ -372,7 +371,7 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	t.globPatternsMu.RLock()
 	defer t.globPatternsMu.RUnlock()
 	data := struct {
-		Handles   map[string]*file.File
+		Handles   map[string]*File
 		Patterns  map[string]struct{}
 		Rotations map[string]string
 		Lines     map[string]string
