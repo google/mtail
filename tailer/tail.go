@@ -186,7 +186,6 @@ func (t *Tailer) TailPath(pathname string) error {
 	if err := t.w.Add(pathname, t.eventsHandle); err != nil {
 		return err
 	}
-	// TODO(jaq): ex_test/filename.mtail requires we use the original pathname here, not fullpath
 	// New file at start of program, seek to EOF.
 	return t.openLogPath(pathname, false)
 }
