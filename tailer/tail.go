@@ -153,27 +153,28 @@ func (t *Tailer) AddPattern(pattern string) {
 // all paths that match the glob are opened and watched, and the directories
 // containing those matches, if any, are watched.
 func (t *Tailer) TailPattern(pattern string) error {
+	t.AddPattern(pattern)
+	// Add a watch on the containing directory, so we know when a rotation
+	// occurs or something shows up that matches this pattern.
+	if err := t.watchDirname(pattern); err != nil {
+		return err
+	}
 	matches, err := afero.Glob(t.fs, pattern)
 	if err != nil {
 		return err
 	}
-	t.AddPattern(pattern)
 	glog.V(1).Infof("glob matches: %v", matches)
-	// TODO(jaq): Error if there are no matches, or do we just assume that it's OK?
-	// mtail_test.go assumes that it's ok.  Figure out why.
-	// if len(matches) == 0 {
-	// 	return errors.Errorf("No matches for pattern %q", pattern)
-	// }
+	// Error if there are no matches, but if they show up later, they'll get picked up by the directory watch set above.
+	if len(matches) == 0 {
+		return errors.Errorf("No matches for pattern %q", pattern)
+	}
 	for _, pathname := range matches {
 		err := t.TailPath(pathname)
 		if err != nil {
 			return errors.Wrapf(err, "attempting to tail %q", pathname)
 		}
 	}
-	// Add a watch on the containing directory, so we know when a rotation
-	// occurs or something shows up that matches this pattern.  TODO(jaq): this
-	// seems fallible.
-	return t.watchDirname(pattern)
+	return nil
 }
 
 // TailPath registers a filesystem pathname to be tailed.
