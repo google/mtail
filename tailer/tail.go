@@ -386,15 +386,15 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 		make(map[string]string),
 	}
 	for _, pair := range []struct {
-		v string
+		v *expvar.Map
 		m map[string]string
 	}{
-		{"log_errors_total", data.Errors},
-		{"log_rotations_total", data.Rotations},
-		{"log_lines_total", data.Lines},
-		{"log_truncates_total", data.Truncs},
+		{logErrors, data.Errors},
+		{logRotations, data.Rotations},
+		{logTruncs, data.Truncs},
+		{lineCount, data.Lines},
 	} {
-		expvar.Get(pair.v).(*expvar.Map).Do(func(kv expvar.KeyValue) {
+		pair.v.Do(func(kv expvar.KeyValue) {
 			pair.m[kv.Key] = kv.Value.String()
 		})
 	}
