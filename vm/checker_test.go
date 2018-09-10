@@ -126,6 +126,15 @@ const ID /bar/
 }
 `,
 		[]string{"invalid del index count:3:7-11: Not enough keys for indexed expression: expecting 2, received 1"}},
+	// TODO(jaq): is it an error to make a counter of type string?
+	// 	{"counter as string",
+	// 		`counter foo
+
+	// /(?P<v>.*)/ {
+	//   foo = $v
+	// }
+	// `,
+	// 		[]string{"counter as string:4:1-10: Can't assign string to counter metric."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
