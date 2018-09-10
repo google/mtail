@@ -172,3 +172,22 @@ container: Dockerfile
 empty :=
 space := $(empty) $(empty)
 export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPATH))))
+
+
+.fuzz-dep-stamp:
+	go get github.com/dvyukov/go-fuzz/go-fuzz
+	go get github.com/dvyukov/go-fuzz/go-fuzz-build
+	touch $@
+
+.PHONY: install-fuzz-deps
+install-fuzz-deps: .fuzz-dep-stamp
+
+vm-fuzz.zip: .fuzz-dep-stamp $(GOFILES)
+	go-fuzz-build github.com/google/mtail/vm
+
+.PHONY: fuzz
+fuzz: vm-fuzz.zip
+#	rm -rf workdir
+	mkdir -p workdir/corpus
+	cp examples/*.mtail workdir/corpus
+	go-fuzz -bin=vm-fuzz.zip -workdir=workdir

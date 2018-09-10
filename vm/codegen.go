@@ -103,10 +103,13 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 				return nil
 			}
 			// Initialize to zero at the zero time.
-			if dtyp == metrics.Int {
+			switch dtyp {
+			case metrics.Int:
 				datum.SetInt(d, 0, time.Unix(0, 0))
-			} else {
+			case metrics.Float:
 				datum.SetFloat(d, 0, time.Unix(0, 0))
+			default:
+				glog.V(2).Infof("Can't initialize to zero a %q", n)
 			}
 		}
 		m.Hidden = n.hidden
@@ -387,7 +390,7 @@ func (c *codegen) VisitAfter(node astNode) {
 				// And a second lhs
 				c.emit(instr{fset, nil})
 			default:
-				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.op)
+				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.Type())
 				return
 			}
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:

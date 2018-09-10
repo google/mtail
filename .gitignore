@@ -22,3 +22,6 @@ foo.log
 /build
 /.crossbuild-dep-stamp
 /.ghi.yml
+/vm-fuzz.zip
+workdir/*
+/.fuzz-dep-stamp
