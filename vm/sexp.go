@@ -109,6 +109,8 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 			s.emit("**")
 		case ASSIGN:
 			s.emit("=")
+		case ADD_ASSIGN:
+			s.emit("+=")
 		case MOD:
 			s.emit("%")
 		case CONCAT:
