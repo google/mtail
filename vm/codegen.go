@@ -109,7 +109,8 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			case metrics.Float:
 				datum.SetFloat(d, 0, time.Unix(0, 0))
 			default:
-				glog.V(2).Infof("Can't initialize to zero a %q", n)
+				c.errorf(n.Pos(), "Can't initialize to zero a %v", n)
+				return nil
 			}
 		}
 		m.Hidden = n.hidden
@@ -265,7 +266,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			return nil
 
 		case ADD_ASSIGN:
-			if Equals(n.Type(), Float) {
+			if !Equals(n.Type(), Int) {
 				// Double-emit the lhs so that it can be assigned to
 				Walk(c, n.lhs)
 			}

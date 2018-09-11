@@ -134,7 +134,7 @@ const ID /bar/
 	//   foo = $v
 	// }
 	// `,
-	// 		[]string{"counter as string:4:1-10: Can't assign string to counter metric."}},
+	// 	[]string{"counter as string:4:4-11: Can't assign rhs of type String to lhs of type Int"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
