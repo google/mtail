@@ -176,7 +176,7 @@ The following relational operators are available in `mtail`:
 *   `>=` greater than or equal
 *   `==` is equal
 *   `!=` is not equal
-*   `~` pattern match
+*   `=~` pattern match
 *   `!~` negated pattern match
 *   `||` logical or
 *   `&&` logical and
