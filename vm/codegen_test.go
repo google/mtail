@@ -739,6 +739,25 @@ text foo
 		{sset, nil},
 		{setmatched, true},
 	}},
+	{"concat to text", `
+text foo
+/(?P<v>.*)/ {
+		foo += $v
+}`,
+		[]instr{
+			{match, 0},
+			{jnm, 12},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{cat, nil},
+			{sset, nil},
+			{setmatched, true},
+		}},
 }
 
 func TestCodegen(t *testing.T) {

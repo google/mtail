@@ -381,7 +381,6 @@ func (c *codegen) VisitAfter(node astNode) {
 			c.setLabel(lEnd)
 		case ADD_ASSIGN:
 			// When operand is not nil, inc pops the delta from the stack.
-			// TODO(jaq): string concatenation, once datums can hold strings.
 			switch {
 			case Equals(n.Type(), Int):
 				c.emit(instr{inc, 0})
@@ -390,6 +389,10 @@ func (c *codegen) VisitAfter(node astNode) {
 				c.emit(instr{fadd, nil})
 				// And a second lhs
 				c.emit(instr{fset, nil})
+			case Equals(n.Type(), String):
+				// same as for Float
+				c.emit(instr{cat, nil})
+				c.emit(instr{sset, nil})
 			default:
 				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.Type())
 				return
