@@ -308,6 +308,12 @@ def decorator {
   }
 }
 `},
+	{"concat with add_assign", `
+text foo
+/(?P<v>.*)/ {
+		foo += $v
+}
+`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {
