@@ -59,6 +59,8 @@ exit 1;
 fail() {
     local msg="$*"
     echo "FAILED: $msg"
+    echo "stderr follows:"
+    cat ${TEST_TMPDIR}/stderr
     exit 1
 }
 
@@ -83,13 +85,13 @@ start_server() {
     MTAIL_PORT=$(pick_random_unused_tcp_port)
     MTAIL_ARGS="--port ${MTAIL_PORT} $MTAIL_ARGS"
     if [ $bg -eq 1 ]; then
-        ${MTAIL_BIN:-mtail} $MTAIL_ARGS $extra_args &
+        ${MTAIL_BIN:-mtail} $MTAIL_ARGS $extra_args 2>${TEST_TMPDIR}/stderr &
         MTAIL_PID=$!
         # wait for http port to respond, or sleep 1
         sleep 1
         atexit 'kill ${MTAIL_PID:?}'
     else
-        ${MTAIL_BIN:-mtail} $MTAIL_ARGS $extra_args
+        ${MTAIL_BIN:-mtail} $MTAIL_ARGS $extra_args 2>${TEST_TMPDIR}/stderr
     fi
 }
 
