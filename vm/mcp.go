@@ -291,7 +291,7 @@ func OverrideLocation(loc *time.Location) func(*MasterControl) error {
 // CompileOnly sets the Loader to compile programs only, without executing them.
 func CompileOnly(l *MasterControl) error {
 	l.compileOnly = true
-	return nil
+	return ErrorsAbort(l)
 }
 
 // ErrorsAbort sets the Loader to abort the Loader on compile errors.
