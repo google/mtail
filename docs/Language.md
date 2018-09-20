@@ -200,6 +200,7 @@ The following arithmetic operators act on exported variables.
 *   `=` assignment
 *   `++` increment
 *   `+=` increment by
+*   `--` decrement
 
 #### `else` Clauses
 
