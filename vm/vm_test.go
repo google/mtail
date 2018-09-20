@@ -674,6 +674,26 @@ func TestDatumSetInstrs(t *testing.T) {
 	if d.ValueString() != "4.1" {
 		t.Errorf("Unexpected value %v", d)
 	}
+
+	// dec
+	v = makeVM(instr{dec, nil}, m)
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	datum.SetInt(d, 1, time.Now())
+	v.t.Push(d)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "0" {
+		t.Errorf("Unexpected value %v", d)
+	}
 }
 
 func TestStrptimeWithTimezone(t *testing.T) {

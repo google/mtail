@@ -758,6 +758,19 @@ text foo
 			{sset, nil},
 			{setmatched, true},
 		}},
+	{"decrement", `
+counter i
+// {
+  i--
+}`, []instr{
+		{match, 0},
+		{jnm, 7},
+		{setmatched, false},
+		{mload, 0},
+		{dload, 0},
+		{dec, nil},
+		{setmatched, true},
+	}},
 }
 
 func TestCodegen(t *testing.T) {

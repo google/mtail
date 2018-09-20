@@ -148,7 +148,7 @@ func main() {
 	}
 	m, err := mtail.New(metrics.NewStore(), w, &afero.OsFs{}, opts...)
 	if err != nil {
-		glog.Error("couldn't start: %s", err)
+		glog.Error(err)
 		os.Exit(1)
 	}
 	err = m.Run()

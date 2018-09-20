@@ -376,7 +376,7 @@ func (c *checker) VisitAfter(node astNode) {
 				return
 			}
 			n.SetType(rType)
-		case INC:
+		case INC, DEC:
 			rType := Int
 			err := Unify(rType, t)
 			if err != nil {
@@ -393,7 +393,7 @@ func (c *checker) VisitAfter(node astNode) {
 			}
 
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary expr %v", n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", lexeme(n.op), n))
 			n.SetType(Error)
 			return
 		}
