@@ -37,7 +37,7 @@ var lexerTests = []lexerTest{
 		{RSQUARE, "]", position{"punctuation", 0, 5, 5}},
 		{COMMA, ",", position{"punctuation", 0, 6, 6}},
 		{EOF, "", position{"punctuation", 0, 7, 7}}}},
-	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~ ** % || && =~ !~", []token{
+	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~ ** % || && =~ !~ --", []token{
 		{MINUS, "-", position{"operators", 0, 0, 0}},
 		{PLUS, "+", position{"operators", 0, 2, 2}},
 		{ASSIGN, "=", position{"operators", 0, 4, 4}},
@@ -63,7 +63,8 @@ var lexerTests = []lexerTest{
 		{AND, "&&", position{"operators", 0, 54, 55}},
 		{MATCH, "=~", position{"operators", 0, 57, 58}},
 		{NOT_MATCH, "!~", position{"operators", 0, 60, 61}},
-		{EOF, "", position{"operators", 0, 62, 62}}}},
+		{DEC, "--", position{"operators", 0, 63, 64}},
+		{EOF, "", position{"operators", 0, 65, 65}}}},
 	{"keywords",
 		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\n", []token{
 			{COUNTER, "counter", position{"keywords", 0, 0, 6}},
@@ -128,13 +129,13 @@ var lexerTests = []lexerTest{
 		{FLOATLITERAL, "-1.0", position{"numbers", 0, 20, 23}},
 		{EOF, "", position{"numbers", 0, 24, 24}},
 	}},
-	{"identifier", "a be foo\nquux line-count", []token{
+	{"identifier", "a be foo\nquux line_count", []token{
 		{ID, "a", position{"identifier", 0, 0, 0}},
 		{ID, "be", position{"identifier", 0, 2, 3}},
 		{ID, "foo", position{"identifier", 0, 5, 7}},
 		{NL, "\n", position{"identifier", 1, 8, -1}},
 		{ID, "quux", position{"identifier", 1, 0, 3}},
-		{ID, "line-count", position{"identifier", 1, 5, 14}},
+		{ID, "line_count", position{"identifier", 1, 5, 14}},
 		{EOF, "", position{"identifier", 1, 15, 15}}}},
 	{"regex", "/asdf/", []token{
 		{DIV, "/", position{"regex", 0, 0, 0}},

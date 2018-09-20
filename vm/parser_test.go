@@ -53,6 +53,13 @@ var parserTests = []struct {
 			"  line_count++\n" +
 			"}\n"},
 
+	{"decrement counter",
+		`counter i
+/foo/ {
+  i--
+}
+`},
+
 	{"regex match includes escaped slashes",
 		"counter foo\n" +
 			"/foo\\// { foo++\n}\n"},

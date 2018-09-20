@@ -314,6 +314,12 @@ text foo
 		foo += $v
 }
 `},
+
+	{"decrement", `
+counter i
+/.*/ {
+  i--
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

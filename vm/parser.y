@@ -31,7 +31,7 @@ import (
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
-%type <op> rel_op shift_op bitwise_op logical_op add_op mul_op match_op
+%type <op> rel_op shift_op bitwise_op logical_op add_op mul_op match_op postfix_op
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
@@ -338,14 +338,22 @@ unary_expr
   {
     $$ = &unaryExprNode{pos: tokenpos(mtaillex), expr: $2, op: $1}
   }
+  ;
 
 postfix_expr
   : primary_expr
   { $$ = $1 }
-  | postfix_expr INC
+  | postfix_expr postfix_op
   {
     $$ = &unaryExprNode{pos: tokenpos(mtaillex), expr: $1, op: $2}
   }
+  ;
+
+postfix_op
+  : INC
+  { $$ = $1 }
+  | DEC
+  { $$ = $1 }
   ;
 
 primary_expr

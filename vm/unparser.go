@@ -190,9 +190,14 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 		case INC:
 			Walk(u, v.expr)
 			u.emit("++")
+		case DEC:
+			Walk(u, v.expr)
+			u.emit("--")
 		case NOT:
 			u.emit(" ~")
 			Walk(u, v.expr)
+		default:
+			u.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.op)))
 		}
 
 	case *stringConstNode:

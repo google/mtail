@@ -28,6 +28,7 @@ var lexemeName = map[lexeme]string{
 	RSQUARE:      "RSQUARE",
 	COMMA:        "COMMA",
 	INC:          "INC",
+	DEC:          "DEC",
 	MINUS:        "MINUS",
 	PLUS:         "PLUS",
 	MUL:          "MUL",
@@ -288,6 +289,9 @@ func lexProg(l *lexer) stateFn {
 	case r == '-':
 		l.accept()
 		switch r = l.next(); {
+		case r == '-':
+			l.accept()
+			l.emit(DEC)
 		case isDigit(r):
 			l.backup()
 			return lexNumeric
@@ -531,7 +535,7 @@ func lexIdentifier(l *lexer) stateFn {
 Loop:
 	for {
 		switch r := l.next(); {
-		case isAlnum(r) || r == '-' || r == '_':
+		case isAlnum(r) || r == '_':
 			l.accept()
 		default:
 			l.backup()
