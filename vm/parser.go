@@ -4,6 +4,7 @@ package vm
 import __yyfmt__ "fmt"
 
 //line parser.y:5
+
 import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/metrics"
