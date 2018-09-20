@@ -22,6 +22,8 @@ import (
 	"github.com/google/mtail/logline"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
+
+	"github.com/golang/groupcache/lru"
 )
 
 type thread struct {
@@ -44,7 +46,7 @@ type VM struct {
 	str []string          // String constants
 	m   []*metrics.Metric // Metrics accessible to this program.
 
-	timeMemos map[string]time.Time // memo of time string parse results
+	timeMemos *lru.Cache // memo of time string parse results
 
 	t *thread // Current thread of execution
 
@@ -458,12 +460,12 @@ func (v *VM) execute(t *thread, i instr) {
 			// Store the result from the re'th index at the s'th index
 			ts = t.matches[re][s]
 		}
-		if tm, ok := v.timeMemos[ts]; !ok {
-			tm = v.ParseTime(layout, ts)
-			v.timeMemos[ts] = tm
+		if cached, ok := v.timeMemos.Get(ts); !ok {
+			tm := v.ParseTime(layout, ts)
+			v.timeMemos.Add(ts, tm)
 			t.time = tm
 		} else {
-			t.time = tm
+			t.time = cached.(time.Time)
 		}
 
 	case timestamp:
@@ -739,7 +741,7 @@ func New(name string, obj *object, syslogUseCurrentYear bool, loc *time.Location
 		str:                  obj.str,
 		m:                    obj.m,
 		prog:                 obj.prog,
-		timeMemos:            make(map[string]time.Time),
+		timeMemos:            lru.New(64),
 		syslogUseCurrentYear: syslogUseCurrentYear,
 		loc:                  loc,
 	}
