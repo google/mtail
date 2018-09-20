@@ -170,3 +170,13 @@ func IncIntBy(d Datum, v int64, ts time.Time) {
 		panic(fmt.Sprintf("datum %v is not an Int", d))
 	}
 }
+
+// DecIntBy increments an integer Datum by the provided value, at time ts, or panics if the Datum is not an IntDatum.
+func DecIntBy(d Datum, v int64, ts time.Time) {
+	switch d := d.(type) {
+	case *IntDatum:
+		d.DecBy(v, ts)
+	default:
+		panic(fmt.Sprintf("datum %v is not an Int", d))
+	}
+}

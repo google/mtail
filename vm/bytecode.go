@@ -18,6 +18,7 @@ const (
 	jm                       // Jump if match.
 	jmp                      // Unconditional jump
 	inc                      // Increment a variable value
+	dec                      // Decrement a variable value
 	strptime                 // Parse into the timestamp register
 	timestamp                // Return value of timestamp register onto TOS.
 	settime                  // Set timestamp register to value at TOS.

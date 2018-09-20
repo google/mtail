@@ -51,7 +51,7 @@ import (
 %token <intVal> INTLITERAL
 %token <floatVal> FLOATLITERAL
 // Operators, in order of precedence
-%token <op> INC
+%token <op> INC DEC
 %token <op> DIV MOD MUL MINUS PLUS POW
 %token <op> SHL SHR
 %token <op> LT GT LE GE EQ NE

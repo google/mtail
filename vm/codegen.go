@@ -342,6 +342,8 @@ func (c *codegen) VisitAfter(node astNode) {
 		switch n.op {
 		case INC:
 			c.emit(instr{op: inc})
+		case DEC:
+			c.emit(instr{op: dec})
 		case NOT:
 			c.emit(instr{op: neg})
 		}

@@ -390,6 +390,23 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
 
+	case dec:
+		// Decrement a datum
+		var delta int64 = 1
+		// If opnd is non-nil, the delta is on the stack.
+		if i.opnd != nil {
+			var err error
+			delta, err = t.PopInt()
+			if err != nil {
+				v.errorf("%s", err)
+			}
+		}
+		if n, ok := t.Pop().(datum.Datum); ok {
+			datum.DecIntBy(n, delta, t.time)
+		} else {
+			v.errorf("Unexpected type to increment: %T %q", n, n)
+		}
+
 	case iset:
 		// Set a datum
 		value, err := t.PopInt()
