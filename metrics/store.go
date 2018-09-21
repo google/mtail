@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -66,7 +67,7 @@ func (s *Store) Add(m *Metric) error {
 				d, err := v.GetDatum(oldLabel.Labels...)
 				if err == nil {
 					if err = m.RemoveDatum(oldLabel.Labels...); err == nil {
-						m.LabelValues = append(m.LabelValues, &LabelValue{oldLabel.Labels, d})
+						m.LabelValues = append(m.LabelValues, &LabelValue{Labels: oldLabel.Labels, Value: d})
 					}
 				}
 			}
@@ -96,4 +97,23 @@ func (s *Store) MarshalJSON() (b []byte, err error) {
 		ms = append(ms, ml...)
 	}
 	return json.Marshal(ms)
+}
+
+func (s *Store) Expire() error {
+	s.Lock()
+	defer s.Unlock()
+	now := time.Now()
+	for _, ml := range s.Metrics {
+		for _, m := range ml {
+			for _, lv := range m.LabelValues[:] {
+				if lv.Expiry <= 0 {
+					continue
+				}
+				if now.Sub(lv.Value.TimeUTC()) > lv.Expiry {
+					m.RemoveDatum(lv.Labels...)
+				}
+			}
+		}
+	}
+	return nil
 }

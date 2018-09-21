@@ -65,6 +65,7 @@ func (m Kind) String() string {
 type LabelValue struct {
 	Labels []string `json:",omitempty"`
 	Value  datum.Datum
+	Expiry time.Duration // After this time of inactivity, the LabelValue is removed from the metric.
 }
 
 func (lv *LabelValue) String() string {
@@ -136,7 +137,7 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 		case datum.String:
 			d = datum.NewString()
 		}
-		m.LabelValues = append(m.LabelValues, &LabelValue{labelvalues, d})
+		m.LabelValues = append(m.LabelValues, &LabelValue{Labels: labelvalues, Value: d})
 	}
 	return d, nil
 }
