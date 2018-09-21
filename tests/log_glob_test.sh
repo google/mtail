@@ -15,11 +15,13 @@ sleep 1
 
 uri_get /debug/vars
 expect_json_field_eq "1" log_count "${DATA}"
+expect_json_field_eq "1" line_count "${DATA}"
 
 echo "line 1" >> $LOGS/log1
 sleep 2
 
 uri_get /debug/vars
-expect_json_field_eq "1" log_count "${DATA}"
+expect_json_field_eq "2" log_count "${DATA}"
+expect_json_field_eq "2" line_count "${DATA}"
 
 pass
