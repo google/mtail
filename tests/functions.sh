@@ -26,7 +26,8 @@ fi
 # Default mtail parameters for start_server
 MTAIL_ARGS="\
     --log_dir ${TEST_TMPDIR} \
-    -v 1 \
+    --alsologtostderr \
+    -v=2
 "
 
 # Find a random unused TCP port
@@ -81,17 +82,16 @@ start_server() {
         shift
         bg=0
     fi
-    extra_args=$*
     MTAIL_PORT=$(pick_random_unused_tcp_port)
     MTAIL_ARGS="--port ${MTAIL_PORT} $MTAIL_ARGS"
     if [ $bg -eq 1 ]; then
-        ${MTAIL_BIN:-mtail} $MTAIL_ARGS $extra_args 2>${TEST_TMPDIR}/stderr &
+        ${MTAIL_BIN:-mtail} $MTAIL_ARGS "$@" 2>${TEST_TMPDIR}/stderr &
         MTAIL_PID=$!
         # wait for http port to respond, or sleep 1
         sleep 1
         atexit 'kill ${MTAIL_PID:?}'
     else
-        ${MTAIL_BIN:-mtail} $MTAIL_ARGS $extra_args 2>${TEST_TMPDIR}/stderr
+        ${MTAIL_BIN:-mtail} $MTAIL_ARGS "$@" 2>${TEST_TMPDIR}/stderr
     fi
 }
 

@@ -8,7 +8,7 @@ mkdir -p $LOGS $PROGS
 
 touch $LOGS/log
 
-start_server  --logs $LOGS/log --progs $PROGS
+start_server  --logs "$LOGS/log*" --progs $PROGS
 
 echo "line 1" >> $LOGS/log
 sleep 1
