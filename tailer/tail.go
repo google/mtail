@@ -280,7 +280,7 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 			continue
 		}
 		if !matched {
-			glog.V(2).Infof("No match for %q", pathname)
+			glog.V(2).Infof("%q did not match pattern %q", pathname, pattern)
 			continue
 		}
 		glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
@@ -288,8 +288,10 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 		if err := t.openLogPath(pathname, true); err != nil {
 			glog.Infof("Failed to tail new file %q: %s", pathname, err)
 		}
-		glog.V(2).Infof("Started tailing %q", pathname)
+		glog.V(2).Infof("started tailing %q", pathname)
+		return
 	}
+	glog.V(2).Infof("did not start tailing %q", pathname)
 }
 
 // run the main event loop for the Tailer.  It receives notification of

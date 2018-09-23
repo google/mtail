@@ -24,6 +24,7 @@ and we need to worry about the jump table too
 count stack size and preallocate stack
 -> counts of push/pop per instruction
 -> test to keep p/p counts updated
+: seems like a lot of work for not much return
 
 
 Run and upload benchmarks to https://perfdata.golang.org/ from circleci
