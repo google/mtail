@@ -117,3 +117,16 @@ func (s *Store) Expire() error {
 	}
 	return nil
 }
+
+func (s *Store) StartExpiryLoop() {
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		select {
+		case <-ticker.C:
+			err := s.Expire()
+			if err != nil {
+				glog.Info(err)
+			}
+		}
+	}()
+}

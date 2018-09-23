@@ -423,5 +423,6 @@ func (m *MtailServer) Run() error {
 			return err
 		}
 	}
+	m.store.StartExpiryLoop()
 	return nil
 }
