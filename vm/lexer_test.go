@@ -119,7 +119,7 @@ var lexerTests = []lexerTest{
 			{BUILTIN, "string", position{"builtins", 10, 0, 5}},
 			{NL, "\n", position{"builtins", 11, 6, -1}},
 			{EOF, "", position{"builtins", 11, 0, 0}}}},
-	{"numbers", "1 23 3.14 1.61.1 -1 -1.0", []token{
+	{"numbers", "1 23 3.14 1.61.1 -1 -1.0 1h 2w 3d -1.5h 15m", []token{
 		{INTLITERAL, "1", position{"numbers", 0, 0, 0}},
 		{INTLITERAL, "23", position{"numbers", 0, 2, 3}},
 		{FLOATLITERAL, "3.14", position{"numbers", 0, 5, 8}},
@@ -127,7 +127,12 @@ var lexerTests = []lexerTest{
 		{FLOATLITERAL, ".1", position{"numbers", 0, 14, 15}},
 		{INTLITERAL, "-1", position{"numbers", 0, 17, 18}},
 		{FLOATLITERAL, "-1.0", position{"numbers", 0, 20, 23}},
-		{EOF, "", position{"numbers", 0, 24, 24}},
+		{DURATIONLITERAL, "1h", position{"numbers", 0, 25, 26}},
+		{DURATIONLITERAL, "2w", position{"numbers", 0, 28, 29}},
+		{DURATIONLITERAL, "3d", position{"numbers", 0, 31, 32}},
+		{DURATIONLITERAL, "-1.5h", position{"numbers", 0, 34, 38}},
+		{DURATIONLITERAL, "15m", position{"numbers", 0, 40, 42}},
+		{EOF, "", position{"numbers", 0, 43, 43}},
 	}},
 	{"identifier", "a be foo\nquux line_count", []token{
 		{ID, "a", position{"identifier", 0, 0, 0}},

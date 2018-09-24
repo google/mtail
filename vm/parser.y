@@ -5,6 +5,8 @@
 package vm
 
 import (
+    "time"
+    
     "github.com/google/mtail/metrics"
     "github.com/golang/glog"
 )
@@ -21,6 +23,7 @@ import (
     flag bool
     n astNode
     kind metrics.Kind
+    duration time.Duration
 }
 
 %type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement
@@ -31,6 +34,7 @@ import (
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
+%type <duration> after_spec
 %type <op> rel_op shift_op bitwise_op logical_op add_op mul_op match_op postfix_op
 // Tokens and types are defined here.
 // Invalid input
@@ -38,7 +42,7 @@ import (
 // Types
 %token COUNTER GAUGE TIMER TEXT
 // Reserved words
-%token AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE
+%token AFTER AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -50,6 +54,7 @@ import (
 %token <text> DECO
 %token <intVal> INTLITERAL
 %token <floatVal> FLOATLITERAL
+%token <duration> DURATIONLITERAL
 // Operators, in order of precedence
 %token <op> INC DEC
 %token <op> DIV MOD MUL MINUS PLUS POW
@@ -111,7 +116,7 @@ stmt
   {
     $$ = &patternFragmentDefNode{id: $2, expr: $3}
   }
-  | DEL postfix_expr
+  | DEL postfix_expr after_spec
   {
     $$ = &delNode{tokenpos(mtaillex), $2}
   }
@@ -530,6 +535,15 @@ by_expr_list
 
 as_spec
   : AS STRING
+  {
+    $$ = $2
+  }
+  ;
+
+after_spec
+  : /* empty */
+  { }
+  | AFTER DURATIONLITERAL
   {
     $$ = $2
   }
