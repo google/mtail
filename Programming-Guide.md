@@ -73,7 +73,7 @@ def syslog {
         /\s+(?:\w+@)?(?P<hostname>[\w\.-]+)\s+(?P<application>[\w\.-]+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)/ {
         # If the legacy_date regexp matched, try this format.
         len($legacy_date) > 0 {
-            strptime($2, "Jan _2 15:04:05")
+            strptime($legacy_date, "Jan _2 15:04:05")
         }
         # If the RFC3339 style matched, parse it this way.
         len($rfc3339_date) > 0 {
