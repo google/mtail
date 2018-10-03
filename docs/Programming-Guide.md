@@ -233,46 +233,57 @@ of a system.
 
 At the moment, `mtail` does not have first class support for a distribution
 type, but a histogram can be easily created by making one label on a
-dimensioned metric the name of the histogram bucket.
+dimensioned metric the name of the histogram bucket. In order to keep bucket label
+consistency we we have to increment by 0 for non-matching buckets.
 
 ```
-counter apache_http_request_time_microseconds by le, server_port, handler, request_method, request_status, request_protocol
+counter apache_http_request_time_seconds_bucket by le, server_port, handler, request_method, request_status, request_protocol
 
 ...
   ###
   # HTTP Requests with histogram buckets.
   #
-  apache_http_request_time_microseconds_count[$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  apache_http_request_time_seconds_count[$server_port][$handler][$request_method][$request_status][$request_protocol]++
 
   # These statements "fall through", so the histogram is cumulative.  The
   # collecting system can compute the percentile bands by taking the ratio of
   # each bucket value over the final bucket.
 
   # 5ms bucket.
-  $time_us < 5000 {
-    apache_http_request_time_microseconds["5000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  $time_us <= 5000 {
+    apache_http_request_time_seconds_bucket["0.005"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  } else {
+    apache_http_request_time_seconds_bucket["0.005"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
   }
 
   # 10ms bucket.
-  $time_us < 10000 {
-    apache_http_request_time_microseconds["10000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  $time_us <= 10000 {
+    apache_http_request_time_seconds_bucket["0.01"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  } else {
+    apache_http_request_time_seconds_bucket["0.01"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
   }
 
   # 25ms bucket.
-  $time_us < 25000 {
-    apache_http_request_time_microseconds["25000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  $time_us <= 25000 {
+    apache_http_request_time_seconds_bucket["0.025"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  } else {
+    apache_http_request_time_seconds_bucket["0.025"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
   }
 
   # 50ms bucket.
-  $time_us < 50000 {
-    apache_http_request_time_microseconds["50000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  $time_us <= 50000 {
+    apache_http_request_time_seconds_bucket["0.05"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  } else {
+    apache_http_request_time_seconds_bucket["0.05"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
   }
 
 ...
 
   # 10s bucket.
-  $time_us < 10000000 {
-    apache_http_request_time_microseconds["10000000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  $time_us <= 10000000 {
+    apache_http_request_time_seconds_bucket["10"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  } else {
+    apache_http_request_time_seconds_bucket["10"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
   }
 
 ```
@@ -284,14 +295,14 @@ In tools like [Prometheus](http://prometheus.io) these can be manipulated in
 aggregate for computing percentiles of response latency.
 
 ```
-apache_http_request_time:rate10s = rate(apache_http_request_time_microseconds[10s])
-apache_http_request_time_count:rate10s = rate(apache_http_request_time_microseconds_count[10s])
+apache_http_request_time:rate10s = rate(apache_http_request_time_seconds_bucket[10s])
+apache_http_request_time_count:rate10s = rate(apache_http_request_time_seconds_count[10s])
 
 
 apache_http_request_time:percentiles = 
   apache_http_request_time:rate10s
     / on (job, port, handler, request_method, request_status, request_protocol)
-  apache_http_request_time_microseconds_count:rate10s
+  apache_http_request_time_seconds_count:rate10s
 ```
 
 This new timeseries can be plotted to see the percentile bands of each bucket,
@@ -310,7 +321,7 @@ responses fall within and without a predefined service level:
 apache_http_request_time:latency_sli = 
   apache_http_request_time:rate10s{le="200"}
     / on (job, port, handler, request_method, request_status, request_protocol)
-  apache_http_request_time_microseconds_count:rate10s
+  apache_http_request_time_seconds_count:rate10s
 
 ALERT LatencyTooHigh
 IF apache_http_request_time:latency_sli < 0.555555555
