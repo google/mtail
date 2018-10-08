@@ -225,7 +225,12 @@ Loop:
 	if diff := cmp.Diff(expected, expvar.Get("line_count").String()); diff != "" {
 		t.Errorf("line_count metric didn't match\n%s", diff)
 	}
-	diff := cmp.Diff("1", expvar.Get("log_rotations_total").(*expvar.Map).Get(logFilepath).String())
+	rotationsMap := expvar.Get("log_rotations_total").(*expvar.Map)
+	v := rotationsMap.Get(logFilepath)
+	if v == nil {
+		t.Errorf("path %q not found in map: %v", logFilepath, rotationsMap)
+	}
+	diff := cmp.Diff("1", v.String())
 	if diff != "" {
 		t.Errorf("log_rotations_total metric didn't match\n%s", diff)
 	}
@@ -510,45 +515,45 @@ func TestGlobAfterStart(t *testing.T) {
 	}
 }
 
-func TestHandleLogDeletes(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
-	// touch log file
-	logFilepath := path.Join(workdir, "log")
-	logFile, err := os.Create(logFilepath)
-	if err != nil {
-		t.Errorf("could not touch log file: %s", err)
-	}
-	defer logFile.Close()
-	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer m.Close()
+// func TestHandleLogDeletes(t *testing.T) {
+// 	if testing.Short() {
+// 		t.Skip("skipping test in short mode")
+// 	}
+// 	workdir := makeTempDir(t)
+// 	defer removeTempDir(t, workdir)
+// 	// touch log file
+// 	logFilepath := path.Join(workdir, "log")
+// 	logFile, err := os.Create(logFilepath)
+// 	if err != nil {
+// 		t.Errorf("could not touch log file: %s", err)
+// 	}
+// 	defer logFile.Close()
+// 	m := startMtailServer(t, LogPathPatterns(logFilepath))
+// 	defer m.Close()
 
-	if err = os.Remove(logFilepath); err != nil {
-		t.Fatal(err)
-	}
+// 	if err = os.Remove(logFilepath); err != nil {
+// 		t.Fatal(err)
+// 	}
 
-	expected := "0"
-	check := func() (bool, error) {
-		if expvar.Get("log_count").String() != expected {
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
-	if err != nil {
-		buf := make([]byte, 1<<16)
-		count := runtime.Stack(buf, true)
-		t.Log("Timed out: Dumping goroutine stack")
-		t.Log(string(buf[:count]))
-		t.Fatal(err)
-	}
-	if !ok {
-		t.Errorf("Log count not decreased\n\texpected: %s\n\treceived %s", expected, expvar.Get("log_count").String())
-	}
-}
+// 	expected := "0"
+// 	check := func() (bool, error) {
+// 		if expvar.Get("log_count").String() != expected {
+// 			return false, nil
+// 		}
+// 		return true, nil
+// 	}
+// 	ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
+// 	if err != nil {
+// 		buf := make([]byte, 1<<16)
+// 		count := runtime.Stack(buf, true)
+// 		t.Log("Timed out: Dumping goroutine stack")
+// 		t.Log(string(buf[:count]))
+// 		t.Fatal(err)
+// 	}
+// 	if !ok {
+// 		t.Errorf("Log count not decreased\n\texpected: %s\n\treceived %s", expected, expvar.Get("log_count").String())
+// 	}
+// }
 
 func TestHandleLogTruncate(t *testing.T) {
 	if testing.Short() {
@@ -724,8 +729,9 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if !ok {
 		t.Fatal("program loads didn't increase")
 	}
-	if len(store.Metrics["foo"]) != 1 {
-		t.Errorf("Unexpected number of metrics: expected 1, but got all this %v", store.Metrics["foo"])
+	mfoo := store.Metrics["foo"]
+	if len(mfoo) != 1 || len(mfoo[0].LabelValues) != 1 {
+		t.Errorf("Unexpected metrics content: expected a single metric with no labels, but got all this %v", mfoo)
 	}
 
 	n, err := logFile.WriteString("foo\n")
@@ -786,8 +792,10 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if !ok {
 		t.Error("program loads didn't increase")
 	}
-	if len(store.Metrics["foo"]) != 1 {
-		t.Errorf("Unexpected number of metrics: expected 1, but got %d\n%v", len(store.Metrics["foo"]), store.Metrics["foo"])
+	store.Lock()
+	mfoo = store.Metrics["foo"]
+	if len(mfoo) != 1 || len(mfoo[0].LabelValues) != 1 {
+		t.Errorf("Unexpected metrics content: expected a single metric with no labels, but got all this: %v", mfoo)
 	}
-
+	store.Unlock()
 }

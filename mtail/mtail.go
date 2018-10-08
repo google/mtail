@@ -18,6 +18,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/exporter"
+	"github.com/google/mtail/logline"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
@@ -28,8 +29,8 @@ import (
 
 // MtailServer contains the state of the main program object.
 type MtailServer struct {
-	lines chan *tailer.LogLine // Channel of lines from tailer to VM engine.
-	store *metrics.Store       // Metrics storage.
+	lines chan *logline.LogLine // Channel of lines from tailer to VM engine.
+	store *metrics.Store        // Metrics storage.
 	w     watcher.Watcher
 	fs    afero.Fs
 
@@ -41,11 +42,11 @@ type MtailServer struct {
 	closeOnce sync.Once     // Ensure shutdown happens only once.
 
 	overrideLocation *time.Location // Timezone location to use when parsing timestamps
+	pollInterval     time.Duration  // Interval between polls of the filesystem
 	bindAddress      string         // address to bind HTTP server
 	buildInfo        string         // go build information
-
-	programPath     string   // path to programs to load
-	logPathPatterns []string // list of patterns to watch for log files to tail
+	programPath      string         // path to programs to load
+	logPathPatterns  []string       // list of patterns to watch for log files to tail
 
 	oneShot      bool // if set, mtail reads log files from the beginning, once, then exits
 	compileOnly  bool // if set, mtail compiles programs then exits
@@ -124,7 +125,9 @@ func (m *MtailServer) initExporter() (err error) {
 
 // initTailer sets up a Tailer for this MtailServer.
 func (m *MtailServer) initTailer() (err error) {
-	opts := []func(*tailer.Tailer) error{}
+	opts := []func(*tailer.Tailer) error{
+		tailer.PollInterval(m.pollInterval),
+	}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
 	}
@@ -159,7 +162,7 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m.buildInfo,
 	}
 	w.Header().Add("Content-type", "text/html")
-	w.WriteHeader(http.StatusFound)
+	w.WriteHeader(http.StatusOK)
 	if err = t.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -209,6 +212,17 @@ func BuildInfo(info string) func(*MtailServer) error {
 func OverrideLocation(loc *time.Location) func(*MtailServer) error {
 	return func(m *MtailServer) error {
 		m.overrideLocation = loc
+		return nil
+	}
+}
+
+// PollInterval sets the polling interval to use on a Tailer.
+func PollInterval(interval time.Duration) func(*MtailServer) error {
+	return func(m *MtailServer) error {
+		if interval < 0 {
+			return errors.New("poll_interval must be positive, or zero to disable.")
+		}
+		m.pollInterval = interval
 		return nil
 	}
 }
@@ -265,7 +279,7 @@ func OmitMetricSource(m *MtailServer) error {
 func New(store *metrics.Store, w watcher.Watcher, fs afero.Fs, options ...func(*MtailServer) error) (*MtailServer, error) {
 	m := &MtailServer{
 		store:   store,
-		lines:   make(chan *tailer.LogLine),
+		lines:   make(chan *logline.LogLine),
 		w:       w,
 		fs:      fs,
 		webquit: make(chan struct{}),

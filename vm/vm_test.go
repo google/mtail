@@ -9,9 +9,9 @@ import (
 	"time"
 
 	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/logline"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
-	"github.com/google/mtail/tailer"
 )
 
 var instructions = []struct {
@@ -477,7 +477,7 @@ func TestInstrs(t *testing.T) {
 				v.t.Push(item)
 			}
 			v.t.matches = make(map[int][]string)
-			v.input = tailer.NewLogLine(testFilename, "aaaab")
+			v.input = logline.NewLogLine(testFilename, "aaaab")
 			v.execute(v.t, tc.i)
 			if v.terminate {
 				t.Fatalf("Execution failed, see info log.")
@@ -508,7 +508,7 @@ func makeVM(i instr, m []*metrics.Metric) *VM {
 	v.t = new(thread)
 	v.t.stack = make([]interface{}, 0)
 	v.t.matches = make(map[int][]string)
-	v.input = tailer.NewLogLine(testFilename, "aaaab")
+	v.input = logline.NewLogLine(testFilename, "aaaab")
 	return v
 
 }
