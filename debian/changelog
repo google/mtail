@@ -1,3 +1,9 @@
+mtail (3.0.0~rc16-1) UNRELEASED; urgency=medium
+
+  * New upstream release candidate.
+
+ -- Martín Ferrari <tincho@debian.org>  Mon, 08 Oct 2018 19:03:19 +0000
+
 mtail (3.0.0~rc15-1) unstable; urgency=medium
 
   [ Alexandre Viau ]
