@@ -1,8 +1,10 @@
 mtail (3.0.0~rc16-1) UNRELEASED; urgency=medium
 
   * New upstream release candidate.
+  * Update Standards-Version with no changes.
+  * Stop using pristine-tar.
 
- -- Martín Ferrari <tincho@debian.org>  Mon, 08 Oct 2018 19:03:19 +0000
+ -- Martín Ferrari <tincho@debian.org>  Mon, 08 Oct 2018 19:07:30 +0000
 
 mtail (3.0.0~rc15-1) unstable; urgency=medium
 
