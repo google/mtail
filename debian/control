@@ -14,7 +14,7 @@ Build-Depends: debhelper (>= 11),
                golang-glog-dev,
                golang-golang-x-tools,
                tzdata,
-Standards-Version: 4.1.4
+Standards-Version: 4.2.1
 Vcs-Browser: https://salsa.debian.org/go-team/packages/mtail
 Vcs-Git: https://salsa.debian.org/go-team/packages/mtail.git
 Homepage: https://github.com/google/mtail/
