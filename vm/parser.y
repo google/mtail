@@ -30,11 +30,11 @@ import (
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
 %type <n> declaration declarator definition decoration_statement regex_pattern match_expr
+%type <n> delete_statement
 %type <kind> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
-%type <duration> after_spec
 %type <op> rel_op shift_op bitwise_op logical_op add_op mul_op match_op postfix_op
 // Tokens and types are defined here.
 // Invalid input
@@ -108,6 +108,8 @@ stmt
   { $$ = $1 }
   | decoration_statement
   { $$ = $1 }
+  | delete_statement
+  { $$ = $1 }  
   | NEXT
   {
     $$ = &nextNode{tokenpos(mtaillex)}
@@ -115,10 +117,6 @@ stmt
   | CONST id_expr concat_expr
   {
     $$ = &patternFragmentDefNode{id: $2, expr: $3}
-  }
-  | DEL postfix_expr after_spec
-  {
-    $$ = &delNode{tokenpos(mtaillex), $2}
   }
   | INVALID
   {
@@ -540,15 +538,6 @@ as_spec
   }
   ;
 
-after_spec
-  : /* empty */
-  { }
-  | AFTER DURATIONLITERAL
-  {
-    $$ = $2
-  }
-  ;
-
 definition
   : mark_pos DEF ID compound_statement
   {
@@ -562,6 +551,17 @@ decoration_statement
     $$ = &decoNode{markedpos(mtaillex), $2, $3, nil, nil}
   }
   ;
+
+delete_statement
+  : DEL postfix_expr AFTER DURATIONLITERAL
+  {
+    $$ = &delNode{pos: tokenpos(mtaillex), n: $2, expiry: $4}
+  }
+  | DEL postfix_expr
+  {
+    $$ = &delNode{pos: tokenpos(mtaillex), n: $2}
+  }
+
 
 // mark_pos is an epsilon (marker nonterminal) that records the current token
 // position as the parser position.  Use markedpos() to fetch the position and

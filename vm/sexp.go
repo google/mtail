@@ -182,6 +182,9 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 		s.emit("otherwise")
 	case *delNode:
 		s.emit("del")
+		if v.expiry > 0 {
+			s.emit(fmt.Sprintf(" after %s", v.expiry))
+		}
 
 	case *convNode:
 		s.emit("conv")

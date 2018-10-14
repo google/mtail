@@ -234,6 +234,9 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 	case *delNode:
 		u.emit("del ")
 		Walk(u, v.n)
+		if v.expiry > 0 {
+			u.emit(fmt.Sprintf(" after %s", v.expiry))
+		}
 		u.newline()
 
 	case *convNode:

@@ -76,6 +76,7 @@ var lexemeName = map[lexeme]string{
 	MATCH:           "MATCH",
 	NOT_MATCH:       "NOT_MATCH",
 	TEXT:            "TEXT",
+	AFTER:           "AFTER",
 }
 
 func (t lexeme) String() string {
@@ -87,6 +88,7 @@ func (t lexeme) String() string {
 
 // List of keywords.  Keep this list sorted!
 var keywords = map[string]lexeme{
+	"after":     AFTER,
 	"as":        AS,
 	"by":        BY,
 	"const":     CONST,
@@ -469,7 +471,7 @@ Loop:
 		case isDurationSuffix(r):
 			kind = DURATIONLITERAL
 			l.accept()
-			break Loop
+			return lexDuration
 		default:
 			l.backup()
 			break Loop
@@ -481,10 +483,33 @@ Loop:
 
 func isDurationSuffix(r rune) bool {
 	switch r {
-	case 's', 'm', 'h', 'd', 'w':
+	case 's', 'm', 'h', 'd':
 		return true
 	}
 	return false
+}
+
+func lexDuration(l *lexer) stateFn {
+Loop:
+	for {
+		switch r := l.next(); {
+		case isDigit(r):
+			l.accept()
+		case r == '.':
+			l.accept()
+		case r == '-':
+			l.accept()
+		case r == '+':
+			l.accept()
+		case isDurationSuffix(r):
+			l.accept()
+		default:
+			l.backup()
+			break Loop
+		}
+	}
+	l.emit(DURATIONLITERAL)
+	return lexProg
 }
 
 // Lex a quoted string.  The text of a quoted string does not include the '"' quotes.
