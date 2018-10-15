@@ -18,63 +18,65 @@ type lexeme int
 
 // Printable names for lexemes.
 var lexemeName = map[lexeme]string{
-	EOF:          "EOF",
-	INVALID:      "INVALID",
-	LCURLY:       "LCURLY",
-	RCURLY:       "RCURLY",
-	LPAREN:       "LPAREN",
-	RPAREN:       "RPAREN",
-	LSQUARE:      "LSQUARE",
-	RSQUARE:      "RSQUARE",
-	COMMA:        "COMMA",
-	INC:          "INC",
-	DEC:          "DEC",
-	MINUS:        "MINUS",
-	PLUS:         "PLUS",
-	MUL:          "MUL",
-	DIV:          "DIV",
-	MOD:          "MOD",
-	POW:          "POW",
-	SHL:          "SHL",
-	SHR:          "SHR",
-	BITAND:       "BITAND",
-	BITOR:        "BITOR",
-	AND:          "AND",
-	OR:           "OR",
-	ADD_ASSIGN:   "ADD_ASSIGN",
-	ASSIGN:       "ASSIGN",
-	LT:           "LT",
-	GT:           "GT",
-	LE:           "LE",
-	GE:           "GE",
-	EQ:           "EQ",
-	NE:           "NE",
-	REGEX:        "REGEX",
-	ID:           "ID",
-	CAPREF:       "CAPREF",
-	CAPREF_NAMED: "CAPREF_NAMED",
-	STRING:       "STRING",
-	BUILTIN:      "BUILTIN",
-	COUNTER:      "COUNTER",
-	GAUGE:        "GAUGE",
-	TIMER:        "TIMER",
-	AS:           "AS",
-	BY:           "BY",
-	HIDDEN:       "HIDDEN",
-	DEF:          "DEF",
-	DECO:         "DECO",
-	NEXT:         "NEXT",
-	CONST:        "CONST",
-	OTHERWISE:    "OTHERWISE",
-	ELSE:         "ELSE",
-	DEL:          "DEL",
-	INTLITERAL:   "INTLITERAL",
-	FLOATLITERAL: "FLOATLITERAL",
-	NL:           "NL",
-	CONCAT:       "CONCAT",
-	MATCH:        "MATCH",
-	NOT_MATCH:    "NOT_MATCH",
-	TEXT:         "TEXT",
+	EOF:             "EOF",
+	INVALID:         "INVALID",
+	LCURLY:          "LCURLY",
+	RCURLY:          "RCURLY",
+	LPAREN:          "LPAREN",
+	RPAREN:          "RPAREN",
+	LSQUARE:         "LSQUARE",
+	RSQUARE:         "RSQUARE",
+	COMMA:           "COMMA",
+	INC:             "INC",
+	DEC:             "DEC",
+	MINUS:           "MINUS",
+	PLUS:            "PLUS",
+	MUL:             "MUL",
+	DIV:             "DIV",
+	MOD:             "MOD",
+	POW:             "POW",
+	SHL:             "SHL",
+	SHR:             "SHR",
+	BITAND:          "BITAND",
+	BITOR:           "BITOR",
+	AND:             "AND",
+	OR:              "OR",
+	ADD_ASSIGN:      "ADD_ASSIGN",
+	ASSIGN:          "ASSIGN",
+	LT:              "LT",
+	GT:              "GT",
+	LE:              "LE",
+	GE:              "GE",
+	EQ:              "EQ",
+	NE:              "NE",
+	REGEX:           "REGEX",
+	ID:              "ID",
+	CAPREF:          "CAPREF",
+	CAPREF_NAMED:    "CAPREF_NAMED",
+	STRING:          "STRING",
+	BUILTIN:         "BUILTIN",
+	COUNTER:         "COUNTER",
+	GAUGE:           "GAUGE",
+	TIMER:           "TIMER",
+	AS:              "AS",
+	BY:              "BY",
+	HIDDEN:          "HIDDEN",
+	DEF:             "DEF",
+	DECO:            "DECO",
+	NEXT:            "NEXT",
+	CONST:           "CONST",
+	OTHERWISE:       "OTHERWISE",
+	ELSE:            "ELSE",
+	DEL:             "DEL",
+	INTLITERAL:      "INTLITERAL",
+	FLOATLITERAL:    "FLOATLITERAL",
+	DURATIONLITERAL: "DURATIONLITERAL",
+	NL:              "NL",
+	CONCAT:          "CONCAT",
+	MATCH:           "MATCH",
+	NOT_MATCH:       "NOT_MATCH",
+	TEXT:            "TEXT",
+	AFTER:           "AFTER",
 }
 
 func (t lexeme) String() string {
@@ -86,6 +88,7 @@ func (t lexeme) String() string {
 
 // List of keywords.  Keep this list sorted!
 var keywords = map[string]lexeme{
+	"after":     AFTER,
 	"as":        AS,
 	"by":        BY,
 	"const":     CONST,
@@ -465,12 +468,47 @@ Loop:
 			}
 			kind = FLOATLITERAL
 			l.accept()
+		case isDurationSuffix(r):
+			kind = DURATIONLITERAL
+			l.accept()
+			return lexDuration
 		default:
 			l.backup()
 			break Loop
 		}
 	}
 	l.emit(lexeme(kind))
+	return lexProg
+}
+
+func isDurationSuffix(r rune) bool {
+	switch r {
+	case 's', 'm', 'h', 'd':
+		return true
+	}
+	return false
+}
+
+func lexDuration(l *lexer) stateFn {
+Loop:
+	for {
+		switch r := l.next(); {
+		case isDigit(r):
+			l.accept()
+		case r == '.':
+			l.accept()
+		case r == '-':
+			l.accept()
+		case r == '+':
+			l.accept()
+		case isDurationSuffix(r):
+			l.accept()
+		default:
+			l.backup()
+			break Loop
+		}
+	}
+	l.emit(DURATIONLITERAL)
 	return lexProg
 }
 

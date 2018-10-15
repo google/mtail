@@ -250,6 +250,12 @@ foo = 3.14
   del foo[$1]
 }`},
 
+	{"delete after",
+		`counter foo by bar
+/foo/ {
+  del foo[$1] after 168h
+}`},
+
 	{"getfilename", `
 getfilename()
 `},
@@ -429,7 +435,7 @@ func TestParsePositionTests(t *testing.T) {
 	for _, tc := range parsePositionTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// Not t.Parallel() because the parser is not reentrant, and mtailDebug is a global.
 			ast, err := Parse(tc.name, strings.NewReader(tc.program))
 			if err != nil {
 				t.Fatal(err)

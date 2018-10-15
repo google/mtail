@@ -5,6 +5,8 @@
 package vm
 
 import (
+    "time"
+    
     "github.com/google/mtail/metrics"
     "github.com/golang/glog"
 )
@@ -21,12 +23,14 @@ import (
     flag bool
     n astNode
     kind metrics.Kind
+    duration time.Duration
 }
 
 %type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
 %type <n> declaration declarator definition decoration_statement regex_pattern match_expr
+%type <n> delete_statement
 %type <kind> type_spec
 %type <text> as_spec
 %type <texts> by_spec by_expr_list
@@ -38,7 +42,7 @@ import (
 // Types
 %token COUNTER GAUGE TIMER TEXT
 // Reserved words
-%token AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE
+%token AFTER AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -50,6 +54,7 @@ import (
 %token <text> DECO
 %token <intVal> INTLITERAL
 %token <floatVal> FLOATLITERAL
+%token <duration> DURATIONLITERAL
 // Operators, in order of precedence
 %token <op> INC DEC
 %token <op> DIV MOD MUL MINUS PLUS POW
@@ -103,6 +108,8 @@ stmt
   { $$ = $1 }
   | decoration_statement
   { $$ = $1 }
+  | delete_statement
+  { $$ = $1 }  
   | NEXT
   {
     $$ = &nextNode{tokenpos(mtaillex)}
@@ -110,10 +117,6 @@ stmt
   | CONST id_expr concat_expr
   {
     $$ = &patternFragmentDefNode{id: $2, expr: $3}
-  }
-  | DEL postfix_expr
-  {
-    $$ = &delNode{tokenpos(mtaillex), $2}
   }
   | INVALID
   {
@@ -548,6 +551,17 @@ decoration_statement
     $$ = &decoNode{markedpos(mtaillex), $2, $3, nil, nil}
   }
   ;
+
+delete_statement
+  : DEL postfix_expr AFTER DURATIONLITERAL
+  {
+    $$ = &delNode{pos: tokenpos(mtaillex), n: $2, expiry: $4}
+  }
+  | DEL postfix_expr
+  {
+    $$ = &delNode{pos: tokenpos(mtaillex), n: $2}
+  }
+
 
 // mark_pos is an epsilon (marker nonterminal) that records the current token
 // position as the parser position.  Use markedpos() to fetch the position and

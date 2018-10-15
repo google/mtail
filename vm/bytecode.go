@@ -50,7 +50,8 @@ const (
 	cat                      // string concatenation
 	setmatched               // Set "matched" flag
 	otherwise                // Only match if "matched" flag is false.
-	del                      //  Pop `operand` keys and metric off stack, and remove the datum at metric[key,...] from memory
+	del                      // Pop `operand` keys and metric off stack, and remove the datum at metric[key,...] from memory
+	expire                   // Set the expiry duration of a datum, perfoming the same as del but after the expiry time passes.
 
 	// Floating point ops
 	fadd

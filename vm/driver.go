@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 
 	"github.com/golang/glog"
 )
@@ -66,6 +67,13 @@ func (p *parser) Lex(lval *mtailSymType) int {
 		lval.floatVal, err = strconv.ParseFloat(p.t.text, 64)
 		if err != nil {
 			p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
+			return INVALID
+		}
+	case DURATIONLITERAL:
+		var err error
+		lval.duration, err = time.ParseDuration(p.t.text)
+		if err != nil {
+			p.Error(fmt.Sprintf("%s", err))
 			return INVALID
 		}
 	case LT, GT, LE, GE, NE, EQ, SHL, SHR, BITAND, BITOR, AND, OR, XOR, NOT, INC, DEC, DIV, MUL, MINUS, PLUS, ASSIGN, ADD_ASSIGN, POW, MOD, CONCAT, MATCH, NOT_MATCH:

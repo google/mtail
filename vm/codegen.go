@@ -230,10 +230,16 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		c.emit(instr{op: otherwise})
 
 	case *delNode:
+		if n.expiry > 0 {
+			c.emit(instr{push, n.expiry})
+		}
 		Walk(c, n.n)
 		// overwrite the dload instruction
 		pc := c.pc()
 		c.obj.prog[pc].op = del
+		if n.expiry > 0 {
+			c.obj.prog[pc].op = expire
+		}
 
 	case *binaryExprNode:
 		switch n.op {
