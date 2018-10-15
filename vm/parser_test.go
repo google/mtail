@@ -310,6 +310,7 @@ $foo =~ X {
 }
 
 func TestParserRoundTrip(t *testing.T) {
+	mtailDebug = 3
 	for _, tc := range parserTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
