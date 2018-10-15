@@ -201,6 +201,11 @@ the datum referenced by that label from this metric, keeping `mtail`'s memory
 usage under control and speeding up labelset search time (by reducing the
 search space!)
 
+Alternatively, the statement `del connection_time[$pid] after 72h` would do the
+same, but only if `connection_time$pid]` is not changed for 72 hours.  This
+form is more convenient when the connection close event is lossy or difficult
+to determine.
+
 ## Computing moving averages
 
 `mtail` deliberately does not implement complex mathematical functions.  It
