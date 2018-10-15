@@ -253,7 +253,7 @@ foo = 3.14
 	{"delete after",
 		`counter foo by bar
 /foo/ {
-  del foo[$1] after 7d
+  del foo[$1] after 168h
 }`},
 
 	{"getfilename", `

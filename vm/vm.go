@@ -616,6 +616,17 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("del (RemoveDatum) failed: %s", err)
 		}
 
+	case expire:
+		m := t.Pop().(*metrics.Metric)
+		index := i.opnd.(int)
+		keys := make([]string, index)
+		for j := index - 1; j >= 0; j-- {
+			s := t.Pop().(string)
+			keys[j] = s
+		}
+		expiry := t.Pop().(time.Duration)
+		m.ExpireDatum(expiry, keys...)
+
 	case tolower:
 		// Lowercase a string from TOS, and push result back.
 		s := t.Pop().(string)

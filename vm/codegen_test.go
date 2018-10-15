@@ -6,6 +6,7 @@ package vm
 import (
 	"strings"
 	"testing"
+	"time"
 
 	go_cmp "github.com/google/go-cmp/cmp"
 )
@@ -382,6 +383,16 @@ del a["string"]
 			{str, 0},
 			{mload, 0},
 			{del, 1}},
+	},
+	{"del after", `
+counter a by b
+del a["string"] after 1h
+`,
+		[]instr{
+			{push, time.Hour},
+			{str, 0},
+			{mload, 0},
+			{expire, 1}},
 	},
 	{"types", `
 gauge i

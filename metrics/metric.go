@@ -106,7 +106,7 @@ func newMetric(len int) *Metric {
 		LabelValues: make([]*LabelValue, 0)}
 }
 
-func (m *Metric) findLabelValueOrNil(labelvalues []string) *LabelValue {
+func (m *Metric) FindLabelValueOrNil(labelvalues []string) *LabelValue {
 Loop:
 	for i, lv := range m.LabelValues {
 		for j := 0; j < len(lv.Labels); j++ {
@@ -127,7 +127,7 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	}
 	m.Lock()
 	defer m.Unlock()
-	if lv := m.findLabelValueOrNil(labelvalues); lv != nil {
+	if lv := m.FindLabelValueOrNil(labelvalues); lv != nil {
 		d = lv.Value
 	} else {
 		switch m.Type {
@@ -161,6 +161,19 @@ Loop:
 		m.LabelValues = append(m.LabelValues[:i], m.LabelValues[i+1:]...)
 	}
 	return nil
+}
+
+func (m *Metric) ExpireDatum(expiry time.Duration, labelvalues ...string) error {
+	if len(labelvalues) != len(m.Keys) {
+		return errors.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
+	}
+	m.Lock()
+	defer m.Unlock()
+	if lv := m.FindLabelValueOrNil(labelvalues); lv != nil {
+		lv.Expiry = expiry
+		return nil
+	}
+	return errors.Errorf("No datum for given labelvalues %q", labelvalues)
 }
 
 // LabelSet is an object that maps the keys of a Metric to the labels naming a

@@ -103,7 +103,7 @@ func TestExpireMetric(t *testing.T) {
 		t.Error(err)
 	}
 	datum.SetInt(d, 1, time.Now().Add(-time.Hour))
-	lv := m.findLabelValueOrNil([]string{"1", "2", "3"})
+	lv := m.FindLabelValueOrNil([]string{"1", "2", "3"})
 	if lv == nil {
 		t.Errorf("couldn't find lv")
 	}
@@ -113,18 +113,18 @@ func TestExpireMetric(t *testing.T) {
 		t.Error(err)
 	}
 	datum.SetInt(d, 1, time.Now().Add(-time.Hour))
-	lv = m.findLabelValueOrNil([]string{"4", "5", "6"})
+	lv = m.FindLabelValueOrNil([]string{"4", "5", "6"})
 	if lv == nil {
 		t.Errorf("couldn't find lv")
 	}
 
 	s.Expire()
-	lv = m.findLabelValueOrNil([]string{"1", "2", "3"})
+	lv = m.FindLabelValueOrNil([]string{"1", "2", "3"})
 	if lv != nil {
 		t.Errorf("lv not expired: %#v", lv)
 		t.Logf("Store: %#v", s)
 	}
-	lv = m.findLabelValueOrNil([]string{"4", "5", "6"})
+	lv = m.FindLabelValueOrNil([]string{"4", "5", "6"})
 	if lv == nil {
 		t.Errorf("lv expired")
 		t.Logf("Store: %#v", s)

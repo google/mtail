@@ -797,3 +797,28 @@ func TestDatumFetchInstrs(t *testing.T) {
 		}
 	}
 }
+
+func TestDeleteInstrs(t *testing.T) {
+	var m []*metrics.Metric
+	m = append(m,
+		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int, "a"),
+	)
+
+	m[0].GetDatum("z")
+
+	v := makeVM(instr{expire, 1}, m)
+	v.t.Push(time.Hour)
+	v.t.Push("z")
+	v.t.Push(m[0])
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("executtion failed, see info log")
+	}
+	lv := m[0].FindLabelValueOrNil([]string{"z"})
+	if lv == nil {
+		t.Fatalf("couldbn;t find label value in metric %#v", m[0])
+	}
+	if lv.Expiry != time.Hour {
+		t.Fatalf("Expiry not correct, is %v", lv.Expiry)
+	}
+}
