@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # Test that files created after startup are correctly matched against the log pattern, in polling mode.
 

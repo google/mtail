@@ -25,3 +25,4 @@ foo.log
 /vm-fuzz.zip
 workdir/*
 /.fuzz-dep-stamp
+/tests/regtest
