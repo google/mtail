@@ -206,6 +206,8 @@ same, but only if `connection_time$pid]` is not changed for 72 hours.  This
 form is more convenient when the connection close event is lossy or difficult
 to determine.
 
+See [state](state.md) for more information.
+
 ## Computing moving averages
 
 `mtail` deliberately does not implement complex mathematical functions.  It
