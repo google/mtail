@@ -49,7 +49,7 @@ a [Go time.Parse layout string](https://golang.org/pkg/time/#Parse).
 ```
 
 N.B.  If no timestamp parsing is done, then the reported timestamp of the event
-may add some latency to the mearusrement of when the event really occurred.
+may add some latency to the measurement of when the event really occurred.
 Between your program logging the event, and mtail reading it, there are many
 moving parts: the log writer, some system calls perhaps, some disk IO, some
 more system calls, some more disk IO, and then mtail's virtual machine
