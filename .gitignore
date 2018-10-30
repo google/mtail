@@ -26,3 +26,4 @@ foo.log
 workdir/*
 /.fuzz-dep-stamp
 /tests/regtest
+/release
