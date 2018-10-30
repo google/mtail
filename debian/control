@@ -1,0 +1,15 @@
+Source: mtail
+Section: unknown
+Priority: optional
+Maintainer: Holger Müller <holgerm@zarathustra.cm4all.com>
+Build-Depends: debhelper (>= 10)
+Standards-Version: 4.1.2
+Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: https://anonscm.debian.org/git/collab-maint/mtail.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/mtail.git
+
+Package: mtail
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
