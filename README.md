@@ -48,7 +48,11 @@ Windows, OSX and Linux binaries are available.
 ### Building from source
 
 To build `mtail` from the source code yourself you need to have a working Go
-environment with version 1.9 or greater installed, also some additional tools
+environment with version 1.9 or greater installed.  `mtail` is `go get`able and
+`go install`able from this repository but is best if you use the Makefile to
+build it.
+
+If you develop the compiler you will need some additional tools
 like `goyacc`.  You can't `go get` the software and have it build straight away.
 Sorry.
 
