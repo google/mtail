@@ -1,0 +1,5 @@
+mtail (2.99-2) unstable; urgency=medium
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Holger Müller <holgerm@zarathustra.cm4all.com>  Tue, 30 Oct 2018 17:18:24 +0100

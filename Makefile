@@ -191,3 +191,16 @@ fuzz: vm-fuzz.zip
 	mkdir -p workdir/corpus
 	cp examples/*.mtail workdir/corpus
 	go-fuzz -bin=vm-fuzz.zip -workdir=workdir
+
+.PHONY: cm-release
+cm-release: 
+	docker run \
+		-v $(PWD)/build:/build \
+		-v $(PWD)/release:/release \
+		-v $(PWD):/src \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-e "FULLNAME=$(shell git config user.name)" \
+		-e "EMAIL=$(shell git config user.email)" \
+		-e "PROJECT_ID=github.com/google/mtail" \
+		-e "INCLUDE_DIRS=./debian" \
+		golang-builder:latest

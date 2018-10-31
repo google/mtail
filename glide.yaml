@@ -1,0 +1,14 @@
+package: github.com/google/mtail
+import:
+- package: github.com/fsnotify/fsnotify
+- package: github.com/golang/glog
+- package: github.com/golang/groupcache
+  subpackages:
+  - lru
+- package: github.com/pkg/errors
+- package: github.com/spf13/afero
+testImport:
+- package: github.com/google/go-cmp
+  subpackages:
+  - cmp
+  - cmp/cmpopts
