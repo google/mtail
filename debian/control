@@ -1,0 +1,36 @@
+Source: mtail
+Section: net
+Priority: extra
+Maintainer: Debian Go Packaging Team <pkg-go-maintainers@lists.alioth.debian.org>
+Uploaders: Martín Ferrari <tincho@debian.org>
+Build-Depends: debhelper (>= 9.0.0),
+               golang-go,
+               dh-golang (>= 1.17~),
+               golang-github-fsnotify-fsnotify-dev,
+               golang-github-kylelemons-godebug-dev,
+               golang-github-spf13-afero-dev,
+               golang-glog-dev,
+               golang-golang-x-tools,
+Standards-Version: 3.9.8
+Vcs-Git: https://anonscm.debian.org/git/pkg-go/packages/mtail.git/
+Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/mtail.git/
+Homepage: https://github.com/google/mtail/
+XS-Go-Import-Path: github.com/google/mtail
+
+Package: mtail
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, adduser, daemon,
+Conflicts: monkeytail
+Built-Using: ${misc:Built-Using}
+Description: Extract monitoring data from logs for collection in a timeseries database
+ Mtail is a tool for extracting metrics from application logs to be exported
+ into a timeseries database or timeseries calculator for alerting and
+ dashboarding.
+ .
+ It aims to fill a niche between applications that do not export their own
+ internal state, and existing monitoring systems, without patching those
+ applications or rewriting the same framework for custom extraction glue code.
+ .
+ Metrics are exported for scraping by a collector as JSON or Prometheus format
+ over HTTP, or can be periodically sent to a collectd, StatsD, or Graphite
+ collector socket.

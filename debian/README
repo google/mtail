@@ -1,0 +1,6 @@
+Place here mtail programs, files not ending in ".mtail" will be ignored.
+
+In /usr/share/doc/mtail/examples you can find many sample programs to process
+some usual logs or that show language features.
+
+See https://github.com/google/mtail/wiki/Language for more information.

@@ -1,0 +1,32 @@
+mtail (0.0+git20161231.ae129e9-1) unstable; urgency=medium
+
+  * New upstream snapshot.
+  * Remove now unneeded patch.
+  * Switch to golang-go, as this does not seem to work under gccgo.
+
+ -- Martín Ferrari <tincho@debian.org>  Sat, 14 Jan 2017 07:17:00 +0000
+
+mtail (0.0+git20161027.a7b3e3c-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Remove unneeded and incorrect watch file.
+  * Refresh debian/rules.
+  * Patch the code to use spf13's version of afero.
+  * Add golang-golang-x-tools as dependency, for goyacc.
+
+ -- Martín Ferrari <tincho@debian.org>  Thu, 03 Nov 2016 21:06:17 +0000
+
+mtail (0.0+git20160716.f911b02-1) unstable; urgency=medium
+
+  * Don't run race tests on any arch except amd64. Closes: #831724.
+  * New upstream snapshot.
+  * Conflict with monkeytail, which provides a binary with the same
+    name. Closes: #831863.
+
+ -- Martín Ferrari <tincho@debian.org>  Thu, 21 Jul 2016 16:27:55 +0000
+
+mtail (0.0+git20160704.35c4023-1) unstable; urgency=medium
+
+  * Initial release. (Closes: #830785)
+
+ -- Martín Ferrari <tincho@debian.org>  Mon, 18 Jul 2016 00:09:49 +0000
