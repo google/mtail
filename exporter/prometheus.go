@@ -35,6 +35,7 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 
 	for _, ml := range e.store.Metrics {
 		emittype := true
+		lastSource := ""
 		for _, m := range ml {
 			m.RLock()
 			// We don't have a way of converting text metrics to prometheus format.
@@ -55,8 +56,10 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 			lc := make(chan *metrics.LabelSet)
 			go m.EmitLabelSets(lc)
 			for l := range lc {
-				if m.Source != "" {
+				if m.Source != "" && m.Source != lastSource {
 					fmt.Fprintf(w, "# %s defined at %s\n", noHyphens(m.Name), m.Source)
+					// suppress redundant source comments
+					lastSource = m.Source
 				}
 				line := metricToPrometheus(m, l, e.omitProgLabel)
 				fmt.Fprint(w, line)
