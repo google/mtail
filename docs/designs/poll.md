@@ -1,6 +1,7 @@
 # Polling filesystem watcher
 
 Original date: 2018-08-13
+Status: draft, unimplemented
 
 ## Overview
 
@@ -22,9 +23,9 @@ Some users want a polling option instead of fsnotify as their platforms don't
 support fsnotify, e.g. mipsel (bug in fsnotify) or no kernel support? (using on
 AIX).
 
-This design attempts to determine how to support a hy
+This design attempts to determine how to support a hybrid watcher.
 
-To the best of our ability, users shoud not have to configure poll- or fsnotify-based filesystem watching.
+To the best of our ability, users should not have to configure poll- or fsnotify-based filesystem watching.
 
 From Linux's inotify(7):
 
