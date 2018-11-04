@@ -50,10 +50,13 @@ var (
 	dumpAstTypes   = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck (to INFO log).")
 	dumpBytecode   = flag.Bool("dump_bytecode", false, "Dump bytecode of programs (to INFO log).")
 
-	// Runtime behaviour flags
+	// VM Runtime behaviour flags
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of UTC.")
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
+
+	// Ops flags
+	pollInterval = flag.Duration("poll_interval", 0, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.")
 
 	// Debugging flags
 	blockProfileRate     = flag.Int("block_profile_rate", 0, "Nanoseconds of block time before goroutine blocking events reported. 0 turns off.  See https://golang.org/pkg/runtime/#SetBlockProfileRate")
@@ -103,11 +106,11 @@ func main() {
 		runtime.SetMutexProfileFraction(*mutexProfileFraction)
 	}
 	if *progs == "" {
-		glog.Exitf("No mtail program directory specified; please use -progs")
+		glog.Exitf("mtail requires programs that in instruct it how to extract metrics from logs; please use the flag -progs to specify the directory containing the programs.")
 	}
 	if !(*dumpBytecode || *dumpAst || *dumpAstTypes || *compileOnly) {
 		if len(logs) == 0 {
-			glog.Exitf("No logs specified to tail; please use -logs")
+			glog.Exitf("mtail requires the names of logs to follow in order to extract logs from them; please use the flag -logs one or more times to specify glob patterns describing these logs.")
 		}
 	}
 	w, err := watcher.NewLogWatcher()
@@ -120,6 +123,7 @@ func main() {
 		mtail.BindAddress(*address, *port),
 		mtail.BuildInfo(buildInfo()),
 		mtail.OverrideLocation(loc),
+		mtail.PollInterval(*pollInterval),
 	}
 	if *oneShot {
 		opts = append(opts, mtail.OneShot)
@@ -144,10 +148,12 @@ func main() {
 	}
 	m, err := mtail.New(metrics.NewStore(), w, &afero.OsFs{}, opts...)
 	if err != nil {
-		glog.Fatalf("couldn't start: %s", err)
+		glog.Error(err)
+		os.Exit(1)
 	}
 	err = m.Run()
 	if err != nil {
-		glog.Exit(err)
+		glog.Error(err)
+		os.Exit(1)
 	}
 }

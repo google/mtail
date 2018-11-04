@@ -109,6 +109,8 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 			s.emit("**")
 		case ASSIGN:
 			s.emit("=")
+		case ADD_ASSIGN:
+			s.emit("+=")
 		case MOD:
 			s.emit("%")
 		case CONCAT:
@@ -118,7 +120,7 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 		case NOT_MATCH:
 			s.emit("!~")
 		default:
-			s.emit(fmt.Sprintf("Unexpected op: %v", v.op))
+			s.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.op)))
 		}
 		s.newline()
 		s.indent()
@@ -155,9 +157,15 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 		switch v.op {
 		case INC:
 			s.emit("++")
+		case DEC:
+			s.emit("--")
 		case NOT:
 			s.emit("~")
+		default:
+			s.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.op)))
 		}
+		s.newline()
+		s.indent()
 
 	case *stringConstNode:
 		s.emit("\"" + v.text + "\"")
@@ -174,6 +182,9 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 		s.emit("otherwise")
 	case *delNode:
 		s.emit("del")
+		if v.expiry > 0 {
+			s.emit(fmt.Sprintf(" after %s", v.expiry))
+		}
 
 	case *convNode:
 		s.emit("conv")

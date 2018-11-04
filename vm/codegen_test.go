@@ -6,6 +6,7 @@ package vm
 import (
 	"strings"
 	"testing"
+	"time"
 
 	go_cmp "github.com/google/go-cmp/cmp"
 )
@@ -383,6 +384,16 @@ del a["string"]
 			{mload, 0},
 			{del, 1}},
 	},
+	{"del after", `
+counter a by b
+del a["string"] after 1h
+`,
+		[]instr{
+			{push, time.Hour},
+			{str, 0},
+			{mload, 0},
+			{expire, 1}},
+	},
 	{"types", `
 gauge i
 gauge f
@@ -737,6 +748,38 @@ text foo
 		{push, 0},
 		{capref, 1},
 		{sset, nil},
+		{setmatched, true},
+	}},
+	{"concat to text", `
+text foo
+/(?P<v>.*)/ {
+		foo += $v
+}`,
+		[]instr{
+			{match, 0},
+			{jnm, 12},
+			{setmatched, false},
+			{mload, 0},
+			{dload, 0},
+			{mload, 0},
+			{dload, 0},
+			{push, 0},
+			{capref, 1},
+			{cat, nil},
+			{sset, nil},
+			{setmatched, true},
+		}},
+	{"decrement", `
+counter i
+// {
+  i--
+}`, []instr{
+		{match, 0},
+		{jnm, 7},
+		{setmatched, false},
+		{mload, 0},
+		{dload, 0},
+		{dec, nil},
 		{setmatched, true},
 	}},
 }

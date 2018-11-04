@@ -103,10 +103,14 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 				return nil
 			}
 			// Initialize to zero at the zero time.
-			if dtyp == metrics.Int {
+			switch dtyp {
+			case metrics.Int:
 				datum.SetInt(d, 0, time.Unix(0, 0))
-			} else {
+			case metrics.Float:
 				datum.SetFloat(d, 0, time.Unix(0, 0))
+			default:
+				c.errorf(n.Pos(), "Can't initialize to zero a %v", n)
+				return nil
 			}
 		}
 		m.Hidden = n.hidden
@@ -226,10 +230,16 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		c.emit(instr{op: otherwise})
 
 	case *delNode:
+		if n.expiry > 0 {
+			c.emit(instr{push, n.expiry})
+		}
 		Walk(c, n.n)
 		// overwrite the dload instruction
 		pc := c.pc()
 		c.obj.prog[pc].op = del
+		if n.expiry > 0 {
+			c.obj.prog[pc].op = expire
+		}
 
 	case *binaryExprNode:
 		switch n.op {
@@ -262,7 +272,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			return nil
 
 		case ADD_ASSIGN:
-			if Equals(n.Type(), Float) {
+			if !Equals(n.Type(), Int) {
 				// Double-emit the lhs so that it can be assigned to
 				Walk(c, n.lhs)
 			}
@@ -296,6 +306,19 @@ var typedOperators = map[int]map[Type]opcode{
 		String: sset},
 }
 
+func getOpcodeForType(op int, opT Type) (opcode, error) {
+	opmap, ok := typedOperators[op]
+	if !ok {
+		return -1, errors.Errorf("no typed operator for type %v", op)
+	}
+	for t, opcode := range opmap {
+		if Equals(t, opT) {
+			return opcode, nil
+		}
+	}
+	return -1, errors.Errorf("no opcode for type %s in op %v", opT, op)
+}
+
 func (c *codegen) VisitAfter(node astNode) {
 	switch n := node.(type) {
 	case *builtinNode:
@@ -325,6 +348,8 @@ func (c *codegen) VisitAfter(node astNode) {
 		switch n.op {
 		case INC:
 			c.emit(instr{op: inc})
+		case DEC:
+			c.emit(instr{op: dec})
 		case NOT:
 			c.emit(instr{op: neg})
 		}
@@ -377,37 +402,35 @@ func (c *codegen) VisitAfter(node astNode) {
 			c.setLabel(lEnd)
 		case ADD_ASSIGN:
 			// When operand is not nil, inc pops the delta from the stack.
-			// TODO(jaq): string concatenation, once datums can hold strings.
 			switch {
 			case Equals(n.Type(), Int):
 				c.emit(instr{inc, 0})
-			case Equals(n.Type(), Float):
+			case Equals(n.Type(), Float), Equals(n.Type(), String):
 				// Already walked the lhs and rhs of this expression
-				c.emit(instr{fadd, nil})
+				opcode, err := getOpcodeForType(PLUS, n.Type())
+				if err != nil {
+					c.errorf(n.Pos(), "%s", err)
+					return
+				}
+				c.emit(instr{op: opcode})
 				// And a second lhs
-				c.emit(instr{fset, nil})
+				opcode, err = getOpcodeForType(ASSIGN, n.Type())
+				if err != nil {
+					c.errorf(n.Pos(), "%s", err)
+					return
+				}
+				c.emit(instr{op: opcode})
 			default:
-				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.op)
+				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.Type())
 				return
 			}
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
-			opmap, ok := typedOperators[n.op]
-			if !ok {
-				c.errorf(n.Pos(), "no typed operator for binary expression %v", n.op)
+			opcode, err := getOpcodeForType(n.op, n.Type())
+			if err != nil {
+				c.errorf(n.Pos(), "%s", err)
 				return
 			}
-			emitflag := false
-			for t, opcode := range opmap {
-				if Equals(n.Type(), t) {
-					c.emit(instr{op: opcode})
-					emitflag = true
-					break
-				}
-			}
-			if !emitflag {
-				c.errorf(n.Pos(), "invalid type for binary expression: %v", n.Type())
-				return
-			}
+			c.emit(instr{op: opcode})
 		case BITAND:
 			c.emit(instr{op: and})
 		case BITOR:

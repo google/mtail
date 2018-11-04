@@ -3,7 +3,12 @@
 
 package metrics
 
-import "testing"
+import (
+	"testing"
+	"time"
+
+	"github.com/google/mtail/metrics/datum"
+)
 
 func TestMatchingKind(t *testing.T) {
 	s := NewStore()
@@ -86,5 +91,42 @@ func TestAddMetricDifferentType(t *testing.T) {
 	}
 	if len(s.Metrics["foo"]) != expected {
 		t.Fatalf("should have %d metrics of different Type: %s", expected, s.Metrics)
+	}
+}
+
+func TestExpireMetric(t *testing.T) {
+	s := NewStore()
+	m := NewMetric("foo", "prog", Counter, Int, "a", "b", "c")
+	s.Add(m)
+	d, err := m.GetDatum("1", "2", "3")
+	if err != nil {
+		t.Error(err)
+	}
+	datum.SetInt(d, 1, time.Now().Add(-time.Hour))
+	lv := m.FindLabelValueOrNil([]string{"1", "2", "3"})
+	if lv == nil {
+		t.Errorf("couldn't find lv")
+	}
+	lv.Expiry = time.Minute
+	d, err = m.GetDatum("4", "5", "6")
+	if err != nil {
+		t.Error(err)
+	}
+	datum.SetInt(d, 1, time.Now().Add(-time.Hour))
+	lv = m.FindLabelValueOrNil([]string{"4", "5", "6"})
+	if lv == nil {
+		t.Errorf("couldn't find lv")
+	}
+
+	s.Expire()
+	lv = m.FindLabelValueOrNil([]string{"1", "2", "3"})
+	if lv != nil {
+		t.Errorf("lv not expired: %#v", lv)
+		t.Logf("Store: %#v", s)
+	}
+	lv = m.FindLabelValueOrNil([]string{"4", "5", "6"})
+	if lv == nil {
+		t.Errorf("lv expired")
+		t.Logf("Store: %#v", s)
 	}
 }

@@ -37,7 +37,7 @@ var lexerTests = []lexerTest{
 		{RSQUARE, "]", position{"punctuation", 0, 5, 5}},
 		{COMMA, ",", position{"punctuation", 0, 6, 6}},
 		{EOF, "", position{"punctuation", 0, 7, 7}}}},
-	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~ ** % || && =~ !~", []token{
+	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~ ** % || && =~ !~ --", []token{
 		{MINUS, "-", position{"operators", 0, 0, 0}},
 		{PLUS, "+", position{"operators", 0, 2, 2}},
 		{ASSIGN, "=", position{"operators", 0, 4, 4}},
@@ -63,9 +63,10 @@ var lexerTests = []lexerTest{
 		{AND, "&&", position{"operators", 0, 54, 55}},
 		{MATCH, "=~", position{"operators", 0, 57, 58}},
 		{NOT_MATCH, "!~", position{"operators", 0, 60, 61}},
-		{EOF, "", position{"operators", 0, 62, 62}}}},
+		{DEC, "--", position{"operators", 0, 63, 64}},
+		{EOF, "", position{"operators", 0, 65, 65}}}},
 	{"keywords",
-		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\n", []token{
+		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\nafter\n", []token{
 			{COUNTER, "counter", position{"keywords", 0, 0, 6}},
 			{NL, "\n", position{"keywords", 1, 7, -1}},
 			{GAUGE, "gauge", position{"keywords", 1, 0, 4}},
@@ -92,7 +93,9 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position{"keywords", 12, 3, -1}},
 			{TEXT, "text", position{"keywords", 12, 0, 3}},
 			{NL, "\n", position{"keywords", 13, 4, -1}},
-			{EOF, "", position{"keywords", 13, 0, 0}}}},
+			{AFTER, "after", position{"keywords", 13, 0, 4}},
+			{NL, "\n", position{"keywords", 14, 5, -1}},
+			{EOF, "", position{"keywords", 14, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\n", []token{
 			{BUILTIN, "strptime", position{"builtins", 0, 0, 7}},
@@ -118,7 +121,7 @@ var lexerTests = []lexerTest{
 			{BUILTIN, "string", position{"builtins", 10, 0, 5}},
 			{NL, "\n", position{"builtins", 11, 6, -1}},
 			{EOF, "", position{"builtins", 11, 0, 0}}}},
-	{"numbers", "1 23 3.14 1.61.1 -1 -1.0", []token{
+	{"numbers", "1 23 3.14 1.61.1 -1 -1.0 1h 0d 3d -1.5h 15m 24h0m0s", []token{
 		{INTLITERAL, "1", position{"numbers", 0, 0, 0}},
 		{INTLITERAL, "23", position{"numbers", 0, 2, 3}},
 		{FLOATLITERAL, "3.14", position{"numbers", 0, 5, 8}},
@@ -126,15 +129,21 @@ var lexerTests = []lexerTest{
 		{FLOATLITERAL, ".1", position{"numbers", 0, 14, 15}},
 		{INTLITERAL, "-1", position{"numbers", 0, 17, 18}},
 		{FLOATLITERAL, "-1.0", position{"numbers", 0, 20, 23}},
-		{EOF, "", position{"numbers", 0, 24, 24}},
+		{DURATIONLITERAL, "1h", position{"numbers", 0, 25, 26}},
+		{DURATIONLITERAL, "0d", position{"numbers", 0, 28, 29}},
+		{DURATIONLITERAL, "3d", position{"numbers", 0, 31, 32}},
+		{DURATIONLITERAL, "-1.5h", position{"numbers", 0, 34, 38}},
+		{DURATIONLITERAL, "15m", position{"numbers", 0, 40, 42}},
+		{DURATIONLITERAL, "24h0m0s", position{"numbers", 0, 44, 50}},
+		{EOF, "", position{"numbers", 0, 51, 51}},
 	}},
-	{"identifier", "a be foo\nquux line-count", []token{
+	{"identifier", "a be foo\nquux line_count", []token{
 		{ID, "a", position{"identifier", 0, 0, 0}},
 		{ID, "be", position{"identifier", 0, 2, 3}},
 		{ID, "foo", position{"identifier", 0, 5, 7}},
 		{NL, "\n", position{"identifier", 1, 8, -1}},
 		{ID, "quux", position{"identifier", 1, 0, 3}},
-		{ID, "line-count", position{"identifier", 1, 5, 14}},
+		{ID, "line_count", position{"identifier", 1, 5, 14}},
 		{EOF, "", position{"identifier", 1, 15, 15}}}},
 	{"regex", "/asdf/", []token{
 		{DIV, "/", position{"regex", 0, 0, 0}},

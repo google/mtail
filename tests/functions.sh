@@ -20,13 +20,14 @@ fi
 if [ ! -e "${TEST_TMPDIR}" ]; then
   mkdir -p -m 0700 "${TEST_TMPDIR}"
   # Clean TEST_TMPDIR on exit
-  #atexit "rm -fr ${TEST_TMPDIR}"
+  atexit "rm -fr ${TEST_TMPDIR}"
 fi
 
 # Default mtail parameters for start_server
 MTAIL_ARGS="\
     --log_dir ${TEST_TMPDIR} \
-    -v 1 \
+    --alsologtostderr \
+    -v=2
 "
 
 # Find a random unused TCP port
@@ -59,6 +60,8 @@ exit 1;
 fail() {
     local msg="$*"
     echo "FAILED: $msg"
+    echo "stderr follows:"
+    cat ${TEST_TMPDIR}/stderr
     exit 1
 }
 
@@ -74,14 +77,22 @@ skip() {
 
 # Start an mtail server with default args and extra args on a random port.
 start_server() {
-    extra_args=$*
+    bg=1
+    if [ $1 = "nobg" ]; then
+        shift
+        bg=0
+    fi
     MTAIL_PORT=$(pick_random_unused_tcp_port)
     MTAIL_ARGS="--port ${MTAIL_PORT} $MTAIL_ARGS"
-    ${MTAIL_BIN:-mtail} $MTAIL_ARGS $extra_args &
-    MTAIL_PID=$!
-    # wait for http port to respond, or sleep 1
-    sleep 1
-    atexit 'kill ${MTAIL_PID:?}'
+    if [ $bg -eq 1 ]; then
+        ${MTAIL_BIN:-mtail} $MTAIL_ARGS "$@" 2>${TEST_TMPDIR}/stderr &
+        MTAIL_PID=$!
+        # wait for http port to respond, or sleep 1
+        sleep 1
+        atexit 'kill ${MTAIL_PID:?}'
+    else
+        ${MTAIL_BIN:-mtail} $MTAIL_ARGS "$@" 2>${TEST_TMPDIR}/stderr
+    fi
 }
 
 # Default parameters for curl

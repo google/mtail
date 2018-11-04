@@ -43,6 +43,9 @@ type Datum interface {
 
 	// TimeString returns the timestamp of a Datum as a string.
 	TimeString() string
+
+	// Time returns the timestamp of the Datum as time.Time in UTC
+	TimeUTC() time.Time
 }
 
 // BaseDatum is a struct used to record timestamps across all Datum implementations.
@@ -63,6 +66,11 @@ func (d *BaseDatum) stamp(timestamp time.Time) {
 // TimeString returns the timestamp of this Datum as a string.
 func (d *BaseDatum) TimeString() string {
 	return fmt.Sprintf("%d", atomic.LoadInt64(&d.Time)/1e9)
+}
+
+func (d *BaseDatum) TimeUTC() time.Time {
+	t_nsec := atomic.LoadInt64(&d.Time)
+	return time.Unix(t_nsec/1e9, t_nsec%1e9)
 }
 
 // NewInt creates a new zero integer datum.
@@ -166,6 +174,16 @@ func IncIntBy(d Datum, v int64, ts time.Time) {
 	switch d := d.(type) {
 	case *IntDatum:
 		d.IncBy(v, ts)
+	default:
+		panic(fmt.Sprintf("datum %v is not an Int", d))
+	}
+}
+
+// DecIntBy increments an integer Datum by the provided value, at time ts, or panics if the Datum is not an IntDatum.
+func DecIntBy(d Datum, v int64, ts time.Time) {
+	switch d := d.(type) {
+	case *IntDatum:
+		d.DecBy(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
 	}

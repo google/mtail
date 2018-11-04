@@ -53,6 +53,13 @@ var parserTests = []struct {
 			"  line_count++\n" +
 			"}\n"},
 
+	{"decrement counter",
+		`counter i
+/foo/ {
+  i--
+}
+`},
+
 	{"regex match includes escaped slashes",
 		"counter foo\n" +
 			"/foo\\// { foo++\n}\n"},
@@ -243,6 +250,12 @@ foo = 3.14
   del foo[$1]
 }`},
 
+	{"delete after",
+		`counter foo by bar
+/foo/ {
+  del foo[$1] after 168h
+}`},
+
 	{"getfilename", `
 getfilename()
 `},
@@ -297,6 +310,7 @@ $foo =~ X {
 }
 
 func TestParserRoundTrip(t *testing.T) {
+	mtailDebug = 3
 	for _, tc := range parserTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -421,7 +435,7 @@ func TestParsePositionTests(t *testing.T) {
 	for _, tc := range parsePositionTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// Not t.Parallel() because the parser is not reentrant, and mtailDebug is a global.
 			ast, err := Parse(tc.name, strings.NewReader(tc.program))
 			if err != nil {
 				t.Fatal(err)

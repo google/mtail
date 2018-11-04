@@ -31,6 +31,12 @@ func (d *IntDatum) IncBy(delta int64, timestamp time.Time) {
 	d.stamp(timestamp)
 }
 
+// DecBy increments the IntDatum's value by the value provided, at timestamp.
+func (d *IntDatum) DecBy(delta int64, timestamp time.Time) {
+	atomic.AddInt64(&d.Value, -delta)
+	d.stamp(timestamp)
+}
+
 // Get returns the value of the IntDatum
 func (d *IntDatum) Get() int64 {
 	return atomic.LoadInt64(&d.Value)

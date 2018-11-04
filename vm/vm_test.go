@@ -9,9 +9,9 @@ import (
 	"time"
 
 	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/logline"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
-	"github.com/google/mtail/tailer"
 )
 
 var instructions = []struct {
@@ -477,7 +477,7 @@ func TestInstrs(t *testing.T) {
 				v.t.Push(item)
 			}
 			v.t.matches = make(map[int][]string)
-			v.input = tailer.NewLogLine(testFilename, "aaaab")
+			v.input = logline.NewLogLine(testFilename, "aaaab")
 			v.execute(v.t, tc.i)
 			if v.terminate {
 				t.Fatalf("Execution failed, see info log.")
@@ -508,7 +508,7 @@ func makeVM(i instr, m []*metrics.Metric) *VM {
 	v.t = new(thread)
 	v.t.stack = make([]interface{}, 0)
 	v.t.matches = make(map[int][]string)
-	v.input = tailer.NewLogLine(testFilename, "aaaab")
+	v.input = logline.NewLogLine(testFilename, "aaaab")
 	return v
 
 }
@@ -674,6 +674,26 @@ func TestDatumSetInstrs(t *testing.T) {
 	if d.ValueString() != "4.1" {
 		t.Errorf("Unexpected value %v", d)
 	}
+
+	// dec
+	v = makeVM(instr{dec, nil}, m)
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	datum.SetInt(d, 1, time.Now())
+	v.t.Push(d)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatalf("Execution failed, see info log.")
+	}
+	d, err = m[0].GetDatum()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ValueString() != "0" {
+		t.Errorf("Unexpected value %v", d)
+	}
 }
 
 func TestStrptimeWithTimezone(t *testing.T) {
@@ -775,5 +795,56 @@ func TestDatumFetchInstrs(t *testing.T) {
 		if i != "aba" {
 			t.Errorf("unexpected value %q", i)
 		}
+	}
+}
+
+func TestDeleteInstrs(t *testing.T) {
+	var m []*metrics.Metric
+	m = append(m,
+		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int, "a"),
+	)
+
+	m[0].GetDatum("z")
+
+	v := makeVM(instr{expire, 1}, m)
+	v.t.Push(time.Hour)
+	v.t.Push("z")
+	v.t.Push(m[0])
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatal("execution failed, see info log")
+	}
+	lv := m[0].FindLabelValueOrNil([]string{"z"})
+	if lv == nil {
+		t.Fatalf("couldbn;t find label value in metric %#v", m[0])
+	}
+	if lv.Expiry != time.Hour {
+		t.Fatalf("Expiry not correct, is %v", lv.Expiry)
+	}
+}
+
+func TestTimestampInstr(t *testing.T) {
+	var m []*metrics.Metric
+	now := time.Now().UTC()
+	v := makeVM(instr{timestamp, nil}, m)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatal("execution failed, see info log")
+	}
+	tos := time.Unix(v.t.Pop().(int64), 0).UTC()
+	if now.Before(tos) {
+		t.Errorf("Expecting timestamp to be after %s, was %s", now, tos)
+	}
+
+	newT := time.Unix(37, 0).UTC()
+	v.t.time = newT
+	v.execute(v.t, v.prog[0])
+
+	if v.terminate {
+		t.Fatal("execution failed, see info log")
+	}
+	tos = time.Unix(v.t.Pop().(int64), 0).UTC()
+	if tos != newT {
+		t.Errorf("Expecting timestamp to be %s, was %s", newT, tos)
 	}
 }

@@ -176,7 +176,7 @@ The following relational operators are available in `mtail`:
 *   `>=` greater than or equal
 *   `==` is equal
 *   `!=` is not equal
-*   `~` pattern match
+*   `=~` pattern match
 *   `!~` negated pattern match
 *   `||` logical or
 *   `&&` logical and
@@ -200,6 +200,7 @@ The following arithmetic operators act on exported variables.
 *   `=` assignment
 *   `++` increment
 *   `+=` increment by
+*   `--` decrement
 
 #### `else` Clauses
 
@@ -548,3 +549,16 @@ grow unbounded as the number of sessions increases. If the programmer knows that
 the `/end/` pattern is the last time a session will be observed, then the datum
 at `$session` will be freed, which keeps `mtail` memory usage under control and
 will improve search time for finding dimensioned metrics.
+
+`del` can be modified with the `after` keyword, signalling that the metric
+should be deleted after some period of no activity.  For example, the
+expression
+
+```
+  del session_start[$session] after 24h
+```
+
+would mean that the datum indexed by `$session` will be removed 24 hours after the last update is recorded.
+
+The del-after form takes any time period supported by the go
+[`time.ParseDuration`](https://golang.org/pkg/time/#ParseDuration) function.

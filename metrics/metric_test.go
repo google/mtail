@@ -44,7 +44,7 @@ func TestScalarMetric(t *testing.T) {
 		t.Errorf("no datum: %s", err)
 	}
 	datum.IncIntBy(d, 1, time.Now().UTC())
-	lv := v.findLabelValueOrNil([]string{})
+	lv := v.FindLabelValueOrNil([]string{})
 	if lv == nil {
 		t.Errorf("couldn't find labelvalue")
 	}
@@ -65,21 +65,21 @@ func TestDimensionedMetric(t *testing.T) {
 	v := NewMetric("test", "prog", Counter, Int, "foo")
 	d, _ := v.GetDatum("a")
 	datum.IncIntBy(d, 1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a"}).Value.ValueString() != "1" {
+	if v.FindLabelValueOrNil([]string{"a"}).Value.ValueString() != "1" {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, Int, "foo", "bar")
 	d, _ = v.GetDatum("a", "b")
 	datum.IncIntBy(d, 1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a", "b"}).Value.ValueString() != "1" {
+	if v.FindLabelValueOrNil([]string{"a", "b"}).Value.ValueString() != "1" {
 		t.Errorf("fail")
 	}
 
 	v = NewMetric("test", "prog", Counter, Int, "foo", "bar", "quux")
 	d, _ = v.GetDatum("a", "b", "c")
 	datum.IncIntBy(d, 1, time.Now().UTC())
-	if v.findLabelValueOrNil([]string{"a", "b", "c"}).Value.ValueString() != "1" {
+	if v.FindLabelValueOrNil([]string{"a", "b", "c"}).Value.ValueString() != "1" {
 		t.Errorf("fail")
 	}
 }
@@ -124,14 +124,14 @@ func TestEmitLabelSet(t *testing.T) {
 
 func TestFindLabelValueOrNil(t *testing.T) {
 	m0 := NewMetric("foo", "prog", Counter, Int)
-	if r0 := m0.findLabelValueOrNil([]string{}); r0 != nil {
+	if r0 := m0.FindLabelValueOrNil([]string{}); r0 != nil {
 		t.Errorf("m0 should be nil: %v", r0)
 	}
 	d, err := m0.GetDatum()
 	if err != nil {
 		t.Errorf("Bad datum %v: %v\n", d, err)
 	}
-	if r1 := m0.findLabelValueOrNil([]string{}); r1 == nil {
+	if r1 := m0.FindLabelValueOrNil([]string{}); r1 == nil {
 		t.Errorf("m0 should not be nil: %v", r1)
 	}
 	m1 := NewMetric("bar", "prog", Counter, Int, "a")
@@ -139,10 +139,10 @@ func TestFindLabelValueOrNil(t *testing.T) {
 	if err1 != nil {
 		t.Errorf("err1 %v: %v\n", d1, err1)
 	}
-	if r2 := m1.findLabelValueOrNil([]string{"0"}); r2 != nil {
+	if r2 := m1.FindLabelValueOrNil([]string{"0"}); r2 != nil {
 		t.Errorf("r2 should be nil")
 	}
-	if r3 := m1.findLabelValueOrNil([]string{"1"}); r3 == nil {
+	if r3 := m1.FindLabelValueOrNil([]string{"1"}); r3 == nil {
 		t.Errorf("r3 should be non nil")
 	}
 }
@@ -220,7 +220,7 @@ func TestTimer(t *testing.T) {
 	}
 	d, _ := m.GetDatum()
 	datum.IncIntBy(d, 1, time.Now().UTC())
-	lv := m.findLabelValueOrNil([]string{})
+	lv := m.FindLabelValueOrNil([]string{})
 	if lv == nil {
 		t.Errorf("couldn't find labelvalue")
 	}
@@ -239,7 +239,7 @@ func TestRemoveMetricLabelValue(t *testing.T) {
 	if e != nil {
 		t.Errorf("Getdatum failed: %s", e)
 	}
-	lv := m.findLabelValueOrNil([]string{"a", "a", "a"})
+	lv := m.FindLabelValueOrNil([]string{"a", "a", "a"})
 	if lv == nil {
 		t.Errorf("coidln't find labelvalue")
 	}
@@ -247,7 +247,7 @@ func TestRemoveMetricLabelValue(t *testing.T) {
 	if e != nil {
 		t.Errorf("couldn't remove datum: %s", e)
 	}
-	lv = m.findLabelValueOrNil([]string{"a", "a", "a"})
+	lv = m.FindLabelValueOrNil([]string{"a", "a", "a"})
 	if lv != nil {
 		t.Errorf("label value still exists")
 	}

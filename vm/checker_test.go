@@ -126,6 +126,15 @@ const ID /bar/
 }
 `,
 		[]string{"invalid del index count:3:7-11: Not enough keys for indexed expression: expecting 2, received 1"}},
+	// TODO(jaq): is it an error to make a counter of type string?
+	// 	{"counter as string",
+	// 		`counter foo
+
+	// /(?P<v>.*)/ {
+	//   foo = $v
+	// }
+	// `,
+	// 	[]string{"counter as string:4:4-11: Can't assign rhs of type String to lhs of type Int"}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
@@ -299,6 +308,18 @@ def decorator {
   }
 }
 `},
+	{"concat with add_assign", `
+text foo
+/(?P<v>.*)/ {
+		foo += $v
+}
+`},
+
+	{"decrement", `
+counter i
+/.*/ {
+  i--
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

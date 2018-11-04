@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/metrics"
 )
 
 // checker holds data for a semantic checker
@@ -69,15 +70,29 @@ func (c *checker) VisitBefore(node astNode) Visitor {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil
 		}
+		var rType Type
+		switch n.kind {
+		case metrics.Counter, metrics.Gauge, metrics.Timer:
+			// TODO(jaq): This should be a numeric type, unless we want to
+			// enforce rules like "Counter can only be Int."
+			rType = NewTypeVariable()
+		case metrics.Text:
+			rType = String
+		default:
+			c.errors.Add(n.Pos(), fmt.Sprintf("internal compiler error: unrecognised Kind %v for declNode %v", n.kind, n))
+			return nil
+		}
 		if len(n.keys) > 0 {
-			// One type per key and one for the value.
-			keyTypes := make([]Type, 0, len(n.keys)+1)
-			for i := 0; i <= len(n.keys); i++ {
+			// One type per key
+			keyTypes := make([]Type, 0, len(n.keys))
+			for i := 0; i < len(n.keys); i++ {
 				keyTypes = append(keyTypes, NewTypeVariable())
 			}
+			// and one for the value.
+			keyTypes = append(keyTypes, rType)
 			n.sym.Type = Dimension(keyTypes...)
 		} else {
-			n.sym.Type = NewTypeVariable()
+			n.sym.Type = rType
 		}
 
 	case *idNode:
@@ -298,8 +313,11 @@ func (c *checker) VisitAfter(node astNode) {
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tr <= Tl
 			// ⇒ O ⊢ e : Tl
+			glog.V(2).Infof("lt %q, rt %q", lT, rT)
 			rType = lT
-			err := Unify(rType, rT)
+			// TODO(jaq): the rT <= lT relationship is not correctly encoded here.
+			t := LeastUpperBound(lT, rT)
+			err := Unify(rType, t)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(Error)
@@ -358,7 +376,7 @@ func (c *checker) VisitAfter(node astNode) {
 				return
 			}
 			n.SetType(rType)
-		case INC:
+		case INC, DEC:
 			rType := Int
 			err := Unify(rType, t)
 			if err != nil {
@@ -375,7 +393,7 @@ func (c *checker) VisitAfter(node astNode) {
 			}
 
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary expr %v", n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", lexeme(n.op), n))
 			n.SetType(Error)
 			return
 		}

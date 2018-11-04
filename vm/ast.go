@@ -5,6 +5,7 @@ package vm
 
 import (
 	"sync"
+	"time"
 
 	"github.com/google/mtail/metrics"
 )
@@ -361,8 +362,9 @@ func (n *otherwiseNode) Type() Type {
 }
 
 type delNode struct {
-	pos position
-	n   astNode
+	pos    position
+	n      astNode
+	expiry time.Duration
 }
 
 func (d *delNode) Pos() *position {

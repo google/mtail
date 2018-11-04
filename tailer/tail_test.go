@@ -4,9 +4,7 @@
 package tailer
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -17,23 +15,25 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/logline"
 	"github.com/google/mtail/watcher"
 
 	"github.com/spf13/afero"
 )
 
-func makeTestTail(t *testing.T) (*Tailer, chan *LogLine, *watcher.FakeWatcher, afero.Fs) {
+func makeTestTail(t *testing.T) (*Tailer, chan *logline.LogLine, *watcher.FakeWatcher, afero.Fs, string, func()) {
 	fs := afero.NewMemMapFs()
 	w := watcher.NewFakeWatcher()
-	lines := make(chan *LogLine, 1)
+	lines := make(chan *logline.LogLine, 1)
 	ta, err := New(lines, fs, w)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ta, lines, w, fs
+	fs.Mkdir("tail_test", os.ModePerm)
+	return ta, lines, w, fs, "/tail_test", func() {}
 }
 
-func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *watcher.LogWatcher, afero.Fs, string) {
+func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *logline.LogLine, *watcher.FakeWatcher, afero.Fs, string, func()) {
 	if testing.Short() {
 		t.Skip("skipping real fs test in short mode")
 	}
@@ -43,22 +43,25 @@ func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *LogLine, *wat
 	}
 
 	fs := afero.NewOsFs()
-	w, err := watcher.NewLogWatcher()
-	if err != nil {
-		t.Fatalf("can't create watcher: %v", err)
-	}
-	lines := make(chan *LogLine, 1)
+	w := watcher.NewFakeWatcher()
+	lines := make(chan *logline.LogLine, 1)
 	ta, err := New(lines, fs, w)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ta, lines, w, fs, dir
+	cleanup := func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Log(err)
+		}
+	}
+	return ta, lines, w, fs, dir, cleanup
 }
 
 func TestTail(t *testing.T) {
-	ta, _, w, fs := makeTestTail(t)
-	fs.Mkdir("tail_test", os.ModePerm)
-	logfile := "/tmp/log"
+	ta, _, w, fs, dir, cleanup := makeTestTail(t)
+	defer cleanup()
+
+	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
 	if err != nil {
 		t.Error(err)
@@ -78,23 +81,21 @@ func TestTail(t *testing.T) {
 }
 
 func TestHandleLogUpdate(t *testing.T) {
-	ta, lines, w, fs := makeTestTail(t)
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "handle_log_update")
+	defer cleanup()
 
-	err := fs.Mkdir("/tail_test", os.ModePerm)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	logfile := "/tail_test/log"
+	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []*LogLine{}
+	result := []*logline.LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	go func() {
 		for line := range lines {
+			glog.V(2).Infof("line %v", line)
 			result = append(result, line)
 			wg.Done()
 		}
@@ -111,7 +112,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Seek(0, 0) // afero in-memory files share the same offset
+	// f.Seek(0, 0) // afero in-memory files share the same offset
 	w.InjectUpdate(logfile)
 
 	wg.Wait()
@@ -120,7 +121,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	}
 	<-done
 
-	expected := []*LogLine{
+	expected := []*logline.LogLine{
 		{logfile, "a"},
 		{logfile, "b"},
 		{logfile, "c"},
@@ -135,12 +136,8 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	ta, lines, w, fs, dir := makeTestTailReal(t, "truncate")
-	defer func() {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Log(err)
-		}
-	}()
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "truncate")
+	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
@@ -148,7 +145,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []*LogLine{}
+	result := []*logline.LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	go func() {
@@ -167,7 +164,8 @@ func TestHandleLogTruncate(t *testing.T) {
 	if _, err = f.WriteString("a\nb\nc\n"); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	//time.Sleep(10 * time.Millisecond)
+	w.InjectUpdate(logfile)
 	wg.Wait()
 
 	if err = f.Truncate(0); err != nil {
@@ -175,13 +173,15 @@ func TestHandleLogTruncate(t *testing.T) {
 	}
 	// "File.Truncate" does not change the file offset.
 	f.Seek(0, 0)
-	time.Sleep(10 * time.Millisecond)
+	w.InjectUpdate(logfile)
+	//time.Sleep(10 * time.Millisecond)
 
 	wg.Add(2)
 	if _, err = f.WriteString("d\ne\n"); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	w.InjectUpdate(logfile)
+	//time.Sleep(10 * time.Millisecond)
 
 	wg.Wait()
 	if err := w.Close(); err != nil {
@@ -189,7 +189,7 @@ func TestHandleLogTruncate(t *testing.T) {
 	}
 	<-done
 
-	expected := []*LogLine{
+	expected := []*logline.LogLine{
 		{logfile, "a"},
 		{logfile, "b"},
 		{logfile, "c"},
@@ -202,19 +202,16 @@ func TestHandleLogTruncate(t *testing.T) {
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
-	ta, lines, w, fs := makeTestTail(t)
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "log_update_partial_line")
+	defer cleanup()
 
-	err := fs.Mkdir("/tail_test", os.ModePerm)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	logfile := "/tail_test/log"
+	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	result := []*LogLine{}
+	result := []*logline.LogLine{}
 	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -235,30 +232,30 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Seek(0, 0)
+	//f.Seek(0, 0)
 	w.InjectUpdate(logfile)
 
-	f.Seek(1, 0)
+	//f.Seek(1, 0)
 	_, err = f.WriteString("b")
 	if err != nil {
 		t.Error(err)
 	}
-	f.Seek(1, 0)
+	// f.Seek(1, 0)
 	w.InjectUpdate(logfile)
 
-	f.Seek(2, 0)
+	//f.Seek(2, 0)
 	_, err = f.WriteString("\n")
 	if err != nil {
 		t.Error(err)
 	}
-	f.Seek(2, 0)
+	//f.Seek(2, 0)
 	w.InjectUpdate(logfile)
 
 	wg.Wait()
 	w.Close()
 	<-done
 
-	expected := []*LogLine{
+	expected := []*logline.LogLine{
 		{logfile, "ab"},
 	}
 	diff := cmp.Diff(expected, result)
@@ -268,56 +265,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 
 }
 
-func TestReadPartial(t *testing.T) {
-	ta, lines, w, fs := makeTestTail(t)
-	defer w.Close()
-
-	f, err := fs.Create("t")
-	if err != nil {
-		t.Fatal(err)
-	}
-	p := bytes.NewBufferString("")
-	err = ta.read(f, p)
-	if p.String() != "" {
-		t.Errorf("partial line returned not empty: %q", p)
-	}
-	if err != io.EOF {
-		t.Errorf("error returned not EOF: %v", err)
-	}
-	p.Reset()
-	p.WriteString("o")
-	f.WriteString("hi")
-	f.Seek(0, 0)
-	err = ta.read(f, p)
-	if p.String() != "ohi" {
-		t.Errorf("partial line returned not expected: %q", p)
-	}
-	if err != io.EOF {
-		t.Errorf("error returned not EOF: %v", err)
-	}
-	p.Reset()
-	err = ta.read(f, p)
-	if err != io.EOF {
-		t.Errorf("error returned not EOF: %v", err)
-	}
-	f.WriteString("\n")
-	f.Seek(-1, io.SeekEnd)
-	p.Reset()
-	p.WriteString("ohi")
-	err = ta.read(f, p)
-	l := <-lines
-	if l.Line != "ohi" {
-		t.Errorf("line emitted not ohi: %q", l)
-	}
-	if p.String() != "" {
-		t.Errorf("partial not empty: %q", p)
-	}
-	if err != io.EOF {
-		t.Errorf("error returned not EOF: %v", err)
-	}
-}
-
-func TestOpenRetries(t *testing.T) {
+func TestTailerOpenRetries(t *testing.T) {
 	// Can't force a permission denied error if run as root.
 	u, err := user.Current()
 	if err != nil {
@@ -328,12 +276,8 @@ func TestOpenRetries(t *testing.T) {
 	}
 	// Use the real filesystem because afero doesn't implement correct
 	// permissions checking on OpenFile in the memfile implementation.
-	ta, lines, w, fs, dir := makeTestTailReal(t, "retries")
-	defer func() {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Log(err)
-		}
-	}()
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "retries")
+	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	if _, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
@@ -354,27 +298,33 @@ func TestOpenRetries(t *testing.T) {
 	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	//w.InjectUpdate(logfile)
+	//time.Sleep(10 * time.Millisecond)
 	glog.Info("remove")
 	if err := fs.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	w.InjectDelete(logfile)
+	//time.Sleep(10 * time.Millisecond)
 	glog.Info("openfile")
 	f, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	w.InjectCreate(logfile)
+	//	time.Sleep(10 * time.Millisecond)
 	glog.Info("chmod")
 	if err := fs.Chmod(logfile, 0666); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	w.InjectUpdate(logfile)
+	//time.Sleep(10 * time.Millisecond)
 	glog.Info("write string")
 	if _, err := f.WriteString("\n"); err != nil {
 		t.Fatal(err)
 	}
+	w.InjectUpdate(logfile)
+
 	wg.Wait()
 	if err := w.Close(); err != nil {
 		t.Log(err)
@@ -387,7 +337,7 @@ func TestTailerInitErrors(t *testing.T) {
 	if err == nil {
 		t.Error("expected error")
 	}
-	lines := make(chan *LogLine)
+	lines := make(chan *logline.LogLine)
 	_, err = New(lines, nil, nil)
 	if err == nil {
 		t.Error("expected error")
@@ -405,5 +355,139 @@ func TestTailerInitErrors(t *testing.T) {
 	_, err = New(lines, fs, w, OneShot)
 	if err != nil {
 		t.Errorf("unexpected error %s", err)
+	}
+}
+
+func TestHandleLogRotate(t *testing.T) {
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "rotate")
+	defer cleanup()
+
+	logfile := filepath.Join(dir, "log")
+	f, err := fs.Create(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result := []*logline.LogLine{}
+	done := make(chan struct{})
+	wg := sync.WaitGroup{}
+	go func() {
+		for line := range lines {
+			result = append(result, line)
+			wg.Done()
+		}
+		close(done)
+	}()
+
+	if err := ta.TailPath(logfile); err != nil {
+		t.Fatal(err)
+	}
+	wg.Add(2)
+	if _, err = f.WriteString("1\n"); err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("update")
+	w.InjectUpdate(logfile)
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = fs.Rename(logfile, logfile+".1"); err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("delete")
+	w.InjectDelete(logfile)
+	w.InjectCreate(logfile + ".1")
+	f, err = fs.Create(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("create")
+	w.InjectCreate(logfile)
+	if _, err = f.WriteString("2\n"); err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("update")
+	w.InjectUpdate(logfile)
+
+	wg.Wait()
+	w.Close()
+	<-done
+
+	expected := []*logline.LogLine{
+		{logfile, "1"},
+		{logfile, "2"},
+	}
+	diff := cmp.Diff(expected, result)
+	if diff != "" {
+		t.Errorf("result didn't match expected:\n%s", diff)
+	}
+}
+
+func TestHandleLogRotateSignalsWrong(t *testing.T) {
+	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "rotate wrong")
+	defer cleanup()
+	logfile := filepath.Join(dir, "log")
+	f, err := fs.Create(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result := []*logline.LogLine{}
+	done := make(chan struct{})
+	wg := sync.WaitGroup{}
+	go func() {
+		for line := range lines {
+			result = append(result, line)
+			wg.Done()
+		}
+		close(done)
+	}()
+
+	if err := ta.TailPath(logfile); err != nil {
+		t.Fatal(err)
+	}
+	wg.Add(2)
+	if _, err = f.WriteString("1\n"); err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("update")
+	w.InjectUpdate(logfile)
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = fs.Rename(logfile, logfile+".1"); err != nil {
+		t.Fatal(err)
+	}
+	// Forcibly remove it from the fake filesystem because afero bugs
+	fs.Remove(logfile)
+	// No delete signal yet
+	f, err = fs.Create(logfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("create")
+	w.InjectCreate(logfile)
+
+	time.Sleep(1 * time.Millisecond)
+	glog.V(2).Info("delete")
+	w.InjectDelete(logfile)
+
+	if _, err = f.WriteString("2\n"); err != nil {
+		t.Fatal(err)
+	}
+	glog.V(2).Info("update")
+	w.InjectUpdate(logfile)
+
+	wg.Wait()
+	w.Close()
+	<-done
+
+	expected := []*logline.LogLine{
+		{logfile, "1"},
+		{logfile, "2"},
+	}
+	diff := cmp.Diff(expected, result)
+	if diff != "" {
+		t.Errorf("result didn't match expected:\n%s", diff)
 	}
 }

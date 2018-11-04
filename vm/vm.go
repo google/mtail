@@ -19,9 +19,11 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
+	"github.com/google/mtail/logline"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
-	"github.com/google/mtail/tailer"
+
+	"github.com/golang/groupcache/lru"
 )
 
 type thread struct {
@@ -44,11 +46,11 @@ type VM struct {
 	str []string          // String constants
 	m   []*metrics.Metric // Metrics accessible to this program.
 
-	timeMemos map[string]time.Time // memo of time string parse results
+	timeMemos *lru.Cache // memo of time string parse results
 
 	t *thread // Current thread of execution
 
-	input *tailer.LogLine // Log line input to this round of execution.
+	input *logline.LogLine // Log line input to this round of execution.
 
 	terminate bool // Flag to stop the VM on this line of input.
 	abort     bool // Flag to abort the VM.
@@ -390,6 +392,23 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
 
+	case dec:
+		// Decrement a datum
+		var delta int64 = 1
+		// If opnd is non-nil, the delta is on the stack.
+		if i.opnd != nil {
+			var err error
+			delta, err = t.PopInt()
+			if err != nil {
+				v.errorf("%s", err)
+			}
+		}
+		if n, ok := t.Pop().(datum.Datum); ok {
+			datum.DecIntBy(n, delta, t.time)
+		} else {
+			v.errorf("Unexpected type to increment: %T %q", n, n)
+		}
+
 	case iset:
 		// Set a datum
 		value, err := t.PopInt()
@@ -441,17 +460,22 @@ func (v *VM) execute(t *thread, i instr) {
 			// Store the result from the re'th index at the s'th index
 			ts = t.matches[re][s]
 		}
-		if tm, ok := v.timeMemos[ts]; !ok {
-			tm = v.ParseTime(layout, ts)
-			v.timeMemos[ts] = tm
+		if cached, ok := v.timeMemos.Get(ts); !ok {
+			tm := v.ParseTime(layout, ts)
+			v.timeMemos.Add(ts, tm)
 			t.time = tm
 		} else {
-			t.time = tm
+			t.time = cached.(time.Time)
 		}
 
 	case timestamp:
-		// Put the time register onto the stack
-		t.Push(t.time.Unix())
+		// Put the time register onto the stack, unless it's zero in which case use system time.
+		if t.time.IsZero() {
+			t.Push(time.Now().Unix())
+		} else {
+			// Put the time register onto the stack
+			t.Push(t.time.Unix())
+		}
 
 	case settime:
 		// Pop TOS and store in time register
@@ -597,6 +621,17 @@ func (v *VM) execute(t *thread, i instr) {
 			v.errorf("del (RemoveDatum) failed: %s", err)
 		}
 
+	case expire:
+		m := t.Pop().(*metrics.Metric)
+		index := i.opnd.(int)
+		keys := make([]string, index)
+		for j := index - 1; j >= 0; j-- {
+			s := t.Pop().(string)
+			keys[j] = s
+		}
+		expiry := t.Pop().(time.Duration)
+		m.ExpireDatum(expiry, keys...)
+
 	case tolower:
 		// Lowercase a string from TOS, and push result back.
 		s := t.Pop().(string)
@@ -676,11 +711,11 @@ func (v *VM) execute(t *thread, i instr) {
 // processLine handles the incoming lines from the input channel, by running a
 // fetch-execute cycle on the VM bytecode with the line as input to the
 // program, until termination.
-func (v *VM) processLine(logline *tailer.LogLine) {
+func (v *VM) processLine(line *logline.LogLine) {
 	t := new(thread)
 	t.matched = false
 	v.t = t
-	v.input = logline
+	v.input = line
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, len(v.re))
 	for {
@@ -701,7 +736,7 @@ func (v *VM) processLine(logline *tailer.LogLine) {
 // Run executes the virtual machine on each line of input received.  When the
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
-func (v *VM) Run(_ uint32, lines <-chan *tailer.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
+func (v *VM) Run(_ uint32, lines <-chan *logline.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
 	defer close(shutdown)
 
 	glog.Infof("Starting program %s", v.name)
@@ -722,7 +757,7 @@ func New(name string, obj *object, syslogUseCurrentYear bool, loc *time.Location
 		str:                  obj.str,
 		m:                    obj.m,
 		prog:                 obj.prog,
-		timeMemos:            make(map[string]time.Time),
+		timeMemos:            lru.New(64),
 		syslogUseCurrentYear: syslogUseCurrentYear,
 		loc:                  loc,
 	}
