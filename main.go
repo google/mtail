@@ -76,7 +76,7 @@ var (
 )
 
 func buildInfo() string {
-	return fmt.Sprintf("mtail version %s git revision %s go version %s", Version, Revision, GoVersion)
+	return fmt.Sprintf("mtail version %s git revision %s go version %s go arch %s go os %s", Version, Revision, GoVersion, runtime.GOARCH, runtime.GOOS)
 }
 
 func main() {
