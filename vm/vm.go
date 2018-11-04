@@ -469,8 +469,13 @@ func (v *VM) execute(t *thread, i instr) {
 		}
 
 	case timestamp:
-		// Put the time register onto the stack
-		t.Push(t.time.Unix())
+		// Put the time register onto the stack, unless it's zero in which case use system time.
+		if t.time.IsZero() {
+			t.Push(time.Now().Unix())
+		} else {
+			// Put the time register onto the stack
+			t.Push(t.time.Unix())
+		}
 
 	case settime:
 		// Pop TOS and store in time register

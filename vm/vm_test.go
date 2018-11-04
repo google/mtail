@@ -812,7 +812,7 @@ func TestDeleteInstrs(t *testing.T) {
 	v.t.Push(m[0])
 	v.execute(v.t, v.prog[0])
 	if v.terminate {
-		t.Fatalf("executtion failed, see info log")
+		t.Fatal("execution failed, see info log")
 	}
 	lv := m[0].FindLabelValueOrNil([]string{"z"})
 	if lv == nil {
@@ -820,5 +820,31 @@ func TestDeleteInstrs(t *testing.T) {
 	}
 	if lv.Expiry != time.Hour {
 		t.Fatalf("Expiry not correct, is %v", lv.Expiry)
+	}
+}
+
+func TestTimestampInstr(t *testing.T) {
+	var m []*metrics.Metric
+	now := time.Now().UTC()
+	v := makeVM(instr{timestamp, nil}, m)
+	v.execute(v.t, v.prog[0])
+	if v.terminate {
+		t.Fatal("execution failed, see info log")
+	}
+	tos := time.Unix(v.t.Pop().(int64), 0).UTC()
+	if now.Before(tos) {
+		t.Errorf("Expecting timestamp to be after %s, was %s", now, tos)
+	}
+
+	newT := time.Unix(37, 0).UTC()
+	v.t.time = newT
+	v.execute(v.t, v.prog[0])
+
+	if v.terminate {
+		t.Fatal("execution failed, see info log")
+	}
+	tos = time.Unix(v.t.Pop().(int64), 0).UTC()
+	if tos != newT {
+		t.Errorf("Expecting timestamp to be %s, was %s", newT, tos)
 	}
 }
