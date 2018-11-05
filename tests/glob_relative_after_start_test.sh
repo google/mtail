@@ -13,7 +13,6 @@ cd $LOGS
 touch $LOGS/log.1.txt
 
 start_server  --logs "log.*" --progs $PROGS
-sleep 1
 
 uri_get /debug/vars
 expect_json_field_eq "1" log_count "${DATA}"
