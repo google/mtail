@@ -102,7 +102,7 @@ func TestDoOrTimeout(t *testing.T) {
 			return false, nil
 		}
 		return true, nil
-	}, 10*time.Millisecond, time.Millisecond)
+	}, 100*time.Millisecond, time.Millisecond)
 	if !ok || err != nil {
 		t.Errorf("Expected OK, got %v, %v", ok, err)
 	}
