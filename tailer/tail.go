@@ -141,11 +141,17 @@ func (t *Tailer) hasHandle(pathname string) bool {
 }
 
 // AddPattern adds a pattern to the list of patterns to filter filenames against.
-func (t *Tailer) AddPattern(pattern string) {
-	glog.V(2).Infof("AddPattern: %s", pattern)
+func (t *Tailer) AddPattern(pattern string) error {
+	absPath, err := filepath.Abs(pattern)
+	if err != nil {
+		glog.V(2).Infof("Couldn't canonicalize path %q: %s", pattern, err)
+		return err
+	}
+	glog.V(2).Infof("AddPattern: %s", absPath)
 	t.globPatternsMu.Lock()
-	t.globPatterns[pattern] = struct{}{}
+	t.globPatterns[absPath] = struct{}{}
 	t.globPatternsMu.Unlock()
+	return nil
 }
 
 // TailPattern registers a pattern to be tailed.  If pattern is a plain
@@ -153,7 +159,9 @@ func (t *Tailer) AddPattern(pattern string) {
 // all paths that match the glob are opened and watched, and the directories
 // containing those matches, if any, are watched.
 func (t *Tailer) TailPattern(pattern string) error {
-	t.AddPattern(pattern)
+	if err := t.AddPattern(pattern); err != nil {
+		return err
+	}
 	// Add a watch on the containing directory, so we know when a rotation
 	// occurs or something shows up that matches this pattern.
 	if err := t.watchDirname(pattern); err != nil {
