@@ -451,6 +451,8 @@ bug!)
     triggered.
 *   `float(x)`, a function of one argument that performs type conversion to
     floating point numbers. The same rules apply as for `int()` above.
+*   `string(x)`, a function of one argument that performs conversion to string
+    values.
 *   `strtol(x, y)`, a function of two arguments, which converts a string `x` to
     an integer using base `y`. Useful for translating octal or hexadecimal
     values in log messages.
