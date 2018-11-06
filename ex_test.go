@@ -120,6 +120,11 @@ var exampleProgramTests = []struct {
 		"testdata/stringy.log",
 		"testdata/stringy.golden",
 	},
+	{
+		"examples/ip-addr.mtail",
+		"testdata/ip-addr.log",
+		"testdata/ip-addr.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {

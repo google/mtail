@@ -1,0 +1,8 @@
+text ipaddr
+
+# To make ex_test.go happy
+strptime("2018-11-06T07:26:02Z", "2006-01-02T15:04:05Z07:00")
+
+/ip address (\d+\.\d+\.\d+\.\d+)/ {
+    ipaddr = $1
+}
