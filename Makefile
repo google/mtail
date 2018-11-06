@@ -11,7 +11,7 @@ timeout := 5m
 endif
 # Let the benchmarks run for a long time.  The timeout is for the total time of
 # all benchmarks, not per bench.
-benchtimeout := 10m
+benchtimeout := 20m
 
 GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
