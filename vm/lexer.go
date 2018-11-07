@@ -633,7 +633,7 @@ func lexDecorator(l *lexer) stateFn {
 Loop:
 	for {
 		switch r := l.next(); {
-		case isAlnum(r):
+		case isAlnum(r) || r == '_':
 			l.accept()
 		default:
 			l.backup()

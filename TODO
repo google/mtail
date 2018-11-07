@@ -43,3 +43,17 @@ X Use capture group references to feed back to declaring regular expression,
 X     noting unused caprefs,
 X     possibly flipping back to noncapturing (and renumbering the caprefs?)
         X -> unlikely to implement, probably won't impact regexp speed
+
+When using a const by itself as a match condition, then we get warnings about
+    the capture group names not existing.
+    const A /(?<a>.*)/
+    A {
+      x[$a]++
+    }
+    ... => $a not defined in scope.
+
+
+Can't define string constants, like const STRPTIME_FORMAT "Jan _2"
+
+Multline const can't startwith a newline, must be const FOO // +\n...
+    
