@@ -135,6 +135,11 @@ var exampleProgramTests = []struct {
 		"testdata/vsftpd_xferlog",
 		"testdata/vsftpd_xferlog.golden",
 	},
+	{
+		"examples/lighttpd.mtail",
+		"testdata/lighttpd_access.log",
+		"testdata/lighttpd_accesslog.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
