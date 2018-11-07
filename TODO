@@ -56,4 +56,7 @@ When using a const by itself as a match condition, then we get warnings about
 Can't define string constants, like const STRPTIME_FORMAT "Jan _2"
 
 Multline const can't startwith a newline, must be const FOO // +\n...
+
+Can't chain two matches in same expresison like getfilename() =~ 'name' &&
+    EXPR_RE because $0 is redefined
     
