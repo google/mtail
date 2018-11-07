@@ -125,6 +125,16 @@ var exampleProgramTests = []struct {
 		"testdata/ip-addr.log",
 		"testdata/ip-addr.golden",
 	},
+	{
+		"examples/vsftpd.mtail",
+		"testdata/vsftpd_log",
+		"testdata/vsftpd_log.golden",
+	},
+	{
+		"examples/vsftpd.mtail",
+		"testdata/vsftpd_xferlog",
+		"testdata/vsftpd_xferlog.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {

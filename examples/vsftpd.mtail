@@ -1,0 +1,117 @@
+# A mtail module for monitoring vsftpd logs
+#
+# Configure your vsftpd to write the xferlog as well as vsftpd.log
+
+hidden text direction
+counter bytes_transferred by direction
+counter transfer_time by direction
+counter transfers by direction
+
+counter connects
+counter logins
+counter uploads
+counter commands by command
+counter responses by response
+
+hidden gauge sessions by client
+counter session_time
+
+def vsftpd_timestamp {
+  # Mon Feb 21 15:21:32 2011
+  /^\w+\s(?P<date>\w+\s+\d+\s\d+:\d+:\d+\s\d+)/ {
+    strptime($date, "Jan _2 15:04:05 2006")
+    next
+  }
+}
+
+const XFERLOG_RE // +
+    # e.g. 1 172.18.115.36 528
+    # time spent transferring
+    /\s(?P<transfertime>\d+)/ +
+    # remote host
+    /\s\d+\.\d+\.\d+\.\d+/ +
+    # bytes transferred
+    /\s(?P<bytestransferred>\d+)/ +
+    # filename
+    /\s(?P<filename>\S+)/ +
+    # e.g. b _ i a anonymous@ ftp 0 * c
+    # transfertype
+    /\s\S/ +
+    # special action flag
+    /\s\S/ +
+    # direction
+    /\s(?P<direction>\S)/ +
+    # access mode
+    /\s\S/ +
+    # username
+    /\s\S+/ +
+    # service name
+    /\s\S+/ +
+    # authentication method
+    /\s\d/ +
+    # authenticated id
+    /\s\S+/ +
+    # completion status
+    /\s(?P<completionstatus>\S)/
+
+const VSFTPD_LOG_RE // +
+    / \[pid \d+\]/ +
+    /( \[\w+\])?/ +
+    / (?P<command>CONNECT|OK LOGIN|OK UPLOAD|FTP (command|response)):/ +
+    / Client "(?P<client>\d+\.\d+\.\d+\.\d+)"/ +
+    /(, (?P<payload>.*))?/
+
+const PAYLOAD_RESPONSE_RE /^"(\d{3})[" -]/
+const PAYLOAD_COMMAND_RE /^"(\w{4})[" -]/
+
+
+@vsftpd_timestamp {
+  getfilename() =~ /xferlog/ {
+    // + XFERLOG_RE {
+      # Handles log entries from the wuftpd format xferlog.
+      $direction == "i" {
+        direction = "incoming"
+      }
+      $direction == "o" {
+        direction = "outgoing"
+      }
+      $completionstatus == "c" {
+        transfers[direction]++
+      }
+      transfer_time[direction] += $transfertime
+      bytes_transferred[direction] += $bytestransferred
+    }
+  }
+  
+  getfilename() =~ /vsftpd.log/ {
+    // + VSFTPD_LOG_RE {
+      # Handle vsftpd.log log file."""
+      $command == "CONNECT" {
+        sessions[$client] = timestamp()
+        del sessions[$client] after 168h
+        connects++
+      }
+      $command == "OK LOGIN" {
+        logins++
+      }
+      $command == "OK UPLOAD" {
+        uploads++
+      }
+      $command == "FTP command" {
+        $payload =~ // + PAYLOAD_COMMAND_RE {
+          commands[$1]++
+          
+          $1 == "QUIT" {
+            session_time += timestamp() - sessions[$client]
+            del sessions[$client]
+          }
+        }
+      }
+      $command == "FTP response" {
+        $payload =~ // + PAYLOAD_RESPONSE_RE {
+          responses[$1]++
+        }
+      }
+    }
+  }
+}

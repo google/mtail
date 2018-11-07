@@ -1,0 +1,9 @@
+counter transfers {direction=incoming} 10 2011-02-21T15:41:15Z
+counter transfer_time {direction=incoming} 10 2011-02-21T15:41:15Z
+counter bytes_transferred {direction=incoming} 6404 2011-02-21T15:41:15Z
+counter connects
+counter logins
+counter uploads
+counter session_time
+counter commands {command=}
+counter responses {response=}
