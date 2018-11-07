@@ -36,15 +36,15 @@
   "Syntax table used while in `mtail-mode'.")
 
 (defconst mtail-mode-types
-  '("counter" "gauge")
+  '("counter" "gauge" "text" "timer")
   "All types in the mtail language.  Used for font locking.")
 
 (defconst mtail-mode-keywords
-  '("as" "by" "const" "hidden" "def" "next")
+  '("after" "as" "by" "const" "def" "del" "else" "hidden" "next" "otherwise")
   "All keywords in the mtail language.  Used for font locking.")
 
 (defconst mtail-mode-builtins
-  '("len" "strptime" "timestamp")
+  '("bool" "float" "getfilename" "int" "len" "settime" "string" "strptime" "strtol" "timestamp" "tolower")
   "All builtins in the mtail language.  Used for font locking.")
 
 (defvar mtail-mode-font-lock-defaults
