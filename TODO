@@ -70,4 +70,9 @@ of a value before casting it.
 +			c.emit(instr{s2f, nil})
 +		} else if Equals(n.Type(), Int) {
 +			c.emit(instr{s2i, nil})
-+		}
+    +		}
+
+
+Can't set the timestamp in one line and reuse it in another; must use the
+    caching state metric pattern, hidden gauge time.
+    
