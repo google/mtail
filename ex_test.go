@@ -140,6 +140,11 @@ var exampleProgramTests = []struct {
 		"testdata/lighttpd_access.log",
 		"testdata/lighttpd_accesslog.golden",
 	},
+	{
+		"examples/mysql_slowqueries.mtail",
+		"testdata/mysql_slowqueries.log",
+		"testdata/mysql_slowqueries.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {
