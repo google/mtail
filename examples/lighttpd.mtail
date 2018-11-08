@@ -1,3 +1,6 @@
+# Copyright 2010 Google Inc. All Rights Reserved.
+# This file is available under the Apache license.
+
 # mtail module for a lighttpd server
 
 counter request by status
