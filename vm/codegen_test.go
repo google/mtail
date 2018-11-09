@@ -817,6 +817,19 @@ counter i
 		{settime, 1},
 		{setmatched, true},
 	}},
+	{"cast to self", `
+/(\d+)/ {
+settime(int($1))
+}`, []instr{
+		{match, 0},
+		{jnm, 8},
+		{setmatched, false},
+		{push, 0},
+		{capref, 1},
+		{s2i, nil},
+		{settime, 1},
+		{setmatched, true},
+	}},
 }
 
 func TestCodegen(t *testing.T) {

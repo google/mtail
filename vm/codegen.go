@@ -499,6 +499,8 @@ func (c *codegen) emitConversion(inType, outType Type) error {
 		c.emit(instr{op: i2s})
 	} else if Equals(Pattern, inType) && Equals(Bool, outType) {
 		// nothing, pattern is implicit bool
+	} else if Equals(inType, outType) {
+		// Nothing; no-op.
 	} else {
 		return errors.Errorf("can't convert %q to %q", inType, outType)
 	}
