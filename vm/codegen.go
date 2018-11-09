@@ -203,6 +203,25 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		c.emit(instr{push, rn.index})
 		// n.sym.addr is the capture group offset
 		c.emit(instr{capref, n.sym.Addr})
+		if Equals(n.Type(), Float) {
+			c.emit(instr{s2f, nil})
+		} else if Equals(n.Type(), Int) {
+			c.emit(instr{s2i, nil})
+		}
+
+	case *indexedExprNode:
+		if args, ok := n.index.(*exprlistNode); ok {
+			for _, arg := range args.children {
+				Walk(c, arg)
+				if Equals(arg.Type(), Float) {
+					c.emit(instr{f2s, nil})
+				} else if Equals(arg.Type(), Int) {
+					c.emit(instr{i2s, nil})
+				}
+			}
+		}
+		Walk(c, n.lhs)
+		return nil
 
 	case *decoDefNode:
 		// Do nothing, defs are inlined.
