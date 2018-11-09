@@ -60,18 +60,6 @@ Multline const can't startwith a newline, must be const FOO // +\n...
 
 Can't chain two matches in same expresison like getfilename() =~ 'name' &&
     EXPR_RE because $0 is redefined
-    
-settime($1) doesn't work even if $1 is typeinf'd to Int because the vm puts the
-    capref as string on the stack.  /(\d+) / { settime($1) }  But merely
-    casting after capref is emittied is no good because currently we rely on
-    stringiness of caprefs for dimensioned metrics.  We need the usage context
-of a value before casting it.
-    +		// If the type is not string, then convert it.
-+		if Equals(n.Type(), Float) {
-+			c.emit(instr{s2f, nil})
-+		} else if Equals(n.Type(), Int) {
-+			c.emit(instr{s2i, nil})
-    +		}
 
 
 Can't set the timestamp in one line and reuse it in another; must use the
