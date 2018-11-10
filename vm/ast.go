@@ -410,3 +410,15 @@ func (n *errorNode) Pos() *position {
 func (n *errorNode) Type() Type {
 	return Error
 }
+
+type stopNode struct {
+	pos position
+}
+
+func (n *stopNode) Pos() *position {
+	return &n.pos
+}
+
+func (n *stopNode) Type() Type {
+	return None
+}

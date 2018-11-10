@@ -307,6 +307,11 @@ $foo =~ X {
   $foo =~ $bar {
   }
 }`},
+
+	{"stop", `
+// {
+  stop
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {

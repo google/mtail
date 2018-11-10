@@ -118,6 +118,10 @@ stmt
   {
     $$ = &patternFragmentDefNode{id: $2, expr: $3}
   }
+  | STOP
+  {
+    $$ = &stopNode{tokenpos(mtaillex)}
+  }
   | INVALID
   {
     $$ = &errorNode{tokenpos(mtaillex), $1}
