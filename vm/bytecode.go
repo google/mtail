@@ -11,6 +11,7 @@ type opcode int
 
 const (
 	bad        opcode = iota // Invalid instruction, indicates a bug in the generator.
+	stop                     // Stop the program, ending processing of this input.
 	match                    // Match a regular expression against input, and set the match register.
 	smatch                   // Match a regular expression against top of stack, and set the match register.
 	cmp                      // Compare two values on the stack and set the match register.
@@ -78,6 +79,7 @@ const (
 )
 
 var opNames = map[opcode]string{
+	stop:        "stop",
 	match:       "match",
 	smatch:      "smatch",
 	cmp:         "cmp",
