@@ -564,3 +564,25 @@ would mean that the datum indexed by `$session` will be removed 24 hours after t
 
 The del-after form takes any time period supported by the go
 [`time.ParseDuration`](https://golang.org/pkg/time/#ParseDuration) function.
+
+### Stopping the program
+
+The program runs from start to finish once per line, but sometimes you may want to stop the program early.  For example, if the log filename does not match a pattern, or some stateful metric indicates work shouldn't be done.
+
+For this purpose, the `stop` keyword terminates the program immediately.
+
+The simplest and most useless mtail program is thus:
+
+```
+stop
+```
+
+But for more useful situations, perhaps stopping if the log filename doesn't match a pattern:
+
+```
+getfilename() !~ /apache.access.log/ {
+  stop
+}
+
+...
+```
