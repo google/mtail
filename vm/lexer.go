@@ -77,6 +77,7 @@ var lexemeName = map[lexeme]string{
 	NOT_MATCH:       "NOT_MATCH",
 	TEXT:            "TEXT",
 	AFTER:           "AFTER",
+	STOP:            "STOP",
 }
 
 func (t lexeme) String() string {
@@ -100,6 +101,7 @@ var keywords = map[string]lexeme{
 	"hidden":    HIDDEN,
 	"next":      NEXT,
 	"otherwise": OTHERWISE,
+	"stop":      STOP,
 	"text":      TEXT,
 	"timer":     TIMER,
 }
