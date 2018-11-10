@@ -830,6 +830,22 @@ settime(int($1))
 		{settime, 1},
 		{setmatched, true},
 	}},
+	{"stop", `
+stop
+`, []instr{
+		{stop, nil},
+	}},
+	{"stop inside", `
+// {
+stop
+}
+`, []instr{
+		{match, 0},
+		{jnm, 5},
+		{setmatched, false},
+		{stop, nil},
+		{setmatched, true},
+	}},
 }
 
 func TestCodegen(t *testing.T) {

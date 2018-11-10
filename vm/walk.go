@@ -74,7 +74,7 @@ func Walk(v Visitor, node astNode) {
 	case *patternFragmentDefNode:
 		Walk(v, n.expr)
 
-	case *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *patternConstNode, *nextNode, *otherwiseNode, *delNode:
+	case *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *patternConstNode, *nextNode, *otherwiseNode, *delNode, *stopNode:
 		// These nodes are terminals, thus have no children to walk.
 
 	default:

@@ -250,6 +250,9 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 		u.newline()
 		u.emit(v.spelling)
 
+	case *stopNode:
+		u.emit("stop")
+
 	default:
 		panic(fmt.Sprintf("unparser found undefined type %T", n))
 	}

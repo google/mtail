@@ -343,3 +343,17 @@ In this example, prometheus computes a service level indicator of the ratio of
 requests at or below the target of 200ms against the total count, and then
 fires an alert if the indicator drops below nine fives.
 
+
+# Avoiding unnecessary work
+
+You can stop the program if it's fed data from a log file you know you want to ignore:
+
+```
+getfilename() !~ /apache.access.?log/ {
+  stop
+}
+```
+
+This will check to see if the input filename looks like
+`/var/log/apache/accesslog` and not attempt any further pattern matching on the
+log line if it doesn't.
