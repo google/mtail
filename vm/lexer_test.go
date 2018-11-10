@@ -66,7 +66,7 @@ var lexerTests = []lexerTest{
 		{DEC, "--", position{"operators", 0, 63, 64}},
 		{EOF, "", position{"operators", 0, 65, 65}}}},
 	{"keywords",
-		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\nafter\n", []token{
+		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\nafter\nstop\n", []token{
 			{COUNTER, "counter", position{"keywords", 0, 0, 6}},
 			{NL, "\n", position{"keywords", 1, 7, -1}},
 			{GAUGE, "gauge", position{"keywords", 1, 0, 4}},
@@ -95,7 +95,9 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position{"keywords", 13, 4, -1}},
 			{AFTER, "after", position{"keywords", 13, 0, 4}},
 			{NL, "\n", position{"keywords", 14, 5, -1}},
-			{EOF, "", position{"keywords", 14, 0, 0}}}},
+			{STOP, "stop", position{"keywords", 14, 0, 3}},
+			{NL, "\n", position{"keywords", 15, 4, -1}},
+			{EOF, "", position{"keywords", 15, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\n", []token{
 			{BUILTIN, "strptime", position{"builtins", 0, 0, 7}},

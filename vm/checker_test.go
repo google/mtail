@@ -320,6 +320,11 @@ counter i
 /.*/ {
   i--
 }`},
+	{"stop", `
+stop
+// {
+stop
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

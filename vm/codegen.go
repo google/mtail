@@ -162,6 +162,9 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 	case *floatConstNode:
 		c.emit(instr{push, n.f})
 
+	case *stopNode:
+		c.emit(instr{stop, nil})
+
 	case *idNode:
 		if n.sym.Kind != VarSymbol {
 			break

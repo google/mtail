@@ -40,7 +40,7 @@
   "All types in the mtail language.  Used for font locking.")
 
 (defconst mtail-mode-keywords
-  '("after" "as" "by" "const" "def" "del" "else" "hidden" "next" "otherwise")
+  '("after" "as" "by" "const" "def" "del" "else" "hidden" "next" "otherwise" "stop")
   "All keywords in the mtail language.  Used for font locking.")
 
 (defconst mtail-mode-builtins

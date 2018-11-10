@@ -291,6 +291,9 @@ func (v *VM) execute(t *thread, i instr) {
 		v.errorf("Invalid instruction.  Aborting.")
 		v.abort = true
 
+	case stop:
+		v.terminate = true
+
 	case match:
 		// match regex and store success
 		// Store the results in the operandth element of the stack,
