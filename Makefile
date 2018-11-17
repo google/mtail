@@ -17,9 +17,13 @@ GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
 GOTESTFILES=$(shell find . -name '*_test.go')
 
+GOGENFILES=vm/parser.go mtail/favicon.go
+
 CLEANFILES+=\
 	vm/parser.go\
 	vm/y.output\
+	mtail/favicon.go\
+	logo.ico\
 
 
 all: mtail
@@ -39,11 +43,17 @@ release := $(shell git describe --tags | cut -d"-" -f 1,2)
 GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 
 .PHONY: install mtail
-install mtail: $(GOFILES)
+install mtail: $(GOFILES) $(GOGENFILES)
 	go install -ldflags $(GO_LDFLAGS)
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
 	go generate -x ./vm
+
+logo.ico: logo.png
+	convert $< -define icon:auto-resize=64,48,32,16 $@
+
+mtail/favicon.go: logo.ico
+	go-bindata -nometadata -pkg mtail -o $@ $<
 
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
@@ -59,16 +69,16 @@ GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 #GOX_OSARCH := ""
 
 .PHONY: crossbuild
-crossbuild: install_crossbuild $(GOFILES) .dep-stamp
+crossbuild: install_crossbuild $(GOFILES) $(GOGENFILES) .dep-stamp
 	mkdir -p build
 	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS)
 
 .PHONY: test check
-check test: $(GOFILES) $(GOTESTFILES)
+check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
 	go test -timeout 10s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOTESTFILES)
+testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
 	go test -timeout ${timeout} -race -v ./...
 
 .PHONY: testex
@@ -76,7 +86,7 @@ testex:
 	go test -timeout ${timeout} -run Test.*ExamplePrograms -v
 
 .PHONY: smoke
-smoke: $(GOFILES) $(GOTESTFILES)
+smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
 	go test -timeout 1s -test.short ./...
 
 .PHONY: ex_test
@@ -84,7 +94,7 @@ ex_test: ex_test.go testdata/* examples/*
 	go test -run TestExamplePrograms --logtostderr
 
 .PHONY: bench
-bench: $(GOFILES) $(GOTESTFILES)
+bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
 	go test -bench=. -timeout=${benchtimeout} -run=XXX ./...
 
 .PHONY: bench_cpu
@@ -95,7 +105,7 @@ bench_mem:
 	go test -bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out
 
 .PHONY: recbench
-recbench: $(GOFILES) $(GOTESTFILES)
+recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
 	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: regtest
@@ -106,7 +116,7 @@ PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
 
 PHONY: coverage
 coverage: gover.coverprofile
-gover.coverprofile: $(GOFILES) $(GOTESTFILES)
+gover.coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
 	for package in $(PACKAGES); do\
 		go test -covermode=count -coverprofile=$$(echo $$package | tr './' '__').coverprofile ./$$package;\
     done
