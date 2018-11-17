@@ -17,13 +17,13 @@ GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
 GOTESTFILES=$(shell find . -name '*_test.go')
 
-GOGENFILES=vm/parser.go mtail/favicon.go
+GOGENFILES=vm/parser.go mtail/logo.ico.go
 
 CLEANFILES+=\
 	vm/parser.go\
 	vm/y.output\
-	mtail/favicon.go\
-	logo.ico\
+	mtail/logo.ico.go\
+	mtail/logo.ico\
 
 
 all: mtail
@@ -49,11 +49,11 @@ install mtail: $(GOFILES) $(GOGENFILES)
 vm/parser.go: vm/parser.y .gen-dep-stamp
 	go generate -x ./vm
 
-logo.ico: logo.png
+mtail/logo.ico: logo.png
 	convert $< -define icon:auto-resize=64,48,32,16 $@
 
-mtail/favicon.go: logo.ico
-	go-bindata -nometadata -pkg mtail -o $@ $<
+mtail/logo.ico.go: mtail/logo.ico
+	go run github.com/flazz/togo -pkg mtail -name logoFavicon -input $<
 
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build

@@ -28,3 +28,4 @@ workdir/*
 /tests/regtest
 /.pc
 /logo.ico
+/mtail/logo.ico
