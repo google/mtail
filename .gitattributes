@@ -3,6 +3,7 @@ vm/parser.go linguist-generated=true
 vm/y.output -diff -merge
 vm/y.output linguist-generated=true
 logo.png binary
+mtail/logo.ico binary
 .gitattributes export-ignore
 .gitignore export-ignore
 docs/* linguist-documentation

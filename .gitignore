@@ -27,5 +27,3 @@ workdir/*
 /.fuzz-dep-stamp
 /tests/regtest
 /.pc
-/logo.ico
-/mtail/logo.ico
