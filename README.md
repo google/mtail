@@ -11,9 +11,10 @@
 into a timeseries database or timeseries calculator for alerting and
 dashboarding.
 
-It aims to fill a niche between applications that do not export their own
-internal state, and existing monitoring systems, without patching those
-applications or rewriting the same framework for custom extraction glue code.
+It fills a monitoring niche by being the glue between applications that do not
+export their own internal state (other than via logs) and existing monitoring
+systems, such that system operators do not need to patch those applications to
+instrument them or writing custom extraction code for every such application.
 
 The extraction is controlled by [mtail programs](docs/Programming-Guide.md)
 which define patterns and actions:
