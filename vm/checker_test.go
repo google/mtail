@@ -146,7 +146,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = Check(ast)
+			ast, err = Check(ast)
 			if err == nil {
 				s := Sexp{}
 				s.emitTypes = true
@@ -336,7 +336,7 @@ func TestCheckValidPrograms(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = Check(ast)
+			ast, err = Check(ast)
 			s := Sexp{}
 			s.emitTypes = true
 			t.Log("Typed AST:\n" + s.Dump(ast))
@@ -377,17 +377,17 @@ func TestCheckTypeExpressions(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			err := Check(tc.expr)
+			ast, err := Check(tc.expr)
 			if err != nil {
 				t.Fatalf("check error: %s", err)
 			}
 
-			diff := go_cmp.Diff(tc.expected, tc.expr.Type().Root())
+			diff := go_cmp.Diff(tc.expected, ast.Type().Root())
 			if diff != "" {
 				t.Error(diff)
 				s := Sexp{}
 				s.emitTypes = true
-				t.Log("Typed AST:\n" + s.Dump(tc.expr))
+				t.Log("Typed AST:\n" + s.Dump(ast))
 			}
 		})
 	}

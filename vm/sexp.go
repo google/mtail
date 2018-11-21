@@ -49,7 +49,7 @@ func (s *Sexp) newline() {
 }
 
 // VisitBefore implements the astNode Visitor interface.
-func (s *Sexp) VisitBefore(n astNode) Visitor {
+func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
 	s.emit(fmt.Sprintf("( ;;%T ", n))
 	if s.emitTypes {
 		s.emit(fmt.Sprintf("<%s> ", n.Type()))
@@ -61,7 +61,7 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 
 	case *patternFragmentDefNode:
 		s.emit("const ")
-		Walk(s, v.id)
+		n = Walk(s, v.id)
 		s.emit(" ")
 
 	case *patternConstNode:
@@ -200,11 +200,11 @@ func (s *Sexp) VisitBefore(n astNode) Visitor {
 	default:
 		panic(fmt.Sprintf("sexp found undefined type %T", n))
 	}
-	return s
+	return s, n
 }
 
 // VisitAfter implements the astNode Visitor interface.
-func (s *Sexp) VisitAfter(node astNode) {
+func (s *Sexp) VisitAfter(node astNode) astNode {
 	switch node.(type) {
 	case *binaryExprNode:
 		s.outdent()
@@ -212,6 +212,7 @@ func (s *Sexp) VisitAfter(node astNode) {
 	s.outdent()
 	s.emit(")")
 	s.newline()
+	return node
 }
 
 // Dump begins the dumping of the syntax tree, returning the s-expression as a single string

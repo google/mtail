@@ -28,7 +28,7 @@ type codegen struct {
 // CodeGen is the function that compiles the program to bytecode and data.
 func CodeGen(name string, ast astNode) (*object, error) {
 	c := &codegen{name: name}
-	Walk(c, ast)
+	ast = Walk(c, ast)
 	c.writeJumps()
 	if len(c.errors) > 0 {
 		return nil, c.errors
@@ -62,7 +62,7 @@ func (c *codegen) pc() int {
 	return len(c.obj.prog) - 1
 }
 
-func (c *codegen) VisitBefore(node astNode) Visitor {
+func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 	switch n := node.(type) {
 
 	case *declNode:
@@ -100,7 +100,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			d, err := m.GetDatum()
 			if err != nil {
 				c.errorf(n.Pos(), "%s", err)
-				return nil
+				return nil, n
 			}
 			// Initialize to zero at the zero time.
 			switch dtyp {
@@ -110,25 +110,25 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 				datum.SetFloat(d, 0, time.Unix(0, 0))
 			default:
 				c.errorf(n.Pos(), "Can't initialize to zero a %v", n)
-				return nil
+				return nil, n
 			}
 		}
 		m.Hidden = n.hidden
 		(*n.sym).Binding = m
 		n.sym.Addr = len(c.obj.m)
 		c.obj.m = append(c.obj.m, m)
-		return nil
+		return nil, n
 
 	case *condNode:
 		lElse := c.newLabel()
 		lEnd := c.newLabel()
 		if n.cond != nil {
-			Walk(c, n.cond)
+			n.cond = Walk(c, n.cond)
 			c.emit(instr{jnm, lElse})
 		}
 		// Set matched flag false for children.
 		c.emit(instr{setmatched, false})
-		Walk(c, n.truthNode)
+		n.truthNode = Walk(c, n.truthNode)
 		// Re-set matched flag to true for rest of current block.
 		c.emit(instr{setmatched, true})
 		if n.elseNode != nil {
@@ -136,16 +136,16 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		}
 		c.setLabel(lElse)
 		if n.elseNode != nil {
-			Walk(c, n.elseNode)
+			n.elseNode = Walk(c, n.elseNode)
 		}
 		c.setLabel(lEnd)
-		return nil
+		return nil, n
 
 	case *patternExprNode:
 		re, err := regexp.Compile(n.pattern)
 		if err != nil {
 			c.errorf(n.Pos(), "%s", err)
-			return nil
+			return nil, n
 		}
 		c.obj.re = append(c.obj.re, re)
 		// Store the location of this regular expression in the patterNode
@@ -166,12 +166,12 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 		c.emit(instr{stop, nil})
 
 	case *idNode:
-		if n.sym.Kind != VarSymbol {
+		if n.sym == nil || n.sym.Kind != VarSymbol {
 			break
 		}
-		if n.sym == nil || n.sym.Binding == nil {
+		if n.sym.Binding == nil {
 			c.errorf(n.Pos(), "No metric bound to identifier %q", n.name)
-			return nil
+			return nil, n
 		}
 		c.emit(instr{mload, n.sym.Addr})
 		m := n.sym.Binding.(*metrics.Metric)
@@ -198,7 +198,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 	case *caprefNode:
 		if n.sym == nil || n.sym.Binding == nil {
 			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.name)
-			return nil
+			return nil, n
 		}
 		rn := n.sym.Binding.(*patternExprNode)
 		// rn.index contains the index of the compiled regular expression object
@@ -224,29 +224,29 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			}
 		}
 		Walk(c, n.lhs)
-		return nil
+		return nil, n
 
 	case *decoDefNode:
 		// Do nothing, defs are inlined.
-		return nil
+		return nil, n
 
 	case *decoNode:
 		// Put the current block on the stack
 		c.decos = append(c.decos, n)
 		if n.def == nil {
 			c.errorf(n.Pos(), "No definition found for decorator %q", n.name)
-			return nil
+			return nil, n
 		}
 		// then iterate over the decorator's nodes
 		Walk(c, n.def.block)
 		c.decos = c.decos[:len(c.decos)-1]
-		return nil
+		return nil, n
 
 	case *nextNode:
 		// Visit the 'next' block on the decorated block stack
 		deco := c.decos[len(c.decos)-1]
 		Walk(c, deco.block)
-		return nil
+		return nil, n
 
 	case *otherwiseNode:
 		c.emit(instr{op: otherwise})
@@ -277,7 +277,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			c.setLabel(lFalse)
 			c.emit(instr{push, false})
 			c.setLabel(lEnd)
-			return nil
+			return nil, n
 
 		case OR:
 			lTrue := c.newLabel()
@@ -291,7 +291,7 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 			c.setLabel(lTrue)
 			c.emit(instr{push, true})
 			c.setLabel(lEnd)
-			return nil
+			return nil, n
 
 		case ADD_ASSIGN:
 			if !Equals(n.Type(), Int) {
@@ -301,12 +301,12 @@ func (c *codegen) VisitBefore(node astNode) Visitor {
 
 		default:
 			// Didn't handle it, let normal walk proceed
-			return c
+			return c, n
 		}
 
 	}
 
-	return c
+	return c, node
 }
 
 var typedOperators = map[int]map[Type]opcode{
@@ -341,7 +341,7 @@ func getOpcodeForType(op int, opT Type) (opcode, error) {
 	return -1, errors.Errorf("no opcode for type %s in op %v", opT, op)
 }
 
-func (c *codegen) VisitAfter(node astNode) {
+func (c *codegen) VisitAfter(node astNode) astNode {
 	switch n := node.(type) {
 	case *builtinNode:
 		arglen := 0
@@ -356,11 +356,11 @@ func (c *codegen) VisitAfter(node astNode) {
 			// len args should be 1
 			if arglen > 1 {
 				c.errorf(n.Pos(), "too many arguments to builtin %q: %#v", n.name, n)
-				return
+				return n
 			}
 			if err := c.emitConversion(n.args.(*exprlistNode).children[0].Type(), n.Type()); err != nil {
 				c.errorf(n.Pos(), "%s on node %v", err.Error(), n)
-				return
+				return n
 			}
 
 		default:
@@ -432,25 +432,25 @@ func (c *codegen) VisitAfter(node astNode) {
 				opcode, err := getOpcodeForType(PLUS, n.Type())
 				if err != nil {
 					c.errorf(n.Pos(), "%s", err)
-					return
+					return n
 				}
 				c.emit(instr{op: opcode})
 				// And a second lhs
 				opcode, err = getOpcodeForType(ASSIGN, n.Type())
 				if err != nil {
 					c.errorf(n.Pos(), "%s", err)
-					return
+					return n
 				}
 				c.emit(instr{op: opcode})
 			default:
 				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.Type())
-				return
+				return n
 			}
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
 			opcode, err := getOpcodeForType(n.op, n.Type())
 			if err != nil {
 				c.errorf(n.Pos(), "%s", err)
-				return
+				return n
 			}
 			c.emit(instr{op: opcode})
 		case BITAND:
@@ -483,9 +483,10 @@ func (c *codegen) VisitAfter(node astNode) {
 	case *convNode:
 		if err := c.emitConversion(n.n.Type(), n.Type()); err != nil {
 			c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
-			return
+			return n
 		}
 	}
+	return node
 }
 
 func (c *codegen) emitConversion(inType, outType Type) error {

@@ -459,13 +459,14 @@ type positionCollector struct {
 	positions []*position
 }
 
-func (p *positionCollector) VisitBefore(node astNode) Visitor {
+func (p *positionCollector) VisitBefore(node astNode) (Visitor, astNode) {
 	switch n := node.(type) {
 	case *declNode, *patternConstNode:
 		p.positions = append(p.positions, n.Pos())
 	}
-	return p
+	return p, node
 }
 
-func (p *positionCollector) VisitAfter(node astNode) {
+func (p *positionCollector) VisitAfter(node astNode) astNode {
+	return node
 }

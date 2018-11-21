@@ -857,7 +857,7 @@ func TestCodegen(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Parse error: %s", err)
 			}
-			err = Check(ast)
+			ast, err = Check(ast)
 			s := Sexp{}
 			s.emitTypes = true
 			t.Log("Typed AST:\n" + s.Dump(ast))
