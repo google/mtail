@@ -6,7 +6,7 @@ package vm
 import "fmt"
 
 type compileError struct {
-	pos position
+	pos Position
 	msg string
 }
 
@@ -18,7 +18,7 @@ func (e compileError) Error() string {
 type ErrorList []*compileError
 
 // Add appends an error at a position to the list of errors.
-func (p *ErrorList) Add(pos *position, msg string) {
+func (p *ErrorList) Add(pos *Position, msg string) {
 	*p = append(*p, &compileError{*pos, msg})
 }
 

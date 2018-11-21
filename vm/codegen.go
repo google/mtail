@@ -36,7 +36,7 @@ func CodeGen(name string, ast astNode) (*object, error) {
 	return &c.obj, nil
 }
 
-func (c *codegen) errorf(pos *position, format string, args ...interface{}) {
+func (c *codegen) errorf(pos *Position, format string, args ...interface{}) {
 	e := "Internal compiler error, aborting compilation: " + fmt.Sprintf(format, args...)
 	c.errors.Add(pos, e)
 }

@@ -14,8 +14,8 @@ import (
 type testNode struct {
 }
 
-func (t testNode) Pos() *position {
-	return &position{}
+func (t testNode) Pos() *Position {
+	return &Position{}
 }
 
 func (t testNode) Type() Type {
@@ -77,7 +77,7 @@ func TestAstReplacement(t *testing.T) {
 	expected := &binaryExprNode{lhs: &intConstNode{i: 4},
 		rhs: &intConstNode{i: 5},
 		op:  PLUS}
-	diff := go_cmp.Diff(expected, a, cmpopts.IgnoreUnexported(sync.RWMutex{}, position{}), go_cmp.AllowUnexported(binaryExprNode{}, intConstNode{}))
+	diff := go_cmp.Diff(expected, a, cmpopts.IgnoreUnexported(sync.RWMutex{}), go_cmp.AllowUnexported(binaryExprNode{}, intConstNode{}))
 	if diff != "" {
 		t.Error(diff)
 		s := Sexp{}
