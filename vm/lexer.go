@@ -126,7 +126,7 @@ var builtins = []string{
 type token struct {
 	kind lexeme
 	text string
-	pos  position
+	pos  Position
 }
 
 func (t token) String() string {
@@ -183,7 +183,7 @@ func (l *lexer) nextToken() token {
 
 // emit passes a token to the client.
 func (l *lexer) emit(kind lexeme) {
-	pos := position{l.name, l.line, l.startcol, l.col - 1}
+	pos := Position{l.name, l.line, l.startcol, l.col - 1}
 	glog.V(2).Infof("Emitting %v at %v", kind, pos)
 	l.tokens <- token{kind, l.text, pos}
 	// Reset the current token
@@ -245,7 +245,7 @@ func (l *lexer) ignore() {
 
 // errorf returns an error token and resets the scanner
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
-	pos := position{l.name, l.line, l.startcol, l.col - 1}
+	pos := Position{l.name, l.line, l.startcol, l.col - 1}
 	l.tokens <- token{kind: INVALID,
 		text: fmt.Sprintf(format, args...),
 		pos:  pos}

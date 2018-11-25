@@ -417,7 +417,7 @@ func TestParseInvalidPrograms(t *testing.T) {
 var parsePositionTests = []struct {
 	name      string
 	program   string
-	positions []*position
+	positions []*Position
 }{
 	{
 		"empty",
@@ -427,12 +427,12 @@ var parsePositionTests = []struct {
 	{
 		"variable",
 		`counter foo`,
-		[]*position{{"variable", 0, 8, 10}},
+		[]*Position{{"variable", 0, 8, 10}},
 	},
 	{
 		"pattern",
 		`const ID /foo/`,
-		[]*position{{"pattern", 0, 6, 13}},
+		[]*Position{{"pattern", 0, 6, 13}},
 	},
 }
 
@@ -447,7 +447,7 @@ func TestParsePositionTests(t *testing.T) {
 			}
 			p := &positionCollector{}
 			Walk(p, ast)
-			diff := go_cmp.Diff(tc.positions, p.positions, go_cmp.AllowUnexported(position{}))
+			diff := go_cmp.Diff(tc.positions, p.positions, go_cmp.AllowUnexported(Position{}))
 			if diff != "" {
 				t.Error(diff)
 			}
@@ -456,16 +456,17 @@ func TestParsePositionTests(t *testing.T) {
 }
 
 type positionCollector struct {
-	positions []*position
+	positions []*Position
 }
 
-func (p *positionCollector) VisitBefore(node astNode) Visitor {
+func (p *positionCollector) VisitBefore(node astNode) (Visitor, astNode) {
 	switch n := node.(type) {
 	case *declNode, *patternConstNode:
 		p.positions = append(p.positions, n.Pos())
 	}
-	return p
+	return p, node
 }
 
-func (p *positionCollector) VisitAfter(node astNode) {
+func (p *positionCollector) VisitAfter(node astNode) astNode {
+	return node
 }

@@ -11,7 +11,7 @@ import (
 )
 
 type astNode interface {
-	Pos() *position // Returns the position of the node from the original source
+	Pos() *Position // Returns the position of the node from the original source
 	Type() Type     // Returns the type of the expression in this node
 }
 
@@ -20,7 +20,7 @@ type stmtlistNode struct {
 	children []astNode
 }
 
-func (n *stmtlistNode) Pos() *position {
+func (n *stmtlistNode) Pos() *Position {
 	return mergepositionlist(n.children)
 }
 
@@ -35,7 +35,7 @@ type exprlistNode struct {
 	typ   Type
 }
 
-func (n *exprlistNode) Pos() *position {
+func (n *exprlistNode) Pos() *Position {
 	return mergepositionlist(n.children)
 }
 
@@ -58,7 +58,7 @@ type condNode struct {
 	s         *Scope // a conditional expression can cause new variables to be defined
 }
 
-func (n *condNode) Pos() *position {
+func (n *condNode) Pos() *Position {
 	return mergepositionlist([]astNode{n.cond, n.truthNode, n.elseNode})
 }
 
@@ -67,14 +67,14 @@ func (n *condNode) Type() Type {
 }
 
 type idNode struct {
-	pos    position
+	pos    Position
 	name   string
 	sym    *Symbol
 	lvalue bool // If set, then this node appears on the left side of an
 	// assignment and needs to have its address taken only.
 }
 
-func (n *idNode) Pos() *position {
+func (n *idNode) Pos() *Position {
 	return &n.pos
 }
 
@@ -86,13 +86,13 @@ func (n *idNode) Type() Type {
 }
 
 type caprefNode struct {
-	pos     position
+	pos     Position
 	name    string
 	isNamed bool // true if the capref is a named reference, not positional
 	sym     *Symbol
 }
 
-func (n *caprefNode) Pos() *position {
+func (n *caprefNode) Pos() *Position {
 	return &n.pos
 }
 
@@ -104,7 +104,7 @@ func (n *caprefNode) Type() Type {
 }
 
 type builtinNode struct {
-	pos  position
+	pos  Position
 	name string
 	args astNode
 
@@ -112,7 +112,7 @@ type builtinNode struct {
 	typ   Type
 }
 
-func (n *builtinNode) Pos() *position {
+func (n *builtinNode) Pos() *Position {
 	return &n.pos
 }
 
@@ -136,7 +136,7 @@ type binaryExprNode struct {
 	typ   Type
 }
 
-func (n *binaryExprNode) Pos() *position {
+func (n *binaryExprNode) Pos() *Position {
 	return MergePosition(n.lhs.Pos(), n.rhs.Pos())
 }
 
@@ -153,7 +153,7 @@ func (n *binaryExprNode) SetType(t Type) {
 }
 
 type unaryExprNode struct {
-	pos  position // pos is the position of the op
+	pos  Position // pos is the position of the op
 	expr astNode
 	op   int
 
@@ -161,7 +161,7 @@ type unaryExprNode struct {
 	typ   Type
 }
 
-func (n *unaryExprNode) Pos() *position {
+func (n *unaryExprNode) Pos() *Position {
 	return MergePosition(&n.pos, n.expr.Pos())
 }
 
@@ -184,7 +184,7 @@ type indexedExprNode struct {
 	typ   Type
 }
 
-func (n *indexedExprNode) Pos() *position {
+func (n *indexedExprNode) Pos() *Position {
 	return MergePosition(n.lhs.Pos(), n.index.Pos())
 }
 
@@ -201,7 +201,7 @@ func (n *indexedExprNode) SetType(t Type) {
 }
 
 type declNode struct {
-	pos          position
+	pos          Position
 	name         string
 	hidden       bool
 	keys         []string
@@ -210,7 +210,7 @@ type declNode struct {
 	sym          *Symbol
 }
 
-func (n *declNode) Pos() *position {
+func (n *declNode) Pos() *Position {
 	return &n.pos
 }
 
@@ -222,11 +222,11 @@ func (n *declNode) Type() Type {
 }
 
 type stringConstNode struct {
-	pos  position
+	pos  Position
 	text string
 }
 
-func (n *stringConstNode) Pos() *position {
+func (n *stringConstNode) Pos() *Position {
 	return &n.pos
 }
 func (n *stringConstNode) Type() Type {
@@ -234,11 +234,11 @@ func (n *stringConstNode) Type() Type {
 }
 
 type intConstNode struct {
-	pos position
+	pos Position
 	i   int64
 }
 
-func (n *intConstNode) Pos() *position {
+func (n *intConstNode) Pos() *Position {
 	return &n.pos
 }
 func (n *intConstNode) Type() Type {
@@ -246,11 +246,11 @@ func (n *intConstNode) Type() Type {
 }
 
 type floatConstNode struct {
-	pos position
+	pos Position
 	f   float64
 }
 
-func (n *floatConstNode) Pos() *position {
+func (n *floatConstNode) Pos() *Position {
 	return &n.pos
 }
 func (n *floatConstNode) Type() Type {
@@ -264,7 +264,7 @@ type patternExprNode struct {
 	index   int    // reference to the compiled object offset after codegen
 }
 
-func (n *patternExprNode) Pos() *position {
+func (n *patternExprNode) Pos() *Position {
 	return n.expr.Pos()
 }
 
@@ -274,11 +274,11 @@ func (n *patternExprNode) Type() Type {
 
 // patternConstNode holds inline constant pattern fragments
 type patternConstNode struct {
-	pos     position
+	pos     Position
 	pattern string
 }
 
-func (n *patternConstNode) Pos() *position {
+func (n *patternConstNode) Pos() *Position {
 	return &n.pos
 }
 
@@ -294,7 +294,7 @@ type patternFragmentDefNode struct {
 	pattern string  // If not empty, contains the complete evaluated pattern of the expr
 }
 
-func (n *patternFragmentDefNode) Pos() *position {
+func (n *patternFragmentDefNode) Pos() *Position {
 	return n.id.Pos()
 }
 
@@ -303,14 +303,14 @@ func (n *patternFragmentDefNode) Type() Type {
 }
 
 type decoDefNode struct {
-	pos   position
+	pos   Position
 	name  string
 	block astNode
 	sym   *Symbol
 	scope *Scope
 }
 
-func (n *decoDefNode) Pos() *position {
+func (n *decoDefNode) Pos() *Position {
 	return MergePosition(&n.pos, n.block.Pos())
 }
 
@@ -322,14 +322,14 @@ func (n *decoDefNode) Type() Type {
 }
 
 type decoNode struct {
-	pos   position
+	pos   Position
 	name  string
 	block astNode
 	def   *decoDefNode
 	scope *Scope
 }
 
-func (n *decoNode) Pos() *position {
+func (n *decoNode) Pos() *Position {
 	return MergePosition(&n.pos, n.block.Pos())
 }
 
@@ -338,10 +338,10 @@ func (n *decoNode) Type() Type {
 }
 
 type nextNode struct {
-	pos position
+	pos Position
 }
 
-func (n *nextNode) Pos() *position {
+func (n *nextNode) Pos() *Position {
 	return &n.pos
 }
 
@@ -350,10 +350,10 @@ func (n *nextNode) Type() Type {
 }
 
 type otherwiseNode struct {
-	pos position
+	pos Position
 }
 
-func (n *otherwiseNode) Pos() *position {
+func (n *otherwiseNode) Pos() *Position {
 	return &n.pos
 }
 
@@ -362,12 +362,12 @@ func (n *otherwiseNode) Type() Type {
 }
 
 type delNode struct {
-	pos    position
+	pos    Position
 	n      astNode
 	expiry time.Duration
 }
 
-func (d *delNode) Pos() *position {
+func (d *delNode) Pos() *Position {
 	return &d.pos
 }
 
@@ -382,7 +382,7 @@ type convNode struct {
 	typ Type
 }
 
-func (n *convNode) Pos() *position {
+func (n *convNode) Pos() *Position {
 	return n.n.Pos()
 }
 
@@ -399,11 +399,11 @@ func (n *convNode) SetType(t Type) {
 }
 
 type errorNode struct {
-	pos      position
+	pos      Position
 	spelling string
 }
 
-func (n *errorNode) Pos() *position {
+func (n *errorNode) Pos() *Position {
 	return &n.pos
 }
 
@@ -412,10 +412,10 @@ func (n *errorNode) Type() Type {
 }
 
 type stopNode struct {
-	pos position
+	pos Position
 }
 
-func (n *stopNode) Pos() *position {
+func (n *stopNode) Pos() *Position {
 	return &n.pos
 }
 

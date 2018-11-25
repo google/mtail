@@ -33,14 +33,14 @@ type parser struct {
 	errors ErrorList
 	l      *lexer
 	t      token    // Most recently lexed token.
-	pos    position // Optionally contains the position of the start of a production
+	pos    Position // Optionally contains the position of the start of a production
 }
 
 func newParser(name string, input io.Reader) *parser {
 	return &parser{name: name, l: newLexer(name, input)}
 }
 
-func (p *parser) ErrorP(s string, pos *position) {
+func (p *parser) ErrorP(s string, pos *Position) {
 	p.errors.Add(pos, s)
 }
 

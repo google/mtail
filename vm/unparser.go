@@ -44,7 +44,7 @@ func (u *Unparser) newline() {
 }
 
 // VisitBefore implements the astNode Visitor interface.
-func (u *Unparser) VisitBefore(n astNode) Visitor {
+func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 	if u.emitTypes {
 		u.emit(fmt.Sprintf("<%s>(", n.Type()))
 	}
@@ -259,11 +259,12 @@ func (u *Unparser) VisitBefore(n astNode) Visitor {
 	if u.emitTypes {
 		u.emit(")")
 	}
-	return nil
+	return nil, n
 }
 
 // VisitAfter implements the astNode Visitor interface.
-func (u *Unparser) VisitAfter(n astNode) {
+func (u *Unparser) VisitAfter(n astNode) astNode {
+	return n
 }
 
 // Unparse begins the unparsing of the syntax tree, returning the program text as a single string.

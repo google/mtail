@@ -146,7 +146,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = Check(ast)
+			ast, err = Check(ast)
 			if err == nil {
 				s := Sexp{}
 				s.emitTypes = true
@@ -336,7 +336,7 @@ func TestCheckValidPrograms(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = Check(ast)
+			ast, err = Check(ast)
 			s := Sexp{}
 			s.emitTypes = true
 			t.Log("Typed AST:\n" + s.Dump(ast))
@@ -353,20 +353,20 @@ var checkerTypeExpressionTests = []struct {
 	expected Type
 }{
 	{"Int + Int -> Int",
-		&binaryExprNode{lhs: &intConstNode{position{}, 1},
-			rhs: &intConstNode{position{}, 1},
+		&binaryExprNode{lhs: &intConstNode{i: 1},
+			rhs: &intConstNode{i: 1},
 			op:  PLUS},
 		Int,
 	},
 	{"Int + Float -> Float",
-		&binaryExprNode{lhs: &intConstNode{position{}, 1},
-			rhs: &floatConstNode{position{}, 1.0},
+		&binaryExprNode{lhs: &intConstNode{i: 1},
+			rhs: &floatConstNode{f: 1.0},
 			op:  PLUS},
 		Float,
 	},
 	{"⍺ + Float -> Float",
-		&binaryExprNode{lhs: &idNode{pos: position{}, sym: &Symbol{Name: "i", Kind: VarSymbol, Type: NewTypeVariable()}},
-			rhs: &caprefNode{pos: position{}, sym: &Symbol{Kind: CaprefSymbol, Type: Float}},
+		&binaryExprNode{lhs: &idNode{sym: &Symbol{Name: "i", Kind: VarSymbol, Type: NewTypeVariable()}},
+			rhs: &caprefNode{sym: &Symbol{Kind: CaprefSymbol, Type: Float}},
 			op:  PLUS},
 		Float,
 	},
@@ -377,17 +377,17 @@ func TestCheckTypeExpressions(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			err := Check(tc.expr)
+			ast, err := Check(tc.expr)
 			if err != nil {
 				t.Fatalf("check error: %s", err)
 			}
 
-			diff := go_cmp.Diff(tc.expected, tc.expr.Type().Root())
+			diff := go_cmp.Diff(tc.expected, ast.Type().Root())
 			if diff != "" {
 				t.Error(diff)
 				s := Sexp{}
 				s.emitTypes = true
-				t.Log("Typed AST:\n" + s.Dump(tc.expr))
+				t.Log("Typed AST:\n" + s.Dump(ast))
 			}
 		})
 	}
