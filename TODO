@@ -19,7 +19,7 @@ but jnm 13 is from the condExpr and the previous is from a comparison binary
     expr; an optimizer is needed to collapse the bytecode to undersand that
     cmp, jm, push, jump, push, jnm in sequence like so is the same as a cmp, jm
 and we need to worry about the jump table too
--  reversed casts: s2i,i2s pairs as well
+  reversed casts: s2i,i2s pairs as well
 
 
 count stack size and preallocate stack
@@ -35,8 +35,8 @@ GC in the tailer to remove handles on files that haven't been updated in 24h,
 
 
 Add coverage from regtest
-- perhaps with https://blog.cloudflare.com/go-coverage-with-external-tests/
-- or just a flag to mtail?
+ perhaps with https://blog.cloudflare.com/go-coverage-with-external-tests/
+ or just a flag to mtail?
 
 # Won't do
 
