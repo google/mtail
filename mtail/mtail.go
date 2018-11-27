@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/exporter"
+	"github.com/google/mtail/internal/exporter"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/tailer"
