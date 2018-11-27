@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/watcher"
+	"github.com/google/mtail/internal/watcher"
 
 	"github.com/spf13/afero"
 )

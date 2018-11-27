@@ -18,7 +18,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/watcher"
+	"github.com/google/mtail/internal/watcher"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )

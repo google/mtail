@@ -17,11 +17,11 @@ GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
 GOTESTFILES=$(shell find . -name '*_test.go')
 
-GOGENFILES=vm/parser.go mtail/logo.ico.go
+GOGENFILES=internal/vm/parser.go mtail/logo.ico.go
 
 CLEANFILES+=\
-	vm/parser.go\
-	vm/y.output\
+	internal/vm/parser.go\
+	internal/vm/y.output\
 	mtail/logo.ico.go\
 	mtail/logo.ico\
 
@@ -46,8 +46,8 @@ GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 install mtail: $(GOFILES) $(GOGENFILES)
 	go install -ldflags $(GO_LDFLAGS) ./cmd/mtail
 
-vm/parser.go: vm/parser.y .gen-dep-stamp
-	go generate -x ./vm
+internal/vm/parser.go: internal/vm/parser.y .gen-dep-stamp
+	go generate -x ./internal/vm
 
 mtail/logo.ico: logo.png
 	convert $< -define icon:auto-resize=64,48,32,16 $@
@@ -137,7 +137,7 @@ install_deps: .dep-stamp
 IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
 TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
 
-.dep-stamp: vm/parser.go
+.dep-stamp: internal/vm/parser.go
 	@echo "Install all dependencies, ensuring they're updated"
 	go get -u -v $(IMPORTS)
 	go get -u -v $(TESTIMPORTS)
@@ -151,7 +151,7 @@ install_gen_deps: .gen-dep-stamp
 	touch $@
 
 .PHONY: install_coverage_deps
-install_coverage_deps: .cov-dep-stamp vm/parser.go
+install_coverage_deps: .cov-dep-stamp internal/vm/parser.go
 
 .cov-dep-stamp: install_deps
 	go get golang.org/x/tools/cmd/cover

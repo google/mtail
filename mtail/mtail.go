@@ -20,9 +20,9 @@ import (
 	"github.com/google/mtail/internal/exporter"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/tailer"
-	"github.com/google/mtail/vm"
-	"github.com/google/mtail/watcher"
+	"github.com/google/mtail/internal/tailer"
+	"github.com/google/mtail/internal/vm"
+	"github.com/google/mtail/internal/watcher"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )

@@ -28,7 +28,7 @@ import (
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/watcher"
+	"github.com/google/mtail/internal/watcher"
 )
 
 var (
