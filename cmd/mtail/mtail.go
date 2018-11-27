@@ -13,8 +13,8 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/watcher"
-	"github.com/google/mtail/mtail"
 	"github.com/spf13/afero"
 
 	_ "net/http/pprof"

@@ -17,13 +17,13 @@ GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
 GOTESTFILES=$(shell find . -name '*_test.go')
 
-GOGENFILES=internal/vm/parser.go mtail/logo.ico.go
+GOGENFILES=internal/vm/parser.go internal/mtail/logo.ico.go
 
 CLEANFILES+=\
 	internal/vm/parser.go\
 	internal/vm/y.output\
-	mtail/logo.ico.go\
-	mtail/logo.ico\
+	internal/mtail/logo.ico.go\
+	internal/mtail/logo.ico\
 
 
 all: mtail
@@ -49,10 +49,10 @@ install mtail: $(GOFILES) $(GOGENFILES)
 internal/vm/parser.go: internal/vm/parser.y .gen-dep-stamp
 	go generate -x ./internal/vm
 
-mtail/logo.ico: logo.png
+internal/mtail/logo.ico: logo.png
 	convert $< -define icon:auto-resize=64,48,32,16 $@
 
-mtail/logo.ico.go: mtail/logo.ico
+internal/mtail/logo.ico.go: internal/mtail/logo.ico
 	go run github.com/flazz/togo -pkg mtail -name logoFavicon -input $<
 
 emgen/emgen: emgen/emgen.go
@@ -193,7 +193,7 @@ export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPAT
 install-fuzz-deps: .fuzz-dep-stamp
 
 vm-fuzz.zip: .fuzz-dep-stamp $(GOFILES)
-	go-fuzz-build github.com/google/mtail/vm
+	go-fuzz-build github.com/google/mtail/internal/vm
 
 .PHONY: fuzz
 fuzz: vm-fuzz.zip
