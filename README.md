@@ -53,9 +53,14 @@ environment with version 1.9 or greater installed.  `mtail` is `go get`able and
 `go install`able from this repository but is best if you use the Makefile to
 build it.
 
+```
+go get -u github.com/google/mtail
+cd $GOPATH/src/github.com/google/mtail
+make install
+```
+
 If you develop the compiler you will need some additional tools
-like `goyacc`.  You can't `go get` the software and have it build straight away.
-Sorry.
+like `goyacc` to be able to rebuild the parser.
 
 See the [Build instructions](docs/Building.md) for more details.
 

@@ -44,7 +44,7 @@ GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 
 .PHONY: install mtail
 install mtail: $(GOFILES) $(GOGENFILES)
-	go install -ldflags $(GO_LDFLAGS)
+	go install -ldflags $(GO_LDFLAGS) ./cmd/mtail
 
 vm/parser.go: vm/parser.y .gen-dep-stamp
 	go generate -x ./vm

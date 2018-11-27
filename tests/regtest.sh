@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export GOBIN="$(mktemp -d ${TMPDIR:-/tmp}/mtail-test-binary.XXXXXXXX)"
-go install
+go install ./cmd/mtail
 export MTAIL_BIN=${GOBIN}/mtail
 trap "rm -rf $GOBIN" EXIT
 
