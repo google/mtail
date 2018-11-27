@@ -13,7 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/logline"
+	"github.com/google/mtail/internal/logline"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )

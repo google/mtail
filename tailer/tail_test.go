@@ -15,7 +15,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/mtail/logline"
+	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/watcher"
 
 	"github.com/spf13/afero"

@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/mtail/logline"
+	"github.com/google/mtail/internal/logline"
 	"github.com/spf13/afero"
 )
 

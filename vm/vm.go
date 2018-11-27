@@ -19,7 +19,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
-	"github.com/google/mtail/logline"
+	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/metrics"
 	"github.com/google/mtail/metrics/datum"
 
