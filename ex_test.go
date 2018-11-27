@@ -14,9 +14,9 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
 	"github.com/google/mtail/mtail"
-	"github.com/google/mtail/testutil"
 	"github.com/spf13/afero"
 )
 
