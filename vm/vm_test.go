@@ -10,8 +10,8 @@ import (
 
 	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/metrics"
-	"github.com/google/mtail/metrics/datum"
+	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/metrics/datum"
 )
 
 var instructions = []struct {

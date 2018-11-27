@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/mtail/metrics/datum"
+	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/pkg/errors"
 )
 

@@ -6,7 +6,7 @@ package vm
 import (
 	"regexp"
 
-	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/internal/metrics"
 )
 
 // object describes a built object of data and bytecode

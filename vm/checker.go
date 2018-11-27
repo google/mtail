@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/internal/metrics"
 )
 
 // checker holds data for a semantic checker

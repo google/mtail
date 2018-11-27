@@ -15,7 +15,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/mtail/metrics/datum"
+	"github.com/google/mtail/internal/metrics/datum"
 )
 
 func TestKindType(t *testing.T) {

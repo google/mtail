@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/internal/metrics"
 )
 
 // Unparser is for converting program syntax trees back to program text.

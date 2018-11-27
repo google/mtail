@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/internal/metrics"
 )
 
 type astNode interface {

@@ -19,7 +19,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/exporter"
 	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/tailer"
 	"github.com/google/mtail/vm"
 	"github.com/google/mtail/watcher"

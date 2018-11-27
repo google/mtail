@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/mtail/metrics/datum"
+	"github.com/google/mtail/internal/metrics/datum"
 )
 
 func TestMatchingKind(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/mtail/metrics"
-	"github.com/google/mtail/metrics/datum"
+	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/metrics/datum"
 )
 
 var expectedMetrics = map[string][]*metrics.Metric{

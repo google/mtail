@@ -8,7 +8,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/google/mtail/metrics"
+	"github.com/google/mtail/internal/metrics"
 )
 
 var (

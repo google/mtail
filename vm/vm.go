@@ -20,8 +20,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/metrics"
-	"github.com/google/mtail/metrics/datum"
+	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/metrics/datum"
 
 	"github.com/golang/groupcache/lru"
 )

@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/metrics"
-	"github.com/google/mtail/metrics/datum"
+	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/metrics/datum"
 )
 
 var varRe = regexp.MustCompile(`^(counter|gauge|timer|text) ([^ ]+)(?: {([^}]+)})?(?: (\S+))?(?: (.+))?`)
