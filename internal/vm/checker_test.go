@@ -9,6 +9,7 @@ import (
 
 	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
 )
 
@@ -366,8 +367,8 @@ var checkerTypeExpressionTests = []struct {
 		types.Float,
 	},
 	{"⍺ + Float -> Float",
-		&binaryExprNode{lhs: &idNode{sym: &Symbol{Name: "i", Kind: VarSymbol, Type: types.NewTypeVariable()}},
-			rhs: &caprefNode{sym: &Symbol{Kind: CaprefSymbol, Type: types.Float}},
+		&binaryExprNode{lhs: &idNode{sym: &symtab.Symbol{Name: "i", Kind: symtab.VarSymbol, Type: types.NewTypeVariable()}},
+			rhs: &caprefNode{sym: &symtab.Symbol{Kind: symtab.CaprefSymbol, Type: types.Float}},
 			op:  PLUS},
 		types.Float,
 	},

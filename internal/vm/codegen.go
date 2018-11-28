@@ -12,6 +12,7 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/vm/position"
+	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
 	"github.com/pkg/errors"
 )
@@ -168,7 +169,7 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 		c.emit(instr{stop, nil})
 
 	case *idNode:
-		if n.sym == nil || n.sym.Kind != VarSymbol {
+		if n.sym == nil || n.sym.Kind != symtab.VarSymbol {
 			break
 		}
 		if n.sym.Binding == nil {

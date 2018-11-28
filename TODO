@@ -48,12 +48,12 @@ X     possibly flipping back to noncapturing (and renumbering the caprefs?)
 
 vm tree refactoring
 
-source position
-symbol table
+source position x
+symbol table x
 
 ast
 
-type system
+type system x
 
 bytecode
 metric definition

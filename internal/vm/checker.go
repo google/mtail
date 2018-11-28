@@ -11,14 +11,15 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
 )
 
 // checker holds data for a semantic checker
 type checker struct {
-	scope *Scope // the current scope
+	scope *symtab.Scope // the current scope
 
-	decoScopes []*Scope // A stack of scopes used for resolving symbols in decorated nodes
+	decoScopes []*symtab.Scope // A stack of scopes used for resolving symbols in decorated nodes
 
 	errors ErrorList
 }
@@ -42,18 +43,18 @@ func (c *checker) VisitBefore(node astNode) (Visitor, astNode) {
 	switch n := node.(type) {
 
 	case *stmtlistNode:
-		n.s = NewScope(c.scope)
+		n.s = symtab.NewScope(c.scope)
 		c.scope = n.s
 		return c, n
 
 	case *condNode:
-		n.s = NewScope(c.scope)
+		n.s = symtab.NewScope(c.scope)
 		c.scope = n.s
 		return c, n
 
 	case *caprefNode:
 		if n.sym == nil {
-			if sym := c.scope.Lookup(n.name, CaprefSymbol); sym == nil {
+			if sym := c.scope.Lookup(n.name, symtab.CaprefSymbol); sym == nil {
 				msg := fmt.Sprintf("Capture group `$%s' was not defined by a regular expression visible to this scope.", n.name)
 				if n.isNamed {
 					msg = fmt.Sprintf("%s\n\tTry using `(?P<%s>...)' to name the capture group.", msg, n.name)
@@ -70,7 +71,7 @@ func (c *checker) VisitBefore(node astNode) (Visitor, astNode) {
 		return c, n
 
 	case *declNode:
-		n.sym = NewSymbol(n.name, VarSymbol, n.Pos())
+		n.sym = symtab.NewSymbol(n.name, symtab.VarSymbol, n.Pos())
 		if alt := c.scope.Insert(n.sym); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil, n
@@ -103,11 +104,11 @@ func (c *checker) VisitBefore(node astNode) (Visitor, astNode) {
 
 	case *idNode:
 		if n.sym == nil {
-			if sym := c.scope.Lookup(n.name, VarSymbol); sym != nil {
+			if sym := c.scope.Lookup(n.name, symtab.VarSymbol); sym != nil {
 				glog.V(2).Infof("found sym %v", sym)
 				sym.Used = true
 				n.sym = sym
-			} else if sym := c.scope.Lookup(n.name, PatternSymbol); sym != nil {
+			} else if sym := c.scope.Lookup(n.name, symtab.PatternSymbol); sym != nil {
 				glog.V(2).Infof("Found Sym %v", sym)
 				sym.Used = true
 				n.sym = sym
@@ -126,7 +127,7 @@ func (c *checker) VisitBefore(node astNode) (Visitor, astNode) {
 		return c, n
 
 	case *decoDefNode:
-		n.sym = NewSymbol(n.name, DecoSymbol, n.Pos())
+		n.sym = symtab.NewSymbol(n.name, symtab.DecoSymbol, n.Pos())
 		(*n.sym).Binding = n
 		if alt := c.scope.Insert(n.sym); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `%s' previously declared at %s", n.name, alt.Pos))
@@ -135,7 +136,7 @@ func (c *checker) VisitBefore(node astNode) (Visitor, astNode) {
 		return c, n
 
 	case *decoNode:
-		if sym := c.scope.Lookup(n.name, DecoSymbol); sym != nil {
+		if sym := c.scope.Lookup(n.name, symtab.DecoSymbol); sym != nil {
 			if sym.Binding == nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.name))
 				return nil, n
@@ -146,7 +147,7 @@ func (c *checker) VisitBefore(node astNode) (Visitor, astNode) {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.name, n.name))
 			return nil, n
 		}
-		n.scope = NewScope(c.scope)
+		n.scope = symtab.NewScope(c.scope)
 		// Insert all of n.def.scope into this scope
 		n.scope.CopyFrom(n.def.scope)
 		c.scope = n.scope
@@ -158,7 +159,7 @@ func (c *checker) VisitBefore(node astNode) (Visitor, astNode) {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no identifier attache to pattern fragment %#v", n))
 			return nil, n
 		}
-		n.sym = NewSymbol(id.name, PatternSymbol, id.Pos())
+		n.sym = symtab.NewSymbol(id.name, symtab.PatternSymbol, id.Pos())
 		if alt := c.scope.Insert(n.sym); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", id.name, alt.Pos))
 			return nil, n
@@ -183,7 +184,7 @@ func (c *checker) checkSymbolUsage() {
 			// Users don't have control over the patterns given from decorators
 			// so this should never be an error; but it can be useful to know
 			// if a program is doing unnecessary work.
-			if sym.Kind == CaprefSymbol {
+			if sym.Kind == symtab.CaprefSymbol {
 				if sym.Addr == 0 {
 					// Don't warn about the zeroth capture group; it's not user-defined.
 					continue
@@ -580,7 +581,7 @@ func (c *checker) checkRegex(pattern string, n astNode) {
 		// retrieve their value.  By recording them in the symbol table, we
 		// can warn the user about unknown capture group references.
 		for i, capref := range reAst.CapNames() {
-			sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
+			sym := symtab.NewSymbol(fmt.Sprintf("%d", i), symtab.CaprefSymbol, n.Pos())
 			sym.Type = types.InferCaprefType(reAst, i)
 			sym.Binding = n
 			sym.Addr = i
@@ -605,7 +606,7 @@ func (c *checker) checkRegex(pattern string, n astNode) {
 // patternEvaluator is a helper that performs concatenation of pattern
 // fragments so that they can be compiled as whole regular expression patterns.
 type patternEvaluator struct {
-	scope   *Scope
+	scope   *symtab.Scope
 	errors  *ErrorList
 	pattern string
 }

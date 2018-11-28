@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/vm/position"
+	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
 )
 
@@ -18,7 +19,7 @@ type astNode interface {
 }
 
 type stmtlistNode struct {
-	s        *Scope // Pointer to the local scope for this enclosing block
+	s        *symtab.Scope // Pointer to the local scope for this enclosing block
 	children []astNode
 }
 
@@ -57,7 +58,7 @@ type condNode struct {
 	cond      astNode
 	truthNode astNode
 	elseNode  astNode
-	s         *Scope // a conditional expression can cause new variables to be defined
+	s         *symtab.Scope // a conditional expression can cause new variables to be defined
 }
 
 func (n *condNode) Pos() *position.Position {
@@ -71,7 +72,7 @@ func (n *condNode) Type() types.Type {
 type idNode struct {
 	pos    position.Position
 	name   string
-	sym    *Symbol
+	sym    *symtab.Symbol
 	lvalue bool // If set, then this node appears on the left side of an
 	// assignment and needs to have its address taken only.
 }
@@ -91,7 +92,7 @@ type caprefNode struct {
 	pos     position.Position
 	name    string
 	isNamed bool // true if the capref is a named reference, not positional
-	sym     *Symbol
+	sym     *symtab.Symbol
 }
 
 func (n *caprefNode) Pos() *position.Position {
@@ -209,7 +210,7 @@ type declNode struct {
 	keys         []string
 	kind         metrics.Kind
 	exportedName string
-	sym          *Symbol
+	sym          *symtab.Symbol
 }
 
 func (n *declNode) Pos() *position.Position {
@@ -292,8 +293,8 @@ func (n *patternConstNode) Type() types.Type {
 type patternFragmentDefNode struct {
 	id      astNode
 	expr    astNode
-	sym     *Symbol // Optional Symbol for a named pattern
-	pattern string  // If not empty, contains the complete evaluated pattern of the expr
+	sym     *symtab.Symbol // Optional Symbol for a named pattern
+	pattern string         // If not empty, contains the complete evaluated pattern of the expr
 }
 
 func (n *patternFragmentDefNode) Pos() *position.Position {
@@ -308,8 +309,8 @@ type decoDefNode struct {
 	pos   position.Position
 	name  string
 	block astNode
-	sym   *Symbol
-	scope *Scope
+	sym   *symtab.Symbol
+	scope *symtab.Scope
 }
 
 func (n *decoDefNode) Pos() *position.Position {
@@ -328,7 +329,7 @@ type decoNode struct {
 	name  string
 	block astNode
 	def   *decoDefNode
-	scope *Scope
+	scope *symtab.Scope
 }
 
 func (n *decoNode) Pos() *position.Position {
