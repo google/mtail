@@ -10,6 +10,7 @@ import (
 	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/internal/vm/position"
+	"github.com/google/mtail/internal/vm/types"
 )
 
 type testNode struct {
@@ -19,8 +20,8 @@ func (t testNode) Pos() *position.Position {
 	return &position.Position{}
 }
 
-func (t testNode) Type() Type {
-	return None
+func (t testNode) Type() types.Type {
+	return types.None
 }
 
 type testVisitor struct {

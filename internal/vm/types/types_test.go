@@ -1,7 +1,7 @@
 // Copyright 2016 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package types
 
 import (
 	"fmt"
@@ -215,7 +215,7 @@ func TestInferCaprefType(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			r := inferCaprefType(re, 1)
+			r := InferCaprefType(re, 1)
 			if !Equals(tc.typ, r) {
 				t.Errorf("Types don't match: %q infers %v, not %v", tc.pattern, r, tc.typ)
 			}

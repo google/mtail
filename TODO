@@ -46,3 +46,23 @@ X     possibly flipping back to noncapturing (and renumbering the caprefs?)
         X -> unlikely to implement, probably won't impact regexp speed
 
 
+vm tree refactoring
+
+source position
+symbol table
+
+ast
+
+type system
+
+bytecode
+metric definition
+
+
+lexer
+parser
+checker
+tree opt
+codegen
+peephole opt
+

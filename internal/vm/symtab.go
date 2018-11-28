@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/google/mtail/internal/vm/position"
+	"github.com/google/mtail/internal/vm/types"
 )
 
 // SymbolKind enumerates the kind of a Symbol.
@@ -40,7 +41,7 @@ func (k SymbolKind) String() string {
 type Symbol struct {
 	Name    string             // identifier name
 	Kind    SymbolKind         // kind of program object
-	Type    Type               // object's type
+	Type    types.Type         // object's type
 	Pos     *position.Position // Source file position of definition
 	Binding interface{}        // binding to storage allocated in runtime
 	Addr    int                // Address offset in another structure, object specific
@@ -49,7 +50,7 @@ type Symbol struct {
 
 // NewSymbol creates a record of a given symbol kind, named name, found at loc
 func NewSymbol(name string, kind SymbolKind, pos *position.Position) (sym *Symbol) {
-	return &Symbol{name, kind, Undef, pos, nil, 0, false}
+	return &Symbol{name, kind, types.Undef, pos, nil, 0, false}
 }
 
 // Scope maintains a record of the identifiers declared in the current program

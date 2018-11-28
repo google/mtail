@@ -1,7 +1,7 @@
 // Copyright 2016 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package types
 
 import (
 	"fmt"
@@ -388,7 +388,7 @@ func LeastUpperBound(a, b Type) Type {
 
 // inferCaprefType determines a type for a capturing group, based on contents
 // of that capture group.
-func inferCaprefType(re *syntax.Regexp, cap int) Type {
+func InferCaprefType(re *syntax.Regexp, cap int) Type {
 	group := getCaptureGroup(re, cap)
 	if group == nil {
 		return None
@@ -459,7 +459,7 @@ func groupOnlyMatches(re *syntax.Regexp, s string) bool {
 }
 
 // isErrorType indicates that a given type is the result of a type error.
-func isErrorType(t Type) bool {
+func IsErrorType(t Type) bool {
 	if o, ok := t.(*TypeOperator); ok {
 		if o.Name == "Error" {
 			return true

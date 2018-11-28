@@ -9,6 +9,7 @@ import (
 
 	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/mtail/internal/vm/types"
 )
 
 var checkerInvalidPrograms = []struct {
@@ -350,25 +351,25 @@ func TestCheckValidPrograms(t *testing.T) {
 var checkerTypeExpressionTests = []struct {
 	name     string
 	expr     astNode
-	expected Type
+	expected types.Type
 }{
 	{"Int + Int -> Int",
 		&binaryExprNode{lhs: &intConstNode{i: 1},
 			rhs: &intConstNode{i: 1},
 			op:  PLUS},
-		Int,
+		types.Int,
 	},
 	{"Int + Float -> Float",
 		&binaryExprNode{lhs: &intConstNode{i: 1},
 			rhs: &floatConstNode{f: 1.0},
 			op:  PLUS},
-		Float,
+		types.Float,
 	},
 	{"⍺ + Float -> Float",
-		&binaryExprNode{lhs: &idNode{sym: &Symbol{Name: "i", Kind: VarSymbol, Type: NewTypeVariable()}},
-			rhs: &caprefNode{sym: &Symbol{Kind: CaprefSymbol, Type: Float}},
+		&binaryExprNode{lhs: &idNode{sym: &Symbol{Name: "i", Kind: VarSymbol, Type: types.NewTypeVariable()}},
+			rhs: &caprefNode{sym: &Symbol{Kind: CaprefSymbol, Type: types.Float}},
 			op:  PLUS},
-		Float,
+		types.Float,
 	},
 }
 

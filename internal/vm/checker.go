@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/vm/types"
 )
 
 // checker holds data for a semantic checker
@@ -74,27 +75,27 @@ func (c *checker) VisitBefore(node astNode) (Visitor, astNode) {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
 			return nil, n
 		}
-		var rType Type
+		var rType types.Type
 		switch n.kind {
 		case metrics.Counter, metrics.Gauge, metrics.Timer:
 			// TODO(jaq): This should be a numeric type, unless we want to
 			// enforce rules like "Counter can only be Int."
-			rType = NewTypeVariable()
+			rType = types.NewTypeVariable()
 		case metrics.Text:
-			rType = String
+			rType = types.String
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("internal compiler error: unrecognised Kind %v for declNode %v", n.kind, n))
 			return nil, n
 		}
 		if len(n.keys) > 0 {
 			// One type per key
-			keyTypes := make([]Type, 0, len(n.keys))
+			keyTypes := make([]types.Type, 0, len(n.keys))
 			for i := 0; i < len(n.keys); i++ {
-				keyTypes = append(keyTypes, NewTypeVariable())
+				keyTypes = append(keyTypes, types.NewTypeVariable())
 			}
 			// and one for the value.
 			keyTypes = append(keyTypes, rType)
-			n.sym.Type = Dimension(keyTypes...)
+			n.sym.Type = types.Dimension(keyTypes...)
 		} else {
 			n.sym.Type = rType
 		}
@@ -163,7 +164,7 @@ func (c *checker) VisitBefore(node astNode) (Visitor, astNode) {
 			return nil, n
 		}
 		n.sym.Binding = n
-		n.sym.Type = Pattern
+		n.sym.Type = types.Pattern
 		return c, n
 
 	case *delNode:
@@ -229,17 +230,17 @@ func (c *checker) VisitAfter(node astNode) astNode {
 		return n
 
 	case *binaryExprNode:
-		var rType Type
+		var rType types.Type
 		lT := n.lhs.Type()
 		switch {
-		case isErrorType(lT):
-			n.SetType(Error)
+		case types.IsErrorType(lT):
+			n.SetType(types.Error)
 			return n
 		}
 		rT := n.rhs.Type()
 		switch {
-		case isErrorType(rT):
-			n.SetType(Error)
+		case types.IsErrorType(rT):
+			n.SetType(types.Error)
 			return n
 		}
 		switch n.op {
@@ -248,31 +249,31 @@ func (c *checker) VisitAfter(node astNode) astNode {
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
-			rType = LeastUpperBound(lT, rT)
-			if isErrorType(rType) {
+			rType = types.LeastUpperBound(lT, rT)
+			if types.IsErrorType(rType) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
 				n.SetType(rType)
 				return n
 			}
 			// astType is the type signature of the ast expression
-			astType := Function(lT, rT, rType)
+			astType := types.Function(lT, rT, rType)
 
-			t := NewTypeVariable()
+			t := types.NewTypeVariable()
 			// exprType is the type signature of this expression
-			exprType := Function(t, t, t)
-			err := Unify(exprType, astType)
+			exprType := types.Function(t, t, t)
+			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
-				n.SetType(Error)
+				n.SetType(types.Error)
 				return n
 			}
 			// Implicit type conversion for non-comparisons, promoting each
 			// half to the return type of the op.
-			if !Equals(rType, lT) {
+			if !types.Equals(rType, lT) {
 				conv := &convNode{n: n.lhs, typ: rType}
 				n.lhs = conv
 			}
-			if !Equals(rType, rT) {
+			if !types.Equals(rType, rT) {
 				conv := &convNode{n: n.rhs, typ: rType}
 				n.rhs = conv
 			}
@@ -281,14 +282,14 @@ func (c *checker) VisitAfter(node astNode) astNode {
 			// bitwise
 			// O ⊢ e1 :Int, O ⊢ e2 : Int
 			// ⇒ O ⊢ e : Int
-			rType = Int
-			exprType := Function(rType, rType, rType)
-			astType := Function(lT, rT, NewTypeVariable())
-			err := Unify(exprType, astType)
+			rType = types.Int
+			exprType := types.Function(rType, rType, rType)
+			astType := types.Function(lT, rT, types.NewTypeVariable())
+			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
 				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, lT, rT))
-				n.SetType(Error)
+				n.SetType(types.Error)
 				return n
 			}
 		case LT, GT, LE, GE, EQ, NE, AND, OR:
@@ -296,29 +297,29 @@ func (c *checker) VisitAfter(node astNode) astNode {
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : Bool
-			rType = Bool
-			if isErrorType(rType) {
+			rType = types.Bool
+			if types.IsErrorType(rType) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
 				n.SetType(rType)
 				return n
 			}
-			astType := Function(lT, rT, rType)
+			astType := types.Function(lT, rT, rType)
 
-			t := LeastUpperBound(lT, rT)
-			exprType := Function(t, t, Bool)
-			err := Unify(exprType, astType)
+			t := types.LeastUpperBound(lT, rT)
+			exprType := types.Function(t, t, types.Bool)
+			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
-				n.SetType(Error)
+				n.SetType(types.Error)
 				return n
 			}
 			// Promote types if the ast types are not the same as the expression type.
-			if !Equals(t, lT) {
+			if !types.Equals(t, lT) {
 				conv := &convNode{n: n.lhs, typ: t}
 				n.lhs = conv
 				glog.V(2).Infof("Emitting convnode %+v", conv)
 			}
-			if !Equals(t, rT) {
+			if !types.Equals(t, rT) {
 				conv := &convNode{n: n.rhs, typ: t}
 				n.rhs = conv
 				glog.V(2).Infof("Emitting convnode %+v", conv)
@@ -331,11 +332,11 @@ func (c *checker) VisitAfter(node astNode) astNode {
 			glog.V(2).Infof("lt %q, rt %q", lT, rT)
 			rType = lT
 			// TODO(jaq): the rT <= lT relationship is not correctly encoded here.
-			t := LeastUpperBound(lT, rT)
-			err := Unify(rType, t)
+			t := types.LeastUpperBound(lT, rT)
+			err := types.Unify(rType, t)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
-				n.SetType(Error)
+				n.SetType(types.Error)
 				return n
 			}
 			switch v := n.lhs.(type) {
@@ -346,30 +347,30 @@ func (c *checker) VisitAfter(node astNode) astNode {
 			}
 
 		case CONCAT:
-			rType = Pattern
-			exprType := Function(rType, rType, rType)
-			astType := Function(lT, rT, NewTypeVariable())
-			err := Unify(exprType, astType)
+			rType = types.Pattern
+			exprType := types.Function(rType, rType, rType)
+			astType := types.Function(lT, rT, types.NewTypeVariable())
+			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
-				n.SetType(Error)
+				n.SetType(types.Error)
 				return n
 			}
 
 		case MATCH, NOT_MATCH:
-			rType = Bool
-			exprType := Function(NewTypeVariable(), Pattern, rType)
-			astType := Function(lT, rT, NewTypeVariable())
-			err := Unify(exprType, astType)
+			rType = types.Bool
+			exprType := types.Function(types.NewTypeVariable(), types.Pattern, rType)
+			astType := types.Function(lT, rT, types.NewTypeVariable())
+			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
-				n.SetType(Error)
+				n.SetType(types.Error)
 				return n
 			}
 
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %v in node %#v", n.op, n))
-			n.SetType(Error)
+			n.SetType(types.Error)
 			return n
 		}
 		n.SetType(rType)
@@ -378,26 +379,26 @@ func (c *checker) VisitAfter(node astNode) astNode {
 	case *unaryExprNode:
 		t := n.expr.Type()
 		switch {
-		case isErrorType(t):
-			n.SetType(Error)
+		case types.IsErrorType(t):
+			n.SetType(types.Error)
 			return n
 		}
 		switch n.op {
 		case NOT:
-			rType := Int
-			err := Unify(rType, t)
+			rType := types.Int
+			err := types.Unify(rType, t)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
-				n.SetType(Error)
+				n.SetType(types.Error)
 				return n
 			}
 			n.SetType(rType)
 		case INC, DEC:
-			rType := Int
-			err := Unify(rType, t)
+			rType := types.Int
+			err := types.Unify(rType, t)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
-				n.SetType(Error)
+				n.SetType(types.Error)
 				return n
 			}
 			n.SetType(rType)
@@ -410,36 +411,36 @@ func (c *checker) VisitAfter(node astNode) astNode {
 
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", lexeme(n.op), n))
-			n.SetType(Error)
+			n.SetType(types.Error)
 			return n
 		}
 		return n
 
 	case *exprlistNode:
-		argTypes := []Type{}
+		argTypes := []types.Type{}
 		for _, arg := range n.children {
-			if isErrorType(arg.Type()) {
-				n.SetType(Error)
+			if types.IsErrorType(arg.Type()) {
+				n.SetType(types.Error)
 				return n
 			}
 			argTypes = append(argTypes, arg.Type())
 		}
-		n.SetType(Dimension(argTypes...))
+		n.SetType(types.Dimension(argTypes...))
 		return n
 
 	case *indexedExprNode:
-		argTypes := []Type{}
+		argTypes := []types.Type{}
 		if args, ok := n.index.(*exprlistNode); ok {
 			for _, arg := range args.children {
-				if isErrorType(arg.Type()) {
-					n.SetType(Error)
+				if types.IsErrorType(arg.Type()) {
+					n.SetType(types.Error)
 					return n
 				}
 				argTypes = append(argTypes, arg.Type())
 			}
 		} else {
 			c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected %v", n.index))
-			n.SetType(Error)
+			n.SetType(types.Error)
 			return n
 		}
 
@@ -447,16 +448,16 @@ func (c *checker) VisitAfter(node astNode) astNode {
 		case *idNode:
 			if v.sym == nil {
 				// undefined, already caught
-				n.SetType(Error)
+				n.SetType(types.Error)
 				return n
 			}
 			// ok
-			if t, ok := v.Type().(*TypeOperator); ok && IsDimension(t) {
+			if t, ok := v.Type().(*types.TypeOperator); ok && types.IsDimension(t) {
 				glog.V(1).Infof("Our idNode is a dimension type")
 			} else {
 				if len(argTypes) > 0 {
 					glog.V(1).Infof("Our idNode is not a dimension type")
-					n.SetType(Error)
+					n.SetType(types.Error)
 					c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
 				} else {
 					n.SetType(v.Type())
@@ -465,54 +466,54 @@ func (c *checker) VisitAfter(node astNode) astNode {
 			}
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
-			n.SetType(Error)
+			n.SetType(types.Error)
 			return n
 		}
 
-		rType := NewTypeVariable()
+		rType := types.NewTypeVariable()
 		argTypes = append(argTypes, rType)
-		astType := Dimension(argTypes...)
+		astType := types.Dimension(argTypes...)
 		fresh := n.lhs.Type()
-		err := Unify(fresh, astType)
+		err := types.Unify(fresh, astType)
 		if err != nil {
-			exprType, ok := n.lhs.Type().(*TypeOperator)
+			exprType, ok := n.lhs.Type().(*types.TypeOperator)
 			if !ok {
 				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected lhs type %v", n.lhs.Type()))
-				n.SetType(Error)
+				n.SetType(types.Error)
 				return n
 			}
 			switch {
 			case len(exprType.Args) > len(astType.Args):
 				c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d, received %d", len(exprType.Args)-1, len(astType.Args)-1))
-				n.SetType(Error)
+				n.SetType(types.Error)
 				return n
 			case len(exprType.Args) < len(astType.Args):
 				c.errors.Add(n.Pos(), fmt.Sprintf("Too many keys for indexed expression: expecting %d, received %d.", len(exprType.Args)-1, len(astType.Args)-1))
 			default:
 				c.errors.Add(n.Pos(), fmt.Sprintf("Index lookup expression %s", err))
 			}
-			n.SetType(Error)
+			n.SetType(types.Error)
 			return n
 		}
 		n.SetType(rType)
 		return n
 
 	case *builtinNode:
-		types := []Type{}
+		typs := []types.Type{}
 		if args, ok := n.args.(*exprlistNode); ok {
 			for _, arg := range args.children {
-				types = append(types, arg.Type())
+				typs = append(typs, arg.Type())
 			}
 		}
-		rType := NewTypeVariable()
-		types = append(types, rType)
+		rType := types.NewTypeVariable()
+		typs = append(typs, rType)
 
-		fn := Function(types...)
-		fresh := FreshType(Builtins[n.name])
-		err := Unify(fresh, fn)
+		fn := types.Function(typs...)
+		fresh := types.FreshType(types.Builtins[n.name])
+		err := types.Unify(fresh, fn)
 		if err != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.name, err))
-			n.SetType(Error)
+			n.SetType(types.Error)
 			return n
 		}
 		n.SetType(rType)
@@ -533,7 +534,7 @@ func (c *checker) VisitAfter(node astNode) astNode {
 				if err != nil {
 					glog.Infof("time.Parse(%q, %q) failed: %s", f.text, timeStr, err)
 					c.errors.Add(f.Pos(), fmt.Sprintf("invalid time format string %q\n\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice.", f.text))
-					n.SetType(Error)
+					n.SetType(types.Error)
 					return n
 				}
 			}
@@ -580,7 +581,7 @@ func (c *checker) checkRegex(pattern string, n astNode) {
 		// can warn the user about unknown capture group references.
 		for i, capref := range reAst.CapNames() {
 			sym := NewSymbol(fmt.Sprintf("%d", i), CaprefSymbol, n.Pos())
-			sym.Type = inferCaprefType(reAst, i)
+			sym.Type = types.InferCaprefType(reAst, i)
 			sym.Binding = n
 			sym.Addr = i
 			if alt := c.scope.Insert(sym); alt != nil {

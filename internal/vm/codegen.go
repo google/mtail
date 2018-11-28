@@ -12,6 +12,7 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/vm/position"
+	"github.com/google/mtail/internal/vm/types"
 	"github.com/pkg/errors"
 )
 
@@ -77,17 +78,17 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 		// a hack for metrics that no type can be inferred, retaining
 		// historical behaviour.
 		t := n.Type()
-		if IsDimension(t) {
-			t = t.(*TypeOperator).Args[len(t.(*TypeOperator).Args)-1]
+		if types.IsDimension(t) {
+			t = t.(*types.TypeOperator).Args[len(t.(*types.TypeOperator).Args)-1]
 		}
 		var dtyp datum.Type
 		switch {
-		case Equals(Float, t):
+		case types.Equals(types.Float, t):
 			dtyp = metrics.Float
-		case Equals(String, t):
+		case types.Equals(types.String, t):
 			dtyp = metrics.String
 		default:
-			if !IsComplete(t) {
+			if !types.IsComplete(t) {
 				glog.Infof("Incomplete type %v for %#v", t, n)
 			}
 			dtyp = metrics.Int
@@ -180,16 +181,16 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 
 		if !n.lvalue {
 			t := n.Type()
-			if IsDimension(t) {
-				l := len(t.(*TypeOperator).Args)
-				t = t.(*TypeOperator).Args[l-1]
+			if types.IsDimension(t) {
+				l := len(t.(*types.TypeOperator).Args)
+				t = t.(*types.TypeOperator).Args[l-1]
 			}
 
-			if Equals(t, Float) {
+			if types.Equals(t, types.Float) {
 				c.emit(instr{fget, nil})
-			} else if Equals(t, Int) {
+			} else if types.Equals(t, types.Int) {
 				c.emit(instr{iget, nil})
-			} else if Equals(t, String) {
+			} else if types.Equals(t, types.String) {
 				c.emit(instr{sget, nil})
 			} else {
 				c.errorf(n.Pos(), "invalid type for get %q in %#v", n.Type(), n)
@@ -207,9 +208,9 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 		c.emit(instr{push, rn.index})
 		// n.sym.addr is the capture group offset
 		c.emit(instr{capref, n.sym.Addr})
-		if Equals(n.Type(), Float) {
+		if types.Equals(n.Type(), types.Float) {
 			c.emit(instr{s2f, nil})
-		} else if Equals(n.Type(), Int) {
+		} else if types.Equals(n.Type(), types.Int) {
 			c.emit(instr{s2i, nil})
 		}
 
@@ -217,9 +218,9 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 		if args, ok := n.index.(*exprlistNode); ok {
 			for _, arg := range args.children {
 				Walk(c, arg)
-				if Equals(arg.Type(), Float) {
+				if types.Equals(arg.Type(), types.Float) {
 					c.emit(instr{f2s, nil})
-				} else if Equals(arg.Type(), Int) {
+				} else if types.Equals(arg.Type(), types.Int) {
 					c.emit(instr{i2s, nil})
 				}
 			}
@@ -295,7 +296,7 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 			return nil, n
 
 		case ADD_ASSIGN:
-			if !Equals(n.Type(), Int) {
+			if !types.Equals(n.Type(), types.Int) {
 				// Double-emit the lhs so that it can be assigned to
 				Walk(c, n.lhs)
 			}
@@ -310,32 +311,32 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 	return c, node
 }
 
-var typedOperators = map[int]map[Type]opcode{
-	PLUS: {Int: iadd,
-		Float:  fadd,
-		String: cat},
-	MINUS: {Int: isub,
-		Float: fsub},
-	MUL: {Int: imul,
-		Float: fmul},
-	DIV: {Int: idiv,
-		Float: fdiv},
-	MOD: {Int: imod,
-		Float: fmod},
-	POW: {Int: ipow,
-		Float: fpow},
-	ASSIGN: {Int: iset,
-		Float:  fset,
-		String: sset},
+var typedOperators = map[int]map[types.Type]opcode{
+	PLUS: {types.Int: iadd,
+		types.Float:  fadd,
+		types.String: cat},
+	MINUS: {types.Int: isub,
+		types.Float: fsub},
+	MUL: {types.Int: imul,
+		types.Float: fmul},
+	DIV: {types.Int: idiv,
+		types.Float: fdiv},
+	MOD: {types.Int: imod,
+		types.Float: fmod},
+	POW: {types.Int: ipow,
+		types.Float: fpow},
+	ASSIGN: {types.Int: iset,
+		types.Float:  fset,
+		types.String: sset},
 }
 
-func getOpcodeForType(op int, opT Type) (opcode, error) {
+func getOpcodeForType(op int, opT types.Type) (opcode, error) {
 	opmap, ok := typedOperators[op]
 	if !ok {
 		return -1, errors.Errorf("no typed operator for type %v", op)
 	}
 	for t, opcode := range opmap {
-		if Equals(t, opT) {
+		if types.Equals(t, opT) {
 			return opcode, nil
 		}
 	}
@@ -404,13 +405,13 @@ func (c *codegen) VisitAfter(node astNode) astNode {
 				jumpOp = jm
 			}
 			cmpOp := cmp
-			if Equals(n.lhs.Type(), n.rhs.Type()) {
+			if types.Equals(n.lhs.Type(), n.rhs.Type()) {
 				switch n.lhs.Type() {
-				case Float:
+				case types.Float:
 					cmpOp = fcmp
-				case Int:
+				case types.Int:
 					cmpOp = icmp
-				case String:
+				case types.String:
 					cmpOp = scmp
 				default:
 					cmpOp = cmp
@@ -426,9 +427,9 @@ func (c *codegen) VisitAfter(node astNode) astNode {
 		case ADD_ASSIGN:
 			// When operand is not nil, inc pops the delta from the stack.
 			switch {
-			case Equals(n.Type(), Int):
+			case types.Equals(n.Type(), types.Int):
 				c.emit(instr{inc, 0})
-			case Equals(n.Type(), Float), Equals(n.Type(), String):
+			case types.Equals(n.Type(), types.Float), types.Equals(n.Type(), types.String):
 				// Already walked the lhs and rhs of this expression
 				opcode, err := getOpcodeForType(PLUS, n.Type())
 				if err != nil {
@@ -490,21 +491,21 @@ func (c *codegen) VisitAfter(node astNode) astNode {
 	return node
 }
 
-func (c *codegen) emitConversion(inType, outType Type) error {
+func (c *codegen) emitConversion(inType, outType types.Type) error {
 	glog.V(2).Infof("Conversion: %q to %q", inType, outType)
-	if Equals(Int, inType) && Equals(Float, outType) {
+	if types.Equals(types.Int, inType) && types.Equals(types.Float, outType) {
 		c.emit(instr{op: i2f})
-	} else if Equals(String, inType) && Equals(Float, outType) {
+	} else if types.Equals(types.String, inType) && types.Equals(types.Float, outType) {
 		c.emit(instr{op: s2f})
-	} else if Equals(String, inType) && Equals(Int, outType) {
+	} else if types.Equals(types.String, inType) && types.Equals(types.Int, outType) {
 		c.emit(instr{op: s2i})
-	} else if Equals(Float, inType) && Equals(String, outType) {
+	} else if types.Equals(types.Float, inType) && types.Equals(types.String, outType) {
 		c.emit(instr{op: f2s})
-	} else if Equals(Int, inType) && Equals(String, outType) {
+	} else if types.Equals(types.Int, inType) && types.Equals(types.String, outType) {
 		c.emit(instr{op: i2s})
-	} else if Equals(Pattern, inType) && Equals(Bool, outType) {
+	} else if types.Equals(types.Pattern, inType) && types.Equals(types.Bool, outType) {
 		// nothing, pattern is implicit bool
-	} else if Equals(inType, outType) {
+	} else if types.Equals(inType, outType) {
 		// Nothing; no-op.
 	} else {
 		return errors.Errorf("can't convert %q to %q", inType, outType)
