@@ -11,6 +11,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/vm/position"
 	"github.com/pkg/errors"
 )
 
@@ -36,7 +37,7 @@ func CodeGen(name string, ast astNode) (*object, error) {
 	return &c.obj, nil
 }
 
-func (c *codegen) errorf(pos *Position, format string, args ...interface{}) {
+func (c *codegen) errorf(pos *position.Position, format string, args ...interface{}) {
 	e := "Internal compiler error, aborting compilation: " + fmt.Sprintf(format, args...)
 	c.errors.Add(pos, e)
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/internal/vm/position"
 )
 
 // Parse reads the program named name from the input, and if successful returns
@@ -32,15 +33,15 @@ type parser struct {
 	root   astNode
 	errors ErrorList
 	l      *lexer
-	t      token    // Most recently lexed token.
-	pos    Position // Optionally contains the position of the start of a production
+	t      token             // Most recently lexed token.
+	pos    position.Position // Optionally contains the position of the start of a production
 }
 
 func newParser(name string, input io.Reader) *parser {
 	return &parser{name: name, l: newLexer(name, input)}
 }
 
-func (p *parser) ErrorP(s string, pos *Position) {
+func (p *parser) ErrorP(s string, pos *position.Position) {
 	p.errors.Add(pos, s)
 }
 

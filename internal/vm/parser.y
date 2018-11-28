@@ -7,7 +7,8 @@ package vm
 import (
     "time"
     
-    "github.com/google/mtail/metrics"
+    "github.com/google/mtail/internal/metrics"
+    "github.com/google/mtail/internal/vm/position"
     "github.com/golang/glog"
 )
 
@@ -599,12 +600,12 @@ opt_nl
 %%
 
 //  tokenpos returns the position of the current token.
-func tokenpos(mtaillex mtailLexer) Position {
+func tokenpos(mtaillex mtailLexer) position.Position {
     return mtaillex.(*parser).t.pos
 }
 
 // markedpos returns the position recorded from the most recent mark_pos
 // production.
-func markedpos(mtaillex mtailLexer) Position {
+func markedpos(mtaillex mtailLexer) position.Position {
     return mtaillex.(*parser).pos
 }

@@ -6,6 +6,8 @@ package vm
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/google/mtail/internal/vm/position"
 )
 
 // SymbolKind enumerates the kind of a Symbol.
@@ -36,17 +38,17 @@ func (k SymbolKind) String() string {
 
 // Symbol describes a named program object.
 type Symbol struct {
-	Name    string      // identifier name
-	Kind    SymbolKind  // kind of program object
-	Type    Type        // object's type
-	Pos     *Position   // Source file position of definition
-	Binding interface{} // binding to storage allocated in runtime
-	Addr    int         // Address offset in another structure, object specific
-	Used    bool        // Optional marker that this symbol is used after declaration.
+	Name    string             // identifier name
+	Kind    SymbolKind         // kind of program object
+	Type    Type               // object's type
+	Pos     *position.Position // Source file position of definition
+	Binding interface{}        // binding to storage allocated in runtime
+	Addr    int                // Address offset in another structure, object specific
+	Used    bool               // Optional marker that this symbol is used after declaration.
 }
 
 // NewSymbol creates a record of a given symbol kind, named name, found at loc
-func NewSymbol(name string, kind SymbolKind, pos *Position) (sym *Symbol) {
+func NewSymbol(name string, kind SymbolKind, pos *position.Position) (sym *Symbol) {
 	return &Symbol{name, kind, Undef, pos, nil, 0, false}
 }
 

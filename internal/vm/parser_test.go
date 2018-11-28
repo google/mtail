@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/internal/vm/position"
 )
 
 var parserTests = []struct {
@@ -417,7 +418,7 @@ func TestParseInvalidPrograms(t *testing.T) {
 var parsePositionTests = []struct {
 	name      string
 	program   string
-	positions []*Position
+	positions []*position.Position
 }{
 	{
 		"empty",
@@ -427,12 +428,12 @@ var parsePositionTests = []struct {
 	{
 		"variable",
 		`counter foo`,
-		[]*Position{{"variable", 0, 8, 10}},
+		[]*position.Position{{"variable", 0, 8, 10}},
 	},
 	{
 		"pattern",
 		`const ID /foo/`,
-		[]*Position{{"pattern", 0, 6, 13}},
+		[]*position.Position{{"pattern", 0, 6, 13}},
 	},
 }
 
@@ -447,7 +448,7 @@ func TestParsePositionTests(t *testing.T) {
 			}
 			p := &positionCollector{}
 			Walk(p, ast)
-			diff := go_cmp.Diff(tc.positions, p.positions, go_cmp.AllowUnexported(Position{}))
+			diff := go_cmp.Diff(tc.positions, p.positions, go_cmp.AllowUnexported(position.Position{}))
 			if diff != "" {
 				t.Error(diff)
 			}
@@ -456,7 +457,7 @@ func TestParsePositionTests(t *testing.T) {
 }
 
 type positionCollector struct {
-	positions []*Position
+	positions []*position.Position
 }
 
 func (p *positionCollector) VisitBefore(node astNode) (Visitor, astNode) {

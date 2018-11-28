@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/vm/position"
 )
 
 type astNode interface {
-	Pos() *Position // Returns the position of the node from the original source
-	Type() Type     // Returns the type of the expression in this node
+	Pos() *position.Position // Returns the position of the node from the original source
+	Type() Type              // Returns the type of the expression in this node
 }
 
 type stmtlistNode struct {
@@ -20,7 +21,7 @@ type stmtlistNode struct {
 	children []astNode
 }
 
-func (n *stmtlistNode) Pos() *Position {
+func (n *stmtlistNode) Pos() *position.Position {
 	return mergepositionlist(n.children)
 }
 
@@ -35,7 +36,7 @@ type exprlistNode struct {
 	typ   Type
 }
 
-func (n *exprlistNode) Pos() *Position {
+func (n *exprlistNode) Pos() *position.Position {
 	return mergepositionlist(n.children)
 }
 
@@ -58,7 +59,7 @@ type condNode struct {
 	s         *Scope // a conditional expression can cause new variables to be defined
 }
 
-func (n *condNode) Pos() *Position {
+func (n *condNode) Pos() *position.Position {
 	return mergepositionlist([]astNode{n.cond, n.truthNode, n.elseNode})
 }
 
@@ -67,14 +68,14 @@ func (n *condNode) Type() Type {
 }
 
 type idNode struct {
-	pos    Position
+	pos    position.Position
 	name   string
 	sym    *Symbol
 	lvalue bool // If set, then this node appears on the left side of an
 	// assignment and needs to have its address taken only.
 }
 
-func (n *idNode) Pos() *Position {
+func (n *idNode) Pos() *position.Position {
 	return &n.pos
 }
 
@@ -86,13 +87,13 @@ func (n *idNode) Type() Type {
 }
 
 type caprefNode struct {
-	pos     Position
+	pos     position.Position
 	name    string
 	isNamed bool // true if the capref is a named reference, not positional
 	sym     *Symbol
 }
 
-func (n *caprefNode) Pos() *Position {
+func (n *caprefNode) Pos() *position.Position {
 	return &n.pos
 }
 
@@ -104,7 +105,7 @@ func (n *caprefNode) Type() Type {
 }
 
 type builtinNode struct {
-	pos  Position
+	pos  position.Position
 	name string
 	args astNode
 
@@ -112,7 +113,7 @@ type builtinNode struct {
 	typ   Type
 }
 
-func (n *builtinNode) Pos() *Position {
+func (n *builtinNode) Pos() *position.Position {
 	return &n.pos
 }
 
@@ -136,7 +137,7 @@ type binaryExprNode struct {
 	typ   Type
 }
 
-func (n *binaryExprNode) Pos() *Position {
+func (n *binaryExprNode) Pos() *position.Position {
 	return MergePosition(n.lhs.Pos(), n.rhs.Pos())
 }
 
@@ -153,7 +154,7 @@ func (n *binaryExprNode) SetType(t Type) {
 }
 
 type unaryExprNode struct {
-	pos  Position // pos is the position of the op
+	pos  position.Position // pos is the position of the op
 	expr astNode
 	op   int
 
@@ -161,7 +162,7 @@ type unaryExprNode struct {
 	typ   Type
 }
 
-func (n *unaryExprNode) Pos() *Position {
+func (n *unaryExprNode) Pos() *position.Position {
 	return MergePosition(&n.pos, n.expr.Pos())
 }
 
@@ -184,7 +185,7 @@ type indexedExprNode struct {
 	typ   Type
 }
 
-func (n *indexedExprNode) Pos() *Position {
+func (n *indexedExprNode) Pos() *position.Position {
 	return MergePosition(n.lhs.Pos(), n.index.Pos())
 }
 
@@ -201,7 +202,7 @@ func (n *indexedExprNode) SetType(t Type) {
 }
 
 type declNode struct {
-	pos          Position
+	pos          position.Position
 	name         string
 	hidden       bool
 	keys         []string
@@ -210,7 +211,7 @@ type declNode struct {
 	sym          *Symbol
 }
 
-func (n *declNode) Pos() *Position {
+func (n *declNode) Pos() *position.Position {
 	return &n.pos
 }
 
@@ -222,11 +223,11 @@ func (n *declNode) Type() Type {
 }
 
 type stringConstNode struct {
-	pos  Position
+	pos  position.Position
 	text string
 }
 
-func (n *stringConstNode) Pos() *Position {
+func (n *stringConstNode) Pos() *position.Position {
 	return &n.pos
 }
 func (n *stringConstNode) Type() Type {
@@ -234,11 +235,11 @@ func (n *stringConstNode) Type() Type {
 }
 
 type intConstNode struct {
-	pos Position
+	pos position.Position
 	i   int64
 }
 
-func (n *intConstNode) Pos() *Position {
+func (n *intConstNode) Pos() *position.Position {
 	return &n.pos
 }
 func (n *intConstNode) Type() Type {
@@ -246,11 +247,11 @@ func (n *intConstNode) Type() Type {
 }
 
 type floatConstNode struct {
-	pos Position
+	pos position.Position
 	f   float64
 }
 
-func (n *floatConstNode) Pos() *Position {
+func (n *floatConstNode) Pos() *position.Position {
 	return &n.pos
 }
 func (n *floatConstNode) Type() Type {
@@ -264,7 +265,7 @@ type patternExprNode struct {
 	index   int    // reference to the compiled object offset after codegen
 }
 
-func (n *patternExprNode) Pos() *Position {
+func (n *patternExprNode) Pos() *position.Position {
 	return n.expr.Pos()
 }
 
@@ -274,11 +275,11 @@ func (n *patternExprNode) Type() Type {
 
 // patternConstNode holds inline constant pattern fragments
 type patternConstNode struct {
-	pos     Position
+	pos     position.Position
 	pattern string
 }
 
-func (n *patternConstNode) Pos() *Position {
+func (n *patternConstNode) Pos() *position.Position {
 	return &n.pos
 }
 
@@ -294,7 +295,7 @@ type patternFragmentDefNode struct {
 	pattern string  // If not empty, contains the complete evaluated pattern of the expr
 }
 
-func (n *patternFragmentDefNode) Pos() *Position {
+func (n *patternFragmentDefNode) Pos() *position.Position {
 	return n.id.Pos()
 }
 
@@ -303,14 +304,14 @@ func (n *patternFragmentDefNode) Type() Type {
 }
 
 type decoDefNode struct {
-	pos   Position
+	pos   position.Position
 	name  string
 	block astNode
 	sym   *Symbol
 	scope *Scope
 }
 
-func (n *decoDefNode) Pos() *Position {
+func (n *decoDefNode) Pos() *position.Position {
 	return MergePosition(&n.pos, n.block.Pos())
 }
 
@@ -322,14 +323,14 @@ func (n *decoDefNode) Type() Type {
 }
 
 type decoNode struct {
-	pos   Position
+	pos   position.Position
 	name  string
 	block astNode
 	def   *decoDefNode
 	scope *Scope
 }
 
-func (n *decoNode) Pos() *Position {
+func (n *decoNode) Pos() *position.Position {
 	return MergePosition(&n.pos, n.block.Pos())
 }
 
@@ -338,10 +339,10 @@ func (n *decoNode) Type() Type {
 }
 
 type nextNode struct {
-	pos Position
+	pos position.Position
 }
 
-func (n *nextNode) Pos() *Position {
+func (n *nextNode) Pos() *position.Position {
 	return &n.pos
 }
 
@@ -350,10 +351,10 @@ func (n *nextNode) Type() Type {
 }
 
 type otherwiseNode struct {
-	pos Position
+	pos position.Position
 }
 
-func (n *otherwiseNode) Pos() *Position {
+func (n *otherwiseNode) Pos() *position.Position {
 	return &n.pos
 }
 
@@ -362,12 +363,12 @@ func (n *otherwiseNode) Type() Type {
 }
 
 type delNode struct {
-	pos    Position
+	pos    position.Position
 	n      astNode
 	expiry time.Duration
 }
 
-func (d *delNode) Pos() *Position {
+func (d *delNode) Pos() *position.Position {
 	return &d.pos
 }
 
@@ -382,7 +383,7 @@ type convNode struct {
 	typ Type
 }
 
-func (n *convNode) Pos() *Position {
+func (n *convNode) Pos() *position.Position {
 	return n.n.Pos()
 }
 
@@ -399,11 +400,11 @@ func (n *convNode) SetType(t Type) {
 }
 
 type errorNode struct {
-	pos      Position
+	pos      position.Position
 	spelling string
 }
 
-func (n *errorNode) Pos() *Position {
+func (n *errorNode) Pos() *position.Position {
 	return &n.pos
 }
 
@@ -412,13 +413,52 @@ func (n *errorNode) Type() Type {
 }
 
 type stopNode struct {
-	pos Position
+	pos position.Position
 }
 
-func (n *stopNode) Pos() *Position {
+func (n *stopNode) Pos() *position.Position {
 	return &n.pos
 }
 
 func (n *stopNode) Type() Type {
 	return None
+}
+
+// MergePosition returns the union of two positions such that the result contains both inputs.
+func MergePosition(a, b *position.Position) *position.Position {
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+	if a.Filename != b.Filename {
+		return a
+	}
+	// TODO(jaq): handle multi-line positions
+	if a.Line != b.Line {
+		return a
+	}
+	r := *a
+	if b.Startcol < r.Startcol {
+		r.Startcol = b.Startcol
+	}
+	if b.Endcol > r.Endcol {
+		r.Endcol = b.Endcol
+	}
+	return &r
+}
+
+// mergepositionlist is a helper that merges the positions of all the nodes in a list
+func mergepositionlist(l []astNode) *position.Position {
+	if len(l) == 0 {
+		return nil
+	}
+	if len(l) == 1 {
+		if l[0] != nil {
+			return l[0].Pos()
+		}
+		return nil
+	}
+	return MergePosition(l[0].Pos(), mergepositionlist(l[1:]))
 }

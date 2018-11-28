@@ -3,10 +3,14 @@
 
 package vm
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/google/mtail/internal/vm/position"
+)
 
 type compileError struct {
-	pos Position
+	pos position.Position
 	msg string
 }
 
@@ -18,7 +22,7 @@ func (e compileError) Error() string {
 type ErrorList []*compileError
 
 // Add appends an error at a position to the list of errors.
-func (p *ErrorList) Add(pos *Position, msg string) {
+func (p *ErrorList) Add(pos *position.Position, msg string) {
 	*p = append(*p, &compileError{*pos, msg})
 }
 

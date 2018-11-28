@@ -9,13 +9,14 @@ import (
 
 	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/mtail/internal/vm/position"
 )
 
 type testNode struct {
 }
 
-func (t testNode) Pos() *Position {
-	return &Position{}
+func (t testNode) Pos() *position.Position {
+	return &position.Position{}
 }
 
 func (t testNode) Type() Type {
