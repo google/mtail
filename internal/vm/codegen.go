@@ -31,7 +31,7 @@ type codegen struct {
 // CodeGen is the function that compiles the program to bytecode and data.
 func CodeGen(name string, ast astNode) (*object, error) {
 	c := &codegen{name: name}
-	ast = Walk(c, ast)
+	_ = Walk(c, ast)
 	c.writeJumps()
 	if len(c.errors) > 0 {
 		return nil, c.errors
