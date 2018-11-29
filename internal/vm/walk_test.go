@@ -50,9 +50,9 @@ type testWalker struct {
 
 func (t *testWalker) VisitBefore(n astNode) (Visitor, astNode) {
 	switch v := n.(type) {
-	case *binaryExprNode:
+	case *BinaryExpr:
 		if v.op == DIV {
-			n = &intConstNode{i: 4}
+			n = &IntConst{i: 4}
 		}
 	}
 	return t, n
@@ -60,9 +60,9 @@ func (t *testWalker) VisitBefore(n astNode) (Visitor, astNode) {
 
 func (t *testWalker) VisitAfter(n astNode) astNode {
 	switch v := n.(type) {
-	case *binaryExprNode:
+	case *BinaryExpr:
 		if v.op == MINUS {
-			n = &intConstNode{i: 5}
+			n = &IntConst{i: 5}
 		}
 	}
 	return n
@@ -71,15 +71,15 @@ func (t *testWalker) VisitAfter(n astNode) astNode {
 func TestAstReplacement(t *testing.T) {
 	var a astNode
 
-	a = &binaryExprNode{lhs: &binaryExprNode{lhs: &intConstNode{i: 0}, rhs: &intConstNode{i: 1}, op: DIV},
-		rhs: &binaryExprNode{lhs: &intConstNode{i: 2}, rhs: &intConstNode{i: 3}, op: MINUS},
+	a = &BinaryExpr{lhs: &BinaryExpr{lhs: &IntConst{i: 0}, rhs: &IntConst{i: 1}, op: DIV},
+		rhs: &BinaryExpr{lhs: &IntConst{i: 2}, rhs: &IntConst{i: 3}, op: MINUS},
 		op:  PLUS}
 	tw := &testWalker{}
 	a = Walk(tw, a)
-	expected := &binaryExprNode{lhs: &intConstNode{i: 4},
-		rhs: &intConstNode{i: 5},
+	expected := &BinaryExpr{lhs: &IntConst{i: 4},
+		rhs: &IntConst{i: 5},
 		op:  PLUS}
-	diff := go_cmp.Diff(expected, a, cmpopts.IgnoreUnexported(sync.RWMutex{}), go_cmp.AllowUnexported(binaryExprNode{}, intConstNode{}))
+	diff := go_cmp.Diff(expected, a, cmpopts.IgnoreUnexported(sync.RWMutex{}), go_cmp.AllowUnexported(BinaryExpr{}, IntConst{}))
 	if diff != "" {
 		t.Error(diff)
 		s := Sexp{}

@@ -49,13 +49,13 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 		u.emit(fmt.Sprintf("<%s>(", n.Type()))
 	}
 	switch v := n.(type) {
-	case *stmtlistNode:
+	case *StmtList:
 		for _, child := range v.children {
 			Walk(u, child)
 			u.newline()
 		}
 
-	case *exprlistNode:
+	case *ExprList:
 		if len(v.children) > 0 {
 			Walk(u, v.children[0])
 			for _, child := range v.children[1:] {
@@ -64,7 +64,7 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 			}
 		}
 
-	case *condNode:
+	case *Cond:
 		if v.cond != nil {
 			Walk(u, v.cond)
 		}
@@ -81,16 +81,16 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 		u.outdent()
 		u.emit("}")
 
-	case *patternFragmentDefNode:
+	case *PatternFragmentDefNode:
 		u.emit("const ")
 		Walk(u, v.id)
 		u.emit(" ")
 		Walk(u, v.expr)
 
-	case *patternConstNode:
+	case *PatternConst:
 		u.emit("/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/")
 
-	case *binaryExprNode:
+	case *BinaryExpr:
 		Walk(u, v.lhs)
 		switch v.op {
 		case LT:
@@ -148,28 +148,28 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 		}
 		Walk(u, v.rhs)
 
-	case *idNode:
+	case *Id:
 		u.emit(v.name)
 
-	case *caprefNode:
+	case *CaprefNode:
 		u.emit("$" + v.name)
 
-	case *builtinNode:
+	case *BuiltinNode:
 		u.emit(v.name + "(")
 		if v.args != nil {
 			Walk(u, v.args)
 		}
 		u.emit(")")
 
-	case *indexedExprNode:
+	case *IndexedExpr:
 		Walk(u, v.lhs)
-		if len(v.index.(*exprlistNode).children) > 0 {
+		if len(v.index.(*ExprList).children) > 0 {
 			u.emit("[")
 			Walk(u, v.index)
 			u.emit("]")
 		}
 
-	case *declNode:
+	case *DeclNode:
 		switch v.kind {
 		case metrics.Counter:
 			u.emit("counter ")
@@ -185,7 +185,7 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 			u.emit(" by " + strings.Join(v.keys, ", "))
 		}
 
-	case *unaryExprNode:
+	case *UnaryExpr:
 		switch v.op {
 		case INC:
 			Walk(u, v.expr)
@@ -200,16 +200,16 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 			u.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.op)))
 		}
 
-	case *stringConstNode:
+	case *StringConst:
 		u.emit("\"" + v.text + "\"")
 
-	case *intConstNode:
+	case *IntConst:
 		u.emit(strconv.FormatInt(v.i, 10))
 
-	case *floatConstNode:
+	case *FloatConst:
 		u.emit(strconv.FormatFloat(v.f, 'g', -1, 64))
 
-	case *decoDefNode:
+	case *DecoDefNode:
 		u.emit(fmt.Sprintf("def %s {", v.name))
 		u.newline()
 		u.indent()
@@ -217,7 +217,7 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 		u.outdent()
 		u.emit("}")
 
-	case *decoNode:
+	case *DecoNode:
 		u.emit(fmt.Sprintf("@%s {", v.name))
 		u.newline()
 		u.indent()
@@ -225,13 +225,13 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 		u.outdent()
 		u.emit("}")
 
-	case *nextNode:
+	case *NextNode:
 		u.emit("next")
 
-	case *otherwiseNode:
+	case *OtherwiseNode:
 		u.emit("otherwise")
 
-	case *delNode:
+	case *DelNode:
 		u.emit("del ")
 		Walk(u, v.n)
 		if v.expiry > 0 {
@@ -239,18 +239,18 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 		}
 		u.newline()
 
-	case *convNode:
+	case *ConvNode:
 		Walk(u, v.n)
 
-	case *patternExprNode:
+	case *PatternExpr:
 		Walk(u, v.expr)
 
-	case *errorNode:
+	case *ErrorNode:
 		u.emit("// error")
 		u.newline()
 		u.emit(v.spelling)
 
-	case *stopNode:
+	case *StopNode:
 		u.emit("stop")
 
 	default:

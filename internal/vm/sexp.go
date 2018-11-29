@@ -59,15 +59,15 @@ func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
 	s.indent()
 	switch v := n.(type) {
 
-	case *patternFragmentDefNode:
+	case *PatternFragmentDefNode:
 		s.emit("const ")
 		n = Walk(s, v.id)
 		s.emit(" ")
 
-	case *patternConstNode:
+	case *PatternConst:
 		s.emit(fmt.Sprintf("%q", v.pattern))
 
-	case *binaryExprNode:
+	case *BinaryExpr:
 		switch v.op {
 		case LT:
 			s.emit("<")
@@ -125,17 +125,17 @@ func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
 		s.newline()
 		s.indent()
 
-	case *idNode:
+	case *Id:
 		s.emit("\"" + v.name + "\"")
 
-	case *caprefNode:
+	case *CaprefNode:
 		s.emit("\"" + v.name + "\"")
 
-	case *builtinNode:
+	case *BuiltinNode:
 		s.emit("\"" + v.name + "\"")
 		s.newline()
 
-	case *declNode:
+	case *DeclNode:
 		switch v.kind {
 		case metrics.Counter:
 			s.emit("counter ")
@@ -153,7 +153,7 @@ func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
 			s.emit(")")
 		}
 
-	case *unaryExprNode:
+	case *UnaryExpr:
 		switch v.op {
 		case INC:
 			s.emit("++")
@@ -167,35 +167,35 @@ func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
 		s.newline()
 		s.indent()
 
-	case *stringConstNode:
+	case *StringConst:
 		s.emit("\"" + v.text + "\"")
 
-	case *intConstNode:
+	case *IntConst:
 		s.emit(strconv.FormatInt(v.i, 10))
 
-	case *floatConstNode:
+	case *FloatConst:
 		s.emit(strconv.FormatFloat(v.f, 'g', -1, 64))
 
-	case *nextNode:
+	case *NextNode:
 		s.emit("next")
-	case *otherwiseNode:
+	case *OtherwiseNode:
 		s.emit("otherwise")
-	case *delNode:
+	case *DelNode:
 		s.emit("del")
 		if v.expiry > 0 {
 			s.emit(fmt.Sprintf(" after %s", v.expiry))
 		}
 
-	case *convNode:
+	case *ConvNode:
 		s.emit("conv")
 
-	case *errorNode:
+	case *ErrorNode:
 		s.emit(fmt.Sprintf("error %q", v.spelling))
 
-	case *stopNode:
+	case *StopNode:
 		s.emit("stop")
 
-	case *indexedExprNode, *stmtlistNode, *exprlistNode, *condNode, *decoDefNode, *decoNode, *patternExprNode: // normal walk
+	case *IndexedExpr, *StmtList, *ExprList, *Cond, *DecoDefNode, *DecoNode, *PatternExpr: // normal walk
 
 	default:
 		panic(fmt.Sprintf("sexp found undefined type %T", n))
@@ -206,7 +206,7 @@ func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
 // VisitAfter implements the astNode Visitor interface.
 func (s *Sexp) VisitAfter(node astNode) astNode {
 	switch node.(type) {
-	case *binaryExprNode:
+	case *BinaryExpr:
 		s.outdent()
 	}
 	s.outdent()

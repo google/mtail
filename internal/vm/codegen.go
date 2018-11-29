@@ -25,7 +25,7 @@ type codegen struct {
 	obj    object    // The object to return, if successful.
 
 	l     []int       // Label table for recording jump destinations.
-	decos []*decoNode // Decorator stack to unwind when entering decorated blocks.
+	decos []*DecoNode // Decorator stack to unwind when entering decorated blocks.
 }
 
 // CodeGen is the function that compiles the program to bytecode and data.
@@ -68,7 +68,7 @@ func (c *codegen) pc() int {
 func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 	switch n := node.(type) {
 
-	case *declNode:
+	case *DeclNode:
 		var name string
 		if n.exportedName != "" {
 			name = n.exportedName
@@ -122,7 +122,7 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 		c.obj.m = append(c.obj.m, m)
 		return nil, n
 
-	case *condNode:
+	case *Cond:
 		lElse := c.newLabel()
 		lEnd := c.newLabel()
 		if n.cond != nil {
@@ -144,7 +144,7 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 		c.setLabel(lEnd)
 		return nil, n
 
-	case *patternExprNode:
+	case *PatternExpr:
 		re, err := regexp.Compile(n.pattern)
 		if err != nil {
 			c.errorf(n.Pos(), "%s", err)
@@ -155,20 +155,20 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 		n.index = len(c.obj.re) - 1
 		c.emit(instr{match, n.index})
 
-	case *stringConstNode:
+	case *StringConst:
 		c.obj.str = append(c.obj.str, n.text)
 		c.emit(instr{str, len(c.obj.str) - 1})
 
-	case *intConstNode:
+	case *IntConst:
 		c.emit(instr{push, n.i})
 
-	case *floatConstNode:
+	case *FloatConst:
 		c.emit(instr{push, n.f})
 
-	case *stopNode:
+	case *StopNode:
 		c.emit(instr{stop, nil})
 
-	case *idNode:
+	case *Id:
 		if n.sym == nil || n.sym.Kind != symtab.VarSymbol {
 			break
 		}
@@ -198,12 +198,12 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 			}
 		}
 
-	case *caprefNode:
+	case *CaprefNode:
 		if n.sym == nil || n.sym.Binding == nil {
 			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.name)
 			return nil, n
 		}
-		rn := n.sym.Binding.(*patternExprNode)
+		rn := n.sym.Binding.(*PatternExpr)
 		// rn.index contains the index of the compiled regular expression object
 		// in the re slice of the object code
 		c.emit(instr{push, rn.index})
@@ -215,8 +215,8 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 			c.emit(instr{s2i, nil})
 		}
 
-	case *indexedExprNode:
-		if args, ok := n.index.(*exprlistNode); ok {
+	case *IndexedExpr:
+		if args, ok := n.index.(*ExprList); ok {
 			for _, arg := range args.children {
 				Walk(c, arg)
 				if types.Equals(arg.Type(), types.Float) {
@@ -229,11 +229,11 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 		Walk(c, n.lhs)
 		return nil, n
 
-	case *decoDefNode:
+	case *DecoDefNode:
 		// Do nothing, defs are inlined.
 		return nil, n
 
-	case *decoNode:
+	case *DecoNode:
 		// Put the current block on the stack
 		c.decos = append(c.decos, n)
 		if n.def == nil {
@@ -245,16 +245,16 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 		c.decos = c.decos[:len(c.decos)-1]
 		return nil, n
 
-	case *nextNode:
+	case *NextNode:
 		// Visit the 'next' block on the decorated block stack
 		deco := c.decos[len(c.decos)-1]
 		Walk(c, deco.block)
 		return nil, n
 
-	case *otherwiseNode:
+	case *OtherwiseNode:
 		c.emit(instr{op: otherwise})
 
-	case *delNode:
+	case *DelNode:
 		if n.expiry > 0 {
 			c.emit(instr{push, n.expiry})
 		}
@@ -266,7 +266,7 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 			c.obj.prog[pc].op = expire
 		}
 
-	case *binaryExprNode:
+	case *BinaryExpr:
 		switch n.op {
 		case AND:
 			lFalse := c.newLabel()
@@ -346,10 +346,10 @@ func getOpcodeForType(op int, opT types.Type) (opcode, error) {
 
 func (c *codegen) VisitAfter(node astNode) astNode {
 	switch n := node.(type) {
-	case *builtinNode:
+	case *BuiltinNode:
 		arglen := 0
 		if n.args != nil {
-			arglen = len(n.args.(*exprlistNode).children)
+			arglen = len(n.args.(*ExprList).children)
 		}
 		switch n.name {
 		case "bool":
@@ -361,7 +361,7 @@ func (c *codegen) VisitAfter(node astNode) astNode {
 				c.errorf(n.Pos(), "too many arguments to builtin %q: %#v", n.name, n)
 				return n
 			}
-			if err := c.emitConversion(n.args.(*exprlistNode).children[0].Type(), n.Type()); err != nil {
+			if err := c.emitConversion(n.args.(*ExprList).children[0].Type(), n.Type()); err != nil {
 				c.errorf(n.Pos(), "%s on node %v", err.Error(), n)
 				return n
 			}
@@ -369,7 +369,7 @@ func (c *codegen) VisitAfter(node astNode) astNode {
 		default:
 			c.emit(instr{builtin[n.name], arglen})
 		}
-	case *unaryExprNode:
+	case *UnaryExpr:
 		switch n.op {
 		case INC:
 			c.emit(instr{op: inc})
@@ -378,7 +378,7 @@ func (c *codegen) VisitAfter(node astNode) astNode {
 		case NOT:
 			c.emit(instr{op: neg})
 		}
-	case *binaryExprNode:
+	case *BinaryExpr:
 		switch n.op {
 		case LT, GT, LE, GE, EQ, NE:
 			lFail := c.newLabel()
@@ -483,7 +483,7 @@ func (c *codegen) VisitAfter(node astNode) astNode {
 			c.errorf(n.Pos(), "unexpected op %v", n.op)
 		}
 
-	case *convNode:
+	case *ConvNode:
 		if err := c.emitConversion(n.n.Type(), n.Type()); err != nil {
 			c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
 			return n

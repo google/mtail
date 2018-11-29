@@ -18,58 +18,58 @@ type astNode interface {
 	Type() types.Type        // Returns the type of the expression in this node
 }
 
-type stmtlistNode struct {
-	s        *symtab.Scope // Pointer to the local scope for this enclosing block
+type StmtList struct {
+	Scope    *symtab.Scope // Pointer to the local scope for this enclosing block
 	children []astNode
 }
 
-func (n *stmtlistNode) Pos() *position.Position {
+func (n *StmtList) Pos() *position.Position {
 	return mergepositionlist(n.children)
 }
 
-func (n *stmtlistNode) Type() types.Type {
+func (n *StmtList) Type() types.Type {
 	return types.None
 }
 
-type exprlistNode struct {
+type ExprList struct {
 	children []astNode
 
 	typMu sync.RWMutex
 	typ   types.Type
 }
 
-func (n *exprlistNode) Pos() *position.Position {
+func (n *ExprList) Pos() *position.Position {
 	return mergepositionlist(n.children)
 }
 
-func (n *exprlistNode) Type() types.Type {
+func (n *ExprList) Type() types.Type {
 	n.typMu.RLock()
 	defer n.typMu.RUnlock()
 	return n.typ
 }
 
-func (n *exprlistNode) SetType(t types.Type) {
+func (n *ExprList) SetType(t types.Type) {
 	n.typMu.Lock()
 	defer n.typMu.Unlock()
 	n.typ = t
 }
 
-type condNode struct {
+type Cond struct {
 	cond      astNode
 	truthNode astNode
 	elseNode  astNode
 	s         *symtab.Scope // a conditional expression can cause new variables to be defined
 }
 
-func (n *condNode) Pos() *position.Position {
+func (n *Cond) Pos() *position.Position {
 	return mergepositionlist([]astNode{n.cond, n.truthNode, n.elseNode})
 }
 
-func (n *condNode) Type() types.Type {
+func (n *Cond) Type() types.Type {
 	return types.None
 }
 
-type idNode struct {
+type Id struct {
 	pos    position.Position
 	name   string
 	sym    *symtab.Symbol
@@ -77,36 +77,36 @@ type idNode struct {
 	// assignment and needs to have its address taken only.
 }
 
-func (n *idNode) Pos() *position.Position {
+func (n *Id) Pos() *position.Position {
 	return &n.pos
 }
 
-func (n *idNode) Type() types.Type {
+func (n *Id) Type() types.Type {
 	if n.sym != nil {
 		return n.sym.Type
 	}
 	return types.Error // id not defined
 }
 
-type caprefNode struct {
+type CaprefNode struct {
 	pos     position.Position
 	name    string
 	isNamed bool // true if the capref is a named reference, not positional
 	sym     *symtab.Symbol
 }
 
-func (n *caprefNode) Pos() *position.Position {
+func (n *CaprefNode) Pos() *position.Position {
 	return &n.pos
 }
 
-func (n *caprefNode) Type() types.Type {
+func (n *CaprefNode) Type() types.Type {
 	if n.sym != nil {
 		return n.sym.Type
 	}
 	return types.Error // sym not defined due to undefined capref error
 }
 
-type builtinNode struct {
+type BuiltinNode struct {
 	pos  position.Position
 	name string
 	args astNode
@@ -115,23 +115,23 @@ type builtinNode struct {
 	typ   types.Type
 }
 
-func (n *builtinNode) Pos() *position.Position {
+func (n *BuiltinNode) Pos() *position.Position {
 	return &n.pos
 }
 
-func (n *builtinNode) Type() types.Type {
+func (n *BuiltinNode) Type() types.Type {
 	n.typMu.RLock()
 	defer n.typMu.RUnlock()
 	return n.typ
 }
 
-func (n *builtinNode) SetType(t types.Type) {
+func (n *BuiltinNode) SetType(t types.Type) {
 	n.typMu.Lock()
 	defer n.typMu.Unlock()
 	n.typ = t
 }
 
-type binaryExprNode struct {
+type BinaryExpr struct {
 	lhs, rhs astNode
 	op       int
 
@@ -139,23 +139,23 @@ type binaryExprNode struct {
 	typ   types.Type
 }
 
-func (n *binaryExprNode) Pos() *position.Position {
+func (n *BinaryExpr) Pos() *position.Position {
 	return MergePosition(n.lhs.Pos(), n.rhs.Pos())
 }
 
-func (n *binaryExprNode) Type() types.Type {
+func (n *BinaryExpr) Type() types.Type {
 	n.typMu.RLock()
 	defer n.typMu.RUnlock()
 	return n.typ
 }
 
-func (n *binaryExprNode) SetType(t types.Type) {
+func (n *BinaryExpr) SetType(t types.Type) {
 	n.typMu.Lock()
 	defer n.typMu.Unlock()
 	n.typ = t
 }
 
-type unaryExprNode struct {
+type UnaryExpr struct {
 	pos  position.Position // pos is the position of the op
 	expr astNode
 	op   int
@@ -164,46 +164,46 @@ type unaryExprNode struct {
 	typ   types.Type
 }
 
-func (n *unaryExprNode) Pos() *position.Position {
+func (n *UnaryExpr) Pos() *position.Position {
 	return MergePosition(&n.pos, n.expr.Pos())
 }
 
-func (n *unaryExprNode) Type() types.Type {
+func (n *UnaryExpr) Type() types.Type {
 	n.typMu.RLock()
 	defer n.typMu.RUnlock()
 	return n.typ
 }
 
-func (n *unaryExprNode) SetType(t types.Type) {
+func (n *UnaryExpr) SetType(t types.Type) {
 	n.typMu.Lock()
 	defer n.typMu.Unlock()
 	n.typ = t
 }
 
-type indexedExprNode struct {
+type IndexedExpr struct {
 	lhs, index astNode
 
 	typMu sync.RWMutex
 	typ   types.Type
 }
 
-func (n *indexedExprNode) Pos() *position.Position {
+func (n *IndexedExpr) Pos() *position.Position {
 	return MergePosition(n.lhs.Pos(), n.index.Pos())
 }
 
-func (n *indexedExprNode) Type() types.Type {
+func (n *IndexedExpr) Type() types.Type {
 	n.typMu.RLock()
 	defer n.typMu.RUnlock()
 	return n.typ
 }
 
-func (n *indexedExprNode) SetType(t types.Type) {
+func (n *IndexedExpr) SetType(t types.Type) {
 	n.typMu.Lock()
 	defer n.typMu.Unlock()
 	n.typ = t
 }
 
-type declNode struct {
+type DeclNode struct {
 	pos          position.Position
 	name         string
 	hidden       bool
@@ -213,99 +213,99 @@ type declNode struct {
 	sym          *symtab.Symbol
 }
 
-func (n *declNode) Pos() *position.Position {
+func (n *DeclNode) Pos() *position.Position {
 	return &n.pos
 }
 
-func (n *declNode) Type() types.Type {
+func (n *DeclNode) Type() types.Type {
 	if n.sym != nil {
 		return n.sym.Type
 	}
 	return types.Error
 }
 
-type stringConstNode struct {
+type StringConst struct {
 	pos  position.Position
 	text string
 }
 
-func (n *stringConstNode) Pos() *position.Position {
+func (n *StringConst) Pos() *position.Position {
 	return &n.pos
 }
-func (n *stringConstNode) Type() types.Type {
+func (n *StringConst) Type() types.Type {
 	return types.String
 }
 
-type intConstNode struct {
+type IntConst struct {
 	pos position.Position
 	i   int64
 }
 
-func (n *intConstNode) Pos() *position.Position {
+func (n *IntConst) Pos() *position.Position {
 	return &n.pos
 }
-func (n *intConstNode) Type() types.Type {
+func (n *IntConst) Type() types.Type {
 	return types.Int
 }
 
-type floatConstNode struct {
+type FloatConst struct {
 	pos position.Position
 	f   float64
 }
 
-func (n *floatConstNode) Pos() *position.Position {
+func (n *FloatConst) Pos() *position.Position {
 	return &n.pos
 }
-func (n *floatConstNode) Type() types.Type {
+func (n *FloatConst) Type() types.Type {
 	return types.Float
 }
 
 // patternExprNode is the top of a pattern expression
-type patternExprNode struct {
+type PatternExpr struct {
 	expr    astNode
 	pattern string // if not empty, the fully defined pattern after typecheck
 	index   int    // reference to the compiled object offset after codegen
 }
 
-func (n *patternExprNode) Pos() *position.Position {
+func (n *PatternExpr) Pos() *position.Position {
 	return n.expr.Pos()
 }
 
-func (n *patternExprNode) Type() types.Type {
+func (n *PatternExpr) Type() types.Type {
 	return types.Pattern
 }
 
 // patternConstNode holds inline constant pattern fragments
-type patternConstNode struct {
+type PatternConst struct {
 	pos     position.Position
 	pattern string
 }
 
-func (n *patternConstNode) Pos() *position.Position {
+func (n *PatternConst) Pos() *position.Position {
 	return &n.pos
 }
 
-func (n *patternConstNode) Type() types.Type {
+func (n *PatternConst) Type() types.Type {
 	return types.Pattern
 }
 
 // patternDefNode holds a named pattern expression
-type patternFragmentDefNode struct {
+type PatternFragmentDefNode struct {
 	id      astNode
 	expr    astNode
 	sym     *symtab.Symbol // Optional Symbol for a named pattern
 	pattern string         // If not empty, contains the complete evaluated pattern of the expr
 }
 
-func (n *patternFragmentDefNode) Pos() *position.Position {
+func (n *PatternFragmentDefNode) Pos() *position.Position {
 	return n.id.Pos()
 }
 
-func (n *patternFragmentDefNode) Type() types.Type {
+func (n *PatternFragmentDefNode) Type() types.Type {
 	return types.Pattern
 }
 
-type decoDefNode struct {
+type DecoDefNode struct {
 	pos   position.Position
 	name  string
 	block astNode
@@ -313,116 +313,116 @@ type decoDefNode struct {
 	scope *symtab.Scope
 }
 
-func (n *decoDefNode) Pos() *position.Position {
+func (n *DecoDefNode) Pos() *position.Position {
 	return MergePosition(&n.pos, n.block.Pos())
 }
 
-func (n *decoDefNode) Type() types.Type {
+func (n *DecoDefNode) Type() types.Type {
 	if n.sym != nil {
 		return n.sym.Type
 	}
 	return types.Int
 }
 
-type decoNode struct {
+type DecoNode struct {
 	pos   position.Position
 	name  string
 	block astNode
-	def   *decoDefNode
+	def   *DecoDefNode
 	scope *symtab.Scope
 }
 
-func (n *decoNode) Pos() *position.Position {
+func (n *DecoNode) Pos() *position.Position {
 	return MergePosition(&n.pos, n.block.Pos())
 }
 
-func (n *decoNode) Type() types.Type {
+func (n *DecoNode) Type() types.Type {
 	return types.None
 }
 
-type nextNode struct {
+type NextNode struct {
 	pos position.Position
 }
 
-func (n *nextNode) Pos() *position.Position {
+func (n *NextNode) Pos() *position.Position {
 	return &n.pos
 }
 
-func (n *nextNode) Type() types.Type {
+func (n *NextNode) Type() types.Type {
 	return types.None
 }
 
-type otherwiseNode struct {
+type OtherwiseNode struct {
 	pos position.Position
 }
 
-func (n *otherwiseNode) Pos() *position.Position {
+func (n *OtherwiseNode) Pos() *position.Position {
 	return &n.pos
 }
 
-func (n *otherwiseNode) Type() types.Type {
+func (n *OtherwiseNode) Type() types.Type {
 	return types.None
 }
 
-type delNode struct {
+type DelNode struct {
 	pos    position.Position
 	n      astNode
 	expiry time.Duration
 }
 
-func (d *delNode) Pos() *position.Position {
+func (d *DelNode) Pos() *position.Position {
 	return &d.pos
 }
 
-func (d *delNode) Type() types.Type {
+func (d *DelNode) Type() types.Type {
 	return types.None
 }
 
-type convNode struct {
+type ConvNode struct {
 	n astNode
 
 	mu  sync.RWMutex
 	typ types.Type
 }
 
-func (n *convNode) Pos() *position.Position {
+func (n *ConvNode) Pos() *position.Position {
 	return n.n.Pos()
 }
 
-func (n *convNode) Type() types.Type {
+func (n *ConvNode) Type() types.Type {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.typ
 }
 
-func (n *convNode) SetType(t types.Type) {
+func (n *ConvNode) SetType(t types.Type) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.typ = t
 }
 
-type errorNode struct {
+type ErrorNode struct {
 	pos      position.Position
 	spelling string
 }
 
-func (n *errorNode) Pos() *position.Position {
+func (n *ErrorNode) Pos() *position.Position {
 	return &n.pos
 }
 
-func (n *errorNode) Type() types.Type {
+func (n *ErrorNode) Type() types.Type {
 	return types.Error
 }
 
-type stopNode struct {
+type StopNode struct {
 	pos position.Position
 }
 
-func (n *stopNode) Pos() *position.Position {
+func (n *StopNode) Pos() *position.Position {
 	return &n.pos
 }
 
-func (n *stopNode) Type() types.Type {
+func (n *StopNode) Type() types.Type {
 	return types.None
 }
 

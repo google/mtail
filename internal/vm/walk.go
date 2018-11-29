@@ -31,12 +31,12 @@ func Walk(v Visitor, node astNode) astNode {
 	}
 
 	switch n := node.(type) {
-	case *stmtlistNode:
+	case *StmtList:
 		n.children = walknodelist(v, n.children)
-	case *exprlistNode:
+	case *ExprList:
 		n.children = walknodelist(v, n.children)
 
-	case *condNode:
+	case *Cond:
 		if n.cond != nil {
 			n.cond = Walk(v, n.cond)
 		}
@@ -45,38 +45,38 @@ func Walk(v Visitor, node astNode) astNode {
 			n.elseNode = Walk(v, n.elseNode)
 		}
 
-	case *builtinNode:
+	case *BuiltinNode:
 		if n.args != nil {
 			n.args = Walk(v, n.args)
 		}
 
-	case *binaryExprNode:
+	case *BinaryExpr:
 		n.lhs = Walk(v, n.lhs)
 		n.rhs = Walk(v, n.rhs)
 
-	case *unaryExprNode:
+	case *UnaryExpr:
 		n.expr = Walk(v, n.expr)
 
-	case *indexedExprNode:
+	case *IndexedExpr:
 		n.index = Walk(v, n.index)
 		n.lhs = Walk(v, n.lhs)
 
-	case *decoDefNode:
+	case *DecoDefNode:
 		n.block = Walk(v, n.block)
 
-	case *decoNode:
+	case *DecoNode:
 		n.block = Walk(v, n.block)
 
-	case *convNode:
+	case *ConvNode:
 		n.n = Walk(v, n.n)
 
-	case *patternExprNode:
+	case *PatternExpr:
 		n.expr = Walk(v, n.expr)
 
-	case *patternFragmentDefNode:
+	case *PatternFragmentDefNode:
 		n.expr = Walk(v, n.expr)
 
-	case *idNode, *caprefNode, *declNode, *stringConstNode, *intConstNode, *floatConstNode, *patternConstNode, *nextNode, *otherwiseNode, *delNode, *stopNode:
+	case *Id, *CaprefNode, *DeclNode, *StringConst, *IntConst, *FloatConst, *PatternConst, *NextNode, *OtherwiseNode, *DelNode, *StopNode:
 		// These nodes are terminals, thus have no children to walk.
 
 	default:
