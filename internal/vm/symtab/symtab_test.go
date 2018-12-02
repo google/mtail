@@ -6,7 +6,7 @@ package symtab
 import (
 	"testing"
 
-	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestInsertLookup(t *testing.T) {
@@ -18,7 +18,7 @@ func TestInsertLookup(t *testing.T) {
 	}
 
 	r1 := s.Lookup("foo", VarSymbol)
-	if diff := go_cmp.Diff(r1, sym1); diff != "" {
+	if diff := testutil.Diff(r1, sym1); diff != "" {
 		t.Error(diff)
 	}
 }

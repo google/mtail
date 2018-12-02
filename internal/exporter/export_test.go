@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestCreateExporter(t *testing.T) {
@@ -51,7 +51,7 @@ func TestMetricToCollectd(t *testing.T) {
 
 	r := FakeSocketWrite(metricToCollectd, scalarMetric)
 	expected := []string{"PUTVAL \"gunstar/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
-	diff := cmp.Diff(expected, r)
+	diff := testutil.Diff(expected, r)
 	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
@@ -68,7 +68,7 @@ func TestMetricToCollectd(t *testing.T) {
 	expected = []string{
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
-	diff = cmp.Diff(expected, r)
+	diff = testutil.Diff(expected, r)
 	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
@@ -80,7 +80,7 @@ func TestMetricToCollectd(t *testing.T) {
 
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/mtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
-	diff = cmp.Diff(expected, r)
+	diff = testutil.Diff(expected, r)
 	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
@@ -88,7 +88,7 @@ func TestMetricToCollectd(t *testing.T) {
 	*collectdPrefix = "prefix"
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/prefixmtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
-	diff = cmp.Diff(expected, r)
+	diff = testutil.Diff(expected, r)
 	if diff != "" {
 		t.Errorf("prefixed string didn't match:\n%s", diff)
 	}
@@ -105,7 +105,7 @@ func TestMetricToGraphite(t *testing.T) {
 	datum.SetInt(d, 37, ts)
 	r := FakeSocketWrite(metricToGraphite, scalarMetric)
 	expected := []string{"prog.foo 37 1343124840\n"}
-	diff := cmp.Diff(expected, r)
+	diff := testutil.Diff(expected, r)
 	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
@@ -119,7 +119,7 @@ func TestMetricToGraphite(t *testing.T) {
 	expected = []string{
 		"prog.bar.host.quux_com 37 1343124840\n",
 		"prog.bar.host.snuh_teevee 37 1343124840\n"}
-	diff = cmp.Diff(expected, r)
+	diff = testutil.Diff(expected, r)
 	if diff != "" {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
@@ -129,7 +129,7 @@ func TestMetricToGraphite(t *testing.T) {
 	expected = []string{
 		"prefixprog.bar.host.quux_com 37 1343124840\n",
 		"prefixprog.bar.host.snuh_teevee 37 1343124840\n"}
-	diff = cmp.Diff(expected, r)
+	diff = testutil.Diff(expected, r)
 	if diff != "" {
 		t.Errorf("prefixed string didn't match:\n%s", diff)
 	}

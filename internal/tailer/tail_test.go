@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/internal/logline"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
 
 	"github.com/spf13/afero"
@@ -127,7 +127,7 @@ func TestHandleLogUpdate(t *testing.T) {
 		{logfile, "c"},
 		{logfile, "d"},
 	}
-	if diff := cmp.Diff(expected, result); diff != "" {
+	if diff := testutil.Diff(expected, result); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
@@ -196,7 +196,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		{logfile, "d"},
 		{logfile, "e"},
 	}
-	if diff := cmp.Diff(expected, result); diff != "" {
+	if diff := testutil.Diff(expected, result); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
@@ -258,7 +258,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	expected := []*logline.LogLine{
 		{logfile, "ab"},
 	}
-	diff := cmp.Diff(expected, result)
+	diff := testutil.Diff(expected, result)
 	if diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
@@ -417,7 +417,7 @@ func TestHandleLogRotate(t *testing.T) {
 		{logfile, "1"},
 		{logfile, "2"},
 	}
-	diff := cmp.Diff(expected, result)
+	diff := testutil.Diff(expected, result)
 	if diff != "" {
 		t.Errorf("result didn't match expected:\n%s", diff)
 	}
@@ -486,7 +486,7 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 		{logfile, "1"},
 		{logfile, "2"},
 	}
-	diff := cmp.Diff(expected, result)
+	diff := testutil.Diff(expected, result)
 	if diff != "" {
 		t.Errorf("result didn't match expected:\n%s", diff)
 	}

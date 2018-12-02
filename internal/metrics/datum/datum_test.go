@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestDatumSetAndValue(t *testing.T) {
@@ -55,7 +55,7 @@ func TestMarshalJSON(t *testing.T) {
 		if err != nil {
 			t.Errorf("%d: Marshal failed: %v", i, err)
 		}
-		if diff := cmp.Diff(tc.expected, string(b)); diff != "" {
+		if diff := testutil.Diff(tc.expected, string(b)); diff != "" {
 			t.Errorf("%d: JSON didn't match:\n%s", i, diff)
 		}
 	}

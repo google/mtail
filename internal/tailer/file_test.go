@@ -13,8 +13,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/internal/logline"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/spf13/afero"
 )
 
@@ -79,7 +79,7 @@ func TestReadPartial(t *testing.T) {
 	expected := []*logline.LogLine{
 		{logfile, "ohi"},
 	}
-	diff := cmp.Diff(expected, result)
+	diff := testutil.Diff(expected, result)
 	if diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}

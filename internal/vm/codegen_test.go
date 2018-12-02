@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/internal/testutil"
 )
 
 var testCodeGenPrograms = []struct {
@@ -869,7 +869,7 @@ func TestCodegen(t *testing.T) {
 				t.Fatalf("Codegen error:\n%s", err)
 			}
 
-			if diff := go_cmp.Diff(tc.prog, obj.prog, go_cmp.AllowUnexported(instr{})); diff != "" {
+			if diff := testutil.Diff(tc.prog, obj.prog, testutil.AllowUnexported(instr{})); diff != "" {
 				t.Error(diff)
 				t.Logf("Expected:\n%s\nReceived:\n%s", tc.prog, obj.prog)
 			}

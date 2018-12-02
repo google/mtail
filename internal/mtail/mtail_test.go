@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
@@ -222,7 +222,7 @@ Loop:
 		t.Fatal(err)
 	}
 	expected := "10"
-	if diff := cmp.Diff(expected, expvar.Get("line_count").String()); diff != "" {
+	if diff := testutil.Diff(expected, expvar.Get("line_count").String()); diff != "" {
 		t.Errorf("line_count metric didn't match\n%s", diff)
 	}
 	rotationsMap := expvar.Get("log_rotations_total").(*expvar.Map)
@@ -230,7 +230,7 @@ Loop:
 	if v == nil {
 		t.Errorf("path %q not found in map: %v", logFilepath, rotationsMap)
 	}
-	diff := cmp.Diff("1", v.String())
+	diff := testutil.Diff("1", v.String())
 	if diff != "" {
 		t.Errorf("log_rotations_total metric didn't match\n%s", diff)
 	}

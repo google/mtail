@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/testutil"
 )
 
 var instructions = []struct {
@@ -483,14 +483,14 @@ func TestInstrs(t *testing.T) {
 				t.Fatalf("Execution failed, see info log.")
 			}
 
-			if diff := go_cmp.Diff(tc.expectedStack, v.t.stack); diff != "" {
+			if diff := testutil.Diff(tc.expectedStack, v.t.stack); diff != "" {
 				t.Log("unexpected vm stack state")
 				t.Error(diff)
 			}
 
 			tc.expectedThread.stack = tc.expectedStack
 
-			if diff := go_cmp.Diff(&tc.expectedThread, v.t, go_cmp.AllowUnexported(thread{})); diff != "" {
+			if diff := testutil.Diff(&tc.expectedThread, v.t, testutil.AllowUnexported(thread{})); diff != "" {
 				t.Log("unexpected vm thread state")
 				t.Error(diff)
 				t.Errorf("\t%v", *v.t)

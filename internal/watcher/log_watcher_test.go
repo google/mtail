@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/internal/testutil"
 )
 
 // This test requires disk access, and cannot be injected without internal
@@ -285,7 +285,7 @@ func TestWatcherErrors(t *testing.T) {
 		t.Fatalf("watcher close failed: %q", err)
 	}
 	expected := strconv.FormatInt(orig+1, 10)
-	if diff := cmp.Diff(expected, expvar.Get("log_watcher_error_count").String()); diff != "" {
+	if diff := testutil.Diff(expected, expvar.Get("log_watcher_error_count").String()); diff != "" {
 		t.Errorf("log watcher error count not increased:\n%s", diff)
 	}
 }

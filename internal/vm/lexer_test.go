@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/vm/position"
 )
 
@@ -252,7 +252,7 @@ func TestLex(t *testing.T) {
 			t.Parallel()
 			tokens := collect(&tc)
 
-			if diff := go_cmp.Diff(tc.tokens, tokens, go_cmp.AllowUnexported(token{}, position.Position{})); diff != "" {
+			if diff := testutil.Diff(tc.tokens, tokens, testutil.AllowUnexported(token{}, position.Position{})); diff != "" {
 				t.Errorf("-expected +received\n%s", diff)
 				t.Logf("received: %v", tokens)
 			}

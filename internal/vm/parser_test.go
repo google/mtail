@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/position"
 )
@@ -347,14 +347,14 @@ func TestParserRoundTrip(t *testing.T) {
 					t.Errorf("\t%s\n", e)
 				}
 				t.Logf("2nd pass input was:\n%s", output)
-				t.Logf("2nd pass diff:\n%s", go_cmp.Diff(tc.program, output))
+				t.Logf("2nd pass diff:\n%s", testutil.Diff(tc.program, output))
 				t.Fatal()
 			}
 
 			u = Unparser{}
 			output2 := u.Unparse(p2.root)
 
-			if diff := go_cmp.Diff(output2, output); diff != "" {
+			if diff := testutil.Diff(output2, output); diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -406,7 +406,7 @@ func TestParseInvalidPrograms(t *testing.T) {
 			p := newParser(tc.name, strings.NewReader(tc.program))
 			mtailParse(p)
 
-			diff := go_cmp.Diff(
+			diff := testutil.Diff(
 				strings.Join(tc.errors, "\n"),             // want
 				strings.TrimRight(p.errors.Error(), "\n")) // got
 			if diff != "" {
@@ -449,7 +449,7 @@ func TestParsePositionTests(t *testing.T) {
 			}
 			p := &positionCollector{}
 			ast.Walk(p, root)
-			diff := go_cmp.Diff(tc.positions, p.positions, go_cmp.AllowUnexported(position.Position{}))
+			diff := testutil.Diff(tc.positions, p.positions, testutil.AllowUnexported(position.Position{}))
 			if diff != "" {
 				t.Error(diff)
 			}

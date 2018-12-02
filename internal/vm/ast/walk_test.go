@@ -6,8 +6,7 @@ package ast_test
 import (
 	"testing"
 
-	go_cmp "github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/vm"
 	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/position"
@@ -80,7 +79,7 @@ func TestAstReplacement(t *testing.T) {
 	expected := &ast.BinaryExpr{Lhs: &ast.IntConst{I: 4},
 		Rhs: &ast.IntConst{I: 5},
 		Op:  vm.PLUS}
-	diff := go_cmp.Diff(expected, a, cmpopts.IgnoreUnexported(ast.BinaryExpr{}))
+	diff := testutil.Diff(expected, a, testutil.IgnoreUnexported(ast.BinaryExpr{}))
 	if diff != "" {
 		t.Error(diff)
 		s := vm.Sexp{}

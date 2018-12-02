@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
@@ -157,7 +157,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 				t.Fatal("check didn't fail")
 			}
 
-			diff := go_cmp.Diff(
+			diff := testutil.Diff(
 				tc.errors,                        // want
 				strings.Split(err.Error(), "\n"), // got
 				cmpopts.SortSlices(func(x, y string) bool { return x < y }))
@@ -388,7 +388,7 @@ func TestCheckTypeExpressions(t *testing.T) {
 				t.Fatalf("check error: %s", err)
 			}
 
-			diff := go_cmp.Diff(tc.expected, ast.Type().Root())
+			diff := testutil.Diff(tc.expected, ast.Type().Root())
 			if diff != "" {
 				t.Error(diff)
 				s := Sexp{}

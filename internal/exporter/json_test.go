@@ -11,10 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/testutil"
 )
 
 var handleJSONTests = []struct {
@@ -111,7 +110,7 @@ func TestHandleJSON(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to read response: %s", err)
 			}
-			diff := cmp.Diff(tc.expected, string(b), cmpopts.IgnoreUnexported(sync.RWMutex{}))
+			diff := testutil.Diff(tc.expected, string(b), testutil.IgnoreUnexported(sync.RWMutex{}))
 			if diff != "" {
 				t.Error(diff)
 			}

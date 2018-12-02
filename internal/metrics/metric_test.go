@@ -13,9 +13,8 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestKindType(t *testing.T) {
@@ -114,7 +113,7 @@ func TestEmitLabelSet(t *testing.T) {
 
 			ls := <-c
 
-			diff := cmp.Diff(tc.expectedLabels, ls.Labels)
+			diff := testutil.Diff(tc.expectedLabels, ls.Labels)
 			if diff != "" {
 				t.Error(diff)
 			}
@@ -196,7 +195,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 			return false
 		}
 
-		if diff := cmp.Diff(m, r, cmpopts.IgnoreUnexported(sync.RWMutex{})); diff != "" {
+		if diff := testutil.Diff(m, r, testutil.IgnoreUnexported(sync.RWMutex{})); diff != "" {
 			t.Errorf("Round trip wasn't stable:\n%s", diff)
 			return false
 		}
@@ -214,7 +213,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 func TestTimer(t *testing.T) {
 	m := NewMetric("test", "prog", Timer, Int)
 	n := NewMetric("test", "prog", Timer, Int)
-	diff := cmp.Diff(m, n, cmpopts.IgnoreUnexported(sync.RWMutex{}))
+	diff := testutil.Diff(m, n, testutil.IgnoreUnexported(sync.RWMutex{}))
 	if diff != "" {
 		t.Errorf("Identical metrics not the same:\n%s", diff)
 	}

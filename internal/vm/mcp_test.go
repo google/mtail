@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
 	"github.com/spf13/afero"
 )
@@ -166,7 +166,7 @@ func TestProcessEvents(t *testing.T) {
 			}
 			l.handleMu.RUnlock()
 			l.handleMu.RLock()
-			if diff := go_cmp.Diff(tt.expectedPrograms, programs); diff != "" {
+			if diff := testutil.Diff(tt.expectedPrograms, programs); diff != "" {
 				t.Errorf("%q: loaded programs don't match.\nl.handles: %+#v\n%s", tt.name, l.handles, diff)
 			}
 			l.handleMu.RUnlock()

@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/testutil"
 )
 
 var handlePrometheusTests = []struct {
@@ -161,7 +161,7 @@ func TestHandlePrometheus(t *testing.T) {
 			if err != nil {
 				t.Errorf(" failed to read response: %s", err)
 			}
-			diff := cmp.Diff(tc.expected, string(b))
+			diff := testutil.Diff(tc.expected, string(b))
 			if diff != "" {
 				t.Error(diff)
 			}
