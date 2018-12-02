@@ -122,16 +122,16 @@ var builtins = []string{
 	"tolower",
 }
 
-// token describes a lexed token from the input, containing its type, the
-// original text of the token, and its position in the input.
-type token struct {
-	kind lexeme
-	text string
-	pos  position.Position
+// Token describes a lexed Token from the input, containing its type, the
+// original text of the Token, and its position in the input.
+type Token struct {
+	Kind     lexeme
+	Spelling string
+	Pos      position.Position
 }
 
-func (t token) String() string {
-	return fmt.Sprintf("%s(%q,%s)", t.kind, t.text, t.pos)
+func (t Token) String() string {
+	return fmt.Sprintf("%s(%q,%s)", t.Kind, t.Spelling, t.Pos)
 }
 
 // A stateFn represents each state the scanner can be in.
@@ -149,29 +149,29 @@ type lexer struct {
 	line  int  // The line position of the current rune.
 	col   int  // The column position of the current rune.
 
-	inRegex bool // Context aware flag from parser to say we're in a regex
+	InRegex bool // Context aware flag from parser to say we're in a regex
 
 	// The currently being lexed token.
 	startcol int    // Starting column of the current token.
 	text     string // the text of the current token
 
-	tokens chan token // Output channel for tokens emitted.
+	tokens chan Token // Output channel for tokens emitted.
 }
 
-// newLexer creates a new scanner type that reads the input provided.
-func newLexer(name string, input io.Reader) *lexer {
+// NewLexer creates a new scanner type that reads the input provided.
+func NewLexer(name string, input io.Reader) *lexer {
 	l := &lexer{
 		name:   name,
 		input:  bufio.NewReader(input),
 		state:  lexProg,
-		tokens: make(chan token, 2),
+		tokens: make(chan Token, 2),
 	}
 	return l
 }
 
-// nextToken returns the next token in the input.  When no token is available
+// NextToken returns the next token in the input.  When no token is available
 // to be returned it executes the next action in the state machine.
-func (l *lexer) nextToken() token {
+func (l *lexer) NextToken() Token {
 	for {
 		select {
 		case tok := <-l.tokens:
@@ -186,7 +186,7 @@ func (l *lexer) nextToken() token {
 func (l *lexer) emit(kind lexeme) {
 	pos := position.Position{l.name, l.line, l.startcol, l.col - 1}
 	glog.V(2).Infof("Emitting %v at %v", kind, pos)
-	l.tokens <- token{kind, l.text, pos}
+	l.tokens <- Token{kind, l.text, pos}
 	// Reset the current token
 	l.text = ""
 	l.startcol = l.col
@@ -246,10 +246,15 @@ func (l *lexer) ignore() {
 
 // errorf returns an error token and resets the scanner
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
-	pos := position.Position{l.name, l.line, l.startcol, l.col - 1}
-	l.tokens <- token{kind: INVALID,
-		text: fmt.Sprintf(format, args...),
-		pos:  pos}
+	pos := position.Position{
+		Filename: l.name,
+		Line:     l.line,
+		Startcol: l.startcol,
+		Endcol:   l.col - 1}
+	l.tokens <- Token{
+		Kind:     INVALID,
+		Spelling: fmt.Sprintf(format, args...),
+		Pos:      pos}
 	// Reset the current token
 	l.text = ""
 	l.startcol = l.col
@@ -260,7 +265,7 @@ func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 
 // lexProg starts lexing a program.
 func lexProg(l *lexer) stateFn {
-	if l.inRegex {
+	if l.InRegex {
 		return lexRegex
 	}
 	switch r := l.next(); {
@@ -601,7 +606,7 @@ func lexRegex(l *lexer) stateFn {
 	defer func() {
 		glog.V(2).Info("Exiting regex")
 		glog.V(2).Infof("Regex at line %d, startcol %d, col %d", l.line, l.startcol, l.col)
-		l.inRegex = false
+		l.InRegex = false
 	}()
 Loop:
 	for {

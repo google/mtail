@@ -602,7 +602,7 @@ opt_nl
 
 //  tokenpos returns the position of the current token.
 func tokenpos(mtaillex mtailLexer) position.Position {
-    return mtaillex.(*parser).t.pos
+    return mtaillex.(*parser).t.Pos
 }
 
 // markedpos returns the position recorded from the most recent mark_pos

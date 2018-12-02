@@ -34,12 +34,12 @@ type parser struct {
 	root   ast.Node
 	errors ErrorList
 	l      *lexer
-	t      token             // Most recently lexed token.
+	t      Token             // Most recently lexed token.
 	pos    position.Position // Optionally contains the position of the start of a production
 }
 
 func newParser(name string, input io.Reader) *parser {
-	return &parser{name: name, l: newLexer(name, input)}
+	return &parser{name: name, l: NewLexer(name, input)}
 }
 
 func (p *parser) ErrorP(s string, pos *position.Position) {
@@ -47,48 +47,48 @@ func (p *parser) ErrorP(s string, pos *position.Position) {
 }
 
 func (p *parser) Error(s string) {
-	p.errors.Add(&p.t.pos, s)
+	p.errors.Add(&p.t.Pos, s)
 }
 
 func (p *parser) Lex(lval *mtailSymType) int {
-	p.t = p.l.nextToken()
-	switch p.t.kind {
+	p.t = p.l.NextToken()
+	switch p.t.Kind {
 	case INVALID:
-		p.Error(p.t.text)
-		lval.text = p.t.text
+		p.Error(p.t.Spelling)
+		lval.text = p.t.Spelling
 		return INVALID
 	case INTLITERAL:
 		var err error
-		lval.intVal, err = strconv.ParseInt(p.t.text, 10, 64)
+		lval.intVal, err = strconv.ParseInt(p.t.Spelling, 10, 64)
 		if err != nil {
-			p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
+			p.Error(fmt.Sprintf("bad number '%s': %s", p.t.Spelling, err))
 			return INVALID
 		}
 	case FLOATLITERAL:
 		var err error
-		lval.floatVal, err = strconv.ParseFloat(p.t.text, 64)
+		lval.floatVal, err = strconv.ParseFloat(p.t.Spelling, 64)
 		if err != nil {
-			p.Error(fmt.Sprintf("bad number '%s': %s", p.t.text, err))
+			p.Error(fmt.Sprintf("bad number '%s': %s", p.t.Spelling, err))
 			return INVALID
 		}
 	case DURATIONLITERAL:
 		var err error
-		lval.duration, err = time.ParseDuration(p.t.text)
+		lval.duration, err = time.ParseDuration(p.t.Spelling)
 		if err != nil {
 			p.Error(fmt.Sprintf("%s", err))
 			return INVALID
 		}
 	case LT, GT, LE, GE, NE, EQ, SHL, SHR, BITAND, BITOR, AND, OR, XOR, NOT, INC, DEC, DIV, MUL, MINUS, PLUS, ASSIGN, ADD_ASSIGN, POW, MOD, CONCAT, MATCH, NOT_MATCH:
-		lval.op = int(p.t.kind)
+		lval.op = int(p.t.Kind)
 	default:
-		lval.text = p.t.text
+		lval.text = p.t.Spelling
 	}
-	return int(p.t.kind)
+	return int(p.t.Kind)
 }
 
 func (p *parser) inRegex() {
 	glog.V(2).Info("Entering regex")
-	p.l.inRegex = true
+	p.l.InRegex = true
 }
 
 func init() {
