@@ -4,7 +4,6 @@
 package ast_test
 
 import (
-	"sync"
 	"testing"
 
 	go_cmp "github.com/google/go-cmp/cmp"
@@ -81,7 +80,7 @@ func TestAstReplacement(t *testing.T) {
 	expected := &ast.BinaryExpr{Lhs: &ast.IntConst{I: 4},
 		Rhs: &ast.IntConst{I: 5},
 		Op:  vm.PLUS}
-	diff := go_cmp.Diff(expected, a, cmpopts.IgnoreUnexported(sync.RWMutex{}))
+	diff := go_cmp.Diff(expected, a, cmpopts.IgnoreUnexported(ast.BinaryExpr{}))
 	if diff != "" {
 		t.Error(diff)
 		s := vm.Sexp{}
