@@ -1,9 +1,6 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-// Build the parser:
-//go:generate goyacc -v y.output -o parser.go -p mtail parser.y
-
 package vm
 
 import (
@@ -12,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/internal/vm/parser"
 )
 
 // Compile compiles a program from the input into a virtual machine or a list
@@ -20,12 +18,12 @@ import (
 func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, syslogUseCurrentYear bool, loc *time.Location) (*VM, error) {
 	name = filepath.Base(name)
 
-	ast, err := Parse(name, input)
+	ast, err := parser.Parse(name, input)
 	if err != nil {
 		return nil, err
 	}
 	if emitAst {
-		s := Sexp{}
+		s := parser.Sexp{}
 		glog.Infof("%s AST:\n%s", name, s.Dump(ast))
 	}
 
@@ -33,8 +31,8 @@ func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, sysl
 		return nil, err
 	}
 	if emitAstTypes {
-		s := Sexp{}
-		s.emitTypes = true
+		s := parser.Sexp{}
+		s.EmitTypes = true
 		glog.Infof("%s AST with Type Annotation:\n%s", name, s.Dump(ast))
 	}
 

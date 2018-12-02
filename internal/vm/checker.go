@@ -13,6 +13,7 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/errors"
+	"github.com/google/mtail/internal/vm/parser"
 	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
 )
@@ -247,7 +248,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			return n
 		}
 		switch n.Op {
-		case DIV, MOD, MUL, MINUS, PLUS, POW:
+		case parser.DIV, parser.MOD, parser.MUL, parser.MINUS, parser.PLUS, parser.POW:
 			// Numeric
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
@@ -283,7 +284,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.Rhs = conv
 			}
 
-		case SHL, SHR, BITAND, BITOR, XOR, NOT:
+		case parser.SHL, parser.SHR, parser.BITAND, parser.BITOR, parser.XOR, parser.NOT:
 			// bitwise
 			// O ⊢ e1 :Int, O ⊢ e2 : Int
 			// ⇒ O ⊢ e : Int
@@ -297,7 +298,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(types.Error)
 				return n
 			}
-		case LT, GT, LE, GE, EQ, NE, AND, OR:
+		case parser.LT, parser.GT, parser.LE, parser.GE, parser.EQ, parser.NE, parser.AND, parser.OR:
 			// comparable, logical
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
@@ -332,7 +333,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				glog.V(2).Infof("Emitting convnode %+v", conv)
 			}
 
-		case ASSIGN, ADD_ASSIGN:
+		case parser.ASSIGN, parser.ADD_ASSIGN:
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tr <= Tl
 			// ⇒ O ⊢ e : Tl
@@ -353,7 +354,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				v.Lhs.(*ast.Id).Lvalue = true
 			}
 
-		case CONCAT:
+		case parser.CONCAT:
 			rType = types.Pattern
 			exprType := types.Function(rType, rType, rType)
 			astType := types.Function(lT, rT, types.NewTypeVariable())
@@ -364,7 +365,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 
-		case MATCH, NOT_MATCH:
+		case parser.MATCH, parser.NOT_MATCH:
 			rType = types.Bool
 			exprType := types.Function(types.NewTypeVariable(), types.Pattern, rType)
 			astType := types.Function(lT, rT, types.NewTypeVariable())
@@ -391,7 +392,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			return n
 		}
 		switch n.Op {
-		case NOT:
+		case parser.NOT:
 			rType := types.Int
 			err := types.Unify(rType, t)
 			if err != nil {
@@ -400,7 +401,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 			n.SetType(rType)
-		case INC, DEC:
+		case parser.INC, parser.DEC:
 			rType := types.Int
 			err := types.Unify(rType, t)
 			if err != nil {
@@ -417,7 +418,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", TokenKind(n.Op), n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", parser.TokenKind(n.Op), n))
 			n.SetType(types.Error)
 			return n
 		}
@@ -620,7 +621,7 @@ type patternEvaluator struct {
 func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	switch v := n.(type) {
 	case *ast.BinaryExpr:
-		if v.Op != CONCAT {
+		if v.Op != parser.CONCAT {
 			p.errors.Add(v.Pos(), fmt.Sprintf("internal error: Invalid operator in concatenation: %v", v))
 			return nil, n
 		}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/mtail/internal/testutil"
+	"github.com/google/mtail/internal/vm/parser"
 )
 
 var testCodeGenPrograms = []struct {
@@ -853,13 +854,13 @@ func TestCodegen(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			ast, err := Parse(tc.name, strings.NewReader(tc.source))
+			ast, err := parser.Parse(tc.name, strings.NewReader(tc.source))
 			if err != nil {
 				t.Fatalf("Parse error: %s", err)
 			}
 			ast, err = Check(ast)
-			s := Sexp{}
-			s.emitTypes = true
+			s := parser.Sexp{}
+			s.EmitTypes = true
 			t.Log("Typed AST:\n" + s.Dump(ast))
 			if err != nil {
 				t.Fatalf("Check error: %s", err)

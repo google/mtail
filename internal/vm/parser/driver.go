@@ -1,7 +1,10 @@
 // Copyright 2016 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+// Build the parser:
+//go:generate goyacc -v y.output -o parser.go -p mtail parser.y
+
+package parser
 
 import (
 	"flag"
@@ -34,7 +37,7 @@ type parser struct {
 	name   string
 	root   ast.Node
 	errors errors.ErrorList
-	l      *lexer
+	l      *Lexer
 	t      Token             // Most recently lexed token.
 	pos    position.Position // Optionally contains the position of the start of a production
 }

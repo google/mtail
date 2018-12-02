@@ -13,6 +13,7 @@ import (
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/errors"
+	"github.com/google/mtail/internal/vm/parser"
 	"github.com/google/mtail/internal/vm/position"
 	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
@@ -269,7 +270,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 
 	case *ast.BinaryExpr:
 		switch n.Op {
-		case AND:
+		case parser.AND:
 			lFalse := c.newLabel()
 			lEnd := c.newLabel()
 			ast.Walk(c, n.Lhs)
@@ -283,7 +284,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			c.setLabel(lEnd)
 			return nil, n
 
-		case OR:
+		case parser.OR:
 			lTrue := c.newLabel()
 			lEnd := c.newLabel()
 			ast.Walk(c, n.Lhs)
@@ -297,7 +298,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			c.setLabel(lEnd)
 			return nil, n
 
-		case ADD_ASSIGN:
+		case parser.ADD_ASSIGN:
 			if !types.Equals(n.Type(), types.Int) {
 				// Double-emit the lhs so that it can be assigned to
 				ast.Walk(c, n.Lhs)
@@ -314,20 +315,20 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 }
 
 var typedOperators = map[int]map[types.Type]opcode{
-	PLUS: {types.Int: iadd,
+	parser.PLUS: {types.Int: iadd,
 		types.Float:  fadd,
 		types.String: cat},
-	MINUS: {types.Int: isub,
+	parser.MINUS: {types.Int: isub,
 		types.Float: fsub},
-	MUL: {types.Int: imul,
+	parser.MUL: {types.Int: imul,
 		types.Float: fmul},
-	DIV: {types.Int: idiv,
+	parser.DIV: {types.Int: idiv,
 		types.Float: fdiv},
-	MOD: {types.Int: imod,
+	parser.MOD: {types.Int: imod,
 		types.Float: fmod},
-	POW: {types.Int: ipow,
+	parser.POW: {types.Int: ipow,
 		types.Float: fpow},
-	ASSIGN: {types.Int: iset,
+	parser.ASSIGN: {types.Int: iset,
 		types.Float:  fset,
 		types.String: sset},
 }
@@ -372,37 +373,37 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 		}
 	case *ast.UnaryExpr:
 		switch n.Op {
-		case INC:
+		case parser.INC:
 			c.emit(instr{op: inc})
-		case DEC:
+		case parser.DEC:
 			c.emit(instr{op: dec})
-		case NOT:
+		case parser.NOT:
 			c.emit(instr{op: neg})
 		}
 	case *ast.BinaryExpr:
 		switch n.Op {
-		case LT, GT, LE, GE, EQ, NE:
+		case parser.LT, parser.GT, parser.LE, parser.GE, parser.EQ, parser.NE:
 			lFail := c.newLabel()
 			lEnd := c.newLabel()
 			var cmpArg int
 			var jumpOp opcode
 			switch n.Op {
-			case LT:
+			case parser.LT:
 				cmpArg = -1
 				jumpOp = jnm
-			case GT:
+			case parser.GT:
 				cmpArg = 1
 				jumpOp = jnm
-			case LE:
+			case parser.LE:
 				cmpArg = 1
 				jumpOp = jm
-			case GE:
+			case parser.GE:
 				cmpArg = -1
 				jumpOp = jm
-			case EQ:
+			case parser.EQ:
 				cmpArg = 0
 				jumpOp = jnm
-			case NE:
+			case parser.NE:
 				cmpArg = 0
 				jumpOp = jm
 			}
@@ -426,21 +427,21 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			c.setLabel(lFail)
 			c.emit(instr{push, false})
 			c.setLabel(lEnd)
-		case ADD_ASSIGN:
+		case parser.ADD_ASSIGN:
 			// When operand is not nil, inc pops the delta from the stack.
 			switch {
 			case types.Equals(n.Type(), types.Int):
 				c.emit(instr{inc, 0})
 			case types.Equals(n.Type(), types.Float), types.Equals(n.Type(), types.String):
 				// Already walked the lhs and rhs of this expression
-				opcode, err := getOpcodeForType(PLUS, n.Type())
+				opcode, err := getOpcodeForType(parser.PLUS, n.Type())
 				if err != nil {
 					c.errorf(n.Pos(), "%s", err)
 					return n
 				}
 				c.emit(instr{op: opcode})
 				// And a second lhs
-				opcode, err = getOpcodeForType(ASSIGN, n.Type())
+				opcode, err = getOpcodeForType(parser.ASSIGN, n.Type())
 				if err != nil {
 					c.errorf(n.Pos(), "%s", err)
 					return n
@@ -450,34 +451,34 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.Type())
 				return n
 			}
-		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
+		case parser.PLUS, parser.MINUS, parser.MUL, parser.DIV, parser.MOD, parser.POW, parser.ASSIGN:
 			opcode, err := getOpcodeForType(n.Op, n.Type())
 			if err != nil {
 				c.errorf(n.Pos(), "%s", err)
 				return n
 			}
 			c.emit(instr{op: opcode})
-		case BITAND:
+		case parser.BITAND:
 			c.emit(instr{op: and})
-		case BITOR:
+		case parser.BITOR:
 			c.emit(instr{op: or})
-		case XOR:
+		case parser.XOR:
 			c.emit(instr{op: xor})
-		case SHL:
+		case parser.SHL:
 			c.emit(instr{op: shl})
-		case SHR:
+		case parser.SHR:
 			c.emit(instr{op: shr})
 
-		case MATCH:
+		case parser.MATCH:
 			// Cross fingers that last branch was a patternExprNode
 			c.obj.prog[c.pc()].op = smatch
 
-		case NOT_MATCH:
+		case parser.NOT_MATCH:
 			// Cross fingers that last branch was a patternExprNode
 			c.obj.prog[c.pc()].op = smatch
 			c.emit(instr{op: not})
 
-		case CONCAT:
+		case parser.CONCAT:
 			// skip
 
 		default:

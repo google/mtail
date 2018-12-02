@@ -1,7 +1,7 @@
 // Copyright 2017 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package parser
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 type Sexp struct {
 	output string // Accumulator for the result
 
-	emitTypes bool
+	EmitTypes bool
 
 	col  int // column to indent current line to
 	line string
@@ -52,7 +52,7 @@ func (s *Sexp) newline() {
 // VisitBefore implements the astNode Visitor interface.
 func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	s.emit(fmt.Sprintf("( ;;%T ", n))
-	if s.emitTypes {
+	if s.EmitTypes {
 		s.emit(fmt.Sprintf("<%s> ", n.Type()))
 	}
 	s.emit(fmt.Sprintf("@ %s", n.Pos()))

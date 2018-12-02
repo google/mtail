@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/vm"
 	"github.com/google/mtail/internal/vm/ast"
+	"github.com/google/mtail/internal/vm/parser"
 	"github.com/google/mtail/internal/vm/position"
 	"github.com/google/mtail/internal/vm/types"
 )
@@ -51,7 +51,7 @@ type testWalker struct {
 func (t *testWalker) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	switch v := n.(type) {
 	case *ast.BinaryExpr:
-		if v.Op == vm.DIV {
+		if v.Op == parser.DIV {
 			n = &ast.IntConst{I: 4}
 		}
 	}
@@ -61,7 +61,7 @@ func (t *testWalker) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 func (t *testWalker) VisitAfter(n ast.Node) ast.Node {
 	switch v := n.(type) {
 	case *ast.BinaryExpr:
-		if v.Op == vm.MINUS {
+		if v.Op == parser.MINUS {
 			n = &ast.IntConst{I: 5}
 		}
 	}
@@ -71,18 +71,18 @@ func (t *testWalker) VisitAfter(n ast.Node) ast.Node {
 func TestAstReplacement(t *testing.T) {
 	var a ast.Node
 
-	a = &ast.BinaryExpr{Lhs: &ast.BinaryExpr{Lhs: &ast.IntConst{I: 0}, Rhs: &ast.IntConst{I: 1}, Op: vm.DIV},
-		Rhs: &ast.BinaryExpr{Lhs: &ast.IntConst{I: 2}, Rhs: &ast.IntConst{I: 3}, Op: vm.MINUS},
-		Op:  vm.PLUS}
+	a = &ast.BinaryExpr{Lhs: &ast.BinaryExpr{Lhs: &ast.IntConst{I: 0}, Rhs: &ast.IntConst{I: 1}, Op: parser.DIV},
+		Rhs: &ast.BinaryExpr{Lhs: &ast.IntConst{I: 2}, Rhs: &ast.IntConst{I: 3}, Op: parser.MINUS},
+		Op:  parser.PLUS}
 	tw := &testWalker{}
 	a = ast.Walk(tw, a)
 	expected := &ast.BinaryExpr{Lhs: &ast.IntConst{I: 4},
 		Rhs: &ast.IntConst{I: 5},
-		Op:  vm.PLUS}
+		Op:  parser.PLUS}
 	diff := testutil.Diff(expected, a, testutil.IgnoreUnexported(ast.BinaryExpr{}))
 	if diff != "" {
 		t.Error(diff)
-		s := vm.Sexp{}
+		s := parser.Sexp{}
 		t.Log("AST:\n" + s.Dump(a))
 	}
 }

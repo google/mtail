@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/vm/ast"
+	"github.com/google/mtail/internal/vm/parser"
 	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
 )
@@ -145,14 +146,14 @@ func TestCheckInvalidPrograms(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			ast, err := Parse(tc.name, strings.NewReader(tc.program))
+			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
 			if err != nil {
 				t.Fatal(err)
 			}
 			ast, err = Check(ast)
 			if err == nil {
-				s := Sexp{}
-				s.emitTypes = true
+				s := parser.Sexp{}
+				s.EmitTypes = true
 				t.Log(s.Dump(ast))
 				t.Fatal("check didn't fail")
 			}
@@ -164,8 +165,8 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			if diff != "" {
 				t.Errorf("Diff %s", diff)
 				t.Logf("Got: %s", err.Error())
-				s := Sexp{}
-				s.emitTypes = true
+				s := parser.Sexp{}
+				s.EmitTypes = true
 				t.Log(s.Dump(ast))
 			}
 		})
@@ -335,13 +336,13 @@ func TestCheckValidPrograms(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			ast, err := Parse(tc.name, strings.NewReader(tc.program))
+			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
 			if err != nil {
 				t.Fatal(err)
 			}
 			ast, err = Check(ast)
-			s := Sexp{}
-			s.emitTypes = true
+			s := parser.Sexp{}
+			s.EmitTypes = true
 			t.Log("Typed AST:\n" + s.Dump(ast))
 			if err != nil {
 				t.Errorf("check failed: %s", err)
@@ -359,21 +360,21 @@ var checkerTypeExpressionTests = []struct {
 		&ast.BinaryExpr{
 			Lhs: &ast.IntConst{I: 1},
 			Rhs: &ast.IntConst{I: 1},
-			Op:  PLUS},
+			Op:  parser.PLUS},
 		types.Int,
 	},
 	{"Int + Float -> Float",
 		&ast.BinaryExpr{
 			Lhs: &ast.IntConst{I: 1},
 			Rhs: &ast.FloatConst{F: 1.0},
-			Op:  PLUS},
+			Op:  parser.PLUS},
 		types.Float,
 	},
 	{"⍺ + Float -> Float",
 		&ast.BinaryExpr{
 			Lhs: &ast.Id{Symbol: &symtab.Symbol{Name: "i", Kind: symtab.VarSymbol, Type: types.NewTypeVariable()}},
 			Rhs: &ast.CaprefNode{Symbol: &symtab.Symbol{Kind: symtab.CaprefSymbol, Type: types.Float}},
-			Op:  PLUS},
+			Op:  parser.PLUS},
 		types.Float,
 	},
 }
@@ -391,8 +392,8 @@ func TestCheckTypeExpressions(t *testing.T) {
 			diff := testutil.Diff(tc.expected, ast.Type().Root())
 			if diff != "" {
 				t.Error(diff)
-				s := Sexp{}
-				s.emitTypes = true
+				s := parser.Sexp{}
+				s.EmitTypes = true
 				t.Log("Typed AST:\n" + s.Dump(ast))
 			}
 		})

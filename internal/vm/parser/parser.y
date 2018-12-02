@@ -2,7 +2,7 @@
 // This file is available under the Apache license.
 
 %{
-package vm
+package parser
 
 import (
     "time"

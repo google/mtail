@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package parser
 
 import (
 	"fmt"
@@ -255,7 +255,7 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		u.emit("stop")
 
 	default:
-		panic(fmt.Sprintf("unparser found undefined type %T", n))
+		panic(fmt.Sprintf("unfound undefined type %T", n))
 	}
 	if u.emitTypes {
 		u.emit(")")

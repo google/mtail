@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package parser
 
 import (
 	"bufio"
@@ -49,10 +49,10 @@ var builtins = []string{
 }
 
 // A stateFn represents each state the scanner can be in.
-type stateFn func(*lexer) stateFn
+type stateFn func(*Lexer) stateFn
 
 // A lexer holds the state of the scanner.
-type lexer struct {
+type Lexer struct {
 	name  string        // Name of program.
 	input *bufio.Reader // Source program
 	state stateFn       // Current state function of the lexer.
@@ -73,8 +73,8 @@ type lexer struct {
 }
 
 // NewLexer creates a new scanner type that reads the input provided.
-func NewLexer(name string, input io.Reader) *lexer {
-	l := &lexer{
+func NewLexer(name string, input io.Reader) *Lexer {
+	l := &Lexer{
 		name:   name,
 		input:  bufio.NewReader(input),
 		state:  lexProg,
@@ -85,7 +85,7 @@ func NewLexer(name string, input io.Reader) *lexer {
 
 // NextToken returns the next token in the input.  When no token is available
 // to be returned it executes the next action in the state machine.
-func (l *lexer) NextToken() Token {
+func (l *Lexer) NextToken() Token {
 	for {
 		select {
 		case tok := <-l.tokens:
@@ -97,7 +97,7 @@ func (l *lexer) NextToken() Token {
 }
 
 // emit passes a token to the client.
-func (l *lexer) emit(kind TokenKind) {
+func (l *Lexer) emit(kind TokenKind) {
 	pos := position.Position{l.name, l.line, l.startcol, l.col - 1}
 	glog.V(2).Infof("Emitting %v at %v", kind, pos)
 	l.tokens <- Token{kind, l.text, pos}
@@ -110,7 +110,7 @@ func (l *lexer) emit(kind TokenKind) {
 var eof rune = -1
 
 // next returns the next rune in the input.
-func (l *lexer) next() rune {
+func (l *Lexer) next() rune {
 	var err error
 	l.rune, l.width, err = l.input.ReadRune()
 	if err == io.EOF {
@@ -122,13 +122,13 @@ func (l *lexer) next() rune {
 
 // backup indicates that we haven't yet dealt with the next rune. Use when
 // terminating tokens on unknown runes.
-func (l *lexer) backup() {
+func (l *Lexer) backup() {
 	l.input.UnreadRune()
 	l.width = 0
 }
 
 // stepCursor moves the read cursor.
-func (l *lexer) stepCursor() {
+func (l *Lexer) stepCursor() {
 	if l.rune == '\n' {
 		l.line++
 		l.col = 0
@@ -138,7 +138,7 @@ func (l *lexer) stepCursor() {
 }
 
 // accept accepts the current rune and its position into the current token.
-func (l *lexer) accept() {
+func (l *Lexer) accept() {
 	l.text += string(l.rune)
 	l.stepCursor()
 }
@@ -146,20 +146,20 @@ func (l *lexer) accept() {
 // skip does not accept the current rune into the current token's text, but
 // does accept its position into the token. Use only at the start or end of a
 // token.
-func (l *lexer) skip() {
+func (l *Lexer) skip() {
 	l.stepCursor()
 }
 
 // ignore skips over the current rune, removing it from the text of the token,
 // and resetting the start position of the current token. Use only between
 // tokens.
-func (l *lexer) ignore() {
+func (l *Lexer) ignore() {
 	l.stepCursor()
 	l.startcol = l.col
 }
 
 // errorf returns an error token and resets the scanner
-func (l *lexer) errorf(format string, args ...interface{}) stateFn {
+func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 	pos := position.Position{
 		Filename: l.name,
 		Line:     l.line,
@@ -178,7 +178,7 @@ func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 // State functions.
 
 // lexProg starts lexing a program.
-func lexProg(l *lexer) stateFn {
+func lexProg(l *Lexer) stateFn {
 	if l.InRegex {
 		return lexRegex
 	}
@@ -358,7 +358,7 @@ func lexProg(l *lexer) stateFn {
 }
 
 // Lex a comment.
-func lexComment(l *lexer) stateFn {
+func lexComment(l *Lexer) stateFn {
 	l.ignore()
 Loop:
 	for {
@@ -376,7 +376,7 @@ Loop:
 }
 
 // Lex a numerical constant.
-func lexNumeric(l *lexer) stateFn {
+func lexNumeric(l *Lexer) stateFn {
 	kind := INTLITERAL
 Loop:
 	for {
@@ -411,7 +411,7 @@ func isDurationSuffix(r rune) bool {
 	return false
 }
 
-func lexDuration(l *lexer) stateFn {
+func lexDuration(l *Lexer) stateFn {
 Loop:
 	for {
 		switch r := l.next(); {
@@ -435,7 +435,7 @@ Loop:
 }
 
 // Lex a quoted string.  The text of a quoted string does not include the '"' quotes.
-func lexQuotedString(l *lexer) stateFn {
+func lexQuotedString(l *Lexer) stateFn {
 	l.skip() // Skip leading quote
 Loop:
 	for {
@@ -465,7 +465,7 @@ Loop:
 
 // Lex a capture group reference. These are local variable references to
 // capture groups in the preceding regular expression.
-func lexCapref(l *lexer) stateFn {
+func lexCapref(l *Lexer) stateFn {
 	l.skip() // Skip the leading $
 	named := false
 Loop:
@@ -490,7 +490,7 @@ Loop:
 }
 
 // Lex an identifier, or builtin keyword.
-func lexIdentifier(l *lexer) stateFn {
+func lexIdentifier(l *Lexer) stateFn {
 	l.accept()
 Loop:
 	for {
@@ -515,7 +515,7 @@ Loop:
 
 // Lex a regular expression pattern. The text of the regular expression does
 // not include the '/' quotes.
-func lexRegex(l *lexer) stateFn {
+func lexRegex(l *Lexer) stateFn {
 	// Exit regex mode when leaving this function.
 	defer func() {
 		glog.V(2).Info("Exiting regex")
@@ -550,7 +550,7 @@ Loop:
 
 // Lex a decorator name. These are functiony templatey wrappers around blocks
 // of rules.
-func lexDecorator(l *lexer) stateFn {
+func lexDecorator(l *Lexer) stateFn {
 	l.skip() // Skip the leading @
 Loop:
 	for {
