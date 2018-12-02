@@ -12,6 +12,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/vm/ast"
+	"github.com/google/mtail/internal/vm/errors"
 	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
 )
@@ -22,7 +23,7 @@ type checker struct {
 
 	decoScopes []*symtab.Scope // A stack of scopes used for resolving symbols in decorated nodes
 
-	errors ErrorList
+	errors errors.ErrorList
 }
 
 // Check performs a semantic check of the astNode, and returns a potentially
@@ -612,7 +613,7 @@ func (c *checker) checkRegex(pattern string, n ast.Node) {
 // fragments so that they can be compiled as whole regular expression patterns.
 type patternEvaluator struct {
 	scope   *symtab.Scope
-	errors  *ErrorList
+	errors  *errors.ErrorList
 	pattern string
 }
 

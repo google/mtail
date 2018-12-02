@@ -12,18 +12,18 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/vm/ast"
+	"github.com/google/mtail/internal/vm/errors"
 	"github.com/google/mtail/internal/vm/position"
 	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
-	"github.com/pkg/errors"
 )
 
 // codegen represents a code generator.
 type codegen struct {
 	name string // Name of the program.
 
-	errors ErrorList // Any compile errors detected are accumulated here.
-	obj    object    // The object to return, if successful.
+	errors errors.ErrorList // Any compile errors detected are accumulated here.
+	obj    object           // The object to return, if successful.
 
 	l     []int           // Label table for recording jump destinations.
 	decos []*ast.DecoNode // Decorator stack to unwind when entering decorated blocks.

@@ -1,12 +1,13 @@
 // Copyright 2015 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package errors
 
 import (
 	"fmt"
 
 	"github.com/google/mtail/internal/vm/position"
+	"github.com/pkg/errors"
 )
 
 type compileError struct {
@@ -44,4 +45,8 @@ func (p ErrorList) Error() string {
 		r = r + fmt.Sprintf("%s\n", e)
 	}
 	return r[:len(r)-1]
+}
+
+func Errorf(format string, args ...interface{}) error {
+	return errors.Errorf(format, args...)
 }

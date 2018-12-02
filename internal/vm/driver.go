@@ -12,6 +12,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/vm/ast"
+	"github.com/google/mtail/internal/vm/errors"
 	"github.com/google/mtail/internal/vm/position"
 )
 
@@ -32,7 +33,7 @@ const EOF = 0
 type parser struct {
 	name   string
 	root   ast.Node
-	errors ErrorList
+	errors errors.ErrorList
 	l      *lexer
 	t      Token             // Most recently lexed token.
 	pos    position.Position // Optionally contains the position of the start of a production
