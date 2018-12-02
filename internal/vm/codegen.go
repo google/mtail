@@ -11,6 +11,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/position"
 	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
@@ -24,14 +25,14 @@ type codegen struct {
 	errors ErrorList // Any compile errors detected are accumulated here.
 	obj    object    // The object to return, if successful.
 
-	l     []int       // Label table for recording jump destinations.
-	decos []*DecoNode // Decorator stack to unwind when entering decorated blocks.
+	l     []int           // Label table for recording jump destinations.
+	decos []*ast.DecoNode // Decorator stack to unwind when entering decorated blocks.
 }
 
 // CodeGen is the function that compiles the program to bytecode and data.
-func CodeGen(name string, ast astNode) (*object, error) {
+func CodeGen(name string, n ast.Node) (*object, error) {
 	c := &codegen{name: name}
-	_ = Walk(c, ast)
+	_ = ast.Walk(c, n)
 	c.writeJumps()
 	if len(c.errors) > 0 {
 		return nil, c.errors
@@ -65,15 +66,15 @@ func (c *codegen) pc() int {
 	return len(c.obj.prog) - 1
 }
 
-func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
+func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	switch n := node.(type) {
 
-	case *DeclNode:
+	case *ast.DeclNode:
 		var name string
-		if n.exportedName != "" {
-			name = n.exportedName
+		if n.ExportedName != "" {
+			name = n.ExportedName
 		} else {
-			name = n.name
+			name = n.Name
 		}
 		// If the Type is not in the map, then default to metrics.Int.  This is
 		// a hack for metrics that no type can be inferred, retaining
@@ -94,12 +95,12 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 			}
 			dtyp = metrics.Int
 		}
-		m := metrics.NewMetric(name, c.name, n.kind, dtyp, n.keys...)
+		m := metrics.NewMetric(name, c.name, n.Kind, dtyp, n.Keys...)
 		m.SetSource(n.Pos().String())
 		// Scalar counters can be initialized to zero.  Dimensioned counters we
 		// don't know the values of the labels yet.  Gauges and Timers we can't
 		// assume start at zero.
-		if len(n.keys) == 0 && n.kind == metrics.Counter {
+		if len(n.Keys) == 0 && n.Kind == metrics.Counter {
 			d, err := m.GetDatum()
 			if err != nil {
 				c.errorf(n.Pos(), "%s", err)
@@ -116,71 +117,71 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 				return nil, n
 			}
 		}
-		m.Hidden = n.hidden
-		(*n.sym).Binding = m
-		n.sym.Addr = len(c.obj.m)
+		m.Hidden = n.Hidden
+		(*n.Symbol).Binding = m
+		n.Symbol.Addr = len(c.obj.m)
 		c.obj.m = append(c.obj.m, m)
 		return nil, n
 
-	case *Cond:
+	case *ast.Cond:
 		lElse := c.newLabel()
 		lEnd := c.newLabel()
-		if n.cond != nil {
-			n.cond = Walk(c, n.cond)
+		if n.Cond != nil {
+			n.Cond = ast.Walk(c, n.Cond)
 			c.emit(instr{jnm, lElse})
 		}
 		// Set matched flag false for children.
 		c.emit(instr{setmatched, false})
-		n.truthNode = Walk(c, n.truthNode)
+		n.Truth = ast.Walk(c, n.Truth)
 		// Re-set matched flag to true for rest of current block.
 		c.emit(instr{setmatched, true})
-		if n.elseNode != nil {
+		if n.Else != nil {
 			c.emit(instr{jmp, lEnd})
 		}
 		c.setLabel(lElse)
-		if n.elseNode != nil {
-			n.elseNode = Walk(c, n.elseNode)
+		if n.Else != nil {
+			n.Else = ast.Walk(c, n.Else)
 		}
 		c.setLabel(lEnd)
 		return nil, n
 
-	case *PatternExpr:
-		re, err := regexp.Compile(n.pattern)
+	case *ast.PatternExpr:
+		re, err := regexp.Compile(n.Pattern)
 		if err != nil {
 			c.errorf(n.Pos(), "%s", err)
 			return nil, n
 		}
 		c.obj.re = append(c.obj.re, re)
 		// Store the location of this regular expression in the patterNode
-		n.index = len(c.obj.re) - 1
-		c.emit(instr{match, n.index})
+		n.Index = len(c.obj.re) - 1
+		c.emit(instr{match, n.Index})
 
-	case *StringConst:
-		c.obj.str = append(c.obj.str, n.text)
+	case *ast.StringConst:
+		c.obj.str = append(c.obj.str, n.Text)
 		c.emit(instr{str, len(c.obj.str) - 1})
 
-	case *IntConst:
-		c.emit(instr{push, n.i})
+	case *ast.IntConst:
+		c.emit(instr{push, n.I})
 
-	case *FloatConst:
-		c.emit(instr{push, n.f})
+	case *ast.FloatConst:
+		c.emit(instr{push, n.F})
 
-	case *StopNode:
+	case *ast.StopNode:
 		c.emit(instr{stop, nil})
 
-	case *Id:
-		if n.sym == nil || n.sym.Kind != symtab.VarSymbol {
+	case *ast.Id:
+		if n.Symbol == nil || n.Symbol.Kind != symtab.VarSymbol {
 			break
 		}
-		if n.sym.Binding == nil {
-			c.errorf(n.Pos(), "No metric bound to identifier %q", n.name)
+		if n.Symbol.Binding == nil {
+			c.errorf(n.Pos(), "No metric bound to identifier %q", n.Name)
 			return nil, n
 		}
-		c.emit(instr{mload, n.sym.Addr})
-		m := n.sym.Binding.(*metrics.Metric)
+		c.emit(instr{mload, n.Symbol.Addr})
+		m := n.Symbol.Binding.(*metrics.Metric)
 		c.emit(instr{dload, len(m.Keys)})
 
-		if !n.lvalue {
+		if !n.Lvalue {
 			t := n.Type()
 			if types.IsDimension(t) {
 				l := len(t.(*types.TypeOperator).Args)
@@ -198,27 +199,27 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 			}
 		}
 
-	case *CaprefNode:
-		if n.sym == nil || n.sym.Binding == nil {
-			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.name)
+	case *ast.CaprefNode:
+		if n.Symbol == nil || n.Symbol.Binding == nil {
+			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.Name)
 			return nil, n
 		}
-		rn := n.sym.Binding.(*PatternExpr)
+		rn := n.Symbol.Binding.(*ast.PatternExpr)
 		// rn.index contains the index of the compiled regular expression object
 		// in the re slice of the object code
-		c.emit(instr{push, rn.index})
-		// n.sym.addr is the capture group offset
-		c.emit(instr{capref, n.sym.Addr})
+		c.emit(instr{push, rn.Index})
+		// n.Symbol.Addr is the capture group offset
+		c.emit(instr{capref, n.Symbol.Addr})
 		if types.Equals(n.Type(), types.Float) {
 			c.emit(instr{s2f, nil})
 		} else if types.Equals(n.Type(), types.Int) {
 			c.emit(instr{s2i, nil})
 		}
 
-	case *IndexedExpr:
-		if args, ok := n.index.(*ExprList); ok {
-			for _, arg := range args.children {
-				Walk(c, arg)
+	case *ast.IndexedExpr:
+		if args, ok := n.Index.(*ast.ExprList); ok {
+			for _, arg := range args.Children {
+				_ = ast.Walk(c, arg)
 				if types.Equals(arg.Type(), types.Float) {
 					c.emit(instr{f2s, nil})
 				} else if types.Equals(arg.Type(), types.Int) {
@@ -226,54 +227,54 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 				}
 			}
 		}
-		Walk(c, n.lhs)
+		ast.Walk(c, n.Lhs)
 		return nil, n
 
-	case *DecoDefNode:
+	case *ast.DecoDefNode:
 		// Do nothing, defs are inlined.
 		return nil, n
 
-	case *DecoNode:
+	case *ast.DecoNode:
 		// Put the current block on the stack
 		c.decos = append(c.decos, n)
-		if n.def == nil {
-			c.errorf(n.Pos(), "No definition found for decorator %q", n.name)
+		if n.Def == nil {
+			c.errorf(n.Pos(), "No definition found for decorator %q", n.Name)
 			return nil, n
 		}
 		// then iterate over the decorator's nodes
-		Walk(c, n.def.block)
+		ast.Walk(c, n.Def.Block)
 		c.decos = c.decos[:len(c.decos)-1]
 		return nil, n
 
-	case *NextNode:
+	case *ast.NextNode:
 		// Visit the 'next' block on the decorated block stack
 		deco := c.decos[len(c.decos)-1]
-		Walk(c, deco.block)
+		ast.Walk(c, deco.Block)
 		return nil, n
 
-	case *OtherwiseNode:
+	case *ast.OtherwiseNode:
 		c.emit(instr{op: otherwise})
 
-	case *DelNode:
-		if n.expiry > 0 {
-			c.emit(instr{push, n.expiry})
+	case *ast.DelNode:
+		if n.Expiry > 0 {
+			c.emit(instr{push, n.Expiry})
 		}
-		Walk(c, n.n)
+		ast.Walk(c, n.N)
 		// overwrite the dload instruction
 		pc := c.pc()
 		c.obj.prog[pc].op = del
-		if n.expiry > 0 {
+		if n.Expiry > 0 {
 			c.obj.prog[pc].op = expire
 		}
 
-	case *BinaryExpr:
-		switch n.op {
+	case *ast.BinaryExpr:
+		switch n.Op {
 		case AND:
 			lFalse := c.newLabel()
 			lEnd := c.newLabel()
-			Walk(c, n.lhs)
+			ast.Walk(c, n.Lhs)
 			c.emit(instr{jnm, lFalse})
-			Walk(c, n.rhs)
+			ast.Walk(c, n.Rhs)
 			c.emit(instr{jnm, lFalse})
 			c.emit(instr{push, true})
 			c.emit(instr{jmp, lEnd})
@@ -285,9 +286,9 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 		case OR:
 			lTrue := c.newLabel()
 			lEnd := c.newLabel()
-			Walk(c, n.lhs)
+			ast.Walk(c, n.Lhs)
 			c.emit(instr{jm, lTrue})
-			Walk(c, n.rhs)
+			ast.Walk(c, n.Rhs)
 			c.emit(instr{jm, lTrue})
 			c.emit(instr{push, false})
 			c.emit(instr{jmp, lEnd})
@@ -299,7 +300,7 @@ func (c *codegen) VisitBefore(node astNode) (Visitor, astNode) {
 		case ADD_ASSIGN:
 			if !types.Equals(n.Type(), types.Int) {
 				// Double-emit the lhs so that it can be assigned to
-				Walk(c, n.lhs)
+				ast.Walk(c, n.Lhs)
 			}
 
 		default:
@@ -344,33 +345,33 @@ func getOpcodeForType(op int, opT types.Type) (opcode, error) {
 	return -1, errors.Errorf("no opcode for type %s in op %v", opT, op)
 }
 
-func (c *codegen) VisitAfter(node astNode) astNode {
+func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 	switch n := node.(type) {
-	case *BuiltinNode:
+	case *ast.BuiltinNode:
 		arglen := 0
-		if n.args != nil {
-			arglen = len(n.args.(*ExprList).children)
+		if n.Args != nil {
+			arglen = len(n.Args.(*ast.ExprList).Children)
 		}
-		switch n.name {
+		switch n.Name {
 		case "bool":
 		// TODO(jaq): Nothing, no support in VM yet.
 
 		case "int", "float", "string":
 			// len args should be 1
 			if arglen > 1 {
-				c.errorf(n.Pos(), "too many arguments to builtin %q: %#v", n.name, n)
+				c.errorf(n.Pos(), "too many arguments to builtin %q: %#v", n.Name, n)
 				return n
 			}
-			if err := c.emitConversion(n.args.(*ExprList).children[0].Type(), n.Type()); err != nil {
+			if err := c.emitConversion(n.Args.(*ast.ExprList).Children[0].Type(), n.Type()); err != nil {
 				c.errorf(n.Pos(), "%s on node %v", err.Error(), n)
 				return n
 			}
 
 		default:
-			c.emit(instr{builtin[n.name], arglen})
+			c.emit(instr{builtin[n.Name], arglen})
 		}
-	case *UnaryExpr:
-		switch n.op {
+	case *ast.UnaryExpr:
+		switch n.Op {
 		case INC:
 			c.emit(instr{op: inc})
 		case DEC:
@@ -378,14 +379,14 @@ func (c *codegen) VisitAfter(node astNode) astNode {
 		case NOT:
 			c.emit(instr{op: neg})
 		}
-	case *BinaryExpr:
-		switch n.op {
+	case *ast.BinaryExpr:
+		switch n.Op {
 		case LT, GT, LE, GE, EQ, NE:
 			lFail := c.newLabel()
 			lEnd := c.newLabel()
 			var cmpArg int
 			var jumpOp opcode
-			switch n.op {
+			switch n.Op {
 			case LT:
 				cmpArg = -1
 				jumpOp = jnm
@@ -406,8 +407,8 @@ func (c *codegen) VisitAfter(node astNode) astNode {
 				jumpOp = jm
 			}
 			cmpOp := cmp
-			if types.Equals(n.lhs.Type(), n.rhs.Type()) {
-				switch n.lhs.Type() {
+			if types.Equals(n.Lhs.Type(), n.Rhs.Type()) {
+				switch n.Lhs.Type() {
 				case types.Float:
 					cmpOp = fcmp
 				case types.Int:
@@ -450,7 +451,7 @@ func (c *codegen) VisitAfter(node astNode) astNode {
 				return n
 			}
 		case PLUS, MINUS, MUL, DIV, MOD, POW, ASSIGN:
-			opcode, err := getOpcodeForType(n.op, n.Type())
+			opcode, err := getOpcodeForType(n.Op, n.Type())
 			if err != nil {
 				c.errorf(n.Pos(), "%s", err)
 				return n
@@ -480,11 +481,11 @@ func (c *codegen) VisitAfter(node astNode) astNode {
 			// skip
 
 		default:
-			c.errorf(n.Pos(), "unexpected op %v", n.op)
+			c.errorf(n.Pos(), "unexpected op %v", n.Op)
 		}
 
-	case *ConvNode:
-		if err := c.emitConversion(n.n.Type(), n.Type()); err != nil {
+	case *ast.ConvNode:
+		if err := c.emitConversion(n.N.Type(), n.Type()); err != nil {
 			c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
 			return n
 		}

@@ -8,6 +8,7 @@ import (
     "time"
     
     "github.com/google/mtail/internal/metrics"
+    "github.com/google/mtail/internal/vm/ast"
     "github.com/google/mtail/internal/vm/position"
     "github.com/golang/glog"
 )
@@ -22,7 +23,7 @@ import (
     text string
     texts []string
     flag bool
-    n astNode
+    n ast.Node
     kind metrics.Kind
     duration time.Duration
 }
@@ -87,13 +88,13 @@ start
 stmt_list
   : /* empty */
   {
-    $$ = &stmtlistNode{}
+    $$ = &ast.StmtList{}
   }
   | stmt_list stmt
   {
     $$ = $1
     if ($2 != nil) {
-      $$.(*stmtlistNode).children = append($$.(*stmtlistNode).children, $2)
+      $$.(*ast.StmtList).Children = append($$.(*ast.StmtList).Children, $2)
     }
   }
   ;
@@ -113,39 +114,39 @@ stmt
   { $$ = $1 }  
   | NEXT
   {
-    $$ = &nextNode{tokenpos(mtaillex)}
+    $$ = &ast.NextNode{tokenpos(mtaillex)}
   }
   | CONST id_expr concat_expr
   {
-    $$ = &patternFragmentDefNode{id: $2, expr: $3}
+    $$ = &ast.PatternFragmentDefNode{Id: $2, Expr: $3}
   }
   | STOP
   {
-    $$ = &stopNode{tokenpos(mtaillex)}
+    $$ = &ast.StopNode{tokenpos(mtaillex)}
   }
   | INVALID
   {
-    $$ = &errorNode{tokenpos(mtaillex), $1}
+    $$ = &ast.ErrorNode{tokenpos(mtaillex), $1}
   }
   ;
 
 conditional_statement
   : logical_expr compound_statement ELSE compound_statement
   {
-    $$ = &condNode{$1, $2, $4, nil}
+    $$ = &ast.Cond{$1, $2, $4, nil}
   }
   | logical_expr compound_statement
   {
     if $1 != nil {
-      $$ = &condNode{$1, $2, nil, nil}
+      $$ = &ast.Cond{$1, $2, nil, nil}
     } else {
       $$ = $2
     }
   }
   | OTHERWISE compound_statement
   {
-    o := &otherwiseNode{tokenpos(mtaillex)}
-    $$ = &condNode{o, $2, nil, nil}
+    o := &ast.OtherwiseNode{tokenpos(mtaillex)}
+    $$ = &ast.Cond{o, $2, nil, nil}
   }
   ;
 
@@ -175,11 +176,11 @@ assign_expr
   }
   | unary_expr ASSIGN opt_nl logical_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
   | unary_expr ADD_ASSIGN opt_nl logical_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
   ;
 
@@ -190,11 +191,11 @@ logical_expr
   { $$ = $1 }
   | logical_expr logical_op opt_nl bitwise_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
   | logical_expr logical_op opt_nl match_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
   ;
 
@@ -210,7 +211,7 @@ bitwise_expr
   { $$ = $1 }
   | bitwise_expr bitwise_op opt_nl rel_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
   ;
 
@@ -228,7 +229,7 @@ rel_expr
   { $$ = $1 }
   | rel_expr rel_op opt_nl shift_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
   ;
 
@@ -252,7 +253,7 @@ shift_expr
   { $$ = $1 }
   | shift_expr shift_op opt_nl additive_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
   ;
 
@@ -268,7 +269,7 @@ additive_expr
   { $$ = $1 }
   | additive_expr add_op opt_nl multiplicative_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
   ;
 
@@ -277,11 +278,11 @@ match_expr
   { $$ = $1 }
   | primary_expr match_op opt_nl pattern_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
   | primary_expr match_op opt_nl primary_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }  
   ;
 
@@ -295,7 +296,7 @@ match_op
 pattern_expr
   : concat_expr
   {
-    $$ = &patternExprNode{expr: $1}
+    $$ = &ast.PatternExpr{Expr: $1}
   }
   ;
 
@@ -304,11 +305,11 @@ concat_expr
   { $$ = $1 }
   | concat_expr PLUS opt_nl regex_pattern
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: CONCAT}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: CONCAT}
   }
   | concat_expr PLUS opt_nl id_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: CONCAT}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: CONCAT}
   }
   ;
 
@@ -324,7 +325,7 @@ multiplicative_expr
   { $$ = $1 }
   | multiplicative_expr mul_op opt_nl unary_expr
   {
-    $$ = &binaryExprNode{lhs: $1, rhs: $4, op: $2}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
   ;
 
@@ -344,7 +345,7 @@ unary_expr
   { $$ = $1 }
   | NOT unary_expr
   {
-    $$ = &unaryExprNode{pos: tokenpos(mtaillex), expr: $2, op: $1}
+    $$ = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $2, Op: $1}
   }
   ;
 
@@ -353,7 +354,7 @@ postfix_expr
   { $$ = $1 }
   | postfix_expr postfix_op
   {
-    $$ = &unaryExprNode{pos: tokenpos(mtaillex), expr: $1, op: $2}
+    $$ = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: $2}
   }
   ;
 
@@ -369,23 +370,23 @@ primary_expr
   { $$ = $1 }
   | BUILTIN LPAREN RPAREN
   {
-    $$ = &builtinNode{pos: tokenpos(mtaillex), name: $1, args: nil}
+    $$ = &ast.BuiltinNode{P: tokenpos(mtaillex), Name: $1, Args: nil}
   }
   | BUILTIN LPAREN arg_expr_list RPAREN
   {
-    $$ = &builtinNode{pos: tokenpos(mtaillex), name: $1, args: $3}
+    $$ = &ast.BuiltinNode{P: tokenpos(mtaillex), Name: $1, Args: $3}
   }
   | CAPREF
   {
-    $$ = &caprefNode{tokenpos(mtaillex), $1, false, nil}
+    $$ = &ast.CaprefNode{tokenpos(mtaillex), $1, false, nil}
   }
   | CAPREF_NAMED
   {
-    $$ = &caprefNode{tokenpos(mtaillex), $1, true, nil}
+    $$ = &ast.CaprefNode{tokenpos(mtaillex), $1, true, nil}
   }
   | STRING
   {
-    $$ = &stringConstNode{tokenpos(mtaillex), $1}
+    $$ = &ast.StringConst{tokenpos(mtaillex), $1}
   }
   | LPAREN expr RPAREN
   {
@@ -393,45 +394,45 @@ primary_expr
   }
   | INTLITERAL
   {
-    $$ = &intConstNode{tokenpos(mtaillex), $1}
+    $$ = &ast.IntConst{tokenpos(mtaillex), $1}
   }
   | FLOATLITERAL
   {
-    $$ = &floatConstNode{tokenpos(mtaillex), $1}
+    $$ = &ast.FloatConst{tokenpos(mtaillex), $1}
   }
   ;
 
 indexed_expr
   : id_expr
   {
-    $$ = &indexedExprNode{lhs: $1, index: &exprlistNode{}}
+    $$ = &ast.IndexedExpr{Lhs: $1, Index: &ast.ExprList{}}
   }
   | indexed_expr LSQUARE arg_expr_list RSQUARE
   {
     $$ = $1
-      $$.(*indexedExprNode).index.(*exprlistNode).children = append(
-        $$.(*indexedExprNode).index.(*exprlistNode).children,
-        $3.(*exprlistNode).children...)
+      $$.(*ast.IndexedExpr).Index.(*ast.ExprList).Children = append(
+        $$.(*ast.IndexedExpr).Index.(*ast.ExprList).Children,
+        $3.(*ast.ExprList).Children...)
   }
   ;
 
 id_expr
   : ID
   {
-    $$ = &idNode{tokenpos(mtaillex), $1, nil, false}
+    $$ = &ast.Id{tokenpos(mtaillex), $1, nil, false}
   }
   ;
 
 arg_expr_list
   : bitwise_expr
   {
-    $$ = &exprlistNode{}
-    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $1)
+    $$ = &ast.ExprList{}
+    $$.(*ast.ExprList).Children = append($$.(*ast.ExprList).Children, $1)
   }
   | arg_expr_list COMMA bitwise_expr
   {
     $$ = $1
-    $$.(*exprlistNode).children = append($$.(*exprlistNode).children, $3)
+    $$.(*ast.ExprList).Children = append($$.(*ast.ExprList).Children, $3)
   }
   ;
 
@@ -440,8 +441,8 @@ regex_pattern
   {
     mp := markedpos(mtaillex)
     tp := tokenpos(mtaillex)
-    pos := MergePosition(&mp, &tp)
-    $$ = &patternConstNode{pos: *pos, pattern: $4}
+    pos := ast.MergePosition(&mp, &tp)
+    $$ = &ast.PatternConst{P: *pos, Pattern: $4}
   }
   ;
 
@@ -449,9 +450,9 @@ declaration
   : hide_spec type_spec declarator
   {
     $$ = $3
-    d := $$.(*declNode)
-    d.kind = $2
-    d.hidden = $1
+    d := $$.(*ast.DeclNode)
+    d.Kind = $2
+    d.Hidden = $1
   }
   ;
 
@@ -470,20 +471,20 @@ declarator
   : declarator by_spec
   {
     $$ = $1
-    $$.(*declNode).keys = $2
+    $$.(*ast.DeclNode).Keys = $2
   }
   | declarator as_spec
   {
     $$ = $1
-    $$.(*declNode).exportedName = $2
+    $$.(*ast.DeclNode).ExportedName = $2
   }
   | ID
   {
-    $$ = &declNode{pos: tokenpos(mtaillex), name: $1}
+    $$ = &ast.DeclNode{P: tokenpos(mtaillex), Name: $1}
   }
   | STRING
   {
-    $$ = &declNode{pos: tokenpos(mtaillex), name: $1}
+    $$ = &ast.DeclNode{P: tokenpos(mtaillex), Name: $1}
   }
   ;
 
@@ -546,25 +547,25 @@ as_spec
 definition
   : mark_pos DEF ID compound_statement
   {
-    $$ = &decoDefNode{pos: markedpos(mtaillex), name: $3, block: $4}
+    $$ = &ast.DecoDefNode{P: markedpos(mtaillex), Name: $3, Block: $4}
   }
   ;
 
 decoration_statement
   : mark_pos DECO compound_statement
   {
-    $$ = &decoNode{markedpos(mtaillex), $2, $3, nil, nil}
+    $$ = &ast.DecoNode{markedpos(mtaillex), $2, $3, nil, nil}
   }
   ;
 
 delete_statement
   : DEL postfix_expr AFTER DURATIONLITERAL
   {
-    $$ = &delNode{pos: tokenpos(mtaillex), n: $2, expiry: $4}
+    $$ = &ast.DelNode{P: tokenpos(mtaillex), N: $2, Expiry: $4}
   }
   | DEL postfix_expr
   {
-    $$ = &delNode{pos: tokenpos(mtaillex), n: $2}
+    $$ = &ast.DelNode{P: tokenpos(mtaillex), N: $2}
   }
 
 

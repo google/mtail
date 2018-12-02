@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package ast
 
 import (
 	"sync"
@@ -13,18 +13,18 @@ import (
 	"github.com/google/mtail/internal/vm/types"
 )
 
-type astNode interface {
+type Node interface {
 	Pos() *position.Position // Returns the position of the node from the original source
 	Type() types.Type        // Returns the type of the expression in this node
 }
 
 type StmtList struct {
 	Scope    *symtab.Scope // Pointer to the local scope for this enclosing block
-	children []astNode
+	Children []Node
 }
 
 func (n *StmtList) Pos() *position.Position {
-	return mergepositionlist(n.children)
+	return mergepositionlist(n.Children)
 }
 
 func (n *StmtList) Type() types.Type {
@@ -32,14 +32,14 @@ func (n *StmtList) Type() types.Type {
 }
 
 type ExprList struct {
-	children []astNode
+	Children []Node
 
 	typMu sync.RWMutex
 	typ   types.Type
 }
 
 func (n *ExprList) Pos() *position.Position {
-	return mergepositionlist(n.children)
+	return mergepositionlist(n.Children)
 }
 
 func (n *ExprList) Type() types.Type {
@@ -55,14 +55,14 @@ func (n *ExprList) SetType(t types.Type) {
 }
 
 type Cond struct {
-	cond      astNode
-	truthNode astNode
-	elseNode  astNode
-	s         *symtab.Scope // a conditional expression can cause new variables to be defined
+	Cond  Node
+	Truth Node
+	Else  Node
+	Scope *symtab.Scope // a conditional expression can cause new variables to be defined
 }
 
 func (n *Cond) Pos() *position.Position {
-	return mergepositionlist([]astNode{n.cond, n.truthNode, n.elseNode})
+	return mergepositionlist([]Node{n.Cond, n.Truth, n.Else})
 }
 
 func (n *Cond) Type() types.Type {
@@ -70,53 +70,53 @@ func (n *Cond) Type() types.Type {
 }
 
 type Id struct {
-	pos    position.Position
-	name   string
-	sym    *symtab.Symbol
-	lvalue bool // If set, then this node appears on the left side of an
+	P      position.Position
+	Name   string
+	Symbol *symtab.Symbol
+	Lvalue bool // If set, then this node appears on the left side of an
 	// assignment and needs to have its address taken only.
 }
 
 func (n *Id) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 
 func (n *Id) Type() types.Type {
-	if n.sym != nil {
-		return n.sym.Type
+	if n.Symbol != nil {
+		return n.Symbol.Type
 	}
 	return types.Error // id not defined
 }
 
 type CaprefNode struct {
-	pos     position.Position
-	name    string
-	isNamed bool // true if the capref is a named reference, not positional
-	sym     *symtab.Symbol
+	P       position.Position
+	Name    string
+	IsNamed bool // true if the capref is a named reference, not positional
+	Symbol  *symtab.Symbol
 }
 
 func (n *CaprefNode) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 
 func (n *CaprefNode) Type() types.Type {
-	if n.sym != nil {
-		return n.sym.Type
+	if n.Symbol != nil {
+		return n.Symbol.Type
 	}
 	return types.Error // sym not defined due to undefined capref error
 }
 
 type BuiltinNode struct {
-	pos  position.Position
-	name string
-	args astNode
+	P    position.Position
+	Name string
+	Args Node
 
 	typMu sync.RWMutex
 	typ   types.Type
 }
 
 func (n *BuiltinNode) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 
 func (n *BuiltinNode) Type() types.Type {
@@ -132,15 +132,15 @@ func (n *BuiltinNode) SetType(t types.Type) {
 }
 
 type BinaryExpr struct {
-	lhs, rhs astNode
-	op       int
+	Lhs, Rhs Node
+	Op       int
 
 	typMu sync.RWMutex
 	typ   types.Type
 }
 
 func (n *BinaryExpr) Pos() *position.Position {
-	return MergePosition(n.lhs.Pos(), n.rhs.Pos())
+	return MergePosition(n.Lhs.Pos(), n.Rhs.Pos())
 }
 
 func (n *BinaryExpr) Type() types.Type {
@@ -156,16 +156,16 @@ func (n *BinaryExpr) SetType(t types.Type) {
 }
 
 type UnaryExpr struct {
-	pos  position.Position // pos is the position of the op
-	expr astNode
-	op   int
+	P    position.Position // pos is the position of the op
+	Expr Node
+	Op   int
 
 	typMu sync.RWMutex
 	typ   types.Type
 }
 
 func (n *UnaryExpr) Pos() *position.Position {
-	return MergePosition(&n.pos, n.expr.Pos())
+	return MergePosition(&n.P, n.Expr.Pos())
 }
 
 func (n *UnaryExpr) Type() types.Type {
@@ -181,14 +181,14 @@ func (n *UnaryExpr) SetType(t types.Type) {
 }
 
 type IndexedExpr struct {
-	lhs, index astNode
+	Lhs, Index Node
 
 	typMu sync.RWMutex
 	typ   types.Type
 }
 
 func (n *IndexedExpr) Pos() *position.Position {
-	return MergePosition(n.lhs.Pos(), n.index.Pos())
+	return MergePosition(n.Lhs.Pos(), n.Index.Pos())
 }
 
 func (n *IndexedExpr) Type() types.Type {
@@ -204,57 +204,57 @@ func (n *IndexedExpr) SetType(t types.Type) {
 }
 
 type DeclNode struct {
-	pos          position.Position
-	name         string
-	hidden       bool
-	keys         []string
-	kind         metrics.Kind
-	exportedName string
-	sym          *symtab.Symbol
+	P            position.Position
+	Name         string
+	Hidden       bool
+	Keys         []string
+	Kind         metrics.Kind
+	ExportedName string
+	Symbol       *symtab.Symbol
 }
 
 func (n *DeclNode) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 
 func (n *DeclNode) Type() types.Type {
-	if n.sym != nil {
-		return n.sym.Type
+	if n.Symbol != nil {
+		return n.Symbol.Type
 	}
 	return types.Error
 }
 
 type StringConst struct {
-	pos  position.Position
-	text string
+	P    position.Position
+	Text string
 }
 
 func (n *StringConst) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 func (n *StringConst) Type() types.Type {
 	return types.String
 }
 
 type IntConst struct {
-	pos position.Position
-	i   int64
+	P position.Position
+	I int64
 }
 
 func (n *IntConst) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 func (n *IntConst) Type() types.Type {
 	return types.Int
 }
 
 type FloatConst struct {
-	pos position.Position
-	f   float64
+	P position.Position
+	F float64
 }
 
 func (n *FloatConst) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 func (n *FloatConst) Type() types.Type {
 	return types.Float
@@ -262,13 +262,13 @@ func (n *FloatConst) Type() types.Type {
 
 // patternExprNode is the top of a pattern expression
 type PatternExpr struct {
-	expr    astNode
-	pattern string // if not empty, the fully defined pattern after typecheck
-	index   int    // reference to the compiled object offset after codegen
+	Expr    Node
+	Pattern string // if not empty, the fully defined pattern after typecheck
+	Index   int    // reference to the compiled object offset after codegen
 }
 
 func (n *PatternExpr) Pos() *position.Position {
-	return n.expr.Pos()
+	return n.Expr.Pos()
 }
 
 func (n *PatternExpr) Type() types.Type {
@@ -277,12 +277,12 @@ func (n *PatternExpr) Type() types.Type {
 
 // patternConstNode holds inline constant pattern fragments
 type PatternConst struct {
-	pos     position.Position
-	pattern string
+	P       position.Position
+	Pattern string
 }
 
 func (n *PatternConst) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 
 func (n *PatternConst) Type() types.Type {
@@ -291,14 +291,14 @@ func (n *PatternConst) Type() types.Type {
 
 // patternDefNode holds a named pattern expression
 type PatternFragmentDefNode struct {
-	id      astNode
-	expr    astNode
-	sym     *symtab.Symbol // Optional Symbol for a named pattern
-	pattern string         // If not empty, contains the complete evaluated pattern of the expr
+	Id      Node
+	Expr    Node
+	Symbol  *symtab.Symbol // Optional Symbol for a named pattern
+	Pattern string         // If not empty, contains the complete evaluated pattern of the expr
 }
 
 func (n *PatternFragmentDefNode) Pos() *position.Position {
-	return n.id.Pos()
+	return n.Id.Pos()
 }
 
 func (n *PatternFragmentDefNode) Type() types.Type {
@@ -306,34 +306,34 @@ func (n *PatternFragmentDefNode) Type() types.Type {
 }
 
 type DecoDefNode struct {
-	pos   position.Position
-	name  string
-	block astNode
-	sym   *symtab.Symbol
-	scope *symtab.Scope
+	P      position.Position
+	Name   string
+	Block  Node
+	Symbol *symtab.Symbol
+	Scope  *symtab.Scope
 }
 
 func (n *DecoDefNode) Pos() *position.Position {
-	return MergePosition(&n.pos, n.block.Pos())
+	return MergePosition(&n.P, n.Block.Pos())
 }
 
 func (n *DecoDefNode) Type() types.Type {
-	if n.sym != nil {
-		return n.sym.Type
+	if n.Symbol != nil {
+		return n.Symbol.Type
 	}
 	return types.Int
 }
 
 type DecoNode struct {
-	pos   position.Position
-	name  string
-	block astNode
-	def   *DecoDefNode
-	scope *symtab.Scope
+	P     position.Position
+	Name  string
+	Block Node
+	Def   *DecoDefNode
+	Scope *symtab.Scope
 }
 
 func (n *DecoNode) Pos() *position.Position {
-	return MergePosition(&n.pos, n.block.Pos())
+	return MergePosition(&n.P, n.Block.Pos())
 }
 
 func (n *DecoNode) Type() types.Type {
@@ -341,11 +341,11 @@ func (n *DecoNode) Type() types.Type {
 }
 
 type NextNode struct {
-	pos position.Position
+	P position.Position
 }
 
 func (n *NextNode) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 
 func (n *NextNode) Type() types.Type {
@@ -353,11 +353,11 @@ func (n *NextNode) Type() types.Type {
 }
 
 type OtherwiseNode struct {
-	pos position.Position
+	P position.Position
 }
 
 func (n *OtherwiseNode) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 
 func (n *OtherwiseNode) Type() types.Type {
@@ -365,28 +365,28 @@ func (n *OtherwiseNode) Type() types.Type {
 }
 
 type DelNode struct {
-	pos    position.Position
-	n      astNode
-	expiry time.Duration
+	P      position.Position
+	N      Node
+	Expiry time.Duration
 }
 
-func (d *DelNode) Pos() *position.Position {
-	return &d.pos
+func (n *DelNode) Pos() *position.Position {
+	return &n.P
 }
 
-func (d *DelNode) Type() types.Type {
+func (n *DelNode) Type() types.Type {
 	return types.None
 }
 
 type ConvNode struct {
-	n astNode
+	N Node
 
 	mu  sync.RWMutex
 	typ types.Type
 }
 
 func (n *ConvNode) Pos() *position.Position {
-	return n.n.Pos()
+	return n.N.Pos()
 }
 
 func (n *ConvNode) Type() types.Type {
@@ -402,12 +402,12 @@ func (n *ConvNode) SetType(t types.Type) {
 }
 
 type ErrorNode struct {
-	pos      position.Position
-	spelling string
+	P        position.Position
+	Spelling string
 }
 
 func (n *ErrorNode) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 
 func (n *ErrorNode) Type() types.Type {
@@ -415,11 +415,11 @@ func (n *ErrorNode) Type() types.Type {
 }
 
 type StopNode struct {
-	pos position.Position
+	P position.Position
 }
 
 func (n *StopNode) Pos() *position.Position {
-	return &n.pos
+	return &n.P
 }
 
 func (n *StopNode) Type() types.Type {
@@ -452,7 +452,7 @@ func MergePosition(a, b *position.Position) *position.Position {
 }
 
 // mergepositionlist is a helper that merges the positions of all the nodes in a list
-func mergepositionlist(l []astNode) *position.Position {
+func mergepositionlist(l []Node) *position.Position {
 	if len(l) == 0 {
 		return nil
 	}

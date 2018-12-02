@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
 )
@@ -28,9 +29,9 @@ type checker struct {
 // modified astNode and either a list of errors found, or nil if the program is
 // semantically valid.  At the completion of Check, the symbol table and type
 // annotation are also complete.
-func Check(node astNode) (astNode, error) {
+func Check(node ast.Node) (ast.Node, error) {
 	c := &checker{}
-	node = Walk(c, node)
+	node = ast.Walk(c, node)
 	if len(c.errors) > 0 {
 		return node, c.errors
 	}
@@ -39,45 +40,45 @@ func Check(node astNode) (astNode, error) {
 
 // VisitBefore performs most of the symbol table construction, so that symbols
 // are guaranteed to exist before their use.
-func (c *checker) VisitBefore(node astNode) (Visitor, astNode) {
+func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	switch n := node.(type) {
 
-	case *StmtList:
+	case *ast.StmtList:
 		n.Scope = symtab.NewScope(c.scope)
 		c.scope = n.Scope
 		return c, n
 
-	case *Cond:
-		n.s = symtab.NewScope(c.scope)
-		c.scope = n.s
+	case *ast.Cond:
+		n.Scope = symtab.NewScope(c.scope)
+		c.scope = n.Scope
 		return c, n
 
-	case *CaprefNode:
-		if n.sym == nil {
-			if sym := c.scope.Lookup(n.name, symtab.CaprefSymbol); sym == nil {
-				msg := fmt.Sprintf("Capture group `$%s' was not defined by a regular expression visible to this scope.", n.name)
-				if n.isNamed {
-					msg = fmt.Sprintf("%s\n\tTry using `(?P<%s>...)' to name the capture group.", msg, n.name)
+	case *ast.CaprefNode:
+		if n.Symbol == nil {
+			if sym := c.scope.Lookup(n.Name, symtab.CaprefSymbol); sym == nil {
+				msg := fmt.Sprintf("Capture group `$%s' was not defined by a regular expression visible to this scope.", n.Name)
+				if n.IsNamed {
+					msg = fmt.Sprintf("%s\n\tTry using `(?P<%s>...)' to name the capture group.", msg, n.Name)
 				} else {
-					msg = fmt.Sprintf("%s\n\tCheck that there are at least %s pairs of parentheses.", msg, n.name)
+					msg = fmt.Sprintf("%s\n\tCheck that there are at least %s pairs of parentheses.", msg, n.Name)
 				}
 				c.errors.Add(n.Pos(), msg)
 				return nil, n
 			} else {
 				sym.Used = true
-				n.sym = sym
+				n.Symbol = sym
 			}
 		}
 		return c, n
 
-	case *DeclNode:
-		n.sym = symtab.NewSymbol(n.name, symtab.VarSymbol, n.Pos())
-		if alt := c.scope.Insert(n.sym); alt != nil {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.name, alt.Pos))
+	case *ast.DeclNode:
+		n.Symbol = symtab.NewSymbol(n.Name, symtab.VarSymbol, n.Pos())
+		if alt := c.scope.Insert(n.Symbol); alt != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.Name, alt.Pos))
 			return nil, n
 		}
 		var rType types.Type
-		switch n.kind {
+		switch n.Kind {
 		case metrics.Counter, metrics.Gauge, metrics.Timer:
 			// TODO(jaq): This should be a numeric type, unless we want to
 			// enforce rules like "Counter can only be Int."
@@ -85,91 +86,91 @@ func (c *checker) VisitBefore(node astNode) (Visitor, astNode) {
 		case metrics.Text:
 			rType = types.String
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("internal compiler error: unrecognised Kind %v for declNode %v", n.kind, n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("internal compiler error: unrecognised Kind %v for declNode %v", n.Kind, n))
 			return nil, n
 		}
-		if len(n.keys) > 0 {
+		if len(n.Keys) > 0 {
 			// One type per key
-			keyTypes := make([]types.Type, 0, len(n.keys))
-			for i := 0; i < len(n.keys); i++ {
+			keyTypes := make([]types.Type, 0, len(n.Keys))
+			for i := 0; i < len(n.Keys); i++ {
 				keyTypes = append(keyTypes, types.NewTypeVariable())
 			}
 			// and one for the value.
 			keyTypes = append(keyTypes, rType)
-			n.sym.Type = types.Dimension(keyTypes...)
+			n.Symbol.Type = types.Dimension(keyTypes...)
 		} else {
-			n.sym.Type = rType
+			n.Symbol.Type = rType
 		}
 		return c, n
 
-	case *Id:
-		if n.sym == nil {
-			if sym := c.scope.Lookup(n.name, symtab.VarSymbol); sym != nil {
+	case *ast.Id:
+		if n.Symbol == nil {
+			if sym := c.scope.Lookup(n.Name, symtab.VarSymbol); sym != nil {
 				glog.V(2).Infof("found sym %v", sym)
 				sym.Used = true
-				n.sym = sym
-			} else if sym := c.scope.Lookup(n.name, symtab.PatternSymbol); sym != nil {
+				n.Symbol = sym
+			} else if sym := c.scope.Lookup(n.Name, symtab.PatternSymbol); sym != nil {
 				glog.V(2).Infof("Found Sym %v", sym)
 				sym.Used = true
-				n.sym = sym
+				n.Symbol = sym
 			} else {
 				// Apply a terribly bad heuristic to choose a suggestion.
-				sug := fmt.Sprintf("Try adding `counter %s' to the top of the program.", n.name)
-				if n.name == strings.ToUpper(n.name) {
+				sug := fmt.Sprintf("Try adding `counter %s' to the top of the program.", n.Name)
+				if n.Name == strings.ToUpper(n.Name) {
 					// If the string is all uppercase, pretend it was a const
 					// pattern because that's what the docs do.
-					sug = fmt.Sprintf("Try adding `const %s /.../' earlier in the program.", n.name)
+					sug = fmt.Sprintf("Try adding `const %s /.../' earlier in the program.", n.Name)
 				}
-				c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\t%s", n.name, sug))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\t%s", n.Name, sug))
 				return nil, n
 			}
 		}
 		return c, n
 
-	case *DecoDefNode:
-		n.sym = symtab.NewSymbol(n.name, symtab.DecoSymbol, n.Pos())
-		(*n.sym).Binding = n
-		if alt := c.scope.Insert(n.sym); alt != nil {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `%s' previously declared at %s", n.name, alt.Pos))
+	case *ast.DecoDefNode:
+		n.Symbol = symtab.NewSymbol(n.Name, symtab.DecoSymbol, n.Pos())
+		(*n.Symbol).Binding = n
+		if alt := c.scope.Insert(n.Symbol); alt != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `%s' previously declared at %s", n.Name, alt.Pos))
 			return nil, n
 		}
 		return c, n
 
-	case *DecoNode:
-		if sym := c.scope.Lookup(n.name, symtab.DecoSymbol); sym != nil {
+	case *ast.DecoNode:
+		if sym := c.scope.Lookup(n.Name, symtab.DecoSymbol); sym != nil {
 			if sym.Binding == nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.name))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.Name))
 				return nil, n
 			}
 			sym.Used = true
-			n.def = sym.Binding.(*DecoDefNode)
+			n.Def = sym.Binding.(*ast.DecoDefNode)
 		} else {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.name, n.name))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.Name, n.Name))
 			return nil, n
 		}
-		n.scope = symtab.NewScope(c.scope)
+		n.Scope = symtab.NewScope(c.scope)
 		// Insert all of n.def.scope into this scope
-		n.scope.CopyFrom(n.def.scope)
-		c.scope = n.scope
+		n.Scope.CopyFrom(n.Def.Scope)
+		c.scope = n.Scope
 		return c, n
 
-	case *PatternFragmentDefNode:
-		id, ok := n.id.(*Id)
+	case *ast.PatternFragmentDefNode:
+		id, ok := n.Id.(*ast.Id)
 		if !ok {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no identifier attache to pattern fragment %#v", n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no identifier attached to pattern fragment %#v", n))
 			return nil, n
 		}
-		n.sym = symtab.NewSymbol(id.name, symtab.PatternSymbol, id.Pos())
-		if alt := c.scope.Insert(n.sym); alt != nil {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", id.name, alt.Pos))
+		n.Symbol = symtab.NewSymbol(id.Name, symtab.PatternSymbol, id.Pos())
+		if alt := c.scope.Insert(n.Symbol); alt != nil {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", id.Name, alt.Pos))
 			return nil, n
 		}
-		n.sym.Binding = n
-		n.sym.Type = types.Pattern
+		n.Symbol.Binding = n
+		n.Symbol.Type = types.Pattern
 		return c, n
 
-	case *DelNode:
-		n.n = Walk(c, n.n)
+	case *ast.DelNode:
+		n.N = ast.Walk(c, n.N)
 		return c, n
 
 	}
@@ -199,52 +200,52 @@ func (c *checker) checkSymbolUsage() {
 
 // VisitAfter performs the type annotation and checking, once the child nodes of
 // expressions have been annotated and checked.
-func (c *checker) VisitAfter(node astNode) astNode {
+func (c *checker) VisitAfter(node ast.Node) ast.Node {
 	switch n := node.(type) {
-	case *StmtList:
+	case *ast.StmtList:
 		c.checkSymbolUsage()
 		// Pop the scope
 		c.scope = n.Scope.Parent
 		return n
 
-	case *Cond:
+	case *ast.Cond:
 		c.checkSymbolUsage()
 		// Pop the scope
-		c.scope = n.s.Parent
+		c.scope = n.Scope.Parent
 		return n
 
-	case *DecoNode:
+	case *ast.DecoNode:
 		// Don't check symbol usage here because the decorator is only partially defined.
-		c.scope = n.scope.Parent
+		c.scope = n.Scope.Parent
 		return n
 
-	case *NextNode:
+	case *ast.NextNode:
 		// Put the current scope on a decorator-specific scoe stack for unwinding
 		c.decoScopes = append(c.decoScopes, c.scope)
 		return n
 
-	case *DecoDefNode:
+	case *ast.DecoDefNode:
 		// Pop a decorator scope off the stack from the enclosed nextNode.
 		last := len(c.decoScopes) - 1
-		n.scope = c.decoScopes[last]
+		n.Scope = c.decoScopes[last]
 		c.decoScopes = c.decoScopes[:last]
 		return n
 
-	case *BinaryExpr:
+	case *ast.BinaryExpr:
 		var rType types.Type
-		lT := n.lhs.Type()
+		lT := n.Lhs.Type()
 		switch {
 		case types.IsErrorType(lT):
 			n.SetType(types.Error)
 			return n
 		}
-		rT := n.rhs.Type()
+		rT := n.Rhs.Type()
 		switch {
 		case types.IsErrorType(rT):
 			n.SetType(types.Error)
 			return n
 		}
-		switch n.op {
+		switch n.Op {
 		case DIV, MOD, MUL, MINUS, PLUS, POW:
 			// Numeric
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
@@ -271,12 +272,14 @@ func (c *checker) VisitAfter(node astNode) astNode {
 			// Implicit type conversion for non-comparisons, promoting each
 			// half to the return type of the op.
 			if !types.Equals(rType, lT) {
-				conv := &ConvNode{n: n.lhs, typ: rType}
-				n.lhs = conv
+				conv := &ast.ConvNode{N: n.Lhs}
+				conv.SetType(rType)
+				n.Lhs = conv
 			}
 			if !types.Equals(rType, rT) {
-				conv := &ConvNode{n: n.rhs, typ: rType}
-				n.rhs = conv
+				conv := &ast.ConvNode{N: n.Rhs}
+				conv.SetType(rType)
+				n.Rhs = conv
 			}
 
 		case SHL, SHR, BITAND, BITOR, XOR, NOT:
@@ -289,7 +292,7 @@ func (c *checker) VisitAfter(node astNode) astNode {
 			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
-				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.op, lT, rT))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.Op, lT, rT))
 				n.SetType(types.Error)
 				return n
 			}
@@ -316,13 +319,15 @@ func (c *checker) VisitAfter(node astNode) astNode {
 			}
 			// Promote types if the ast types are not the same as the expression type.
 			if !types.Equals(t, lT) {
-				conv := &ConvNode{n: n.lhs, typ: t}
-				n.lhs = conv
+				conv := &ast.ConvNode{N: n.Lhs}
+				conv.SetType(t)
+				n.Lhs = conv
 				glog.V(2).Infof("Emitting convnode %+v", conv)
 			}
 			if !types.Equals(t, rT) {
-				conv := &ConvNode{n: n.rhs, typ: t}
-				n.rhs = conv
+				conv := &ast.ConvNode{N: n.Rhs}
+				conv.SetType(t)
+				n.Rhs = conv
 				glog.V(2).Infof("Emitting convnode %+v", conv)
 			}
 
@@ -340,11 +345,11 @@ func (c *checker) VisitAfter(node astNode) astNode {
 				n.SetType(types.Error)
 				return n
 			}
-			switch v := n.lhs.(type) {
-			case *Id:
-				v.lvalue = true
-			case *IndexedExpr:
-				v.lhs.(*Id).lvalue = true
+			switch v := n.Lhs.(type) {
+			case *ast.Id:
+				v.Lvalue = true
+			case *ast.IndexedExpr:
+				v.Lhs.(*ast.Id).Lvalue = true
 			}
 
 		case CONCAT:
@@ -370,21 +375,21 @@ func (c *checker) VisitAfter(node astNode) astNode {
 			}
 
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %v in node %#v", n.op, n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %v in node %#v", n.Op, n))
 			n.SetType(types.Error)
 			return n
 		}
 		n.SetType(rType)
 		return n
 
-	case *UnaryExpr:
-		t := n.expr.Type()
+	case *ast.UnaryExpr:
+		t := n.Expr.Type()
 		switch {
 		case types.IsErrorType(t):
 			n.SetType(types.Error)
 			return n
 		}
-		switch n.op {
+		switch n.Op {
 		case NOT:
 			rType := types.Int
 			err := types.Unify(rType, t)
@@ -403,23 +408,23 @@ func (c *checker) VisitAfter(node astNode) astNode {
 				return n
 			}
 			n.SetType(rType)
-			switch v := n.expr.(type) {
-			case *Id:
-				v.lvalue = true
-			case *IndexedExpr:
-				v.lhs.(*Id).lvalue = true
+			switch v := n.Expr.(type) {
+			case *ast.Id:
+				v.Lvalue = true
+			case *ast.IndexedExpr:
+				v.Lhs.(*ast.Id).Lvalue = true
 			}
 
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", lexeme(n.op), n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", lexeme(n.Op), n))
 			n.SetType(types.Error)
 			return n
 		}
 		return n
 
-	case *ExprList:
+	case *ast.ExprList:
 		argTypes := []types.Type{}
-		for _, arg := range n.children {
+		for _, arg := range n.Children {
 			if types.IsErrorType(arg.Type()) {
 				n.SetType(types.Error)
 				return n
@@ -429,10 +434,10 @@ func (c *checker) VisitAfter(node astNode) astNode {
 		n.SetType(types.Dimension(argTypes...))
 		return n
 
-	case *IndexedExpr:
+	case *ast.IndexedExpr:
 		argTypes := []types.Type{}
-		if args, ok := n.index.(*ExprList); ok {
-			for _, arg := range args.children {
+		if args, ok := n.Index.(*ast.ExprList); ok {
+			for _, arg := range args.Children {
 				if types.IsErrorType(arg.Type()) {
 					n.SetType(types.Error)
 					return n
@@ -440,14 +445,14 @@ func (c *checker) VisitAfter(node astNode) astNode {
 				argTypes = append(argTypes, arg.Type())
 			}
 		} else {
-			c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected %v", n.index))
+			c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected %v", n.Index))
 			n.SetType(types.Error)
 			return n
 		}
 
-		switch v := n.lhs.(type) {
-		case *Id:
-			if v.sym == nil {
+		switch v := n.Lhs.(type) {
+		case *ast.Id:
+			if v.Symbol == nil {
 				// undefined, already caught
 				n.SetType(types.Error)
 				return n
@@ -474,12 +479,12 @@ func (c *checker) VisitAfter(node astNode) astNode {
 		rType := types.NewTypeVariable()
 		argTypes = append(argTypes, rType)
 		astType := types.Dimension(argTypes...)
-		fresh := n.lhs.Type()
+		fresh := n.Lhs.Type()
 		err := types.Unify(fresh, astType)
 		if err != nil {
-			exprType, ok := n.lhs.Type().(*types.TypeOperator)
+			exprType, ok := n.Lhs.Type().(*types.TypeOperator)
 			if !ok {
-				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected lhs type %v", n.lhs.Type()))
+				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected lhs type %v", n.Lhs.Type()))
 				n.SetType(types.Error)
 				return n
 			}
@@ -499,10 +504,10 @@ func (c *checker) VisitAfter(node astNode) astNode {
 		n.SetType(rType)
 		return n
 
-	case *BuiltinNode:
+	case *ast.BuiltinNode:
 		typs := []types.Type{}
-		if args, ok := n.args.(*ExprList); ok {
-			for _, arg := range args.children {
+		if args, ok := n.Args.(*ast.ExprList); ok {
+			for _, arg := range args.Children {
 				typs = append(typs, arg.Type())
 			}
 		}
@@ -510,31 +515,31 @@ func (c *checker) VisitAfter(node astNode) astNode {
 		typs = append(typs, rType)
 
 		fn := types.Function(typs...)
-		fresh := types.FreshType(types.Builtins[n.name])
+		fresh := types.FreshType(types.Builtins[n.Name])
 		err := types.Unify(fresh, fn)
 		if err != nil {
-			c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.name, err))
+			c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.Name, err))
 			n.SetType(types.Error)
 			return n
 		}
 		n.SetType(rType)
 
-		switch n.name {
+		switch n.Name {
 		case "strptime":
 			// Second argument to strptime is the format string.  If it is
 			// defined at compile time, we can verify it can be use as a format
 			// string by parsing itself.
-			if f, ok := n.args.(*ExprList).children[1].(*StringConst); ok {
+			if f, ok := n.Args.(*ast.ExprList).Children[1].(*ast.StringConst); ok {
 				// Layout strings can contain an underscore to indicate a digit
 				// field if the layout field can contain two digits; but they
 				// won't parse themselves.  Zulu Timezones in the layout need
 				// to be converted to offset in the parsed time.
-				timeStr := strings.Replace(strings.Replace(f.text, "_", "", -1), "Z", "+", -1)
+				timeStr := strings.Replace(strings.Replace(f.Text, "_", "", -1), "Z", "+", -1)
 				glog.V(2).Infof("time_str is %q", timeStr)
-				_, err := time.Parse(f.text, timeStr)
+				_, err := time.Parse(f.Text, timeStr)
 				if err != nil {
-					glog.Infof("time.Parse(%q, %q) failed: %s", f.text, timeStr, err)
-					c.errors.Add(f.Pos(), fmt.Sprintf("invalid time format string %q\n\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice.", f.text))
+					glog.Infof("time.Parse(%q, %q) failed: %s", f.Text, timeStr, err)
+					c.errors.Add(f.Pos(), fmt.Sprintf("invalid time format string %q\n\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice.", f.Text))
 					n.SetType(types.Error)
 					return n
 				}
@@ -542,29 +547,29 @@ func (c *checker) VisitAfter(node astNode) astNode {
 		}
 		return n
 
-	case *PatternExpr:
+	case *ast.PatternExpr:
 		// Evaluate the expression.
 		pe := &patternEvaluator{scope: c.scope, errors: &c.errors}
-		n = Walk(pe, n).(*PatternExpr)
+		n = ast.Walk(pe, n).(*ast.PatternExpr)
 		if pe.pattern == "" {
 			return n
 		}
-		n.pattern = pe.pattern
+		n.Pattern = pe.pattern
 		c.checkRegex(pe.pattern, n)
 		return n
 
-	case *PatternFragmentDefNode:
+	case *ast.PatternFragmentDefNode:
 		// Evaluate the expression.
 		pe := &patternEvaluator{scope: c.scope, errors: &c.errors}
-		n.expr = Walk(pe, n.expr)
+		n.Expr = ast.Walk(pe, n.Expr)
 		if pe.pattern == "" {
 			return n
 		}
-		n.pattern = pe.pattern
+		n.Pattern = pe.pattern
 		return n
 
-	case *DelNode:
-		n.n.(*IndexedExpr).lhs.(*Id).lvalue = true
+	case *ast.DelNode:
+		n.N.(*ast.IndexedExpr).Lhs.(*ast.Id).Lvalue = true
 		return n
 
 	}
@@ -574,7 +579,7 @@ func (c *checker) VisitAfter(node astNode) astNode {
 
 // checkRegex is a helper method to compile and check a regular expression, and
 // to generate its capture groups as symbols.
-func (c *checker) checkRegex(pattern string, n astNode) {
+func (c *checker) checkRegex(pattern string, n ast.Node) {
 	if reAst, err := syntax.Parse(pattern, syntax.Perl); err == nil {
 		// We reserve the names of the capturing groups as declarations
 		// of those symbols, so that future CAPREF tokens parsed can
@@ -611,26 +616,26 @@ type patternEvaluator struct {
 	pattern string
 }
 
-func (p *patternEvaluator) VisitBefore(n astNode) (Visitor, astNode) {
+func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	switch v := n.(type) {
-	case *BinaryExpr:
-		if v.op != CONCAT {
+	case *ast.BinaryExpr:
+		if v.Op != CONCAT {
 			p.errors.Add(v.Pos(), fmt.Sprintf("internal error: Invalid operator in concatenation: %v", v))
 			return nil, n
 		}
 		return p, v
-	case *PatternConst:
-		p.pattern += v.pattern
+	case *ast.PatternConst:
+		p.pattern += v.Pattern
 		return p, v
-	case *Id:
+	case *ast.Id:
 		// Already looked up sym, if still nil undefined.
-		if v.sym == nil {
+		if v.Symbol == nil {
 			return nil, n
 		}
-		idPattern := v.sym.Binding.(*PatternFragmentDefNode).pattern
+		idPattern := v.Symbol.Binding.(*ast.PatternFragmentDefNode).Pattern
 		if idPattern == "" {
 			idEvaluator := &patternEvaluator{scope: p.scope}
-			n = Walk(idEvaluator, v.sym.Binding.(*PatternFragmentDefNode))
+			n = ast.Walk(idEvaluator, v.Symbol.Binding.(*ast.PatternFragmentDefNode))
 			idPattern = idEvaluator.pattern
 		}
 		p.pattern += idPattern
@@ -639,6 +644,6 @@ func (p *patternEvaluator) VisitBefore(n astNode) (Visitor, astNode) {
 	return p, n
 }
 
-func (p *patternEvaluator) VisitAfter(n astNode) astNode {
+func (p *patternEvaluator) VisitAfter(n ast.Node) ast.Node {
 	return n
 }

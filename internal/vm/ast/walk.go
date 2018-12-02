@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package ast
 
 import "fmt"
 
@@ -9,13 +9,13 @@ import "fmt"
 // If the result Visitor v is not nil, Walk visits each of the children of that
 // node with v.  VisitAfter is called on n at the end.
 type Visitor interface {
-	VisitBefore(n astNode) (Visitor, astNode)
-	VisitAfter(n astNode) astNode
+	VisitBefore(n Node) (Visitor, Node)
+	VisitAfter(n Node) Node
 }
 
 // convenience function
-func walknodelist(v Visitor, list []astNode) []astNode {
-	var r []astNode
+func walknodelist(v Visitor, list []Node) []Node {
+	var r []Node
 	for _, x := range list {
 		r = append(r, Walk(v, x))
 	}
@@ -23,7 +23,7 @@ func walknodelist(v Visitor, list []astNode) []astNode {
 }
 
 // Walk traverses (walks) an AST node with the provided Visitor v.
-func Walk(v Visitor, node astNode) astNode {
+func Walk(v Visitor, node Node) Node {
 	// Returning nil from VisitBefore signals to Walk that the Visitor has
 	// handled the children of this node.  VisitAfter will not be called.
 	if v, node = v.VisitBefore(node); v == nil {
@@ -32,49 +32,49 @@ func Walk(v Visitor, node astNode) astNode {
 
 	switch n := node.(type) {
 	case *StmtList:
-		n.children = walknodelist(v, n.children)
+		n.Children = walknodelist(v, n.Children)
 	case *ExprList:
-		n.children = walknodelist(v, n.children)
+		n.Children = walknodelist(v, n.Children)
 
 	case *Cond:
-		if n.cond != nil {
-			n.cond = Walk(v, n.cond)
+		if n.Cond != nil {
+			n.Cond = Walk(v, n.Cond)
 		}
-		n.truthNode = Walk(v, n.truthNode)
-		if n.elseNode != nil {
-			n.elseNode = Walk(v, n.elseNode)
+		n.Truth = Walk(v, n.Truth)
+		if n.Else != nil {
+			n.Else = Walk(v, n.Else)
 		}
 
 	case *BuiltinNode:
-		if n.args != nil {
-			n.args = Walk(v, n.args)
+		if n.Args != nil {
+			n.Args = Walk(v, n.Args)
 		}
 
 	case *BinaryExpr:
-		n.lhs = Walk(v, n.lhs)
-		n.rhs = Walk(v, n.rhs)
+		n.Lhs = Walk(v, n.Lhs)
+		n.Rhs = Walk(v, n.Rhs)
 
 	case *UnaryExpr:
-		n.expr = Walk(v, n.expr)
+		n.Expr = Walk(v, n.Expr)
 
 	case *IndexedExpr:
-		n.index = Walk(v, n.index)
-		n.lhs = Walk(v, n.lhs)
+		n.Index = Walk(v, n.Index)
+		n.Lhs = Walk(v, n.Lhs)
 
 	case *DecoDefNode:
-		n.block = Walk(v, n.block)
+		n.Block = Walk(v, n.Block)
 
 	case *DecoNode:
-		n.block = Walk(v, n.block)
+		n.Block = Walk(v, n.Block)
 
 	case *ConvNode:
-		n.n = Walk(v, n.n)
+		n.N = Walk(v, n.N)
 
 	case *PatternExpr:
-		n.expr = Walk(v, n.expr)
+		n.Expr = Walk(v, n.Expr)
 
 	case *PatternFragmentDefNode:
-		n.expr = Walk(v, n.expr)
+		n.Expr = Walk(v, n.Expr)
 
 	case *Id, *CaprefNode, *DeclNode, *StringConst, *IntConst, *FloatConst, *PatternConst, *NextNode, *OtherwiseNode, *DelNode, *StopNode:
 		// These nodes are terminals, thus have no children to walk.

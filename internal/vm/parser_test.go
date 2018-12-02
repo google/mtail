@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/position"
 )
 
@@ -442,12 +443,12 @@ func TestParsePositionTests(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			// Not t.Parallel() because the parser is not reentrant, and mtailDebug is a global.
-			ast, err := Parse(tc.name, strings.NewReader(tc.program))
+			root, err := Parse(tc.name, strings.NewReader(tc.program))
 			if err != nil {
 				t.Fatal(err)
 			}
 			p := &positionCollector{}
-			Walk(p, ast)
+			ast.Walk(p, root)
 			diff := go_cmp.Diff(tc.positions, p.positions, go_cmp.AllowUnexported(position.Position{}))
 			if diff != "" {
 				t.Error(diff)
@@ -460,14 +461,14 @@ type positionCollector struct {
 	positions []*position.Position
 }
 
-func (p *positionCollector) VisitBefore(node astNode) (Visitor, astNode) {
+func (p *positionCollector) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	switch n := node.(type) {
-	case *DeclNode, *PatternConst:
+	case *ast.DeclNode, *ast.PatternConst:
 		p.positions = append(p.positions, n.Pos())
 	}
 	return p, node
 }
 
-func (p *positionCollector) VisitAfter(node astNode) astNode {
+func (p *positionCollector) VisitAfter(node ast.Node) ast.Node {
 	return node
 }

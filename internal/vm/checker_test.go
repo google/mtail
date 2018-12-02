@@ -9,6 +9,7 @@ import (
 
 	go_cmp "github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
 )
@@ -351,25 +352,28 @@ func TestCheckValidPrograms(t *testing.T) {
 
 var checkerTypeExpressionTests = []struct {
 	name     string
-	expr     astNode
+	expr     ast.Node
 	expected types.Type
 }{
 	{"Int + Int -> Int",
-		&BinaryExpr{lhs: &IntConst{i: 1},
-			rhs: &IntConst{i: 1},
-			op:  PLUS},
+		&ast.BinaryExpr{
+			Lhs: &ast.IntConst{I: 1},
+			Rhs: &ast.IntConst{I: 1},
+			Op:  PLUS},
 		types.Int,
 	},
 	{"Int + Float -> Float",
-		&BinaryExpr{lhs: &IntConst{i: 1},
-			rhs: &FloatConst{f: 1.0},
-			op:  PLUS},
+		&ast.BinaryExpr{
+			Lhs: &ast.IntConst{I: 1},
+			Rhs: &ast.FloatConst{F: 1.0},
+			Op:  PLUS},
 		types.Float,
 	},
 	{"⍺ + Float -> Float",
-		&BinaryExpr{lhs: &Id{sym: &symtab.Symbol{Name: "i", Kind: symtab.VarSymbol, Type: types.NewTypeVariable()}},
-			rhs: &CaprefNode{sym: &symtab.Symbol{Kind: symtab.CaprefSymbol, Type: types.Float}},
-			op:  PLUS},
+		&ast.BinaryExpr{
+			Lhs: &ast.Id{Symbol: &symtab.Symbol{Name: "i", Kind: symtab.VarSymbol, Type: types.NewTypeVariable()}},
+			Rhs: &ast.CaprefNode{Symbol: &symtab.Symbol{Kind: symtab.CaprefSymbol, Type: types.Float}},
+			Op:  PLUS},
 		types.Float,
 	},
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/vm/ast"
 )
 
 // Unparser is for converting program syntax trees back to program text.
@@ -43,56 +44,56 @@ func (u *Unparser) newline() {
 	u.line = ""
 }
 
-// VisitBefore implements the astNode Visitor interface.
-func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
+// VisitBefore implements the ast.Visitor interface.
+func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	if u.emitTypes {
 		u.emit(fmt.Sprintf("<%s>(", n.Type()))
 	}
 	switch v := n.(type) {
-	case *StmtList:
-		for _, child := range v.children {
-			Walk(u, child)
+	case *ast.StmtList:
+		for _, child := range v.Children {
+			ast.Walk(u, child)
 			u.newline()
 		}
 
-	case *ExprList:
-		if len(v.children) > 0 {
-			Walk(u, v.children[0])
-			for _, child := range v.children[1:] {
+	case *ast.ExprList:
+		if len(v.Children) > 0 {
+			ast.Walk(u, v.Children[0])
+			for _, child := range v.Children[1:] {
 				u.emit(", ")
-				Walk(u, child)
+				ast.Walk(u, child)
 			}
 		}
 
-	case *Cond:
-		if v.cond != nil {
-			Walk(u, v.cond)
+	case *ast.Cond:
+		if v.Cond != nil {
+			ast.Walk(u, v.Cond)
 		}
 		u.emit(" {")
 		u.newline()
 		u.indent()
-		Walk(u, v.truthNode)
-		if v.elseNode != nil {
+		ast.Walk(u, v.Truth)
+		if v.Else != nil {
 			u.outdent()
 			u.emit("} else {")
 			u.indent()
-			Walk(u, v.elseNode)
+			ast.Walk(u, v.Else)
 		}
 		u.outdent()
 		u.emit("}")
 
-	case *PatternFragmentDefNode:
+	case *ast.PatternFragmentDefNode:
 		u.emit("const ")
-		Walk(u, v.id)
+		ast.Walk(u, v.Id)
 		u.emit(" ")
-		Walk(u, v.expr)
+		ast.Walk(u, v.Expr)
 
-	case *PatternConst:
-		u.emit("/" + strings.Replace(v.pattern, "/", "\\/", -1) + "/")
+	case *ast.PatternConst:
+		u.emit("/" + strings.Replace(v.Pattern, "/", "\\/", -1) + "/")
 
-	case *BinaryExpr:
-		Walk(u, v.lhs)
-		switch v.op {
+	case *ast.BinaryExpr:
+		ast.Walk(u, v.Lhs)
+		switch v.Op {
 		case LT:
 			u.emit(" < ")
 		case GT:
@@ -144,33 +145,33 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 		case NOT_MATCH:
 			u.emit(" !~ ")
 		default:
-			u.emit(fmt.Sprintf("Unexpected op: %v", v.op))
+			u.emit(fmt.Sprintf("Unexpected op: %v", v.Op))
 		}
-		Walk(u, v.rhs)
+		ast.Walk(u, v.Rhs)
 
-	case *Id:
-		u.emit(v.name)
+	case *ast.Id:
+		u.emit(v.Name)
 
-	case *CaprefNode:
-		u.emit("$" + v.name)
+	case *ast.CaprefNode:
+		u.emit("$" + v.Name)
 
-	case *BuiltinNode:
-		u.emit(v.name + "(")
-		if v.args != nil {
-			Walk(u, v.args)
+	case *ast.BuiltinNode:
+		u.emit(v.Name + "(")
+		if v.Args != nil {
+			ast.Walk(u, v.Args)
 		}
 		u.emit(")")
 
-	case *IndexedExpr:
-		Walk(u, v.lhs)
-		if len(v.index.(*ExprList).children) > 0 {
+	case *ast.IndexedExpr:
+		ast.Walk(u, v.Lhs)
+		if len(v.Index.(*ast.ExprList).Children) > 0 {
 			u.emit("[")
-			Walk(u, v.index)
+			ast.Walk(u, v.Index)
 			u.emit("]")
 		}
 
-	case *DeclNode:
-		switch v.kind {
+	case *ast.DeclNode:
+		switch v.Kind {
 		case metrics.Counter:
 			u.emit("counter ")
 		case metrics.Gauge:
@@ -180,77 +181,77 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 		case metrics.Text:
 			u.emit("text ")
 		}
-		u.emit(v.name)
-		if len(v.keys) > 0 {
-			u.emit(" by " + strings.Join(v.keys, ", "))
+		u.emit(v.Name)
+		if len(v.Keys) > 0 {
+			u.emit(" by " + strings.Join(v.Keys, ", "))
 		}
 
-	case *UnaryExpr:
-		switch v.op {
+	case *ast.UnaryExpr:
+		switch v.Op {
 		case INC:
-			Walk(u, v.expr)
+			ast.Walk(u, v.Expr)
 			u.emit("++")
 		case DEC:
-			Walk(u, v.expr)
+			ast.Walk(u, v.Expr)
 			u.emit("--")
 		case NOT:
 			u.emit(" ~")
-			Walk(u, v.expr)
+			ast.Walk(u, v.Expr)
 		default:
-			u.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.op)))
+			u.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.Op)))
 		}
 
-	case *StringConst:
-		u.emit("\"" + v.text + "\"")
+	case *ast.StringConst:
+		u.emit("\"" + v.Text + "\"")
 
-	case *IntConst:
-		u.emit(strconv.FormatInt(v.i, 10))
+	case *ast.IntConst:
+		u.emit(strconv.FormatInt(v.I, 10))
 
-	case *FloatConst:
-		u.emit(strconv.FormatFloat(v.f, 'g', -1, 64))
+	case *ast.FloatConst:
+		u.emit(strconv.FormatFloat(v.F, 'g', -1, 64))
 
-	case *DecoDefNode:
-		u.emit(fmt.Sprintf("def %s {", v.name))
+	case *ast.DecoDefNode:
+		u.emit(fmt.Sprintf("def %s {", v.Name))
 		u.newline()
 		u.indent()
-		Walk(u, v.block)
+		ast.Walk(u, v.Block)
 		u.outdent()
 		u.emit("}")
 
-	case *DecoNode:
-		u.emit(fmt.Sprintf("@%s {", v.name))
+	case *ast.DecoNode:
+		u.emit(fmt.Sprintf("@%s {", v.Name))
 		u.newline()
 		u.indent()
-		Walk(u, v.block)
+		ast.Walk(u, v.Block)
 		u.outdent()
 		u.emit("}")
 
-	case *NextNode:
+	case *ast.NextNode:
 		u.emit("next")
 
-	case *OtherwiseNode:
+	case *ast.OtherwiseNode:
 		u.emit("otherwise")
 
-	case *DelNode:
+	case *ast.DelNode:
 		u.emit("del ")
-		Walk(u, v.n)
-		if v.expiry > 0 {
-			u.emit(fmt.Sprintf(" after %s", v.expiry))
+		ast.Walk(u, v.N)
+		if v.Expiry > 0 {
+			u.emit(fmt.Sprintf(" after %s", v.Expiry))
 		}
 		u.newline()
 
-	case *ConvNode:
-		Walk(u, v.n)
+	case *ast.ConvNode:
+		ast.Walk(u, v.N)
 
-	case *PatternExpr:
-		Walk(u, v.expr)
+	case *ast.PatternExpr:
+		ast.Walk(u, v.Expr)
 
-	case *ErrorNode:
+	case *ast.ErrorNode:
 		u.emit("// error")
 		u.newline()
-		u.emit(v.spelling)
+		u.emit(v.Spelling)
 
-	case *StopNode:
+	case *ast.StopNode:
 		u.emit("stop")
 
 	default:
@@ -262,13 +263,13 @@ func (u *Unparser) VisitBefore(n astNode) (Visitor, astNode) {
 	return nil, n
 }
 
-// VisitAfter implements the astNode Visitor interface.
-func (u *Unparser) VisitAfter(n astNode) astNode {
+// VisitAfter implements the ast.Visitor interface.
+func (u *Unparser) VisitAfter(n ast.Node) ast.Node {
 	return n
 }
 
 // Unparse begins the unparsing of the syntax tree, returning the program text as a single string.
-func (u *Unparser) Unparse(n astNode) string {
-	Walk(u, n)
+func (u *Unparser) Unparse(n ast.Node) string {
+	ast.Walk(u, n)
 	return u.output
 }

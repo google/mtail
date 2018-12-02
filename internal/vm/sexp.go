@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/vm/ast"
 )
 
 // Sexp is for converting program syntax trees into typed s-expression for printing
@@ -49,7 +50,7 @@ func (s *Sexp) newline() {
 }
 
 // VisitBefore implements the astNode Visitor interface.
-func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
+func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	s.emit(fmt.Sprintf("( ;;%T ", n))
 	if s.emitTypes {
 		s.emit(fmt.Sprintf("<%s> ", n.Type()))
@@ -59,16 +60,16 @@ func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
 	s.indent()
 	switch v := n.(type) {
 
-	case *PatternFragmentDefNode:
+	case *ast.PatternFragmentDefNode:
 		s.emit("const ")
-		n = Walk(s, v.id)
+		n = ast.Walk(s, v.Id)
 		s.emit(" ")
 
-	case *PatternConst:
-		s.emit(fmt.Sprintf("%q", v.pattern))
+	case *ast.PatternConst:
+		s.emit(fmt.Sprintf("%q", v.Pattern))
 
-	case *BinaryExpr:
-		switch v.op {
+	case *ast.BinaryExpr:
+		switch v.Op {
 		case LT:
 			s.emit("<")
 		case GT:
@@ -120,23 +121,23 @@ func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
 		case NOT_MATCH:
 			s.emit("!~")
 		default:
-			s.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.op)))
+			s.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.Op)))
 		}
 		s.newline()
 		s.indent()
 
-	case *Id:
-		s.emit("\"" + v.name + "\"")
+	case *ast.Id:
+		s.emit("\"" + v.Name + "\"")
 
-	case *CaprefNode:
-		s.emit("\"" + v.name + "\"")
+	case *ast.CaprefNode:
+		s.emit("\"" + v.Name + "\"")
 
-	case *BuiltinNode:
-		s.emit("\"" + v.name + "\"")
+	case *ast.BuiltinNode:
+		s.emit("\"" + v.Name + "\"")
 		s.newline()
 
-	case *DeclNode:
-		switch v.kind {
+	case *ast.DeclNode:
+		switch v.Kind {
 		case metrics.Counter:
 			s.emit("counter ")
 		case metrics.Gauge:
@@ -146,15 +147,15 @@ func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
 		case metrics.Text:
 			s.emit("text ")
 		}
-		s.emit(v.name)
-		if len(v.keys) > 0 {
+		s.emit(v.Name)
+		if len(v.Keys) > 0 {
 			s.emit(" (")
-			s.emit(strings.Join(v.keys, " "))
+			s.emit(strings.Join(v.Keys, " "))
 			s.emit(")")
 		}
 
-	case *UnaryExpr:
-		switch v.op {
+	case *ast.UnaryExpr:
+		switch v.Op {
 		case INC:
 			s.emit("++")
 		case DEC:
@@ -162,40 +163,40 @@ func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
 		case NOT:
 			s.emit("~")
 		default:
-			s.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.op)))
+			s.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.Op)))
 		}
 		s.newline()
 		s.indent()
 
-	case *StringConst:
-		s.emit("\"" + v.text + "\"")
+	case *ast.StringConst:
+		s.emit("\"" + v.Text + "\"")
 
-	case *IntConst:
-		s.emit(strconv.FormatInt(v.i, 10))
+	case *ast.IntConst:
+		s.emit(strconv.FormatInt(v.I, 10))
 
-	case *FloatConst:
-		s.emit(strconv.FormatFloat(v.f, 'g', -1, 64))
+	case *ast.FloatConst:
+		s.emit(strconv.FormatFloat(v.F, 'g', -1, 64))
 
-	case *NextNode:
+	case *ast.NextNode:
 		s.emit("next")
-	case *OtherwiseNode:
+	case *ast.OtherwiseNode:
 		s.emit("otherwise")
-	case *DelNode:
+	case *ast.DelNode:
 		s.emit("del")
-		if v.expiry > 0 {
-			s.emit(fmt.Sprintf(" after %s", v.expiry))
+		if v.Expiry > 0 {
+			s.emit(fmt.Sprintf(" after %s", v.Expiry))
 		}
 
-	case *ConvNode:
+	case *ast.ConvNode:
 		s.emit("conv")
 
-	case *ErrorNode:
-		s.emit(fmt.Sprintf("error %q", v.spelling))
+	case *ast.ErrorNode:
+		s.emit(fmt.Sprintf("error %q", v.Spelling))
 
-	case *StopNode:
+	case *ast.StopNode:
 		s.emit("stop")
 
-	case *IndexedExpr, *StmtList, *ExprList, *Cond, *DecoDefNode, *DecoNode, *PatternExpr: // normal walk
+	case *ast.IndexedExpr, *ast.StmtList, *ast.ExprList, *ast.Cond, *ast.DecoDefNode, *ast.DecoNode, *ast.PatternExpr: // normal walk
 
 	default:
 		panic(fmt.Sprintf("sexp found undefined type %T", n))
@@ -204,9 +205,9 @@ func (s *Sexp) VisitBefore(n astNode) (Visitor, astNode) {
 }
 
 // VisitAfter implements the astNode Visitor interface.
-func (s *Sexp) VisitAfter(node astNode) astNode {
+func (s *Sexp) VisitAfter(node ast.Node) ast.Node {
 	switch node.(type) {
-	case *BinaryExpr:
+	case *ast.BinaryExpr:
 		s.outdent()
 	}
 	s.outdent()
@@ -216,7 +217,7 @@ func (s *Sexp) VisitAfter(node astNode) astNode {
 }
 
 // Dump begins the dumping of the syntax tree, returning the s-expression as a single string
-func (s *Sexp) Dump(n astNode) string {
-	Walk(s, n)
+func (s *Sexp) Dump(n ast.Node) string {
+	ast.Walk(s, n)
 	return s.output
 }

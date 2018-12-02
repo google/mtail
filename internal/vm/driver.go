@@ -11,12 +11,13 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/position"
 )
 
 // Parse reads the program named name from the input, and if successful returns
 // an astNode for the root of the AST, or parser errors.
-func Parse(name string, input io.Reader) (astNode, error) {
+func Parse(name string, input io.Reader) (ast.Node, error) {
 	p := newParser(name, input)
 	r := mtailParse(p)
 	if r != 0 || p == nil || p.errors != nil {
@@ -30,7 +31,7 @@ const EOF = 0
 
 type parser struct {
 	name   string
-	root   astNode
+	root   ast.Node
 	errors ErrorList
 	l      *lexer
 	t      token             // Most recently lexed token.
