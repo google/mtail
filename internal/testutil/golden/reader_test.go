@@ -1,4 +1,4 @@
-package testutil
+package golden
 
 import (
 	"os"
@@ -6,10 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/testutil"
 )
 
 var expectedMetrics = map[string][]*metrics.Metric{
@@ -123,7 +122,7 @@ func TestReadTestData(t *testing.T) {
 	defer f.Close()
 	store := metrics.NewStore()
 	ReadTestData(f, "reader_test", store)
-	diff := cmp.Diff(expectedMetrics, store.Metrics, cmpopts.IgnoreUnexported(sync.RWMutex{}, datum.StringDatum{}))
+	diff := testutil.Diff(expectedMetrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}, datum.StringDatum{}))
 	if diff != "" {
 		t.Error(diff)
 		t.Logf("store contains %s", store.Metrics)
