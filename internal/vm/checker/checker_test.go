@@ -1,7 +1,7 @@
 // Copyright 2016 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package checker_test
 
 import (
 	"strings"
@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/vm/ast"
+	"github.com/google/mtail/internal/vm/checker"
 	"github.com/google/mtail/internal/vm/parser"
 	"github.com/google/mtail/internal/vm/symtab"
 	"github.com/google/mtail/internal/vm/types"
@@ -150,7 +151,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			ast, err = Check(ast)
+			ast, err = checker.Check(ast)
 			if err == nil {
 				s := parser.Sexp{}
 				s.EmitTypes = true
@@ -340,7 +341,7 @@ func TestCheckValidPrograms(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			ast, err = Check(ast)
+			ast, err = checker.Check(ast)
 			s := parser.Sexp{}
 			s.EmitTypes = true
 			t.Log("Typed AST:\n" + s.Dump(ast))
@@ -384,7 +385,7 @@ func TestCheckTypeExpressions(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			ast, err := Check(tc.expr)
+			ast, err := checker.Check(tc.expr)
 			if err != nil {
 				t.Fatalf("check error: %s", err)
 			}

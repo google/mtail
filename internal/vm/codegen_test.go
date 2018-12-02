@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/mtail/internal/testutil"
+	"github.com/google/mtail/internal/vm/checker"
 	"github.com/google/mtail/internal/vm/parser"
 )
 
@@ -858,7 +859,7 @@ func TestCodegen(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Parse error: %s", err)
 			}
-			ast, err = Check(ast)
+			ast, err = checker.Check(ast)
 			s := parser.Sexp{}
 			s.EmitTypes = true
 			t.Log("Typed AST:\n" + s.Dump(ast))

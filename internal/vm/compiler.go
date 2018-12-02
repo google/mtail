@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/internal/vm/checker"
 	"github.com/google/mtail/internal/vm/parser"
 )
 
@@ -27,7 +28,7 @@ func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, sysl
 		glog.Infof("%s AST:\n%s", name, s.Dump(ast))
 	}
 
-	if ast, err = Check(ast); err != nil {
+	if ast, err = checker.Check(ast); err != nil {
 		return nil, err
 	}
 	if emitAstTypes {
