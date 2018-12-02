@@ -95,3 +95,7 @@ func init() {
 	flag.IntVar(&mtailDebug, "mtailDebug", 0, "Set parser debug level.")
 	mtailErrorVerbose = true
 }
+
+func TokenKindName(k TokenKind) string {
+	return mtailTokname(int(k))
+}

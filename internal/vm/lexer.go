@@ -14,82 +14,8 @@ import (
 	"github.com/google/mtail/internal/vm/position"
 )
 
-// Lexeme enumerates the types of lexical tokens in a mtail program.
-type lexeme int
-
-// Printable names for lexemes.
-var lexemeName = map[lexeme]string{
-	EOF:             "EOF",
-	INVALID:         "INVALID",
-	LCURLY:          "LCURLY",
-	RCURLY:          "RCURLY",
-	LPAREN:          "LPAREN",
-	RPAREN:          "RPAREN",
-	LSQUARE:         "LSQUARE",
-	RSQUARE:         "RSQUARE",
-	COMMA:           "COMMA",
-	INC:             "INC",
-	DEC:             "DEC",
-	MINUS:           "MINUS",
-	PLUS:            "PLUS",
-	MUL:             "MUL",
-	DIV:             "DIV",
-	MOD:             "MOD",
-	POW:             "POW",
-	SHL:             "SHL",
-	SHR:             "SHR",
-	BITAND:          "BITAND",
-	BITOR:           "BITOR",
-	AND:             "AND",
-	OR:              "OR",
-	ADD_ASSIGN:      "ADD_ASSIGN",
-	ASSIGN:          "ASSIGN",
-	LT:              "LT",
-	GT:              "GT",
-	LE:              "LE",
-	GE:              "GE",
-	EQ:              "EQ",
-	NE:              "NE",
-	REGEX:           "REGEX",
-	ID:              "ID",
-	CAPREF:          "CAPREF",
-	CAPREF_NAMED:    "CAPREF_NAMED",
-	STRING:          "STRING",
-	BUILTIN:         "BUILTIN",
-	COUNTER:         "COUNTER",
-	GAUGE:           "GAUGE",
-	TIMER:           "TIMER",
-	AS:              "AS",
-	BY:              "BY",
-	HIDDEN:          "HIDDEN",
-	DEF:             "DEF",
-	DECO:            "DECO",
-	NEXT:            "NEXT",
-	CONST:           "CONST",
-	OTHERWISE:       "OTHERWISE",
-	ELSE:            "ELSE",
-	DEL:             "DEL",
-	INTLITERAL:      "INTLITERAL",
-	FLOATLITERAL:    "FLOATLITERAL",
-	DURATIONLITERAL: "DURATIONLITERAL",
-	NL:              "NL",
-	CONCAT:          "CONCAT",
-	MATCH:           "MATCH",
-	NOT_MATCH:       "NOT_MATCH",
-	TEXT:            "TEXT",
-	AFTER:           "AFTER",
-	STOP:            "STOP",
-}
-
-func (t lexeme) String() string {
-	if s, ok := lexemeName[t]; ok {
-		return s
-	}
-	return fmt.Sprintf("token%d", int(t))
-}
-
 // List of keywords.  Keep this list sorted!
-var keywords = map[string]lexeme{
+var keywords = map[string]TokenKind{
 	"after":     AFTER,
 	"as":        AS,
 	"by":        BY,
@@ -120,18 +46,6 @@ var builtins = []string{
 	"strtol",
 	"timestamp",
 	"tolower",
-}
-
-// Token describes a lexed Token from the input, containing its type, the
-// original text of the Token, and its position in the input.
-type Token struct {
-	Kind     lexeme
-	Spelling string
-	Pos      position.Position
-}
-
-func (t Token) String() string {
-	return fmt.Sprintf("%s(%q,%s)", t.Kind, t.Spelling, t.Pos)
 }
 
 // A stateFn represents each state the scanner can be in.
@@ -183,7 +97,7 @@ func (l *lexer) NextToken() Token {
 }
 
 // emit passes a token to the client.
-func (l *lexer) emit(kind lexeme) {
+func (l *lexer) emit(kind TokenKind) {
 	pos := position.Position{l.name, l.line, l.startcol, l.col - 1}
 	glog.V(2).Infof("Emitting %v at %v", kind, pos)
 	l.tokens <- Token{kind, l.text, pos}
@@ -485,7 +399,7 @@ Loop:
 			break Loop
 		}
 	}
-	l.emit(lexeme(kind))
+	l.emit(TokenKind(kind))
 	return lexProg
 }
 

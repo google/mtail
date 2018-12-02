@@ -121,7 +121,7 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		case NOT_MATCH:
 			s.emit("!~")
 		default:
-			s.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.Op)))
+			s.emit(fmt.Sprintf("Unexpected op: %s", TokenKind(v.Op)))
 		}
 		s.newline()
 		s.indent()
@@ -163,7 +163,7 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		case NOT:
 			s.emit("~")
 		default:
-			s.emit(fmt.Sprintf("Unexpected op: %s", lexeme(v.Op)))
+			s.emit(fmt.Sprintf("Unexpected op: %s", TokenKind(v.Op)))
 		}
 		s.newline()
 		s.indent()
