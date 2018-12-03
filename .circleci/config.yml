@@ -9,7 +9,6 @@ common-build: &common-build
     - checkout
     - run: mkdir -p $TEST_RESULTS
     - run: go get github.com/jstemmer/go-junit-report
-    - run: make vm/parser.go
     - run: make install_coverage_deps
     - run:
         name: Run tests with race detector
@@ -115,7 +114,6 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - run: make vm/parser.go
       - run: make crossbuild
       - run: sha1sum build/*
       - store_artifacts:
