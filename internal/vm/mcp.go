@@ -48,7 +48,7 @@ const (
 // LoadAllPrograms loads all programs in a directory and starts watching the
 // directory for filesystem changes.  Any compile errors are stored for later retrieival.
 // This function returns an error if an internal error occurs.
-func (l *MasterControl) LoadAllPrograms() error {
+func (l *Loader) LoadAllPrograms() error {
 	s, err := os.Stat(l.programPath)
 	if err != nil {
 		return errors.Wrapf(err, "failed to stat %q", l.programPath)
@@ -89,7 +89,7 @@ func (l *MasterControl) LoadAllPrograms() error {
 
 // LoadProgram loads or reloads a program from the path specified.  The name of
 // the program is the basename of the file.
-func (l *MasterControl) LoadProgram(programPath string) error {
+func (l *Loader) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)
 	if strings.HasPrefix(name, ".") {
 		glog.V(2).Infof("Skipping %s because it is a hidden file.", programPath)
@@ -150,7 +150,7 @@ No compile errors
 `
 
 // WriteStatusHTML writes the current state of the loader as HTML to the given writer w.
-func (l *MasterControl) WriteStatusHTML(w io.Writer) error {
+func (l *Loader) WriteStatusHTML(w io.Writer) error {
 	t, err := template.New("loader").Parse(loaderTemplate)
 	if err != nil {
 		return err
@@ -187,7 +187,7 @@ func (l *MasterControl) WriteStatusHTML(w io.Writer) error {
 // exists, the previous virtual machine is terminated and the new loaded over
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
-func (l *MasterControl) CompileAndRun(name string, input io.Reader) error {
+func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	glog.V(2).Infof("CompileAndRun %s", name)
 	v, errs := Compile(name, input, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation)
 	if errs != nil {
@@ -249,11 +249,11 @@ func nameToCode(name string) uint32 {
 	return uint32(name[0])<<24 | uint32(name[1])<<16 | uint32(name[2])<<8 | uint32(name[3])
 }
 
-// MasterControl handles the lifecycle of programs and virtual machines, by watching
+// Loader handles the lifecycle of programs and virtual machines, by watching
 // the configured program source directory, compiling changes to programs, and
 // managing the running virtual machines that receive input from the lines
 // channel.
-type MasterControl struct {
+type Loader struct {
 	ms          *metrics.Store  // pointer to metrics.Store to pass to compiler
 	w           watcher.Watcher // watches for program changes
 	fs          afero.Fs        // filesystem interface
@@ -281,61 +281,61 @@ type MasterControl struct {
 }
 
 // OverrideLocation sets the timezone location for the VM.
-func OverrideLocation(loc *time.Location) func(*MasterControl) error {
-	return func(l *MasterControl) error {
+func OverrideLocation(loc *time.Location) func(*Loader) error {
+	return func(l *Loader) error {
 		l.overrideLocation = loc
 		return nil
 	}
 }
 
 // CompileOnly sets the Loader to compile programs only, without executing them.
-func CompileOnly(l *MasterControl) error {
+func CompileOnly(l *Loader) error {
 	l.compileOnly = true
 	return ErrorsAbort(l)
 }
 
 // ErrorsAbort sets the Loader to abort the Loader on compile errors.
-func ErrorsAbort(l *MasterControl) error {
+func ErrorsAbort(l *Loader) error {
 	l.errorsAbort = true
 	return nil
 }
 
 // DumpAst instructs the Loader to print the AST after program compilation.
-func DumpAst(l *MasterControl) error {
+func DumpAst(l *Loader) error {
 	l.dumpAst = true
 	return nil
 }
 
 // DumpAstTypes instructs the Loader to print the AST after type checking.
-func DumpAstTypes(l *MasterControl) error {
+func DumpAstTypes(l *Loader) error {
 	l.dumpAstTypes = true
 	return nil
 }
 
 // DumpBytecode instructs the loader to print the compiled bytecode after code generation.
-func DumpBytecode(l *MasterControl) error {
+func DumpBytecode(l *Loader) error {
 	l.dumpBytecode = true
 	return nil
 }
 
 // SyslogUseCurrentYear instructs the VM to annotate yearless timestamps with the current year.
-func SyslogUseCurrentYear(l *MasterControl) error {
+func SyslogUseCurrentYear(l *Loader) error {
 	l.syslogUseCurrentYear = true
 	return nil
 }
 
 // OmitMetricSource instructs the Loader to not annotate metrics with their program source when added to the metric store.
-func OmitMetricSource(l *MasterControl) error {
+func OmitMetricSource(l *Loader) error {
 	l.omitMetricSource = true
 	return nil
 }
 
 // NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.LogLine, w watcher.Watcher, fs afero.Fs, options ...func(*MasterControl) error) (*MasterControl, error) {
+func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.LogLine, w watcher.Watcher, fs afero.Fs, options ...func(*Loader) error) (*Loader, error) {
 	if store == nil || lines == nil {
 		return nil, errors.New("loader needs a store and lines")
 	}
-	l := &MasterControl{
+	l := &Loader{
 		ms:            store,
 		fs:            fs,
 		w:             w,
@@ -356,7 +356,7 @@ func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.L
 }
 
 // SetOption takes one or more option functions and applies them in order to Loader.
-func (l *MasterControl) SetOption(options ...func(*MasterControl) error) error {
+func (l *Loader) SetOption(options ...func(*Loader) error) error {
 	for _, option := range options {
 		if err := option(l); err != nil {
 			return err
@@ -372,7 +372,7 @@ type vmHandle struct {
 
 // processEvents manages program lifecycle triggered by events from the
 // filesystem watcher.
-func (l *MasterControl) processEvents(events <-chan watcher.Event) {
+func (l *Loader) processEvents(events <-chan watcher.Event) {
 	defer close(l.watcherDone)
 
 	for event := range events {
@@ -401,7 +401,7 @@ func (l *MasterControl) processEvents(events <-chan watcher.Event) {
 // running.  Upon close of the incoming lines channel, it also communicates
 // shutdown to the target VMs via channel close.  At termination it signals via
 // VMsDone that the goroutine has finished, and thus all VMs are terminated.
-func (l *MasterControl) processLines(lines <-chan *logline.LogLine) {
+func (l *Loader) processLines(lines <-chan *logline.LogLine) {
 	defer close(l.VMsDone)
 
 	// Copy all input LogLines to each VM's LogLine input channel.
@@ -432,7 +432,7 @@ func (l *MasterControl) processLines(lines <-chan *logline.LogLine) {
 
 // UnloadProgram removes the named program from the watcher to prevent future
 // updates, and terminates any currently running VM goroutine.
-func (l *MasterControl) UnloadProgram(pathname string) {
+func (l *Loader) UnloadProgram(pathname string) {
 	if err := l.w.Remove(pathname); err != nil {
 		glog.V(2).Infof("Remove watch on %s failed: %s", pathname, err)
 	}
