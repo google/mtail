@@ -10,10 +10,10 @@ import (
 	"github.com/google/mtail/internal/vm/bytecode"
 )
 
-// object describes a built object of data and bytecode
-type object struct {
-	prog []bytecode.Instr  // The emitted program.
-	str  []string          // Static strings.
-	re   []*regexp.Regexp  // Static regular expressions.
-	m    []*metrics.Metric // Metrics accessible to this program.
+// Object is the data and bytecode resulting from compiled program source.
+type Object struct {
+	Program []bytecode.Instr  // The program bytecode.
+	Strings []string          // Static strings.
+	Regexps []*regexp.Regexp  // Static regular expressions.
+	Metrics []*metrics.Metric // Metrics accessible to this program.
 }

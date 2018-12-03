@@ -25,14 +25,14 @@ type codegen struct {
 	name string // Name of the program.
 
 	errors errors.ErrorList // Any compile errors detected are accumulated here.
-	obj    object           // The object to return, if successful.
+	obj    Object           // The object to return, if successful.
 
 	l     []int           // Label table for recording jump destinations.
 	decos []*ast.DecoNode // Decorator stack to unwind when entering decorated blocks.
 }
 
 // CodeGen is the function that compiles the program to bytecode and data.
-func CodeGen(name string, n ast.Node) (*object, error) {
+func CodeGen(name string, n ast.Node) (*Object, error) {
 	c := &codegen{name: name}
 	_ = ast.Walk(c, n)
 	c.writeJumps()
@@ -48,7 +48,7 @@ func (c *codegen) errorf(pos *position.Position, format string, args ...interfac
 }
 
 func (c *codegen) emit(i bytecode.Instr) {
-	c.obj.prog = append(c.obj.prog, i)
+	c.obj.Program = append(c.obj.Program, i)
 }
 
 // newLabel creates a new label to jump to
@@ -65,7 +65,7 @@ func (c *codegen) setLabel(l int) {
 
 // pc returns the program offset of the last instruction
 func (c *codegen) pc() int {
-	return len(c.obj.prog) - 1
+	return len(c.obj.Program) - 1
 }
 
 func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
@@ -121,8 +121,8 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		}
 		m.Hidden = n.Hidden
 		(*n.Symbol).Binding = m
-		n.Symbol.Addr = len(c.obj.m)
-		c.obj.m = append(c.obj.m, m)
+		n.Symbol.Addr = len(c.obj.Metrics)
+		c.obj.Metrics = append(c.obj.Metrics, m)
 		return nil, n
 
 	case *ast.Cond:
@@ -153,14 +153,14 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			c.errorf(n.Pos(), "%s", err)
 			return nil, n
 		}
-		c.obj.re = append(c.obj.re, re)
+		c.obj.Regexps = append(c.obj.Regexps, re)
 		// Store the location of this regular expression in the patterNode
-		n.Index = len(c.obj.re) - 1
+		n.Index = len(c.obj.Regexps) - 1
 		c.emit(bytecode.Instr{bytecode.Match, n.Index})
 
 	case *ast.StringConst:
-		c.obj.str = append(c.obj.str, n.Text)
-		c.emit(bytecode.Instr{bytecode.Str, len(c.obj.str) - 1})
+		c.obj.Strings = append(c.obj.Strings, n.Text)
+		c.emit(bytecode.Instr{bytecode.Str, len(c.obj.Strings) - 1})
 
 	case *ast.IntConst:
 		c.emit(bytecode.Instr{bytecode.Push, n.I})
@@ -264,9 +264,9 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		ast.Walk(c, n.N)
 		// overwrite the dload instruction
 		pc := c.pc()
-		c.obj.prog[pc].Opcode = bytecode.Del
+		c.obj.Program[pc].Opcode = bytecode.Del
 		if n.Expiry > 0 {
-			c.obj.prog[pc].Opcode = bytecode.Expire
+			c.obj.Program[pc].Opcode = bytecode.Expire
 		}
 
 	case *ast.BinaryExpr:
@@ -482,11 +482,11 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 
 		case parser.MATCH:
 			// Cross fingers that last branch was a patternExprNode
-			c.obj.prog[c.pc()].Opcode = bytecode.Smatch
+			c.obj.Program[c.pc()].Opcode = bytecode.Smatch
 
 		case parser.NOT_MATCH:
 			// Cross fingers that last branch was a patternExprNode
-			c.obj.prog[c.pc()].Opcode = bytecode.Smatch
+			c.obj.Program[c.pc()].Opcode = bytecode.Smatch
 			c.emit(bytecode.Instr{Opcode: bytecode.Not})
 
 		case parser.CONCAT:
@@ -528,7 +528,7 @@ func (c *codegen) emitConversion(inType, outType types.Type) error {
 }
 
 func (c *codegen) writeJumps() {
-	for j, i := range c.obj.prog {
+	for j, i := range c.obj.Program {
 		switch i.Opcode {
 		case bytecode.Jmp, bytecode.Jm, bytecode.Jnm:
 			index := i.Operand.(int)
@@ -541,7 +541,7 @@ func (c *codegen) writeJumps() {
 				c.errorf(nil, "offset for label %v is negative, table is %v", i.Operand, c.l)
 				continue
 			}
-			c.obj.prog[j].Operand = c.l[index]
+			c.obj.Program[j].Operand = c.l[index]
 		}
 	}
 }

@@ -754,13 +754,13 @@ func (v *VM) Run(_ uint32, lines <-chan *logline.LogLine, shutdown chan<- struct
 
 // New creates a new virtual machine with the given name, and compiler
 // artifacts for executable and data segments.
-func New(name string, obj *object, syslogUseCurrentYear bool, loc *time.Location) *VM {
+func New(name string, obj *Object, syslogUseCurrentYear bool, loc *time.Location) *VM {
 	return &VM{
 		name:                 name,
-		re:                   obj.re,
-		str:                  obj.str,
-		m:                    obj.m,
-		prog:                 obj.prog,
+		re:                   obj.Regexps,
+		str:                  obj.Strings,
+		m:                    obj.Metrics,
+		prog:                 obj.Program,
 		timeMemos:            lru.New(64),
 		syslogUseCurrentYear: syslogUseCurrentYear,
 		loc:                  loc,

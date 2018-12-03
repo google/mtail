@@ -470,7 +470,7 @@ func TestInstrs(t *testing.T) {
 				metrics.NewMetric("foo", "test", metrics.Counter, metrics.Int),
 				metrics.NewMetric("bar", "test", metrics.Counter, metrics.Int),
 				metrics.NewMetric("quux", "test", metrics.Gauge, metrics.Float))
-			obj := &object{re: tc.re, str: tc.str, m: m, prog: []bytecode.Instr{tc.i}}
+			obj := &Object{Regexps: tc.re, Strings: tc.str, Metrics: m, Program: []bytecode.Instr{tc.i}}
 			v := New(tc.name, obj, true, nil)
 			v.t = new(thread)
 			v.t.stack = make([]interface{}, 0)
@@ -504,7 +504,7 @@ func TestInstrs(t *testing.T) {
 
 // makeVM is a helper method for construction a single-instruction VM
 func makeVM(i bytecode.Instr, m []*metrics.Metric) *VM {
-	obj := &object{m: m, prog: []bytecode.Instr{i}}
+	obj := &Object{Metrics: m, Program: []bytecode.Instr{i}}
 	v := New("test", obj, true, nil)
 	v.t = new(thread)
 	v.t.stack = make([]interface{}, 0)
@@ -699,26 +699,26 @@ func TestDatumSetInstrs(t *testing.T) {
 
 func TestStrptimeWithTimezone(t *testing.T) {
 	loc, _ := time.LoadLocation("Europe/Berlin")
-	obj := &object{prog: []bytecode.Instr{{bytecode.Strptime, 0}}}
+	obj := &Object{Program: []bytecode.Instr{{bytecode.Strptime, 0}}}
 	vm := New("strptimezone", obj, true, loc)
 	vm.t = new(thread)
 	vm.t.stack = make([]interface{}, 0)
 	vm.t.Push("2012/01/18 06:25:00")
 	vm.t.Push("2006/01/02 15:04:05")
-	vm.execute(vm.t, obj.prog[0])
+	vm.execute(vm.t, obj.Program[0])
 	if vm.t.time != time.Date(2012, 01, 18, 06, 25, 00, 00, loc) {
 		t.Errorf("Time didn't parse with location: %s received", vm.t.time)
 	}
 }
 
 func TestStrptimeWithoutTimezone(t *testing.T) {
-	obj := &object{prog: []bytecode.Instr{{bytecode.Strptime, 0}}}
+	obj := &Object{Program: []bytecode.Instr{{bytecode.Strptime, 0}}}
 	vm := New("strptimezone", obj, true, nil)
 	vm.t = new(thread)
 	vm.t.stack = make([]interface{}, 0)
 	vm.t.Push("2012/01/18 06:25:00")
 	vm.t.Push("2006/01/02 15:04:05")
-	vm.execute(vm.t, obj.prog[0])
+	vm.execute(vm.t, obj.Program[0])
 	if vm.t.time != time.Date(2012, 01, 18, 06, 25, 00, 00, time.UTC) {
 		t.Errorf("Time didn't parse with location: %s received", vm.t.time)
 	}
