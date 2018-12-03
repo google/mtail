@@ -12,7 +12,7 @@ import (
 func TestBytecodeString(t *testing.T) {
 	expected := "{match 0}"
 
-	if diff := testutil.Diff(instr{match, 0}.String(), expected); diff != "" {
+	if diff := testutil.Diff(Instr{Match, 0}.String(), expected); diff != "" {
 		t.Errorf("bytedoce string didn't match:\n%s", diff)
 	}
 }

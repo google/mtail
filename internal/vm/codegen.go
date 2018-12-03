@@ -46,7 +46,7 @@ func (c *codegen) errorf(pos *position.Position, format string, args ...interfac
 	c.errors.Add(pos, e)
 }
 
-func (c *codegen) emit(i instr) {
+func (c *codegen) emit(i Instr) {
 	c.obj.prog = append(c.obj.prog, i)
 }
 
@@ -129,15 +129,15 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		lEnd := c.newLabel()
 		if n.Cond != nil {
 			n.Cond = ast.Walk(c, n.Cond)
-			c.emit(instr{jnm, lElse})
+			c.emit(Instr{Jnm, lElse})
 		}
 		// Set matched flag false for children.
-		c.emit(instr{setmatched, false})
+		c.emit(Instr{Setmatched, false})
 		n.Truth = ast.Walk(c, n.Truth)
 		// Re-set matched flag to true for rest of current block.
-		c.emit(instr{setmatched, true})
+		c.emit(Instr{Setmatched, true})
 		if n.Else != nil {
-			c.emit(instr{jmp, lEnd})
+			c.emit(Instr{Jmp, lEnd})
 		}
 		c.setLabel(lElse)
 		if n.Else != nil {
@@ -155,20 +155,20 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		c.obj.re = append(c.obj.re, re)
 		// Store the location of this regular expression in the patterNode
 		n.Index = len(c.obj.re) - 1
-		c.emit(instr{match, n.Index})
+		c.emit(Instr{Match, n.Index})
 
 	case *ast.StringConst:
 		c.obj.str = append(c.obj.str, n.Text)
-		c.emit(instr{str, len(c.obj.str) - 1})
+		c.emit(Instr{Str, len(c.obj.str) - 1})
 
 	case *ast.IntConst:
-		c.emit(instr{push, n.I})
+		c.emit(Instr{Push, n.I})
 
 	case *ast.FloatConst:
-		c.emit(instr{push, n.F})
+		c.emit(Instr{Push, n.F})
 
 	case *ast.StopNode:
-		c.emit(instr{stop, nil})
+		c.emit(Instr{Stop, nil})
 
 	case *ast.Id:
 		if n.Symbol == nil || n.Symbol.Kind != symtab.VarSymbol {
@@ -178,9 +178,9 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			c.errorf(n.Pos(), "No metric bound to identifier %q", n.Name)
 			return nil, n
 		}
-		c.emit(instr{mload, n.Symbol.Addr})
+		c.emit(Instr{Mload, n.Symbol.Addr})
 		m := n.Symbol.Binding.(*metrics.Metric)
-		c.emit(instr{dload, len(m.Keys)})
+		c.emit(Instr{Dload, len(m.Keys)})
 
 		if !n.Lvalue {
 			t := n.Type()
@@ -190,11 +190,11 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			}
 
 			if types.Equals(t, types.Float) {
-				c.emit(instr{fget, nil})
+				c.emit(Instr{Fget, nil})
 			} else if types.Equals(t, types.Int) {
-				c.emit(instr{iget, nil})
+				c.emit(Instr{Iget, nil})
 			} else if types.Equals(t, types.String) {
-				c.emit(instr{sget, nil})
+				c.emit(Instr{Sget, nil})
 			} else {
 				c.errorf(n.Pos(), "invalid type for get %q in %#v", n.Type(), n)
 			}
@@ -208,13 +208,13 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		rn := n.Symbol.Binding.(*ast.PatternExpr)
 		// rn.index contains the index of the compiled regular expression object
 		// in the re slice of the object code
-		c.emit(instr{push, rn.Index})
+		c.emit(Instr{Push, rn.Index})
 		// n.Symbol.Addr is the capture group offset
-		c.emit(instr{capref, n.Symbol.Addr})
+		c.emit(Instr{Capref, n.Symbol.Addr})
 		if types.Equals(n.Type(), types.Float) {
-			c.emit(instr{s2f, nil})
+			c.emit(Instr{S2f, nil})
 		} else if types.Equals(n.Type(), types.Int) {
-			c.emit(instr{s2i, nil})
+			c.emit(Instr{S2i, nil})
 		}
 
 	case *ast.IndexedExpr:
@@ -222,9 +222,9 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			for _, arg := range args.Children {
 				_ = ast.Walk(c, arg)
 				if types.Equals(arg.Type(), types.Float) {
-					c.emit(instr{f2s, nil})
+					c.emit(Instr{F2s, nil})
 				} else if types.Equals(arg.Type(), types.Int) {
-					c.emit(instr{i2s, nil})
+					c.emit(Instr{I2s, nil})
 				}
 			}
 		}
@@ -254,18 +254,18 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		return nil, n
 
 	case *ast.OtherwiseNode:
-		c.emit(instr{op: otherwise})
+		c.emit(Instr{Opcode: Otherwise})
 
 	case *ast.DelNode:
 		if n.Expiry > 0 {
-			c.emit(instr{push, n.Expiry})
+			c.emit(Instr{Push, n.Expiry})
 		}
 		ast.Walk(c, n.N)
 		// overwrite the dload instruction
 		pc := c.pc()
-		c.obj.prog[pc].op = del
+		c.obj.prog[pc].Opcode = Del
 		if n.Expiry > 0 {
-			c.obj.prog[pc].op = expire
+			c.obj.prog[pc].Opcode = Expire
 		}
 
 	case *ast.BinaryExpr:
@@ -274,13 +274,13 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			lFalse := c.newLabel()
 			lEnd := c.newLabel()
 			ast.Walk(c, n.Lhs)
-			c.emit(instr{jnm, lFalse})
+			c.emit(Instr{Jnm, lFalse})
 			ast.Walk(c, n.Rhs)
-			c.emit(instr{jnm, lFalse})
-			c.emit(instr{push, true})
-			c.emit(instr{jmp, lEnd})
+			c.emit(Instr{Jnm, lFalse})
+			c.emit(Instr{Push, true})
+			c.emit(Instr{Jmp, lEnd})
 			c.setLabel(lFalse)
-			c.emit(instr{push, false})
+			c.emit(Instr{Push, false})
 			c.setLabel(lEnd)
 			return nil, n
 
@@ -288,13 +288,13 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			lTrue := c.newLabel()
 			lEnd := c.newLabel()
 			ast.Walk(c, n.Lhs)
-			c.emit(instr{jm, lTrue})
+			c.emit(Instr{Jm, lTrue})
 			ast.Walk(c, n.Rhs)
-			c.emit(instr{jm, lTrue})
-			c.emit(instr{push, false})
-			c.emit(instr{jmp, lEnd})
+			c.emit(Instr{Jm, lTrue})
+			c.emit(Instr{Push, false})
+			c.emit(Instr{Jmp, lEnd})
 			c.setLabel(lTrue)
-			c.emit(instr{push, true})
+			c.emit(Instr{Push, true})
 			c.setLabel(lEnd)
 			return nil, n
 
@@ -314,26 +314,26 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	return c, node
 }
 
-var typedOperators = map[int]map[types.Type]opcode{
-	parser.PLUS: {types.Int: iadd,
-		types.Float:  fadd,
-		types.String: cat},
-	parser.MINUS: {types.Int: isub,
-		types.Float: fsub},
-	parser.MUL: {types.Int: imul,
-		types.Float: fmul},
-	parser.DIV: {types.Int: idiv,
-		types.Float: fdiv},
-	parser.MOD: {types.Int: imod,
-		types.Float: fmod},
-	parser.POW: {types.Int: ipow,
-		types.Float: fpow},
-	parser.ASSIGN: {types.Int: iset,
-		types.Float:  fset,
-		types.String: sset},
+var typedOperators = map[int]map[types.Type]Opcode{
+	parser.PLUS: {types.Int: Iadd,
+		types.Float:  Fadd,
+		types.String: Cat},
+	parser.MINUS: {types.Int: Isub,
+		types.Float: Fsub},
+	parser.MUL: {types.Int: Imul,
+		types.Float: Fmul},
+	parser.DIV: {types.Int: Idiv,
+		types.Float: Fdiv},
+	parser.MOD: {types.Int: Imod,
+		types.Float: Fmod},
+	parser.POW: {types.Int: Ipow,
+		types.Float: Fpow},
+	parser.ASSIGN: {types.Int: Iset,
+		types.Float:  Fset,
+		types.String: Sset},
 }
 
-func getOpcodeForType(op int, opT types.Type) (opcode, error) {
+func getOpcodeForType(op int, opT types.Type) (Opcode, error) {
 	opmap, ok := typedOperators[op]
 	if !ok {
 		return -1, errors.Errorf("no typed operator for type %v", op)
@@ -344,6 +344,16 @@ func getOpcodeForType(op int, opT types.Type) (opcode, error) {
 		}
 	}
 	return -1, errors.Errorf("no opcode for type %s in op %v", opT, op)
+}
+
+var builtin = map[string]Opcode{
+	"getfilename": Getfilename,
+	"len":         Length,
+	"settime":     Settime,
+	"strptime":    Strptime,
+	"strtol":      S2i,
+	"timestamp":   Timestamp,
+	"tolower":     Tolower,
 }
 
 func (c *codegen) VisitAfter(node ast.Node) ast.Node {
@@ -369,16 +379,16 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			}
 
 		default:
-			c.emit(instr{builtin[n.Name], arglen})
+			c.emit(Instr{builtin[n.Name], arglen})
 		}
 	case *ast.UnaryExpr:
 		switch n.Op {
 		case parser.INC:
-			c.emit(instr{op: inc})
+			c.emit(Instr{Opcode: Inc})
 		case parser.DEC:
-			c.emit(instr{op: dec})
+			c.emit(Instr{Opcode: Dec})
 		case parser.NOT:
-			c.emit(instr{op: neg})
+			c.emit(Instr{Opcode: Neg})
 		}
 	case *ast.BinaryExpr:
 		switch n.Op {
@@ -386,52 +396,52 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			lFail := c.newLabel()
 			lEnd := c.newLabel()
 			var cmpArg int
-			var jumpOp opcode
+			var jumpOp Opcode
 			switch n.Op {
 			case parser.LT:
 				cmpArg = -1
-				jumpOp = jnm
+				jumpOp = Jnm
 			case parser.GT:
 				cmpArg = 1
-				jumpOp = jnm
+				jumpOp = Jnm
 			case parser.LE:
 				cmpArg = 1
-				jumpOp = jm
+				jumpOp = Jm
 			case parser.GE:
 				cmpArg = -1
-				jumpOp = jm
+				jumpOp = Jm
 			case parser.EQ:
 				cmpArg = 0
-				jumpOp = jnm
+				jumpOp = Jnm
 			case parser.NE:
 				cmpArg = 0
-				jumpOp = jm
+				jumpOp = Jm
 			}
-			cmpOp := cmp
+			cmpOp := Cmp
 			if types.Equals(n.Lhs.Type(), n.Rhs.Type()) {
 				switch n.Lhs.Type() {
 				case types.Float:
-					cmpOp = fcmp
+					cmpOp = Fcmp
 				case types.Int:
-					cmpOp = icmp
+					cmpOp = Icmp
 				case types.String:
-					cmpOp = scmp
+					cmpOp = Scmp
 				default:
-					cmpOp = cmp
+					cmpOp = Cmp
 				}
 			}
-			c.emit(instr{cmpOp, cmpArg})
-			c.emit(instr{jumpOp, lFail})
-			c.emit(instr{push, true})
-			c.emit(instr{jmp, lEnd})
+			c.emit(Instr{cmpOp, cmpArg})
+			c.emit(Instr{jumpOp, lFail})
+			c.emit(Instr{Push, true})
+			c.emit(Instr{Jmp, lEnd})
 			c.setLabel(lFail)
-			c.emit(instr{push, false})
+			c.emit(Instr{Push, false})
 			c.setLabel(lEnd)
 		case parser.ADD_ASSIGN:
 			// When operand is not nil, inc pops the delta from the stack.
 			switch {
 			case types.Equals(n.Type(), types.Int):
-				c.emit(instr{inc, 0})
+				c.emit(Instr{Inc, 0})
 			case types.Equals(n.Type(), types.Float), types.Equals(n.Type(), types.String):
 				// Already walked the lhs and rhs of this expression
 				opcode, err := getOpcodeForType(parser.PLUS, n.Type())
@@ -439,14 +449,14 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 					c.errorf(n.Pos(), "%s", err)
 					return n
 				}
-				c.emit(instr{op: opcode})
+				c.emit(Instr{Opcode: opcode})
 				// And a second lhs
 				opcode, err = getOpcodeForType(parser.ASSIGN, n.Type())
 				if err != nil {
 					c.errorf(n.Pos(), "%s", err)
 					return n
 				}
-				c.emit(instr{op: opcode})
+				c.emit(Instr{Opcode: opcode})
 			default:
 				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.Type())
 				return n
@@ -457,26 +467,26 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 				c.errorf(n.Pos(), "%s", err)
 				return n
 			}
-			c.emit(instr{op: opcode})
+			c.emit(Instr{Opcode: opcode})
 		case parser.BITAND:
-			c.emit(instr{op: and})
+			c.emit(Instr{Opcode: And})
 		case parser.BITOR:
-			c.emit(instr{op: or})
+			c.emit(Instr{Opcode: Or})
 		case parser.XOR:
-			c.emit(instr{op: xor})
+			c.emit(Instr{Opcode: Xor})
 		case parser.SHL:
-			c.emit(instr{op: shl})
+			c.emit(Instr{Opcode: Shl})
 		case parser.SHR:
-			c.emit(instr{op: shr})
+			c.emit(Instr{Opcode: Shr})
 
 		case parser.MATCH:
 			// Cross fingers that last branch was a patternExprNode
-			c.obj.prog[c.pc()].op = smatch
+			c.obj.prog[c.pc()].Opcode = Smatch
 
 		case parser.NOT_MATCH:
 			// Cross fingers that last branch was a patternExprNode
-			c.obj.prog[c.pc()].op = smatch
-			c.emit(instr{op: not})
+			c.obj.prog[c.pc()].Opcode = Smatch
+			c.emit(Instr{Opcode: Not})
 
 		case parser.CONCAT:
 			// skip
@@ -497,15 +507,15 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 func (c *codegen) emitConversion(inType, outType types.Type) error {
 	glog.V(2).Infof("Conversion: %q to %q", inType, outType)
 	if types.Equals(types.Int, inType) && types.Equals(types.Float, outType) {
-		c.emit(instr{op: i2f})
+		c.emit(Instr{Opcode: I2f})
 	} else if types.Equals(types.String, inType) && types.Equals(types.Float, outType) {
-		c.emit(instr{op: s2f})
+		c.emit(Instr{Opcode: S2f})
 	} else if types.Equals(types.String, inType) && types.Equals(types.Int, outType) {
-		c.emit(instr{op: s2i})
+		c.emit(Instr{Opcode: S2i})
 	} else if types.Equals(types.Float, inType) && types.Equals(types.String, outType) {
-		c.emit(instr{op: f2s})
+		c.emit(Instr{Opcode: F2s})
 	} else if types.Equals(types.Int, inType) && types.Equals(types.String, outType) {
-		c.emit(instr{op: i2s})
+		c.emit(Instr{Opcode: I2s})
 	} else if types.Equals(types.Pattern, inType) && types.Equals(types.Bool, outType) {
 		// nothing, pattern is implicit bool
 	} else if types.Equals(inType, outType) {
@@ -518,19 +528,19 @@ func (c *codegen) emitConversion(inType, outType types.Type) error {
 
 func (c *codegen) writeJumps() {
 	for j, i := range c.obj.prog {
-		switch i.op {
-		case jmp, jm, jnm:
-			index := i.opnd.(int)
+		switch i.Opcode {
+		case Jmp, Jm, Jnm:
+			index := i.Operand.(int)
 			if index > len(c.l) {
-				c.errorf(nil, "no jump at label %v, table is %v", i.opnd, c.l)
+				c.errorf(nil, "no jump at label %v, table is %v", i.Operand, c.l)
 				continue
 			}
 			offset := c.l[index]
 			if offset < 0 {
-				c.errorf(nil, "offset for label %v is negative, table is %v", i.opnd, c.l)
+				c.errorf(nil, "offset for label %v is negative, table is %v", i.Operand, c.l)
 				continue
 			}
-			c.obj.prog[j].opnd = c.l[index]
+			c.obj.prog[j].Operand = c.l[index]
 		}
 	}
 }
