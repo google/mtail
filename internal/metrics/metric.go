@@ -123,7 +123,7 @@ Loop:
 // Metric.  If the sequence of label values does not yet exist, it is created.
 func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	if len(labelvalues) != len(m.Keys) {
-		return nil, errors.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
+		return nil, errors.Errorf("Label values requested (%q) not same length as keys for metric %v", labelvalues, m)
 	}
 	m.Lock()
 	defer m.Unlock()
@@ -146,7 +146,7 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 // RemoveDatum removes the Datum described by labelvalues from the Metric m.
 func (m *Metric) RemoveDatum(labelvalues ...string) error {
 	if len(labelvalues) != len(m.Keys) {
-		return errors.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
+		return errors.Errorf("Label values requested (%q) not same length as keys for metric %v", labelvalues, m)
 	}
 	m.Lock()
 	defer m.Unlock()
@@ -165,7 +165,7 @@ Loop:
 
 func (m *Metric) ExpireDatum(expiry time.Duration, labelvalues ...string) error {
 	if len(labelvalues) != len(m.Keys) {
-		return errors.Errorf("Label values requested (%q) not same length as keys for metric %q", labelvalues, m)
+		return errors.Errorf("Label values requested (%q) not same length as keys for metric %v", labelvalues, m)
 	}
 	m.Lock()
 	defer m.Unlock()
@@ -241,7 +241,7 @@ func (lv *LabelValue) UnmarshalJSON(b []byte) error {
 func (m *Metric) String() string {
 	m.RLock()
 	defer m.RUnlock()
-	return fmt.Sprintf("Metric: name=%s program=%s kind=%s type=%s hidden=%v keys=%v labelvalues=%v source=%s", m.Name, m.Program, m.Kind, m.Type, m.Hidden, m.Keys, m.LabelValues, m.Source)
+	return fmt.Sprintf("Metric: name=%s program=%s kind=%v type=%s hidden=%v keys=%v labelvalues=%v source=%s", m.Name, m.Program, m.Kind, m.Type, m.Hidden, m.Keys, m.LabelValues, m.Source)
 }
 
 // SetSource sets the source of a metric, describing where in user programmes it was defined.

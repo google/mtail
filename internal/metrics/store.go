@@ -35,7 +35,7 @@ func (s *Store) Add(m *Metric) error {
 	if len(s.Metrics[m.Name]) > 0 {
 		t := s.Metrics[m.Name][0].Kind
 		if m.Kind != t {
-			return errors.Errorf("Metric %s has different kind %s to existing %s.", m.Name, m.Kind, t)
+			return errors.Errorf("Metric %s has different kind %v to existing %v.", m.Name, m.Kind, t)
 		}
 
 		// To avoid duplicate metrics:
