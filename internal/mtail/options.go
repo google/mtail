@@ -53,7 +53,7 @@ func OverrideLocation(loc *time.Location) func(*Server) error {
 func PollInterval(interval time.Duration) func(*Server) error {
 	return func(m *Server) error {
 		if interval < 0 {
-			return errors.New("poll_interval must be positive, or zero to disable.")
+			return errors.New("poll_interval must be positive, or zero to disable")
 		}
 		m.pollInterval = interval
 		return nil
