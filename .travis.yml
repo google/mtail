@@ -1,11 +1,6 @@
 language: go
 sudo: false
 
-# Must generate the parser before installing deps or go get will error out on
-# undefined lexer tokens.
-before_install:
- - make vm/parser.go
-
 # Default dependency installation command, which is disabled when Makefile
 # detected.
 install:
