@@ -635,7 +635,9 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			keys[j] = s
 		}
 		expiry := t.Pop().(time.Duration)
-		m.ExpireDatum(expiry, keys...)
+		if err := m.ExpireDatum(expiry, keys...); err != nil {
+			v.errorf("%s", err)
+		}
 
 	case bytecode.Tolower:
 		// Lowercase bytecode.a string from TOS, and push result back.
