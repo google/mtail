@@ -26,14 +26,14 @@ type Type interface {
 func Equals(t1, t2 Type) bool {
 	t1, t2 = t1.Root(), t2.Root()
 	switch t1 := t1.(type) {
-	case *TypeVariable:
-		r2, ok := t2.(*TypeVariable)
+	case *Variable:
+		r2, ok := t2.(*Variable)
 		if !ok {
 			return occursInType(t1, t2)
 		}
 		return t1 == r2
-	case *TypeOperator:
-		t2, ok := t2.(*TypeOperator)
+	case *Operator:
+		t2, ok := t2.(*Operator)
 		if !ok {
 			return false
 		}
@@ -59,25 +59,25 @@ var (
 	nextVariableID   int
 )
 
-// TypeVariable represents an unbound type variable in the type system.
-type TypeVariable struct {
+// Variable represents an unbound type variable in the type system.
+type Variable struct {
 	ID int
 
 	instanceMu sync.RWMutex
 	Instance   *Type
 }
 
-// NewTypeVariable constructs a new unique TypeVariable.
-func NewTypeVariable() *TypeVariable {
+// NewVariable constructs a new unique TypeVariable.
+func NewVariable() *Variable {
 	nextVariableIDMu.Lock()
 	id := nextVariableID
 	nextVariableID++
 	nextVariableIDMu.Unlock()
-	return &TypeVariable{ID: id}
+	return &Variable{ID: id}
 }
 
 // Root returns an exemplar of this TypeVariable, in this case the root of the unification tree.
-func (t *TypeVariable) Root() Type {
+func (t *Variable) Root() Type {
 	t.instanceMu.Lock()
 	defer t.instanceMu.Unlock()
 	if t.Instance == nil {
@@ -88,7 +88,7 @@ func (t *TypeVariable) Root() Type {
 	return r
 }
 
-func (t *TypeVariable) String() string {
+func (t *Variable) String() string {
 	t.instanceMu.RLock()
 	defer t.instanceMu.RUnlock()
 	if t.Instance != nil {
@@ -100,14 +100,14 @@ func (t *TypeVariable) String() string {
 
 // SetInstance sets the exemplar instance of this TypeVariable, during
 // unification.
-func (t *TypeVariable) SetInstance(t1 *Type) {
+func (t *Variable) SetInstance(t1 *Type) {
 	t.instanceMu.Lock()
 	defer t.instanceMu.Unlock()
 	t.Instance = t1
 }
 
-// TypeOperator represents a type scheme in the type system.
-type TypeOperator struct {
+// Operator represents a type scheme in the type system.
+type Operator struct {
 	// Name is a common name for this operator
 	Name string
 	// Args is the sequence of types that are parameters to this type.  They
@@ -118,11 +118,11 @@ type TypeOperator struct {
 }
 
 // Root returns an exemplar of a TypeOperator, i.e. itself.
-func (t *TypeOperator) Root() Type {
+func (t *Operator) Root() Type {
 	return t
 }
 
-func (t *TypeOperator) String() (s string) {
+func (t *Operator) String() (s string) {
 	switch l := len(t.Args); {
 	case l < 2:
 		s = t.Name
@@ -140,13 +140,13 @@ func (t *TypeOperator) String() (s string) {
 
 // Function is a convenience method, which instantiates a new Function type
 // scheme, with the given args as parameters.
-func Function(args ...Type) *TypeOperator {
-	return &TypeOperator{"→", args}
+func Function(args ...Type) *Operator {
+	return &Operator{"→", args}
 }
 
 // IsFunction returns true if the given type is a Function type.
 func IsFunction(t Type) bool {
-	if v, ok := t.(*TypeOperator); ok {
+	if v, ok := t.(*Operator); ok {
 		return v.Name == "→"
 	}
 	return false
@@ -154,13 +154,13 @@ func IsFunction(t Type) bool {
 
 // Dimension is a convenience method which instantiates a new Dimension type
 // scheme, with the given args as the dimensions of the type.
-func Dimension(args ...Type) *TypeOperator {
-	return &TypeOperator{"⨯", args}
+func Dimension(args ...Type) *Operator {
+	return &Operator{"⨯", args}
 }
 
 // IsDimension returns true if the given type is a Dimension type.
 func IsDimension(t Type) bool {
-	if v, ok := t.(*TypeOperator); ok {
+	if v, ok := t.(*Operator); ok {
 		return v.Name == "⨯"
 	}
 	return false
@@ -169,9 +169,9 @@ func IsDimension(t Type) bool {
 // IsComplete returns true if the type and all its arguments have non-variable exemplars.
 func IsComplete(t Type) bool {
 	switch v := t.Root().(type) {
-	case *TypeVariable:
+	case *Variable:
 		return false
-	case *TypeOperator:
+	case *Operator:
 		for _, a := range v.Args {
 			if !IsComplete(a) {
 				return false
@@ -184,22 +184,22 @@ func IsComplete(t Type) bool {
 
 // Builtin types
 var (
-	Undef   = &TypeOperator{"Undef", []Type{}}
-	Error   = &TypeOperator{"Error", []Type{}}
-	None    = &TypeOperator{"None", []Type{}}
-	Bool    = &TypeOperator{"Bool", []Type{}}
-	Int     = &TypeOperator{"Int", []Type{}}
-	Float   = &TypeOperator{"Float", []Type{}}
-	String  = &TypeOperator{"String", []Type{}}
-	Pattern = &TypeOperator{"Pattern", []Type{}}
+	Undef   = &Operator{"Undef", []Type{}}
+	Error   = &Operator{"Error", []Type{}}
+	None    = &Operator{"None", []Type{}}
+	Bool    = &Operator{"Bool", []Type{}}
+	Int     = &Operator{"Int", []Type{}}
+	Float   = &Operator{"Float", []Type{}}
+	String  = &Operator{"String", []Type{}}
+	Pattern = &Operator{"Pattern", []Type{}}
 )
 
 // Builtins is a mapping of the builtin language functions to their type definitions.
 var Builtins = map[string]Type{
-	"int":         Function(NewTypeVariable(), Int),
-	"bool":        Function(NewTypeVariable(), Bool),
-	"float":       Function(NewTypeVariable(), Float),
-	"string":      Function(NewTypeVariable(), String),
+	"int":         Function(NewVariable(), Int),
+	"bool":        Function(NewVariable(), Bool),
+	"float":       Function(NewVariable(), Float),
+	"string":      Function(NewVariable(), String),
 	"timestamp":   Function(Int),
 	"len":         Function(String, Int),
 	"settime":     Function(Int, None),
@@ -212,23 +212,23 @@ var Builtins = map[string]Type{
 // FreshType returns a new type from the provided type scheme, replacing any
 // unbound type variables with new type variables.
 func FreshType(t Type) Type {
-	mappings := make(map[*TypeVariable]*TypeVariable)
+	mappings := make(map[*Variable]*Variable)
 
 	var freshRec func(Type) Type
 	freshRec = func(tp Type) Type {
 		p := tp.Root()
 		switch p1 := p.(type) {
-		case *TypeVariable:
+		case *Variable:
 			if _, ok := mappings[p1]; !ok {
-				mappings[p1] = NewTypeVariable()
+				mappings[p1] = NewVariable()
 			}
 			return mappings[p1]
-		case *TypeOperator:
+		case *Operator:
 			args := make([]Type, 0, len(p1.Args))
 			for _, arg := range p1.Args {
 				args = append(args, freshRec(arg))
 			}
-			return &TypeOperator{p1.Name, args}
+			return &Operator{p1.Name, args}
 		default:
 			glog.V(1).Infof("Unexpected type p1: %v", p1)
 		}
@@ -237,7 +237,7 @@ func FreshType(t Type) Type {
 	return freshRec(t)
 }
 
-func occursIn(v *TypeVariable, types []Type) bool {
+func occursIn(v *Variable, types []Type) bool {
 	for _, t2 := range types {
 		if occursInType(v, t2) {
 			return true
@@ -246,12 +246,12 @@ func occursIn(v *TypeVariable, types []Type) bool {
 	return false
 }
 
-func occursInType(v *TypeVariable, t2 Type) bool {
+func occursInType(v *Variable, t2 Type) bool {
 	root := t2.Root()
 	if Equals(root, v) {
 		return true
 	}
-	if to, ok := root.(*TypeOperator); ok {
+	if to, ok := root.(*Operator); ok {
 		return occursIn(v, to.Args)
 	}
 	return false
@@ -288,15 +288,15 @@ func Unify(a, b Type) error {
 	glog.V(2).Infof("Unifying %v and %v", a, b)
 	a1, b1 := a.Root(), b.Root()
 	switch a2 := a1.(type) {
-	case *TypeVariable:
+	case *Variable:
 		switch b2 := b1.(type) {
-		case *TypeVariable:
+		case *Variable:
 			if a2.ID != b2.ID {
 				glog.V(2).Infof("Making %q type %q", a2, b1)
 				a2.SetInstance(&b1)
 				return nil
 			}
-		case *TypeOperator:
+		case *Operator:
 			if occursInType(a2, b2) {
 				return fmt.Errorf("Recursive unification on %v and %v", a2, b2)
 			}
@@ -304,9 +304,9 @@ func Unify(a, b Type) error {
 			a2.SetInstance(&b1)
 			return nil
 		}
-	case *TypeOperator:
+	case *Operator:
 		switch b2 := b1.(type) {
-		case *TypeVariable:
+		case *Variable:
 			err := Unify(b, a)
 			if err != nil {
 				// We flipped the args, flip them back.
@@ -316,7 +316,7 @@ func Unify(a, b Type) error {
 			}
 			return err
 
-		case *TypeOperator:
+		case *Operator:
 			if len(a2.Args) != len(b2.Args) {
 				return &TypeError{a2, b2}
 			}
@@ -354,10 +354,10 @@ func LeastUpperBound(a, b Type) Type {
 		return a1
 	}
 	// If either is a TypeVariable, the other is the lub
-	if _, ok := a1.(*TypeVariable); ok {
+	if _, ok := a1.(*Variable); ok {
 		return b1
 	}
-	if _, ok := b1.(*TypeVariable); ok {
+	if _, ok := b1.(*Variable); ok {
 		return a1
 	}
 	if (Equals(a1, Float) && Equals(b1, Int)) ||
@@ -460,7 +460,7 @@ func groupOnlyMatches(re *syntax.Regexp, s string) bool {
 
 // isErrorType indicates that a given type is the result of a type error.
 func IsErrorType(t Type) bool {
-	if o, ok := t.(*TypeOperator); ok {
+	if o, ok := t.(*Operator); ok {
 		if o.Name == "Error" {
 			return true
 		}

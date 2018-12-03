@@ -84,7 +84,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		// historical behaviour.
 		t := n.Type()
 		if types.IsDimension(t) {
-			t = t.(*types.TypeOperator).Args[len(t.(*types.TypeOperator).Args)-1]
+			t = t.(*types.Operator).Args[len(t.(*types.Operator).Args)-1]
 		}
 		var dtyp datum.Type
 		switch {
@@ -187,8 +187,8 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		if !n.Lvalue {
 			t := n.Type()
 			if types.IsDimension(t) {
-				l := len(t.(*types.TypeOperator).Args)
-				t = t.(*types.TypeOperator).Args[l-1]
+				l := len(t.(*types.Operator).Args)
+				t = t.(*types.Operator).Args[l-1]
 			}
 
 			if types.Equals(t, types.Float) {

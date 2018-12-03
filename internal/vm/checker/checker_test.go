@@ -373,7 +373,7 @@ var checkerTypeExpressionTests = []struct {
 	},
 	{"⍺ + Float -> Float",
 		&ast.BinaryExpr{
-			Lhs: &ast.Id{Symbol: &symtab.Symbol{Name: "i", Kind: symtab.VarSymbol, Type: types.NewTypeVariable()}},
+			Lhs: &ast.Id{Symbol: &symtab.Symbol{Name: "i", Kind: symtab.VarSymbol, Type: types.NewVariable()}},
 			Rhs: &ast.CaprefNode{Symbol: &symtab.Symbol{Kind: symtab.CaprefSymbol, Type: types.Float}},
 			Op:  parser.PLUS},
 		types.Float,

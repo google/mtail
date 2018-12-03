@@ -84,7 +84,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		case metrics.Counter, metrics.Gauge, metrics.Timer:
 			// TODO(jaq): This should be a numeric type, unless we want to
 			// enforce rules like "Counter can only be Int."
-			rType = types.NewTypeVariable()
+			rType = types.NewVariable()
 		case metrics.Text:
 			rType = types.String
 		default:
@@ -95,7 +95,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			// One type per key
 			keyTypes := make([]types.Type, 0, len(n.Keys))
 			for i := 0; i < len(n.Keys); i++ {
-				keyTypes = append(keyTypes, types.NewTypeVariable())
+				keyTypes = append(keyTypes, types.NewVariable())
 			}
 			// and one for the value.
 			keyTypes = append(keyTypes, rType)
@@ -262,7 +262,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			// astType is the type signature of the ast expression
 			astType := types.Function(lT, rT, rType)
 
-			t := types.NewTypeVariable()
+			t := types.NewVariable()
 			// exprType is the type signature of this expression
 			exprType := types.Function(t, t, t)
 			err := types.Unify(exprType, astType)
@@ -290,7 +290,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			// ⇒ O ⊢ e : Int
 			rType = types.Int
 			exprType := types.Function(rType, rType, rType)
-			astType := types.Function(lT, rT, types.NewTypeVariable())
+			astType := types.Function(lT, rT, types.NewVariable())
 			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), err.Error())
@@ -357,7 +357,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		case parser.CONCAT:
 			rType = types.Pattern
 			exprType := types.Function(rType, rType, rType)
-			astType := types.Function(lT, rT, types.NewTypeVariable())
+			astType := types.Function(lT, rT, types.NewVariable())
 			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
@@ -367,8 +367,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 		case parser.MATCH, parser.NOT_MATCH:
 			rType = types.Bool
-			exprType := types.Function(types.NewTypeVariable(), types.Pattern, rType)
-			astType := types.Function(lT, rT, types.NewTypeVariable())
+			exprType := types.Function(types.NewVariable(), types.Pattern, rType)
+			astType := types.Function(lT, rT, types.NewVariable())
 			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
@@ -460,7 +460,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 			// ok
-			if t, ok := v.Type().(*types.TypeOperator); ok && types.IsDimension(t) {
+			if t, ok := v.Type().(*types.Operator); ok && types.IsDimension(t) {
 				glog.V(1).Infof("Our idNode is a dimension type")
 			} else {
 				if len(argTypes) > 0 {
@@ -478,13 +478,13 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			return n
 		}
 
-		rType := types.NewTypeVariable()
+		rType := types.NewVariable()
 		argTypes = append(argTypes, rType)
 		astType := types.Dimension(argTypes...)
 		fresh := n.Lhs.Type()
 		err := types.Unify(fresh, astType)
 		if err != nil {
-			exprType, ok := n.Lhs.Type().(*types.TypeOperator)
+			exprType, ok := n.Lhs.Type().(*types.Operator)
 			if !ok {
 				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected lhs type %v", n.Lhs.Type()))
 				n.SetType(types.Error)
@@ -513,7 +513,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				typs = append(typs, arg.Type())
 			}
 		}
-		rType := types.NewTypeVariable()
+		rType := types.NewVariable()
 		typs = append(typs, rType)
 
 		fn := types.Function(typs...)

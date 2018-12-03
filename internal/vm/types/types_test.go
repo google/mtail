@@ -32,40 +32,40 @@ var typeUnificationTests = []struct {
 		Float,
 	},
 	{
-		&TypeVariable{ID: 0}, &TypeVariable{ID: 0},
-		&TypeVariable{ID: 0},
+		&Variable{ID: 0}, &Variable{ID: 0},
+		&Variable{ID: 0},
 	},
 	// The unification of any type operator with a type variable is the type operator
 	{
-		&TypeVariable{}, None,
+		&Variable{}, None,
 		None,
 	},
 	{
-		&TypeVariable{}, Float,
+		&Variable{}, Float,
 		Float,
 	},
 	{
-		&TypeVariable{}, Int,
+		&Variable{}, Int,
 		Int,
 	},
 	{
-		&TypeVariable{}, String,
+		&Variable{}, String,
 		String,
 	},
 	{
-		None, &TypeVariable{},
+		None, &Variable{},
 		None,
 	},
 	{
-		Float, &TypeVariable{},
+		Float, &Variable{},
 		Float,
 	},
 	{
-		Int, &TypeVariable{},
+		Int, &Variable{},
 		Int,
 	},
 	{
-		String, &TypeVariable{},
+		String, &Variable{},
 		String,
 	},
 	// The lub of Int and Float is Float.
@@ -224,12 +224,12 @@ func TestInferCaprefType(t *testing.T) {
 }
 
 func TestTypeEquals(t *testing.T) {
-	if Equals(NewTypeVariable(), NewTypeVariable()) {
+	if Equals(NewVariable(), NewVariable()) {
 		t.Error("Type variables are not same")
 	}
 
-	t1 := NewTypeVariable()
-	t2 := NewTypeVariable()
+	t1 := NewVariable()
+	t2 := NewVariable()
 	err := Unify(t1, t2)
 	if err != nil {
 		t.Fatal(err)
@@ -241,7 +241,7 @@ func TestTypeEquals(t *testing.T) {
 		t.Errorf("type constants not same")
 	}
 
-	t3 := NewTypeVariable()
+	t3 := NewVariable()
 	if Equals(t3, Int) {
 		t.Error("ununified type const and var")
 	}
