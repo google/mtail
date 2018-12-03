@@ -27,8 +27,8 @@ import (
 	"github.com/spf13/afero"
 )
 
-// MtailServer contains the state of the main program object.
-type MtailServer struct {
+// Server contains the state of the main mtail program.
+type Server struct {
 	lines chan *logline.LogLine // Channel of lines from tailer to VM engine.
 	store *metrics.Store        // Metrics storage.
 	w     watcher.Watcher
@@ -61,7 +61,7 @@ type MtailServer struct {
 
 // StartTailing constructs a new Tailer and commences sending log lines into
 // the lines channel.
-func (m *MtailServer) StartTailing() error {
+func (m *Server) StartTailing() error {
 	var err error
 	for _, pattern := range m.logPathPatterns {
 		glog.V(1).Infof("Tail pattern %q", pattern)
@@ -73,7 +73,7 @@ func (m *MtailServer) StartTailing() error {
 }
 
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
-func (m *MtailServer) initLoader() error {
+func (m *Server) initLoader() error {
 	opts := []func(*vm.Loader) error{}
 	if m.compileOnly {
 		opts = append(opts, vm.CompileOnly)
@@ -114,7 +114,7 @@ func (m *MtailServer) initLoader() error {
 }
 
 // initExporter sets up an Exporter for this MtailServer.
-func (m *MtailServer) initExporter() (err error) {
+func (m *Server) initExporter() (err error) {
 	opts := []func(*exporter.Exporter) error{}
 	if m.omitProgLabel {
 		opts = append(opts, exporter.OmitProgLabel)
@@ -124,7 +124,7 @@ func (m *MtailServer) initExporter() (err error) {
 }
 
 // initTailer sets up a Tailer for this MtailServer.
-func (m *MtailServer) initTailer() (err error) {
+func (m *Server) initTailer() (err error) {
 	opts := []func(*tailer.Tailer) error{
 		tailer.PollInterval(m.pollInterval),
 	}
@@ -147,7 +147,7 @@ const statusTemplate = `
 <p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a></p>
 `
 
-func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t, err := template.New("status").Parse(statusTemplate)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -177,48 +177,48 @@ func (m *MtailServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // ProgramPath sets the path to find mtail programs in the MtailServer.
-func ProgramPath(path string) func(*MtailServer) error {
-	return func(m *MtailServer) error {
+func ProgramPath(path string) func(*Server) error {
+	return func(m *Server) error {
 		m.programPath = path
 		return nil
 	}
 }
 
 // LogPathPatterns sets the patterns to find log paths in the MtailServer.
-func LogPathPatterns(patterns ...string) func(*MtailServer) error {
-	return func(m *MtailServer) error {
+func LogPathPatterns(patterns ...string) func(*Server) error {
+	return func(m *Server) error {
 		m.logPathPatterns = patterns
 		return nil
 	}
 }
 
 // BindAddress sets the HTTP server address in MtailServer.
-func BindAddress(address, port string) func(*MtailServer) error {
-	return func(m *MtailServer) error {
+func BindAddress(address, port string) func(*Server) error {
+	return func(m *Server) error {
 		m.bindAddress = net.JoinHostPort(address, port)
 		return nil
 	}
 }
 
 // BuildInfo sets the mtail program build information in the MtailServer.
-func BuildInfo(info string) func(*MtailServer) error {
-	return func(m *MtailServer) error {
+func BuildInfo(info string) func(*Server) error {
+	return func(m *Server) error {
 		m.buildInfo = info
 		return nil
 	}
 }
 
 // OverrideLocation sets the timezone location for log timestamps without any such information.
-func OverrideLocation(loc *time.Location) func(*MtailServer) error {
-	return func(m *MtailServer) error {
+func OverrideLocation(loc *time.Location) func(*Server) error {
+	return func(m *Server) error {
 		m.overrideLocation = loc
 		return nil
 	}
 }
 
 // PollInterval sets the polling interval to use on a Tailer.
-func PollInterval(interval time.Duration) func(*MtailServer) error {
-	return func(m *MtailServer) error {
+func PollInterval(interval time.Duration) func(*Server) error {
+	return func(m *Server) error {
 		if interval < 0 {
 			return errors.New("poll_interval must be positive, or zero to disable.")
 		}
@@ -228,56 +228,56 @@ func PollInterval(interval time.Duration) func(*MtailServer) error {
 }
 
 // OneShot sets one-shot mode in the MtailServer.
-func OneShot(m *MtailServer) error {
+func OneShot(m *Server) error {
 	m.oneShot = true
 	return nil
 }
 
 // CompileOnly sets compile-only mode in the MtailServer.
-func CompileOnly(m *MtailServer) error {
+func CompileOnly(m *Server) error {
 	m.compileOnly = true
 	return nil
 }
 
 // DumpAst instructs the MtailServer's compiler to print the AST after parsing.
-func DumpAst(m *MtailServer) error {
+func DumpAst(m *Server) error {
 	m.dumpAst = true
 	return nil
 }
 
 // DumpAstTypes instructs the MtailServer's copmiler to print the AST after type checking.
-func DumpAstTypes(m *MtailServer) error {
+func DumpAstTypes(m *Server) error {
 	m.dumpAstTypes = true
 	return nil
 }
 
 // DumpBytecode instructs the MtailServer's compiuler to print the program bytecode after code generation.
-func DumpBytecode(m *MtailServer) error {
+func DumpBytecode(m *Server) error {
 	m.dumpBytecode = true
 	return nil
 }
 
 // SyslogUseCurrentYear instructs the MtailServer to use the current year for year-less log timestamp during parsing.
-func SyslogUseCurrentYear(m *MtailServer) error {
+func SyslogUseCurrentYear(m *Server) error {
 	m.syslogUseCurrentYear = true
 	return nil
 }
 
 // OmitProgLabel sets the MtailServer to not put the program name as a label in exported metrics.
-func OmitProgLabel(m *MtailServer) error {
+func OmitProgLabel(m *Server) error {
 	m.omitProgLabel = true
 	return nil
 }
 
 // OmitMetricSource sets the MtailServer to not link created metrics to their source program.
-func OmitMetricSource(m *MtailServer) error {
+func OmitMetricSource(m *Server) error {
 	m.omitMetricSource = true
 	return nil
 }
 
 // New creates a MtailServer from the supplied Options.
-func New(store *metrics.Store, w watcher.Watcher, fs afero.Fs, options ...func(*MtailServer) error) (*MtailServer, error) {
-	m := &MtailServer{
+func New(store *metrics.Store, w watcher.Watcher, fs afero.Fs, options ...func(*Server) error) (*Server, error) {
+	m := &Server{
 		store:   store,
 		lines:   make(chan *logline.LogLine),
 		w:       w,
@@ -300,7 +300,7 @@ func New(store *metrics.Store, w watcher.Watcher, fs afero.Fs, options ...func(*
 }
 
 // SetOption takes one or more option functions and applies them in order to MtailServer.
-func (m *MtailServer) SetOption(options ...func(*MtailServer) error) error {
+func (m *Server) SetOption(options ...func(*Server) error) error {
 	for _, option := range options {
 		if err := option(m); err != nil {
 			return err
@@ -311,7 +311,7 @@ func (m *MtailServer) SetOption(options ...func(*MtailServer) error) error {
 
 // WriteMetrics dumps the current state of the metrics store in JSON format to
 // the io.Writer.
-func (m *MtailServer) WriteMetrics(w io.Writer) error {
+func (m *Server) WriteMetrics(w io.Writer) error {
 	m.store.RLock()
 	b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
 	m.store.RUnlock()
@@ -323,7 +323,7 @@ func (m *MtailServer) WriteMetrics(w io.Writer) error {
 }
 
 // Serve begins the webserver and awaits a shutdown instruction.
-func (m *MtailServer) Serve() error {
+func (m *Server) Serve() error {
 	if m.bindAddress == "" {
 		return errors.Errorf("No bind address provided.")
 	}
@@ -346,7 +346,7 @@ func (m *MtailServer) Serve() error {
 	return nil
 }
 
-func (m *MtailServer) handleQuit(w http.ResponseWriter, r *http.Request) {
+func (m *Server) handleQuit(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Header().Add("Allow", "POST")
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -357,7 +357,7 @@ func (m *MtailServer) handleQuit(w http.ResponseWriter, r *http.Request) {
 }
 
 // WaitForShutdown handles shutdown requests from the system or the UI.
-func (m *MtailServer) WaitForShutdown() {
+func (m *Server) WaitForShutdown() {
 	n := make(chan os.Signal, 1)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
 	select {
@@ -372,7 +372,7 @@ func (m *MtailServer) WaitForShutdown() {
 }
 
 // Close handles the graceful shutdown of this mtail instance, ensuring that it only occurs once.
-func (m *MtailServer) Close() error {
+func (m *Server) Close() error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		// If we have a tailer (i.e. not in test) then signal the tailer to
@@ -402,7 +402,7 @@ func (m *MtailServer) Close() error {
 // Run starts MtailServer's primary function, in which it watches the log
 // files for changes and sends any new lines found into the lines channel for
 // pick up by the virtual machines. If OneShot mode is enabled, it will exit.
-func (m *MtailServer) Run() error {
+func (m *Server) Run() error {
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
 		return nil

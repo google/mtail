@@ -39,7 +39,7 @@ func removeTempDir(t *testing.T, workdir string) {
 	}
 }
 
-func startMtailServer(t *testing.T, options ...func(*MtailServer) error) *MtailServer {
+func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	expvar.Get("line_count").(*expvar.Int).Set(0)
 	expvar.Get("log_count").(*expvar.Int).Set(0)
 	expvar.Get("log_rotations_total").(*expvar.Map).Init()
