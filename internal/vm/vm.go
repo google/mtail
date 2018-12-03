@@ -23,6 +23,7 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/vm/bytecode"
+	"github.com/google/mtail/internal/vm/object"
 
 	"github.com/golang/groupcache/lru"
 )
@@ -754,7 +755,7 @@ func (v *VM) Run(_ uint32, lines <-chan *logline.LogLine, shutdown chan<- struct
 
 // New creates a new virtual machine with the given name, and compiler
 // artifacts for executable and data segments.
-func New(name string, obj *Object, syslogUseCurrentYear bool, loc *time.Location) *VM {
+func New(name string, obj *object.Object, syslogUseCurrentYear bool, loc *time.Location) *VM {
 	return &VM{
 		name:                 name,
 		re:                   obj.Regexps,

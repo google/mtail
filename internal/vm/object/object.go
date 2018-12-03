@@ -1,7 +1,7 @@
 // Copyright 2017 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package object
 
 import (
 	"regexp"

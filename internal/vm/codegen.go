@@ -14,6 +14,7 @@ import (
 	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/bytecode"
 	"github.com/google/mtail/internal/vm/errors"
+	"github.com/google/mtail/internal/vm/object"
 	"github.com/google/mtail/internal/vm/parser"
 	"github.com/google/mtail/internal/vm/position"
 	"github.com/google/mtail/internal/vm/symtab"
@@ -25,14 +26,14 @@ type codegen struct {
 	name string // Name of the program.
 
 	errors errors.ErrorList // Any compile errors detected are accumulated here.
-	obj    Object           // The object to return, if successful.
+	obj    object.Object    // The object to return, if successful.
 
 	l     []int           // Label table for recording jump destinations.
 	decos []*ast.DecoNode // Decorator stack to unwind when entering decorated blocks.
 }
 
 // CodeGen is the function that compiles the program to bytecode and data.
-func CodeGen(name string, n ast.Node) (*Object, error) {
+func CodeGen(name string, n ast.Node) (*object.Object, error) {
 	c := &codegen{name: name}
 	_ = ast.Walk(c, n)
 	c.writeJumps()
