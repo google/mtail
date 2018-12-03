@@ -10,13 +10,12 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/mtail/metrics"
-	"github.com/google/mtail/metrics/datum"
-	"github.com/google/mtail/mtail"
-	"github.com/google/mtail/testutil"
-	"github.com/google/mtail/watcher"
+	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
+	"github.com/google/mtail/internal/testutil/golden"
+	"github.com/google/mtail/internal/watcher"
 	"github.com/spf13/afero"
 )
 
@@ -153,14 +152,14 @@ func TestExamplePrograms(t *testing.T) {
 			defer g.Close()
 
 			goldenStore := metrics.NewStore()
-			testutil.ReadTestData(g, tc.programfile, goldenStore)
+			golden.ReadTestData(g, tc.programfile, goldenStore)
 
 			err = mtail.Close()
 			if err != nil {
 				t.Error(err)
 			}
 
-			diff := cmp.Diff(goldenStore, store, cmpopts.IgnoreUnexported(sync.RWMutex{}, datum.StringDatum{}))
+			diff := testutil.Diff(goldenStore, store, testutil.IgnoreUnexported(sync.RWMutex{}, datum.StringDatum{}))
 
 			if diff != "" {
 				t.Error(diff)

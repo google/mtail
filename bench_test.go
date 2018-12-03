@@ -13,9 +13,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/google/mtail/metrics"
-	"github.com/google/mtail/mtail"
-	"github.com/google/mtail/watcher"
+	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/watcher"
 	"github.com/spf13/afero"
 )
 
