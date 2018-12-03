@@ -110,7 +110,10 @@ func (s *Store) Expire() error {
 					continue
 				}
 				if now.Sub(lv.Value.TimeUTC()) > lv.Expiry {
-					m.RemoveDatum(lv.Labels...)
+					err := m.RemoveDatum(lv.Labels...)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
