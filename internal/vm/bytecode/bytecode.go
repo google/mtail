@@ -3,7 +3,7 @@
 
 // Package vm provides a compiler and virtual machine environment for executing
 // mtail programs.
-package vm
+package bytecode
 
 import "fmt"
 
@@ -135,6 +135,10 @@ var opNames = map[Opcode]string{
 	Icmp:        "icmp",
 	Fcmp:        "fcmp",
 	Scmp:        "scmp",
+}
+
+func (o Opcode) String() string {
+	return opNames[o]
 }
 
 type Instr struct {
