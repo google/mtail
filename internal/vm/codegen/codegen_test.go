@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package codegen_test
 
 import (
 	"strings"
@@ -11,6 +11,7 @@ import (
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/vm/bytecode"
 	"github.com/google/mtail/internal/vm/checker"
+	"github.com/google/mtail/internal/vm/codegen"
 	"github.com/google/mtail/internal/vm/parser"
 )
 
@@ -867,7 +868,7 @@ func TestCodegen(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Check error: %s", err)
 			}
-			obj, err := CodeGen(tc.name, ast)
+			obj, err := codegen.CodeGen(tc.name, ast)
 			if err != nil {
 				t.Fatalf("Codegen error:\n%s", err)
 			}

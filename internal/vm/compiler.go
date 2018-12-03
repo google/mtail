@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/vm/checker"
+	"github.com/google/mtail/internal/vm/codegen"
 	"github.com/google/mtail/internal/vm/parser"
 )
 
@@ -37,7 +38,7 @@ func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, sysl
 		glog.Infof("%s AST with Type Annotation:\n%s", name, s.Dump(ast))
 	}
 
-	obj, err := CodeGen(name, ast)
+	obj, err := codegen.CodeGen(name, ast)
 	if err != nil {
 		return nil, err
 	}
