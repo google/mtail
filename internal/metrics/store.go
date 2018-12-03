@@ -99,6 +99,8 @@ func (s *Store) MarshalJSON() (b []byte, err error) {
 	return json.Marshal(ms)
 }
 
+// Expire iterates through the Store looking for metrics that have been marked
+// for expiry, and removing them if their expiration time has passed.
 func (s *Store) Expire() error {
 	s.Lock()
 	defer s.Unlock()
@@ -121,6 +123,7 @@ func (s *Store) Expire() error {
 	return nil
 }
 
+// StartExpiryLoop runs a permanent goroutine to expire metrics every hour.
 func (s *Store) StartExpiryLoop() {
 	go func() {
 		ticker := time.NewTicker(time.Hour)
