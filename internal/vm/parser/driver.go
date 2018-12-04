@@ -5,6 +5,15 @@
 //go:generate goyacc -v y.output -o parser.go -p mtail parser.y
 
 // Package parser implements the parse phase of the mtail program compilation.
+// The parser itself is defined in parser.y, and goyacc generates the program
+// code and token definitions.  The parser fetches tokens from the lexer, which
+// scans the input converting the program source into a token stream.  The
+// driver code wraps the generated parser and marshals the ast and errors back
+// to the caller.
+//
+// Two pretty-printers are used for debugging: the unparser, which converts an
+// ast back into program text, and an approximation of an s-expression printer,
+// which tries to model in indented text the structure of the ast.
 package parser
 
 import (
@@ -31,7 +40,7 @@ func Parse(name string, input io.Reader) (ast.Node, error) {
 	return p.root, nil
 }
 
-// EOF is a marker for end of file.
+// EOF is a marker for end of file.  It has the same value as the goyacc internal Kind `$end`.
 const EOF = 0
 
 // parser defines the data structure for parsing an mtail program.
