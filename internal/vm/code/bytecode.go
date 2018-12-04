@@ -1,9 +1,8 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-// Package vm provides a compiler and virtual machine environment for executing
-// mtail programs.
-package bytecode
+// Package code contains the bytecode instructions for the mtail virtual machine.
+package code
 
 import "fmt"
 
