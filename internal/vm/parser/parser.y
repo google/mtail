@@ -6,7 +6,7 @@ package parser
 
 import (
     "time"
-    
+
     "github.com/google/mtail/internal/metrics"
     "github.com/google/mtail/internal/vm/ast"
     "github.com/google/mtail/internal/vm/position"
@@ -111,7 +111,7 @@ stmt
   | decoration_statement
   { $$ = $1 }
   | delete_statement
-  { $$ = $1 }  
+  { $$ = $1 }
   | NEXT
   {
     $$ = &ast.NextStmt{tokenpos(mtaillex)}
@@ -283,7 +283,7 @@ match_expr
   | primary_expr match_op opt_nl primary_expr
   {
     $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
-  }  
+  }
   ;
 
 match_op
