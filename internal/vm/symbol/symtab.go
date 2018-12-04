@@ -20,6 +20,7 @@ const (
 	CaprefSymbol                    // Capture group references
 	DecoSymbol                      // Decorators
 	PatternSymbol                   // Named pattern constants
+	endSymbol                       // for testing
 )
 
 func (k SymbolKind) String() string {
