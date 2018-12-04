@@ -17,7 +17,7 @@ import (
 	"github.com/google/mtail/internal/vm/object"
 	"github.com/google/mtail/internal/vm/parser"
 	"github.com/google/mtail/internal/vm/position"
-	"github.com/google/mtail/internal/vm/symtab"
+	"github.com/google/mtail/internal/vm/symbol"
 	"github.com/google/mtail/internal/vm/types"
 )
 
@@ -173,7 +173,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		c.emit(bytecode.Instr{bytecode.Stop, nil})
 
 	case *ast.Id:
-		if n.Symbol == nil || n.Symbol.Kind != symtab.VarSymbol {
+		if n.Symbol == nil || n.Symbol.Kind != symbol.VarSymbol {
 			break
 		}
 		if n.Symbol.Binding == nil {

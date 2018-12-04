@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/vm/position"
-	"github.com/google/mtail/internal/vm/symtab"
+	"github.com/google/mtail/internal/vm/symbol"
 	"github.com/google/mtail/internal/vm/types"
 )
 
@@ -19,7 +19,7 @@ type Node interface {
 }
 
 type StmtList struct {
-	Scope    *symtab.Scope // Pointer to the local scope for this enclosing block
+	Scope    *symbol.Scope // Pointer to the local scope for this enclosing block
 	Children []Node
 }
 
@@ -58,7 +58,7 @@ type Cond struct {
 	Cond  Node
 	Truth Node
 	Else  Node
-	Scope *symtab.Scope // a conditional expression can cause new variables to be defined
+	Scope *symbol.Scope // a conditional expression can cause new variables to be defined
 }
 
 func (n *Cond) Pos() *position.Position {
@@ -72,7 +72,7 @@ func (n *Cond) Type() types.Type {
 type Id struct {
 	P      position.Position
 	Name   string
-	Symbol *symtab.Symbol
+	Symbol *symbol.Symbol
 	Lvalue bool // If set, then this node appears on the left side of an
 	// assignment and needs to have its address taken only.
 }
@@ -92,7 +92,7 @@ type CaprefNode struct {
 	P       position.Position
 	Name    string
 	IsNamed bool // true if the capref is a named reference, not positional
-	Symbol  *symtab.Symbol
+	Symbol  *symbol.Symbol
 }
 
 func (n *CaprefNode) Pos() *position.Position {
@@ -210,7 +210,7 @@ type DeclNode struct {
 	Keys         []string
 	Kind         metrics.Kind
 	ExportedName string
-	Symbol       *symtab.Symbol
+	Symbol       *symbol.Symbol
 }
 
 func (n *DeclNode) Pos() *position.Position {
@@ -293,7 +293,7 @@ func (n *PatternConst) Type() types.Type {
 type PatternFragmentDefNode struct {
 	Id      Node
 	Expr    Node
-	Symbol  *symtab.Symbol // Optional Symbol for a named pattern
+	Symbol  *symbol.Symbol // Optional Symbol for a named pattern
 	Pattern string         // If not empty, contains the complete evaluated pattern of the expr
 }
 
@@ -309,8 +309,8 @@ type DecoDefNode struct {
 	P      position.Position
 	Name   string
 	Block  Node
-	Symbol *symtab.Symbol
-	Scope  *symtab.Scope
+	Symbol *symbol.Symbol
+	Scope  *symbol.Scope
 }
 
 func (n *DecoDefNode) Pos() *position.Position {
@@ -329,7 +329,7 @@ type DecoNode struct {
 	Name  string
 	Block Node
 	Def   *DecoDefNode
-	Scope *symtab.Scope
+	Scope *symbol.Scope
 }
 
 func (n *DecoNode) Pos() *position.Position {

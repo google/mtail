@@ -12,7 +12,7 @@ import (
 	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/checker"
 	"github.com/google/mtail/internal/vm/parser"
-	"github.com/google/mtail/internal/vm/symtab"
+	"github.com/google/mtail/internal/vm/symbol"
 	"github.com/google/mtail/internal/vm/types"
 )
 
@@ -373,8 +373,8 @@ var checkerTypeExpressionTests = []struct {
 	},
 	{"⍺ + Float -> Float",
 		&ast.BinaryExpr{
-			Lhs: &ast.Id{Symbol: &symtab.Symbol{Name: "i", Kind: symtab.VarSymbol, Type: types.NewVariable()}},
-			Rhs: &ast.CaprefNode{Symbol: &symtab.Symbol{Kind: symtab.CaprefSymbol, Type: types.Float}},
+			Lhs: &ast.Id{Symbol: &symbol.Symbol{Name: "i", Kind: symbol.VarSymbol, Type: types.NewVariable()}},
+			Rhs: &ast.CaprefNode{Symbol: &symbol.Symbol{Kind: symbol.CaprefSymbol, Type: types.Float}},
 			Op:  parser.PLUS},
 		types.Float,
 	},
