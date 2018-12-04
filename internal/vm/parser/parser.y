@@ -31,7 +31,7 @@ import (
 %type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
-%type <n> declaration declarator definition decoration_statement regex_pattern match_expr
+%type <n> declaration declarator decorator_declaration decoration_statement regex_pattern match_expr
 %type <n> delete_statement
 %type <kind> type_spec
 %type <text> as_spec
@@ -106,7 +106,7 @@ stmt
   { $$ = $1 }
   | declaration
   { $$ = $1 }
-  | definition
+  | decorator_declaration
   { $$ = $1 }
   | decoration_statement
   { $$ = $1 }
@@ -114,39 +114,39 @@ stmt
   { $$ = $1 }  
   | NEXT
   {
-    $$ = &ast.NextNode{tokenpos(mtaillex)}
+    $$ = &ast.NextStmt{tokenpos(mtaillex)}
   }
   | CONST id_expr concat_expr
   {
-    $$ = &ast.PatternFragmentDefNode{Id: $2, Expr: $3}
+    $$ = &ast.PatternFragment{Id: $2, Expr: $3}
   }
   | STOP
   {
-    $$ = &ast.StopNode{tokenpos(mtaillex)}
+    $$ = &ast.StopStmt{tokenpos(mtaillex)}
   }
   | INVALID
   {
-    $$ = &ast.ErrorNode{tokenpos(mtaillex), $1}
+    $$ = &ast.Error{tokenpos(mtaillex), $1}
   }
   ;
 
 conditional_statement
   : logical_expr compound_statement ELSE compound_statement
   {
-    $$ = &ast.Cond{$1, $2, $4, nil}
+    $$ = &ast.CondStmt{$1, $2, $4, nil}
   }
   | logical_expr compound_statement
   {
     if $1 != nil {
-      $$ = &ast.Cond{$1, $2, nil, nil}
+      $$ = &ast.CondStmt{$1, $2, nil, nil}
     } else {
       $$ = $2
     }
   }
   | OTHERWISE compound_statement
   {
-    o := &ast.OtherwiseNode{tokenpos(mtaillex)}
-    $$ = &ast.Cond{o, $2, nil, nil}
+    o := &ast.OtherwiseStmt{tokenpos(mtaillex)}
+    $$ = &ast.CondStmt{o, $2, nil, nil}
   }
   ;
 
@@ -370,23 +370,23 @@ primary_expr
   { $$ = $1 }
   | BUILTIN LPAREN RPAREN
   {
-    $$ = &ast.BuiltinNode{P: tokenpos(mtaillex), Name: $1, Args: nil}
+    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: nil}
   }
   | BUILTIN LPAREN arg_expr_list RPAREN
   {
-    $$ = &ast.BuiltinNode{P: tokenpos(mtaillex), Name: $1, Args: $3}
+    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: $3}
   }
   | CAPREF
   {
-    $$ = &ast.CaprefNode{tokenpos(mtaillex), $1, false, nil}
+    $$ = &ast.CaprefTerm{tokenpos(mtaillex), $1, false, nil}
   }
   | CAPREF_NAMED
   {
-    $$ = &ast.CaprefNode{tokenpos(mtaillex), $1, true, nil}
+    $$ = &ast.CaprefTerm{tokenpos(mtaillex), $1, true, nil}
   }
   | STRING
   {
-    $$ = &ast.StringConst{tokenpos(mtaillex), $1}
+    $$ = &ast.StringLit{tokenpos(mtaillex), $1}
   }
   | LPAREN expr RPAREN
   {
@@ -394,11 +394,11 @@ primary_expr
   }
   | INTLITERAL
   {
-    $$ = &ast.IntConst{tokenpos(mtaillex), $1}
+    $$ = &ast.IntLit{tokenpos(mtaillex), $1}
   }
   | FLOATLITERAL
   {
-    $$ = &ast.FloatConst{tokenpos(mtaillex), $1}
+    $$ = &ast.FloatLit{tokenpos(mtaillex), $1}
   }
   ;
 
@@ -419,7 +419,7 @@ indexed_expr
 id_expr
   : ID
   {
-    $$ = &ast.Id{tokenpos(mtaillex), $1, nil, false}
+    $$ = &ast.IdTerm{tokenpos(mtaillex), $1, nil, false}
   }
   ;
 
@@ -442,7 +442,7 @@ regex_pattern
     mp := markedpos(mtaillex)
     tp := tokenpos(mtaillex)
     pos := ast.MergePosition(&mp, &tp)
-    $$ = &ast.PatternConst{P: *pos, Pattern: $4}
+    $$ = &ast.PatternLit{P: *pos, Pattern: $4}
   }
   ;
 
@@ -450,7 +450,7 @@ declaration
   : hide_spec type_spec declarator
   {
     $$ = $3
-    d := $$.(*ast.DeclNode)
+    d := $$.(*ast.VarDecl)
     d.Kind = $2
     d.Hidden = $1
   }
@@ -471,20 +471,20 @@ declarator
   : declarator by_spec
   {
     $$ = $1
-    $$.(*ast.DeclNode).Keys = $2
+    $$.(*ast.VarDecl).Keys = $2
   }
   | declarator as_spec
   {
     $$ = $1
-    $$.(*ast.DeclNode).ExportedName = $2
+    $$.(*ast.VarDecl).ExportedName = $2
   }
   | ID
   {
-    $$ = &ast.DeclNode{P: tokenpos(mtaillex), Name: $1}
+    $$ = &ast.VarDecl{P: tokenpos(mtaillex), Name: $1}
   }
   | STRING
   {
-    $$ = &ast.DeclNode{P: tokenpos(mtaillex), Name: $1}
+    $$ = &ast.VarDecl{P: tokenpos(mtaillex), Name: $1}
   }
   ;
 
@@ -544,28 +544,28 @@ as_spec
   }
   ;
 
-definition
+decorator_declaration
   : mark_pos DEF ID compound_statement
   {
-    $$ = &ast.DecoDefNode{P: markedpos(mtaillex), Name: $3, Block: $4}
+    $$ = &ast.DecoDecl{P: markedpos(mtaillex), Name: $3, Block: $4}
   }
   ;
 
 decoration_statement
   : mark_pos DECO compound_statement
   {
-    $$ = &ast.DecoNode{markedpos(mtaillex), $2, $3, nil, nil}
+    $$ = &ast.DecoStmt{markedpos(mtaillex), $2, $3, nil, nil}
   }
   ;
 
 delete_statement
   : DEL postfix_expr AFTER DURATIONLITERAL
   {
-    $$ = &ast.DelNode{P: tokenpos(mtaillex), N: $2, Expiry: $4}
+    $$ = &ast.DelStmt{P: tokenpos(mtaillex), N: $2, Expiry: $4}
   }
   | DEL postfix_expr
   {
-    $$ = &ast.DelNode{P: tokenpos(mtaillex), N: $2}
+    $$ = &ast.DelStmt{P: tokenpos(mtaillex), N: $2}
   }
 
 

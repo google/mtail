@@ -63,7 +63,7 @@ state 2
 	concat_expr  goto 30
 	pattern_expr  goto 26
 	declaration  goto 6
-	definition  goto 7
+	decorator_declaration  goto 7
 	decoration_statement  goto 8
 	regex_pattern  goto 42
 	match_expr  goto 22
@@ -96,7 +96,7 @@ state 6
 
 
 state 7
-	stmt:  definition.    (7)
+	stmt:  decorator_declaration.    (7)
 
 	.  reduce 7 (src line 109)
 
@@ -188,7 +188,7 @@ state 18
 
 state 19
 	regex_pattern:  mark_pos.DIV in_regex REGEX DIV 
-	definition:  mark_pos.DEF ID compound_statement 
+	decorator_declaration:  mark_pos.DEF ID compound_statement 
 	decoration_statement:  mark_pos.DECO compound_statement 
 
 	DEF  shift 60
@@ -557,7 +557,7 @@ state 59
 	in_regex  goto 109
 
 state 60
-	definition:  mark_pos DEF.ID compound_statement 
+	decorator_declaration:  mark_pos DEF.ID compound_statement 
 
 	ID  shift 110
 	.  error
@@ -992,7 +992,7 @@ state 105
 	concat_expr  goto 30
 	pattern_expr  goto 26
 	declaration  goto 6
-	definition  goto 7
+	decorator_declaration  goto 7
 	decoration_statement  goto 8
 	regex_pattern  goto 42
 	match_expr  goto 22
@@ -1032,7 +1032,7 @@ state 109
 
 
 state 110
-	definition:  mark_pos DEF ID.compound_statement 
+	decorator_declaration:  mark_pos DEF ID.compound_statement 
 
 	LCURLY  shift 49
 	.  error
@@ -1373,7 +1373,7 @@ state 136
 
 
 state 137
-	definition:  mark_pos DEF ID compound_statement.    (104)
+	decorator_declaration:  mark_pos DEF ID compound_statement.    (104)
 
 	.  reduce 104 (src line 547)
 

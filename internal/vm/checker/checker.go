@@ -50,12 +50,12 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		c.scope = n.Scope
 		return c, n
 
-	case *ast.Cond:
+	case *ast.CondStmt:
 		n.Scope = symbol.NewScope(c.scope)
 		c.scope = n.Scope
 		return c, n
 
-	case *ast.CaprefNode:
+	case *ast.CaprefTerm:
 		if n.Symbol == nil {
 			if sym := c.scope.Lookup(n.Name, symbol.CaprefSymbol); sym == nil {
 				msg := fmt.Sprintf("Capture group `$%s' was not defined by a regular expression visible to this scope.", n.Name)
@@ -73,7 +73,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		}
 		return c, n
 
-	case *ast.DeclNode:
+	case *ast.VarDecl:
 		n.Symbol = symbol.NewSymbol(n.Name, symbol.VarSymbol, n.Pos())
 		if alt := c.scope.Insert(n.Symbol); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.Name, alt.Pos))
@@ -105,7 +105,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		}
 		return c, n
 
-	case *ast.Id:
+	case *ast.IdTerm:
 		if n.Symbol == nil {
 			if sym := c.scope.Lookup(n.Name, symbol.VarSymbol); sym != nil {
 				glog.V(2).Infof("found sym %v", sym)
@@ -129,7 +129,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		}
 		return c, n
 
-	case *ast.DecoDefNode:
+	case *ast.DecoDecl:
 		n.Symbol = symbol.NewSymbol(n.Name, symbol.DecoSymbol, n.Pos())
 		(*n.Symbol).Binding = n
 		if alt := c.scope.Insert(n.Symbol); alt != nil {
@@ -138,14 +138,14 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		}
 		return c, n
 
-	case *ast.DecoNode:
+	case *ast.DecoStmt:
 		if sym := c.scope.Lookup(n.Name, symbol.DecoSymbol); sym != nil {
 			if sym.Binding == nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.Name))
 				return nil, n
 			}
 			sym.Used = true
-			n.Def = sym.Binding.(*ast.DecoDefNode)
+			n.Def = sym.Binding.(*ast.DecoDecl)
 		} else {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.Name, n.Name))
 			return nil, n
@@ -156,8 +156,8 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		c.scope = n.Scope
 		return c, n
 
-	case *ast.PatternFragmentDefNode:
-		id, ok := n.Id.(*ast.Id)
+	case *ast.PatternFragment:
+		id, ok := n.Id.(*ast.IdTerm)
 		if !ok {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no identifier attached to pattern fragment %#v", n))
 			return nil, n
@@ -171,7 +171,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		n.Symbol.Type = types.Pattern
 		return c, n
 
-	case *ast.DelNode:
+	case *ast.DelStmt:
 		n.N = ast.Walk(c, n.N)
 		return c, n
 
@@ -210,23 +210,23 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		c.scope = n.Scope.Parent
 		return n
 
-	case *ast.Cond:
+	case *ast.CondStmt:
 		c.checkSymbolUsage()
 		// Pop the scope
 		c.scope = n.Scope.Parent
 		return n
 
-	case *ast.DecoNode:
+	case *ast.DecoStmt:
 		// Don't check symbol usage here because the decorator is only partially defined.
 		c.scope = n.Scope.Parent
 		return n
 
-	case *ast.NextNode:
+	case *ast.NextStmt:
 		// Put the current scope on a decorator-specific scoe stack for unwinding
 		c.decoScopes = append(c.decoScopes, c.scope)
 		return n
 
-	case *ast.DecoDefNode:
+	case *ast.DecoDecl:
 		// Pop a decorator scope off the stack from the enclosed nextNode.
 		last := len(c.decoScopes) - 1
 		n.Scope = c.decoScopes[last]
@@ -274,12 +274,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			// Implicit type conversion for non-comparisons, promoting each
 			// half to the return type of the op.
 			if !types.Equals(rType, lT) {
-				conv := &ast.ConvNode{N: n.Lhs}
+				conv := &ast.ConvExpr{N: n.Lhs}
 				conv.SetType(rType)
 				n.Lhs = conv
 			}
 			if !types.Equals(rType, rT) {
-				conv := &ast.ConvNode{N: n.Rhs}
+				conv := &ast.ConvExpr{N: n.Rhs}
 				conv.SetType(rType)
 				n.Rhs = conv
 			}
@@ -321,13 +321,13 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 			// Promote types if the ast types are not the same as the expression type.
 			if !types.Equals(t, lT) {
-				conv := &ast.ConvNode{N: n.Lhs}
+				conv := &ast.ConvExpr{N: n.Lhs}
 				conv.SetType(t)
 				n.Lhs = conv
 				glog.V(2).Infof("Emitting convnode %+v", conv)
 			}
 			if !types.Equals(t, rT) {
-				conv := &ast.ConvNode{N: n.Rhs}
+				conv := &ast.ConvExpr{N: n.Rhs}
 				conv.SetType(t)
 				n.Rhs = conv
 				glog.V(2).Infof("Emitting convnode %+v", conv)
@@ -348,10 +348,10 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 			switch v := n.Lhs.(type) {
-			case *ast.Id:
+			case *ast.IdTerm:
 				v.Lvalue = true
 			case *ast.IndexedExpr:
-				v.Lhs.(*ast.Id).Lvalue = true
+				v.Lhs.(*ast.IdTerm).Lvalue = true
 			}
 
 		case parser.CONCAT:
@@ -411,10 +411,10 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 			n.SetType(rType)
 			switch v := n.Expr.(type) {
-			case *ast.Id:
+			case *ast.IdTerm:
 				v.Lvalue = true
 			case *ast.IndexedExpr:
-				v.Lhs.(*ast.Id).Lvalue = true
+				v.Lhs.(*ast.IdTerm).Lvalue = true
 			}
 
 		default:
@@ -453,7 +453,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		}
 
 		switch v := n.Lhs.(type) {
-		case *ast.Id:
+		case *ast.IdTerm:
 			if v.Symbol == nil {
 				// undefined, already caught
 				n.SetType(types.Error)
@@ -506,7 +506,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		n.SetType(rType)
 		return n
 
-	case *ast.BuiltinNode:
+	case *ast.BuiltinExpr:
 		typs := []types.Type{}
 		if args, ok := n.Args.(*ast.ExprList); ok {
 			for _, arg := range args.Children {
@@ -531,7 +531,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			// Second argument to strptime is the format string.  If it is
 			// defined at compile time, we can verify it can be use as a format
 			// string by parsing itself.
-			if f, ok := n.Args.(*ast.ExprList).Children[1].(*ast.StringConst); ok {
+			if f, ok := n.Args.(*ast.ExprList).Children[1].(*ast.StringLit); ok {
 				// Layout strings can contain an underscore to indicate a digit
 				// field if the layout field can contain two digits; but they
 				// won't parse themselves.  Zulu Timezones in the layout need
@@ -560,7 +560,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		c.checkRegex(pe.pattern, n)
 		return n
 
-	case *ast.PatternFragmentDefNode:
+	case *ast.PatternFragment:
 		// Evaluate the expression.
 		pe := &patternEvaluator{scope: c.scope, errors: &c.errors}
 		n.Expr = ast.Walk(pe, n.Expr)
@@ -570,8 +570,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		n.Pattern = pe.pattern
 		return n
 
-	case *ast.DelNode:
-		n.N.(*ast.IndexedExpr).Lhs.(*ast.Id).Lvalue = true
+	case *ast.DelStmt:
+		n.N.(*ast.IndexedExpr).Lhs.(*ast.IdTerm).Lvalue = true
 		return n
 
 	}
@@ -626,18 +626,18 @@ func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			return nil, n
 		}
 		return p, v
-	case *ast.PatternConst:
+	case *ast.PatternLit:
 		p.pattern += v.Pattern
 		return p, v
-	case *ast.Id:
+	case *ast.IdTerm:
 		// Already looked up sym, if still nil undefined.
 		if v.Symbol == nil {
 			return nil, n
 		}
-		idPattern := v.Symbol.Binding.(*ast.PatternFragmentDefNode).Pattern
+		idPattern := v.Symbol.Binding.(*ast.PatternFragment).Pattern
 		if idPattern == "" {
 			idEvaluator := &patternEvaluator{scope: p.scope}
-			n = ast.Walk(idEvaluator, v.Symbol.Binding.(*ast.PatternFragmentDefNode))
+			n = ast.Walk(idEvaluator, v.Symbol.Binding.(*ast.PatternFragment))
 			idPattern = idEvaluator.pattern
 		}
 		p.pattern += idPattern

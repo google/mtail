@@ -29,7 +29,7 @@ type codegen struct {
 	obj    object.Object    // The object to return, if successful.
 
 	l     []int           // Label table for recording jump destinations.
-	decos []*ast.DecoNode // Decorator stack to unwind when entering decorated blocks.
+	decos []*ast.DecoStmt // Decorator stack to unwind when entering decorated blocks.
 }
 
 // CodeGen is the function that compiles the program to bytecode and data.
@@ -72,7 +72,7 @@ func (c *codegen) pc() int {
 func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	switch n := node.(type) {
 
-	case *ast.DeclNode:
+	case *ast.VarDecl:
 		var name string
 		if n.ExportedName != "" {
 			name = n.ExportedName
@@ -126,7 +126,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		c.obj.Metrics = append(c.obj.Metrics, m)
 		return nil, n
 
-	case *ast.Cond:
+	case *ast.CondStmt:
 		lElse := c.newLabel()
 		lEnd := c.newLabel()
 		if n.Cond != nil {
@@ -159,20 +159,20 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		n.Index = len(c.obj.Regexps) - 1
 		c.emit(code.Instr{code.Match, n.Index})
 
-	case *ast.StringConst:
+	case *ast.StringLit:
 		c.obj.Strings = append(c.obj.Strings, n.Text)
 		c.emit(code.Instr{code.Str, len(c.obj.Strings) - 1})
 
-	case *ast.IntConst:
+	case *ast.IntLit:
 		c.emit(code.Instr{code.Push, n.I})
 
-	case *ast.FloatConst:
+	case *ast.FloatLit:
 		c.emit(code.Instr{code.Push, n.F})
 
-	case *ast.StopNode:
+	case *ast.StopStmt:
 		c.emit(code.Instr{code.Stop, nil})
 
-	case *ast.Id:
+	case *ast.IdTerm:
 		if n.Symbol == nil || n.Symbol.Kind != symbol.VarSymbol {
 			break
 		}
@@ -202,7 +202,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			}
 		}
 
-	case *ast.CaprefNode:
+	case *ast.CaprefTerm:
 		if n.Symbol == nil || n.Symbol.Binding == nil {
 			c.errorf(n.Pos(), "No regular expression bound to capref %q", n.Name)
 			return nil, n
@@ -233,11 +233,11 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		ast.Walk(c, n.Lhs)
 		return nil, n
 
-	case *ast.DecoDefNode:
+	case *ast.DecoDecl:
 		// Do nothing, defs are inlined.
 		return nil, n
 
-	case *ast.DecoNode:
+	case *ast.DecoStmt:
 		// Put the current block on the stack
 		c.decos = append(c.decos, n)
 		if n.Def == nil {
@@ -249,16 +249,16 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		c.decos = c.decos[:len(c.decos)-1]
 		return nil, n
 
-	case *ast.NextNode:
+	case *ast.NextStmt:
 		// Visit the 'next' block on the decorated block stack
 		deco := c.decos[len(c.decos)-1]
 		ast.Walk(c, deco.Block)
 		return nil, n
 
-	case *ast.OtherwiseNode:
+	case *ast.OtherwiseStmt:
 		c.emit(code.Instr{Opcode: code.Otherwise})
 
-	case *ast.DelNode:
+	case *ast.DelStmt:
 		if n.Expiry > 0 {
 			c.emit(code.Instr{code.Push, n.Expiry})
 		}
@@ -360,7 +360,7 @@ var builtin = map[string]code.Opcode{
 
 func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 	switch n := node.(type) {
-	case *ast.BuiltinNode:
+	case *ast.BuiltinExpr:
 		arglen := 0
 		if n.Args != nil {
 			arglen = len(n.Args.(*ast.ExprList).Children)
@@ -497,7 +497,7 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			c.errorf(n.Pos(), "unexpected op %v", n.Op)
 		}
 
-	case *ast.ConvNode:
+	case *ast.ConvExpr:
 		if err := c.emitConversion(n.N.Type(), n.Type()); err != nil {
 			c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
 			return n

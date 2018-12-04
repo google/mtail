@@ -60,12 +60,12 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	s.indent()
 	switch v := n.(type) {
 
-	case *ast.PatternFragmentDefNode:
+	case *ast.PatternFragment:
 		s.emit("const ")
 		n = ast.Walk(s, v.Id)
 		s.emit(" ")
 
-	case *ast.PatternConst:
+	case *ast.PatternLit:
 		s.emit(fmt.Sprintf("%q", v.Pattern))
 
 	case *ast.BinaryExpr:
@@ -126,17 +126,17 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		s.newline()
 		s.indent()
 
-	case *ast.Id:
+	case *ast.IdTerm:
 		s.emit("\"" + v.Name + "\"")
 
-	case *ast.CaprefNode:
+	case *ast.CaprefTerm:
 		s.emit("\"" + v.Name + "\"")
 
-	case *ast.BuiltinNode:
+	case *ast.BuiltinExpr:
 		s.emit("\"" + v.Name + "\"")
 		s.newline()
 
-	case *ast.DeclNode:
+	case *ast.VarDecl:
 		switch v.Kind {
 		case metrics.Counter:
 			s.emit("counter ")
@@ -168,35 +168,35 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		s.newline()
 		s.indent()
 
-	case *ast.StringConst:
+	case *ast.StringLit:
 		s.emit("\"" + v.Text + "\"")
 
-	case *ast.IntConst:
+	case *ast.IntLit:
 		s.emit(strconv.FormatInt(v.I, 10))
 
-	case *ast.FloatConst:
+	case *ast.FloatLit:
 		s.emit(strconv.FormatFloat(v.F, 'g', -1, 64))
 
-	case *ast.NextNode:
+	case *ast.NextStmt:
 		s.emit("next")
-	case *ast.OtherwiseNode:
+	case *ast.OtherwiseStmt:
 		s.emit("otherwise")
-	case *ast.DelNode:
+	case *ast.DelStmt:
 		s.emit("del")
 		if v.Expiry > 0 {
 			s.emit(fmt.Sprintf(" after %s", v.Expiry))
 		}
 
-	case *ast.ConvNode:
+	case *ast.ConvExpr:
 		s.emit("conv")
 
-	case *ast.ErrorNode:
+	case *ast.Error:
 		s.emit(fmt.Sprintf("error %q", v.Spelling))
 
-	case *ast.StopNode:
+	case *ast.StopStmt:
 		s.emit("stop")
 
-	case *ast.IndexedExpr, *ast.StmtList, *ast.ExprList, *ast.Cond, *ast.DecoDefNode, *ast.DecoNode, *ast.PatternExpr: // normal walk
+	case *ast.IndexedExpr, *ast.StmtList, *ast.ExprList, *ast.CondStmt, *ast.DecoDecl, *ast.DecoStmt, *ast.PatternExpr: // normal walk
 
 	default:
 		panic(fmt.Sprintf("sexp found undefined type %T", n))

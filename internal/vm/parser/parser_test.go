@@ -463,7 +463,7 @@ type positionCollector struct {
 
 func (p *positionCollector) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	switch n := node.(type) {
-	case *ast.DeclNode, *ast.PatternConst:
+	case *ast.VarDecl, *ast.PatternLit:
 		p.positions = append(p.positions, n.Pos())
 	}
 	return p, node
