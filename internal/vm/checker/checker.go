@@ -418,7 +418,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", parser.TokenKind(n.Op), n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", parser.Kind(n.Op), n))
 			n.SetType(types.Error)
 			return n
 		}

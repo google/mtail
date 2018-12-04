@@ -15,7 +15,7 @@ import (
 )
 
 // List of keywords.  Keep this list sorted!
-var keywords = map[string]TokenKind{
+var keywords = map[string]Kind{
 	"after":     AFTER,
 	"as":        AS,
 	"by":        BY,
@@ -97,7 +97,7 @@ func (l *Lexer) NextToken() Token {
 }
 
 // emit passes a token to the client.
-func (l *Lexer) emit(kind TokenKind) {
+func (l *Lexer) emit(kind Kind) {
 	pos := position.Position{l.name, l.line, l.startcol, l.col - 1}
 	glog.V(2).Infof("Emitting %v at %v", kind, pos)
 	l.tokens <- Token{kind, l.text, pos}
@@ -399,7 +399,7 @@ Loop:
 			break Loop
 		}
 	}
-	l.emit(TokenKind(kind))
+	l.emit(Kind(kind))
 	return lexProg
 }
 

@@ -198,7 +198,7 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			u.emit(" ~")
 			ast.Walk(u, v.Expr)
 		default:
-			u.emit(fmt.Sprintf("Unexpected op: %s", TokenKind(v.Op)))
+			u.emit(fmt.Sprintf("Unexpected op: %s", Kind(v.Op)))
 		}
 
 	case *ast.StringLit:
