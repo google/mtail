@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/vm/bytecode"
 	"github.com/google/mtail/internal/vm/checker"
+	"github.com/google/mtail/internal/vm/code"
 	"github.com/google/mtail/internal/vm/codegen"
 	"github.com/google/mtail/internal/vm/parser"
 )
@@ -18,198 +18,198 @@ import (
 var testCodeGenPrograms = []struct {
 	name   string
 	source string
-	prog   []bytecode.Instr // expected bytecode
+	prog   []code.Instr // expected bytecode
 }{
 	// Composite literals require too many explicit conversions.
 	{"simple line counter",
 		"counter line_count\n/$/ { line_count++\n }\n",
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 7},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 7},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"count a",
 		"counter a_count\n/a$/ { a_count++\n }\n",
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 7},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 7},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"strptime and capref",
 		"counter foo\n" +
 			"/(.*)/ { strptime($1, \"2006-01-02T15:04:05\")\n" +
 			"foo++\n}\n",
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 11},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.Str, 0},
-			{bytecode.Strptime, 2},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 11},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.Str, 0},
+			{code.Strptime, 2},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"strptime and named capref",
 		"counter foo\n" +
 			"/(?P<date>.*)/ { strptime($date, \"2006-01-02T15:04:05\")\n" +
 			"foo++\n }\n",
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 11},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.Str, 0},
-			{bytecode.Strptime, 2},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 11},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.Str, 0},
+			{code.Strptime, 2},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"inc by and set",
 		"counter foo\ncounter bar\n" +
 			"/([0-9]+)/ {\n" +
 			"foo += $1\n" +
 			"bar = $1\n" +
 			"}\n",
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 16},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.Inc, 0},
-			{bytecode.Mload, 1},
-			{bytecode.Dload, 0},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.Iset, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 16},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.Inc, 0},
+			{code.Mload, 1},
+			{code.Dload, 0},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.Iset, nil},
+			{code.Setmatched, true}}},
 	{"cond expr gt",
 		"counter foo\n" +
 			"1 > 0 {\n" +
 			"  foo++\n" +
 			"}\n",
-		[]bytecode.Instr{
-			{bytecode.Push, int64(1)},
-			{bytecode.Push, int64(0)},
-			{bytecode.Icmp, 1},
-			{bytecode.Jnm, 6},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 7},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 13},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Push, int64(1)},
+			{code.Push, int64(0)},
+			{code.Icmp, 1},
+			{code.Jnm, 6},
+			{code.Push, true},
+			{code.Jmp, 7},
+			{code.Push, false},
+			{code.Jnm, 13},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"cond expr lt",
 		"counter foo\n" +
 			"1 < 0 {\n" +
 			"  foo++\n" +
 			"}\n",
-		[]bytecode.Instr{
-			{bytecode.Push, int64(1)},
-			{bytecode.Push, int64(0)},
-			{bytecode.Icmp, -1},
-			{bytecode.Jnm, 6},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 7},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 13},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Push, int64(1)},
+			{code.Push, int64(0)},
+			{code.Icmp, -1},
+			{code.Jnm, 6},
+			{code.Push, true},
+			{code.Jmp, 7},
+			{code.Push, false},
+			{code.Jnm, 13},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"cond expr eq",
 		"counter foo\n" +
 			"1 == 0 {\n" +
 			"  foo++\n" +
 			"}\n",
-		[]bytecode.Instr{
-			{bytecode.Push, int64(1)},
-			{bytecode.Push, int64(0)},
-			{bytecode.Icmp, 0},
-			{bytecode.Jnm, 6},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 7},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 13},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Push, int64(1)},
+			{code.Push, int64(0)},
+			{code.Icmp, 0},
+			{code.Jnm, 6},
+			{code.Push, true},
+			{code.Jmp, 7},
+			{code.Push, false},
+			{code.Jnm, 13},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"cond expr le",
 		"counter foo\n" +
 			"1 <= 0 {\n" +
 			"  foo++\n" +
 			"}\n",
-		[]bytecode.Instr{
-			{bytecode.Push, int64(1)},
-			{bytecode.Push, int64(0)},
-			{bytecode.Icmp, 1},
-			{bytecode.Jm, 6},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 7},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 13},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Push, int64(1)},
+			{code.Push, int64(0)},
+			{code.Icmp, 1},
+			{code.Jm, 6},
+			{code.Push, true},
+			{code.Jmp, 7},
+			{code.Push, false},
+			{code.Jnm, 13},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"cond expr ge",
 		"counter foo\n" +
 			"1 >= 0 {\n" +
 			"  foo++\n" +
 			"}\n",
-		[]bytecode.Instr{
-			{bytecode.Push, int64(1)},
-			{bytecode.Push, int64(0)},
-			{bytecode.Icmp, -1},
-			{bytecode.Jm, 6},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 7},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 13},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Push, int64(1)},
+			{code.Push, int64(0)},
+			{code.Icmp, -1},
+			{code.Jm, 6},
+			{code.Push, true},
+			{code.Jmp, 7},
+			{code.Push, false},
+			{code.Jnm, 13},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"cond expr ne",
 		"counter foo\n" +
 			"1 != 0 {\n" +
 			"  foo++\n" +
 			"}\n",
-		[]bytecode.Instr{
-			{bytecode.Push, int64(1)},
-			{bytecode.Push, int64(0)},
-			{bytecode.Icmp, 0},
-			{bytecode.Jm, 6},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 7},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 13},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Push, int64(1)},
+			{code.Push, int64(0)},
+			{code.Icmp, 0},
+			{code.Jm, 6},
+			{code.Push, true},
+			{code.Jmp, 7},
+			{code.Push, false},
+			{code.Jnm, 13},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"nested cond",
 		"counter foo\n" +
 			"/(\\d+)/ {\n" +
@@ -217,26 +217,26 @@ var testCodeGenPrograms = []struct {
 			"    foo++\n" +
 			"  }\n" +
 			"}\n",
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 19},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.Push, int64(1)},
-			{bytecode.Icmp, 1},
-			{bytecode.Jm, 11},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 12},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 18},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 19},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.Push, int64(1)},
+			{code.Icmp, 1},
+			{code.Jm, 11},
+			{code.Push, true},
+			{code.Jmp, 12},
+			{code.Push, false},
+			{code.Jnm, 18},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true},
+			{code.Setmatched, true}}},
 	{"deco",
 		"counter foo\n" +
 			"counter bar\n" +
@@ -248,104 +248,104 @@ var testCodeGenPrograms = []struct {
 			"}\n" +
 			"" +
 			"@fooWrap { bar++\n }\n",
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 10},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Mload, 1},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 10},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Mload, 1},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"length",
 		"len(\"foo\") > 0 {\n" +
 			"}\n",
-		[]bytecode.Instr{
-			{bytecode.Str, 0},
-			{bytecode.Length, 1},
-			{bytecode.Push, int64(0)},
-			{bytecode.Cmp, 1},
-			{bytecode.Jnm, 7},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 8},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 11},
-			{bytecode.Setmatched, false},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Str, 0},
+			{code.Length, 1},
+			{code.Push, int64(0)},
+			{code.Cmp, 1},
+			{code.Jnm, 7},
+			{code.Push, true},
+			{code.Jmp, 8},
+			{code.Push, false},
+			{code.Jnm, 11},
+			{code.Setmatched, false},
+			{code.Setmatched, true}}},
 	{"bitwise", `
 1 & 7 ^ 15 | 8
 ~ 16 << 2
 1 >> 20
 `,
-		[]bytecode.Instr{
-			{bytecode.Push, int64(1)},
-			{bytecode.Push, int64(7)},
-			{bytecode.And, nil},
-			{bytecode.Push, int64(15)},
-			{bytecode.Xor, nil},
-			{bytecode.Push, int64(8)},
-			{bytecode.Or, nil},
-			{bytecode.Push, int64(16)},
-			{bytecode.Neg, nil},
-			{bytecode.Push, int64(2)},
-			{bytecode.Shl, nil},
-			{bytecode.Push, int64(1)},
-			{bytecode.Push, int64(20)},
-			{bytecode.Shr, nil}}},
+		[]code.Instr{
+			{code.Push, int64(1)},
+			{code.Push, int64(7)},
+			{code.And, nil},
+			{code.Push, int64(15)},
+			{code.Xor, nil},
+			{code.Push, int64(8)},
+			{code.Or, nil},
+			{code.Push, int64(16)},
+			{code.Neg, nil},
+			{code.Push, int64(2)},
+			{code.Shl, nil},
+			{code.Push, int64(1)},
+			{code.Push, int64(20)},
+			{code.Shr, nil}}},
 	{"pow", `
 /(\d+) (\d+)/ {
 $1 ** $2
 }
 `,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 11},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 2},
-			{bytecode.S2i, nil},
-			{bytecode.Ipow, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 11},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.Push, 0},
+			{code.Capref, 2},
+			{code.S2i, nil},
+			{code.Ipow, nil},
+			{code.Setmatched, true}}},
 	{"indexed expr", `
 counter a by b
 a["string"]++
 `,
-		[]bytecode.Instr{
-			{bytecode.Str, 0},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 1},
-			{bytecode.Inc, nil}}},
+		[]code.Instr{
+			{code.Str, 0},
+			{code.Mload, 0},
+			{code.Dload, 1},
+			{code.Inc, nil}}},
 	{"strtol", `
 strtol("deadbeef", 16)
 `,
-		[]bytecode.Instr{
-			{bytecode.Str, 0},
-			{bytecode.Push, int64(16)},
-			{bytecode.S2i, 2}}},
+		[]code.Instr{
+			{code.Str, 0},
+			{code.Push, int64(16)},
+			{code.S2i, 2}}},
 	{"float", `
 20.0
 `,
-		[]bytecode.Instr{
-			{bytecode.Push, 20.0}}},
+		[]code.Instr{
+			{code.Push, 20.0}}},
 	{"otherwise", `
 counter a
 otherwise {
 	a++
 }
 `,
-		[]bytecode.Instr{
-			{bytecode.Otherwise, nil},
-			{bytecode.Jnm, 7},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Otherwise, nil},
+			{code.Jnm, 7},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"cond else",
 		`counter foo
 counter bar
@@ -354,54 +354,54 @@ counter bar
 } else {
   bar++
 }`,
-		[]bytecode.Instr{
-			{bytecode.Push, int64(1)},
-			{bytecode.Push, int64(0)},
-			{bytecode.Icmp, 1},
-			{bytecode.Jnm, 6},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 7},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 14},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true},
-			{bytecode.Jmp, 17},
-			{bytecode.Mload, 1},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
+		[]code.Instr{
+			{code.Push, int64(1)},
+			{code.Push, int64(0)},
+			{code.Icmp, 1},
+			{code.Jnm, 6},
+			{code.Push, true},
+			{code.Jmp, 7},
+			{code.Push, false},
+			{code.Jnm, 14},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true},
+			{code.Jmp, 17},
+			{code.Mload, 1},
+			{code.Dload, 0},
+			{code.Inc, nil},
 		},
 	},
 	{"mod",
 		`
 3 % 1
 `,
-		[]bytecode.Instr{
-			{bytecode.Push, int64(3)},
-			{bytecode.Push, int64(1)},
-			{bytecode.Imod, nil},
+		[]code.Instr{
+			{code.Push, int64(3)},
+			{code.Push, int64(1)},
+			{code.Imod, nil},
 		},
 	},
 	{"del", `
 counter a by b
 del a["string"]
 `,
-		[]bytecode.Instr{
-			{bytecode.Str, 0},
-			{bytecode.Mload, 0},
-			{bytecode.Del, 1}},
+		[]code.Instr{
+			{code.Str, 0},
+			{code.Mload, 0},
+			{code.Del, 1}},
 	},
 	{"del after", `
 counter a by b
 del a["string"] after 1h
 `,
-		[]bytecode.Instr{
-			{bytecode.Push, time.Hour},
-			{bytecode.Str, 0},
-			{bytecode.Mload, 0},
-			{bytecode.Expire, 1}},
+		[]code.Instr{
+			{code.Push, time.Hour},
+			{code.Str, 0},
+			{code.Mload, 0},
+			{code.Expire, 1}},
 	},
 	{"types", `
 gauge i
@@ -413,35 +413,35 @@ gauge f
  f = $1
 }
 `,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 10},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.Iset, nil},
-			{bytecode.Setmatched, true},
-			{bytecode.Match, 1},
-			{bytecode.Jnm, 20},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 1},
-			{bytecode.Dload, 0},
-			{bytecode.Push, 1},
-			{bytecode.Capref, 1},
-			{bytecode.S2f, nil},
-			{bytecode.Fset, nil},
-			{bytecode.Setmatched, true},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 10},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.Iset, nil},
+			{code.Setmatched, true},
+			{code.Match, 1},
+			{code.Jnm, 20},
+			{code.Setmatched, false},
+			{code.Mload, 1},
+			{code.Dload, 0},
+			{code.Push, 1},
+			{code.Capref, 1},
+			{code.S2f, nil},
+			{code.Fset, nil},
+			{code.Setmatched, true},
 		},
 	},
 
 	{"getfilename", `
 getfilename()
 `,
-		[]bytecode.Instr{
-			{bytecode.Getfilename, 0},
+		[]code.Instr{
+			{code.Getfilename, 0},
 		},
 	},
 
@@ -451,114 +451,114 @@ getfilename()
   c[$1,$2][$3]++
 }
 `,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 19},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.I2s, nil},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 2},
-			{bytecode.S2i, nil},
-			{bytecode.I2s, nil},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 3},
-			{bytecode.S2i, nil},
-			{bytecode.I2s, nil},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 3},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 19},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.I2s, nil},
+			{code.Push, 0},
+			{code.Capref, 2},
+			{code.S2i, nil},
+			{code.I2s, nil},
+			{code.Push, 0},
+			{code.Capref, 3},
+			{code.S2i, nil},
+			{code.I2s, nil},
+			{code.Mload, 0},
+			{code.Dload, 3},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"string to int",
 		`counter c
 /(.*)/ {
   c = int($1)
 }
 `,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 10},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.Iset, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 10},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.Iset, nil},
+			{code.Setmatched, true}}},
 	{"int to float",
 		`counter c
 /(\d)/ {
   c = float($1)
 }
 `,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 11},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.I2f, nil},
-			{bytecode.Fset, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 11},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.I2f, nil},
+			{code.Fset, nil},
+			{code.Setmatched, true}}},
 	{"string to float",
 		`counter c
 /(.*)/ {
   c = float($1)
 }
 `,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 10},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2f, nil},
-			{bytecode.Fset, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 10},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2f, nil},
+			{code.Fset, nil},
+			{code.Setmatched, true}}},
 	{"float to string",
 		`counter c by a
 /(\d+\.\d+)/ {
   c[string($1)] ++
 }
 `,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 11},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2f, nil},
-			{bytecode.F2s, nil},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 1},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 11},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2f, nil},
+			{code.F2s, nil},
+			{code.Mload, 0},
+			{code.Dload, 1},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"int to string",
 		`counter c by a
 /(\d+)/ {
   c[string($1)] ++
 }
 `,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 11},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.I2s, nil},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 1},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true}}},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 11},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.I2s, nil},
+			{code.Mload, 0},
+			{code.Dload, 1},
+			{code.Inc, nil},
+			{code.Setmatched, true}}},
 	{"nested comparisons",
 		`counter foo
 /(.*)/ {
@@ -566,57 +566,57 @@ getfilename()
     foo++
   }
 }
-`, []bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 31},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.Str, 0},
-			{bytecode.Scmp, 0},
-			{bytecode.Jnm, 10},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 11},
-			{bytecode.Push, false},
-			{bytecode.Jm, 23},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.Str, 1},
-			{bytecode.Scmp, 0},
-			{bytecode.Jnm, 19},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 20},
-			{bytecode.Push, false},
-			{bytecode.Jm, 23},
-			{bytecode.Push, false},
-			{bytecode.Jmp, 24},
-			{bytecode.Push, true},
-			{bytecode.Jnm, 30},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true},
-			{bytecode.Setmatched, true}}},
+`, []code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 31},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.Str, 0},
+			{code.Scmp, 0},
+			{code.Jnm, 10},
+			{code.Push, true},
+			{code.Jmp, 11},
+			{code.Push, false},
+			{code.Jm, 23},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.Str, 1},
+			{code.Scmp, 0},
+			{code.Jnm, 19},
+			{code.Push, true},
+			{code.Jmp, 20},
+			{code.Push, false},
+			{code.Jm, 23},
+			{code.Push, false},
+			{code.Jmp, 24},
+			{code.Push, true},
+			{code.Jnm, 30},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true},
+			{code.Setmatched, true}}},
 	{"string concat", `
 counter f by s
 /(.*), (.*)/ {
   f[$1 + $2]++
 }
 `,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 12},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 2},
-			{bytecode.Cat, nil},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 1},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 12},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.Push, 0},
+			{code.Capref, 2},
+			{code.Cat, nil},
+			{code.Mload, 0},
+			{code.Dload, 1},
+			{code.Inc, nil},
+			{code.Setmatched, true},
 		}},
 	{"add assign float", `
 gauge foo
@@ -624,20 +624,20 @@ gauge foo
   foo += $1
 }
 `,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 13},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2f, nil},
-			{bytecode.Fadd, nil},
-			{bytecode.Fset, nil},
-			{bytecode.Setmatched, true},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 13},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2f, nil},
+			{code.Fadd, nil},
+			{code.Fset, nil},
+			{code.Setmatched, true},
 		}},
 	{"match expression", `
 	counter foo
@@ -646,20 +646,20 @@ gauge foo
 	    foo++
 	  }
 	}`,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 13},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.Smatch, 1},
-			{bytecode.Jnm, 12},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true},
-			{bytecode.Setmatched, true},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 13},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.Smatch, 1},
+			{code.Jnm, 12},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true},
+			{code.Setmatched, true},
 		}},
 	{"negative match expression", `
 	counter foo
@@ -668,66 +668,66 @@ gauge foo
 	    foo++
 	  }
 	}`,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 14},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.Smatch, 1},
-			{bytecode.Not, nil},
-			{bytecode.Jnm, 13},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true},
-			{bytecode.Setmatched, true},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 14},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.Smatch, 1},
+			{code.Not, nil},
+			{code.Jnm, 13},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true},
+			{code.Setmatched, true},
 		}},
 	{"capref used in def", `
 /(?P<x>\d+)/ && $x > 5 {
 }`,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 14},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.Push, int64(5)},
-			{bytecode.Icmp, 1},
-			{bytecode.Jnm, 10},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 11},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 14},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 15},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 18},
-			{bytecode.Setmatched, false},
-			{bytecode.Setmatched, true},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 14},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.Push, int64(5)},
+			{code.Icmp, 1},
+			{code.Jnm, 10},
+			{code.Push, true},
+			{code.Jmp, 11},
+			{code.Push, false},
+			{code.Jnm, 14},
+			{code.Push, true},
+			{code.Jmp, 15},
+			{code.Push, false},
+			{code.Jnm, 18},
+			{code.Setmatched, false},
+			{code.Setmatched, true},
 		}},
 	{"binop arith type conversion", `
 gauge var
 /(?P<x>\d+) (\d+\.\d+)/ {
   var = $x + $2
 }`,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 15},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.I2f, nil},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 2},
-			{bytecode.S2f, nil},
-			{bytecode.Fadd, nil},
-			{bytecode.Fset, nil},
-			{bytecode.Setmatched, true},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 15},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.I2f, nil},
+			{code.Push, 0},
+			{code.Capref, 2},
+			{code.S2f, nil},
+			{code.Fadd, nil},
+			{code.Fset, nil},
+			{code.Setmatched, true},
 		}},
 	{"binop compare type conversion", `
 counter var
@@ -736,119 +736,119 @@ counter var
     var++
   }
 }`,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 22},
-			{bytecode.Setmatched, false},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.S2i, nil},
-			{bytecode.I2f, nil},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 2},
-			{bytecode.S2f, nil},
-			{bytecode.Fcmp, 1},
-			{bytecode.Jnm, 14},
-			{bytecode.Push, true},
-			{bytecode.Jmp, 15},
-			{bytecode.Push, false},
-			{bytecode.Jnm, 21},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Inc, nil},
-			{bytecode.Setmatched, true},
-			{bytecode.Setmatched, true},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 22},
+			{code.Setmatched, false},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.S2i, nil},
+			{code.I2f, nil},
+			{code.Push, 0},
+			{code.Capref, 2},
+			{code.S2f, nil},
+			{code.Fcmp, 1},
+			{code.Jnm, 14},
+			{code.Push, true},
+			{code.Jmp, 15},
+			{code.Push, false},
+			{code.Jnm, 21},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Inc, nil},
+			{code.Setmatched, true},
+			{code.Setmatched, true},
 		}},
 	{"set string", `
 text foo
 /(.*)/ {
   foo = $1
 }
-`, []bytecode.Instr{
-		{bytecode.Match, 0},
-		{bytecode.Jnm, 9},
-		{bytecode.Setmatched, false},
-		{bytecode.Mload, 0},
-		{bytecode.Dload, 0},
-		{bytecode.Push, 0},
-		{bytecode.Capref, 1},
-		{bytecode.Sset, nil},
-		{bytecode.Setmatched, true},
+`, []code.Instr{
+		{code.Match, 0},
+		{code.Jnm, 9},
+		{code.Setmatched, false},
+		{code.Mload, 0},
+		{code.Dload, 0},
+		{code.Push, 0},
+		{code.Capref, 1},
+		{code.Sset, nil},
+		{code.Setmatched, true},
 	}},
 	{"concat to text", `
 text foo
 /(?P<v>.*)/ {
 		foo += $v
 }`,
-		[]bytecode.Instr{
-			{bytecode.Match, 0},
-			{bytecode.Jnm, 12},
-			{bytecode.Setmatched, false},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Mload, 0},
-			{bytecode.Dload, 0},
-			{bytecode.Push, 0},
-			{bytecode.Capref, 1},
-			{bytecode.Cat, nil},
-			{bytecode.Sset, nil},
-			{bytecode.Setmatched, true},
+		[]code.Instr{
+			{code.Match, 0},
+			{code.Jnm, 12},
+			{code.Setmatched, false},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Mload, 0},
+			{code.Dload, 0},
+			{code.Push, 0},
+			{code.Capref, 1},
+			{code.Cat, nil},
+			{code.Sset, nil},
+			{code.Setmatched, true},
 		}},
 	{"decrement", `
 counter i
 // {
   i--
-}`, []bytecode.Instr{
-		{bytecode.Match, 0},
-		{bytecode.Jnm, 7},
-		{bytecode.Setmatched, false},
-		{bytecode.Mload, 0},
-		{bytecode.Dload, 0},
-		{bytecode.Dec, nil},
-		{bytecode.Setmatched, true},
+}`, []code.Instr{
+		{code.Match, 0},
+		{code.Jnm, 7},
+		{code.Setmatched, false},
+		{code.Mload, 0},
+		{code.Dload, 0},
+		{code.Dec, nil},
+		{code.Setmatched, true},
 	}},
 	{"capref and settime", `
 /(\d+)/ {
   settime($1)
-}`, []bytecode.Instr{
-		{bytecode.Match, 0},
-		{bytecode.Jnm, 8},
-		{bytecode.Setmatched, false},
-		{bytecode.Push, 0},
-		{bytecode.Capref, 1},
-		{bytecode.S2i, nil},
-		{bytecode.Settime, 1},
-		{bytecode.Setmatched, true},
+}`, []code.Instr{
+		{code.Match, 0},
+		{code.Jnm, 8},
+		{code.Setmatched, false},
+		{code.Push, 0},
+		{code.Capref, 1},
+		{code.S2i, nil},
+		{code.Settime, 1},
+		{code.Setmatched, true},
 	}},
 	{"cast to self", `
 /(\d+)/ {
 settime(int($1))
-}`, []bytecode.Instr{
-		{bytecode.Match, 0},
-		{bytecode.Jnm, 8},
-		{bytecode.Setmatched, false},
-		{bytecode.Push, 0},
-		{bytecode.Capref, 1},
-		{bytecode.S2i, nil},
-		{bytecode.Settime, 1},
-		{bytecode.Setmatched, true},
+}`, []code.Instr{
+		{code.Match, 0},
+		{code.Jnm, 8},
+		{code.Setmatched, false},
+		{code.Push, 0},
+		{code.Capref, 1},
+		{code.S2i, nil},
+		{code.Settime, 1},
+		{code.Setmatched, true},
 	}},
 	{"stop", `
 stop
-`, []bytecode.Instr{
-		{bytecode.Stop, nil},
+`, []code.Instr{
+		{code.Stop, nil},
 	}},
 	{"stop inside", `
 // {
 stop
 }
-`, []bytecode.Instr{
-		{bytecode.Match, 0},
-		{bytecode.Jnm, 5},
-		{bytecode.Setmatched, false},
-		{bytecode.Stop, nil},
-		{bytecode.Setmatched, true},
+`, []code.Instr{
+		{code.Match, 0},
+		{code.Jnm, 5},
+		{code.Setmatched, false},
+		{code.Stop, nil},
+		{code.Setmatched, true},
 	}},
 }
 
@@ -873,7 +873,7 @@ func TestCodegen(t *testing.T) {
 				t.Fatalf("Codegen error:\n%s", err)
 			}
 
-			if diff := testutil.Diff(tc.prog, obj.Program, testutil.AllowUnexported(bytecode.Instr{})); diff != "" {
+			if diff := testutil.Diff(tc.prog, obj.Program, testutil.AllowUnexported(code.Instr{})); diff != "" {
 				t.Error(diff)
 				t.Logf("Expected:\n%s\nReceived:\n%s", tc.prog, obj.Program)
 			}

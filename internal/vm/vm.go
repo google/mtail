@@ -22,7 +22,7 @@ import (
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
-	"github.com/google/mtail/internal/vm/bytecode"
+	"github.com/google/mtail/internal/vm/code"
 	"github.com/google/mtail/internal/vm/object"
 
 	"github.com/golang/groupcache/lru"
@@ -42,7 +42,7 @@ type thread struct {
 // execution.
 type VM struct {
 	name string
-	prog []bytecode.Instr
+	prog []code.Instr
 
 	re  []*regexp.Regexp  // Regular expression constants
 	str []string          // String constants
@@ -280,7 +280,7 @@ func (v *VM) ParseTime(layout, value string) (tm time.Time) {
 
 // execute performs an instruction cycle in the VM. acting on the instruction
 // i in thread t.
-func (v *VM) execute(t *thread, i bytecode.Instr) {
+func (v *VM) execute(t *thread, i code.Instr) {
 	defer func() {
 		if r := recover(); r != nil {
 			v.errorf("panic in thread %#v at instr %q: %s", t, i, r)
@@ -289,14 +289,14 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 	}()
 
 	switch i.Opcode {
-	case bytecode.Bad:
+	case code.Bad:
 		v.errorf("Invalid instruction.  Aborting.")
 		v.abort = true
 
-	case bytecode.Stop:
+	case code.Stop:
 		v.terminate = true
 
-	case bytecode.Match:
+	case code.Match:
 		// match regex and store success
 		// Store the results in the operandth element of the stack,
 		// where i.opnd == the matched re index
@@ -304,14 +304,14 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 		t.matches[index] = v.re[index].FindStringSubmatch(v.input.Line)
 		t.Push(t.matches[index] != nil)
 
-	case bytecode.Smatch:
+	case code.Smatch:
 		// match regex against item on the stack
 		index := i.Operand.(int)
 		line := t.Pop().(string)
 		t.matches[index] = v.re[index].FindStringSubmatch(line)
 		t.Push(t.matches[index] != nil)
 
-	case bytecode.Cmp:
+	case code.Cmp:
 		// Compare two elements on the stack.
 		// Set the match register based on the truthiness of the comparison.
 		// Operand contains the expected result.
@@ -325,7 +325,7 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 
 		t.Push(match)
 
-	case bytecode.Icmp:
+	case code.Icmp:
 		b, berr := t.PopInt()
 		if berr != nil {
 			v.errorf("%v", berr)
@@ -340,7 +340,7 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 		}
 
 		t.Push(match)
-	case bytecode.Fcmp:
+	case code.Fcmp:
 		b, berr := t.PopFloat()
 		if berr != nil {
 			v.errorf("%v", berr)
@@ -355,7 +355,7 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 		}
 
 		t.Push(match)
-	case bytecode.Scmp:
+	case code.Scmp:
 		b := t.Pop().(string)
 		a := t.Pop().(string)
 		match, err := compareString(a, b, i.Operand.(int))
@@ -365,22 +365,22 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 
 		t.Push(match)
 
-	case bytecode.Jnm:
+	case code.Jnm:
 		match := t.Pop().(bool)
 		if !match {
 			t.pc = i.Operand.(int)
 		}
 
-	case bytecode.Jm:
+	case code.Jm:
 		match := t.Pop().(bool)
 		if match {
 			t.pc = i.Operand.(int)
 		}
 
-	case bytecode.Jmp:
+	case code.Jmp:
 		t.pc = i.Operand.(int)
 
-	case bytecode.Inc:
+	case code.Inc:
 		// Increment a datum
 		var delta int64 = 1
 		// If opnd is non-nil, the delta is on the stack.
@@ -397,7 +397,7 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
 
-	case bytecode.Dec:
+	case code.Dec:
 		// Decrement a datum
 		var delta int64 = 1
 		// If opnd is non-nil, the delta is on the stack.
@@ -414,7 +414,7 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 		}
 
-	case bytecode.Iset:
+	case code.Iset:
 		// Set a datum
 		value, err := t.PopInt()
 		if err != nil {
@@ -426,7 +426,7 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			v.errorf("Unexpected type to iset: %T %q", n, n)
 		}
 
-	case bytecode.Fset:
+	case code.Fset:
 		// Set a datum
 		value, err := t.PopFloat()
 		if err != nil {
@@ -438,7 +438,7 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			v.errorf("Unexpected type to fset: %T %q", n, n)
 		}
 
-	case bytecode.Sset:
+	case code.Sset:
 		// Set a string datum
 		value, ok := t.Pop().(string)
 		if !ok {
@@ -450,7 +450,7 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			v.errorf("Unexpected type to sset: %T %q", n, n)
 		}
 
-	case bytecode.Strptime:
+	case code.Strptime:
 		// Parse a time string into the time register
 		layout := t.Pop().(string)
 
@@ -473,8 +473,8 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			t.time = cached.(time.Time)
 		}
 
-	case bytecode.Timestamp:
-		// Put the time register onto the stack, unless it's zero in which case bytecode.use system time.
+	case code.Timestamp:
+		// Put the time register onto the stack, unless it's zero in which case code.use system time.
 		if t.time.IsZero() {
 			t.Push(time.Now().Unix())
 		} else {
@@ -482,26 +482,26 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			t.Push(t.time.Unix())
 		}
 
-	case bytecode.Settime:
+	case code.Settime:
 		// Pop TOS and store in time register
 		t.time = time.Unix(t.Pop().(int64), 0).UTC()
 
-	case bytecode.Capref:
+	case code.Capref:
 		// Put a capture group reference onto the stack.
 		// First find the match storage index on the stack,
 		re := t.Pop().(int)
 		// Push the result from the re'th match at operandth index
 		t.Push(t.matches[re][i.Operand.(int)])
 
-	case bytecode.Str:
+	case code.Str:
 		// Put a string constant onto the stack
 		t.Push(v.str[i.Operand.(int)])
 
-	case bytecode.Push:
+	case code.Push:
 		// Push a value onto the stack
 		t.Push(i.Operand)
 
-	case bytecode.Fadd, bytecode.Fsub, bytecode.Fmul, bytecode.Fdiv, bytecode.Fmod, bytecode.Fpow:
+	case code.Fadd, code.Fsub, code.Fmul, code.Fdiv, code.Fmod, code.Fpow:
 		b, err := t.PopFloat()
 		if err != nil {
 			v.errorf("%s", err)
@@ -511,21 +511,21 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			v.errorf("%s", err)
 		}
 		switch i.Opcode {
-		case bytecode.Fadd:
+		case code.Fadd:
 			t.Push(a + b)
-		case bytecode.Fsub:
+		case code.Fsub:
 			t.Push(a - b)
-		case bytecode.Fmul:
+		case code.Fmul:
 			t.Push(a * b)
-		case bytecode.Fdiv:
+		case code.Fdiv:
 			t.Push(a / b)
-		case bytecode.Fmod:
+		case code.Fmod:
 			t.Push(math.Mod(a, b))
-		case bytecode.Fpow:
+		case code.Fpow:
 			t.Push(math.Pow(a, b))
 		}
 
-	case bytecode.Iadd, bytecode.Isub, bytecode.Imul, bytecode.Idiv, bytecode.Imod, bytecode.Ipow, bytecode.Shl, bytecode.Shr, bytecode.And, bytecode.Or, bytecode.Xor:
+	case code.Iadd, code.Isub, code.Imul, code.Idiv, code.Imod, code.Ipow, code.Shl, code.Shr, code.And, code.Or, code.Xor:
 		// Op two values at TOS, and push result onto stack
 		b, err := t.PopInt()
 		if err != nil {
@@ -536,48 +536,48 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			v.errorf("%s", err)
 		}
 		switch i.Opcode {
-		case bytecode.Iadd:
+		case code.Iadd:
 			t.Push(a + b)
-		case bytecode.Isub:
+		case code.Isub:
 			t.Push(a - b)
-		case bytecode.Imul:
+		case code.Imul:
 			t.Push(a * b)
-		case bytecode.Idiv:
+		case code.Idiv:
 			// Integer division
 			t.Push(a / b)
-		case bytecode.Imod:
+		case code.Imod:
 			t.Push(a % b)
-		case bytecode.Ipow:
+		case code.Ipow:
 			// TODO(jaq): replace with type coercion
 			t.Push(int64(math.Pow(float64(a), float64(b))))
-		case bytecode.Shl:
+		case code.Shl:
 			t.Push(a << uint(b))
-		case bytecode.Shr:
+		case code.Shr:
 			t.Push(a >> uint(b))
-		case bytecode.And:
+		case code.And:
 			t.Push(a & b)
-		case bytecode.Or:
+		case code.Or:
 			t.Push(a | b)
-		case bytecode.Xor:
+		case code.Xor:
 			t.Push(a ^ b)
 		}
 
-	case bytecode.Neg:
+	case code.Neg:
 		a, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
 		}
 		t.Push(^a)
 
-	case bytecode.Not:
+	case code.Not:
 		a := t.Pop().(bool)
 		t.Push(!a)
 
-	case bytecode.Mload:
+	case code.Mload:
 		// Load a metric at operand onto stack
 		t.Push(v.m[i.Operand.(int)])
 
-	case bytecode.Dload:
+	case code.Dload:
 		// Load a datum from metric at TOS onto stack
 		//fmt.Printf("Stack: %v\n", t.stack)
 		m := t.Pop().(*metrics.Metric)
@@ -599,21 +599,21 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 		//fmt.Printf("Found %v\n", d)
 		t.Push(d)
 
-	case bytecode.Iget, bytecode.Fget, bytecode.Sget:
+	case code.Iget, code.Fget, code.Sget:
 		d, ok := t.Pop().(datum.Datum)
 		if !ok {
 			v.errorf("Unexpected value on stack: %q", d)
 		}
 		switch i.Opcode {
-		case bytecode.Iget:
+		case code.Iget:
 			t.Push(datum.GetInt(d))
-		case bytecode.Fget:
+		case code.Fget:
 			t.Push(datum.GetFloat(d))
-		case bytecode.Sget:
+		case code.Sget:
 			t.Push(datum.GetString(d))
 		}
 
-	case bytecode.Del:
+	case code.Del:
 		m := t.Pop().(*metrics.Metric)
 		index := i.Operand.(int)
 		keys := make([]string, index)
@@ -626,7 +626,7 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			v.errorf("del (RemoveDatum) failed: %s", err)
 		}
 
-	case bytecode.Expire:
+	case code.Expire:
 		m := t.Pop().(*metrics.Metric)
 		index := i.Operand.(int)
 		keys := make([]string, index)
@@ -639,17 +639,17 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 			v.errorf("%s", err)
 		}
 
-	case bytecode.Tolower:
-		// Lowercase bytecode.a string from TOS, and push result back.
+	case code.Tolower:
+		// Lowercase code.a string from TOS, and push result back.
 		s := t.Pop().(string)
 		t.Push(strings.ToLower(s))
 
-	case bytecode.Length:
+	case code.Length:
 		// Compute the length of a string from TOS, and push result back.
 		s := t.Pop().(string)
 		t.Push(len(s))
 
-	case bytecode.S2i:
+	case code.S2i:
 		base := int64(10)
 		var err error
 		if i.Operand != nil {
@@ -666,7 +666,7 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 		}
 		t.Push(i)
 
-	case bytecode.S2f:
+	case code.S2f:
 		str := t.Pop().(string)
 		f, err := strconv.ParseFloat(str, 64)
 		if err != nil {
@@ -674,38 +674,38 @@ func (v *VM) execute(t *thread, i bytecode.Instr) {
 		}
 		t.Push(f)
 
-	case bytecode.I2f:
+	case code.I2f:
 		i, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
 		}
 		t.Push(float64(i))
 
-	case bytecode.I2s:
+	case code.I2s:
 		i, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
 		}
 		t.Push(fmt.Sprintf("%d", i))
 
-	case bytecode.F2s:
+	case code.F2s:
 		f, err := t.PopFloat()
 		if err != nil {
 			v.errorf("%s", err)
 		}
 		t.Push(fmt.Sprintf("%g", f))
 
-	case bytecode.Setmatched:
+	case code.Setmatched:
 		t.matched = i.Operand.(bool)
 
-	case bytecode.Otherwise:
+	case code.Otherwise:
 		// Only match if the matched flag is false.
 		t.Push(!t.matched)
 
-	case bytecode.Getfilename:
+	case code.Getfilename:
 		t.Push(v.input.Filename)
 
-	case bytecode.Cat:
+	case code.Cat:
 		s1 := t.Pop().(string)
 		s2 := t.Pop().(string)
 		t.Push(s2 + s1)

@@ -12,7 +12,7 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/vm/ast"
-	"github.com/google/mtail/internal/vm/bytecode"
+	"github.com/google/mtail/internal/vm/code"
 	"github.com/google/mtail/internal/vm/errors"
 	"github.com/google/mtail/internal/vm/object"
 	"github.com/google/mtail/internal/vm/parser"
@@ -48,7 +48,7 @@ func (c *codegen) errorf(pos *position.Position, format string, args ...interfac
 	c.errors.Add(pos, e)
 }
 
-func (c *codegen) emit(i bytecode.Instr) {
+func (c *codegen) emit(i code.Instr) {
 	c.obj.Program = append(c.obj.Program, i)
 }
 
@@ -131,15 +131,15 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		lEnd := c.newLabel()
 		if n.Cond != nil {
 			n.Cond = ast.Walk(c, n.Cond)
-			c.emit(bytecode.Instr{bytecode.Jnm, lElse})
+			c.emit(code.Instr{code.Jnm, lElse})
 		}
 		// Set matched flag false for children.
-		c.emit(bytecode.Instr{bytecode.Setmatched, false})
+		c.emit(code.Instr{code.Setmatched, false})
 		n.Truth = ast.Walk(c, n.Truth)
 		// Re-set matched flag to true for rest of current block.
-		c.emit(bytecode.Instr{bytecode.Setmatched, true})
+		c.emit(code.Instr{code.Setmatched, true})
 		if n.Else != nil {
-			c.emit(bytecode.Instr{bytecode.Jmp, lEnd})
+			c.emit(code.Instr{code.Jmp, lEnd})
 		}
 		c.setLabel(lElse)
 		if n.Else != nil {
@@ -157,20 +157,20 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		c.obj.Regexps = append(c.obj.Regexps, re)
 		// Store the location of this regular expression in the patterNode
 		n.Index = len(c.obj.Regexps) - 1
-		c.emit(bytecode.Instr{bytecode.Match, n.Index})
+		c.emit(code.Instr{code.Match, n.Index})
 
 	case *ast.StringConst:
 		c.obj.Strings = append(c.obj.Strings, n.Text)
-		c.emit(bytecode.Instr{bytecode.Str, len(c.obj.Strings) - 1})
+		c.emit(code.Instr{code.Str, len(c.obj.Strings) - 1})
 
 	case *ast.IntConst:
-		c.emit(bytecode.Instr{bytecode.Push, n.I})
+		c.emit(code.Instr{code.Push, n.I})
 
 	case *ast.FloatConst:
-		c.emit(bytecode.Instr{bytecode.Push, n.F})
+		c.emit(code.Instr{code.Push, n.F})
 
 	case *ast.StopNode:
-		c.emit(bytecode.Instr{bytecode.Stop, nil})
+		c.emit(code.Instr{code.Stop, nil})
 
 	case *ast.Id:
 		if n.Symbol == nil || n.Symbol.Kind != symbol.VarSymbol {
@@ -180,9 +180,9 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			c.errorf(n.Pos(), "No metric bound to identifier %q", n.Name)
 			return nil, n
 		}
-		c.emit(bytecode.Instr{bytecode.Mload, n.Symbol.Addr})
+		c.emit(code.Instr{code.Mload, n.Symbol.Addr})
 		m := n.Symbol.Binding.(*metrics.Metric)
-		c.emit(bytecode.Instr{bytecode.Dload, len(m.Keys)})
+		c.emit(code.Instr{code.Dload, len(m.Keys)})
 
 		if !n.Lvalue {
 			t := n.Type()
@@ -192,11 +192,11 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			}
 
 			if types.Equals(t, types.Float) {
-				c.emit(bytecode.Instr{bytecode.Fget, nil})
+				c.emit(code.Instr{code.Fget, nil})
 			} else if types.Equals(t, types.Int) {
-				c.emit(bytecode.Instr{bytecode.Iget, nil})
+				c.emit(code.Instr{code.Iget, nil})
 			} else if types.Equals(t, types.String) {
-				c.emit(bytecode.Instr{bytecode.Sget, nil})
+				c.emit(code.Instr{code.Sget, nil})
 			} else {
 				c.errorf(n.Pos(), "invalid type for get %q in %#v", n.Type(), n)
 			}
@@ -210,13 +210,13 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		rn := n.Symbol.Binding.(*ast.PatternExpr)
 		// rn.index contains the index of the compiled regular expression object
 		// in the re slice of the object code
-		c.emit(bytecode.Instr{bytecode.Push, rn.Index})
+		c.emit(code.Instr{code.Push, rn.Index})
 		// n.Symbol.Addr is the capture group offset
-		c.emit(bytecode.Instr{bytecode.Capref, n.Symbol.Addr})
+		c.emit(code.Instr{code.Capref, n.Symbol.Addr})
 		if types.Equals(n.Type(), types.Float) {
-			c.emit(bytecode.Instr{bytecode.S2f, nil})
+			c.emit(code.Instr{code.S2f, nil})
 		} else if types.Equals(n.Type(), types.Int) {
-			c.emit(bytecode.Instr{bytecode.S2i, nil})
+			c.emit(code.Instr{code.S2i, nil})
 		}
 
 	case *ast.IndexedExpr:
@@ -224,9 +224,9 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			for _, arg := range args.Children {
 				_ = ast.Walk(c, arg)
 				if types.Equals(arg.Type(), types.Float) {
-					c.emit(bytecode.Instr{bytecode.F2s, nil})
+					c.emit(code.Instr{code.F2s, nil})
 				} else if types.Equals(arg.Type(), types.Int) {
-					c.emit(bytecode.Instr{bytecode.I2s, nil})
+					c.emit(code.Instr{code.I2s, nil})
 				}
 			}
 		}
@@ -256,18 +256,18 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		return nil, n
 
 	case *ast.OtherwiseNode:
-		c.emit(bytecode.Instr{Opcode: bytecode.Otherwise})
+		c.emit(code.Instr{Opcode: code.Otherwise})
 
 	case *ast.DelNode:
 		if n.Expiry > 0 {
-			c.emit(bytecode.Instr{bytecode.Push, n.Expiry})
+			c.emit(code.Instr{code.Push, n.Expiry})
 		}
 		ast.Walk(c, n.N)
 		// overwrite the dload instruction
 		pc := c.pc()
-		c.obj.Program[pc].Opcode = bytecode.Del
+		c.obj.Program[pc].Opcode = code.Del
 		if n.Expiry > 0 {
-			c.obj.Program[pc].Opcode = bytecode.Expire
+			c.obj.Program[pc].Opcode = code.Expire
 		}
 
 	case *ast.BinaryExpr:
@@ -276,13 +276,13 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			lFalse := c.newLabel()
 			lEnd := c.newLabel()
 			ast.Walk(c, n.Lhs)
-			c.emit(bytecode.Instr{bytecode.Jnm, lFalse})
+			c.emit(code.Instr{code.Jnm, lFalse})
 			ast.Walk(c, n.Rhs)
-			c.emit(bytecode.Instr{bytecode.Jnm, lFalse})
-			c.emit(bytecode.Instr{bytecode.Push, true})
-			c.emit(bytecode.Instr{bytecode.Jmp, lEnd})
+			c.emit(code.Instr{code.Jnm, lFalse})
+			c.emit(code.Instr{code.Push, true})
+			c.emit(code.Instr{code.Jmp, lEnd})
 			c.setLabel(lFalse)
-			c.emit(bytecode.Instr{bytecode.Push, false})
+			c.emit(code.Instr{code.Push, false})
 			c.setLabel(lEnd)
 			return nil, n
 
@@ -290,13 +290,13 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			lTrue := c.newLabel()
 			lEnd := c.newLabel()
 			ast.Walk(c, n.Lhs)
-			c.emit(bytecode.Instr{bytecode.Jm, lTrue})
+			c.emit(code.Instr{code.Jm, lTrue})
 			ast.Walk(c, n.Rhs)
-			c.emit(bytecode.Instr{bytecode.Jm, lTrue})
-			c.emit(bytecode.Instr{bytecode.Push, false})
-			c.emit(bytecode.Instr{bytecode.Jmp, lEnd})
+			c.emit(code.Instr{code.Jm, lTrue})
+			c.emit(code.Instr{code.Push, false})
+			c.emit(code.Instr{code.Jmp, lEnd})
 			c.setLabel(lTrue)
-			c.emit(bytecode.Instr{bytecode.Push, true})
+			c.emit(code.Instr{code.Push, true})
 			c.setLabel(lEnd)
 			return nil, n
 
@@ -316,26 +316,26 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	return c, node
 }
 
-var typedOperators = map[int]map[types.Type]bytecode.Opcode{
-	parser.PLUS: {types.Int: bytecode.Iadd,
-		types.Float:  bytecode.Fadd,
-		types.String: bytecode.Cat},
-	parser.MINUS: {types.Int: bytecode.Isub,
-		types.Float: bytecode.Fsub},
-	parser.MUL: {types.Int: bytecode.Imul,
-		types.Float: bytecode.Fmul},
-	parser.DIV: {types.Int: bytecode.Idiv,
-		types.Float: bytecode.Fdiv},
-	parser.MOD: {types.Int: bytecode.Imod,
-		types.Float: bytecode.Fmod},
-	parser.POW: {types.Int: bytecode.Ipow,
-		types.Float: bytecode.Fpow},
-	parser.ASSIGN: {types.Int: bytecode.Iset,
-		types.Float:  bytecode.Fset,
-		types.String: bytecode.Sset},
+var typedOperators = map[int]map[types.Type]code.Opcode{
+	parser.PLUS: {types.Int: code.Iadd,
+		types.Float:  code.Fadd,
+		types.String: code.Cat},
+	parser.MINUS: {types.Int: code.Isub,
+		types.Float: code.Fsub},
+	parser.MUL: {types.Int: code.Imul,
+		types.Float: code.Fmul},
+	parser.DIV: {types.Int: code.Idiv,
+		types.Float: code.Fdiv},
+	parser.MOD: {types.Int: code.Imod,
+		types.Float: code.Fmod},
+	parser.POW: {types.Int: code.Ipow,
+		types.Float: code.Fpow},
+	parser.ASSIGN: {types.Int: code.Iset,
+		types.Float:  code.Fset,
+		types.String: code.Sset},
 }
 
-func getOpcodeForType(op int, opT types.Type) (bytecode.Opcode, error) {
+func getOpcodeForType(op int, opT types.Type) (code.Opcode, error) {
 	opmap, ok := typedOperators[op]
 	if !ok {
 		return -1, errors.Errorf("no typed operator for type %v", op)
@@ -348,14 +348,14 @@ func getOpcodeForType(op int, opT types.Type) (bytecode.Opcode, error) {
 	return -1, errors.Errorf("no opcode for type %s in op %v", opT, op)
 }
 
-var builtin = map[string]bytecode.Opcode{
-	"getfilename": bytecode.Getfilename,
-	"len":         bytecode.Length,
-	"settime":     bytecode.Settime,
-	"strptime":    bytecode.Strptime,
-	"strtol":      bytecode.S2i,
-	"timestamp":   bytecode.Timestamp,
-	"tolower":     bytecode.Tolower,
+var builtin = map[string]code.Opcode{
+	"getfilename": code.Getfilename,
+	"len":         code.Length,
+	"settime":     code.Settime,
+	"strptime":    code.Strptime,
+	"strtol":      code.S2i,
+	"timestamp":   code.Timestamp,
+	"tolower":     code.Tolower,
 }
 
 func (c *codegen) VisitAfter(node ast.Node) ast.Node {
@@ -381,16 +381,16 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			}
 
 		default:
-			c.emit(bytecode.Instr{builtin[n.Name], arglen})
+			c.emit(code.Instr{builtin[n.Name], arglen})
 		}
 	case *ast.UnaryExpr:
 		switch n.Op {
 		case parser.INC:
-			c.emit(bytecode.Instr{Opcode: bytecode.Inc})
+			c.emit(code.Instr{Opcode: code.Inc})
 		case parser.DEC:
-			c.emit(bytecode.Instr{Opcode: bytecode.Dec})
+			c.emit(code.Instr{Opcode: code.Dec})
 		case parser.NOT:
-			c.emit(bytecode.Instr{Opcode: bytecode.Neg})
+			c.emit(code.Instr{Opcode: code.Neg})
 		}
 	case *ast.BinaryExpr:
 		switch n.Op {
@@ -398,52 +398,52 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			lFail := c.newLabel()
 			lEnd := c.newLabel()
 			var cmpArg int
-			var jumpOp bytecode.Opcode
+			var jumpOp code.Opcode
 			switch n.Op {
 			case parser.LT:
 				cmpArg = -1
-				jumpOp = bytecode.Jnm
+				jumpOp = code.Jnm
 			case parser.GT:
 				cmpArg = 1
-				jumpOp = bytecode.Jnm
+				jumpOp = code.Jnm
 			case parser.LE:
 				cmpArg = 1
-				jumpOp = bytecode.Jm
+				jumpOp = code.Jm
 			case parser.GE:
 				cmpArg = -1
-				jumpOp = bytecode.Jm
+				jumpOp = code.Jm
 			case parser.EQ:
 				cmpArg = 0
-				jumpOp = bytecode.Jnm
+				jumpOp = code.Jnm
 			case parser.NE:
 				cmpArg = 0
-				jumpOp = bytecode.Jm
+				jumpOp = code.Jm
 			}
-			cmpOp := bytecode.Cmp
+			cmpOp := code.Cmp
 			if types.Equals(n.Lhs.Type(), n.Rhs.Type()) {
 				switch n.Lhs.Type() {
 				case types.Float:
-					cmpOp = bytecode.Fcmp
+					cmpOp = code.Fcmp
 				case types.Int:
-					cmpOp = bytecode.Icmp
+					cmpOp = code.Icmp
 				case types.String:
-					cmpOp = bytecode.Scmp
+					cmpOp = code.Scmp
 				default:
-					cmpOp = bytecode.Cmp
+					cmpOp = code.Cmp
 				}
 			}
-			c.emit(bytecode.Instr{cmpOp, cmpArg})
-			c.emit(bytecode.Instr{jumpOp, lFail})
-			c.emit(bytecode.Instr{bytecode.Push, true})
-			c.emit(bytecode.Instr{bytecode.Jmp, lEnd})
+			c.emit(code.Instr{cmpOp, cmpArg})
+			c.emit(code.Instr{jumpOp, lFail})
+			c.emit(code.Instr{code.Push, true})
+			c.emit(code.Instr{code.Jmp, lEnd})
 			c.setLabel(lFail)
-			c.emit(bytecode.Instr{bytecode.Push, false})
+			c.emit(code.Instr{code.Push, false})
 			c.setLabel(lEnd)
 		case parser.ADD_ASSIGN:
 			// When operand is not nil, inc pops the delta from the stack.
 			switch {
 			case types.Equals(n.Type(), types.Int):
-				c.emit(bytecode.Instr{bytecode.Inc, 0})
+				c.emit(code.Instr{code.Inc, 0})
 			case types.Equals(n.Type(), types.Float), types.Equals(n.Type(), types.String):
 				// Already walked the lhs and rhs of this expression
 				opcode, err := getOpcodeForType(parser.PLUS, n.Type())
@@ -451,14 +451,14 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 					c.errorf(n.Pos(), "%s", err)
 					return n
 				}
-				c.emit(bytecode.Instr{Opcode: opcode})
+				c.emit(code.Instr{Opcode: opcode})
 				// And a second lhs
 				opcode, err = getOpcodeForType(parser.ASSIGN, n.Type())
 				if err != nil {
 					c.errorf(n.Pos(), "%s", err)
 					return n
 				}
-				c.emit(bytecode.Instr{Opcode: opcode})
+				c.emit(code.Instr{Opcode: opcode})
 			default:
 				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.Type())
 				return n
@@ -469,26 +469,26 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 				c.errorf(n.Pos(), "%s", err)
 				return n
 			}
-			c.emit(bytecode.Instr{Opcode: opcode})
+			c.emit(code.Instr{Opcode: opcode})
 		case parser.BITAND:
-			c.emit(bytecode.Instr{Opcode: bytecode.And})
+			c.emit(code.Instr{Opcode: code.And})
 		case parser.BITOR:
-			c.emit(bytecode.Instr{Opcode: bytecode.Or})
+			c.emit(code.Instr{Opcode: code.Or})
 		case parser.XOR:
-			c.emit(bytecode.Instr{Opcode: bytecode.Xor})
+			c.emit(code.Instr{Opcode: code.Xor})
 		case parser.SHL:
-			c.emit(bytecode.Instr{Opcode: bytecode.Shl})
+			c.emit(code.Instr{Opcode: code.Shl})
 		case parser.SHR:
-			c.emit(bytecode.Instr{Opcode: bytecode.Shr})
+			c.emit(code.Instr{Opcode: code.Shr})
 
 		case parser.MATCH:
 			// Cross fingers that last branch was a patternExprNode
-			c.obj.Program[c.pc()].Opcode = bytecode.Smatch
+			c.obj.Program[c.pc()].Opcode = code.Smatch
 
 		case parser.NOT_MATCH:
 			// Cross fingers that last branch was a patternExprNode
-			c.obj.Program[c.pc()].Opcode = bytecode.Smatch
-			c.emit(bytecode.Instr{Opcode: bytecode.Not})
+			c.obj.Program[c.pc()].Opcode = code.Smatch
+			c.emit(code.Instr{Opcode: code.Not})
 
 		case parser.CONCAT:
 			// skip
@@ -509,15 +509,15 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 func (c *codegen) emitConversion(inType, outType types.Type) error {
 	glog.V(2).Infof("Conversion: %q to %q", inType, outType)
 	if types.Equals(types.Int, inType) && types.Equals(types.Float, outType) {
-		c.emit(bytecode.Instr{Opcode: bytecode.I2f})
+		c.emit(code.Instr{Opcode: code.I2f})
 	} else if types.Equals(types.String, inType) && types.Equals(types.Float, outType) {
-		c.emit(bytecode.Instr{Opcode: bytecode.S2f})
+		c.emit(code.Instr{Opcode: code.S2f})
 	} else if types.Equals(types.String, inType) && types.Equals(types.Int, outType) {
-		c.emit(bytecode.Instr{Opcode: bytecode.S2i})
+		c.emit(code.Instr{Opcode: code.S2i})
 	} else if types.Equals(types.Float, inType) && types.Equals(types.String, outType) {
-		c.emit(bytecode.Instr{Opcode: bytecode.F2s})
+		c.emit(code.Instr{Opcode: code.F2s})
 	} else if types.Equals(types.Int, inType) && types.Equals(types.String, outType) {
-		c.emit(bytecode.Instr{Opcode: bytecode.I2s})
+		c.emit(code.Instr{Opcode: code.I2s})
 	} else if types.Equals(types.Pattern, inType) && types.Equals(types.Bool, outType) {
 		// nothing, pattern is implicit bool
 	} else if types.Equals(inType, outType) {
@@ -531,7 +531,7 @@ func (c *codegen) emitConversion(inType, outType types.Type) error {
 func (c *codegen) writeJumps() {
 	for j, i := range c.obj.Program {
 		switch i.Opcode {
-		case bytecode.Jmp, bytecode.Jm, bytecode.Jnm:
+		case code.Jmp, code.Jm, code.Jnm:
 			index := i.Operand.(int)
 			if index > len(c.l) {
 				c.errorf(nil, "no jump at label %v, table is %v", i.Operand, c.l)
