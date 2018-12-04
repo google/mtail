@@ -4,8 +4,6 @@
 // Package code contains the bytecode instructions for the mtail virtual machine.
 package code
 
-import "fmt"
-
 type Opcode int
 
 const (
@@ -138,14 +136,4 @@ var opNames = map[Opcode]string{
 
 func (o Opcode) String() string {
 	return opNames[o]
-}
-
-type Instr struct {
-	Opcode  Opcode
-	Operand interface{}
-}
-
-// debug print for instructions
-func (i Instr) String() string {
-	return fmt.Sprintf("{%s %v}", opNames[i.Opcode], i.Operand)
 }
