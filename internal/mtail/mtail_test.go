@@ -39,7 +39,7 @@ func removeTempDir(t *testing.T, workdir string) {
 	}
 }
 
-func startMtailServer(t *testing.T, options ...func(*MtailServer) error) *MtailServer {
+func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	expvar.Get("line_count").(*expvar.Int).Set(0)
 	expvar.Get("log_count").(*expvar.Int).Set(0)
 	expvar.Get("log_rotations_total").(*expvar.Map).Init()
@@ -713,9 +713,9 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		if v == nil {
 			return false, nil
 		}
-		n, err := strconv.Atoi(v.String())
-		if err != nil {
-			return false, err
+		n, nerr := strconv.Atoi(v.String())
+		if nerr != nil {
+			return false, nerr
 		}
 		if n < 1 {
 			return false, nil
@@ -745,9 +745,9 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 
 	checkFoo := func() (bool, error) {
 		v := store.Metrics["foo"][0]
-		d, err := v.GetDatum()
-		if err != nil {
-			return false, err
+		d, derr := v.GetDatum()
+		if derr != nil {
+			return false, derr
 		}
 		if d.ValueString() != "1" {
 			t.Log(d)
@@ -776,9 +776,9 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		if v == nil {
 			return false, nil
 		}
-		n, err := strconv.Atoi(v.String())
-		if err != nil {
-			return false, err
+		n, nerr := strconv.Atoi(v.String())
+		if nerr != nil {
+			return false, nerr
 		}
 		if n < 2 {
 			return false, nil

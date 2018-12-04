@@ -117,7 +117,7 @@ func main() {
 	if err != nil {
 		glog.Exitf("Failure to create log watcher: %s", err)
 	}
-	opts := []func(*mtail.MtailServer) error{
+	opts := []func(*mtail.Server) error{
 		mtail.ProgramPath(*progs),
 		mtail.LogPathPatterns(logs...),
 		mtail.BindAddress(*address, *port),

@@ -12,7 +12,7 @@ import (
 	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/checker"
 	"github.com/google/mtail/internal/vm/parser"
-	"github.com/google/mtail/internal/vm/symtab"
+	"github.com/google/mtail/internal/vm/symbol"
 	"github.com/google/mtail/internal/vm/types"
 )
 
@@ -359,22 +359,22 @@ var checkerTypeExpressionTests = []struct {
 }{
 	{"Int + Int -> Int",
 		&ast.BinaryExpr{
-			Lhs: &ast.IntConst{I: 1},
-			Rhs: &ast.IntConst{I: 1},
+			Lhs: &ast.IntLit{I: 1},
+			Rhs: &ast.IntLit{I: 1},
 			Op:  parser.PLUS},
 		types.Int,
 	},
 	{"Int + Float -> Float",
 		&ast.BinaryExpr{
-			Lhs: &ast.IntConst{I: 1},
-			Rhs: &ast.FloatConst{F: 1.0},
+			Lhs: &ast.IntLit{I: 1},
+			Rhs: &ast.FloatLit{F: 1.0},
 			Op:  parser.PLUS},
 		types.Float,
 	},
 	{"⍺ + Float -> Float",
 		&ast.BinaryExpr{
-			Lhs: &ast.Id{Symbol: &symtab.Symbol{Name: "i", Kind: symtab.VarSymbol, Type: types.NewVariable()}},
-			Rhs: &ast.CaprefNode{Symbol: &symtab.Symbol{Kind: symtab.CaprefSymbol, Type: types.Float}},
+			Lhs: &ast.IdTerm{Symbol: &symbol.Symbol{Name: "i", Kind: symbol.VarSymbol, Type: types.NewVariable()}},
+			Rhs: &ast.CaprefTerm{Symbol: &symbol.Symbol{Kind: symbol.CaprefSymbol, Type: types.Float}},
 			Op:  parser.PLUS},
 		types.Float,
 	},

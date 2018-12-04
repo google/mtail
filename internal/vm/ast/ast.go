@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/vm/position"
-	"github.com/google/mtail/internal/vm/symtab"
+	"github.com/google/mtail/internal/vm/symbol"
 	"github.com/google/mtail/internal/vm/types"
 )
 
@@ -19,7 +19,7 @@ type Node interface {
 }
 
 type StmtList struct {
-	Scope    *symtab.Scope // Pointer to the local scope for this enclosing block
+	Scope    *symbol.Scope // Pointer to the local scope for this enclosing block
 	Children []Node
 }
 
@@ -54,59 +54,59 @@ func (n *ExprList) SetType(t types.Type) {
 	n.typ = t
 }
 
-type Cond struct {
+type CondStmt struct {
 	Cond  Node
 	Truth Node
 	Else  Node
-	Scope *symtab.Scope // a conditional expression can cause new variables to be defined
+	Scope *symbol.Scope // a conditional expression can cause new variables to be defined
 }
 
-func (n *Cond) Pos() *position.Position {
+func (n *CondStmt) Pos() *position.Position {
 	return mergepositionlist([]Node{n.Cond, n.Truth, n.Else})
 }
 
-func (n *Cond) Type() types.Type {
+func (n *CondStmt) Type() types.Type {
 	return types.None
 }
 
-type Id struct {
+type IdTerm struct {
 	P      position.Position
 	Name   string
-	Symbol *symtab.Symbol
+	Symbol *symbol.Symbol
 	Lvalue bool // If set, then this node appears on the left side of an
 	// assignment and needs to have its address taken only.
 }
 
-func (n *Id) Pos() *position.Position {
+func (n *IdTerm) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *Id) Type() types.Type {
+func (n *IdTerm) Type() types.Type {
 	if n.Symbol != nil {
 		return n.Symbol.Type
 	}
 	return types.Error // id not defined
 }
 
-type CaprefNode struct {
+type CaprefTerm struct {
 	P       position.Position
 	Name    string
 	IsNamed bool // true if the capref is a named reference, not positional
-	Symbol  *symtab.Symbol
+	Symbol  *symbol.Symbol
 }
 
-func (n *CaprefNode) Pos() *position.Position {
+func (n *CaprefTerm) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *CaprefNode) Type() types.Type {
+func (n *CaprefTerm) Type() types.Type {
 	if n.Symbol != nil {
 		return n.Symbol.Type
 	}
 	return types.Error // sym not defined due to undefined capref error
 }
 
-type BuiltinNode struct {
+type BuiltinExpr struct {
 	P    position.Position
 	Name string
 	Args Node
@@ -115,17 +115,17 @@ type BuiltinNode struct {
 	typ   types.Type
 }
 
-func (n *BuiltinNode) Pos() *position.Position {
+func (n *BuiltinExpr) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *BuiltinNode) Type() types.Type {
+func (n *BuiltinExpr) Type() types.Type {
 	n.typMu.RLock()
 	defer n.typMu.RUnlock()
 	return n.typ
 }
 
-func (n *BuiltinNode) SetType(t types.Type) {
+func (n *BuiltinExpr) SetType(t types.Type) {
 	n.typMu.Lock()
 	defer n.typMu.Unlock()
 	n.typ = t
@@ -203,60 +203,60 @@ func (n *IndexedExpr) SetType(t types.Type) {
 	n.typ = t
 }
 
-type DeclNode struct {
+type VarDecl struct {
 	P            position.Position
 	Name         string
 	Hidden       bool
 	Keys         []string
 	Kind         metrics.Kind
 	ExportedName string
-	Symbol       *symtab.Symbol
+	Symbol       *symbol.Symbol
 }
 
-func (n *DeclNode) Pos() *position.Position {
+func (n *VarDecl) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *DeclNode) Type() types.Type {
+func (n *VarDecl) Type() types.Type {
 	if n.Symbol != nil {
 		return n.Symbol.Type
 	}
 	return types.Error
 }
 
-type StringConst struct {
+type StringLit struct {
 	P    position.Position
 	Text string
 }
 
-func (n *StringConst) Pos() *position.Position {
+func (n *StringLit) Pos() *position.Position {
 	return &n.P
 }
-func (n *StringConst) Type() types.Type {
+func (n *StringLit) Type() types.Type {
 	return types.String
 }
 
-type IntConst struct {
+type IntLit struct {
 	P position.Position
 	I int64
 }
 
-func (n *IntConst) Pos() *position.Position {
+func (n *IntLit) Pos() *position.Position {
 	return &n.P
 }
-func (n *IntConst) Type() types.Type {
+func (n *IntLit) Type() types.Type {
 	return types.Int
 }
 
-type FloatConst struct {
+type FloatLit struct {
 	P position.Position
 	F float64
 }
 
-func (n *FloatConst) Pos() *position.Position {
+func (n *FloatLit) Pos() *position.Position {
 	return &n.P
 }
-func (n *FloatConst) Type() types.Type {
+func (n *FloatLit) Type() types.Type {
 	return types.Float
 }
 
@@ -276,153 +276,153 @@ func (n *PatternExpr) Type() types.Type {
 }
 
 // patternConstNode holds inline constant pattern fragments
-type PatternConst struct {
+type PatternLit struct {
 	P       position.Position
 	Pattern string
 }
 
-func (n *PatternConst) Pos() *position.Position {
+func (n *PatternLit) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *PatternConst) Type() types.Type {
+func (n *PatternLit) Type() types.Type {
 	return types.Pattern
 }
 
 // patternDefNode holds a named pattern expression
-type PatternFragmentDefNode struct {
+type PatternFragment struct {
 	Id      Node
 	Expr    Node
-	Symbol  *symtab.Symbol // Optional Symbol for a named pattern
+	Symbol  *symbol.Symbol // Optional Symbol for a named pattern
 	Pattern string         // If not empty, contains the complete evaluated pattern of the expr
 }
 
-func (n *PatternFragmentDefNode) Pos() *position.Position {
+func (n *PatternFragment) Pos() *position.Position {
 	return n.Id.Pos()
 }
 
-func (n *PatternFragmentDefNode) Type() types.Type {
+func (n *PatternFragment) Type() types.Type {
 	return types.Pattern
 }
 
-type DecoDefNode struct {
+type DecoDecl struct {
 	P      position.Position
 	Name   string
 	Block  Node
-	Symbol *symtab.Symbol
-	Scope  *symtab.Scope
+	Symbol *symbol.Symbol
+	Scope  *symbol.Scope
 }
 
-func (n *DecoDefNode) Pos() *position.Position {
+func (n *DecoDecl) Pos() *position.Position {
 	return MergePosition(&n.P, n.Block.Pos())
 }
 
-func (n *DecoDefNode) Type() types.Type {
+func (n *DecoDecl) Type() types.Type {
 	if n.Symbol != nil {
 		return n.Symbol.Type
 	}
 	return types.Int
 }
 
-type DecoNode struct {
+type DecoStmt struct {
 	P     position.Position
 	Name  string
 	Block Node
-	Def   *DecoDefNode
-	Scope *symtab.Scope
+	Def   *DecoDecl
+	Scope *symbol.Scope
 }
 
-func (n *DecoNode) Pos() *position.Position {
+func (n *DecoStmt) Pos() *position.Position {
 	return MergePosition(&n.P, n.Block.Pos())
 }
 
-func (n *DecoNode) Type() types.Type {
+func (n *DecoStmt) Type() types.Type {
 	return types.None
 }
 
-type NextNode struct {
+type NextStmt struct {
 	P position.Position
 }
 
-func (n *NextNode) Pos() *position.Position {
+func (n *NextStmt) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *NextNode) Type() types.Type {
+func (n *NextStmt) Type() types.Type {
 	return types.None
 }
 
-type OtherwiseNode struct {
+type OtherwiseStmt struct {
 	P position.Position
 }
 
-func (n *OtherwiseNode) Pos() *position.Position {
+func (n *OtherwiseStmt) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *OtherwiseNode) Type() types.Type {
+func (n *OtherwiseStmt) Type() types.Type {
 	return types.None
 }
 
-type DelNode struct {
+type DelStmt struct {
 	P      position.Position
 	N      Node
 	Expiry time.Duration
 }
 
-func (n *DelNode) Pos() *position.Position {
+func (n *DelStmt) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *DelNode) Type() types.Type {
+func (n *DelStmt) Type() types.Type {
 	return types.None
 }
 
-type ConvNode struct {
+type ConvExpr struct {
 	N Node
 
 	mu  sync.RWMutex
 	typ types.Type
 }
 
-func (n *ConvNode) Pos() *position.Position {
+func (n *ConvExpr) Pos() *position.Position {
 	return n.N.Pos()
 }
 
-func (n *ConvNode) Type() types.Type {
+func (n *ConvExpr) Type() types.Type {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.typ
 }
 
-func (n *ConvNode) SetType(t types.Type) {
+func (n *ConvExpr) SetType(t types.Type) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.typ = t
 }
 
-type ErrorNode struct {
+type Error struct {
 	P        position.Position
 	Spelling string
 }
 
-func (n *ErrorNode) Pos() *position.Position {
+func (n *Error) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *ErrorNode) Type() types.Type {
+func (n *Error) Type() types.Type {
 	return types.Error
 }
 
-type StopNode struct {
+type StopStmt struct {
 	P position.Position
 }
 
-func (n *StopNode) Pos() *position.Position {
+func (n *StopStmt) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *StopNode) Type() types.Type {
+func (n *StopStmt) Type() types.Type {
 	return types.None
 }
 

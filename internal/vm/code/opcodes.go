@@ -1,11 +1,8 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-// Package vm provides a compiler and virtual machine environment for executing
-// mtail programs.
-package bytecode
-
-import "fmt"
+// Package code contains the bytecode instructions for the mtail virtual machine.
+package code
 
 type Opcode int
 
@@ -139,14 +136,4 @@ var opNames = map[Opcode]string{
 
 func (o Opcode) String() string {
 	return opNames[o]
-}
-
-type Instr struct {
-	Opcode  Opcode
-	Operand interface{}
-}
-
-// debug print for instructions
-func (i Instr) String() string {
-	return fmt.Sprintf("{%s %v}", opNames[i.Opcode], i.Operand)
 }

@@ -4,6 +4,16 @@
 // Build the parser:
 //go:generate goyacc -v y.output -o parser.go -p mtail parser.y
 
+// Package parser implements the parse phase of the mtail program compilation.
+// The parser itself is defined in parser.y, and goyacc generates the program
+// code and token definitions.  The parser fetches tokens from the lexer, which
+// scans the input converting the program source into a token stream.  The
+// driver code wraps the generated parser and marshals the ast and errors back
+// to the caller.
+//
+// Two pretty-printers are used for debugging: the unparser, which converts an
+// ast back into program text, and an approximation of an s-expression printer,
+// which tries to model in indented text the structure of the ast.
 package parser
 
 import (
@@ -20,7 +30,7 @@ import (
 )
 
 // Parse reads the program named name from the input, and if successful returns
-// an astNode for the root of the AST, or parser errors.
+// an ast.Node for the root of the AST, otherwise parser errors.
 func Parse(name string, input io.Reader) (ast.Node, error) {
 	p := newParser(name, input)
 	r := mtailParse(p)
@@ -30,9 +40,10 @@ func Parse(name string, input io.Reader) (ast.Node, error) {
 	return p.root, nil
 }
 
-// EOF is a marker for end of file.
+// EOF is a marker for end of file.  It has the same value as the goyacc internal Kind `$end`.
 const EOF = 0
 
+// parser defines the data structure for parsing an mtail program.
 type parser struct {
 	name   string
 	root   ast.Node
@@ -54,6 +65,8 @@ func (p *parser) Error(s string) {
 	p.errors.Add(&p.t.Pos, s)
 }
 
+// Lex reads the next token from the Lexer, turning it into a form useful for the goyacc generated parser.
+// The variable lval is modified to carry token information, and the token type is returned.
 func (p *parser) Lex(lval *mtailSymType) int {
 	p.t = p.l.NextToken()
 	switch p.t.Kind {
@@ -98,8 +111,4 @@ func (p *parser) inRegex() {
 func init() {
 	flag.IntVar(&mtailDebug, "mtailDebug", 0, "Set parser debug level.")
 	mtailErrorVerbose = true
-}
-
-func TokenKindName(k TokenKind) string {
-	return mtailTokname(int(k))
 }

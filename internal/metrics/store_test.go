@@ -77,20 +77,20 @@ func TestAddMetricDifferentType(t *testing.T) {
 	// Duplicate metric of different type from *the same program
 	err = s.Add(NewMetric("foo", "prog", Counter, Float))
 	if err != nil {
-		t.Fatalf("should add a new metric to the store: %s. Store: %s", err, s.Metrics)
+		t.Fatalf("should add a new metric to the store: %s. Store: %v", err, s.Metrics)
 	}
 	if len(s.Metrics["foo"]) != expected {
-		t.Fatalf("should have %d metrics of different Type: %s", expected, s.Metrics)
+		t.Fatalf("should have %d metrics of different Type: %v", expected, s.Metrics)
 	}
 
 	// Duplicate metric of different type from a different program
 	err = s.Add(NewMetric("foo", "prog1", Counter, Float))
 	expected++
 	if err != nil {
-		t.Fatalf("should add a new metric to the store: %s. Store: %s", err, s.Metrics)
+		t.Fatalf("should add a new metric to the store: %s. Store: %v", err, s.Metrics)
 	}
 	if len(s.Metrics["foo"]) != expected {
-		t.Fatalf("should have %d metrics of different Type: %s", expected, s.Metrics)
+		t.Fatalf("should have %d metrics of different Type: %v", expected, s.Metrics)
 	}
 }
 

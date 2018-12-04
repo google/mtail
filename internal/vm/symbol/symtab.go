@@ -1,7 +1,7 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package symtab
+package symbol
 
 import (
 	"bytes"
@@ -106,7 +106,7 @@ func (s *Scope) String() string {
 		fmt.Fprintln(&buf)
 		if len(s.Symbols) > 0 {
 			for name, sym := range s.Symbols {
-				fmt.Fprintf(&buf, "\t%q: %s %q %v\n", name, sym.Kind, sym.Name, sym.Used)
+				fmt.Fprintf(&buf, "\t%q: %v %q %v\n", name, sym.Kind, sym.Name, sym.Used)
 			}
 		}
 		if s.Parent != nil {

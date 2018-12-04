@@ -7,12 +7,12 @@ import (
 	"regexp"
 
 	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/vm/bytecode"
+	"github.com/google/mtail/internal/vm/code"
 )
 
 // Object is the data and bytecode resulting from compiled program source.
 type Object struct {
-	Program []bytecode.Instr  // The program bytecode.
+	Program []code.Instr      // The program bytecode.
 	Strings []string          // Static strings.
 	Regexps []*regexp.Regexp  // Static regular expressions.
 	Metrics []*metrics.Metric // Metrics accessible to this program.

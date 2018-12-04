@@ -52,7 +52,7 @@ func (t *testWalker) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	switch v := n.(type) {
 	case *ast.BinaryExpr:
 		if v.Op == parser.DIV {
-			n = &ast.IntConst{I: 4}
+			n = &ast.IntLit{I: 4}
 		}
 	}
 	return t, n
@@ -62,7 +62,7 @@ func (t *testWalker) VisitAfter(n ast.Node) ast.Node {
 	switch v := n.(type) {
 	case *ast.BinaryExpr:
 		if v.Op == parser.MINUS {
-			n = &ast.IntConst{I: 5}
+			n = &ast.IntLit{I: 5}
 		}
 	}
 	return n
@@ -71,13 +71,13 @@ func (t *testWalker) VisitAfter(n ast.Node) ast.Node {
 func TestAstReplacement(t *testing.T) {
 	var a ast.Node
 
-	a = &ast.BinaryExpr{Lhs: &ast.BinaryExpr{Lhs: &ast.IntConst{I: 0}, Rhs: &ast.IntConst{I: 1}, Op: parser.DIV},
-		Rhs: &ast.BinaryExpr{Lhs: &ast.IntConst{I: 2}, Rhs: &ast.IntConst{I: 3}, Op: parser.MINUS},
+	a = &ast.BinaryExpr{Lhs: &ast.BinaryExpr{Lhs: &ast.IntLit{I: 0}, Rhs: &ast.IntLit{I: 1}, Op: parser.DIV},
+		Rhs: &ast.BinaryExpr{Lhs: &ast.IntLit{I: 2}, Rhs: &ast.IntLit{I: 3}, Op: parser.MINUS},
 		Op:  parser.PLUS}
 	tw := &testWalker{}
 	a = ast.Walk(tw, a)
-	expected := &ast.BinaryExpr{Lhs: &ast.IntConst{I: 4},
-		Rhs: &ast.IntConst{I: 5},
+	expected := &ast.BinaryExpr{Lhs: &ast.IntLit{I: 4},
+		Rhs: &ast.IntLit{I: 5},
 		Op:  parser.PLUS}
 	diff := testutil.Diff(expected, a, testutil.IgnoreUnexported(ast.BinaryExpr{}))
 	if diff != "" {

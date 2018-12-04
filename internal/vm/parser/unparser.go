@@ -65,7 +65,7 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			}
 		}
 
-	case *ast.Cond:
+	case *ast.CondStmt:
 		if v.Cond != nil {
 			ast.Walk(u, v.Cond)
 		}
@@ -82,13 +82,13 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		u.outdent()
 		u.emit("}")
 
-	case *ast.PatternFragmentDefNode:
+	case *ast.PatternFragment:
 		u.emit("const ")
 		ast.Walk(u, v.Id)
 		u.emit(" ")
 		ast.Walk(u, v.Expr)
 
-	case *ast.PatternConst:
+	case *ast.PatternLit:
 		u.emit("/" + strings.Replace(v.Pattern, "/", "\\/", -1) + "/")
 
 	case *ast.BinaryExpr:
@@ -149,13 +149,13 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		}
 		ast.Walk(u, v.Rhs)
 
-	case *ast.Id:
+	case *ast.IdTerm:
 		u.emit(v.Name)
 
-	case *ast.CaprefNode:
+	case *ast.CaprefTerm:
 		u.emit("$" + v.Name)
 
-	case *ast.BuiltinNode:
+	case *ast.BuiltinExpr:
 		u.emit(v.Name + "(")
 		if v.Args != nil {
 			ast.Walk(u, v.Args)
@@ -170,7 +170,7 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			u.emit("]")
 		}
 
-	case *ast.DeclNode:
+	case *ast.VarDecl:
 		switch v.Kind {
 		case metrics.Counter:
 			u.emit("counter ")
@@ -198,19 +198,19 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			u.emit(" ~")
 			ast.Walk(u, v.Expr)
 		default:
-			u.emit(fmt.Sprintf("Unexpected op: %s", TokenKind(v.Op)))
+			u.emit(fmt.Sprintf("Unexpected op: %s", Kind(v.Op)))
 		}
 
-	case *ast.StringConst:
+	case *ast.StringLit:
 		u.emit("\"" + v.Text + "\"")
 
-	case *ast.IntConst:
+	case *ast.IntLit:
 		u.emit(strconv.FormatInt(v.I, 10))
 
-	case *ast.FloatConst:
+	case *ast.FloatLit:
 		u.emit(strconv.FormatFloat(v.F, 'g', -1, 64))
 
-	case *ast.DecoDefNode:
+	case *ast.DecoDecl:
 		u.emit(fmt.Sprintf("def %s {", v.Name))
 		u.newline()
 		u.indent()
@@ -218,7 +218,7 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		u.outdent()
 		u.emit("}")
 
-	case *ast.DecoNode:
+	case *ast.DecoStmt:
 		u.emit(fmt.Sprintf("@%s {", v.Name))
 		u.newline()
 		u.indent()
@@ -226,13 +226,13 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		u.outdent()
 		u.emit("}")
 
-	case *ast.NextNode:
+	case *ast.NextStmt:
 		u.emit("next")
 
-	case *ast.OtherwiseNode:
+	case *ast.OtherwiseStmt:
 		u.emit("otherwise")
 
-	case *ast.DelNode:
+	case *ast.DelStmt:
 		u.emit("del ")
 		ast.Walk(u, v.N)
 		if v.Expiry > 0 {
@@ -240,18 +240,18 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		}
 		u.newline()
 
-	case *ast.ConvNode:
+	case *ast.ConvExpr:
 		ast.Walk(u, v.N)
 
 	case *ast.PatternExpr:
 		ast.Walk(u, v.Expr)
 
-	case *ast.ErrorNode:
+	case *ast.Error:
 		u.emit("// error")
 		u.newline()
 		u.emit(v.Spelling)
 
-	case *ast.StopNode:
+	case *ast.StopStmt:
 		u.emit("stop")
 
 	default:

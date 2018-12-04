@@ -36,7 +36,7 @@ func Walk(v Visitor, node Node) Node {
 	case *ExprList:
 		n.Children = walknodelist(v, n.Children)
 
-	case *Cond:
+	case *CondStmt:
 		if n.Cond != nil {
 			n.Cond = Walk(v, n.Cond)
 		}
@@ -45,7 +45,7 @@ func Walk(v Visitor, node Node) Node {
 			n.Else = Walk(v, n.Else)
 		}
 
-	case *BuiltinNode:
+	case *BuiltinExpr:
 		if n.Args != nil {
 			n.Args = Walk(v, n.Args)
 		}
@@ -61,22 +61,22 @@ func Walk(v Visitor, node Node) Node {
 		n.Index = Walk(v, n.Index)
 		n.Lhs = Walk(v, n.Lhs)
 
-	case *DecoDefNode:
+	case *DecoDecl:
 		n.Block = Walk(v, n.Block)
 
-	case *DecoNode:
+	case *DecoStmt:
 		n.Block = Walk(v, n.Block)
 
-	case *ConvNode:
+	case *ConvExpr:
 		n.N = Walk(v, n.N)
 
 	case *PatternExpr:
 		n.Expr = Walk(v, n.Expr)
 
-	case *PatternFragmentDefNode:
+	case *PatternFragment:
 		n.Expr = Walk(v, n.Expr)
 
-	case *Id, *CaprefNode, *DeclNode, *StringConst, *IntConst, *FloatConst, *PatternConst, *NextNode, *OtherwiseNode, *DelNode, *StopNode:
+	case *IdTerm, *CaprefTerm, *VarDecl, *StringLit, *IntLit, *FloatLit, *PatternLit, *NextStmt, *OtherwiseStmt, *DelStmt, *StopStmt:
 		// These nodes are terminals, thus have no children to walk.
 
 	default:

@@ -12,13 +12,13 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/vm/bytecode"
+	"github.com/google/mtail/internal/vm/code"
 	"github.com/google/mtail/internal/vm/object"
 )
 
 var instructions = []struct {
 	name          string
-	i             bytecode.Instr
+	i             code.Instr
 	re            []*regexp.Regexp
 	str           []string
 	reversedStack []interface{} // stack is inverted to be pushed onto vm stack
@@ -27,7 +27,7 @@ var instructions = []struct {
 	expectedThread thread
 }{
 	{"match",
-		bytecode.Instr{bytecode.Match, 0},
+		code.Instr{code.Match, 0},
 		[]*regexp.Regexp{regexp.MustCompile("a*b")},
 		[]string{},
 		[]interface{}{},
@@ -35,126 +35,126 @@ var instructions = []struct {
 		thread{pc: 0, matches: map[int][]string{0: {"aaaab"}}},
 	},
 	{"cmp lt",
-		bytecode.Instr{bytecode.Cmp, -1},
+		code.Instr{code.Cmp, -1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1, "2"},
 		[]interface{}{true},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp eq",
-		bytecode.Instr{bytecode.Cmp, 0},
+		code.Instr{code.Cmp, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"2", "2"},
 		[]interface{}{true},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt",
-		bytecode.Instr{bytecode.Cmp, 1},
+		code.Instr{code.Cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{true},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp le",
-		bytecode.Instr{bytecode.Cmp, 1},
+		code.Instr{code.Cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, "2"},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp ne",
-		bytecode.Instr{bytecode.Cmp, 0},
+		code.Instr{code.Cmp, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"1", "2"},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp ge",
-		bytecode.Instr{bytecode.Cmp, -1},
+		code.Instr{code.Cmp, -1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 2},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt float float",
-		bytecode.Instr{bytecode.Cmp, 1},
+		code.Instr{code.Cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"2.0", "1.0"},
 		[]interface{}{true},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt float int",
-		bytecode.Instr{bytecode.Cmp, 1},
+		code.Instr{code.Cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"1.0", "2"},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt int float",
-		bytecode.Instr{bytecode.Cmp, 1},
+		code.Instr{code.Cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"1", "2.0"},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp eq string string false",
-		bytecode.Instr{bytecode.Cmp, 0},
+		code.Instr{code.Cmp, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"abc", "def"},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp eq string string true",
-		bytecode.Instr{bytecode.Cmp, 0},
+		code.Instr{code.Cmp, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"abc", "abc"},
 		[]interface{}{true},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt float float",
-		bytecode.Instr{bytecode.Cmp, 1},
+		code.Instr{code.Cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2.0, 1.0},
 		[]interface{}{true},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt float int",
-		bytecode.Instr{bytecode.Cmp, 1},
+		code.Instr{code.Cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1.0, 2},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cmp gt int float",
-		bytecode.Instr{bytecode.Cmp, 1},
+		code.Instr{code.Cmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1, 2.0},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"jnm",
-		bytecode.Instr{bytecode.Jnm, 37},
+		code.Instr{code.Jnm, 37},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{false},
 		[]interface{}{},
 		thread{pc: 37, matches: map[int][]string{}}},
 	{"jm",
-		bytecode.Instr{bytecode.Jm, 37},
+		code.Instr{code.Jm, 37},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{false},
 		[]interface{}{},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"jmp",
-		bytecode.Instr{bytecode.Jmp, 37},
+		code.Instr{code.Jmp, 37},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{},
 		[]interface{}{},
 		thread{pc: 37, matches: map[int][]string{}}},
 	{"strptime",
-		bytecode.Instr{bytecode.Strptime, 0},
+		code.Instr{code.Strptime, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"2012/01/18 06:25:00", "2006/01/02 15:04:05"},
@@ -162,294 +162,294 @@ var instructions = []struct {
 		thread{pc: 0, time: time.Date(2012, 1, 18, 6, 25, 0, 0, time.UTC),
 			matches: map[int][]string{}}},
 	{"iadd",
-		bytecode.Instr{bytecode.Iadd, 0},
+		code.Instr{code.Iadd, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(3)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"isub",
-		bytecode.Instr{bytecode.Isub, 0},
+		code.Instr{code.Isub, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(1)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"imul",
-		bytecode.Instr{bytecode.Imul, 0},
+		code.Instr{code.Imul, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(2)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"idiv",
-		bytecode.Instr{bytecode.Idiv, 0},
+		code.Instr{code.Idiv, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{4, 2},
 		[]interface{}{int64(2)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"imod",
-		bytecode.Instr{bytecode.Imod, 0},
+		code.Instr{code.Imod, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{4, 2},
 		[]interface{}{int64(0)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"imod 2",
-		bytecode.Instr{bytecode.Imod, 0},
+		code.Instr{code.Imod, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{3, 2},
 		[]interface{}{int64(1)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"tolower",
-		bytecode.Instr{bytecode.Tolower, 0},
+		code.Instr{code.Tolower, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"mIxeDCasE"},
 		[]interface{}{"mixedcase"},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"length",
-		bytecode.Instr{bytecode.Length, 0},
+		code.Instr{code.Length, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"1234"},
 		[]interface{}{4},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"length 0",
-		bytecode.Instr{bytecode.Length, 0},
+		code.Instr{code.Length, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{""},
 		[]interface{}{0},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"shl",
-		bytecode.Instr{bytecode.Shl, 0},
+		code.Instr{code.Shl, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(4)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"shr",
-		bytecode.Instr{bytecode.Shr, 0},
+		code.Instr{code.Shr, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(1)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"and",
-		bytecode.Instr{bytecode.And, 0},
+		code.Instr{code.And, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(0)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"or",
-		bytecode.Instr{bytecode.Or, 0},
+		code.Instr{code.Or, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(3)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"xor",
-		bytecode.Instr{bytecode.Xor, 0},
+		code.Instr{code.Xor, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 1},
 		[]interface{}{int64(3)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"xor 2",
-		bytecode.Instr{bytecode.Xor, 0},
+		code.Instr{code.Xor, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 3},
 		[]interface{}{int64(1)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"xor 3",
-		bytecode.Instr{bytecode.Xor, 0},
+		code.Instr{code.Xor, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{-1, 3},
 		[]interface{}{int64(^3)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"neg",
-		bytecode.Instr{bytecode.Neg, 0},
+		code.Instr{code.Neg, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{0},
 		[]interface{}{int64(-1)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"not",
-		bytecode.Instr{bytecode.Not, 0},
+		code.Instr{code.Not, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{false},
 		[]interface{}{true},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"pow",
-		bytecode.Instr{bytecode.Ipow, 0},
+		code.Instr{code.Ipow, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2, 2},
 		[]interface{}{int64(4)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"s2i pop",
-		bytecode.Instr{bytecode.S2i, 1},
+		code.Instr{code.S2i, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"ff", 16},
 		[]interface{}{int64(255)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"s2i",
-		bytecode.Instr{bytecode.S2i, nil},
+		code.Instr{code.S2i, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"190"},
 		[]interface{}{int64(190)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"s2f",
-		bytecode.Instr{bytecode.S2f, nil},
+		code.Instr{code.S2f, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"1.0"},
 		[]interface{}{float64(1.0)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"i2f",
-		bytecode.Instr{bytecode.I2f, nil},
+		code.Instr{code.I2f, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1},
 		[]interface{}{float64(1.0)},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"settime",
-		bytecode.Instr{bytecode.Settime, 0},
+		code.Instr{code.Settime, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{int64(0)},
 		[]interface{}{},
 		thread{pc: 0, time: time.Unix(0, 0).UTC(), matches: map[int][]string{}}},
 	{"push int",
-		bytecode.Instr{bytecode.Push, 1},
+		code.Instr{code.Push, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{},
 		[]interface{}{1},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"push float",
-		bytecode.Instr{bytecode.Push, 1.0},
+		code.Instr{code.Push, 1.0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{},
 		[]interface{}{1.0},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"setmatched false",
-		bytecode.Instr{bytecode.Setmatched, false},
+		code.Instr{code.Setmatched, false},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{},
 		[]interface{}{},
 		thread{matched: false, pc: 0, matches: map[int][]string{}}},
 	{"setmatched true",
-		bytecode.Instr{bytecode.Setmatched, true},
+		code.Instr{code.Setmatched, true},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{},
 		[]interface{}{},
 		thread{matched: true, pc: 0, matches: map[int][]string{}}},
 	{"otherwise",
-		bytecode.Instr{bytecode.Otherwise, nil},
+		code.Instr{code.Otherwise, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{},
 		[]interface{}{true},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"fadd",
-		bytecode.Instr{bytecode.Fadd, nil},
+		code.Instr{code.Fadd, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1.0, 2.0},
 		[]interface{}{3.0},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"fsub",
-		bytecode.Instr{bytecode.Fsub, nil},
+		code.Instr{code.Fsub, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1.0, 2.0},
 		[]interface{}{-1.0},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"fmul",
-		bytecode.Instr{bytecode.Fmul, nil},
+		code.Instr{code.Fmul, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1.0, 2.0},
 		[]interface{}{2.0},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"fdiv",
-		bytecode.Instr{bytecode.Fdiv, nil},
+		code.Instr{code.Fdiv, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1.0, 2.0},
 		[]interface{}{0.5},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"fmod",
-		bytecode.Instr{bytecode.Fmod, nil},
+		code.Instr{code.Fmod, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1.0, 2.0},
 		[]interface{}{1.0},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"fpow",
-		bytecode.Instr{bytecode.Fpow, nil},
+		code.Instr{code.Fpow, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{2.0, 2.0},
 		[]interface{}{4.0},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"getfilename",
-		bytecode.Instr{bytecode.Getfilename, nil},
+		code.Instr{code.Getfilename, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{},
 		[]interface{}{testFilename},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"i2s",
-		bytecode.Instr{bytecode.I2s, nil},
+		code.Instr{code.I2s, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1},
 		[]interface{}{"1"},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"f2s",
-		bytecode.Instr{bytecode.F2s, nil},
+		code.Instr{code.F2s, nil},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{3.1},
 		[]interface{}{"3.1"},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"cat",
-		bytecode.Instr{bytecode.Cat, 0},
+		code.Instr{code.Cat, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"first", "second"},
 		[]interface{}{"firstsecond"},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"icmp gt false",
-		bytecode.Instr{bytecode.Icmp, 1},
+		code.Instr{code.Icmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1, 2},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"fcmp gt false",
-		bytecode.Instr{bytecode.Fcmp, 1},
+		code.Instr{code.Fcmp, 1},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{1.0, 2.0},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
 	{"scmp eq false",
-		bytecode.Instr{bytecode.Scmp, 0},
+		code.Instr{code.Scmp, 0},
 		[]*regexp.Regexp{},
 		[]string{},
 		[]interface{}{"abc", "def"},
@@ -459,7 +459,7 @@ var instructions = []struct {
 
 const testFilename = "test"
 
-// Testbytecode.Instrs tests that each instruction behaves as expected through one
+// Testcode.Instrs tests that each instruction behaves as expected through one
 // instruction cycle.
 func TestInstrs(t *testing.T) {
 	for _, tc := range instructions {
@@ -471,7 +471,7 @@ func TestInstrs(t *testing.T) {
 				metrics.NewMetric("foo", "test", metrics.Counter, metrics.Int),
 				metrics.NewMetric("bar", "test", metrics.Counter, metrics.Int),
 				metrics.NewMetric("quux", "test", metrics.Gauge, metrics.Float))
-			obj := &object.Object{Regexps: tc.re, Strings: tc.str, Metrics: m, Program: []bytecode.Instr{tc.i}}
+			obj := &object.Object{Regexps: tc.re, Strings: tc.str, Metrics: m, Program: []code.Instr{tc.i}}
 			v := New(tc.name, obj, true, nil)
 			v.t = new(thread)
 			v.t.stack = make([]interface{}, 0)
@@ -504,8 +504,8 @@ func TestInstrs(t *testing.T) {
 }
 
 // makeVM is a helper method for construction a single-instruction VM
-func makeVM(i bytecode.Instr, m []*metrics.Metric) *VM {
-	obj := &object.Object{Metrics: m, Program: []bytecode.Instr{i}}
+func makeVM(i code.Instr, m []*metrics.Metric) *VM {
+	obj := &object.Object{Metrics: m, Program: []code.Instr{i}}
 	v := New("test", obj, true, nil)
 	v.t = new(thread)
 	v.t.stack = make([]interface{}, 0)
@@ -515,7 +515,7 @@ func makeVM(i bytecode.Instr, m []*metrics.Metric) *VM {
 
 }
 
-// bytecode.Instructions with datum store side effects
+// code.Instructions with datum store side effects
 func TestDatumSetInstrs(t *testing.T) {
 	var m []*metrics.Metric
 	m = append(m,
@@ -525,7 +525,7 @@ func TestDatumSetInstrs(t *testing.T) {
 	)
 
 	// simple inc
-	v := makeVM(bytecode.Instr{bytecode.Inc, nil}, m)
+	v := makeVM(code.Instr{code.Inc, nil}, m)
 	d, err := m[0].GetDatum()
 	if err != nil {
 		t.Fatal(err)
@@ -543,7 +543,7 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// inc by int
-	v = makeVM(bytecode.Instr{bytecode.Inc, 0}, m)
+	v = makeVM(code.Instr{code.Inc, 0}, m)
 	d, err = m[0].GetDatum()
 	if err != nil {
 		t.Fatal(err)
@@ -562,7 +562,7 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// inc by str
-	v = makeVM(bytecode.Instr{bytecode.Inc, 0}, m)
+	v = makeVM(code.Instr{code.Inc, 0}, m)
 	d, err = m[0].GetDatum()
 	if err != nil {
 		t.Fatal(err)
@@ -581,7 +581,7 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// iset
-	v = makeVM(bytecode.Instr{bytecode.Iset, nil}, m)
+	v = makeVM(code.Instr{code.Iset, nil}, m)
 	d, err = m[0].GetDatum()
 	if err != nil {
 		t.Fatal(err)
@@ -600,7 +600,7 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// iset str
-	v = makeVM(bytecode.Instr{bytecode.Iset, nil}, m)
+	v = makeVM(code.Instr{code.Iset, nil}, m)
 	d, err = m[0].GetDatum()
 	if err != nil {
 		t.Fatal(err)
@@ -619,7 +619,7 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// fset
-	v = makeVM(bytecode.Instr{bytecode.Fset, nil}, m)
+	v = makeVM(code.Instr{code.Fset, nil}, m)
 	d, err = m[1].GetDatum()
 	if err != nil {
 		t.Fatal(err)
@@ -638,7 +638,7 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// fset str
-	v = makeVM(bytecode.Instr{bytecode.Fset, nil}, m)
+	v = makeVM(code.Instr{code.Fset, nil}, m)
 	d, err = m[1].GetDatum()
 	if err != nil {
 		t.Fatal(err)
@@ -658,7 +658,7 @@ func TestDatumSetInstrs(t *testing.T) {
 	}
 
 	// sset
-	v = makeVM(bytecode.Instr{bytecode.Sset, nil}, m)
+	v = makeVM(code.Instr{code.Sset, nil}, m)
 	d, err = m[2].GetDatum()
 	if err != nil {
 		t.Fatal(err)
@@ -678,7 +678,7 @@ func TestDatumSetInstrs(t *testing.T) {
 	}
 
 	// dec
-	v = makeVM(bytecode.Instr{bytecode.Dec, nil}, m)
+	v = makeVM(code.Instr{code.Dec, nil}, m)
 	d, err = m[0].GetDatum()
 	if err != nil {
 		t.Fatal(err)
@@ -700,7 +700,7 @@ func TestDatumSetInstrs(t *testing.T) {
 
 func TestStrptimeWithTimezone(t *testing.T) {
 	loc, _ := time.LoadLocation("Europe/Berlin")
-	obj := &object.Object{Program: []bytecode.Instr{{bytecode.Strptime, 0}}}
+	obj := &object.Object{Program: []code.Instr{{code.Strptime, 0}}}
 	vm := New("strptimezone", obj, true, loc)
 	vm.t = new(thread)
 	vm.t.stack = make([]interface{}, 0)
@@ -713,7 +713,7 @@ func TestStrptimeWithTimezone(t *testing.T) {
 }
 
 func TestStrptimeWithoutTimezone(t *testing.T) {
-	obj := &object.Object{Program: []bytecode.Instr{{bytecode.Strptime, 0}}}
+	obj := &object.Object{Program: []code.Instr{{code.Strptime, 0}}}
 	vm := New("strptimezone", obj, true, nil)
 	vm.t = new(thread)
 	vm.t.stack = make([]interface{}, 0)
@@ -725,7 +725,7 @@ func TestStrptimeWithoutTimezone(t *testing.T) {
 	}
 }
 
-// bytecode.Instructions with datum retrieve
+// code.Instructions with datum retrieve
 func TestDatumFetchInstrs(t *testing.T) {
 	var m []*metrics.Metric
 	m = append(m,
@@ -735,7 +735,7 @@ func TestDatumFetchInstrs(t *testing.T) {
 
 	{
 		// iget
-		v := makeVM(bytecode.Instr{bytecode.Iget, nil}, m)
+		v := makeVM(code.Instr{code.Iget, nil}, m)
 		d, err := m[0].GetDatum()
 		if err != nil {
 			t.Fatal(err)
@@ -757,7 +757,7 @@ func TestDatumFetchInstrs(t *testing.T) {
 
 	{
 		// fget
-		v := makeVM(bytecode.Instr{bytecode.Fget, nil}, m)
+		v := makeVM(code.Instr{code.Fget, nil}, m)
 		d, err := m[1].GetDatum()
 		if err != nil {
 			t.Fatal(err)
@@ -779,7 +779,7 @@ func TestDatumFetchInstrs(t *testing.T) {
 
 	{
 		// sget
-		v := makeVM(bytecode.Instr{bytecode.Sget, nil}, m)
+		v := makeVM(code.Instr{code.Sget, nil}, m)
 		d, err := m[2].GetDatum()
 		if err != nil {
 			t.Fatal(err)
@@ -808,7 +808,7 @@ func TestDeleteInstrs(t *testing.T) {
 
 	m[0].GetDatum("z")
 
-	v := makeVM(bytecode.Instr{bytecode.Expire, 1}, m)
+	v := makeVM(code.Instr{code.Expire, 1}, m)
 	v.t.Push(time.Hour)
 	v.t.Push("z")
 	v.t.Push(m[0])
@@ -828,7 +828,7 @@ func TestDeleteInstrs(t *testing.T) {
 func TestTimestampInstr(t *testing.T) {
 	var m []*metrics.Metric
 	now := time.Now().UTC()
-	v := makeVM(bytecode.Instr{bytecode.Timestamp, nil}, m)
+	v := makeVM(code.Instr{code.Timestamp, nil}, m)
 	v.execute(v.t, v.prog[0])
 	if v.terminate {
 		t.Fatal("execution failed, see info log")
