@@ -14,7 +14,10 @@ type Kind int
 
 // String returns a readable name of the token Kind.
 func (k Kind) String() string {
-	return mtailTokname(int(k))
+	// 0xE000 is the magic offset for the first token ID in goyacc, and 2 is
+	// the offset of the internal tokens in the token table.  Yes this is a
+	// hack around what appears to be an original yacc bug.
+	return mtailTokname(int(k) - 0xE000 + 2)
 }
 
 // Token describes a lexed Token from the input, containing its type, the
