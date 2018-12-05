@@ -95,6 +95,8 @@ func (d *dotter) emitNode(id int, node ast.Node) {
 			attrs["label"] += parser.Kind(n.Op).String()
 		case *ast.UnaryExpr:
 			attrs["label"] += parser.Kind(n.Op).String()
+		case *ast.BuiltinExpr:
+			attrs["label"] += n.Name
 		}
 	}
 	pos := node.Pos()
