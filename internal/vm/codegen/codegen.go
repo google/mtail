@@ -240,12 +240,12 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	case *ast.DecoStmt:
 		// Put the current block on the stack
 		c.decos = append(c.decos, n)
-		if n.Def == nil {
+		if n.Decl == nil {
 			c.errorf(n.Pos(), "No definition found for decorator %q", n.Name)
 			return nil, n
 		}
 		// then iterate over the decorator's nodes
-		ast.Walk(c, n.Def.Block)
+		ast.Walk(c, n.Decl.Block)
 		c.decos = c.decos[:len(c.decos)-1]
 		return nil, n
 

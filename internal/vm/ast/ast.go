@@ -310,7 +310,7 @@ type DecoDecl struct {
 	Name   string
 	Block  Node
 	Symbol *symbol.Symbol
-	Scope  *symbol.Scope
+	Scope  *symbol.Scope // The declaration creates its own scope, as a zygote to be instantiated later.
 }
 
 func (n *DecoDecl) Pos() *position.Position {
@@ -328,8 +328,8 @@ type DecoStmt struct {
 	P     position.Position
 	Name  string
 	Block Node
-	Def   *DecoDecl
-	Scope *symbol.Scope
+	Decl  *DecoDecl     // Pointer to the declaration of the decorator this statement invokes.
+	Scope *symbol.Scope // Instantiated with a copy of the Def's Scope.
 }
 
 func (n *DecoStmt) Pos() *position.Position {

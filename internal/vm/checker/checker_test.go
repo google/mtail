@@ -140,6 +140,26 @@ const ID /bar/
 	// }
 	// `,
 	// 	[]string{"counter as string:4:4-11: Can't assign rhs of type String to lhs of type Int"}},
+	{"def without usage",
+		`def x{next}`,
+		[]string{"def without usage:1:1-10: Declaration of decorator `x' is never used"}},
+	{"def without next",
+		`def x{}
+@x {
+}`,
+		[]string{"def without next:1:1-3: No symbols found in decorator `@x', try adding a `next' statement."}},
+	{"def with two nexts",
+		`def x{
+  /a/ {
+    next
+  }
+  /b/ {
+    next
+  }
+}
+@x {
+}`,
+		[]string{"def with two nexts:6:5-8: Can't use `next' statement twice in a decorator."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
