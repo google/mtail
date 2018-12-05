@@ -130,7 +130,19 @@ func (d *dotter) VisitAfter(node ast.Node) ast.Node {
 	return node
 }
 
-func makeDot(n ast.Node, w io.Writer) error {
+func makeDot(name string, w io.Writer) error {
+	f, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+	n, err := parser.Parse(name, f)
+	if err != nil {
+		return err
+	}
+	n, err = checker.Check(n)
+	if err != nil {
+		return err
+	}
 	fmt.Fprintf(w, "digraph \"%s\" {\n", *prog)
 	dot := &dotter{w: w}
 	ast.Walk(dot, n)
@@ -145,21 +157,8 @@ func main() {
 		glog.Exitf("No -prog given")
 	}
 
-	f, err := os.Open(*prog)
-	if err != nil {
-		glog.Fatal(err)
-	}
-	n, err := parser.Parse(*prog, f)
-	if err != nil {
-		glog.Exit(err)
-	}
-	n, err = checker.Check(n)
-	if err != nil {
-		glog.Exit(err)
-	}
 	if *httpPort == "" {
-		makeDot(n, os.Stdout)
-		return
+		glog.Exit(makeDot(*prog, os.Stdout))
 	}
 
 	http.HandleFunc("/",
@@ -180,7 +179,7 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			err = makeDot(n, in)
+			err = makeDot(*prog, in)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
