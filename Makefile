@@ -186,8 +186,8 @@ export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPAT
 
 
 .fuzz-dep-stamp:
-	go get github.com/dvyukov/go-fuzz/go-fuzz
-	go get github.com/dvyukov/go-fuzz/go-fuzz-build
+	go get -u -v github.com/dvyukov/go-fuzz/go-fuzz
+	go get -u -v github.com/dvyukov/go-fuzz/go-fuzz-build
 	touch $@
 
 .PHONY: install-fuzz-deps
