@@ -1,3 +1,7 @@
+// Copyright 2013 Google Inc. All Rights Reserved.
+// This file is available under the Apache license.
+
+// Command mgen generates mtail programs for fuzz testing by following a simple grammar.
 package main
 
 import (
