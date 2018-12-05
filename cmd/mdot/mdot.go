@@ -103,7 +103,7 @@ func (d *dotter) emitNode(id int, node ast.Node) {
 	if pos != nil {
 		attrs["xlabel"] = pos.String()
 	}
-	fmt.Fprintf(d.w, "%d [", id)
+	fmt.Fprintf(d.w, "n%d [", id)
 	for k, v := range attrs {
 		fmt.Fprintf(d.w, "%s=\"%s\" ", k, v)
 	}
@@ -111,7 +111,7 @@ func (d *dotter) emitNode(id int, node ast.Node) {
 }
 
 func (d *dotter) emitLine(src, dst int) {
-	fmt.Fprintf(d.w, "%d -> %d\n", src, dst)
+	fmt.Fprintf(d.w, "n%d -> n%d\n", src, dst)
 }
 
 func (d *dotter) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
