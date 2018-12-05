@@ -201,7 +201,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 		}
 		return true
 	}
-	q := &quick.Config{MaxCount: 100000}
+	q := &quick.Config{MaxCount: 10000}
 	if testing.Short() {
 		q.MaxCountScale = 0.01
 	}
