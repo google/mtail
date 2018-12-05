@@ -136,6 +136,8 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `%s' previously declared at %s", n.Name, alt.Pos))
 			return nil, n
 		}
+		// Append a scope placeholder for the recursion into the block.  It has no parent, it'll be cloned when the decorator is instantiated.
+		c.decoScopes = append(c.decoScopes, symbol.NewScope(nil))
 		return c, n
 
 	case *ast.DecoStmt:
@@ -145,14 +147,15 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 				return nil, n
 			}
 			sym.Used = true
-			n.Def = sym.Binding.(*ast.DecoDecl)
+			n.Decl = sym.Binding.(*ast.DecoDecl)
 		} else {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.Name, n.Name))
 			return nil, n
 		}
+		// Create a new scope for the decorator instantiation.
 		n.Scope = symbol.NewScope(c.scope)
-		// Insert all of n.def.scope into this scope
-		n.Scope.CopyFrom(n.Def.Scope)
+		// Clone the DecoDecl scope zygote into this scope.
+		n.Scope.CopyFrom(n.Decl.Scope)
 		c.scope = n.Scope
 		return c, n
 
@@ -212,24 +215,35 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	case *ast.CondStmt:
 		c.checkSymbolUsage()
-		// Pop the scope
+		// Pop the scope.
 		c.scope = n.Scope.Parent
 		return n
 
 	case *ast.DecoStmt:
 		// Don't check symbol usage here because the decorator is only partially defined.
+		// Pop the scope.
 		c.scope = n.Scope.Parent
 		return n
 
 	case *ast.NextStmt:
-		// Put the current scope on a decorator-specific scoe stack for unwinding
-		c.decoScopes = append(c.decoScopes, c.scope)
+		// The last element in this list will be the empty stack created by the DecoDecl on the way in.
+		last := len(c.decoScopes) - 1
+		decoScope := c.decoScopes[last]
+		if len(decoScope.Symbols) > 0 {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Can't use `next' statement twice in a decorator."))
+		}
+		// Merge the current scope into it.
+		decoScope.CopyFrom(c.scope)
 		return n
 
 	case *ast.DecoDecl:
-		// Pop a decorator scope off the stack from the enclosed nextNode.
+		// Pop the scope off the list, and insert it into this node.
 		last := len(c.decoScopes) - 1
-		n.Scope = c.decoScopes[last]
+		decoScope := c.decoScopes[last]
+		if len(decoScope.Symbols) == 0 {
+			c.errors.Add(n.Pos(), fmt.Sprintf("No symbols found in decorator `@%s', try adding a `next' statement.", n.Name))
+		}
+		n.Scope = decoScope
 		c.decoScopes = c.decoScopes[:last]
 		return n
 

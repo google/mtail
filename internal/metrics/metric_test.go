@@ -201,11 +201,11 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 		}
 		return true
 	}
-	q := quick.Config{MaxCount: 100000}
+	q := &quick.Config{MaxCount: 10000}
 	if testing.Short() {
-		q.MaxCount = 1000
+		q.MaxCountScale = 0.01
 	}
-	if err := quick.Check(f, nil); err != nil {
+	if err := quick.Check(f, q); err != nil {
 		t.Error(err)
 	}
 }

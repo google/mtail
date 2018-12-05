@@ -4,7 +4,10 @@
 package symbol
 
 import (
+	"math/rand"
+	"reflect"
 	"testing"
+	"testing/quick"
 
 	"github.com/google/mtail/internal/testutil"
 )
@@ -20,6 +23,33 @@ func TestInsertLookup(t *testing.T) {
 	r1 := s.Lookup("foo", VarSymbol)
 	if diff := testutil.Diff(r1, sym1); diff != "" {
 		t.Error(diff)
+	}
+}
+
+// Generate implements the Generator interface for SymbolKind.
+func (SymbolKind) Generate(rand *rand.Rand, size int) reflect.Value {
+	return reflect.ValueOf(SymbolKind(rand.Intn(int(endSymbol))))
+}
+
+func TestInsertLookupQuick(t *testing.T) {
+	check := func(name string, kind SymbolKind) bool {
+		// Create a new scope each run because scope doesn't overwrite on insert.
+		scope := NewScope(nil)
+		sym := NewSymbol(name, kind, nil)
+		a := scope.Insert(sym)
+		if a != nil {
+			return false
+		}
+		b := scope.Lookup(name, kind)
+		diff := testutil.Diff(a, b)
+		return diff != ""
+	}
+	q := &quick.Config{MaxCount: 100000}
+	if testing.Short() {
+		q.MaxCountScale = 0.01
+	}
+	if err := quick.Check(check, q); err != nil {
+		t.Error(err)
 	}
 }
 
