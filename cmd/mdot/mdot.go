@@ -59,7 +59,7 @@ func (d *dotter) emitNode(id int, node ast.Node) {
 	}
 	switch n := node.(type) {
 	case *ast.VarDecl, *ast.DecoDecl:
-		attrs["fillcolor"] = "green"
+		attrs["fillcolor"] = "lightgreen"
 		switch n := n.(type) {
 		case *ast.VarDecl:
 			attrs["label"] += fmt.Sprintf("%s %s", n.Kind, n.Name)
