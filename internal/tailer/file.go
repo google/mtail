@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -34,6 +35,7 @@ var (
 type File struct {
 	Name     string // Given name for the file (possibly relative, used for displau)
 	Pathname string // Full absolute path of the file used internally
+	regular  bool   // Remember if this is a regular file (or a pipe)
 	fs       afero.Fs
 	file     afero.File
 	partial  *bytes.Buffer
@@ -61,8 +63,10 @@ func NewFile(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seekTo
 		logErrors.Add(absPath, 1)
 		return nil, errors.Wrapf(err, "Failed to stat %q", absPath)
 	}
+	regular := false
 	switch m := fi.Mode(); {
 	case m.IsRegular():
+		regular = true
 		seekWhence := io.SeekEnd
 		if seekToStart {
 			seekWhence = io.SeekCurrent
@@ -76,7 +80,7 @@ func NewFile(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seekTo
 	default:
 		return nil, errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, absPath)
 	}
-	return &File{pathname, absPath, fs, f, bytes.NewBufferString(""), lines}, nil
+	return &File{pathname, absPath, regular, fs, f, bytes.NewBufferString(""), lines}, nil
 }
 
 func open(fs afero.Fs, pathname string, seenBefore bool) (afero.File, error) {
@@ -91,7 +95,7 @@ func open(fs afero.Fs, pathname string, seenBefore bool) (afero.File, error) {
 	}
 	var f afero.File
 Retry:
-	f, err := fs.Open(pathname)
+	f, err := fs.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
 	if err != nil {
 		logErrors.Add(pathname, 1)
 		if shouldRetry() {
@@ -166,9 +170,10 @@ func (f *File) Read() error {
 		totalBytes += n
 		b = b[:n]
 
-		if err == io.EOF && totalBytes == 0 {
+		// If this time we've read no bytes at all and then hit an EOF, and
+		// we're a regular file, check for truncation.
+		if err == io.EOF && totalBytes == 0 && f.regular {
 			glog.V(2).Info("Suspected truncation.")
-			// If there was nothing to be read, perhaps the file just got truncated.
 			truncated, terr := f.checkForTruncate()
 			if terr != nil {
 				glog.Infof("checkForTruncate returned with error '%v'", terr)
