@@ -7,13 +7,24 @@ Command mdot turns an mtail program AST into a graphviz graph on standard output
 To use, run it like
 
   go run github.com/google/mtail/cmd/mdot --prog ../../examples/dhcpd.mtail | xdot -
+
+or
+
+  go run github.com/google/mtail/cmd/mdot --prog ../../examples/dhcpd.mtail --http_port 8080
+
+to view the dot output visit http://localhost:8080
+
+You'll need the graphviz `dot' command installed.
 */
 package main
 
 import (
 	"flag"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/golang/glog"
@@ -23,10 +34,12 @@ import (
 )
 
 var (
-	prog = flag.String("prog", "", "Name of the program source to parse.")
+	prog     = flag.String("prog", "", "Name of the program source to parse.")
+	httpPort = flag.String("http_port", "", "Port number to run HTTP server on.")
 )
 
 type dotter struct {
+	w        io.Writer
 	id       int
 	parentID []int // id of the parent node
 }
@@ -86,15 +99,15 @@ func (d *dotter) emitNode(id int, node ast.Node) {
 	if pos != nil {
 		attrs["xlabel"] = pos.String()
 	}
-	fmt.Printf("%d [", id)
+	fmt.Fprintf(d.w, "%d [", id)
 	for k, v := range attrs {
-		fmt.Printf("%s=\"%s\" ", k, v)
+		fmt.Fprintf(d.w, "%s=\"%s\" ", k, v)
 	}
-	fmt.Printf("]\n")
+	fmt.Fprintf(d.w, "]\n")
 }
 
 func (d *dotter) emitLine(src, dst int) {
-	fmt.Printf("%d -> %d\n", src, dst)
+	fmt.Fprintf(d.w, "%d -> %d\n", src, dst)
 }
 
 func (d *dotter) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
@@ -111,6 +124,14 @@ func (d *dotter) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 func (d *dotter) VisitAfter(node ast.Node) ast.Node {
 	d.parentID = d.parentID[:len(d.parentID)-1]
 	return node
+}
+
+func makeDot(n ast.Node, w io.Writer) error {
+	fmt.Fprintf(w, "digraph \"%s\" {\n", *prog)
+	dot := &dotter{w: w}
+	ast.Walk(dot, n)
+	fmt.Fprintf(w, "}\n")
+	return nil
 }
 
 func main() {
@@ -132,8 +153,49 @@ func main() {
 	if err != nil {
 		glog.Exit(err)
 	}
-	dot := &dotter{}
-	fmt.Printf("digraph \"%s\" {\n", *prog)
-	ast.Walk(dot, n)
-	fmt.Println("}")
+	if *httpPort == "" {
+		makeDot(n, os.Stdout)
+		return
+	}
+
+	http.HandleFunc("/",
+		func(w http.ResponseWriter, r *http.Request) {
+			dot := exec.Command("dot", "-Tsvg")
+			in, err := dot.StdinPipe()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			out, err := dot.StdoutPipe()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			err = dot.Start()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			err = makeDot(n, in)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			err = in.Close()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Add("Content-type", "image/svg+xml")
+			w.WriteHeader(http.StatusOK)
+			_, err = io.Copy(w, out)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			err = dot.Wait()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+		})
+	http.ListenAndServe(fmt.Sprintf(":%s", *httpPort), nil)
 }
