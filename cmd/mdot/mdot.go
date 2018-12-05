@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/checker"
 	"github.com/google/mtail/internal/vm/parser"
@@ -51,9 +52,10 @@ func (d *dotter) nextID() int {
 
 func (d *dotter) emitNode(id int, node ast.Node) {
 	attrs := map[string]string{
-		"label": strings.Split(fmt.Sprintf("%T", node), ".")[1] + "\n",
-		"shape": "box",
-		"style": "filled",
+		"label":   strings.Split(fmt.Sprintf("%T", node), ".")[1] + "\n",
+		"shape":   "box",
+		"style":   "filled",
+		"tooltip": node.Type().String(),
 	}
 	switch n := node.(type) {
 	case *ast.VarDecl, *ast.DecoDecl:
@@ -197,5 +199,6 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		})
+	http.HandleFunc("/favicon.ico", mtail.FaviconHandler)
 	http.ListenAndServe(fmt.Sprintf(":%s", *httpPort), nil)
 }

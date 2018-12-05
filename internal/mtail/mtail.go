@@ -227,7 +227,7 @@ func (m *Server) Serve() error {
 	if m.bindAddress == "" {
 		return errors.Errorf("No bind address provided.")
 	}
-	http.HandleFunc("/favicon.ico", faviconHandler)
+	http.HandleFunc("/favicon.ico", FaviconHandler)
 	http.Handle("/", m)
 	http.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	http.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
@@ -328,7 +328,7 @@ func (m *Server) Run() error {
 	return nil
 }
 
-func faviconHandler(w http.ResponseWriter, r *http.Request) {
+func FaviconHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/x-icon")
 	w.Header().Set("Cache-Control", "public, max-age=7776000")
 	if _, err := w.Write(logoFavicon); err != nil {
