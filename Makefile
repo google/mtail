@@ -116,7 +116,7 @@ PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
 
 PHONY: coverage
 coverage: gover.coverprofile
-gover.coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
+gover.coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .cov-dep-stamp
 	for package in $(PACKAGES); do\
 		go test -covermode=count -coverprofile=$$(echo $$package | tr './' '__').coverprofile ./$$package;\
     done
