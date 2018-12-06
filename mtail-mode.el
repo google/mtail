@@ -10,10 +10,23 @@
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.em$" . mtail-mode))
 
-(defvar mtail-mode-hook nil)
+(defgroup mtail nil
+  "Support for the mtail language."
+  :group 'languages
+  :prefix "mtail-")
 
-(defvar mtail-indent-offset 2
-  "Indent offset for `mtail-mode'.")
+
+(defcustom mtail-mode-hook nil
+  "Hook run when entering mtail mode."
+  :type 'hook
+  :group 'mtail)
+
+(defcustom mtail-indent-offset 2
+  "Indent offset for `mtail-mode'."
+  :type 'integer
+  :group 'mtail)
+
+;; font locking
 
 (defvar mtail-mode-syntax-table
   (let ((st (make-syntax-table)))
