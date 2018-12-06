@@ -46,14 +46,14 @@ GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 install mtail: $(GOFILES) $(GOGENFILES)
 	go install -ldflags $(GO_LDFLAGS) ./cmd/mtail
 
-internal/vm/parser/parser.go: internal/vm/parser/parser.y .gen-dep-stamp
+internal/vm/parser/parser.go: internal/vm/parser/parser.y | .gen-dep-stamp
 	go generate -x ./$(@D)
 
 internal/mtail/logo.ico: logo.png
 	test -x /usr/bin/convert && convert $< -define icon:auto-resize=64,48,32,16 $@ || touch $@
 
-internal/mtail/logo.ico.go: internal/mtail/logo.ico .gen-dep-stamp
-	togo -pkg mtail -name logoFavicon -input $<
+internal/mtail/logo.ico.go: internal/mtail/logo.ico | .gen-dep-stamp
+	go run github.com/flazz/togo -pkg mtail -name logoFavicon -input $<
 
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
@@ -69,7 +69,7 @@ GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 #GOX_OSARCH := ""
 
 .PHONY: crossbuild
-crossbuild: install_crossbuild $(GOFILES) $(GOGENFILES) .dep-stamp
+crossbuild: $(GOFILES) $(GOGENFILES) | .dep-stamp .crossbuild-dep-stamp
 	mkdir -p build
 	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS)
 
@@ -125,18 +125,17 @@ gover.coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
 .PHONY: covrep
 covrep: coverage.html
 	xdg-open $<
-coverage.html: gover.coverprofile
+coverage.html: gover.coverprofile | .cov-dep-stamp
 	go tool cover -html=$< -o $@
 
 .PHONY: testall
 testall: testrace bench regtest
 
-.PHONY: install_deps
-install_deps: .dep-stamp
-
 IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
 TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
 
+.PHONY: install_deps
+install_deps: .dep-stamp
 .dep-stamp: internal/vm/parser/parser.go
 	@echo "Install all dependencies, ensuring they're updated"
 	go get -u -v $(IMPORTS)
@@ -145,19 +144,17 @@ TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | un
 
 .PHONY: install_gen_deps
 install_gen_deps: .gen-dep-stamp
-
 .gen-dep-stamp:
 	go get -u -v golang.org/x/tools/cmd/goyacc
 	go get -u -v github.com/flazz/togo
 	touch $@
 
 .PHONY: install_coverage_deps
-install_coverage_deps: .cov-dep-stamp internal/vm/parser/parser.go
-
-.cov-dep-stamp: install_deps
-	go get golang.org/x/tools/cmd/cover
-	go get github.com/sozorogami/gover
-	go get github.com/mattn/goveralls
+install_coverage_deps: .cov-dep-stamp
+.cov-dep-stamp:
+	go get -u -v golang.org/x/tools/cmd/cover
+	go get -u -v github.com/sozorogami/gover
+	go get -u -v github.com/mattn/goveralls
 	touch $@
 
 ifeq ($(CIRCLECI),true)
@@ -184,16 +181,14 @@ empty :=
 space := $(empty) $(empty)
 export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPATH))))
 
-
+.PHONY: install-fuzz-deps
+install-fuzz-deps: .fuzz-dep-stamp
 .fuzz-dep-stamp:
 	go get -u -v github.com/dvyukov/go-fuzz/go-fuzz
 	go get -u -v github.com/dvyukov/go-fuzz/go-fuzz-build
 	touch $@
 
-.PHONY: install-fuzz-deps
-install-fuzz-deps: .fuzz-dep-stamp
-
-vm-fuzz.zip: .fuzz-dep-stamp $(GOFILES)
+vm-fuzz.zip: $(GOFILES) | .fuzz-dep-stamp
 	go-fuzz-build github.com/google/mtail/internal/vm
 
 .PHONY: fuzz
