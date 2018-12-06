@@ -89,7 +89,7 @@
      )))
 
 ;;;###autoload
-(define-derived-mode mtail-mode awk-mode "emtail"
+(define-derived-mode mtail-mode awk-mode "mtail"
   "Major mode for editing mtail programs."
   :syntax-table mtail-mode-syntax-table
   (set (make-local-variable 'paragraph-separate) "^[ \t]*$")
