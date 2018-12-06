@@ -52,8 +52,8 @@ internal/vm/parser/parser.go: internal/vm/parser/parser.y .gen-dep-stamp
 internal/mtail/logo.ico: logo.png
 	test -x /usr/bin/convert && convert $< -define icon:auto-resize=64,48,32,16 $@ || touch $@
 
-internal/mtail/logo.ico.go: internal/mtail/logo.ico
-	go run github.com/flazz/togo -pkg mtail -name logoFavicon -input $<
+internal/mtail/logo.ico.go: internal/mtail/logo.ico .gen-dep-stamp
+	togo -pkg mtail -name logoFavicon -input $<
 
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
