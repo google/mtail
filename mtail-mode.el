@@ -1,9 +1,18 @@
-; Copyright 2011 Google Inc. All Rights Reserved.
-; This file is available under the Apache license.
+;;; mtail-mode.el -- Major mode for editing mtail programs.
+;;;
+;;; Copyright 2011 Google Inc. All Rights Reserved.
+;;; This file is available under the Apache license.
+;;;
+;;; Commentary:
+;;;
+;;; Code:
+
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.em$" . mtail-mode))
 
 (defvar mtail-mode-hook nil)
 
-(defcustom mtail-indent-offset 2
+(defvar mtail-indent-offset 2
   "Indent offset for `mtail-mode'.")
 
 (defvar mtail-mode-syntax-table
@@ -89,4 +98,4 @@
 
 (provide 'mtail-mode)
 
-(add-to-list 'auto-mode-alist (cons "\\.em$" #'mtail-mode))
+;;; mtail-mode.el ends here
