@@ -8,7 +8,7 @@
 ;;; Code:
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.em$" . mtail-mode))
+(add-to-list 'auto-mode-alist '("\\.mtail$" . mtail-mode))
 
 (defgroup mtail nil
   "Support for the mtail language."
@@ -104,10 +104,14 @@
 (defun mtail-mode-reload ()
   "Reload mtail-mode.el and put the current buffer into emtail-mode.  Useful for debugging."
   (interactive)
-  (unload-feature 'mtail-mode)
-  (add-to-list 'load-path "/home/jaq/src/mtail")
-  (require 'mtail-mode)
-  (mtail-mode))
+  ;; Store the file that contains mtail-mode, this file.
+  (let ((mtail-mode-filename (symbol-file 'mtail-mode)))
+    (progn
+      (unload-feature 'mtail-mode)
+      (load-file mtail-mode-filename)
+      (require 'mtail-mode)
+      ;; Whatever buffer we're in, reset its mode.
+      (set-auto-mode t))))
 
 (provide 'mtail-mode)
 
