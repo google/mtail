@@ -9,7 +9,7 @@ common-build: &common-build
     - checkout
     - run: mkdir -p $TEST_RESULTS
     - run: go get github.com/jstemmer/go-junit-report
-    - run: make install_coverage_deps
+    - run: make install_deps install_coverage_deps
     - run:
         name: Run tests with race detector
         command: |
