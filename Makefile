@@ -25,7 +25,6 @@ CLEANFILES+=\
 	internal/mtail/logo.ico.go\
 	internal/mtail/logo.ico\
 
-
 all: mtail
 
 .PHONY: clean covclean crossclean
@@ -58,12 +57,6 @@ internal/mtail/logo.ico.go: internal/mtail/logo.ico | .gen-dep-stamp
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
 
-.PHONY: install_crossbuild
-install_crossbuild: .crossbuild-dep-stamp
-
-.crossbuild-dep-stamp:
-	go get github.com/mitchellh/gox
-	touch $@
 
 GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 #GOX_OSARCH := ""
@@ -134,29 +127,6 @@ testall: testrace bench regtest
 IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
 TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
 
-.PHONY: install_deps
-install_deps: .dep-stamp
-.dep-stamp: internal/vm/parser/parser.go
-	@echo "Install all dependencies, ensuring they're updated"
-	go get -u -v $(IMPORTS)
-	go get -u -v $(TESTIMPORTS)
-	touch $@
-
-.PHONY: install_gen_deps
-install_gen_deps: .gen-dep-stamp
-.gen-dep-stamp:
-	go get -u -v golang.org/x/tools/cmd/goyacc
-	go get -u -v github.com/flazz/togo
-	touch $@
-
-.PHONY: install_coverage_deps
-install_coverage_deps: .cov-dep-stamp
-.cov-dep-stamp:
-	go get -u -v golang.org/x/tools/cmd/cover
-	go get -u -v github.com/sozorogami/gover
-	go get -u -v github.com/mattn/goveralls
-	touch $@
-
 ifeq ($(CIRCLECI),true)
   COVERALLS_SERVICE := circle-ci
 endif
@@ -181,13 +151,9 @@ empty :=
 space := $(empty) $(empty)
 export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPATH))))
 
-.PHONY: install-fuzz-deps
-install-fuzz-deps: .fuzz-dep-stamp
-.fuzz-dep-stamp:
-	go get -u -v github.com/dvyukov/go-fuzz/go-fuzz
-	go get -u -v github.com/dvyukov/go-fuzz/go-fuzz-build
-	touch $@
-
+###
+## Fuzz testing
+#
 vm-fuzz.zip: $(GOFILES) | .fuzz-dep-stamp
 	go-fuzz-build github.com/google/mtail/internal/vm
 
@@ -197,3 +163,42 @@ fuzz: vm-fuzz.zip
 	mkdir -p workdir/corpus
 	cp examples/*.mtail workdir/corpus
 	go-fuzz -bin=vm-fuzz.zip -workdir=workdir
+
+###
+## dependency section
+#
+.PHONY: install_deps
+install_deps: .dep-stamp
+.dep-stamp: internal/vm/parser/parser.go
+	@echo "Install all dependencies, ensuring they're updated"
+	go get -u -v $(IMPORTS)
+	go get -u -v $(TESTIMPORTS)
+	touch $@
+
+.PHONY: install_gen_deps
+install_gen_deps: .gen-dep-stamp
+.gen-dep-stamp:
+	go get -u -v golang.org/x/tools/cmd/goyacc
+	go get -u -v github.com/flazz/togo
+	touch $@
+
+.PHONY: install_coverage_deps
+install_coverage_deps: .cov-dep-stamp
+.cov-dep-stamp:
+	go get -u -v golang.org/x/tools/cmd/cover
+	go get -u -v github.com/sozorogami/gover
+	go get -u -v github.com/mattn/goveralls
+	touch $@
+
+.PHONY: install_crossbuild
+install_crossbuild: .crossbuild-dep-stamp
+.crossbuild-dep-stamp:
+	go get github.com/mitchellh/gox
+	touch $@
+
+.PHONY: install-fuzz-deps
+install-fuzz-deps: .fuzz-dep-stamp
+.fuzz-dep-stamp:
+	go get -u -v github.com/dvyukov/go-fuzz/go-fuzz
+	go get -u -v github.com/dvyukov/go-fuzz/go-fuzz-build
+	touch $@
