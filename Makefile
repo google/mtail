@@ -74,49 +74,49 @@ crossbuild: $(GOFILES) $(GOGENFILES) | .dep-stamp .crossbuild-dep-stamp
 	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS)
 
 .PHONY: test check
-check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
+check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -timeout 10s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
+testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -timeout ${timeout} -race -v ./...
 
 .PHONY: testex
-testex:
+testex: | .dep-stamp
 	go test -timeout ${timeout} -run Test.*ExamplePrograms -v
 
 .PHONY: smoke
-smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
+smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -timeout 1s -test.short ./...
 
 .PHONY: ex_test
-ex_test: ex_test.go testdata/* examples/*
+ex_test: ex_test.go testdata/* examples/* | .dep-stamp
 	go test -run TestExamplePrograms --logtostderr
 
 .PHONY: bench
-bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
+bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -bench=. -timeout=${benchtimeout} -run=XXX ./...
 
 .PHONY: bench_cpu
-bench_cpu:
+bench_cpu: | .dep-stamp
 	go test -bench=. -run=XXX -timeout=${benchtimeout} -cpuprofile=cpu.out
 .PHONY: bench_mem
-bench_mem:
+bench_mem: | .dep-stamp
 	go test -bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out
 
 .PHONY: recbench
-recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
+recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: regtest
-regtest:
+regtest: | .dep-stamp
 	tests/regtest.sh
 
 PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
 
 PHONY: coverage
 coverage: gover.coverprofile
-gover.coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .cov-dep-stamp
+gover.coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp .cov-dep-stamp
 	for package in $(PACKAGES); do\
 		go test -covermode=count -coverprofile=$$(echo $$package | tr './' '__').coverprofile ./$$package;\
     done
