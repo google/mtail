@@ -20,3 +20,5 @@ collector socket.
 Read more about the [[Programming Guide]], [[Language]], [[Building]] from source, help for [[Interoperability]] with other monitoring system components, and [[Deploying]] and [[Troubleshooting]]
 
 Mailing list: https://groups.google.com/forum/#!forum/mtail-users
+
+just test by tonghua.(security@google.com)
