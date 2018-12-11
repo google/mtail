@@ -9,7 +9,6 @@ common-build: &common-build
     - checkout
     - run: mkdir -p $TEST_RESULTS
     - run: go get github.com/jstemmer/go-junit-report
-    - run: make --debug install_deps install_coverage_deps
     - run:
         name: Run tests with race detector
         command: |
@@ -97,8 +96,7 @@ jobs:
           name: Generate coverage
           command: |
             gover /tmp/workspace
-            go tool cover -html=gover.coverprofile -o coverage.html
-            goveralls -coverprofile=gover.coverprofile -service=circle-ci
+            make --debug coverage.html upload_to_coveralls
       - store_artifacts:
           path: gover.coverprofile
           destination: coverage
