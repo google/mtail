@@ -11,16 +11,12 @@ foo.log
 *.test
 /coverage.html
 *.coverprofile
-/.dep-stamp
-/.build-dep-stamp
-/.gen-dep-stamp
+/.*dep-stamp
 /cpu.out
 /mem.out
 /build
-/.crossbuild-dep-stamp
 /.ghi.yml
 /vm-fuzz.zip
 workdir/*
-/.fuzz-dep-stamp
 /tests/regtest
 /.pc
