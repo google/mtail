@@ -133,7 +133,7 @@ tag-filter: &tag-filter
 # of the build matrix change.
 workflows:
   version: 2
-  build:
+  build_and_deliver:
     jobs:
       - build-go1.11-4:
           <<: *tag-filter
