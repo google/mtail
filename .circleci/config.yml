@@ -9,24 +9,24 @@ common-build: &common-build
     - checkout
     - run: mkdir -p $TEST_RESULTS
     - run: go get github.com/jstemmer/go-junit-report
-    - run: make install_deps install_coverage_deps
+    - run: make --debug install_deps install_coverage_deps
     - run:
         name: Run tests with race detector
         command: |
           trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
-          make testrace | tee ${TEST_RESULTS}/go-test.out
+          make --debug testrace | tee ${TEST_RESULTS}/go-test.out
     - run:
         name: Run tests with coverage
         command: |
-          make gover.coverprofile
+          make --debug gover.coverprofile
           mkdir -p workspace
           cp gover.coverprofile workspace/${CIRCLE_JOB}.coverprofile
     - persist_to_workspace:
         root: workspace
         paths:
           - "*.coverprofile"
-    - run: make regtest
-    - run: make bench
+    - run: make --debug regtest
+    - run: make --debug bench
     - store_test_results:
         path: /tmp/test-results
 
@@ -92,7 +92,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - run: make install_coverage_deps
+      - run: make --debug install_coverage_deps
       - run:
           name: Generate coverage
           command: |
@@ -114,7 +114,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - run: make crossbuild
+      - run: make --debug crossbuild
       - run: sha1sum build/*
       - store_artifacts:
           path: build/
