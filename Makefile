@@ -22,8 +22,9 @@ GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
 GOTESTFILES=$(shell find . -name '*_test.go')
 
-PARSER_GO=internal/vm/parser/parser.go
-LOGO_GO=internal/mtail/logo.ico.go
+GOGENFILES=internal/vm/parser/parser.go\
+	internal/mtail/logo.ico.go
+
 
 CLEANFILES+=\
 	internal/vm/parser/parser.go\
@@ -48,14 +49,14 @@ release := $(shell git describe --tags | cut -d"-" -f 1,2)
 GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 
 .PHONY: install mtail
-install mtail: $(GOFILES) $(PARSER_GO) | $(LOGO_GO)
+install mtail: $(GOFILES) $(GOGENFILES)
 	go install -ldflags $(GO_LDFLAGS) ./cmd/mtail
 
 internal/vm/parser/parser.go: internal/vm/parser/parser.y | .gen-dep-stamp
 	go generate -x ./$(@D)
 
-internal/mtail/logo.ico: logo.png
-	/usr/bin/convert $< -define icon:auto-resize=64,48,32,16 $@
+internal/mtail/logo.ico: | logo.png
+	/usr/bin/convert $< -define icon:auto-resize=64,48,32,16 $@ || touch $@
 
 internal/mtail/logo.ico.go: internal/mtail/logo.ico | .gen-dep-stamp
 	go run github.com/flazz/togo -pkg mtail -name logoFavicon -input $<
@@ -68,16 +69,16 @@ GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 #GOX_OSARCH := ""
 
 .PHONY: crossbuild
-crossbuild: $(GOFILES) $(PARSER_GO) | $(LOGO_GO) | .dep-stamp .crossbuild-dep-stamp
+crossbuild: $(GOFILES) $(GOGENFILES) | .dep-stamp .crossbuild-dep-stamp
 	mkdir -p build
 	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS)
 
 .PHONY: test check
-check test: $(GOFILES) $(PARSER_GO) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
+check test: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
 	go test -timeout 10s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(PARSER_GO) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
+testrace: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
 	go test -timeout ${timeout} -race -v ./...
 
 .PHONY: testex
@@ -85,7 +86,7 @@ testex: | .dep-stamp
 	go test -timeout ${timeout} -run Test.*ExamplePrograms -v
 
 .PHONY: smoke
-smoke: $(GOFILES) $(PARSER_GO) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
+smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -timeout 1s -test.short ./...
 
 .PHONY: ex_test
@@ -93,7 +94,7 @@ ex_test: ex_test.go testdata/* examples/* | .dep-stamp
 	go test -run TestExamplePrograms --logtostderr
 
 .PHONY: bench
-bench: $(GOFILES) $(PARSER_GO) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
+bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -bench=. -timeout=${benchtimeout} -run=XXX ./...
 
 .PHONY: bench_cpu
@@ -104,7 +105,7 @@ bench_mem: | .dep-stamp
 	go test -bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out
 
 .PHONY: recbench
-recbench: $(GOFILES) $(PARSER_GO) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
+recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: regtest
@@ -115,7 +116,7 @@ PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
 
 PHONY: coverage
 coverage: gover.coverprofile
-gover.coverprofile: $(GOFILES) $(PARSER_GO) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp .cov-dep-stamp
+gover.coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp .cov-dep-stamp
 	for package in $(PACKAGES); do\
 		go test -covermode=count -coverprofile=$$(echo $$package | tr './' '__').coverprofile ./$$package;\
     done
