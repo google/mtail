@@ -13,6 +13,11 @@ endif
 # all benchmarks, not per bench.
 benchtimeout := 20m
 
+GOGETFLAGS="-v"
+ifeq ($(UPGRADE),"y")
+GOGETFLAGS=$(GOGETFLAGS) "-u"
+endif
+
 GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
 GOTESTFILES=$(shell find . -name '*_test.go')
@@ -172,23 +177,23 @@ fuzz: vm-fuzz.zip
 install_deps: .dep-stamp
 .dep-stamp: internal/vm/parser/parser.go
 	@echo "Install all dependencies, ensuring they're updated"
-	go get -u -v $(IMPORTS)
-	go get -u -v $(TESTIMPORTS)
+	go get $(UPGRADE) -v $(IMPORTS)
+	go get $(UPGRADE) -v $(TESTIMPORTS)
 	touch $@
 
 .PHONY: install_gen_deps
 install_gen_deps: .gen-dep-stamp
 .gen-dep-stamp:
-	go get -u -v golang.org/x/tools/cmd/goyacc
-	go get -u -v github.com/flazz/togo
+	go get $(UPGRADE) -v golang.org/x/tools/cmd/goyacc
+	go get $(UPGRADE) -v github.com/flazz/togo
 	touch $@
 
 .PHONY: install_coverage_deps
 install_coverage_deps: .cov-dep-stamp
 .cov-dep-stamp:
-	go get -u -v golang.org/x/tools/cmd/cover
-	go get -u -v github.com/sozorogami/gover
-	go get -u -v github.com/mattn/goveralls
+	go get $(UPGRADE) -v golang.org/x/tools/cmd/cover
+	go get $(UPGRADE) -v github.com/sozorogami/gover
+	go get $(UPGRADE) -v github.com/mattn/goveralls
 	touch $@
 
 .PHONY: install_crossbuild
@@ -200,6 +205,6 @@ install_crossbuild: .crossbuild-dep-stamp
 .PHONY: install-fuzz-deps
 install-fuzz-deps: .fuzz-dep-stamp
 .fuzz-dep-stamp:
-	go get -u -v github.com/dvyukov/go-fuzz/go-fuzz
-	go get -u -v github.com/dvyukov/go-fuzz/go-fuzz-build
+	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz
+	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz-build
 	touch $@
