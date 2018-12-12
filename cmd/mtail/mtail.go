@@ -115,7 +115,11 @@ func main() {
 	}
 	w, err := watcher.NewLogWatcher()
 	if err != nil {
-		glog.Exitf("Failure to create log watcher: %s", err)
+		glog.Errorf("Failure to create log watcher: %s", err)
+		if *pollInterval == 0 {
+			glog.Info("Setting poll interval to 250ms")
+			*pollInterval = time.Millisecond * 250
+		}
 	}
 	opts := []func(*mtail.Server) error{
 		mtail.ProgramPath(*progs),
