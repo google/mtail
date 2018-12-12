@@ -1,3 +1,8 @@
+tailer needs to have a robust stop method not relying on the watcher events
+    channel
+
+   or watcher exists but handles the polling
+
 standard library, search path
 
 refactor fs and notify into single interface
