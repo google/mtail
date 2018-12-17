@@ -35,6 +35,16 @@ changes.
 Use `--logs` multiple times to pass in glob patterns that match the logs you
 want to tail.  This includes named pipes.
 
+### Polling the file system
+
+If your system is not supported by `fsnotify` then mtail will fall back to polling mode.  You can also specify this explicitly with the `--poll_interval` flag, for example
+
+```
+mtail --progs /etc/mtail --logs /var/log/syslog --poll_interval 250ms
+```
+
+*N.B.* `mtail` will only discover new files if using `fsnotify`.  If you rely on polling mode, then only the files that mtail sees at program startup will be watched.
+
 ### Launching under Docker
 
 `mtail` can be run as a sidecar process if you expose an application container's logs with a volume.
