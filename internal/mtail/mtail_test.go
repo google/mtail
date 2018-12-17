@@ -45,7 +45,7 @@ func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	expvar.Get("log_rotations_total").(*expvar.Map).Init()
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
-	w, err := watcher.NewLogWatcher()
+	w, err := watcher.NewLogWatcher(0)
 	if err != nil {
 		t.Errorf("Couodn't make a log watcher: %s", err)
 	}

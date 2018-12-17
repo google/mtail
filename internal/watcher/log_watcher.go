@@ -32,7 +32,12 @@ type LogWatcher struct {
 	watchedMu sync.RWMutex          // protects `watched'
 	watched   map[string]chan Event // Names of paths being watched
 
-	runDone chan struct{} // Channel to respond to Close
+	stopTicks chan struct{} // Channel to notify ticker to stop.
+
+	ticksDone  chan struct{} // Channel to notify when the ticks handler is done.
+	eventsDone chan struct{} // Channel to notify when the events handler is done.
+
+	closeOnce sync.Once
 }
 
 // NewLogWatcher returns a new LogWatcher, or returns an error.
@@ -48,13 +53,15 @@ func NewLogWatcher(pollInterval time.Duration) (*LogWatcher, error) {
 		watcher: f,
 		events:  make([]chan Event, 0),
 		watched: make(map[string]chan Event),
-		runDone: make(chan struct{}),
 	}
 	if pollInterval > 0 {
 		w.pollTicker = time.NewTicker(pollInterval)
+		w.stopTicks = make(chan struct{})
+		w.ticksDone = make(chan struct{})
 		go w.runTicks()
 	}
 	if f != nil {
+		w.eventsDone = make(chan struct{})
 		go w.runEvents()
 	}
 	return w, nil
@@ -88,26 +95,31 @@ func (w *LogWatcher) sendEvent(e Event) {
 }
 
 func (w *LogWatcher) runTicks() {
+	defer close(w.ticksDone)
+
 	if w.pollTicker == nil {
 		return
 	}
 
-	var ticks <-chan time.Time
-	ticks = w.pollTicker.C
-	defer w.pollTicker.Stop()
-
-	for _ = range ticks {
-		w.watchedMu.RLock()
-		for n, c := range w.watched {
-			c <- Event{Update, n}
+Exit:
+	for {
+		select {
+		case _ = <-w.pollTicker.C:
+			w.watchedMu.RLock()
+			for n, c := range w.watched {
+				c <- Event{Update, n}
+			}
+			w.watchedMu.RUnlock()
+		case <-w.stopTicks:
+			w.pollTicker.Stop()
+			break Exit
 		}
-		w.watchedMu.RUnlock()
 	}
 }
 
 // runEvents assumes that w.watcher is not nil
 func (w *LogWatcher) runEvents() {
-	defer close(w.runDone)
+	defer close(w.eventsDone)
 
 	// Suck out errors and dump them to the error log.
 	go func() {
@@ -138,16 +150,25 @@ func (w *LogWatcher) runEvents() {
 	glog.Infof("Shutting down log watcher.")
 }
 
-// Close shuts down the LogWatcher.  It is safe to call this from multiple clients because
+// Close shuts down the LogWatcher.  It is safe to call this from multiple clients.
 func (w *LogWatcher) Close() (err error) {
-	err = w.watcher.Close()
-	<-w.runDone
-	w.eventsMu.Lock()
-	for _, c := range w.events {
-		close(c)
-	}
-	w.eventsMu.Unlock()
-	return
+	w.closeOnce.Do(func() {
+		if w.watcher != nil {
+			err = w.watcher.Close()
+			<-w.eventsDone
+		}
+		if w.pollTicker != nil {
+			close(w.stopTicks)
+			<-w.ticksDone
+		}
+		glog.Info("Closing events channels")
+		w.eventsMu.Lock()
+		for _, c := range w.events {
+			close(c)
+		}
+		w.eventsMu.Unlock()
+	})
+	return nil
 }
 
 // Add adds a path to the list of watched items.
@@ -195,4 +216,14 @@ func (w *LogWatcher) IsWatching(path string) bool {
 	_, ok := w.watched[absPath]
 	w.watchedMu.RUnlock()
 	return ok
+}
+
+func (w *LogWatcher) Remove(path string) error {
+	w.watchedMu.Lock()
+	delete(w.watched, path)
+	w.watchedMu.Unlock()
+	if w.watcher != nil {
+		return w.watcher.Remove(path)
+	}
+	return nil
 }

@@ -113,13 +113,9 @@ func main() {
 			glog.Exitf("mtail requires the names of logs to follow in order to extract logs from them; please use the flag -logs one or more times to specify glob patterns describing these logs.")
 		}
 	}
-	w, err := watcher.NewLogWatcher()
+	w, err := watcher.NewLogWatcher(*pollInterval)
 	if err != nil {
-		glog.Errorf("Failure to create log watcher: %s", err)
-		if *pollInterval == 0 {
-			glog.Info("Setting poll interval to 250ms")
-			*pollInterval = time.Millisecond * 250
-		}
+		glog.Exitf("Failure to create log watcher: %s", err)
 	}
 	opts := []func(*mtail.Server) error{
 		mtail.ProgramPath(*progs),
@@ -127,7 +123,6 @@ func main() {
 		mtail.BindAddress(*address, *port),
 		mtail.BuildInfo(buildInfo()),
 		mtail.OverrideLocation(loc),
-		mtail.PollInterval(*pollInterval),
 	}
 	if *oneShot {
 		opts = append(opts, mtail.OneShot)

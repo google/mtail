@@ -41,7 +41,6 @@ type Server struct {
 	closeOnce sync.Once     // Ensure shutdown happens only once.
 
 	overrideLocation *time.Location // Timezone location to use when parsing timestamps
-	pollInterval     time.Duration  // Interval between polls of the filesystem
 	bindAddress      string         // address to bind HTTP server
 	buildInfo        string         // go build information
 	programPath      string         // path to programs to load
@@ -124,9 +123,7 @@ func (m *Server) initExporter() (err error) {
 
 // initTailer sets up a Tailer for this MtailServer.
 func (m *Server) initTailer() (err error) {
-	opts := []func(*tailer.Tailer) error{
-		tailer.PollInterval(m.pollInterval),
-	}
+	opts := []func(*tailer.Tailer) error{}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
 	}
