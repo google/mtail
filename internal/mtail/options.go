@@ -4,7 +4,6 @@
 package mtail
 
 import (
-	"errors"
 	"net"
 	"time"
 )
@@ -45,17 +44,6 @@ func BuildInfo(info string) func(*Server) error {
 func OverrideLocation(loc *time.Location) func(*Server) error {
 	return func(m *Server) error {
 		m.overrideLocation = loc
-		return nil
-	}
-}
-
-// PollInterval sets the polling interval to use on a Tailer.
-func PollInterval(interval time.Duration) func(*Server) error {
-	return func(m *Server) error {
-		if interval < 0 {
-			return errors.New("poll_interval must be positive, or zero to disable")
-		}
-		m.pollInterval = interval
 		return nil
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/testutil"
 )
 
@@ -40,7 +41,7 @@ func TestLogWatcher(t *testing.T) {
 		}
 	}()
 
-	w, err := NewLogWatcher()
+	w, err := NewLogWatcher(0)
 	if err != nil {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
@@ -160,23 +161,27 @@ func TestLogWatcher(t *testing.T) {
 }
 
 // This test may be OS specific; possibly break it out to a file with build tags.
-func TestNewLogWatcherError(t *testing.T) {
+func TestFsnotifyErrorFallbackToPoll(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping log watcher test in short mode")
 	}
+	// The Warning log isn't created until the first write.  Create it before
+	// setting the rlimit on open files or the test will fail trying to open
+	// the log file instead of where it should.
+	glog.Warning("pre-creating log to avoid too many open file")
 
 	var rLimit syscall.Rlimit
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
-		t.Fatalf("coulnd't get rlimit: %s", err)
+		t.Fatalf("couldn't get rlimit: %s", err)
 	}
 	var zero = rLimit
 	zero.Cur = 0
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &zero); err != nil {
 		t.Fatalf("couldn't set rlimit: %s", err)
 	}
-	_, err := NewLogWatcher()
-	if err == nil {
-		t.Errorf("didn't fail as expected")
+	_, err := NewLogWatcher(0)
+	if err != nil {
+		t.Error(err)
 	}
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
 		t.Fatalf("couldn't reset rlimit: %s", err)
@@ -200,7 +205,7 @@ func TestLogWatcherAddError(t *testing.T) {
 		}
 	}()
 
-	w, err := NewLogWatcher()
+	w, err := NewLogWatcher(0)
 	if err != nil {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
@@ -241,7 +246,7 @@ func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
 		}
 	}()
 
-	w, err := NewLogWatcher()
+	w, err := NewLogWatcher(0)
 	if err != nil {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
@@ -276,11 +281,11 @@ func TestWatcherErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't convert expvar %q", expvar.Get("log_watcher_error_count").String())
 	}
-	w, err := NewLogWatcher()
+	w, err := NewLogWatcher(0)
 	if err != nil {
 		t.Fatalf("couldn't create a watcher")
 	}
-	w.Errors <- errors.New("Injected error for test")
+	w.watcher.Errors <- errors.New("Injected error for test")
 	if err := w.Close(); err != nil {
 		t.Fatalf("watcher close failed: %q", err)
 	}

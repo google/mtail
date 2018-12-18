@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/golang/glog"
@@ -22,7 +23,8 @@ var (
 
 // LogWatcher implements a Watcher for watching real filesystems.
 type LogWatcher struct {
-	*fsnotify.Watcher
+	watcher    *fsnotify.Watcher
+	pollTicker *time.Ticker
 
 	eventsMu sync.RWMutex
 	events   []chan Event
@@ -30,22 +32,38 @@ type LogWatcher struct {
 	watchedMu sync.RWMutex          // protects `watched'
 	watched   map[string]chan Event // Names of paths being watched
 
-	runDone chan struct{} // Channel to respond to Close
+	stopTicks chan struct{} // Channel to notify ticker to stop.
+
+	ticksDone  chan struct{} // Channel to notify when the ticks handler is done.
+	eventsDone chan struct{} // Channel to notify when the events handler is done.
+
+	closeOnce sync.Once
 }
 
 // NewLogWatcher returns a new LogWatcher, or returns an error.
-func NewLogWatcher() (*LogWatcher, error) {
+func NewLogWatcher(pollInterval time.Duration) (*LogWatcher, error) {
 	f, err := fsnotify.NewWatcher()
 	if err != nil {
-		return nil, err
+		glog.Warning(err)
+		if pollInterval == 0 {
+			pollInterval = time.Millisecond * 250
+		}
 	}
 	w := &LogWatcher{
-		Watcher: f,
+		watcher: f,
 		events:  make([]chan Event, 0),
 		watched: make(map[string]chan Event),
-		runDone: make(chan struct{}),
 	}
-	go w.run()
+	if pollInterval > 0 {
+		w.pollTicker = time.NewTicker(pollInterval)
+		w.stopTicks = make(chan struct{})
+		w.ticksDone = make(chan struct{})
+		go w.runTicks()
+	}
+	if f != nil {
+		w.eventsDone = make(chan struct{})
+		go w.runEvents()
+	}
 	return w, nil
 }
 
@@ -76,16 +94,42 @@ func (w *LogWatcher) sendEvent(e Event) {
 	glog.V(2).Infof("No channel for path %q", e.Pathname)
 }
 
-func (w *LogWatcher) run() {
-	defer close(w.runDone)
+func (w *LogWatcher) runTicks() {
+	defer close(w.ticksDone)
+
+	if w.pollTicker == nil {
+		return
+	}
+
+Exit:
+	for {
+		select {
+		case _ = <-w.pollTicker.C:
+			w.watchedMu.RLock()
+			for n, c := range w.watched {
+				c <- Event{Update, n}
+			}
+			w.watchedMu.RUnlock()
+		case <-w.stopTicks:
+			w.pollTicker.Stop()
+			break Exit
+		}
+	}
+}
+
+// runEvents assumes that w.watcher is not nil
+func (w *LogWatcher) runEvents() {
+	defer close(w.eventsDone)
+
 	// Suck out errors and dump them to the error log.
 	go func() {
-		for err := range w.Watcher.Errors {
+		for err := range w.watcher.Errors {
 			errorCount.Add(1)
 			glog.Errorf("fsnotify error: %s\n", err)
 		}
 	}()
-	for e := range w.Watcher.Events {
+
+	for e := range w.watcher.Events {
 		glog.V(2).Infof("watcher event %v", e)
 		eventCount.Add(e.Name, 1)
 		switch {
@@ -104,19 +148,27 @@ func (w *LogWatcher) run() {
 		}
 	}
 	glog.Infof("Shutting down log watcher.")
-
-	w.eventsMu.Lock()
-	for _, c := range w.events {
-		close(c)
-	}
-	w.eventsMu.Unlock()
 }
 
-// Close shuts down the LogWatcher.  It is safe to call this from multiple clients because
+// Close shuts down the LogWatcher.  It is safe to call this from multiple clients.
 func (w *LogWatcher) Close() (err error) {
-	err = w.Watcher.Close()
-	<-w.runDone
-	return
+	w.closeOnce.Do(func() {
+		if w.watcher != nil {
+			err = w.watcher.Close()
+			<-w.eventsDone
+		}
+		if w.pollTicker != nil {
+			close(w.stopTicks)
+			<-w.ticksDone
+		}
+		glog.Info("Closing events channels")
+		w.eventsMu.Lock()
+		for _, c := range w.events {
+			close(c)
+		}
+		w.eventsMu.Unlock()
+	})
+	return nil
 }
 
 // Add adds a path to the list of watched items.
@@ -135,7 +187,7 @@ func (w *LogWatcher) Add(path string, handle int) error {
 		return errors.Wrapf(err, "Failed to lookup absolutepath of %q", path)
 	}
 	glog.V(2).Infof("Adding a watch on resolved path %q", absPath)
-	err = w.Watcher.Add(absPath)
+	err = w.watcher.Add(absPath)
 	if err != nil {
 		if os.IsPermission(err) {
 			glog.V(2).Infof("Skipping permission denied error on adding a watch.")
@@ -164,4 +216,14 @@ func (w *LogWatcher) IsWatching(path string) bool {
 	_, ok := w.watched[absPath]
 	w.watchedMu.RUnlock()
 	return ok
+}
+
+func (w *LogWatcher) Remove(path string) error {
+	w.watchedMu.Lock()
+	delete(w.watched, path)
+	w.watchedMu.Unlock()
+	if w.watcher != nil {
+		return w.watcher.Remove(path)
+	}
+	return nil
 }
