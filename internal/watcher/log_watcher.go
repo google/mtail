@@ -41,13 +41,17 @@ type LogWatcher struct {
 }
 
 // NewLogWatcher returns a new LogWatcher, or returns an error.
-func NewLogWatcher(pollInterval time.Duration) (*LogWatcher, error) {
-	f, err := fsnotify.NewWatcher()
-	if err != nil {
-		glog.Warning(err)
-		if pollInterval == 0 {
-			pollInterval = time.Millisecond * 250
+func NewLogWatcher(pollInterval time.Duration, enableFsnotify bool) (*LogWatcher, error) {
+	var f *fsnotify.Watcher
+	if enableFsnotify {
+		var err error
+		f, err = fsnotify.NewWatcher()
+		if err != nil {
+			glog.Warning(err)
 		}
+	}
+	if f == nil && pollInterval == 0 {
+		pollInterval = time.Millisecond * 250
 	}
 	w := &LogWatcher{
 		watcher: f,

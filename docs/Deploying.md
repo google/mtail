@@ -45,6 +45,18 @@ mtail --progs /etc/mtail --logs /var/log/syslog --poll_interval 250ms
 
 *N.B.* `mtail` will only discover new files if using `fsnotify`.  If you rely on polling mode, then only the files that mtail sees at program startup will be watched.
 
+### Disabling `fsnotify`
+
+In some cases, the log watcher can not process update events from the kernel fast enough and you may see
+```
+fsnotify error: fsnotify queue overflow
+```
+errors in the `mtail` log.  This will also manifest as counters not updating anymore.
+
+If your incoming log rate is high enough to trigger this condition, try forcing mtail to only use polling mode by adding the flag `--disable_fsnotify`.
+
+When fsnotify is disabled, new mtail programs and new log files won't be detected after program startup.
+
 ### Launching under Docker
 
 `mtail` can be run as a sidecar process if you expose an application container's logs with a volume.

@@ -56,7 +56,8 @@ var (
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 
 	// Ops flags
-	pollInterval = flag.Duration("poll_interval", 0, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
+	pollInterval    = flag.Duration("poll_interval", 0, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
+	disableFsnotify = flag.Bool("disable_fsnotify", false, "When enabled no fsnotify watcher is created, and mtail falls back to polling mode only.  Only the files known at program startup will be polled.")
 
 	// Debugging flags
 	blockProfileRate     = flag.Int("block_profile_rate", 0, "Nanoseconds of block time before goroutine blocking events reported. 0 turns off.  See https://golang.org/pkg/runtime/#SetBlockProfileRate")
@@ -113,7 +114,7 @@ func main() {
 			glog.Exitf("mtail requires the names of logs to follow in order to extract logs from them; please use the flag -logs one or more times to specify glob patterns describing these logs.")
 		}
 	}
-	w, err := watcher.NewLogWatcher(*pollInterval)
+	w, err := watcher.NewLogWatcher(*pollInterval, !*disableFsnotify)
 	if err != nil {
 		glog.Exitf("Failure to create log watcher: %s", err)
 	}

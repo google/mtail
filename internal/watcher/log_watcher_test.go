@@ -41,7 +41,7 @@ func TestLogWatcher(t *testing.T) {
 		}
 	}()
 
-	w, err := NewLogWatcher(0)
+	w, err := NewLogWatcher(0, true)
 	if err != nil {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
@@ -179,7 +179,7 @@ func TestFsnotifyErrorFallbackToPoll(t *testing.T) {
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &zero); err != nil {
 		t.Fatalf("couldn't set rlimit: %s", err)
 	}
-	_, err := NewLogWatcher(0)
+	_, err := NewLogWatcher(0, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -205,7 +205,7 @@ func TestLogWatcherAddError(t *testing.T) {
 		}
 	}()
 
-	w, err := NewLogWatcher(0)
+	w, err := NewLogWatcher(0, true)
 	if err != nil {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
@@ -246,7 +246,7 @@ func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
 		}
 	}()
 
-	w, err := NewLogWatcher(0)
+	w, err := NewLogWatcher(0, true)
 	if err != nil {
 		t.Fatalf("couldn't create a watcher: %s\n", err)
 	}
@@ -281,7 +281,7 @@ func TestWatcherErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't convert expvar %q", expvar.Get("log_watcher_error_count").String())
 	}
-	w, err := NewLogWatcher(0)
+	w, err := NewLogWatcher(0, true)
 	if err != nil {
 		t.Fatalf("couldn't create a watcher")
 	}
