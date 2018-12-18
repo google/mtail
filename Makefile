@@ -42,7 +42,7 @@ covclean:
 crossclean:
 	rm -rf build
 
-version := $(shell git describe --tags)
+version := $(shell git describe --tags --always --dirty)
 revision := $(shell git rev-parse HEAD)
 release := $(shell git describe --tags | cut -d"-" -f 1,2)
 
