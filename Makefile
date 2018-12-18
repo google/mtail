@@ -1,6 +1,15 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
+DEPDIR = .d
+$(shell install -d $(DEPDIR))
+MAKEDEPEND = echo "$@: $$(go list -f '{{if not .Standard}}{{.Dir}}{{end}}' $$(go list -f '{{ join .Deps "\n" }}' $<) | sed -e 's@$$@/*.go@' | tr "\n" " " )" > $(DEPDIR)/$@.d
+
+$(DEPDIR)/%.d: ;
+.PRECIOUS: $(DEPDIR)/%.d
+
+-include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
+
 # Set the timeout for tests run under the race detector.
 timeout := 60s
 ifeq ($(TRAVIS),true)
@@ -48,9 +57,13 @@ release := $(shell git describe --tags | cut -d"-" -f 1,2)
 
 GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 
-.PHONY: install mtail
-install mtail: $(GOFILES) $(GOGENFILES)
+.PHONY: install
+install: $(GOFILES) $(GOGENFILES)
 	go install -ldflags $(GO_LDFLAGS) ./cmd/mtail
+
+mtail: cmd/mtail/mtail.go $(DEPDIR)/mtail.d
+	$(MAKEDEPEND)
+	go build -ldflags $(GO_LDFLAGS) -o $@ $<
 
 internal/vm/parser/parser.go: internal/vm/parser/parser.y | .gen-dep-stamp
 	go generate -x ./$(@D)
