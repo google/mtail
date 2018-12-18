@@ -73,6 +73,8 @@ const (
 	Icmp // integer compare
 	Fcmp // floating point compare
 	Scmp // string compare
+
+	lastOpcode
 )
 
 var opNames = map[Opcode]string{
