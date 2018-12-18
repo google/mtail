@@ -4,6 +4,7 @@
 package exporter
 
 import (
+	"errors"
 	"reflect"
 	"sort"
 	"testing"
@@ -23,6 +24,13 @@ func TestCreateExporter(t *testing.T) {
 	_, err = New(store)
 	if err != nil {
 		t.Errorf("unexpected error:%s", err)
+	}
+	failopt := func(*Exporter) error {
+		return errors.New("busted")
+	}
+	_, err = New(store, failopt)
+	if err == nil {
+		t.Errorf("unexpected success")
 	}
 }
 
