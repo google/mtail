@@ -191,7 +191,6 @@ install_gen_deps: .gen-dep-stamp
 .PHONY: install_coverage_deps
 install_coverage_deps: .cov-dep-stamp
 .cov-dep-stamp:
-	go get $(UPGRADE) -v golang.org/x/tools/cmd/cover
 	go get $(UPGRADE) -v github.com/mattn/goveralls
 	touch $@
 
