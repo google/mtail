@@ -1,16 +1,24 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
+
+# Build these.
+TARGETS = mtail mgen mdot
+
+# Place to store dependencies.
 DEPDIR = .d
-$(shell install -d $(DEPDIR))
+$(DEPDIR):
+	install -d $(DEPDIR)
+
+# This rule finds all non-standard-library dependencies of each target and emits them to a makefile include.
 MAKEDEPEND = echo "$@: $$(go list -f '{{if not .Standard}}{{.Dir}}{{end}}' $$(go list -f '{{ join .Deps "\n" }}' $<) | sed -e 's@$$@/*.go@' | tr "\n" " " )" > $(DEPDIR)/$@.d
 
+# This rule allows the dependencies to not exist yet, for the first run.
 $(DEPDIR)/%.d: ;
 .PRECIOUS: $(DEPDIR)/%.d
 
+# This instruction loads any dependency includes for our targets.
 -include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
-
-TARGETS = mtail mgen mdot
 
 # Set the timeout for tests run under the race detector.
 timeout := 60s
@@ -24,6 +32,7 @@ endif
 # all benchmarks, not per bench.
 benchtimeout := 20m
 
+# Only be verbose with `go get` unless the UPGRADE variable is also set.
 GOGETFLAGS="-v"
 ifeq ($(UPGRADE),"y")
 GOGETFLAGS=$(GOGETFLAGS) "-u"
@@ -43,6 +52,7 @@ CLEANFILES+=\
 	internal/mtail/logo.ico.go\
 	internal/mtail/logo.ico\
 
+# A place to install tool dependencies.
 BIN = $(GOPATH)/bin
 
 all: $(TARGETS)
@@ -66,7 +76,10 @@ install: $(GOFILES) $(GOGENFILES)
 	go install -ldflags $(GO_LDFLAGS) ./cmd/mtail
 
 # Very specific static pattern rule to only do this for commandline targets.
-# Each commandline must be in a 'main.go' in their respective directory.
+# Each commandline must be in a 'main.go' in their respective directory.  The
+# MAKEDEPEND rule generates a list of dependencies for the next make run -- the
+# first time the rule executes because the target doesn't exist, subsequent
+# runs can read the dependencies and update iff they change.
 $(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d
 	$(MAKEDEPEND)
 	go build -ldflags $(GO_LDFLAGS) -o $@ $<
