@@ -10,6 +10,7 @@ $(DEPDIR)/%.d: ;
 
 -include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
 
+TARGETS = mtail mgen mdot
 
 # Set the timeout for tests run under the race detector.
 timeout := 60s
@@ -44,7 +45,7 @@ CLEANFILES+=\
 
 BIN = $(GOPATH)/bin
 
-all: mtail
+all: $(TARGETS)
 
 .PHONY: clean covclean crossclean
 clean: covclean crossclean
@@ -64,7 +65,9 @@ GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 install: $(GOFILES) $(GOGENFILES)
 	go install -ldflags $(GO_LDFLAGS) ./cmd/mtail
 
-mtail: cmd/mtail/mtail.go $(DEPDIR)/mtail.d
+# Very specific static pattern rule to only do this for commandline targets.
+# Each commandline must be in a 'main.go' in their respective directory.
+$(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d
 	$(MAKEDEPEND)
 	go build -ldflags $(GO_LDFLAGS) -o $@ $<
 
