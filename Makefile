@@ -153,15 +153,25 @@ export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPAT
 ###
 ## Fuzz testing
 #
-vm-fuzz.zip: $(GOFILES) | .fuzz-dep-stamp
-	go-fuzz-build github.com/google/mtail/internal/vm
+
+vm-fuzz.zip: $(GOFILES) | $(GOFUZZBUILD)
+	$(GOFUZZBUILD) github.com/google/mtail/internal/vm
 
 .PHONY: fuzz
-fuzz: vm-fuzz.zip
+fuzz: vm-fuzz.zip | $(GOFUZZ)
 #	rm -rf workdir
 	mkdir -p workdir/corpus
 	cp examples/*.mtail workdir/corpus
-	go-fuzz -bin=vm-fuzz.zip -workdir=workdir
+	$(GOFUZZ) -bin=vm-fuzz.zip -workdir=workdir
+
+GOFUZZBUILD = $(BIN)/go-fuzz-build
+$(GOFUZZBUILD):
+	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz-build
+
+GOFUZZ = $(BIN)/go-fuzz
+$(GOFUZZ):
+	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz
+
 
 ###
 ## dependency section
@@ -187,12 +197,6 @@ install_crossbuild: .crossbuild-dep-stamp
 	go get github.com/mitchellh/gox
 	touch $@
 
-.PHONY: install-fuzz-deps
-install-fuzz-deps: .fuzz-dep-stamp
-.fuzz-dep-stamp:
-	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz
-	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz-build
-	touch $@
 ###
 ## Coverage
 #
