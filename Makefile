@@ -68,7 +68,7 @@ mtail: cmd/mtail/mtail.go $(DEPDIR)/mtail.d
 internal/vm/parser/parser.go: internal/vm/parser/parser.y | .gen-dep-stamp
 	go generate -x ./$(@D)
 
-internal/mtail/logo.ico: | logo.png
+internal/mtail/logo.ico: logo.png
 	/usr/bin/convert $< -define icon:auto-resize=64,48,32,16 $@ || touch $@
 
 internal/mtail/logo.ico.go: internal/mtail/logo.ico | .gen-dep-stamp
