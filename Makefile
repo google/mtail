@@ -10,6 +10,7 @@ $(DEPDIR)/%.d: ;
 
 -include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
 
+
 # Set the timeout for tests run under the race detector.
 timeout := 60s
 ifeq ($(TRAVIS),true)
@@ -40,6 +41,8 @@ CLEANFILES+=\
 	internal/vm/parser/y.output\
 	internal/mtail/logo.ico.go\
 	internal/mtail/logo.ico\
+
+BIN = $(GOPATH)/bin
 
 all: mtail
 
@@ -133,16 +136,6 @@ testall: testrace bench regtest
 IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
 TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
 
-ifeq ($(CIRCLECI),true)
-  COVERALLS_SERVICE := circle-ci
-endif
-ifeq ($(TRAVIS),true)
-  COVERALLS_SERVICE := travis-ci
-endif
-
-upload_to_coveralls: gover.coverprofile
-	goveralls -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE)
-
 ## make u a container
 .PHONY: container
 container: Dockerfile
@@ -188,12 +181,6 @@ install_gen_deps: .gen-dep-stamp
 	go get $(UPGRADE) -v github.com/flazz/togo
 	touch $@
 
-.PHONY: install_coverage_deps
-install_coverage_deps: .cov-dep-stamp
-.cov-dep-stamp:
-	go get $(UPGRADE) -v github.com/mattn/goveralls
-	touch $@
-
 .PHONY: install_crossbuild
 install_crossbuild: .crossbuild-dep-stamp
 .crossbuild-dep-stamp:
@@ -221,8 +208,27 @@ gover.coverprofile: $(COVERPROFILES)
 	echo "mode: count" > $@
 	grep -h -v "mode: " $^ >> $@
 
-coverage.html: gover.coverprofile | .cov-dep-stamp
+coverage.html: gover.coverprofile
 	go tool cover -html=$< -o $@
+
+
+ifeq ($(CIRCLECI),true)
+  COVERALLS_SERVICE := circle-ci
+endif
+ifeq ($(TRAVIS),true)
+  COVERALLS_SERVICE := travis-ci
+endif
+
+GOVERALLS = $(BIN)/goveralls
+$(GOVERALLS):
+	go get $(UPGRADE) -v github.com/mattn/goveralls
+
+.PHONY: upload_to_coveralls
+upload_to_coveralls: gover.coverprofile | $(GOVERALLS)
+	goveralls -coverprofile=$< -service=$(COVERALLS_SERVICE)
+
+GOVERALLS = $(GOBIN)/goveralls
+
 
 # Coverage profiles per package depend on all the source files in that package,
 # so we need secondary expansion so that the wildcard rule is expanded at the
