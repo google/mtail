@@ -225,7 +225,7 @@ $(GOVERALLS):
 
 .PHONY: upload_to_coveralls
 upload_to_coveralls: gover.coverprofile | $(GOVERALLS)
-	goveralls -coverprofile=$< -service=$(COVERALLS_SERVICE)
+	$(GOVERALLS) -coverprofile=$< -service=$(COVERALLS_SERVICE)
 
 GOVERALLS = $(GOBIN)/goveralls
 
