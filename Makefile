@@ -127,20 +127,6 @@ regtest: | .dep-stamp
 
 PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
 
-PHONY: coverage
-coverage: gover.coverprofile
-gover.coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp .cov-dep-stamp
-	for package in $(PACKAGES); do\
-		go test -covermode=count -coverprofile=$$(echo $$package | tr './' '__').coverprofile ./$$package;\
-    done
-	gover
-
-.PHONY: covrep
-covrep: coverage.html
-	xdg-open $<
-coverage.html: gover.coverprofile | .cov-dep-stamp
-	go tool cover -html=$< -o $@
-
 .PHONY: testall
 testall: testrace bench regtest
 
@@ -206,7 +192,6 @@ install_gen_deps: .gen-dep-stamp
 install_coverage_deps: .cov-dep-stamp
 .cov-dep-stamp:
 	go get $(UPGRADE) -v golang.org/x/tools/cmd/cover
-	go get $(UPGRADE) -v github.com/sozorogami/gover
 	go get $(UPGRADE) -v github.com/mattn/goveralls
 	touch $@
 
@@ -222,3 +207,28 @@ install-fuzz-deps: .fuzz-dep-stamp
 	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz
 	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz-build
 	touch $@
+###
+## Coverage
+#
+COVERPROFILES := $(patsubst %,%/.coverprofile,$(PACKAGES))
+
+.PHONY: coverage covrep
+coverage: gover.coverprofile
+covrep: coverage.html
+	xdg-open $<
+
+# Coverage is just concatenated together, stripping out the 'mode' header from each copy.
+gover.coverprofile: $(COVERPROFILES)
+	echo "mode: count" > $@
+	grep -h -v "mode: " $^ >> $@
+
+coverage.html: gover.coverprofile | .cov-dep-stamp
+	go tool cover -html=$< -o $@
+
+# Coverage profiles per package depend on all the source files in that package,
+# so we need secondary expansion so that the wildcard rule is expanded at the
+# correct time.  Put at the end of the Makefile as it turns it on for all rules
+# after this point.
+.SECONDEXPANSION:
+$(COVERPROFILES): %.coverprofile: $$(wildcard %*.go)
+	go test -covermode=count -coverprofile=$@ ./$$(dirname $@)
