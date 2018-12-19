@@ -16,15 +16,18 @@ import (
 )
 
 var handlePrometheusTests = []struct {
-	name     string
-	metrics  []*metrics.Metric
-	expected string
+	name      string
+	progLabel bool
+	metrics   []*metrics.Metric
+	expected  string
 }{
 	{"empty",
+		false,
 		[]*metrics.Metric{},
 		"",
 	},
 	{"single",
+		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -36,7 +39,21 @@ var handlePrometheusTests = []struct {
 foo{} 1
 `,
 	},
+	{"with prog label",
+		true,
+		[]*metrics.Metric{
+			{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Counter,
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
+		},
+		`# TYPE foo counter
+foo{prog="test"} 1
+`,
+	},
 	{"dimensioned",
+		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -51,6 +68,7 @@ foo{a="1",b="2"} 1
 `,
 	},
 	{"gauge",
+		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -63,6 +81,7 @@ foo{} 1
 `,
 	},
 	{"timer",
+		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -75,6 +94,7 @@ foo{} 1
 `,
 	},
 	{"text",
+		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -85,6 +105,7 @@ foo{} 1
 		"",
 	},
 	{"quotes",
+		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -99,6 +120,7 @@ foo{a="str\"bang\"blah"} 1
 `,
 	},
 	{"help",
+		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -114,17 +136,18 @@ foo{} 1
 `,
 	},
 	{"2 help",
+		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
-				Program:     "test",
+				Program:     "test2",
 				Kind:        metrics.Counter,
 				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 				Source:      "location.mtail:37",
 			},
 			{
 				Name:        "foo",
-				Program:     "test",
+				Program:     "test1",
 				Kind:        metrics.Counter,
 				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 				Source:      "different.mtail:37",
@@ -135,6 +158,31 @@ foo{} 1
 foo{} 1
 # foo defined at different.mtail:37
 foo{} 1
+`,
+	},
+	{"2 help with label",
+		true,
+		[]*metrics.Metric{
+			{
+				Name:        "foo",
+				Program:     "test2",
+				Kind:        metrics.Counter,
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				Source:      "location.mtail:37",
+			},
+			{
+				Name:        "foo",
+				Program:     "test1",
+				Kind:        metrics.Counter,
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				Source:      "different.mtail:37",
+			},
+		},
+		`# TYPE foo counter
+# foo defined at location.mtail:37
+foo{prog="test2"} 1
+# foo defined at different.mtail:37
+foo{prog="test1"} 1
 `,
 	},
 }
@@ -148,7 +196,13 @@ func TestHandlePrometheus(t *testing.T) {
 			for _, metric := range tc.metrics {
 				ms.Add(metric)
 			}
-			e, err := New(ms, Hostname("gunstar"), OmitProgLabel)
+			opts := []func(*Exporter) error{
+				Hostname("gunstar"),
+			}
+			if !tc.progLabel {
+				opts = append(opts, OmitProgLabel)
+			}
+			e, err := New(ms, opts...)
 			if err != nil {
 				t.Fatalf("couldn't make exporter: %s", err)
 			}

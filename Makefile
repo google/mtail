@@ -1,6 +1,16 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
+DEPDIR = .d
+$(shell install -d $(DEPDIR))
+MAKEDEPEND = echo "$@: $$(go list -f '{{if not .Standard}}{{.Dir}}{{end}}' $$(go list -f '{{ join .Deps "\n" }}' $<) | sed -e 's@$$@/*.go@' | tr "\n" " " )" > $(DEPDIR)/$@.d
+
+$(DEPDIR)/%.d: ;
+.PRECIOUS: $(DEPDIR)/%.d
+
+-include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
+
+
 # Set the timeout for tests run under the race detector.
 timeout := 60s
 ifeq ($(TRAVIS),true)
@@ -32,6 +42,8 @@ CLEANFILES+=\
 	internal/mtail/logo.ico.go\
 	internal/mtail/logo.ico\
 
+BIN = $(GOPATH)/bin
+
 all: mtail
 
 .PHONY: clean covclean crossclean
@@ -42,20 +54,24 @@ covclean:
 crossclean:
 	rm -rf build
 
-version := $(shell git describe --tags)
+version := $(shell git describe --tags --always --dirty)
 revision := $(shell git rev-parse HEAD)
 release := $(shell git describe --tags | cut -d"-" -f 1,2)
 
 GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 
-.PHONY: install mtail
-install mtail: $(GOFILES) $(GOGENFILES)
+.PHONY: install
+install: $(GOFILES) $(GOGENFILES)
 	go install -ldflags $(GO_LDFLAGS) ./cmd/mtail
+
+mtail: cmd/mtail/mtail.go $(DEPDIR)/mtail.d
+	$(MAKEDEPEND)
+	go build -ldflags $(GO_LDFLAGS) -o $@ $<
 
 internal/vm/parser/parser.go: internal/vm/parser/parser.y | .gen-dep-stamp
 	go generate -x ./$(@D)
 
-internal/mtail/logo.ico: | logo.png
+internal/mtail/logo.ico: logo.png
 	/usr/bin/convert $< -define icon:auto-resize=64,48,32,16 $@ || touch $@
 
 internal/mtail/logo.ico.go: internal/mtail/logo.ico | .gen-dep-stamp
@@ -114,35 +130,11 @@ regtest: | .dep-stamp
 
 PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
 
-PHONY: coverage
-coverage: gover.coverprofile
-gover.coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp .cov-dep-stamp
-	for package in $(PACKAGES); do\
-		go test -covermode=count -coverprofile=$$(echo $$package | tr './' '__').coverprofile ./$$package;\
-    done
-	gover
-
-.PHONY: covrep
-covrep: coverage.html
-	xdg-open $<
-coverage.html: gover.coverprofile | .cov-dep-stamp
-	go tool cover -html=$< -o $@
-
 .PHONY: testall
 testall: testrace bench regtest
 
 IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
 TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
-
-ifeq ($(CIRCLECI),true)
-  COVERALLS_SERVICE := circle-ci
-endif
-ifeq ($(TRAVIS),true)
-  COVERALLS_SERVICE := travis-ci
-endif
-
-upload_to_coveralls: gover.coverprofile
-	goveralls -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE)
 
 ## make u a container
 .PHONY: container
@@ -189,14 +181,6 @@ install_gen_deps: .gen-dep-stamp
 	go get $(UPGRADE) -v github.com/flazz/togo
 	touch $@
 
-.PHONY: install_coverage_deps
-install_coverage_deps: .cov-dep-stamp
-.cov-dep-stamp:
-	go get $(UPGRADE) -v golang.org/x/tools/cmd/cover
-	go get $(UPGRADE) -v github.com/sozorogami/gover
-	go get $(UPGRADE) -v github.com/mattn/goveralls
-	touch $@
-
 .PHONY: install_crossbuild
 install_crossbuild: .crossbuild-dep-stamp
 .crossbuild-dep-stamp:
@@ -209,3 +193,47 @@ install-fuzz-deps: .fuzz-dep-stamp
 	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz
 	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz-build
 	touch $@
+###
+## Coverage
+#
+COVERPROFILES := $(patsubst %,%/.coverprofile,$(PACKAGES))
+
+.PHONY: coverage covrep
+coverage: gover.coverprofile
+covrep: coverage.html
+	xdg-open $<
+
+# Coverage is just concatenated together, stripping out the 'mode' header from each copy.
+gover.coverprofile: $(COVERPROFILES)
+	echo "mode: count" > $@
+	grep -h -v "mode: " $^ >> $@
+
+coverage.html: gover.coverprofile
+	go tool cover -html=$< -o $@
+
+
+ifeq ($(CIRCLECI),true)
+  COVERALLS_SERVICE := circle-ci
+endif
+ifeq ($(TRAVIS),true)
+  COVERALLS_SERVICE := travis-ci
+endif
+
+GOVERALLS = $(BIN)/goveralls
+$(GOVERALLS):
+	go get $(UPGRADE) -v github.com/mattn/goveralls
+
+.PHONY: upload_to_coveralls
+upload_to_coveralls: gover.coverprofile | $(GOVERALLS)
+	goveralls -coverprofile=$< -service=$(COVERALLS_SERVICE)
+
+GOVERALLS = $(GOBIN)/goveralls
+
+
+# Coverage profiles per package depend on all the source files in that package,
+# so we need secondary expansion so that the wildcard rule is expanded at the
+# correct time.  Put at the end of the Makefile as it turns it on for all rules
+# after this point.
+.SECONDEXPANSION:
+$(COVERPROFILES): %.coverprofile: $$(wildcard %*.go)
+	go test -covermode=count -coverprofile=$@ ./$$(dirname $@)

@@ -91,10 +91,10 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - run: make --debug install_coverage_deps
       - run:
           name: Generate coverage
           command: |
+            go get github.com/sozorogami/gover
             gover /tmp/workspace
             make --debug coverage.html upload_to_coveralls
       - store_artifacts:
