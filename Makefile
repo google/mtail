@@ -1,15 +1,24 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
+
+# Build these.
+TARGETS = mtail mgen mdot
+
+# Place to store dependencies.
 DEPDIR = .d
-$(shell install -d $(DEPDIR))
+$(DEPDIR):
+	install -d $(DEPDIR)
+
+# This rule finds all non-standard-library dependencies of each target and emits them to a makefile include.
 MAKEDEPEND = echo "$@: $$(go list -f '{{if not .Standard}}{{.Dir}}{{end}}' $$(go list -f '{{ join .Deps "\n" }}' $<) | sed -e 's@$$@/*.go@' | tr "\n" " " )" > $(DEPDIR)/$@.d
 
+# This rule allows the dependencies to not exist yet, for the first run.
 $(DEPDIR)/%.d: ;
 .PRECIOUS: $(DEPDIR)/%.d
 
+# This instruction loads any dependency includes for our targets.
 -include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
-
 
 # Set the timeout for tests run under the race detector.
 timeout := 60s
@@ -23,6 +32,7 @@ endif
 # all benchmarks, not per bench.
 benchtimeout := 20m
 
+# Only be verbose with `go get` unless the UPGRADE variable is also set.
 GOGETFLAGS="-v"
 ifeq ($(UPGRADE),"y")
 GOGETFLAGS=$(GOGETFLAGS) "-u"
@@ -42,15 +52,40 @@ CLEANFILES+=\
 	internal/mtail/logo.ico.go\
 	internal/mtail/logo.ico\
 
+# A place to install tool dependencies.
 BIN = $(GOPATH)/bin
 
-all: mtail
+TOGO = $(BIN)/togo
+$(TOGO):
+	go get $(UPGRADE) -v github.com/flazz/togo
+
+GOYACC = $(BIN)/goyacc
+$(GOYACC):
+	go get $(UPGRADE) -v golang.org/x/tools/cmd/goyacc
+
+GOFUZZBUILD = $(BIN)/go-fuzz-build
+$(GOFUZZBUILD):
+	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz-build
+
+GOFUZZ = $(BIN)/go-fuzz
+$(GOFUZZ):
+	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz
+
+GOVERALLS = $(BIN)/goveralls
+$(GOVERALLS):
+	go get $(UPGRADE) -v github.com/mattn/goveralls
+
+GOX = $(BIN)/gox
+$(GOX):
+	go get github.com/mitchellh/gox
+
+all: $(TARGETS)
 
 .PHONY: clean covclean crossclean
 clean: covclean crossclean
 	rm -f $(CLEANFILES) .*dep-stamp
 covclean:
-	rm -f *.coverprofile coverage.html
+	rm -f *.coverprofile coverage.html $(COVERPROFILES)
 crossclean:
 	rm -rf build
 
@@ -64,30 +99,31 @@ GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 install: $(GOFILES) $(GOGENFILES)
 	go install -ldflags $(GO_LDFLAGS) ./cmd/mtail
 
-mtail: cmd/mtail/mtail.go $(DEPDIR)/mtail.d
+# Very specific static pattern rule to only do this for commandline targets.
+# Each commandline must be in a 'main.go' in their respective directory.  The
+# MAKEDEPEND rule generates a list of dependencies for the next make run -- the
+# first time the rule executes because the target doesn't exist, subsequent
+# runs can read the dependencies and update iff they change.
+$(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d
 	$(MAKEDEPEND)
 	go build -ldflags $(GO_LDFLAGS) -o $@ $<
 
-internal/vm/parser/parser.go: internal/vm/parser/parser.y | .gen-dep-stamp
+internal/vm/parser/parser.go: internal/vm/parser/parser.y | $(GOYACC)
 	go generate -x ./$(@D)
 
 internal/mtail/logo.ico: logo.png
 	/usr/bin/convert $< -define icon:auto-resize=64,48,32,16 $@ || touch $@
 
-internal/mtail/logo.ico.go: internal/mtail/logo.ico | .gen-dep-stamp
-	go run github.com/flazz/togo -pkg mtail -name logoFavicon -input $<
-
-emgen/emgen: emgen/emgen.go
-	cd emgen && go build
-
+internal/mtail/logo.ico.go: | internal/mtail/logo.ico $(TOGO)
+	$(TOGO) -pkg mtail -name logoFavicon -input internal/mtail/logo.ico
 
 GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 #GOX_OSARCH := ""
 
 .PHONY: crossbuild
-crossbuild: $(GOFILES) $(GOGENFILES) | .dep-stamp .crossbuild-dep-stamp
+crossbuild: $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp
 	mkdir -p build
-	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS)
+	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS) ./cmd/mtail
 
 .PHONY: test check
 check test: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
@@ -153,15 +189,16 @@ export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPAT
 ###
 ## Fuzz testing
 #
-vm-fuzz.zip: $(GOFILES) | .fuzz-dep-stamp
-	go-fuzz-build github.com/google/mtail/internal/vm
+
+vm-fuzz.zip: $(GOFILES) | $(GOFUZZBUILD)
+	$(GOFUZZBUILD) github.com/google/mtail/internal/vm
 
 .PHONY: fuzz
-fuzz: vm-fuzz.zip
+fuzz: vm-fuzz.zip | $(GOFUZZ)
 #	rm -rf workdir
 	mkdir -p workdir/corpus
 	cp examples/*.mtail workdir/corpus
-	go-fuzz -bin=vm-fuzz.zip -workdir=workdir
+	$(GOFUZZ) -bin=vm-fuzz.zip -workdir=workdir
 
 ###
 ## dependency section
@@ -174,25 +211,7 @@ install_deps: .dep-stamp
 	go get $(UPGRADE) -v $(TESTIMPORTS)
 	touch $@
 
-.PHONY: install_gen_deps
-install_gen_deps: .gen-dep-stamp
-.gen-dep-stamp:
-	go get $(UPGRADE) -v golang.org/x/tools/cmd/goyacc
-	go get $(UPGRADE) -v github.com/flazz/togo
-	touch $@
 
-.PHONY: install_crossbuild
-install_crossbuild: .crossbuild-dep-stamp
-.crossbuild-dep-stamp:
-	go get github.com/mitchellh/gox
-	touch $@
-
-.PHONY: install-fuzz-deps
-install-fuzz-deps: .fuzz-dep-stamp
-.fuzz-dep-stamp:
-	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz
-	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz-build
-	touch $@
 ###
 ## Coverage
 #
@@ -219,15 +238,9 @@ ifeq ($(TRAVIS),true)
   COVERALLS_SERVICE := travis-ci
 endif
 
-GOVERALLS = $(BIN)/goveralls
-$(GOVERALLS):
-	go get $(UPGRADE) -v github.com/mattn/goveralls
-
 .PHONY: upload_to_coveralls
 upload_to_coveralls: gover.coverprofile | $(GOVERALLS)
-	goveralls -coverprofile=$< -service=$(COVERALLS_SERVICE)
-
-GOVERALLS = $(GOBIN)/goveralls
+	$(GOVERALLS) -coverprofile=$< -service=$(COVERALLS_SERVICE)
 
 
 # Coverage profiles per package depend on all the source files in that package,
@@ -235,5 +248,5 @@ GOVERALLS = $(GOBIN)/goveralls
 # correct time.  Put at the end of the Makefile as it turns it on for all rules
 # after this point.
 .SECONDEXPANSION:
-$(COVERPROFILES): %.coverprofile: $$(wildcard %*.go)
+$(COVERPROFILES): %.coverprofile: $$(wildcard %*.go) $(GOGENFILES)
 	go test -covermode=count -coverprofile=$@ ./$$(dirname $@)
