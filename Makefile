@@ -75,6 +75,10 @@ GOVERALLS = $(BIN)/goveralls
 $(GOVERALLS):
 	go get $(UPGRADE) -v github.com/mattn/goveralls
 
+GOX = $(BIN)/gox
+$(GOX):
+	go get github.com/mitchellh/gox
+
 all: $(TARGETS)
 
 .PHONY: clean covclean crossclean
@@ -117,9 +121,9 @@ GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 #GOX_OSARCH := ""
 
 .PHONY: crossbuild
-crossbuild: $(GOFILES) $(GOGENFILES) | .dep-stamp .crossbuild-dep-stamp
+crossbuild: $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp
 	mkdir -p build
-	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS)
+	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS) ./cmd/mtail
 
 .PHONY: test check
 check test: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
@@ -214,8 +218,7 @@ install_gen_deps: .gen-dep-stamp
 
 .PHONY: install_crossbuild
 install_crossbuild: .crossbuild-dep-stamp
-.crossbuild-dep-stamp:
-	go get github.com/mitchellh/gox
+.crossbuild-dep-stamp: $(GOX)
 	touch $@
 
 ###
