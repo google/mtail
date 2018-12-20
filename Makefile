@@ -216,11 +216,6 @@ install_gen_deps: .gen-dep-stamp
 .gen-dep-stamp: $(GOYACC) $(TOGO)
 	touch $@
 
-.PHONY: install_crossbuild
-install_crossbuild: .crossbuild-dep-stamp
-.crossbuild-dep-stamp: $(GOX)
-	touch $@
-
 ###
 ## Coverage
 #
