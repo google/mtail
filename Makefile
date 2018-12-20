@@ -113,10 +113,6 @@ internal/mtail/logo.ico: logo.png
 internal/mtail/logo.ico.go: | internal/mtail/logo.ico $(TOGO)
 	$(TOGO) -pkg mtail -name logoFavicon -input internal/mtail/logo.ico
 
-emgen/emgen: emgen/emgen.go
-	cd emgen && go build
-
-
 GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 #GOX_OSARCH := ""
 
