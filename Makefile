@@ -211,10 +211,6 @@ install_deps: .dep-stamp
 	go get $(UPGRADE) -v $(TESTIMPORTS)
 	touch $@
 
-.PHONY: install_gen_deps
-install_gen_deps: .gen-dep-stamp
-.gen-dep-stamp: $(GOYACC) $(TOGO)
-	touch $@
 
 ###
 ## Coverage
