@@ -55,13 +55,33 @@ CLEANFILES+=\
 # A place to install tool dependencies.
 BIN = $(GOPATH)/bin
 
+TOGO = $(BIN)/togo
+$(TOGO):
+	go get $(UPGRADE) -v github.com/flazz/togo
+
+GOYACC = $(BIN)/goyacc
+$(GOYACC):
+	go get $(UPGRADE) -v golang.org/x/tools/cmd/goyacc
+
+GOFUZZBUILD = $(BIN)/go-fuzz-build
+$(GOFUZZBUILD):
+	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz-build
+
+GOFUZZ = $(BIN)/go-fuzz
+$(GOFUZZ):
+	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz
+
+GOVERALLS = $(BIN)/goveralls
+$(GOVERALLS):
+	go get $(UPGRADE) -v github.com/mattn/goveralls
+
 all: $(TARGETS)
 
 .PHONY: clean covclean crossclean
 clean: covclean crossclean
 	rm -f $(CLEANFILES) .*dep-stamp
 covclean:
-	rm -f *.coverprofile coverage.html
+	rm -f *.coverprofile coverage.html $(COVERPROFILES)
 crossclean:
 	rm -rf build
 
@@ -84,14 +104,14 @@ $(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d
 	$(MAKEDEPEND)
 	go build -ldflags $(GO_LDFLAGS) -o $@ $<
 
-internal/vm/parser/parser.go: internal/vm/parser/parser.y | .gen-dep-stamp
+internal/vm/parser/parser.go: internal/vm/parser/parser.y | $(GOYACC)
 	go generate -x ./$(@D)
 
 internal/mtail/logo.ico: logo.png
 	/usr/bin/convert $< -define icon:auto-resize=64,48,32,16 $@ || touch $@
 
-internal/mtail/logo.ico.go: | internal/mtail/logo.ico .gen-dep-stamp
-	go run github.com/flazz/togo -pkg mtail -name logoFavicon -input $<
+internal/mtail/logo.ico.go: | internal/mtail/logo.ico $(TOGO)
+	$(TOGO) -pkg mtail -name logoFavicon -input internal/mtail/logo.ico
 
 emgen/emgen: emgen/emgen.go
 	cd emgen && go build
@@ -180,15 +200,6 @@ fuzz: vm-fuzz.zip | $(GOFUZZ)
 	cp examples/*.mtail workdir/corpus
 	$(GOFUZZ) -bin=vm-fuzz.zip -workdir=workdir
 
-GOFUZZBUILD = $(BIN)/go-fuzz-build
-$(GOFUZZBUILD):
-	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz-build
-
-GOFUZZ = $(BIN)/go-fuzz
-$(GOFUZZ):
-	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz
-
-
 ###
 ## dependency section
 #
@@ -202,9 +213,7 @@ install_deps: .dep-stamp
 
 .PHONY: install_gen_deps
 install_gen_deps: .gen-dep-stamp
-.gen-dep-stamp:
-	go get $(UPGRADE) -v golang.org/x/tools/cmd/goyacc
-	go get $(UPGRADE) -v github.com/flazz/togo
+.gen-dep-stamp: $(GOYACC) $(TOGO)
 	touch $@
 
 .PHONY: install_crossbuild
@@ -239,15 +248,9 @@ ifeq ($(TRAVIS),true)
   COVERALLS_SERVICE := travis-ci
 endif
 
-GOVERALLS = $(BIN)/goveralls
-$(GOVERALLS):
-	go get $(UPGRADE) -v github.com/mattn/goveralls
-
 .PHONY: upload_to_coveralls
 upload_to_coveralls: gover.coverprofile | $(GOVERALLS)
 	$(GOVERALLS) -coverprofile=$< -service=$(COVERALLS_SERVICE)
-
-GOVERALLS = $(GOBIN)/goveralls
 
 
 # Coverage profiles per package depend on all the source files in that package,
@@ -255,5 +258,5 @@ GOVERALLS = $(GOBIN)/goveralls
 # correct time.  Put at the end of the Makefile as it turns it on for all rules
 # after this point.
 .SECONDEXPANSION:
-$(COVERPROFILES): %.coverprofile: $$(wildcard %*.go)
+$(COVERPROFILES): %.coverprofile: $$(wildcard %*.go) $(GOGENFILES)
 	go test -covermode=count -coverprofile=$@ ./$$(dirname $@)
