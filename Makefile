@@ -264,4 +264,4 @@ upload_to_coveralls: gover.coverprofile | $(GOVERALLS)
 # after this point.
 .SECONDEXPANSION:
 $(COVERPROFILES): %.coverprofile: $$(wildcard %*.go) $(GOGENFILES)
-	go test -covermode=count -coverprofile=$@ ./$$(dirname $@)
+	go test -covermode=count -coverprofile=$@ ./$(@D)
