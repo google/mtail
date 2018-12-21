@@ -5,12 +5,16 @@
 # Build these.
 TARGETS = mtail mgen mdot
 
+# Install them here
+PREFIX ?= usr/local
+
 # Place to store dependencies.
 DEPDIR = .d
 $(DEPDIR):
 	install -d $(DEPDIR)
 
 # This rule finds all non-standard-library dependencies of each target and emits them to a makefile include.
+# Thanks mrtazz: https://unwiredcouch.com/2016/05/31/go-make.html
 MAKEDEPEND = echo "$@: $$(go list -f '{{if not .Standard}}{{.Dir}}{{end}}' $$(go list -f '{{ join .Deps "\n" }}' $<) | sed -e 's@$$@/*.go@' | tr "\n" " " )" > $(DEPDIR)/$@.d
 
 # This rule allows the dependencies to not exist yet, for the first run.
@@ -95,10 +99,6 @@ release := $(shell git describe --tags | cut -d"-" -f 1,2)
 
 GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 
-.PHONY: install
-install: $(GOFILES) $(GOGENFILES)
-	go install -ldflags $(GO_LDFLAGS) ./cmd/mtail
-
 # Very specific static pattern rule to only do this for commandline targets.
 # Each commandline must be in a 'main.go' in their respective directory.  The
 # MAKEDEPEND rule generates a list of dependencies for the next make run -- the
@@ -116,6 +116,21 @@ internal/mtail/logo.ico: logo.png
 
 internal/mtail/logo.ico.go: | internal/mtail/logo.ico $(TOGO)
 	$(TOGO) -pkg mtail -name logoFavicon -input internal/mtail/logo.ico
+
+
+###
+## Install rules
+#
+# Would subst all $(TARGETS) except other binaries are just for development.
+INSTALLED_TARGETS = $(PREFIX)/bin/mtail
+
+.PHONY: install
+install: $(INSTALLED_TARGETS)
+
+$(PREFIX)/bin/%: %
+	install -d $(@D)
+	install -m 755 $< $@
+
 
 GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 #GOX_OSARCH := ""
