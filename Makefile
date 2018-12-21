@@ -179,7 +179,7 @@ recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 regtest: | .dep-stamp
 	tests/regtest.sh
 
-PACKAGES := $(shell find . -name '*.go' -exec dirname {} \; | sort -u)
+PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/)
 
 .PHONY: testall
 testall: testrace bench regtest
@@ -264,4 +264,4 @@ upload_to_coveralls: gover.coverprofile | $(GOVERALLS)
 # after this point.
 .SECONDEXPANSION:
 $(COVERPROFILES): %.coverprofile: $$(wildcard %*.go) $(GOGENFILES)
-	go test -covermode=count -coverprofile=$@ ./$(@D)
+	go test -covermode=count -coverprofile=$@ $(@D)
