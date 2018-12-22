@@ -39,10 +39,6 @@ go1_10: &go1_10
   <<: *common-build
   docker:
     - image: circleci/golang:1.10
-go1_9: &go1_9
-  <<: *common-build
-  docker:
-    - image: circleci/golang:1.9
 
 # concurrency* names anchors which define the the concurrency level to run
 # tests with.
@@ -72,12 +68,6 @@ jobs:
     <<: [*go1_10, *concurrency_2]
   build-go1.10-1:
     <<: [*go1_10, *concurrency_1]
-  build-go1.9-4:
-    <<: [*go1_9, *concurrency_4]
-  build-go1.9-2:
-    <<: [*go1_9, *concurrency_2]
-  build-go1.9-1:
-    <<: [*go1_9, *concurrency_1]
 
   # Coverage collects all the coverage reports from each build and merges them,
   # before sending off to Coveralls.
