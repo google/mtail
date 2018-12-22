@@ -104,7 +104,7 @@ GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
 # MAKEDEPEND rule generates a list of dependencies for the next make run -- the
 # first time the rule executes because the target doesn't exist, subsequent
 # runs can read the dependencies and update iff they change.
-$(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d
+$(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d | .dep-stamp
 	$(MAKEDEPEND)
 	go build -ldflags $(GO_LDFLAGS) -o $@ $<
 
