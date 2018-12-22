@@ -240,7 +240,7 @@ covrep: coverage.html
 # Coverage is just concatenated together, stripping out the 'mode' header from each copy.
 gover.coverprofile: $(COVERPROFILES)
 	echo "mode: count" > $@
-	grep -h -v "mode: " $^ >> $@
+	grep -s -h -v "mode: " $^ >> $@
 
 coverage.html: gover.coverprofile
 	go tool cover -html=$< -o $@
