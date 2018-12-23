@@ -147,18 +147,6 @@ workflows:
           <<: *tag-filter
           requires:
             - build-go1.11-4
-      - build-go1.9-4:
-          <<: *tag-filter
-          requires:
-            - build-go1.11-4
-      - build-go1.9-2:
-          <<: *tag-filter
-          requires:
-            - build-go1.11-4
-      - build-go1.9-1:
-          <<: *tag-filter
-          requires:
-            - build-go1.11-4
       - coverage:
           <<: *tag-filter
           requires:
@@ -168,9 +156,6 @@ workflows:
             - build-go1.10-4
             - build-go1.10-2
             - build-go1.10-1
-            - build-go1.9-4
-            - build-go1.9-2
-            - build-go1.9-1
       - delivery:
           requires:
             - coverage
