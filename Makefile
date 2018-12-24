@@ -242,8 +242,8 @@ gover.coverprofile: $(COVERPROFILES)
 	echo "mode: count" > $@
 	grep -h -v "mode: " $^ >> $@
 
-coverage.html: gover.coverprofile
-	go tool cover -html=$< -o $@
+coverage.html: | gover.coverprofile
+	go tool cover -html=gover.coverprofile -o $@
 
 
 ifeq ($(CIRCLECI),true)
@@ -254,8 +254,8 @@ ifeq ($(TRAVIS),true)
 endif
 
 .PHONY: upload_to_coveralls
-upload_to_coveralls: gover.coverprofile | $(GOVERALLS)
-	$(GOVERALLS) -coverprofile=$< -service=$(COVERALLS_SERVICE)
+upload_to_coveralls: | gover.coverprofile $(GOVERALLS)
+	$(GOVERALLS) -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE)
 
 
 # Coverage profiles per package depend on all the source files in that package,
