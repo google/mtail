@@ -84,6 +84,7 @@ jobs:
       - run:
           name: Generate coverage
           command: |
+            ls -lR /tmp/workspace
             go get github.com/sozorogami/gover
             gover /tmp/workspace
             make --debug coverage.html upload_to_coveralls
