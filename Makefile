@@ -230,21 +230,18 @@ install_deps: .dep-stamp
 ###
 ## Coverage
 #
-COVERPROFILES := $(patsubst %,%/.coverprofile,$(PACKAGES))
-
 .PHONY: coverage covrep
-coverage: gover.coverprofile
+
+coverage: coverprofile
+
+coverprofile: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
+	go test -covermode=count -coverpkg=./... -coverprofile=$@
+
+coverage.html: coverprofile
+	go tool cover -html=$< -o $@
+
 covrep: coverage.html
 	xdg-open $<
-
-# Coverage is just concatenated together, stripping out the 'mode' header from each copy.
-gover.coverprofile: $(COVERPROFILES)
-	echo "mode: count" > $@
-	grep -h -v "mode: " $^ >> $@
-
-coverage.html: | gover.coverprofile
-	go tool cover -html=gover.coverprofile -o $@
-
 
 ifeq ($(CIRCLECI),true)
   COVERALLS_SERVICE := circle-ci
@@ -254,14 +251,5 @@ ifeq ($(TRAVIS),true)
 endif
 
 .PHONY: upload_to_coveralls
-upload_to_coveralls: | gover.coverprofile $(GOVERALLS)
-	$(GOVERALLS) -coverprofile=gover.coverprofile -service=$(COVERALLS_SERVICE)
-
-
-# Coverage profiles per package depend on all the source files in that package,
-# so we need secondary expansion so that the wildcard rule is expanded at the
-# correct time.  Put at the end of the Makefile as it turns it on for all rules
-# after this point.
-.SECONDEXPANSION:
-$(COVERPROFILES): %.coverprofile: $$(wildcard %*.go) $(GOGENFILES)
-	go test -covermode=count -coverprofile=$@ ./$(@D)
+upload_to_coveralls: | coverprofile $(GOVERALLS)
+	$(GOVERALLS) -coverprofile=coverprofile -service=$(COVERALLS_SERVICE)
