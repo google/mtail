@@ -235,7 +235,7 @@ install_deps: .dep-stamp
 coverage: coverprofile
 
 coverprofile: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
-	go test -covermode=count -coverpkg=./... -coverprofile=$@
+	go test -v -covermode=count -coverprofile=$@ $(PACKAGES)
 
 coverage.html: coverprofile
 	go tool cover -html=$< -o $@
