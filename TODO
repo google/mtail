@@ -7,7 +7,7 @@ no trailing newline in parser test, requires changes to expr stmt
 parse tree/ast testing? - expected AST as result from parse/check instead of
     merely getting a result
 
-mapping between progs and logs to reduce wasted processing
+mapping between progs and logs to reduce wasted processing- issue #35
 
 bytecode like
 [{push 1} {push 0} {cmp 1} {jm 6} {push 0} {jmp 7} {push 1} {jnm 13}
@@ -32,6 +32,7 @@ Run and upload benchmarks to https://perfdata.golang.org/ from circleci
 
 GC in the tailer to remove handles on files that haven't been updated in 24h,
     when log files rotate with a timestamp-like pattern
+  issue #201
 
 
 Add coverage from regtest
