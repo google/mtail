@@ -17,9 +17,9 @@ common-build: &common-build
     - run:
         name: Run tests with coverage
         command: |
-          make --debug gover.coverprofile
+          make --debug coverprofile
           mkdir -p workspace
-          cp gover.coverprofile workspace/${CIRCLE_JOB}.coverprofile
+          cp coverprofile workspace/${CIRCLE_JOB}.coverprofile
     - persist_to_workspace:
         root: workspace
         paths:
@@ -86,7 +86,7 @@ jobs:
           command: |
             ls -lR /tmp/workspace
             go get github.com/sozorogami/gover
-            gover /tmp/workspace
+            gover /tmp/workspace coverprofile
             make --debug coverage.html upload_to_coveralls
       - store_artifacts:
           path: gover.coverprofile
