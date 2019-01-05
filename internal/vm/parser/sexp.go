@@ -14,12 +14,12 @@ import (
 
 // Sexp is for converting program syntax trees into typed s-expression for printing
 type Sexp struct {
-	output string // Accumulator for the result
+	output strings.Builder // Accumulator for the result
 
 	EmitTypes bool
 
 	col  int // column to indent current line to
-	line string
+	line strings.Builder
 }
 
 func (s *Sexp) indent() {
@@ -38,15 +38,16 @@ func (s *Sexp) prefix() (r string) {
 }
 
 func (s *Sexp) emit(str string) {
-	s.line += str
+	s.line.WriteString(str)
 }
 
 func (s *Sexp) newline() {
-	if s.line != "" {
-		s.output += s.prefix() + s.line
+	if s.line.Len() > 0 {
+		s.output.WriteString(s.prefix())
+		s.output.WriteString(s.line.String())
 	}
-	s.output += "\n"
-	s.line = ""
+	s.output.WriteString("\n")
+	s.line.Reset()
 }
 
 // VisitBefore implements the astNode Visitor interface.
@@ -219,5 +220,5 @@ func (s *Sexp) VisitAfter(node ast.Node) ast.Node {
 // Dump begins the dumping of the syntax tree, returning the s-expression as a single string
 func (s *Sexp) Dump(n ast.Node) string {
 	ast.Walk(s, n)
-	return s.output
+	return s.output.String()
 }
