@@ -89,7 +89,7 @@ jobs:
             gover /tmp/workspace coverprofile
             make --debug coverage.html upload_to_coveralls
       - store_artifacts:
-          path: gover.coverprofile
+          path: coverprofile
           destination: coverage
       - store_artifacts:
           path: coverage.html
