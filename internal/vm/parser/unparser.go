@@ -15,8 +15,8 @@ import (
 // Unparser is for converting program syntax trees back to program text.
 type Unparser struct {
 	pos       int
-	output    string
-	line      string
+	output    strings.Builder
+	line      strings.Builder
 	emitTypes bool
 }
 
@@ -36,12 +36,14 @@ func (u *Unparser) prefix() (s string) {
 }
 
 func (u *Unparser) emit(s string) {
-	u.line += s
+	u.line.WriteString(s)
 }
 
 func (u *Unparser) newline() {
-	u.output += u.prefix() + u.line + "\n"
-	u.line = ""
+	u.output.WriteString(u.prefix())
+	u.output.WriteString(u.line.String())
+	u.output.WriteString("\n")
+	u.line.Reset()
 }
 
 // VisitBefore implements the ast.Visitor interface.
@@ -271,5 +273,5 @@ func (u *Unparser) VisitAfter(n ast.Node) ast.Node {
 // Unparse begins the unparsing of the syntax tree, returning the program text as a single string.
 func (u *Unparser) Unparse(n ast.Node) string {
 	ast.Walk(u, n)
-	return u.output
+	return u.output.String()
 }
