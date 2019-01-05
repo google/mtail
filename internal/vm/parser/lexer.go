@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 	"unicode"
 
 	"github.com/golang/glog"
@@ -66,8 +67,8 @@ type Lexer struct {
 	InRegex bool // Context aware flag from parser to say we're in a regex
 
 	// The currently being lexed token.
-	startcol int    // Starting column of the current token.
-	text     string // the text of the current token
+	startcol int             // Starting column of the current token.
+	text     strings.Builder // the text of the current token
 
 	tokens chan Token // Output channel for tokens emitted.
 }
@@ -100,9 +101,9 @@ func (l *Lexer) NextToken() Token {
 func (l *Lexer) emit(kind Kind) {
 	pos := position.Position{l.name, l.line, l.startcol, l.col - 1}
 	glog.V(2).Infof("Emitting %v at %v", kind, pos)
-	l.tokens <- Token{kind, l.text, pos}
+	l.tokens <- Token{kind, l.text.String(), pos}
 	// Reset the current token
-	l.text = ""
+	l.text.Reset()
 	l.startcol = l.col
 }
 
@@ -139,7 +140,7 @@ func (l *Lexer) stepCursor() {
 
 // accept accepts the current rune and its position into the current token.
 func (l *Lexer) accept() {
-	l.text += string(l.rune)
+	l.text.WriteRune(l.rune)
 	l.stepCursor()
 }
 
@@ -170,7 +171,7 @@ func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 		Spelling: fmt.Sprintf(format, args...),
 		Pos:      pos}
 	// Reset the current token
-	l.text = ""
+	l.text.Reset()
 	l.startcol = l.col
 	return lexProg
 }
@@ -444,14 +445,14 @@ Loop:
 			l.skip()
 			if r := l.next(); r != eof && r != '\n' {
 				if r != '"' {
-					l.text += "\\"
+					l.text.WriteRune('\\')
 				}
 				l.accept()
 				break
 			}
 			fallthrough
 		case eof, '\n':
-			return l.errorf("Unterminated quoted string: \"\\\"%s\"", l.text)
+			return l.errorf("Unterminated quoted string: \"\\\"%s\"", l.text.String())
 		case '"':
 			l.skip() // Skip trailing quote.
 			break Loop
@@ -502,9 +503,9 @@ Loop:
 			break Loop
 		}
 	}
-	if r, ok := keywords[l.text]; ok {
+	if r, ok := keywords[l.text.String()]; ok {
 		l.emit(r)
-	} else if r := sort.SearchStrings(builtins, l.text); r >= 0 && r < len(builtins) && builtins[r] == l.text {
+	} else if r := sort.SearchStrings(builtins, l.text.String()); r >= 0 && r < len(builtins) && builtins[r] == l.text.String() {
 		l.emit(BUILTIN)
 	} else {
 		l.emit(ID)
@@ -529,14 +530,14 @@ Loop:
 			l.skip()
 			if r := l.next(); r != eof && r != '\n' {
 				if r != '/' {
-					l.text += `\`
+					l.text.WriteRune('\\')
 				}
 				l.accept()
 				break
 			}
 			fallthrough
 		case eof, '\n':
-			return l.errorf("Unterminated regular expression: \"/%s\"", l.text)
+			return l.errorf("Unterminated regular expression: \"/%s\"", l.text.String())
 		case '/':
 			l.backup() // Backup trailing slash on successful parse
 			break Loop
