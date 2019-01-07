@@ -63,14 +63,13 @@ type Server struct {
 	omitProgLabel        bool // if set, do not put the program name in the metric labels
 }
 
-// StartTailing constructs a new Tailer and commences sending log lines into
-// the lines channel.
+// StartTailing adds each log path pattern to the tailer.
 func (m *Server) StartTailing() error {
 	var err error
 	for _, pattern := range m.logPathPatterns {
 		glog.V(1).Infof("Tail pattern %q", pattern)
 		if err = m.t.TailPattern(pattern); err != nil {
-			glog.Error(err)
+			glog.Warning(err)
 		}
 	}
 	return nil
