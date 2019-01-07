@@ -4,10 +4,12 @@
 package mtail
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -37,7 +39,11 @@ type Server struct {
 	l *vm.Loader         // l loads programs and manages the VM lifecycle.
 	e *exporter.Exporter // e manages the export of metrics from the store.
 
+	h        *http.Server
+	listener net.Listener
+
 	webquit   chan struct{} // Channel to signal shutdown from web UI.
+	closeQuit chan struct{} // Channel to signal shutdown from code.
 	closeOnce sync.Once     // Ensure shutdown happens only once.
 
 	overrideLocation *time.Location // Timezone location to use when parsing timestamps
@@ -175,11 +181,13 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // New creates a MtailServer from the supplied Options.
 func New(store *metrics.Store, w watcher.Watcher, fs afero.Fs, options ...func(*Server) error) (*Server, error) {
 	m := &Server{
-		store:   store,
-		lines:   make(chan *logline.LogLine),
-		w:       w,
-		fs:      fs,
-		webquit: make(chan struct{}),
+		store:     store,
+		lines:     make(chan *logline.LogLine),
+		w:         w,
+		fs:        fs,
+		webquit:   make(chan struct{}),
+		closeQuit: make(chan struct{}),
+		h:         &http.Server{},
 	}
 	if err := m.SetOption(options...); err != nil {
 		return nil, err
@@ -232,15 +240,18 @@ func (m *Server) Serve() error {
 	http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
 	m.e.StartMetricPush()
 
+	errc := make(chan error, 1)
 	go func() {
-		glog.Infof("Listening on port %s", m.bindAddress)
-		err := http.ListenAndServe(m.bindAddress, nil)
-		if err != nil {
-			glog.Exit(err)
+		glog.Infof("Listening on %s", m.listener.Addr())
+		err := m.h.Serve(m.listener)
+
+		if err == http.ErrServerClosed {
+			err = nil
 		}
+		errc <- err
 	}()
 	m.WaitForShutdown()
-	return nil
+	return <-errc
 }
 
 func (m *Server) handleQuit(w http.ResponseWriter, r *http.Request) {
@@ -262,6 +273,8 @@ func (m *Server) WaitForShutdown() {
 		glog.Info("Received SIGTERM, exiting...")
 	case <-m.webquit:
 		glog.Info("Received Quit from HTTP, exiting...")
+	case <-m.closeQuit:
+		glog.Info("Received quit internally, exiting...")
 	}
 	if err := m.Close(); err != nil {
 		glog.Warning(err)
@@ -272,6 +285,7 @@ func (m *Server) WaitForShutdown() {
 func (m *Server) Close() error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
+		close(m.closeQuit)
 		// If we have a tailer (i.e. not in test) then signal the tailer to
 		// shut down, which will cause the watcher to shut down and for the
 		// lines channel to close, causing the loader to start shutdown.
@@ -290,6 +304,9 @@ func (m *Server) Close() error {
 			<-m.l.VMsDone
 		} else {
 			glog.V(2).Info("No loader, so not waiting for loader shutdown.")
+		}
+		if m.h != nil {
+			m.h.Shutdown(context.Background())
 		}
 		glog.Info("All done.")
 	})
@@ -317,11 +334,11 @@ func (m *Server) Run() error {
 			return err
 		}
 	} else {
+		m.store.StartExpiryLoop()
 		if err := m.Serve(); err != nil {
 			return err
 		}
 	}
-	m.store.StartExpiryLoop()
 	return nil
 }
 
@@ -331,4 +348,11 @@ func FaviconHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write(logoFavicon); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (m *Server) Addr() string {
+	if m.listener == nil {
+		return "none"
+	}
+	return m.listener.Addr().String()
 }
