@@ -28,7 +28,9 @@ func LogPathPatterns(patterns ...string) func(*Server) error {
 func BindAddress(address, port string) func(*Server) error {
 	return func(m *Server) error {
 		m.bindAddress = net.JoinHostPort(address, port)
-		return nil
+		var err error
+		m.listener, err = net.Listen("tcp", m.bindAddress)
+		return err
 	}
 }
 

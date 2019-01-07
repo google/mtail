@@ -209,6 +209,7 @@ func (f *File) Read() error {
 func (f *File) sendLine() {
 	f.lines <- logline.NewLogLine(f.Name, f.partial.String())
 	lineCount.Add(f.Name, 1)
+	glog.V(2).Info("Line sent")
 	// reset partial accumulator
 	f.partial.Reset()
 }
@@ -251,5 +252,8 @@ func (f *File) Stat() (os.FileInfo, error) {
 }
 
 func (f *File) Close() error {
+	if f.partial.Len() > 0 {
+		f.sendLine()
+	}
 	return f.file.Close()
 }
