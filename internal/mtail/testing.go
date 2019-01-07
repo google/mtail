@@ -84,6 +84,7 @@ func TestStartServer(t *testing.T, options ...func(*Server) error) (*Server, fun
 // returns the value of one named name.  Callers are responsible for type
 // assertions on the returned value.
 func TestGetMetric(t *testing.T, addr, name string) interface{} {
+	t.Helper()
 	uri := fmt.Sprintf("http://%s/debug/vars", addr)
 	resp, err := http.Get(uri)
 	if err != nil {
