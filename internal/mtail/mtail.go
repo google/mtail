@@ -6,11 +6,13 @@ package mtail
 import (
 	"context"
 	"encoding/json"
+	"expvar"
 	"fmt"
 	"html/template"
 	"io"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"sync"
@@ -63,14 +65,13 @@ type Server struct {
 	omitProgLabel        bool // if set, do not put the program name in the metric labels
 }
 
-// StartTailing constructs a new Tailer and commences sending log lines into
-// the lines channel.
+// StartTailing adds each log path pattern to the tailer.
 func (m *Server) StartTailing() error {
 	var err error
 	for _, pattern := range m.logPathPatterns {
 		glog.V(1).Infof("Tail pattern %q", pattern)
 		if err = m.t.TailPattern(pattern); err != nil {
-			glog.Error(err)
+			glog.Warning(err)
 		}
 	}
 	return nil
@@ -232,12 +233,20 @@ func (m *Server) Serve() error {
 	if m.bindAddress == "" {
 		return errors.Errorf("No bind address provided.")
 	}
-	http.HandleFunc("/favicon.ico", FaviconHandler)
-	http.Handle("/", m)
-	http.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
-	http.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
-	http.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
-	http.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/favicon.ico", FaviconHandler)
+	mux.Handle("/", m)
+	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
+	mux.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
+	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
+	mux.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
+	mux.Handle("/debug/vars", expvar.Handler())
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	m.h.Handler = mux
 	m.e.StartMetricPush()
 
 	errc := make(chan error, 1)
