@@ -12,6 +12,7 @@ common-build: &common-build
     - run:
         name: Run tests and coverage with race detector
         command: gotestsum --junitfile test-results/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=20m  ./...
+        no_output_timeout: 20m
     - persist_to_workspace:
         root: workspace
         paths:
