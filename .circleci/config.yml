@@ -17,7 +17,8 @@ common-build: &common-build
     - run:
         name: Run tests with coverage
         command: |
-          make --debug coverprofile
+          trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-coverage-report.xml" EXIT
+          make --debug coverprofile | tee ${TEST_RESULTS}/go-test.out
           mkdir -p workspace
           cp coverprofile workspace/${CIRCLE_JOB}.coverprofile
     - persist_to_workspace:
