@@ -7,7 +7,7 @@ common-build: &common-build
     - checkout
     - run: make --debug smoke
     - run: mkdir -p test-results
-      run: mkdir -p workspace
+    - run: mkdir -p workspace
     - run: go get gotest.tools/gotestsum
     - run:
         name: Run tests and coverage with race detector
