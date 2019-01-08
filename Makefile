@@ -146,7 +146,7 @@ check test: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
-	go test -timeout ${timeout} -race -v ./...
+	go test -timeout ${timeout} -race -v -tags=integration ./...
 
 .PHONY: testex
 testex: | .dep-stamp
