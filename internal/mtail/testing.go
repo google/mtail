@@ -116,3 +116,11 @@ func TestChdir(t *testing.T, dir string) func() {
 		}
 	}
 }
+
+func ExpectMetricDelta(t *testing.T, a, b interface{}, want float64) {
+	t.Helper()
+	delta := a.(float64) - b.(float64)
+	if delta != want {
+		t.Errorf("Unexpected delta: got %g, want %g", delta, want)
+	}
+}
