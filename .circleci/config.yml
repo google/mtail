@@ -15,7 +15,7 @@ common-build: &common-build
         name: Run tests and coverage with race detector
         command: |
           make --debug install_deps
-          go run gotest.tools/gotestsum --junitfile ${TEST_RESULTS}/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=10m  ./...
+          go run gotest.tools/gotestsum --junitfile ${TEST_RESULTS}/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=20m  ./...
     - persist_to_workspace:
         root: workspace
         paths:
