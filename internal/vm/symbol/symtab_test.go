@@ -32,6 +32,10 @@ func (SymbolKind) Generate(rand *rand.Rand, size int) reflect.Value {
 }
 
 func TestInsertLookupQuick(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping quickcheck in short mode")
+	}
+
 	check := func(name string, kind SymbolKind) bool {
 		// Create a new scope each run because scope doesn't overwrite on insert.
 		scope := NewScope(nil)
