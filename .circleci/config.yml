@@ -3,25 +3,25 @@
 # instructions.
 common-build: &common-build
   working_directory: /go/src/github.com/google/mtail
-  environment:
-    TEST_RESULTS: /tmp/test-results
   steps:
     - checkout
     - run: make --debug smoke
-    - run: mkdir -p $TEST_RESULTS
+    - run: mkdir -p test-results
       run: mkdir -p workspace
     - run: go get gotest.tools/gotestsum
     - run:
         name: Run tests and coverage with race detector
         command: |
           make --debug install_deps
-          go run gotest.tools/gotestsum --junitfile ${TEST_RESULTS}/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=20m  ./...
+          go run gotest.tools/gotestsum --junitfile test-results/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=20m  ./...
     - persist_to_workspace:
         root: workspace
         paths:
           - "*.coverprofile"
     - store_test_results:
-        path: /tmp/test-results
+        path: test-results
+    - store_artifacts:
+        path: test-results
 
 # go* names anchors which define the Go versions to build with, merging the
 # common-build alias above.
