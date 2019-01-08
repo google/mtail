@@ -17,6 +17,8 @@ import (
 	"github.com/spf13/afero"
 )
 
+const timeoutMultiplier = 3
+
 // TestTempDir creates a temporary directory for use during tests. It returns
 // the pathname, and a cleanup function.
 func TestTempDir(t *testing.T) (string, func()) {
@@ -63,9 +65,9 @@ func TestStartServer(t *testing.T, pollInterval time.Duration, disableFsNotify b
 
 	glog.Infof("check that server is listening")
 	count := 0
-	for _, err := net.DialTimeout("tcp", m.Addr(), 10*time.Millisecond); err != nil && count < 10; count++ {
+	for _, err := net.DialTimeout("tcp", m.Addr(), 10*time.Millisecond*timeoutMultiplier); err != nil && count < 10; count++ {
 		glog.Infof("err: %s, retrying to dial %s", err, m.Addr())
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond * timeoutMultiplier)
 	}
 	if count >= 10 {
 		t.Fatal("server wasn't listening after 10 attempts")
