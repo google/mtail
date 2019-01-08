@@ -16,8 +16,6 @@ import (
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/watcher"
 	"github.com/spf13/afero"
-
-	_ "net/http/pprof"
 )
 
 type seqStringFlag []string

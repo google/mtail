@@ -3,7 +3,6 @@
 package mtail_test
 
 import (
-	_ "expvar"
 	"fmt"
 	"os"
 	"path"
