@@ -4,7 +4,6 @@ package mtail_test
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"testing"
 	"time"
@@ -27,10 +26,7 @@ func TestBasicTail(t *testing.T) {
 
 	logFile := path.Join(logDir, "log")
 
-	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
+	f := mtail.TestOpenFile(t, logFile)
 
 	for i := 1; i <= 3; i++ {
 		n, err := f.WriteString(fmt.Sprintf("%d\n", i))

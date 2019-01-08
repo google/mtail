@@ -29,10 +29,7 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 
 	logFile := path.Join(logDir, "log")
 
-	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
+	f := mtail.TestOpenFile(t, logFile)
 
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()

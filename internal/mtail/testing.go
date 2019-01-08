@@ -103,6 +103,7 @@ func TestGetMetric(t *testing.T, addr, name string) interface{} {
 // TestChdir changes current working directory, and returns a cleanup function
 // to return to the previous directory.
 func TestChdir(t *testing.T, dir string) func() {
+	t.Helper()
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -119,6 +120,8 @@ func TestChdir(t *testing.T, dir string) func() {
 	}
 }
 
+// ExpectMetricDelta checks to see if the difference between a and b is want;
+// it assumes both values are float64s that came from a TestGetMetric.
 func ExpectMetricDelta(t *testing.T, a, b interface{}, want float64) {
 	t.Helper()
 	if a == nil {
@@ -131,4 +134,14 @@ func ExpectMetricDelta(t *testing.T, a, b interface{}, want float64) {
 	if delta != want {
 		t.Errorf("Unexpected delta: got %g, want %g", delta, want)
 	}
+}
+
+// TestOpenFile creates a new file called name and returns the opened file.
+func TestOpenFile(t *testing.T, name string) *os.File {
+	t.Helper()
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return f
 }
