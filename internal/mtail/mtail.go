@@ -315,7 +315,11 @@ func (m *Server) Close() error {
 			glog.V(2).Info("No loader, so not waiting for loader shutdown.")
 		}
 		if m.h != nil {
-			m.h.Shutdown(context.Background())
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if err := m.h.Shutdown(ctx); err != nil {
+				glog.Error(err)
+			}
+			cancel()
 		}
 		glog.Info("All done.")
 	})
