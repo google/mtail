@@ -34,9 +34,9 @@ func TestTempDir(t *testing.T) (string, func()) {
 
 // TestMakeServer makes a new Server for use in tests, but does not start
 // the server.  It returns the server, or any errors the new server creates.
-func TestMakeServer(t *testing.T, options ...func(*Server) error) (*Server, error) {
+func TestMakeServer(t *testing.T, pollInterval time.Duration, disableFsNotify bool, options ...func(*Server) error) (*Server, error) {
 	t.Helper()
-	w, err := watcher.NewLogWatcher(0, true)
+	w, err := watcher.NewLogWatcher(pollInterval, !disableFsNotify)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,11 +46,11 @@ func TestMakeServer(t *testing.T, options ...func(*Server) error) (*Server, erro
 
 // TestStartServer creates a new Server and starts it running.  It
 // returns the server, and a cleanup function.
-func TestStartServer(t *testing.T, options ...func(*Server) error) (*Server, func()) {
+func TestStartServer(t *testing.T, pollInterval time.Duration, disableFsNotify bool, options ...func(*Server) error) (*Server, func()) {
 	t.Helper()
 	options = append(options, BindAddress("", "0"))
 
-	m, err := TestMakeServer(t, options...)
+	m, err := TestMakeServer(t, pollInterval, disableFsNotify, options...)
 	if err != nil {
 		t.Fatal(err)
 	}

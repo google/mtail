@@ -18,7 +18,7 @@ func TestBasicTail(t *testing.T) {
 	defer rmLogDir()
 
 	//flag.Set("vmodule", "tail=2,log_watcher=2")
-	m, stopM := mtail.TestStartServer(t, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
+	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
 	defer stopM()
 
 	startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")

@@ -23,7 +23,7 @@ func TestBadProgramFailsCompilation(t *testing.T) {
 	}
 
 	// Compile-only fails program compilation at server start, not after it's running.
-	_, err = mtail.TestMakeServer(t, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir), mtail.CompileOnly)
+	_, err = mtail.TestMakeServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir), mtail.CompileOnly)
 	if err == nil {
 		t.Error("expected error from mtail")
 	}

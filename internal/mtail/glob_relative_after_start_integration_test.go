@@ -28,7 +28,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	}
 	defer mtail.TestChdir(t, logDir)()
 
-	m, stopM := mtail.TestStartServer(t, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
+	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
 	defer stopM()
 
 	startLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
