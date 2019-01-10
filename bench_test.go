@@ -2,7 +2,7 @@
 // This file is available under the Apache license.
 
 // Only build with go1.7 or above because b.Run did not exist before.
-// +build go1.7
+// +build integration
 
 package main
 
@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/google/mtail/internal/metrics"
@@ -29,15 +30,13 @@ func BenchmarkProgram(b *testing.B) {
 		bm := bm
 		b.Run(fmt.Sprintf("%s on %s", bm.programfile, bm.logfile), func(b *testing.B) {
 			b.ReportAllocs()
+			logDir, rmLogDir := mtail.TestTempDir(b)
+			defer rmLogDir()
+			logFile := path.Join(logDir, "test.log")
+			log := mtail.TestOpenFile(b, logFile)
 			w := watcher.NewFakeWatcher()
-			fs := afero.NewOsFs()
-			fs = afero.NewCopyOnWriteFs(fs, afero.NewMemMapFs())
-			log, err := fs.Create("/tmp/test.log")
-			if err != nil {
-				b.Fatalf("failed to create test file descriptor")
-			}
 			store := metrics.NewStore()
-			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(bm.programfile), mtail.LogPathPatterns(log.Name()))
+			mtail, err := mtail.New(store, w, afero.OsFs{}, mtail.ProgramPath(bm.programfile), mtail.LogPathPatterns(log.Name()))
 			if err != nil {
 				b.Fatalf("Failed to create mtail: %s", err)
 			}

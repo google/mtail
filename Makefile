@@ -162,14 +162,14 @@ ex_test: ex_test.go testdata/* examples/* | .dep-stamp
 
 .PHONY: bench
 bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
-	go test -bench=. -timeout=${benchtimeout} -run=XXX ./...
+	go test -tags=integration -bench=. -timeout=${benchtimeout} -run=XXX ./...
 
 .PHONY: bench_cpu
 bench_cpu: | .dep-stamp
-	go test -bench=. -run=XXX -timeout=${benchtimeout} -cpuprofile=cpu.out
+	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -cpuprofile=cpu.out
 .PHONY: bench_mem
 bench_mem: | .dep-stamp
-	go test -bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out
+	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
