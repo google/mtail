@@ -18,7 +18,6 @@ import (
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/testutil/golden"
 	"github.com/google/mtail/internal/watcher"
-	"github.com/spf13/afero"
 )
 
 var exampleProgramTests = []struct {
@@ -136,10 +135,9 @@ func TestExamplePrograms(t *testing.T) {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
-			fs := &afero.OsFs{}
 			programFile := path.Join("../..", tc.programfile)
 			logFile := path.Join("../..", tc.logfile)
-			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(programFile), mtail.LogPathPatterns(logFile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
+			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(logFile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			if err != nil {
 				t.Fatalf("create mtail failed: %s", err)
 			}
@@ -189,8 +187,7 @@ func TestCompileExamplePrograms(t *testing.T) {
 		t.Run(tc, func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
-			fs := &afero.OsFs{}
-			mtail, err := mtail.New(s, w, fs, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
+			mtail, err := mtail.New(s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			if err != nil {
 				t.Fatal(err)
 			}

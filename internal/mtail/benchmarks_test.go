@@ -17,7 +17,6 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/watcher"
-	"github.com/spf13/afero"
 )
 
 var (
@@ -37,7 +36,7 @@ func BenchmarkProgram(b *testing.B) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			programFile := path.Join("../..", bm.programfile)
-			mtail, err := mtail.New(store, w, afero.OsFs{}, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()))
+			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()))
 			if err != nil {
 				b.Fatalf("Failed to create mtail: %s", err)
 			}
