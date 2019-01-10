@@ -29,7 +29,7 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	logFile := path.Join(logDir, "log")
 
 	// Hide the error from stdout during test.
-	defer mtail.TestSetFlag("stderrthreshold", "FATAL")()
+	defer mtail.TestSetFlag(t, "stderrthreshold", "FATAL")()
 
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
