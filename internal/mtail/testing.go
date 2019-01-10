@@ -81,7 +81,11 @@ func TestStartServer(t *testing.T, pollInterval time.Duration, disableFsNotify b
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = <-errc
+		select {
+		case err = <-errc:
+		case <-time.After(5 * time.Second):
+		}
+
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -93,7 +97,10 @@ func TestStartServer(t *testing.T, pollInterval time.Duration, disableFsNotify b
 // assertions on the returned value.
 func TestGetMetric(t *testing.T, addr, name string) interface{} {
 	uri := fmt.Sprintf("http://%s/debug/vars", addr)
-	resp, err := http.Get(uri)
+	client := &http.Client{
+		Timeout: time.Duration(time.Second),
+	}
+	resp, err := client.Get(uri)
 	if err != nil {
 		t.Fatal(err)
 	}

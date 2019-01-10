@@ -25,12 +25,12 @@ $(DEPDIR)/%.d: ;
 -include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
 
 # Set the timeout for tests run under the race detector.
-timeout := 60s
+timeout := 10m
 ifeq ($(TRAVIS),true)
-timeout := 5m
+timeout := 20m
 endif
 ifeq ($(CIRCLECI),true)
-timeout := 5m
+timeout := 20m
 endif
 # Let the benchmarks run for a long time.  The timeout is for the total time of
 # all benchmarks, not per bench.
