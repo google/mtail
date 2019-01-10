@@ -103,7 +103,7 @@ func TestStartServer(t *testing.T, pollInterval time.Duration, disableFsNotify b
 func TestGetMetric(t *testing.T, addr, name string) interface{} {
 	uri := fmt.Sprintf("http://%s/debug/vars", addr)
 	client := &http.Client{
-		Timeout: time.Duration(time.Second),
+		Timeout: time.Duration(5 * time.Second),
 	}
 	resp, err := client.Get(uri)
 	if err != nil {
