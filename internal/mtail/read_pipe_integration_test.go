@@ -16,6 +16,7 @@ import (
 )
 
 func TestReadFromPipe(t *testing.T) {
+	t.Skip("cancellation bugs")
 	tmpDir, rmTmpDir := mtail.TestTempDir(t)
 	defer rmTmpDir()
 
