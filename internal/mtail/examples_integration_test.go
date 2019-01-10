@@ -136,8 +136,7 @@ func TestExamplePrograms(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
-			logFile := path.Join("../..", tc.logfile)
-			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(logFile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
+			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			if err != nil {
 				t.Fatalf("create mtail failed: %s", err)
 			}
@@ -147,7 +146,7 @@ func TestExamplePrograms(t *testing.T) {
 				t.Fatalf("Start tailling failed: %s", err)
 			}
 
-			g, err := os.Open(path.Join("../..", tc.goldenfile))
+			g, err := os.Open(tc.goldenfile)
 			if err != nil {
 				t.Fatalf("could not open golden file: %s", err)
 			}
