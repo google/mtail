@@ -25,12 +25,12 @@ $(DEPDIR)/%.d: ;
 -include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
 
 # Set the timeout for tests run under the race detector.
-timeout := 60s
+timeout := 10m
 ifeq ($(TRAVIS),true)
-timeout := 5m
+timeout := 20m
 endif
 ifeq ($(CIRCLECI),true)
-timeout := 5m
+timeout := 20m
 endif
 # Let the benchmarks run for a long time.  The timeout is for the total time of
 # all benchmarks, not per bench.
@@ -177,8 +177,7 @@ recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 
 .PHONY: regtest
 regtest: | .dep-stamp
-	tests/regtest.sh
-	go test -tags=integration -timeout=${benchtimeout} ./...
+	go test -v -tags=integration -timeout=${timeout} ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
@@ -236,7 +235,7 @@ install_deps: .dep-stamp
 coverage: coverprofile
 
 coverprofile: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
-	go test -v -covermode=count -coverprofile=$@ -tags=integration $(PACKAGES)
+	go test -v -covermode=count -coverprofile=$@ -tags=integration -timeout=${timeout} $(PACKAGES)
 
 coverage.html: coverprofile
 	go tool cover -html=$< -o $@

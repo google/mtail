@@ -39,10 +39,7 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 
 			{
 				logFile := path.Join(logDir, "log")
-				f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
-				if err != nil {
-					t.Fatal(err)
-				}
+				f := mtail.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
 				if err != nil {
 					t.Fatal(err)
@@ -64,10 +61,7 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 			{
 
 				logFile := path.Join(logDir, "log1")
-				f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
-				if err != nil {
-					t.Fatal(err)
-				}
+				f := mtail.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
 				if err != nil {
 					t.Fatal(err)

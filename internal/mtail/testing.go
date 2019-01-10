@@ -1,13 +1,17 @@
+// +build integration
+
 package mtail
 
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -74,8 +78,19 @@ func TestStartServer(t *testing.T, pollInterval time.Duration, disableFsNotify b
 	}
 
 	return m, func() {
-		m.Close()
-		err := <-errc
+		err := m.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		select {
+		case err = <-errc:
+		case <-time.After(5 * time.Second):
+			buf := make([]byte, 1<<16)
+			n := runtime.Stack(buf, true)
+			fmt.Fprintf(os.Stderr, "%s", buf[0:n])
+			t.Fatal("timeout waiting for shutdown")
+		}
+
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -87,7 +102,10 @@ func TestStartServer(t *testing.T, pollInterval time.Duration, disableFsNotify b
 // assertions on the returned value.
 func TestGetMetric(t *testing.T, addr, name string) interface{} {
 	uri := fmt.Sprintf("http://%s/debug/vars", addr)
-	resp, err := http.Get(uri)
+	client := &http.Client{
+		Timeout: time.Duration(time.Second),
+	}
+	resp, err := client.Get(uri)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,6 +121,7 @@ func TestGetMetric(t *testing.T, addr, name string) interface{} {
 // TestChdir changes current working directory, and returns a cleanup function
 // to return to the previous directory.
 func TestChdir(t *testing.T, dir string) func() {
+	t.Helper()
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -119,6 +138,8 @@ func TestChdir(t *testing.T, dir string) func() {
 	}
 }
 
+// ExpectMetricDelta checks to see if the difference between a and b is want;
+// it assumes both values are float64s that came from a TestGetMetric.
 func ExpectMetricDelta(t *testing.T, a, b interface{}, want float64) {
 	t.Helper()
 	if a == nil {
@@ -127,8 +148,32 @@ func ExpectMetricDelta(t *testing.T, a, b interface{}, want float64) {
 	if b == nil {
 		b = 0.
 	}
-	delta := a.(float64) - b.(float64)
-	if delta != want {
-		t.Errorf("Unexpected delta: got %g, want %g", delta, want)
+	if a.(float64)-b.(float64) != want {
+		t.Errorf("Unexpected delta: got %v - %v, want %g", a, b, want)
+	}
+}
+
+// TestOpenFile creates a new file called name and returns the opened file.
+func TestOpenFile(t *testing.T, name string) *os.File {
+	t.Helper()
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return f
+}
+
+// TestSetFlag sets the value of the commandline flag, and returns a cleanup function that restores the flag value.
+func TestSetFlag(t *testing.T, name, value string) func() {
+	t.Helper()
+	val := flag.Lookup(name)
+
+	flag.Set(name, value)
+	flag.Parse()
+
+	return func() {
+		if val != nil {
+			flag.Set(name, val.Value.String())
+		}
 	}
 }

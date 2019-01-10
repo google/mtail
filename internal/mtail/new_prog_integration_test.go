@@ -31,10 +31,7 @@ func TestNewProg(t *testing.T) {
 
 	startProgLoadsTotal := mtail.TestGetMetric(t, m.Addr(), "prog_loads_total").(map[string]interface{})
 
-	_, err = os.OpenFile(progDir+"/nocode.mtail", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
+	mtail.TestOpenFile(t, progDir+"/nocode.mtail")
 	time.Sleep(time.Second)
 
 	progLoadsTotal := mtail.TestGetMetric(t, m.Addr(), "prog_loads_total").(map[string]interface{})

@@ -35,10 +35,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
 
 	logFile := path.Join(logDir, "log.1.txt")
-	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
+	f := mtail.TestOpenFile(t, logFile)
+
 	n, err := f.WriteString("line 1\n")
 	if err != nil {
 		t.Fatal(err)
@@ -61,10 +59,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	{
 
 		logFile := path.Join(logDir, "log.2.txt")
-		f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
-		if err != nil {
-			t.Fatal(err)
-		}
+		f := mtail.TestOpenFile(t, logFile)
 		n, err := f.WriteString("line 1\n")
 		if err != nil {
 			t.Fatal(err)
@@ -85,10 +80,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	}
 	{
 		logFile := path.Join(logDir, "log.2.txt")
-		f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
-		if err != nil {
-			t.Fatal(err)
-		}
+		f := mtail.TestOpenFile(t, logFile)
 		n, err := f.WriteString("line 1\n")
 		if err != nil {
 			t.Fatal(err)

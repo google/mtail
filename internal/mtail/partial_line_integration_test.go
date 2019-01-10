@@ -12,7 +12,7 @@ import (
 	"github.com/google/mtail/internal/mtail"
 )
 
-func TestMultipleLinesInOneWrite(t *testing.T) {
+func TestPartialLineRead(t *testing.T) {
 	tmpDir, rmTmpDir := mtail.TestTempDir(t)
 	defer rmTmpDir()
 
@@ -34,6 +34,8 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
+	startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+
 	{
 		n, err := f.WriteString("line 1\n")
 		if err != nil {
@@ -41,12 +43,28 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 		}
 		glog.Infof("Wrote %d bytes", n)
 		time.Sleep(time.Second)
+
+		lineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+
+		mtail.ExpectMetricDelta(t, lineCount, startLineCount, 1)
 	}
-	startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
 
 	{
 
-		n, err := f.WriteString("line 2\nline 3\n")
+		n, err := f.WriteString("line ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		glog.Infof("Wrote %d bytes", n)
+		time.Sleep(time.Second)
+
+		lineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+
+		mtail.ExpectMetricDelta(t, lineCount, startLineCount, 1)
+	}
+	{
+
+		n, err := f.WriteString("2\n")
 		if err != nil {
 			t.Fatal(err)
 		}

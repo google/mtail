@@ -321,7 +321,7 @@ func (m *Server) Close() error {
 			}
 			cancel()
 		}
-		glog.Info("All done.")
+		glog.Info("END OF LINE")
 	})
 	return nil
 }

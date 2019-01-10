@@ -294,12 +294,13 @@ func (t *Tailer) handleCreateGlob(pathname string) {
 // handler.
 func (t *Tailer) run(events <-chan watcher.Event) {
 	defer close(t.runDone)
-	defer close(t.lines)
 
 	for e := range events {
 		glog.V(2).Infof("Event type %#v", e)
 		t.handleLogEvent(e.Pathname)
 	}
+	glog.Infof("Closing lines channel.")
+	close(t.lines)
 	glog.Infof("Shutting down tailer.")
 }
 

@@ -95,6 +95,7 @@ func open(fs afero.Fs, pathname string, seenBefore bool) (afero.File, error) {
 	}
 	var f afero.File
 Retry:
+	// TODO(jaq): Can we avoid the NONBLOCK open on fifos with a goroutine per file?
 	f, err := fs.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
 	if err != nil {
 		logErrors.Add(pathname, 1)
@@ -109,6 +110,7 @@ Retry:
 		glog.Infof("open failed all retries")
 		return nil, err
 	}
+	// TODO(jaq): f.SetDeadline() to see if we can close fifo readers.
 	glog.V(2).Infof("open succeeded %s", pathname)
 	return f, nil
 }
