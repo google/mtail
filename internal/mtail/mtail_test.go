@@ -20,7 +20,6 @@ import (
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 )
 
 const testProgram = "/$/ { }\n"
@@ -49,7 +48,7 @@ func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	if err != nil {
 		t.Errorf("Couodn't make a log watcher: %s", err)
 	}
-	m, err := New(metrics.NewStore(), w, &afero.OsFs{}, options...)
+	m, err := New(metrics.NewStore(), w, options...)
 	if err != nil {
 		t.Fatalf("couldn't create mtail: %s", err)
 	}

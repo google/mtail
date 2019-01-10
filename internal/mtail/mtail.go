@@ -35,7 +35,6 @@ type Server struct {
 	lines chan *logline.LogLine // Channel of lines from tailer to VM engine.
 	store *metrics.Store        // Metrics storage.
 	w     watcher.Watcher
-	fs    afero.Fs
 
 	t *tailer.Tailer     // t tails the watched files and feeds lines to the VMs.
 	l *vm.Loader         // l loads programs and manages the VM lifecycle.
@@ -105,7 +104,7 @@ func (m *Server) initLoader() error {
 		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
 	}
 	var err error
-	m.l, err = vm.NewLoader(m.programPath, m.store, m.lines, m.w, m.fs, opts...)
+	m.l, err = vm.NewLoader(m.programPath, m.store, m.lines, m.w, &afero.OsFs{}, opts...)
 	if err != nil {
 		return err
 	}
@@ -134,7 +133,7 @@ func (m *Server) initTailer() (err error) {
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
 	}
-	m.t, err = tailer.New(m.lines, m.fs, m.w, opts...)
+	m.t, err = tailer.New(m.lines, &afero.OsFs{}, m.w, opts...)
 	return
 }
 
@@ -180,12 +179,11 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // New creates a MtailServer from the supplied Options.
-func New(store *metrics.Store, w watcher.Watcher, fs afero.Fs, options ...func(*Server) error) (*Server, error) {
+func New(store *metrics.Store, w watcher.Watcher, options ...func(*Server) error) (*Server, error) {
 	m := &Server{
 		store:     store,
 		lines:     make(chan *logline.LogLine),
 		w:         w,
-		fs:        fs,
 		webquit:   make(chan struct{}),
 		closeQuit: make(chan struct{}),
 		h:         &http.Server{},

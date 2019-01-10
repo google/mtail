@@ -18,7 +18,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/watcher"
-	"github.com/spf13/afero"
 )
 
 const timeoutMultiplier = 3
@@ -47,7 +46,7 @@ func TestMakeServer(t *testing.T, pollInterval time.Duration, disableFsNotify bo
 		t.Fatal(err)
 	}
 
-	return New(metrics.NewStore(), w, &afero.OsFs{}, options...)
+	return New(metrics.NewStore(), w, options...)
 }
 
 // TestStartServer creates a new Server and starts it running.  It
