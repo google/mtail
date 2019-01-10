@@ -15,8 +15,8 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/mtail"
-	"github.com/google/mtail/internal/mtail/testutil"
-	"github.com/google/mtail/internal/mtail/testutil/golden"
+	"github.com/google/mtail/internal/testutil"
+	"github.com/google/mtail/internal/testutil/golden"
 	"github.com/google/mtail/internal/watcher"
 )
 
