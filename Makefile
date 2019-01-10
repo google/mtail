@@ -177,7 +177,7 @@ recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 
 .PHONY: regtest
 regtest: | .dep-stamp
-	go test -v -tags=integration -timeout=${benchtimeout} ./...
+	go test -v -tags=integration -timeout=${timeout} ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
@@ -235,7 +235,7 @@ install_deps: .dep-stamp
 coverage: coverprofile
 
 coverprofile: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
-	go test -v -covermode=count -coverprofile=$@ -tags=integration $(PACKAGES)
+	go test -v -covermode=count -coverprofile=$@ -tags=integration -timeout=${timeout} $(PACKAGES)
 
 coverage.html: coverprofile
 	go tool cover -html=$< -o $@
