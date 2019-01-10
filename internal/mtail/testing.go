@@ -74,8 +74,11 @@ func TestStartServer(t *testing.T, pollInterval time.Duration, disableFsNotify b
 	}
 
 	return m, func() {
-		m.Close()
-		err := <-errc
+		err := m.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = <-errc
 		if err != nil {
 			t.Fatal(err)
 		}

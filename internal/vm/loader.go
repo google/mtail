@@ -422,6 +422,7 @@ func (l *Loader) processLines(lines <-chan *logline.LogLine) {
 	<-l.watcherDone
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
+	glog.Info("Closing VM lines channels.")
 	for prog := range l.handles {
 		// Close the per-VM lines channel, and wait for it to signal it's done.
 		close(l.handles[prog].lines)
