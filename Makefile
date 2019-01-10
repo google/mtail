@@ -177,7 +177,6 @@ recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 
 .PHONY: regtest
 regtest: | .dep-stamp
-	tests/regtest.sh
 	go test -tags=integration -timeout=${benchtimeout} ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
