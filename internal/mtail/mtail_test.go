@@ -17,7 +17,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/google/mtail/internal/mtail/testutil"
 	"github.com/google/mtail/internal/watcher"
 	"github.com/pkg/errors"
 )
