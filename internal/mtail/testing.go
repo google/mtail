@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -84,6 +85,10 @@ func TestStartServer(t *testing.T, pollInterval time.Duration, disableFsNotify b
 		select {
 		case err = <-errc:
 		case <-time.After(5 * time.Second):
+			buf := make([]byte, 1<<16)
+			n := runtime.Stack(buf, true)
+			fmt.Fprintf(os.Stderr, "%s", buf[0:n])
+			t.Fatal("timeout waiting for shutdown")
 		}
 
 		if err != nil {
@@ -159,7 +164,8 @@ func TestOpenFile(t *testing.T, name string) *os.File {
 }
 
 // TestSetFlag sets the value of the commandline flag, and returns a cleanup function that restores the flag value.
-func TestSetFlag(name, value string) func() {
+func TestSetFlag(t *testing.T, name, value string) func() {
+	t.Helper()
 	val := flag.Lookup(name)
 
 	flag.Set(name, value)
