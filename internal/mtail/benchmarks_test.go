@@ -4,7 +4,7 @@
 // Only build with go1.7 or above because b.Run did not exist before.
 // +build integration
 
-package main
+package mtail_test
 
 import (
 	"flag"
@@ -36,7 +36,8 @@ func BenchmarkProgram(b *testing.B) {
 			log := mtail.TestOpenFile(b, logFile)
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
-			mtail, err := mtail.New(store, w, afero.OsFs{}, mtail.ProgramPath(bm.programfile), mtail.LogPathPatterns(log.Name()))
+			programFile := path.Join("../..", bm.programfile)
+			mtail, err := mtail.New(store, w, afero.OsFs{}, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()))
 			if err != nil {
 				b.Fatalf("Failed to create mtail: %s", err)
 			}
@@ -46,9 +47,10 @@ func BenchmarkProgram(b *testing.B) {
 			}
 
 			var total int64
+			dataLogFile := path.Join("../..", bm.logfile)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				l, err := os.Open(bm.logfile)
+				l, err := os.Open(dataLogFile)
 				if err != nil {
 					b.Fatalf("Couldn't open logfile: %s", err)
 				}

@@ -1,11 +1,13 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
+// +build integration
 
-package main
+package mtail_test
 
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -135,7 +137,9 @@ func TestExamplePrograms(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			fs := &afero.OsFs{}
-			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(tc.programfile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
+			programFile := path.Join("../..", tc.programfile)
+			logFile := path.Join("../..", tc.logfile)
+			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(programFile), mtail.LogPathPatterns(logFile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			if err != nil {
 				t.Fatalf("create mtail failed: %s", err)
 			}
@@ -145,7 +149,7 @@ func TestExamplePrograms(t *testing.T) {
 				t.Fatalf("Start tailling failed: %s", err)
 			}
 
-			g, err := os.Open(tc.goldenfile)
+			g, err := os.Open(path.Join("../..", tc.goldenfile))
 			if err != nil {
 				t.Fatalf("could not open golden file: %s", err)
 			}

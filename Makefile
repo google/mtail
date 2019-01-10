@@ -148,17 +148,9 @@ check test: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
 testrace: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
 	go test -timeout ${timeout} -race -v -tags=integration ./...
 
-.PHONY: testex
-testex: | .dep-stamp
-	go test -timeout ${timeout} -run Test.*ExamplePrograms -v
-
 .PHONY: smoke
 smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -timeout 1s -test.short ./...
-
-.PHONY: ex_test
-ex_test: ex_test.go testdata/* examples/* | .dep-stamp
-	go test -run TestExamplePrograms --logtostderr
 
 .PHONY: bench
 bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
@@ -169,7 +161,8 @@ bench_cpu: | .dep-stamp
 	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -cpuprofile=cpu.out
 .PHONY: bench_mem
 bench_mem: | .dep-stamp
-	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out
+	go test -tags=integration
+-bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
