@@ -3,6 +3,7 @@ package mtail
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -147,4 +148,18 @@ func TestOpenFile(t *testing.T, name string) *os.File {
 		t.Fatal(err)
 	}
 	return f
+}
+
+// TestSetFlag sets the value of the commandline flag, and returns a cleanup function that restores the flag value.
+func TestSetFlag(name, value string) func() {
+	val := flag.Lookup(name)
+
+	flag.Set(name, value)
+	flag.Parse()
+
+	return func() {
+		if val != nil {
+			flag.Set(name, val.Value.String())
+		}
+	}
 }

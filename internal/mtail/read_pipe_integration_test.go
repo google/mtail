@@ -29,14 +29,6 @@ func TestReadFromPipe(t *testing.T) {
 	}
 	defer mtail.TestChdir(t, logDir)()
 
-	//flag.Set("vmodule", "tail=2,log_watcher=2")
-	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
-	defer stopM()
-
-	startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
-
-	time.Sleep(1 * time.Second)
-
 	logFile := path.Join(logDir, "logpipe")
 
 	err = syscall.Mkfifo(logFile, 0600)
@@ -50,6 +42,13 @@ func TestReadFromPipe(t *testing.T) {
 		t.Fatal(err)
 	}
 	time.Sleep(time.Second)
+
+	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
+	defer stopM()
+
+	startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+
+	time.Sleep(1 * time.Second)
 
 	n, err := f.WriteString("1\n2\n3\n")
 	if err != nil {
