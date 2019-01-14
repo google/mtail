@@ -5,7 +5,6 @@ package tailer
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -22,25 +21,7 @@ import (
 )
 
 func makeTestTail(t *testing.T) (*Tailer, chan *logline.LogLine, *watcher.FakeWatcher, afero.Fs, string, func()) {
-	fs := afero.NewMemMapFs()
-	w := watcher.NewFakeWatcher()
-	lines := make(chan *logline.LogLine, 1)
-	ta, err := New(lines, fs, w)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fs.Mkdir("tail_test", os.ModePerm)
-	return ta, lines, w, fs, "/tail_test", func() {}
-}
-
-func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *logline.LogLine, *watcher.FakeWatcher, afero.Fs, string, func()) {
-	if testing.Short() {
-		t.Skip("skipping real fs test in short mode")
-	}
-	dir, err := ioutil.TempDir("", prefix)
-	if err != nil {
-		t.Fatalf("can't create tempdir: %v", err)
-	}
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 
 	fs := afero.NewOsFs()
 	w := watcher.NewFakeWatcher()
@@ -49,12 +30,7 @@ func makeTestTailReal(t *testing.T, prefix string) (*Tailer, chan *logline.LogLi
 	if err != nil {
 		t.Fatal(err)
 	}
-	cleanup := func() {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Log(err)
-		}
-	}
-	return ta, lines, w, fs, dir, cleanup
+	return ta, lines, w, fs, tmpDir, rmTmpDir
 }
 
 func TestTail(t *testing.T) {
@@ -81,7 +57,7 @@ func TestTail(t *testing.T) {
 }
 
 func TestHandleLogUpdate(t *testing.T) {
-	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "handle_log_update")
+	ta, lines, w, fs, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -112,7 +88,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// f.Seek(0, 0) // afero in-memory files share the same offset
+	// f.Seek(0, 0)
 	w.InjectUpdate(logfile)
 
 	wg.Wait()
@@ -136,7 +112,7 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "truncate")
+	ta, lines, w, fs, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -202,7 +178,7 @@ func TestHandleLogTruncate(t *testing.T) {
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
-	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "log_update_partial_line")
+	ta, lines, w, fs, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -274,9 +250,7 @@ func TestTailerOpenRetries(t *testing.T) {
 	if u.Uid == "0" {
 		t.Skip("Skipping test when run as root")
 	}
-	// Use the real filesystem because afero doesn't implement correct
-	// permissions checking on OpenFile in the memfile implementation.
-	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "retries")
+	ta, lines, w, fs, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -342,7 +316,7 @@ func TestTailerInitErrors(t *testing.T) {
 	if err == nil {
 		t.Error("expected error")
 	}
-	fs := afero.NewMemMapFs()
+	fs := afero.NewOsFs()
 	_, err = New(lines, fs, nil)
 	if err == nil {
 		t.Error("expected error")
@@ -359,7 +333,7 @@ func TestTailerInitErrors(t *testing.T) {
 }
 
 func TestHandleLogRotate(t *testing.T) {
-	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "rotate")
+	ta, lines, w, fs, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -424,7 +398,7 @@ func TestHandleLogRotate(t *testing.T) {
 }
 
 func TestHandleLogRotateSignalsWrong(t *testing.T) {
-	ta, lines, w, fs, dir, cleanup := makeTestTailReal(t, "rotate wrong")
+	ta, lines, w, fs, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 	logfile := filepath.Join(dir, "log")
 	f, err := fs.Create(logfile)
