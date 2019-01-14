@@ -12,10 +12,11 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestBasicTail(t *testing.T) {
-	logDir, rmLogDir := mtail.TestTempDir(t)
+	logDir, rmLogDir := testutil.TestTempDir(t)
 	defer rmLogDir()
 
 	//flag.Set("vmodule", "tail=2,log_watcher=2")
@@ -28,7 +29,7 @@ func TestBasicTail(t *testing.T) {
 
 	logFile := path.Join(logDir, "log")
 
-	f := mtail.TestOpenFile(t, logFile)
+	f := testutil.TestOpenFile(t, logFile)
 
 	for i := 1; i <= 3; i++ {
 		n, err := f.WriteString(fmt.Sprintf("%d\n", i))

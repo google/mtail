@@ -12,10 +12,11 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestTruncatedLogRead(t *testing.T) {
-	tmpDir, rmTmpDir := mtail.TestTempDir(t)
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
 	logDir := path.Join(tmpDir, "logs")
@@ -36,7 +37,7 @@ func TestTruncatedLogRead(t *testing.T) {
 	startLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
 
 	logFile := path.Join(logDir, "log")
-	f := mtail.TestOpenFile(t, logFile)
+	f := testutil.TestOpenFile(t, logFile)
 	time.Sleep(time.Second)
 
 	n, err := f.WriteString("1\n")

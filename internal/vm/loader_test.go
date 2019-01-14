@@ -4,9 +4,12 @@
 package vm
 
 import (
+	"os"
+	"path"
 	"strings"
 	"testing"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/testutil"
@@ -18,7 +21,8 @@ func TestNewLoader(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
 	inLines := make(chan *logline.LogLine)
-	fs := afero.NewMemMapFs()
+
+	fs := &afero.OsFs{}
 	l, err := NewLoader("", store, inLines, w, fs)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
@@ -43,7 +47,7 @@ func TestCompileAndRun(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	w := watcher.NewFakeWatcher()
-	fs := afero.NewMemMapFs()
+	fs := &afero.OsFs{}
 	l, err := NewLoader("", store, lines, w, fs)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
@@ -117,8 +121,11 @@ func TestProcessEvents(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			lines := make(chan *logline.LogLine)
-			fs := afero.NewMemMapFs()
-			l, err := NewLoader(".", store, lines, w, fs)
+			tmpDir, rmTmpDir := testutil.TestTempDir(t)
+			defer rmTmpDir()
+
+			fs := afero.OsFs{}
+			l, err := NewLoader(tmpDir, store, lines, w, fs)
 			if err != nil {
 				t.Fatalf("couldn't create loader: %s", err)
 			}
@@ -128,24 +135,18 @@ func TestProcessEvents(t *testing.T) {
 				switch e.Op {
 				case watcher.Create:
 					if e.Pathname != "notexist.mtail" {
-						_, err := fs.Create(e.Pathname)
-						if err != nil {
-							t.Fatalf("Create failed for %s: %s", e.Pathname, err)
-						}
+						testutil.TestOpenFile(t, path.Join(tmpDir, e.Pathname))
 					}
-					w.InjectCreate(e.Pathname)
+					w.InjectCreate(path.Join(tmpDir, e.Pathname))
 				case watcher.Delete:
-					err := fs.Remove(e.Pathname)
+					err := os.Remove(path.Join(tmpDir, e.Pathname))
 					if err != nil {
 						t.Fatalf("Remove failed for %s: %s", e.Pathname, err)
 					}
-					w.InjectDelete(e.Pathname)
+					w.InjectDelete(path.Join(tmpDir, e.Pathname))
 				case watcher.Update:
 					if e.Pathname != "notexist.mtail" {
-						f, err := fs.Create(e.Pathname)
-						if err != nil {
-							t.Fatalf("Couldn't open file %s for test: %s", e.Pathname, err)
-						}
+						f := testutil.TestOpenFile(t, path.Join(tmpDir, e.Pathname))
 						_, err = f.WriteString(testProgram)
 						if err != nil {
 							t.Fatalf("Couldn't write file contents: %s", err)
@@ -154,7 +155,7 @@ func TestProcessEvents(t *testing.T) {
 							t.Fatalf("Close failed: %s", err)
 						}
 					}
-					w.InjectUpdate(e.Pathname)
+					w.InjectUpdate(path.Join(tmpDir, e.Pathname))
 				}
 			}
 			w.Close()
@@ -185,17 +186,24 @@ func TestLoadProg(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
 	inLines := make(chan *logline.LogLine)
-	fs := afero.NewMemMapFs()
-	l, err := NewLoader("", store, inLines, w, fs)
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+	fs := &afero.OsFs{}
+	l, err := NewLoader(tmpDir, store, inLines, w, fs)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
 
-	for _, f := range testProgFiles {
-		afero.WriteFile(fs, f, []byte(testProgram), 0644)
-		err = l.LoadProgram(f)
+	for _, name := range testProgFiles {
+		f := testutil.TestOpenFile(t, path.Join(tmpDir, name))
+		n, err := f.WriteString(testProgram)
 		if err != nil {
-			t.Fatalf("couldn't load file: %s error: %s", f, err)
+			t.Fatal(err)
+		}
+		glog.Infof("Wrote %d bytes", n)
+		err = l.LoadProgram(path.Join(tmpDir, name))
+		if err != nil {
+			t.Fatalf("couldn't load file: %s error: %s", name, err)
 		}
 	}
 }

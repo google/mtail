@@ -13,12 +13,13 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 	for _, pollInterval := range []time.Duration{0, 250 * time.Millisecond} {
 		t.Run(fmt.Sprintf("%s", pollInterval), func(t *testing.T) {
-			tmpDir, rmTmpDir := mtail.TestTempDir(t)
+			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
 
 			logDir := path.Join(tmpDir, "logs")
@@ -31,7 +32,7 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer mtail.TestChdir(t, logDir)()
+			defer testutil.TestChdir(t, logDir)()
 
 			m, stopM := mtail.TestStartServer(t, pollInterval, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log*"))
 			defer stopM()
@@ -41,7 +42,7 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 
 			{
 				logFile := path.Join(logDir, "log")
-				f := mtail.TestOpenFile(t, logFile)
+				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
 				if err != nil {
 					t.Fatal(err)
@@ -63,7 +64,7 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 			{
 
 				logFile := path.Join(logDir, "log1")
-				f := mtail.TestOpenFile(t, logFile)
+				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
 				if err != nil {
 					t.Fatal(err)

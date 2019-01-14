@@ -12,10 +12,11 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestLogRotation(t *testing.T) {
-	tmpDir, rmTmpDir := mtail.TestTempDir(t)
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
 	logDir := path.Join(tmpDir, "logs")
@@ -31,7 +32,7 @@ func TestLogRotation(t *testing.T) {
 
 	logFile := path.Join(logDir, "log")
 
-	f := mtail.TestOpenFile(t, logFile)
+	f := testutil.TestOpenFile(t, logFile)
 
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
@@ -65,7 +66,7 @@ func TestLogRotation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	f = mtail.TestOpenFile(t, logFile)
+	f = testutil.TestOpenFile(t, logFile)
 
 	{
 		n, err := f.WriteString("line 1\n")

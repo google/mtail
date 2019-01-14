@@ -87,7 +87,7 @@ func (l *Loader) LoadAllPrograms() error {
 	return nil
 }
 
-// LoadProgram loads or reloads a program from the path specified.  The name of
+// LoadProgram loads or reloads a program from the full pathname programPath.  The name of
 // the program is the basename of the file.
 func (l *Loader) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)

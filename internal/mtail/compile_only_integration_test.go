@@ -11,12 +11,13 @@ import (
 	"testing"
 
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestBadProgramFailsCompilation(t *testing.T) {
-	progDir, rmProgDir := mtail.TestTempDir(t)
+	progDir, rmProgDir := testutil.TestTempDir(t)
 	defer rmProgDir()
-	logDir, rmLogDir := mtail.TestTempDir(t)
+	logDir, rmLogDir := testutil.TestTempDir(t)
 	defer rmLogDir()
 
 	err := ioutil.WriteFile(path.Join(progDir, "bad.mtail"), []byte("asdfasdf\n"), 0666)

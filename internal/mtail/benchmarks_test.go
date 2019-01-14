@@ -16,6 +16,7 @@ import (
 
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
 )
 
@@ -29,10 +30,10 @@ func BenchmarkProgram(b *testing.B) {
 		bm := bm
 		b.Run(fmt.Sprintf("%s on %s", bm.programfile, bm.logfile), func(b *testing.B) {
 			b.ReportAllocs()
-			logDir, rmLogDir := mtail.TestTempDir(b)
+			logDir, rmLogDir := testutil.TestTempDir(b)
 			defer rmLogDir()
 			logFile := path.Join(logDir, "test.log")
-			log := mtail.TestOpenFile(b, logFile)
+			log := testutil.TestOpenFile(b, logFile)
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			programFile := path.Join("../..", bm.programfile)

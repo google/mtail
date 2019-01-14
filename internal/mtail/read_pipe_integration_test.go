@@ -13,11 +13,12 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestReadFromPipe(t *testing.T) {
 	t.Skip("cancellation bugs")
-	tmpDir, rmTmpDir := mtail.TestTempDir(t)
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
 	logDir := path.Join(tmpDir, "logs")
@@ -30,7 +31,7 @@ func TestReadFromPipe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer mtail.TestChdir(t, logDir)()
+	defer testutil.TestChdir(t, logDir)()
 
 	logFile := path.Join(logDir, "logpipe")
 
