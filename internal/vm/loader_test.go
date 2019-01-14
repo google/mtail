@@ -14,16 +14,13 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
-	"github.com/spf13/afero"
 )
 
 func TestNewLoader(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
 	inLines := make(chan *logline.LogLine)
-
-	fs := &afero.OsFs{}
-	l, err := NewLoader("", store, inLines, w, fs)
+	l, err := NewLoader("", store, inLines, w)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
@@ -47,8 +44,7 @@ func TestCompileAndRun(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	w := watcher.NewFakeWatcher()
-	fs := &afero.OsFs{}
-	l, err := NewLoader("", store, lines, w, fs)
+	l, err := NewLoader("", store, lines, w)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
@@ -124,8 +120,7 @@ func TestProcessEvents(t *testing.T) {
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
 
-			fs := afero.OsFs{}
-			l, err := NewLoader(tmpDir, store, lines, w, fs)
+			l, err := NewLoader(tmpDir, store, lines, w)
 			if err != nil {
 				t.Fatalf("couldn't create loader: %s", err)
 			}
@@ -188,8 +183,7 @@ func TestLoadProg(t *testing.T) {
 	inLines := make(chan *logline.LogLine)
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
-	fs := &afero.OsFs{}
-	l, err := NewLoader(tmpDir, store, inLines, w, fs)
+	l, err := NewLoader(tmpDir, store, inLines, w)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}

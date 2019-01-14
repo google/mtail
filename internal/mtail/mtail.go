@@ -104,7 +104,7 @@ func (m *Server) initLoader() error {
 		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
 	}
 	var err error
-	m.l, err = vm.NewLoader(m.programPath, m.store, m.lines, m.w, &afero.OsFs{}, opts...)
+	m.l, err = vm.NewLoader(m.programPath, m.store, m.lines, m.w, opts...)
 	if err != nil {
 		return err
 	}
