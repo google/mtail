@@ -6,9 +6,9 @@ package tailer
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -20,14 +20,14 @@ import (
 
 func TestReadPartial(t *testing.T) {
 	lines := make(chan *logline.LogLine, 1)
-	fs := afero.NewMemMapFs()
+	fs := afero.NewOsFs()
 
-	logfile := "/t"
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
 
-	fd, err := fs.Create(logfile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	logfile := path.Join(tmpDir, "t")
+
+	fd := testutil.TestOpenFile(t, logfile)
 	f, err := NewFile(fs, logfile, lines, false)
 	if err != nil {
 		t.Fatal(err)
@@ -95,22 +95,15 @@ func TestOpenRetries(t *testing.T) {
 		t.Skip("Skipping test when run as root")
 	}
 
-	dir, err := ioutil.TempDir("", "file_test_openretries")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Log(err)
-		}
-	}()
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
 
 	// Use the real filesystem because afero doesn't implement correct
 	// permissions checking on OpenFile in the memfile implementation.
 	fs := afero.NewOsFs()
 
-	logfile := filepath.Join(dir, "log")
-	if _, err := fs.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
+	logfile := filepath.Join(tmpDir, "log")
+	if _, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
 		t.Fatal(err)
 	}
 
