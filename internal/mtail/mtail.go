@@ -27,7 +27,6 @@ import (
 	"github.com/google/mtail/internal/vm"
 	"github.com/google/mtail/internal/watcher"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 )
 
 // Server contains the state of the main mtail program.
@@ -133,7 +132,7 @@ func (m *Server) initTailer() (err error) {
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
 	}
-	m.t, err = tailer.New(m.lines, &afero.OsFs{}, m.w, opts...)
+	m.t, err = tailer.New(m.lines, m.w, opts...)
 	return
 }
 

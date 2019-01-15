@@ -15,12 +15,10 @@ import (
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/testutil"
-	"github.com/spf13/afero"
 )
 
 func TestReadPartial(t *testing.T) {
 	lines := make(chan *logline.LogLine, 1)
-	fs := afero.NewOsFs()
 
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
@@ -28,7 +26,7 @@ func TestReadPartial(t *testing.T) {
 	logfile := path.Join(tmpDir, "t")
 
 	fd := testutil.TestOpenFile(t, logfile)
-	f, err := NewFile(fs, logfile, lines, false)
+	f, err := NewFile(logfile, lines, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,16 +96,12 @@ func TestOpenRetries(t *testing.T) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
-	// Use the real filesystem because afero doesn't implement correct
-	// permissions checking on OpenFile in the memfile implementation.
-	fs := afero.NewOsFs()
-
 	logfile := filepath.Join(tmpDir, "log")
 	if _, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := NewFile(fs, logfile, nil, false); err == nil || !os.IsPermission(err) {
+	if _, err := NewFile(logfile, nil, false); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
 }
