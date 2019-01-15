@@ -16,7 +16,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 )
 
 var (
@@ -36,7 +35,7 @@ type File struct {
 	Name     string // Given name for the file (possibly relative, used for displau)
 	Pathname string // Full absolute path of the file used internally
 	regular  bool   // Remember if this is a regular file (or a pipe)
-	file     afero.File
+	file     *os.File
 	partial  *bytes.Buffer
 	lines    chan<- *logline.LogLine // output channel for lines read
 }
@@ -82,7 +81,7 @@ func NewFile(pathname string, lines chan<- *logline.LogLine, seekToStart bool) (
 	return &File{pathname, absPath, regular, f, bytes.NewBufferString(""), lines}, nil
 }
 
-func open(pathname string, seenBefore bool) (afero.File, error) {
+func open(pathname string, seenBefore bool) (*os.File, error) {
 	retries := 3
 	retryDelay := 1 * time.Millisecond
 	shouldRetry := func() bool {
@@ -92,7 +91,7 @@ func open(pathname string, seenBefore bool) (afero.File, error) {
 		}
 		return retries > 0
 	}
-	var f afero.File
+	var f *os.File
 Retry:
 	// TODO(jaq): Can we avoid the NONBLOCK open on fifos with a goroutine per file?
 	f, err := os.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
@@ -109,7 +108,6 @@ Retry:
 		glog.Infof("open failed all retries")
 		return nil, err
 	}
-	// TODO(jaq): f.SetDeadline() to see if we can close fifo readers.
 	glog.V(2).Infof("open succeeded %s", pathname)
 	return f, nil
 }

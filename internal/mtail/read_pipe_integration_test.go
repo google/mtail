@@ -52,7 +52,6 @@ func TestReadFromPipe(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
-		// TODO(jaq): Use f.SetDeadline once we stop using afero.
 		err = f.Close()
 		if err != nil {
 			t.Fatal(err)
