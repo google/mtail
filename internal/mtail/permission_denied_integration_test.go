@@ -1,3 +1,5 @@
+// Copyright 2019 Google Inc. All Rights Reserved.
+// This file is available under the Apache license.
 // +build integration
 
 package mtail_test
@@ -9,10 +11,11 @@ import (
 	"time"
 
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestPermissionDeniedOnLog(t *testing.T) {
-	tmpDir, rmTmpDir := mtail.TestTempDir(t)
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
 	logDir := path.Join(tmpDir, "logs")
@@ -29,7 +32,7 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	logFile := path.Join(logDir, "log")
 
 	// Hide the error from stdout during test.
-	defer mtail.TestSetFlag(t, "stderrthreshold", "FATAL")()
+	defer testutil.TestSetFlag(t, "stderrthreshold", "FATAL")()
 
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()

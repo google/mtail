@@ -1,3 +1,5 @@
+// Copyright 2019 Google Inc. All Rights Reserved.
+// This file is available under the Apache license.
 // +build integration
 
 package mtail_test
@@ -10,10 +12,11 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestPartialLineRead(t *testing.T) {
-	tmpDir, rmTmpDir := mtail.TestTempDir(t)
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
 	logDir := path.Join(tmpDir, "logs")
@@ -29,7 +32,7 @@ func TestPartialLineRead(t *testing.T) {
 
 	logFile := path.Join(logDir, "log")
 
-	f := mtail.TestOpenFile(t, logFile)
+	f := testutil.TestOpenFile(t, logFile)
 
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()

@@ -15,7 +15,6 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/watcher"
-	"github.com/spf13/afero"
 )
 
 type seqStringFlag []string
@@ -144,7 +143,7 @@ func main() {
 	if !*emitProgLabel {
 		opts = append(opts, mtail.OmitProgLabel)
 	}
-	m, err := mtail.New(metrics.NewStore(), w, &afero.OsFs{}, opts...)
+	m, err := mtail.New(metrics.NewStore(), w, opts...)
 	if err != nil {
 		glog.Error(err)
 		os.Exit(1)

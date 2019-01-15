@@ -2,21 +2,22 @@
 // This file is available under the Apache license.
 
 // Only build with go1.7 or above because b.Run did not exist before.
-// +build go1.7
+// +build integration
 
-package main
+package mtail_test
 
 import (
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
-	"github.com/spf13/afero"
 )
 
 var (
@@ -29,15 +30,14 @@ func BenchmarkProgram(b *testing.B) {
 		bm := bm
 		b.Run(fmt.Sprintf("%s on %s", bm.programfile, bm.logfile), func(b *testing.B) {
 			b.ReportAllocs()
+			logDir, rmLogDir := testutil.TestTempDir(b)
+			defer rmLogDir()
+			logFile := path.Join(logDir, "test.log")
+			log := testutil.TestOpenFile(b, logFile)
 			w := watcher.NewFakeWatcher()
-			fs := afero.NewOsFs()
-			fs = afero.NewCopyOnWriteFs(fs, afero.NewMemMapFs())
-			log, err := fs.Create("/tmp/test.log")
-			if err != nil {
-				b.Fatalf("failed to create test file descriptor")
-			}
 			store := metrics.NewStore()
-			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(bm.programfile), mtail.LogPathPatterns(log.Name()))
+			programFile := path.Join("../..", bm.programfile)
+			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()))
 			if err != nil {
 				b.Fatalf("Failed to create mtail: %s", err)
 			}
@@ -47,9 +47,10 @@ func BenchmarkProgram(b *testing.B) {
 			}
 
 			var total int64
+			dataLogFile := path.Join("../..", bm.logfile)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				l, err := os.Open(bm.logfile)
+				l, err := os.Open(dataLogFile)
 				if err != nil {
 					b.Fatalf("Couldn't open logfile: %s", err)
 				}

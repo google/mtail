@@ -16,7 +16,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 )
 
 var (
@@ -36,8 +35,7 @@ type File struct {
 	Name     string // Given name for the file (possibly relative, used for displau)
 	Pathname string // Full absolute path of the file used internally
 	regular  bool   // Remember if this is a regular file (or a pipe)
-	fs       afero.Fs
-	file     afero.File
+	file     *os.File
 	partial  *bytes.Buffer
 	lines    chan<- *logline.LogLine // output channel for lines read
 }
@@ -47,13 +45,13 @@ type File struct {
 // retry on error to open the file. `seekToStart` indicates that the file
 // should be tailed from offset 0, not EOF; the latter is true for rotated
 // files and for files opened when mtail is in oneshot mode.
-func NewFile(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seekToStart bool) (*File, error) {
+func NewFile(pathname string, lines chan<- *logline.LogLine, seekToStart bool) (*File, error) {
 	glog.V(2).Infof("file.New(%s, %v)", pathname, seekToStart)
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		return nil, err
 	}
-	f, err := open(fs, absPath, false)
+	f, err := open(absPath, false)
 	if err != nil {
 		return nil, err
 	}
@@ -80,10 +78,10 @@ func NewFile(fs afero.Fs, pathname string, lines chan<- *logline.LogLine, seekTo
 	default:
 		return nil, errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, absPath)
 	}
-	return &File{pathname, absPath, regular, fs, f, bytes.NewBufferString(""), lines}, nil
+	return &File{pathname, absPath, regular, f, bytes.NewBufferString(""), lines}, nil
 }
 
-func open(fs afero.Fs, pathname string, seenBefore bool) (afero.File, error) {
+func open(pathname string, seenBefore bool) (*os.File, error) {
 	retries := 3
 	retryDelay := 1 * time.Millisecond
 	shouldRetry := func() bool {
@@ -93,10 +91,10 @@ func open(fs afero.Fs, pathname string, seenBefore bool) (afero.File, error) {
 		}
 		return retries > 0
 	}
-	var f afero.File
+	var f *os.File
 Retry:
 	// TODO(jaq): Can we avoid the NONBLOCK open on fifos with a goroutine per file?
-	f, err := fs.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
+	f, err := os.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
 	if err != nil {
 		logErrors.Add(pathname, 1)
 		if shouldRetry() {
@@ -110,7 +108,6 @@ Retry:
 		glog.Infof("open failed all retries")
 		return nil, err
 	}
-	// TODO(jaq): f.SetDeadline() to see if we can close fifo readers.
 	glog.V(2).Infof("open succeeded %s", pathname)
 	return f, nil
 }
@@ -126,7 +123,7 @@ func (f *File) Follow() error {
 			return err
 		}
 	}
-	s2, err := f.fs.Stat(f.Pathname)
+	s2, err := os.Stat(f.Pathname)
 	if err != nil {
 		glog.Infof("Stat failed on %q: %s", f.Pathname, err)
 		return nil
@@ -151,7 +148,7 @@ func (f *File) doRotation() error {
 	glog.V(2).Info("doing the rotation flush read")
 	f.Read()
 	logRotations.Add(f.Name, 1)
-	newFile, err := open(f.fs, f.Pathname, true /*seenBefore*/)
+	newFile, err := open(f.Pathname, true /*seenBefore*/)
 	if err != nil {
 		return err
 	}
@@ -167,6 +164,9 @@ func (f *File) Read() error {
 	b := make([]byte, 0, 4096)
 	totalBytes := 0
 	for {
+		if err := f.file.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+			glog.Info(err)
+		}
 		n, err := f.file.Read(b[:cap(b)])
 		glog.V(2).Infof("Read count %v err %v", n, err)
 		totalBytes += n

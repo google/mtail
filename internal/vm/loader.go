@@ -24,7 +24,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
@@ -87,7 +86,7 @@ func (l *Loader) LoadAllPrograms() error {
 	return nil
 }
 
-// LoadProgram loads or reloads a program from the path specified.  The name of
+// LoadProgram loads or reloads a program from the full pathname programPath.  The name of
 // the program is the basename of the file.
 func (l *Loader) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)
@@ -99,7 +98,7 @@ func (l *Loader) LoadProgram(programPath string) error {
 		glog.V(2).Infof("Skipping %s due to file extension.", programPath)
 		return nil
 	}
-	f, err := l.fs.Open(programPath)
+	f, err := os.OpenFile(programPath, os.O_RDONLY, 0600)
 	if err != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Wrapf(err, "Failed to read program %q", programPath)
@@ -256,7 +255,6 @@ func nameToCode(name string) uint32 {
 type Loader struct {
 	ms          *metrics.Store  // pointer to metrics.Store to pass to compiler
 	w           watcher.Watcher // watches for program changes
-	fs          afero.Fs        // filesystem interface
 	programPath string          // Path that contains mtail programs.
 
 	eventsHandle int // record the handle with which to add programs to the watcher
@@ -331,13 +329,12 @@ func OmitMetricSource(l *Loader) error {
 }
 
 // NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.LogLine, w watcher.Watcher, fs afero.Fs, options ...func(*Loader) error) (*Loader, error) {
+func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.LogLine, w watcher.Watcher, options ...func(*Loader) error) (*Loader, error) {
 	if store == nil || lines == nil {
 		return nil, errors.New("loader needs a store and lines")
 	}
 	l := &Loader{
 		ms:            store,
-		fs:            fs,
 		w:             w,
 		programPath:   programPath,
 		handles:       make(map[string]*vmHandle),

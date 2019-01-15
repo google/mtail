@@ -1,3 +1,5 @@
+// Copyright 2019 Google Inc. All Rights Reserved.
+// This file is available under the Apache license.
 // +build integration
 
 package mtail_test
@@ -11,10 +13,12 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
+	"golang.org/x/sys/unix"
 )
 
 func TestReadFromPipe(t *testing.T) {
-	tmpDir, rmTmpDir := mtail.TestTempDir(t)
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
 	logDir := path.Join(tmpDir, "logs")
@@ -27,34 +31,29 @@ func TestReadFromPipe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer mtail.TestChdir(t, logDir)()
+	defer testutil.TestChdir(t, logDir)()
 
 	logFile := path.Join(logDir, "logpipe")
 
-	err = syscall.Mkfifo(logFile, 0600)
+	err = unix.Mkfifo(logFile, 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(time.Second)
-
-	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
-
-	defer stopM()
-
-	// TODO(jaq): Want to open the file before the startserver to the pipe
-	// exists before start, but that hangs the server.
 	f, err := os.OpenFile(logFile, os.O_RDWR|syscall.O_NONBLOCK, 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		// TODO(jaq): Use f.SetDeadline once we stop using afero.
 		err = f.Close()
 		if err != nil {
 			t.Fatal(err)
 		}
 	}()
 
+	time.Sleep(time.Second)
+
+	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
+	defer stopM()
 	time.Sleep(time.Second)
 
 	startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")

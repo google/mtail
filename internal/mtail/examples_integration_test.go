@@ -1,11 +1,13 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
+// +build integration
 
-package main
+package mtail_test
 
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -13,10 +15,9 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/mtail/golden"
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/testutil/golden"
 	"github.com/google/mtail/internal/watcher"
-	"github.com/spf13/afero"
 )
 
 var exampleProgramTests = []struct {
@@ -134,8 +135,8 @@ func TestExamplePrograms(t *testing.T) {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
-			fs := &afero.OsFs{}
-			mtail, err := mtail.New(store, w, fs, mtail.ProgramPath(tc.programfile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
+			programFile := path.Join("../..", tc.programfile)
+			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			if err != nil {
 				t.Fatalf("create mtail failed: %s", err)
 			}
@@ -185,8 +186,7 @@ func TestCompileExamplePrograms(t *testing.T) {
 		t.Run(tc, func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
-			fs := &afero.OsFs{}
-			mtail, err := mtail.New(s, w, fs, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
+			mtail, err := mtail.New(s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			if err != nil {
 				t.Fatal(err)
 			}
