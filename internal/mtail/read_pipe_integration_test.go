@@ -14,10 +14,10 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
+	"golang.org/x/sys/unix"
 )
 
 func TestReadFromPipe(t *testing.T) {
-	t.Skip("cancellation bugs")
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
@@ -35,18 +35,10 @@ func TestReadFromPipe(t *testing.T) {
 
 	logFile := path.Join(logDir, "logpipe")
 
-	err = syscall.Mkfifo(logFile, 0600)
+	err = unix.Mkfifo(logFile, 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(time.Second)
-
-	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
-
-	defer stopM()
-
-	// TODO(jaq): Want to open the file before the startserver to the pipe
-	// exists before start, but that hangs the server.
 	f, err := os.OpenFile(logFile, os.O_RDWR|syscall.O_NONBLOCK, 0600)
 	if err != nil {
 		t.Fatal(err)
@@ -58,6 +50,10 @@ func TestReadFromPipe(t *testing.T) {
 		}
 	}()
 
+	time.Sleep(time.Second)
+
+	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
+	defer stopM()
 	time.Sleep(time.Second)
 
 	startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
