@@ -83,6 +83,25 @@ extraction skills!  It is good at dealing with log files!!
 
 ## Read More
 
-Read more about `mtail` in the [Programming Guide](docs/Programming-Guide.md), [Language reference](docs/Language.md), or specifics on [Metrics](docs/Metrics.md) and [State](docs/state.md), instructions on [Building from source](docs/Building.md), help for [Interoperability](docs/Interoperability.md) with other monitoring system components, and tips for [Deploying](docs/Deploying.md), a [FAQ](docs/faq.md) and help [Troubleshooting](docs/Troubleshooting.md) your programs and installation.
+Read more about writing `mtail` programs:
 
+* [Programming Guide](docs/Programming-Guide.md)
+* [Language Reference](docs/Language.md)
+* [Metrics](docs/Metrics.md)
+* [Managing internal state](docs/state.md)
+* [Testing your programs](docs/Testing.md)
 
+Read more about hacking on `mtail`
+
+* [Building from source](docs/Building.md)
+* [Contributing](CONTRIBUTING.md)
+* [Style](docs/style.md)
+
+Read more about deploying `mtail` and your programs in a monitoring environment
+
+* [Deploying](docs/Deploying.md)
+* [Interoperability](docs/Interoperability.md) with other systems
+* [Troubleshooting](docs/Troubleshooting.md)
+* [FAQ](docs/faq.md)
+
+After that, if you have any questions, please email (and optionally join) the mailing list: https://groups.google.com/forum/#!forum/mtail-users or [file a new issue](https://github.com/google/mtail/issues/new).
