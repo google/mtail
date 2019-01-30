@@ -80,3 +80,8 @@ alerting tool, like [Prometheus](http://prometheus.io).
 [It deals with the instrumentation so the engineers don't have
 to!](http://www.imdb.com/title/tt0151804/quotes/qt0386890)  It has the
 extraction skills!  It is good at dealing with log files!!
+
+## Read More
+
+Read more about `mtail` in the [Programming Guide](docs/Programming-Guide.md), [Language](docs/Language.md), [Building from source](docs/Building.md) from source, help for [Interoperability](docs/Interoperability.md) with other monitoring system components, and [Deploying](docs/Deploying.md) and [Troubleshooting](docs/Troubleshooting.md)
+
