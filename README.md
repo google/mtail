@@ -83,5 +83,6 @@ extraction skills!  It is good at dealing with log files!!
 
 ## Read More
 
-Read more about `mtail` in the [Programming Guide](docs/Programming-Guide.md), [Language](docs/Language.md), [Building from source](docs/Building.md) from source, help for [Interoperability](docs/Interoperability.md) with other monitoring system components, and [Deploying](docs/Deploying.md) and [Troubleshooting](docs/Troubleshooting.md)
+Read more about `mtail` in the [Programming Guide](docs/Programming-Guide.md), [Language reference](docs/Language.md), instructions on [Building from source](docs/Building.md), help for [Interoperability](docs/Interoperability.md) with other monitoring system components, and [Deploying](docs/Deploying.md) and [Troubleshooting](docs/Troubleshooting.md) your programs and installation.
+
 
