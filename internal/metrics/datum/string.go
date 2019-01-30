@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// StringDatum describes an integer value at a given timestamp.
+// StringDatum describes a string value at a given timestamp.
 type StringDatum struct {
 	BaseDatum
 	mu    sync.RWMutex

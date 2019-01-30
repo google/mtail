@@ -141,11 +141,11 @@ crossbuild: $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp
 	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS) ./cmd/mtail
 
 .PHONY: test check
-check test: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
+check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
 	go test -timeout 10s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
+testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
 	go test -timeout ${timeout} -race -v -tags=integration ./...
 
 .PHONY: smoke
@@ -227,7 +227,7 @@ install_deps: .dep-stamp
 
 coverage: coverprofile
 
-coverprofile: $(GOFILES) $(GOGENFILES) | $(LOGO_GO) .dep-stamp
+coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
 	go test -v -covermode=count -coverprofile=$@ -tags=integration -timeout=${timeout} $(PACKAGES)
 
 coverage.html: coverprofile

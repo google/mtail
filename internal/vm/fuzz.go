@@ -14,7 +14,7 @@ func Fuzz(data []byte) int {
 	flag.Set("logtostderr", "true")
 	flag.Set("v", "2")
 	flag.Parse()
-	if _, err := Compile("fuzz", bytes.NewReader(data), false, false, false, nil); err != nil {
+	if _, err := Compile("fuzz", bytes.NewReader(data), true, true, false, nil); err != nil {
 		return 0
 	}
 	return 1
