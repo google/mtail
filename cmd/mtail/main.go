@@ -53,8 +53,9 @@ var (
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 
 	// Ops flags
-	pollInterval    = flag.Duration("poll_interval", 0, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
-	disableFsnotify = flag.Bool("disable_fsnotify", false, "When enabled no fsnotify watcher is created, and mtail falls back to polling mode only.  Only the files known at program startup will be polled.")
+	pollInterval            = flag.Duration("poll_interval", 0, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
+	disableFsnotify         = flag.Bool("disable_fsnotify", false, "When enabled no fsnotify watcher is created, and mtail falls back to polling mode only.  Only the files known at program startup will be polled.")
+	storeExpireTickInterval = flag.Duration("store_expire_tick_interval", time.Hour, "interval to delete expired metrics from store")
 
 	// Debugging flags
 	blockProfileRate     = flag.Int("block_profile_rate", 0, "Nanoseconds of block time before goroutine blocking events reported. 0 turns off.  See https://golang.org/pkg/runtime/#SetBlockProfileRate")
@@ -121,6 +122,7 @@ func main() {
 		mtail.BindAddress(*address, *port),
 		mtail.BuildInfo(buildInfo()),
 		mtail.OverrideLocation(loc),
+		mtail.StoreExpireTickInterval(*storeExpireTickInterval),
 	}
 	if *oneShot {
 		opts = append(opts, mtail.OneShot)
