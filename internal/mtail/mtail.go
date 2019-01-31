@@ -58,9 +58,10 @@ type Server struct {
 	dumpAstTypes bool // if set, mtail prints the program syntax tree after type checking
 	dumpBytecode bool // if set, mtail prints the program bytecode after code generation
 
-	syslogUseCurrentYear bool // if set, use the current year for timestamps that have no year information
-	omitMetricSource     bool // if set, do not link the source program to a metric
-	omitProgLabel        bool // if set, do not put the program name in the metric labels
+	syslogUseCurrentYear    bool           // if set, use the current year for timestamps that have no year information
+	omitMetricSource        bool           // if set, do not link the source program to a metric
+	omitProgLabel           bool           // if set, do not put the program name in the metric labels
+	storeExpireTickInterval *time.Duration // interval to expire/delete metrics from store
 }
 
 // StartTailing adds each log path pattern to the tailer.
@@ -344,7 +345,7 @@ func (m *Server) Run() error {
 			return err
 		}
 	} else {
-		m.store.StartExpiryLoop()
+		m.store.StartExpiryLoop(*m.storeExpireTickInterval)
 		if err := m.Serve(); err != nil {
 			return err
 		}
