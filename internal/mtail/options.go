@@ -50,6 +50,14 @@ func OverrideLocation(loc *time.Location) func(*Server) error {
 	}
 }
 
+// StoreExpireTickInterval sets the interval to run ticker to delete expired metrics from store.
+func StoreExpireTickInterval(interval time.Duration) func(*Server) error {
+	return func(m *Server) error {
+		m.storeExpireTickInterval = interval
+		return nil
+	}
+}
+
 // OneShot sets one-shot mode in the MtailServer.
 func OneShot(m *Server) error {
 	m.oneShot = true
