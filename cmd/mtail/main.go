@@ -122,7 +122,7 @@ func main() {
 		mtail.BindAddress(*address, *port),
 		mtail.BuildInfo(buildInfo()),
 		mtail.OverrideLocation(loc),
-		mtail.StoreExpireTickInterval(storeExpireTickInterval),
+		mtail.StoreExpireTickInterval(*storeExpireTickInterval),
 	}
 	if *oneShot {
 		opts = append(opts, mtail.OneShot)
