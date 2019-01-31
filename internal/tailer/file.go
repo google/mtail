@@ -32,9 +32,10 @@ var (
 // File provides an abstraction over files and named pipes being tailed
 // by `mtail`.
 type File struct {
-	Name     string // Given name for the file (possibly relative, used for displau)
-	Pathname string // Full absolute path of the file used internally
-	regular  bool   // Remember if this is a regular file (or a pipe)
+	Name     string    // Given name for the file (possibly relative, used for displau)
+	Pathname string    // Full absolute path of the file used internally
+	LastRead time.Time // time of the last read received on this handle
+	regular  bool      // Remember if this is a regular file (or a pipe)
 	file     *os.File
 	partial  *bytes.Buffer
 	lines    chan<- *logline.LogLine // output channel for lines read
@@ -202,6 +203,10 @@ func (f *File) Read() error {
 
 		// Return on any error, including EOF.
 		if err != nil {
+			// Update the last read time if we were able to read anything.
+			if totalBytes > 0 {
+				f.lastRead = time.Now()
+			}
 			return err
 		}
 	}
