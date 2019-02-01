@@ -389,3 +389,23 @@ func (t *Tailer) Expire() error {
 	}
 	return nil
 }
+
+// StartExpiryLoop runs a permanent goroutine to expire metrics every duration.
+func (t *Tailer) StartExpiryLoop(duration time.Duration) {
+	if duration <= 0 {
+		glog.Info("Log handle expiration disabled")
+		return
+	}
+	go func() {
+		glog.Infof("Starting log handle expiry loop every %s", duration.String())
+		ticker := time.NewTicker(duration)
+		for {
+			select {
+			case <-ticker.C:
+				if err := t.Expire(); err != nil {
+					glog.Info(err)
+				}
+			}
+		}
+	}()
+}

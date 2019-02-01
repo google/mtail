@@ -124,14 +124,14 @@ func (s *Store) Expire() error {
 	return nil
 }
 
-// StartExpiryLoop runs a permanent goroutine to expire metrics every hour.
+// StartExpiryLoop runs a permanent goroutine to expire metrics every duration.
 func (s *Store) StartExpiryLoop(duration time.Duration) {
+	if duration <= 0 {
+		glog.Infof("Metric store expiration disabled")
+		return
+	}
 	go func() {
-if duration <= 0 {
-glog.Infof("Metric store expiration disabled")
-return
-}
-glog.Infof("Configuring StartExpiryLoop with %s", duration.String())
+		glog.Infof("Starting metric store expiry loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
 		for {
 			select {

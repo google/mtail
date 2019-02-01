@@ -346,6 +346,7 @@ func (m *Server) Run() error {
 		}
 	} else {
 		m.store.StartExpiryLoop(m.storeExpireTickInterval)
+		m.t.StartExpiryLoop(time.Hour)
 		if err := m.Serve(); err != nil {
 			return err
 		}
