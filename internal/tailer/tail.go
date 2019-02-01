@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -375,4 +376,16 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 		})
 	}
 	return tpl.Execute(w, data)
+}
+
+// Expire removes file handles that have had no reads for 24h or more.
+func (t *Tailer) Expire() error {
+	t.handlesMu.Lock()
+	defer t.handlesMu.Unlock()
+	for k, v := range t.handles {
+		if time.Since(v.LastRead) > (time.Hour * 24) {
+			delete(t.handles, k)
+		}
+	}
+	return nil
 }

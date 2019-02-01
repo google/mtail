@@ -430,3 +430,74 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 		t.Errorf("result didn't match expected:\n%s", diff)
 	}
 }
+
+func TestTailExpireStaleHandles(t *testing.T) {
+	ta, lines, w, dir, cleanup := makeTestTail(t)
+	defer cleanup()
+
+	result := []*logline.LogLine{}
+	done := make(chan struct{})
+	wg := sync.WaitGroup{}
+	go func() {
+		for line := range lines {
+			glog.V(2).Infof("line %v", line)
+			result = append(result, line)
+			wg.Done()
+		}
+		close(done)
+	}()
+
+	log1 := filepath.Join(dir, "log1")
+	f1 := testutil.TestOpenFile(t, log1)
+	log2 := filepath.Join(dir, "log2")
+	f2 := testutil.TestOpenFile(t, log2)
+
+	if err := ta.TailPath(log1); err != nil {
+		t.Fatal(err)
+	}
+	if err := ta.TailPath(log2); err != nil {
+		t.Fatal(err)
+	}
+	wg.Add(2)
+	if _, err := f1.WriteString("1\n"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f2.WriteString("2\n"); err != nil {
+		t.Fatal(err)
+	}
+	w.InjectUpdate(log1)
+	w.InjectUpdate(log2)
+	wg.Wait()
+	if err := w.Close(); err != nil {
+		t.Log(err)
+	}
+	<-done
+	if err := ta.Expire(); err != nil {
+		t.Fatal(err)
+	}
+	ta.handlesMu.RLock()
+	if len(ta.handles) != 2 {
+		t.Errorf("expecting 2 handles, got %v", ta.handles)
+	}
+	ta.handlesMu.RUnlock()
+	ta.handlesMu.Lock()
+	ta.handles[log1].LastRead = time.Now().Add(-time.Hour*24 + time.Minute)
+	ta.handlesMu.Unlock()
+	ta.handlesMu.RLock()
+	if len(ta.handles) != 2 {
+		t.Errorf("expecting 2 handles, got %v", ta.handles)
+	}
+	ta.handlesMu.RUnlock()
+	ta.handlesMu.Lock()
+	ta.handles[log1].LastRead = time.Now().Add(-time.Hour*24 - time.Minute)
+	ta.handlesMu.Unlock()
+	if err := ta.Expire(); err != nil {
+		t.Fatal(err)
+	}
+	ta.handlesMu.RLock()
+	if len(ta.handles) != 1 {
+		t.Errorf("expecting 1 handles, got %v", ta.handles)
+	}
+	ta.handlesMu.RUnlock()
+	glog.Info("good")
+}
