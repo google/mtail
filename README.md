@@ -83,6 +83,8 @@ extraction skills!  It is good at dealing with log files!!
 
 ## Read More
 
+Full documentation at http://google.github.io/mtail/
+
 Read more about writing `mtail` programs:
 
 * [Programming Guide](docs/Programming-Guide.md)
