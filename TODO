@@ -30,11 +30,6 @@ count stack size and preallocate stack
 
 Run and upload benchmarks to https://perfdata.golang.org/ from circleci
 
-GC in the tailer to remove handles on files that haven't been updated in 24h,
-    when log files rotate with a timestamp-like pattern
-  issue #201
-
-
 # Won't do
 
 X Use capture group references to feed back to declaring regular expression,
