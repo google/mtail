@@ -46,11 +46,10 @@ type Server struct {
 	closeQuit chan struct{} // Channel to signal shutdown from code.
 	closeOnce sync.Once     // Ensure shutdown happens only once.
 
-	overrideLocation *time.Location // Timezone location to use when parsing timestamps
-	bindAddress      string         // address to bind HTTP server
-	buildInfo        string         // go build information
-	programPath      string         // path to programs to load
-	logPathPatterns  []string       // list of patterns to watch for log files to tail
+	bindAddress     string   // address to bind HTTP server
+	buildInfo       string   // go build information
+	programPath     string   // path to programs to load
+	logPathPatterns []string // list of patterns to watch for log files to tail
 
 	oneShot      bool // if set, mtail reads log files from the beginning, once, then exits
 	compileOnly  bool // if set, mtail compiles programs then exits
@@ -58,10 +57,12 @@ type Server struct {
 	dumpAstTypes bool // if set, mtail prints the program syntax tree after type checking
 	dumpBytecode bool // if set, mtail prints the program bytecode after code generation
 
-	syslogUseCurrentYear    bool          // if set, use the current year for timestamps that have no year information
-	omitMetricSource        bool          // if set, do not link the source program to a metric
-	omitProgLabel           bool          // if set, do not put the program name in the metric labels
-	storeExpireTickInterval time.Duration // interval to expire/delete metrics from store
+	overrideLocation            *time.Location // Timezone location to use when parsing timestamps
+	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
+	staleLogGcTickInterval      time.Duration  // Interval between stale log gc runs
+	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
+	omitMetricSource            bool           // if set, do not link the source program to a metric
+	omitProgLabel               bool           // if set, do not put the program name in the metric labels
 }
 
 // StartTailing adds each log path pattern to the tailer.
@@ -345,8 +346,8 @@ func (m *Server) Run() error {
 			return err
 		}
 	} else {
-		m.store.StartExpiryLoop(m.storeExpireTickInterval)
-		m.t.StartExpiryLoop(time.Hour)
+		m.store.StartGcLoop(m.expiredMetricGcTickInterval)
+		m.t.StartGcLoop(m.staleLogGcTickInterval)
 		if err := m.Serve(); err != nil {
 			return err
 		}

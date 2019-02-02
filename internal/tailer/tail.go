@@ -378,8 +378,8 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	return tpl.Execute(w, data)
 }
 
-// Expire removes file handles that have had no reads for 24h or more.
-func (t *Tailer) Expire() error {
+// Gc removes file handles that have had no reads for 24h or more.
+func (t *Tailer) Gc() error {
 	t.handlesMu.Lock()
 	defer t.handlesMu.Unlock()
 	for k, v := range t.handles {
@@ -391,7 +391,7 @@ func (t *Tailer) Expire() error {
 }
 
 // StartExpiryLoop runs a permanent goroutine to expire metrics every duration.
-func (t *Tailer) StartExpiryLoop(duration time.Duration) {
+func (t *Tailer) StartGcLoop(duration time.Duration) {
 	if duration <= 0 {
 		glog.Info("Log handle expiration disabled")
 		return
@@ -402,7 +402,7 @@ func (t *Tailer) StartExpiryLoop(duration time.Duration) {
 		for {
 			select {
 			case <-ticker.C:
-				if err := t.Expire(); err != nil {
+				if err := t.Gc(); err != nil {
 					glog.Info(err)
 				}
 			}

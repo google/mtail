@@ -50,10 +50,18 @@ func OverrideLocation(loc *time.Location) func(*Server) error {
 	}
 }
 
-// StoreExpireTickInterval sets the interval to run ticker to delete expired metrics from store.
-func StoreExpireTickInterval(interval time.Duration) func(*Server) error {
+// ExpiredMetricGcTickInterval sets the interval to run ticker to delete expired metrics from store.
+func ExpiredMetricGcTickInterval(interval time.Duration) func(*Server) error {
 	return func(m *Server) error {
-		m.storeExpireTickInterval = interval
+		m.expiredMetricGcTickInterval = interval
+		return nil
+	}
+}
+
+// StaleLogGcTickInterval sets the interval to run ticker to remove stale log handles.
+func StaleLogGcTickInterval(interval time.Duration) func(*Server) error {
+	return func(m *Server) error {
+		m.staleLogGcTickInterval = interval
 		return nil
 	}
 }

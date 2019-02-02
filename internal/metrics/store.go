@@ -99,9 +99,9 @@ func (s *Store) MarshalJSON() (b []byte, err error) {
 	return json.Marshal(ms)
 }
 
-// Expire iterates through the Store looking for metrics that have been marked
+// Gc iterates through the Store looking for metrics that have been marked
 // for expiry, and removing them if their expiration time has passed.
-func (s *Store) Expire() error {
+func (s *Store) Gc() error {
 	glog.Info("Running Store.Expire()")
 	s.Lock()
 	defer s.Unlock()
@@ -124,8 +124,8 @@ func (s *Store) Expire() error {
 	return nil
 }
 
-// StartExpiryLoop runs a permanent goroutine to expire metrics every duration.
-func (s *Store) StartExpiryLoop(duration time.Duration) {
+// StartGcLoop runs a permanent goroutine to expire metrics every duration.
+func (s *Store) StartGcLoop(duration time.Duration) {
 	if duration <= 0 {
 		glog.Infof("Metric store expiration disabled")
 		return
@@ -136,8 +136,7 @@ func (s *Store) StartExpiryLoop(duration time.Duration) {
 		for {
 			select {
 			case <-ticker.C:
-				err := s.Expire()
-				if err != nil {
+				if err := s.Gc(); err != nil {
 					glog.Info(err)
 				}
 			}

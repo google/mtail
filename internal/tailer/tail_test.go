@@ -472,7 +472,7 @@ func TestTailExpireStaleHandles(t *testing.T) {
 		t.Log(err)
 	}
 	<-done
-	if err := ta.Expire(); err != nil {
+	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
 	}
 	ta.handlesMu.RLock()
@@ -483,6 +483,9 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	ta.handlesMu.Lock()
 	ta.handles[log1].LastRead = time.Now().Add(-time.Hour*24 + time.Minute)
 	ta.handlesMu.Unlock()
+	if err := ta.Gc(); err != nil {
+		t.Fatal(err)
+	}
 	ta.handlesMu.RLock()
 	if len(ta.handles) != 2 {
 		t.Errorf("expecting 2 handles, got %v", ta.handles)
@@ -491,7 +494,7 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	ta.handlesMu.Lock()
 	ta.handles[log1].LastRead = time.Now().Add(-time.Hour*24 - time.Minute)
 	ta.handlesMu.Unlock()
-	if err := ta.Expire(); err != nil {
+	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
 	}
 	ta.handlesMu.RLock()
