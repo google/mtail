@@ -55,3 +55,5 @@ The other form indicates that when the session is closed, the key and value can 
    1. `del` form when the session is ended, explicitly removing it before the expiration time is up.
 
 It is not an error to delete a nonexistent key from a map.
+
+Expiry is only processed once ever hour, so durations shorter than 1h won't take effect until the next hour has passed.

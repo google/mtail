@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -375,4 +376,42 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 		})
 	}
 	return tpl.Execute(w, data)
+}
+
+// Gc removes file handles that have had no reads for 24h or more.
+func (t *Tailer) Gc() error {
+	t.handlesMu.Lock()
+	defer t.handlesMu.Unlock()
+	for k, v := range t.handles {
+		if time.Since(v.LastRead) > (time.Hour * 24) {
+			if err := t.w.Remove(v.Pathname); err != nil {
+				glog.Info(err)
+			}
+			if err := v.Close(); err != nil {
+				glog.Info(err)
+			}
+			delete(t.handles, k)
+		}
+	}
+	return nil
+}
+
+// StartExpiryLoop runs a permanent goroutine to expire metrics every duration.
+func (t *Tailer) StartGcLoop(duration time.Duration) {
+	if duration <= 0 {
+		glog.Info("Log handle expiration disabled")
+		return
+	}
+	go func() {
+		glog.Infof("Starting log handle expiry loop every %s", duration.String())
+		ticker := time.NewTicker(duration)
+		for {
+			select {
+			case <-ticker.C:
+				if err := t.Gc(); err != nil {
+					glog.Info(err)
+				}
+			}
+		}
+	}()
 }

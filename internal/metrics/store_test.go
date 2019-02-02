@@ -119,7 +119,7 @@ func TestExpireMetric(t *testing.T) {
 		t.Errorf("couldn't find lv")
 	}
 
-	s.Expire()
+	s.Gc()
 	lv = m.FindLabelValueOrNil([]string{"1", "2", "3"})
 	if lv != nil {
 		t.Errorf("lv not expired: %#v", lv)

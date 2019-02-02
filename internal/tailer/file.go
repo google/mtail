@@ -32,9 +32,10 @@ var (
 // File provides an abstraction over files and named pipes being tailed
 // by `mtail`.
 type File struct {
-	Name     string // Given name for the file (possibly relative, used for displau)
-	Pathname string // Full absolute path of the file used internally
-	regular  bool   // Remember if this is a regular file (or a pipe)
+	Name     string    // Given name for the file (possibly relative, used for displau)
+	Pathname string    // Full absolute path of the file used internally
+	LastRead time.Time // time of the last read received on this handle
+	regular  bool      // Remember if this is a regular file (or a pipe)
 	file     *os.File
 	partial  *bytes.Buffer
 	lines    chan<- *logline.LogLine // output channel for lines read
@@ -78,7 +79,7 @@ func NewFile(pathname string, lines chan<- *logline.LogLine, seekToStart bool) (
 	default:
 		return nil, errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, absPath)
 	}
-	return &File{pathname, absPath, regular, f, bytes.NewBufferString(""), lines}, nil
+	return &File{pathname, absPath, time.Now(), regular, f, bytes.NewBufferString(""), lines}, nil
 }
 
 func open(pathname string, seenBefore bool) (*os.File, error) {
@@ -165,7 +166,7 @@ func (f *File) Read() error {
 	totalBytes := 0
 	for {
 		if err := f.file.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
-			glog.Info(err)
+			glog.Infof("%s: %s", f.Name, err)
 		}
 		n, err := f.file.Read(b[:cap(b)])
 		glog.V(2).Infof("Read count %v err %v", n, err)
@@ -202,6 +203,10 @@ func (f *File) Read() error {
 
 		// Return on any error, including EOF.
 		if err != nil {
+			// Update the last read time if we were able to read anything.
+			if totalBytes > 0 {
+				f.LastRead = time.Now()
+			}
 			return err
 		}
 	}
