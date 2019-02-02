@@ -57,6 +57,17 @@ If your incoming log rate is high enough to trigger this condition, try forcing 
 
 When fsnotify is disabled, new mtail programs and new log files won't be detected after program startup.
 
+### Setting garbage collection intervals
+
+`mtail` accumulates metrics and log files during its operation.  By default, *every hour* both a garbage collection pass occurs looking for expired metrics, and stale log files.
+
+An expired metric is any metric that hasn't been updated in a time specified by a `del after` form in a program.
+
+A stale log file is any log being watched that hasn't been read from in 24 hours.
+
+The interval between garbage collection runs can be changed on the commandline with the `--expired_metrics_gc_interval` and `--stale_log_gc_interval` flags, which accept a time duration string compatible with the Go [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration) function.
+
+
 ### Launching under Docker
 
 `mtail` can be run as a sidecar process if you expose an application container's logs with a volume.
