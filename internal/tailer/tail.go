@@ -384,6 +384,9 @@ func (t *Tailer) Gc() error {
 	defer t.handlesMu.Unlock()
 	for k, v := range t.handles {
 		if time.Since(v.LastRead) > (time.Hour * 24) {
+			if err := v.Close(); err != nil {
+				glog.Info(err)
+			}
 			delete(t.handles, k)
 		}
 	}
