@@ -124,7 +124,9 @@ func (l *Lexer) next() rune {
 // backup indicates that we haven't yet dealt with the next rune. Use when
 // terminating tokens on unknown runes.
 func (l *Lexer) backup() {
-	l.input.UnreadRune()
+	if err := l.input.UnreadRune(); err != nil {
+		glog.Info(err)
+	}
 	l.width = 0
 }
 
