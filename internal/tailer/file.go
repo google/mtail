@@ -147,7 +147,9 @@ func (f *File) Follow() error {
 // doRotation reads the remaining content of the currently opened file, then reopens the new one.
 func (f *File) doRotation() error {
 	glog.V(2).Info("doing the rotation flush read")
-	f.Read()
+	if err := f.Read(); err != nil {
+		glog.Info(err)
+	}
 	logRotations.Add(f.Name, 1)
 	newFile, err := open(f.Pathname, true /*seenBefore*/)
 	if err != nil {
