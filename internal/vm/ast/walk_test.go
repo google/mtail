@@ -69,9 +69,7 @@ func (t *testWalker) VisitAfter(n ast.Node) ast.Node {
 }
 
 func TestAstReplacement(t *testing.T) {
-	var a ast.Node
-
-	a = &ast.BinaryExpr{Lhs: &ast.BinaryExpr{Lhs: &ast.IntLit{I: 0}, Rhs: &ast.IntLit{I: 1}, Op: parser.DIV},
+	var a ast.Node = &ast.BinaryExpr{Lhs: &ast.BinaryExpr{Lhs: &ast.IntLit{I: 0}, Rhs: &ast.IntLit{I: 1}, Op: parser.DIV},
 		Rhs: &ast.BinaryExpr{Lhs: &ast.IntLit{I: 2}, Rhs: &ast.IntLit{I: 3}, Op: parser.MINUS},
 		Op:  parser.PLUS}
 	tw := &testWalker{}
