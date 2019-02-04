@@ -651,7 +651,7 @@ func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		idPattern := v.Symbol.Binding.(*ast.PatternFragment).Pattern
 		if idPattern == "" {
 			idEvaluator := &patternEvaluator{scope: p.scope}
-			n = ast.Walk(idEvaluator, v.Symbol.Binding.(*ast.PatternFragment))
+			_ = ast.Walk(idEvaluator, v.Symbol.Binding.(*ast.PatternFragment))
 			idPattern = idEvaluator.pattern
 		}
 		p.pattern += idPattern
