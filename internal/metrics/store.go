@@ -133,12 +133,9 @@ func (s *Store) StartGcLoop(duration time.Duration) {
 	go func() {
 		glog.Infof("Starting metric store expiry loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
-		for {
-			select {
-			case <-ticker.C:
-				if err := s.Gc(); err != nil {
-					glog.Info(err)
-				}
+		for range ticker.C {
+			if err := s.Gc(); err != nil {
+				glog.Info(err)
 			}
 		}
 	}()

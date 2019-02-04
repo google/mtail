@@ -405,12 +405,9 @@ func (t *Tailer) StartGcLoop(duration time.Duration) {
 	go func() {
 		glog.Infof("Starting log handle expiry loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
-		for {
-			select {
-			case <-ticker.C:
-				if err := t.Gc(); err != nil {
-					glog.Info(err)
-				}
+		for range ticker.C {
+			if err := t.Gc(); err != nil {
+				glog.Info(err)
 			}
 		}
 	}()
