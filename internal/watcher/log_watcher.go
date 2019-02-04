@@ -108,7 +108,7 @@ func (w *LogWatcher) runTicks() {
 Exit:
 	for {
 		select {
-		case _ = <-w.pollTicker.C:
+		case <-w.pollTicker.C:
 			w.watchedMu.RLock()
 			for n, c := range w.watched {
 				c <- Event{Update, n}
