@@ -201,5 +201,5 @@ func main() {
 			}
 		})
 	http.HandleFunc("/favicon.ico", mtail.FaviconHandler)
-	http.ListenAndServe(fmt.Sprintf(":%s", *httpPort), nil)
+	glog.Info(http.ListenAndServe(fmt.Sprintf(":%s", *httpPort), nil))
 }
