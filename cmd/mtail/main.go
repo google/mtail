@@ -40,12 +40,11 @@ var (
 	version = flag.Bool("version", false, "Print mtail version information.")
 
 	// Compiler behaviour flags
-	oneShot        = flag.Bool("one_shot", false, "Compile the programs, then read the contents of the provided logs from start until EOF, print the values of the metrics store and exit. This is a debugging flag only, not for production use.")
-	oneShotMetrics = flag.Bool("one_shot_metrics", false, "DEPRECATED: Dump metrics (to stdout) after one shot mode.")
-	compileOnly    = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
-	dumpAst        = flag.Bool("dump_ast", false, "Dump AST of programs after parse (to INFO log).")
-	dumpAstTypes   = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck (to INFO log).")
-	dumpBytecode   = flag.Bool("dump_bytecode", false, "Dump bytecode of programs (to INFO log).")
+	oneShot      = flag.Bool("one_shot", false, "Compile the programs, then read the contents of the provided logs from start until EOF, print the values of the metrics store and exit. This is a debugging flag only, not for production use.")
+	compileOnly  = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
+	dumpAst      = flag.Bool("dump_ast", false, "Dump AST of programs after parse (to INFO log).")
+	dumpAstTypes = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck (to INFO log).")
+	dumpBytecode = flag.Bool("dump_bytecode", false, "Dump bytecode of programs (to INFO log).")
 
 	// VM Runtime behaviour flags
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
