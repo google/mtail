@@ -13,12 +13,16 @@ func TestSetFlag(tb testing.TB, name, value string) func() {
 	tb.Helper()
 	val := flag.Lookup(name)
 
-	flag.Set(name, value)
+	if err := flag.Set(name, value); err != nil {
+		tb.Fatal(err)
+	}
 	flag.Parse()
 
 	return func() {
 		if val != nil {
-			flag.Set(name, val.Value.String())
+			if err := flag.Set(name, val.Value.String()); err != nil {
+				tb.Fatal(err)
+			}
 		}
 	}
 }
