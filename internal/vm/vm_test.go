@@ -806,7 +806,8 @@ func TestDeleteInstrs(t *testing.T) {
 		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int, "a"),
 	)
 
-	m[0].GetDatum("z")
+	_, err := m[0].GetDatum("z")
+	testutil.FatalIfErr(t, err)
 
 	v := makeVM(code.Instr{code.Expire, 1}, m)
 	v.t.Push(time.Hour)

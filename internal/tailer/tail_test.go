@@ -134,7 +134,8 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 	// "File.Truncate" does not change the file offset.
-	f.Seek(0, 0)
+	_, err := f.Seek(0, 0)
+	testutil.FatalIfErr(t, err)
 	w.InjectUpdate(logfile)
 	//time.Sleep(10 * time.Millisecond)
 
@@ -249,7 +250,7 @@ func TestTailerOpenRetries(t *testing.T) {
 		}
 		close(done)
 	}()
-	ta.AddPattern(logfile)
+	testutil.FatalIfErr(t, ta.AddPattern(logfile))
 
 	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)

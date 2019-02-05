@@ -20,3 +20,5 @@ issues:
     - 'declaration of "err" shadows declaration'
     #- 'bad syntax for struct tag key'
     #- 'bad syntax for struct tag pair'
+    # goyacc generated error in three locations
+    - 'this value of `mtailDollar.* is never used'

@@ -132,7 +132,8 @@ func TestHandleLogUpdates(t *testing.T) {
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
 		// write to log file
-		logFile.WriteString(x + "\n")
+		_, err := logFile.WriteString(x + "\n")
+		testutil.FatalIfErr(t, err)
 		// check log line count increase
 		expected := fmt.Sprintf("%d", i+1)
 		check := func() (bool, error) {
@@ -326,8 +327,9 @@ func TestHandleSoftLinkChange(t *testing.T) {
 	}
 	inputLines := []string{"hi1", "hi2", "hi3"}
 	for _, x := range inputLines {
-		trueLog1.WriteString(x + "\n")
-		trueLog1.Sync()
+		_, err := trueLog1.WriteString(x + "\n")
+		testutil.FatalIfErr(t, err)
+		testutil.FatalIfErr(t, trueLog1.Sync())
 	}
 	check3 := func() (bool, error) {
 		if expvar.Get("log_count").String() != "1" {
@@ -360,8 +362,9 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		t.Errorf("could not create symlink: %s", err)
 	}
 	for _, x := range inputLines {
-		trueLog2.WriteString(x + "\n")
-		trueLog2.Sync()
+		_, err := trueLog2.WriteString(x + "\n")
+		testutil.FatalIfErr(t, err)
+		testutil.FatalIfErr(t, trueLog2.Sync())
 	}
 	check6 := func() (bool, error) {
 		if expvar.Get("log_count").String() != "1" {
@@ -433,8 +436,9 @@ func TestGlob(t *testing.T) {
 		if tt.expected {
 			count++
 		}
-		log.WriteString("\n")
-		log.Sync()
+		_, err = log.WriteString("\n")
+		testutil.FatalIfErr(t, err)
+		testutil.FatalIfErr(t, log.Sync())
 	}
 	m := startMtailServer(t, LogPathPatterns(path.Join(workdir, "log*")))
 	defer m.Close()
@@ -494,8 +498,9 @@ func TestGlobAfterStart(t *testing.T) {
 		if tt.expected {
 			count++
 		}
-		log.WriteString("\n")
-		log.Sync()
+		_, err = log.WriteString("\n")
+		testutil.FatalIfErr(t, err)
+		testutil.FatalIfErr(t, log.Sync())
 	}
 	glog.Infof("count is %d", count)
 	check := func() (bool, error) {
@@ -574,7 +579,8 @@ func TestHandleLogTruncate(t *testing.T) {
 		}
 	}()
 
-	logFile.WriteString("x\n")
+	_, err = logFile.WriteString("x\n")
+	testutil.FatalIfErr(t, err)
 	glog.Info("Write")
 	check := func() (bool, error) {
 		if expvar.Get("line_count").String() != "1" {
@@ -589,9 +595,10 @@ func TestHandleLogTruncate(t *testing.T) {
 	if !ok {
 		t.Errorf("log line count received %s, expected 1", expvar.Get("log_count").String())
 	}
-	logFile.Truncate(0)
+	testutil.FatalIfErr(t, logFile.Truncate(0))
 	glog.Infof("Truncate")
-	logFile.WriteString("x\n")
+	_, err = logFile.WriteString("x\n")
+	testutil.FatalIfErr(t, err)
 	glog.Info("Write")
 	check2 := func() (bool, error) {
 		if expvar.Get("line_count").String() != "2" {
@@ -643,7 +650,8 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
 		// write to log file
-		logFile.WriteString(x + "\n")
+		_, err := logFile.WriteString(x + "\n")
+		testutil.FatalIfErr(t, err)
 		// check log line count increase
 		expected := fmt.Sprintf("%d", i+1)
 		check := func() (bool, error) {
@@ -704,7 +712,8 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't open program file: %s", err)
 	}
-	p.WriteString("counter foo\n/^foo$/ {\n foo++\n }\n")
+	_, err = p.WriteString("counter foo\n/^foo$/ {\n foo++\n }\n")
+	testutil.FatalIfErr(t, err)
 	p.Close()
 
 	check := func() (bool, error) {
@@ -766,7 +775,8 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't open program file: %s", err)
 	}
-	p.WriteString("counter foo\n/^foo$/ {\n foo++\n }\n")
+	_, err = p.WriteString("counter foo\n/^foo$/ {\n foo++\n }\n")
+	testutil.FatalIfErr(t, err)
 	p.Close()
 
 	check2 := func() (bool, error) {
