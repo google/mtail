@@ -15,7 +15,7 @@ type Visitor interface {
 
 // convenience function
 func walknodelist(v Visitor, list []Node) []Node {
-	var r []Node
+	r := make([]Node, 0, len(list))
 	for _, x := range list {
 		r = append(r, Walk(v, x))
 	}

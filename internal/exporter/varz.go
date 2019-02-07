@@ -42,7 +42,7 @@ func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
 }
 
 func metricToVarz(m *metrics.Metric, l *metrics.LabelSet, omitProgLabel bool, hostname string) string {
-	var s []string
+	s := make([]string, 0, len(l.Labels)+2)
 	for k, v := range l.Labels {
 		s = append(s, fmt.Sprintf("%s=%s", k, v))
 	}

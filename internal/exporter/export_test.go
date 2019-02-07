@@ -35,7 +35,8 @@ func TestCreateExporter(t *testing.T) {
 }
 
 func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
-	var ret []string
+	// TODO(jaq): urgh looking inside m to find preallocation size
+	ret := make([]string, 0, len(m.LabelValues))
 	lc := make(chan *metrics.LabelSet)
 	go m.EmitLabelSets(lc)
 	for l := range lc {
