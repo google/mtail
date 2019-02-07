@@ -23,6 +23,8 @@ linters:
     - unparam
     # Not sure what this is telling me yet.
     - scopelint
+    # How dare you tell me not to use inits.
+    - gochecknoinits
 
 issues:
   max-per-linter: 0
