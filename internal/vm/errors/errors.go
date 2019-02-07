@@ -5,6 +5,7 @@ package errors
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/google/mtail/internal/vm/position"
 	"github.com/pkg/errors"
@@ -40,11 +41,11 @@ func (p ErrorList) Error() string {
 	case 1:
 		return p[0].Error()
 	}
-	var r string
+	var r strings.Builder
 	for _, e := range p {
-		r = r + fmt.Sprintf("%s\n", e)
+		r.WriteString(fmt.Sprintf("%s\n", e))
 	}
-	return r[:len(r)-1]
+	return r.String()
 }
 
 func Errorf(format string, args ...interface{}) error {
