@@ -49,8 +49,7 @@ type testWalker struct {
 }
 
 func (t *testWalker) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
-	switch v := n.(type) {
-	case *ast.BinaryExpr:
+	if v, ok := n.(*ast.BinaryExpr); ok {
 		if v.Op == parser.DIV {
 			n = &ast.IntLit{I: 4}
 		}
@@ -59,8 +58,7 @@ func (t *testWalker) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 }
 
 func (t *testWalker) VisitAfter(n ast.Node) ast.Node {
-	switch v := n.(type) {
-	case *ast.BinaryExpr:
+	if v, ok := n.(*ast.BinaryExpr); ok {
 		if v.Op == parser.MINUS {
 			n = &ast.IntLit{I: 5}
 		}
