@@ -7,7 +7,6 @@
 package mtail_test
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -18,10 +17,6 @@ import (
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
-)
-
-var (
-	recordBenchmark = flag.Bool("record_benchmark", false, "Record the benchmark results to 'benchmark_results.csv'.")
 )
 
 func BenchmarkProgram(b *testing.B) {
