@@ -131,7 +131,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 
 	case *ast.DecoDecl:
 		n.Symbol = symbol.NewSymbol(n.Name, symbol.DecoSymbol, n.Pos())
-		(*n.Symbol).Binding = n
+		n.Symbol.Binding = n
 		if alt := c.scope.Insert(n.Symbol); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `%s' previously declared at %s", n.Name, alt.Pos))
 			return nil, n
