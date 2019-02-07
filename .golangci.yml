@@ -21,6 +21,8 @@ linters:
     - lll
     - gocyclo
     - unparam
+    # Not sure what this is telling me yet.
+    - scopelint
 
 issues:
   max-per-linter: 0
