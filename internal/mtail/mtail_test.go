@@ -132,8 +132,7 @@ func TestHandleLogUpdates(t *testing.T) {
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
 		// write to log file
-		_, err := logFile.WriteString(x + "\n")
-		testutil.FatalIfErr(t, err)
+		testutil.WriteString(t, logFile, x+"\n")
 		// check log line count increase
 		expected := fmt.Sprintf("%d", i+1)
 		check := func() (bool, error) {
@@ -208,9 +207,7 @@ Loop:
 			if i >= 10 {
 				break Loop
 			}
-			if _, werr := logFile.WriteString(fmt.Sprintf("%d\n", i)); werr != nil {
-				t.Fatal(werr)
-			}
+			testutil.WriteString(t, logFile, fmt.Sprintf("%d\n", i))
 			i++
 		}
 	}
@@ -255,9 +252,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		t.Errorf("could not touch log file: %s", err)
 	}
 	defer logFile.Close()
-	if _, werr := logFile.WriteString("a\n"); werr != nil {
-		t.Error(werr)
-	}
+	testutil.WriteString(t, logFile, "a\n")
 
 	expectedLogCount := "1"
 	expectedLineCount := "1"
@@ -327,8 +322,7 @@ func TestHandleSoftLinkChange(t *testing.T) {
 	}
 	inputLines := []string{"hi1", "hi2", "hi3"}
 	for _, x := range inputLines {
-		_, err := trueLog1.WriteString(x + "\n")
-		testutil.FatalIfErr(t, err)
+		testutil.WriteString(t, trueLog1, x+"\n")
 		testutil.FatalIfErr(t, trueLog1.Sync())
 	}
 	check3 := func() (bool, error) {
@@ -362,8 +356,7 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		t.Errorf("could not create symlink: %s", err)
 	}
 	for _, x := range inputLines {
-		_, err := trueLog2.WriteString(x + "\n")
-		testutil.FatalIfErr(t, err)
+		testutil.WriteString(t, trueLog2, x+"\n")
 		testutil.FatalIfErr(t, trueLog2.Sync())
 	}
 	check6 := func() (bool, error) {
@@ -436,7 +429,7 @@ func TestGlob(t *testing.T) {
 		if tt.expected {
 			count++
 		}
-		_, err = log.WriteString("\n")
+		testutil.WriteString(t, log, "\n")
 		testutil.FatalIfErr(t, err)
 		testutil.FatalIfErr(t, log.Sync())
 	}
@@ -498,8 +491,7 @@ func TestGlobAfterStart(t *testing.T) {
 		if tt.expected {
 			count++
 		}
-		_, err = log.WriteString("\n")
-		testutil.FatalIfErr(t, err)
+		testutil.WriteString(t, log, "\n")
 		testutil.FatalIfErr(t, log.Sync())
 	}
 	glog.Infof("count is %d", count)
@@ -579,8 +571,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		}
 	}()
 
-	_, err = logFile.WriteString("x\n")
-	testutil.FatalIfErr(t, err)
+	testutil.WriteString(t, logFile, "x\n")
 	glog.Info("Write")
 	check := func() (bool, error) {
 		if expvar.Get("line_count").String() != "1" {
@@ -597,8 +588,7 @@ func TestHandleLogTruncate(t *testing.T) {
 	}
 	testutil.FatalIfErr(t, logFile.Truncate(0))
 	glog.Infof("Truncate")
-	_, err = logFile.WriteString("x\n")
-	testutil.FatalIfErr(t, err)
+	testutil.WriteString(t, logFile, "x\n")
 	glog.Info("Write")
 	check2 := func() (bool, error) {
 		if expvar.Get("line_count").String() != "2" {
@@ -650,8 +640,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
 		// write to log file
-		_, err := logFile.WriteString(x + "\n")
-		testutil.FatalIfErr(t, err)
+		testutil.WriteString(t, logFile, x+"\n")
 		// check log line count increase
 		expected := fmt.Sprintf("%d", i+1)
 		check := func() (bool, error) {
@@ -712,9 +701,8 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't open program file: %s", err)
 	}
-	_, err = p.WriteString("counter foo\n/^foo$/ {\n foo++\n }\n")
-	testutil.FatalIfErr(t, err)
-	p.Close()
+	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
+	testutil.FatalIfErr(t, p.Close())
 
 	check := func() (bool, error) {
 		v := expvar.Get("prog_loads_total").(*expvar.Map).Get("program.mtail")
@@ -775,9 +763,8 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't open program file: %s", err)
 	}
-	_, err = p.WriteString("counter foo\n/^foo$/ {\n foo++\n }\n")
-	testutil.FatalIfErr(t, err)
-	p.Close()
+	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
+	testutil.FatalIfErr(t, p.Close())
 
 	check2 := func() (bool, error) {
 		v := expvar.Get("prog_loads_total")

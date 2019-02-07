@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
 )
@@ -38,22 +37,14 @@ func TestLogRotation(t *testing.T) {
 	defer stopM()
 
 	{
-		n, err := f.WriteString("line 1\n")
-		if err != nil {
-			t.Fatal(err)
-		}
-		glog.Infof("Wrote %d bytes", n)
+		testutil.WriteString(t, f, "line 1\n")
 		time.Sleep(time.Second)
 	}
 	startLogLinesTotal := mtail.TestGetMetric(t, m.Addr(), "log_lines_total").(map[string]interface{})[logFile]
 
 	{
 
-		n, err := f.WriteString("line 2\n")
-		if err != nil {
-			t.Fatal(err)
-		}
-		glog.Infof("Wrote %d bytes", n)
+		testutil.WriteString(t, f, "line 2\n")
 		time.Sleep(time.Second)
 
 		logLinesTotal := mtail.TestGetMetric(t, m.Addr(), "log_lines_total").(map[string]interface{})[logFile]
@@ -69,11 +60,7 @@ func TestLogRotation(t *testing.T) {
 	f = testutil.TestOpenFile(t, logFile)
 
 	{
-		n, err := f.WriteString("line 1\n")
-		if err != nil {
-			t.Fatal(err)
-		}
-		glog.Infof("Wrote %d bytes", n)
+		testutil.WriteString(t, f, "line 1\n")
 		time.Sleep(time.Second)
 
 		logLinesTotal := mtail.TestGetMetric(t, m.Addr(), "log_lines_total").(map[string]interface{})[logFile]
