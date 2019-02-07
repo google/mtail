@@ -108,7 +108,7 @@ func (s *Store) Gc() error {
 	now := time.Now()
 	for _, ml := range s.Metrics {
 		for _, m := range ml {
-			for _, lv := range m.LabelValues[:] {
+			for _, lv := range m.LabelValues {
 				if lv.Expiry <= 0 {
 					continue
 				}
