@@ -537,8 +537,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		}
 		n.SetType(rType)
 
-		switch n.Name {
-		case "strptime":
+		if n.Name == "strptime" {
 			// Second argument to strptime is the format string.  If it is
 			// defined at compile time, we can verify it can be use as a format
 			// string by parsing itself.
