@@ -25,6 +25,8 @@ linters:
     - scopelint
     # How dare you tell me not to use inits.
     - gochecknoinits
+    # Flags are fine, as are test tables.
+    - gochecknoglobals
 
 issues:
   max-per-linter: 0
