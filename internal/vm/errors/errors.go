@@ -42,7 +42,7 @@ func (p ErrorList) Error() string {
 	}
 	var r string
 	for _, e := range p {
-		r = r + fmt.Sprintf("%s\n", e)
+		r += fmt.Sprintf("%s\n", e)
 	}
 	return r[:len(r)-1]
 }
