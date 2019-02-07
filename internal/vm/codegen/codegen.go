@@ -191,13 +191,14 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 				t = t.(*types.Operator).Args[l-1]
 			}
 
-			if types.Equals(t, types.Float) {
+			switch {
+			case types.Equals(t, types.Float):
 				c.emit(code.Instr{code.Fget, nil})
-			} else if types.Equals(t, types.Int) {
+			case types.Equals(t, types.Int):
 				c.emit(code.Instr{code.Iget, nil})
-			} else if types.Equals(t, types.String) {
+			case types.Equals(t, types.String):
 				c.emit(code.Instr{code.Sget, nil})
-			} else {
+			default:
 				c.errorf(n.Pos(), "invalid type for get %q in %#v", n.Type(), n)
 			}
 		}
@@ -508,21 +509,22 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 
 func (c *codegen) emitConversion(inType, outType types.Type) error {
 	glog.V(2).Infof("Conversion: %q to %q", inType, outType)
-	if types.Equals(types.Int, inType) && types.Equals(types.Float, outType) {
+	switch {
+	case types.Equals(types.Int, inType) && types.Equals(types.Float, outType):
 		c.emit(code.Instr{Opcode: code.I2f})
-	} else if types.Equals(types.String, inType) && types.Equals(types.Float, outType) {
+	case types.Equals(types.String, inType) && types.Equals(types.Float, outType):
 		c.emit(code.Instr{Opcode: code.S2f})
-	} else if types.Equals(types.String, inType) && types.Equals(types.Int, outType) {
+	case types.Equals(types.String, inType) && types.Equals(types.Int, outType):
 		c.emit(code.Instr{Opcode: code.S2i})
-	} else if types.Equals(types.Float, inType) && types.Equals(types.String, outType) {
+	case types.Equals(types.Float, inType) && types.Equals(types.String, outType):
 		c.emit(code.Instr{Opcode: code.F2s})
-	} else if types.Equals(types.Int, inType) && types.Equals(types.String, outType) {
+	case types.Equals(types.Int, inType) && types.Equals(types.String, outType):
 		c.emit(code.Instr{Opcode: code.I2s})
-	} else if types.Equals(types.Pattern, inType) && types.Equals(types.Bool, outType) {
+	case types.Equals(types.Pattern, inType) && types.Equals(types.Bool, outType):
 		// nothing, pattern is implicit bool
-	} else if types.Equals(inType, outType) {
+	case types.Equals(inType, outType):
 		// Nothing; no-op.
-	} else {
+	default:
 		return errors.Errorf("can't convert %q to %q", inType, outType)
 	}
 	return nil
