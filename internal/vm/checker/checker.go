@@ -250,14 +250,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 	case *ast.BinaryExpr:
 		var rType types.Type
 		lT := n.Lhs.Type()
-		switch {
-		case types.IsErrorType(lT):
+		if types.IsErrorType(lT) {
 			n.SetType(types.Error)
 			return n
 		}
 		rT := n.Rhs.Type()
-		switch {
-		case types.IsErrorType(rT):
+		if types.IsErrorType(rT) {
 			n.SetType(types.Error)
 			return n
 		}
@@ -400,8 +398,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	case *ast.UnaryExpr:
 		t := n.Expr.Type()
-		switch {
-		case types.IsErrorType(t):
+		if types.IsErrorType(t) {
 			n.SetType(types.Error)
 			return n
 		}
