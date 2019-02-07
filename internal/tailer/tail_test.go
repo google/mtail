@@ -123,9 +123,7 @@ func TestHandleLogTruncate(t *testing.T) {
 	}
 
 	wg.Add(3)
-	if _, err := f.WriteString("a\nb\nc\n"); err != nil {
-		t.Fatal(err)
-	}
+	testutil.WriteString(t, f, "a\nb\nc\n")
 	//time.Sleep(10 * time.Millisecond)
 	w.InjectUpdate(logfile)
 	wg.Wait()
@@ -140,9 +138,7 @@ func TestHandleLogTruncate(t *testing.T) {
 	//time.Sleep(10 * time.Millisecond)
 
 	wg.Add(2)
-	if _, err := f.WriteString("d\ne\n"); err != nil {
-		t.Fatal(err)
-	}
+	testutil.WriteString(t, f, "d\ne\n")
 	w.InjectUpdate(logfile)
 	//time.Sleep(10 * time.Millisecond)
 
@@ -277,9 +273,7 @@ func TestTailerOpenRetries(t *testing.T) {
 	w.InjectUpdate(logfile)
 	//time.Sleep(10 * time.Millisecond)
 	glog.Info("write string")
-	if _, err := f.WriteString("\n"); err != nil {
-		t.Fatal(err)
-	}
+	testutil.WriteString(t, f, "\n")
 	w.InjectUpdate(logfile)
 
 	wg.Wait()
@@ -335,9 +329,7 @@ func TestHandleLogRotate(t *testing.T) {
 		t.Fatal(err)
 	}
 	wg.Add(2)
-	if _, err := f.WriteString("1\n"); err != nil {
-		t.Fatal(err)
-	}
+	testutil.WriteString(t, f, "1\n")
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
 	if err := f.Close(); err != nil {
@@ -352,9 +344,7 @@ func TestHandleLogRotate(t *testing.T) {
 	f = testutil.TestOpenFile(t, logfile)
 	glog.V(2).Info("create")
 	w.InjectCreate(logfile)
-	if _, err := f.WriteString("2\n"); err != nil {
-		t.Fatal(err)
-	}
+	testutil.WriteString(t, f, "2\n")
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
 
@@ -392,9 +382,7 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 		t.Fatal(err)
 	}
 	wg.Add(2)
-	if _, err := f.WriteString("1\n"); err != nil {
-		t.Fatal(err)
-	}
+	testutil.WriteString(t, f, "1\n")
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
 	if err := f.Close(); err != nil {
@@ -412,9 +400,7 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 	glog.V(2).Info("delete")
 	w.InjectDelete(logfile)
 
-	if _, err := f.WriteString("2\n"); err != nil {
-		t.Fatal(err)
-	}
+	testutil.WriteString(t, f, "2\n")
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
 
@@ -460,12 +446,8 @@ func TestTailExpireStaleHandles(t *testing.T) {
 		t.Fatal(err)
 	}
 	wg.Add(2)
-	if _, err := f1.WriteString("1\n"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := f2.WriteString("2\n"); err != nil {
-		t.Fatal(err)
-	}
+	testutil.WriteString(t, f1, "1\n")
+	testutil.WriteString(t, f2, "2\n")
 	w.InjectUpdate(log1)
 	w.InjectUpdate(log2)
 	wg.Wait()
