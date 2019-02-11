@@ -42,10 +42,9 @@ func BenchmarkProgram(b *testing.B) {
 			}
 
 			var total int64
-			dataLogFile := path.Join("../..", bm.logfile)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				l, err := os.Open(dataLogFile)
+				l, err := os.Open(bm.logfile)
 				if err != nil {
 					b.Fatalf("Couldn't open logfile: %s", err)
 				}
