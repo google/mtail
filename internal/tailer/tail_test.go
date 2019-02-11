@@ -74,10 +74,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	}
 
 	wg.Add(4)
-	_, err = f.WriteString("a\nb\nc\nd\n")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.WriteString(t, f, "a\nb\nc\nd\n")
 	// f.Seek(0, 0)
 	w.InjectUpdate(logfile)
 
@@ -183,15 +180,12 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = f.WriteString("a")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.WriteString(t, f, "a")
 	//f.Seek(0, 0)
 	w.InjectUpdate(logfile)
 
 	//f.Seek(1, 0)
-	_, err = f.WriteString("b")
+	testutil.WriteString(t, f, "b")
 	if err != nil {
 		t.Error(err)
 	}
@@ -199,10 +193,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	w.InjectUpdate(logfile)
 
 	//f.Seek(2, 0)
-	_, err = f.WriteString("\n")
-	if err != nil {
-		t.Error(err)
-	}
+	testutil.WriteString(t, f, "\n")
 	//f.Seek(2, 0)
 	w.InjectUpdate(logfile)
 
