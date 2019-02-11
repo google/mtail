@@ -2,21 +2,47 @@ service:
   prepare:
     - make install_deps
 
+run:
+  tests: true
+  build-tags:
+    - integration
+  skip-files:
+    - internal/vm/parser/parser.go
+
 linters-settings:
   govet:
     check-shadowing: true
 
+linters:
+  enable-all: true
+  disable:
+    - maligned
+    - megacheck
+    - lll
+    - gocyclo
+    - unparam
+    # Not sure what this is telling me yet.
+    - scopelint
+    # How dare you tell me not to use inits.
+    - gochecknoinits
+    # Flags are fine, as are test tables.
+    - gochecknoglobals
+
 issues:
   max-per-linter: 0
   max-same: 0
-  exclude-use-default: false
+  exclude-use-default: true
   exclude:
-    # Captured by errcheck.
-    - '^(G104|G204):'
-    # Very commonly not checked.
-    - 'Error return value of .(.*\.Help|.*\.MarkFlagRequired|(os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*printf?|os\.(Un)?Setenv). is not checked'
-    #- 'exported method (.*\.MarshalJSON|.*\.UnmarshalJSON|.*\.EntityURN|.*\.GoString|.*\.Pos) should have comment or be unexported'
-    - 'composite literal uses unkeyed fields'
-    - 'declaration of "err" shadows declaration'
-    #- 'bad syntax for struct tag key'
-    #- 'bad syntax for struct tag pair'
+  #   # Captured by errcheck.
+  #   - '^(G104|G204):'
+  #   # Very commonly not checked.
+  #   - 'Error return value of .(.*\.Help|.*\.MarkFlagRequired|(os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*printf?|os\.(Un)?Setenv). is not checked'
+  #   #- 'exported method (.*\.MarshalJSON|.*\.UnmarshalJSON|.*\.EntityURN|.*\.GoString|.*\.Pos) should have comment or be unexported'
+     # If you liked it you shoulda put a gofix on it.
+     - 'composite literal uses unkeyed fields'
+     # I like shadowing err
+     - 'declaration of "err" shadows declaration'
+  #   #- 'bad syntax for struct tag key'
+  #   #- 'bad syntax for struct tag pair'
+     # goyacc generated error in three locations
+     - 'this value of `mtailDollar.* is never used'

@@ -124,7 +124,7 @@ func TestProcessEvents(t *testing.T) {
 			if err != nil {
 				t.Fatalf("couldn't create loader: %s", err)
 			}
-			l.LoadAllPrograms()
+			testutil.FatalIfErr(t, l.LoadAllPrograms())
 			for i := range tt.events {
 				e := tt.events[i]
 				switch e.Op {

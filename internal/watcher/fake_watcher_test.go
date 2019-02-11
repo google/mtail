@@ -6,6 +6,8 @@ package watcher
 import (
 	"sync"
 	"testing"
+
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestFakeWatcher(t *testing.T) {
@@ -14,17 +16,17 @@ func TestFakeWatcher(t *testing.T) {
 
 	handle, eventsChannel := w.Events()
 
-	w.Add("/tmp", handle)
+	testutil.FatalIfErr(t, w.Add("/tmp", handle))
 	if _, ok := w.watches["/tmp"]; !ok {
 		t.Errorf("Not watching /tmp, w contains: %+#v", w.watches)
 	}
 
-	w.Remove("/tmp")
+	testutil.FatalIfErr(t, w.Remove("/tmp"))
 	if _, ok := w.watches["/tmp"]; ok {
 		t.Errorf("Still watching /tmp, w contains: %+#v", w.watches)
 	}
 
-	w.Add("/tmp", handle)
+	testutil.FatalIfErr(t, w.Add("/tmp", handle))
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
@@ -43,7 +45,7 @@ func TestFakeWatcher(t *testing.T) {
 	w.InjectCreate("/tmp/log")
 	wg.Wait()
 
-	w.Add("/tmp/foo", handle)
+	testutil.FatalIfErr(t, w.Add("/tmp/foo", handle))
 	wg = sync.WaitGroup{}
 	wg.Add(1)
 	go func() {

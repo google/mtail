@@ -194,7 +194,7 @@ func TestHandlePrometheus(t *testing.T) {
 			t.Parallel()
 			ms := metrics.NewStore()
 			for _, metric := range tc.metrics {
-				ms.Add(metric)
+				testutil.FatalIfErr(t, ms.Add(metric))
 			}
 			opts := []func(*Exporter) error{
 				Hostname("gunstar"),

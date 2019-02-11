@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/testutil"
 )
 
 func TestMatchingKind(t *testing.T) {
@@ -98,7 +99,7 @@ func TestAddMetricDifferentType(t *testing.T) {
 func TestExpireMetric(t *testing.T) {
 	s := NewStore()
 	m := NewMetric("foo", "prog", Counter, Int, "a", "b", "c")
-	s.Add(m)
+	testutil.FatalIfErr(t, s.Add(m))
 	d, err := m.GetDatum("1", "2", "3")
 	if err != nil {
 		t.Error(err)
@@ -119,7 +120,7 @@ func TestExpireMetric(t *testing.T) {
 		t.Errorf("couldn't find lv")
 	}
 
-	s.Gc()
+	testutil.FatalIfErr(t, s.Gc())
 	lv = m.FindLabelValueOrNil([]string{"1", "2", "3"})
 	if lv != nil {
 		t.Errorf("lv not expired: %#v", lv)

@@ -207,8 +207,7 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 
 // VisitAfter implements the astNode Visitor interface.
 func (s *Sexp) VisitAfter(node ast.Node) ast.Node {
-	switch node.(type) {
-	case *ast.BinaryExpr:
+	if _, ok := node.(*ast.BinaryExpr); ok {
 		s.outdent()
 	}
 	s.outdent()

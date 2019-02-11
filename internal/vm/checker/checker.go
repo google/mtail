@@ -131,7 +131,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 
 	case *ast.DecoDecl:
 		n.Symbol = symbol.NewSymbol(n.Name, symbol.DecoSymbol, n.Pos())
-		(*n.Symbol).Binding = n
+		n.Symbol.Binding = n
 		if alt := c.scope.Insert(n.Symbol); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `%s' previously declared at %s", n.Name, alt.Pos))
 			return nil, n
@@ -250,14 +250,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 	case *ast.BinaryExpr:
 		var rType types.Type
 		lT := n.Lhs.Type()
-		switch {
-		case types.IsErrorType(lT):
+		if types.IsErrorType(lT) {
 			n.SetType(types.Error)
 			return n
 		}
 		rT := n.Rhs.Type()
-		switch {
-		case types.IsErrorType(rT):
+		if types.IsErrorType(rT) {
 			n.SetType(types.Error)
 			return n
 		}
@@ -400,8 +398,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	case *ast.UnaryExpr:
 		t := n.Expr.Type()
-		switch {
-		case types.IsErrorType(t):
+		if types.IsErrorType(t) {
 			n.SetType(types.Error)
 			return n
 		}
@@ -540,8 +537,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		}
 		n.SetType(rType)
 
-		switch n.Name {
-		case "strptime":
+		if n.Name == "strptime" {
 			// Second argument to strptime is the format string.  If it is
 			// defined at compile time, we can verify it can be use as a format
 			// string by parsing itself.

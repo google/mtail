@@ -208,6 +208,7 @@ func doFollow(fd *File) {
 }
 
 // pollHandles walks the handles map and polls them all in series.
+// nolint
 func (t *Tailer) pollHandles() {
 	t.handlesMu.RLock()
 	defer t.handlesMu.RUnlock()

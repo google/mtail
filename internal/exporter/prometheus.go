@@ -70,7 +70,7 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 }
 
 func metricToPrometheus(m *metrics.Metric, l *metrics.LabelSet, omitProgLabel bool) string {
-	var s []string
+	s := make([]string, 0, len(l.Labels)+1)
 	for k, v := range l.Labels {
 		// Prometheus quotes the value of each label=value pair.
 		s = append(s, fmt.Sprintf("%s=%q", k, v))

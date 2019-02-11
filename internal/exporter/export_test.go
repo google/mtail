@@ -35,7 +35,8 @@ func TestCreateExporter(t *testing.T) {
 }
 
 func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
-	var ret []string
+	// TODO(jaq): urgh looking inside m to find preallocation size
+	ret := make([]string, 0, len(m.LabelValues))
 	lc := make(chan *metrics.LabelSet)
 	go m.EmitLabelSets(lc)
 	for l := range lc {
@@ -55,7 +56,7 @@ func TestMetricToCollectd(t *testing.T) {
 	scalarMetric := metrics.NewMetric("foo", "prog", metrics.Counter, metrics.Int)
 	d, _ := scalarMetric.GetDatum()
 	datum.SetInt(d, 37, ts)
-	ms.Add(scalarMetric)
+	testutil.FatalIfErr(t, ms.Add(scalarMetric))
 
 	r := FakeSocketWrite(metricToCollectd, scalarMetric)
 	expected := []string{"PUTVAL \"gunstar/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
@@ -70,7 +71,7 @@ func TestMetricToCollectd(t *testing.T) {
 	d, _ = dimensionedMetric.GetDatum("snuh")
 	datum.SetInt(d, 37, ts)
 	ms.ClearMetrics()
-	ms.Add(dimensionedMetric)
+	testutil.FatalIfErr(t, ms.Add(dimensionedMetric))
 
 	r = FakeSocketWrite(metricToCollectd, dimensionedMetric)
 	expected = []string{
@@ -84,7 +85,7 @@ func TestMetricToCollectd(t *testing.T) {
 	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer, metrics.Int)
 	d, _ = timingMetric.GetDatum()
 	datum.SetInt(d, 123, ts)
-	ms.Add(timingMetric)
+	testutil.FatalIfErr(t, ms.Add(timingMetric))
 
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/mtail-prog/gauge-foo\" interval=60 1343124840:123\n"}

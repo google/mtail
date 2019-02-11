@@ -49,10 +49,11 @@ func TestReadPartial(t *testing.T) {
 	if f.partial.String() != "" {
 		t.Errorf("partial line not empty: %q", f.partial)
 	}
-	fd.WriteString("o")
-	fd.WriteString("hi")
+	testutil.WriteString(t, fd, "o")
+	testutil.WriteString(t, fd, "hi")
 	// memmapfs shares data structure here and in code under test so reset the file offset
-	fd.Seek(0, 0)
+	_, err = fd.Seek(0, 0)
+	testutil.FatalIfErr(t, err)
 	err = f.Read()
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
@@ -61,9 +62,11 @@ func TestReadPartial(t *testing.T) {
 		t.Errorf("partial line not expected: %q", f.partial)
 	}
 	// reset the cursor again
-	fd.Seek(3, io.SeekStart)
-	fd.WriteString("\n")
-	fd.Seek(-1, io.SeekEnd)
+	_, err = fd.Seek(3, io.SeekStart)
+	testutil.FatalIfErr(t, err)
+	testutil.WriteString(t, fd, "\n")
+	_, err = fd.Seek(-1, io.SeekEnd)
+	testutil.FatalIfErr(t, err)
 	err = f.Read()
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)

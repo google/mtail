@@ -17,6 +17,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
 )
 
@@ -87,14 +88,16 @@ func TestStartServer(tb testing.TB, pollInterval time.Duration, disableFsNotify 
 func TestGetMetric(tb testing.TB, addr, name string) interface{} {
 	uri := fmt.Sprintf("http://%s/debug/vars", addr)
 	client := &http.Client{
-		Timeout: time.Duration(5 * time.Second),
+		Timeout: 5 * time.Second,
 	}
 	resp, err := client.Get(uri)
 	if err != nil {
 		tb.Fatal(err)
 	}
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
+	n, err := buf.ReadFrom(resp.Body)
+	testutil.FatalIfErr(tb, err)
+	glog.Infof("Read %d bytes", n)
 	var r map[string]interface{}
 	if err := json.Unmarshal(buf.Bytes(), &r); err != nil {
 		tb.Fatalf("%s: body was %s", err, buf.String())
