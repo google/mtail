@@ -125,6 +125,26 @@ var exampleProgramTests = []struct {
 		"testdata/ip-addr.log",
 		"testdata/ip-addr.golden",
 	},
+	{
+		"examples/vsftpd.mtail",
+		"testdata/vsftpd_log",
+		"testdata/vsftpd_log.golden",
+	},
+	{
+		"examples/vsftpd.mtail",
+		"testdata/vsftpd_xferlog",
+		"testdata/vsftpd_xferlog.golden",
+	},
+	{
+		"examples/lighttpd.mtail",
+		"testdata/lighttpd_access.log",
+		"testdata/lighttpd_accesslog.golden",
+	},
+	{
+		"examples/mysql_slowqueries.mtail",
+		"testdata/mysql_slowqueries.log",
+		"testdata/mysql_slowqueries.golden",
+	},
 }
 
 func TestExamplePrograms(t *testing.T) {

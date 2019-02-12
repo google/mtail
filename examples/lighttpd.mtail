@@ -1,0 +1,42 @@
+# Copyright 2010 Google Inc. All Rights Reserved.
+# This file is available under the Apache license.
+
+# mtail module for a lighttpd server
+
+counter request by status
+counter time_taken by status
+counter bytes_out by subtotal, status
+counter bytes_in by status
+counter requests by proxy_cache
+
+
+const ACCESSLOG_RE // +
+    /(?P<proxied_for>\S+) (?P<request_ip>\S+) (?P<authuser>\S+)/ +
+    / \[(?P<access_time>[^\]]+)\] "(?P<http_method>\S+) (?P<url>.+?) / +
+    /(?P<protocol>\S+)" (?P<status>\d+) (?P<bytes_body>\d+) (?P<bytes_in>\d+)/ +
+    / (?P<bytes_out>\d+) (?P<time_taken>\d+) "(?P<referer>[^"]+)" / +
+    /"(?P<agent>[^"]+)"/
+
+
+# /var/log/lighttpd/access.log
+getfilename() =~ /lighttpd.access.log/ {
+  // + ACCESSLOG_RE {
+    # Parse an accesslog entry.
+    $url == "/healthz" {
+      # nothing
+    }
+    otherwise {
+      strptime($access_time, "02/Jan/2006:15:04:05 -0700")
+
+      request[$status]++
+      time_taken[$status] += $time_taken
+      bytes_out["resp_body", $status] += $bytes_body
+      bytes_out["resp_header", $status] += $bytes_out - $bytes_body
+      bytes_in[$status] += $bytes_in
+
+      $proxied_for != "-" {
+        requests[$request_ip]++
+      }
+    }
+  }
+}

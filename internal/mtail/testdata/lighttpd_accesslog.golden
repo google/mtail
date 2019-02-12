@@ -1,0 +1,11 @@
+counter request {status=200} 13 2010-04-08T20:43:27-07:00
+counter request {status=304} 3 2010-04-08T20:43:20-07:00
+counter time_taken {status=200} 15 2010-04-08T20:43:27-07:00
+counter time_taken {status=304} 4 2010-04-08T20:43:20-07:00
+counter bytes_out {subtotal=resp_body,status=200} 2338666 2010-04-08T20:43:27-07:00
+counter bytes_out {subtotal=resp_header,status=200} 3560 2010-04-08T20:43:27-07:00
+counter bytes_out {subtotal=resp_body,status=304} 0 2010-04-08T20:43:20-07:00
+counter bytes_out {subtotal=resp_header,status=304} 841 2010-04-08T20:43:20-07:00
+counter bytes_in {status=200} 4770 2010-04-08T20:43:27-07:00
+counter bytes_in {status=304} 1091 2010-04-08T20:43:20-07:00
+counter requests {proxy_cache=192.0.2.5} 16 2010-04-08T20:43:27-07:00

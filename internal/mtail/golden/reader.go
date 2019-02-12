@@ -50,7 +50,11 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 				kv := strings.Split(pair, "=")
 				keys = append(keys, kv[0])
 				if kv[1] != "" {
-					vals = append(vals, kv[1])
+					if kv[1] == `""` {
+						vals = append(vals, "")
+					} else {
+						vals = append(vals, kv[1])
+					}
 				}
 			}
 		}
@@ -88,7 +92,15 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 		var timestamp time.Time
 		glog.V(2).Infof("match 5: %q\n", match[5])
 		if match[5] != "" {
-			timestamp, _ = time.Parse(time.RFC3339, match[5])
+			timestamp, err = time.Parse(time.RFC3339, match[5])
+			if err != nil {
+				j, err := strconv.ParseInt(match[5], 10, 64)
+				if err == nil {
+					timestamp = time.Unix(j/1000000000, j%1000000000)
+				} else {
+					glog.V(2).Info(err)
+				}
+			}
 		}
 		glog.V(2).Infof("timestamp is %s which is %v in unix", timestamp.Format(time.RFC3339), timestamp.Unix())
 

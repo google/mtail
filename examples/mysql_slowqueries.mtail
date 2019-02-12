@@ -1,0 +1,102 @@
+# Copyright 2008 Google Inc. All Rights Reserved.
+# This file is available under the Apache license.
+
+# mysql-slowqueries -- mtail module tracking slow mysql queries
+
+hidden text user
+hidden text host
+hidden text query_type
+hidden text service
+hidden gauge tmp_query_time
+hidden gauge tmp_lock_time
+hidden gauge partial
+hidden gauge time
+counter query_time by type, server, service, user
+counter lock_time by type, server, service, user
+counter query_time_overall_sum
+counter query_time_total_count
+counter lock_time_overall_sum
+counter lock_time_total_count
+
+# Example lines from the file and regex to match them:
+
+# # User@Host: dbuser[dbuser] @ host [192.0.2.87]
+const USER_HOST /^# User@Host: ([a-zA-Z]+)\[[a-zA-Z]+\] @ ([^\. ]+)/
+
+# # Query_time: 30  Lock_time: 0  Rows_sent: 0  Rows_examined: 0
+const QUERY_TIME /^# Query_time: (\d+)\s*Lock_time: (\d+)/
+
+# UPDATE ... # outbox;
+const FULL_QUERY_LINE /^(INSERT|UPDATE|DELETE|SELECT) .* # (.*);$/
+
+# Not all queries have helpful comments at the end
+const UNINSTRUMENTED_QUERY_LINE /^(INSERT|UPDATE|DELETE|SELECT) .*;$/
+
+# If the query gets split up, the service may end up on another line
+const PARTIAL_QUERY_LINE /^(INSERT|UPDATE|DELETE|SELECT) .*[^;]$/
+
+# This one has the potential to catch too many things, so it can only be a last
+# resort match.
+const END_QUERY_LINE /.*;$/
+
+/^# Time: (\d{6} .\d:\d\d:\d\d)/ {
+  strptime($1, "060102  3:04:05")
+  time = timestamp()
+}
+
+/^SET timestamp=(\d+);/ {
+  time = $1
+}
+
+settime(time)
+
+// + USER_HOST {
+  user = $1
+  host = $2
+}
+# break if no user set yet
+user == "" {
+  stop
+}
+
+// + QUERY_TIME {
+  tmp_query_time = $1
+  tmp_lock_time = $2
+  query_time_overall_sum += tmp_query_time
+  query_time_total_count++
+  lock_time_overall_sum += tmp_lock_time
+  lock_time_total_count++
+}
+
+// + FULL_QUERY_LINE {
+  # We should have everything we need now.
+  query_type = tolower($1)
+  service = $2
+  query_time[query_type, host, service, user] += tmp_query_time
+  lock_time[query_type, host, service, user] += tmp_lock_time
+}
+
+// + UNINSTRUMENTED_QUERY_LINE {
+  # We should have everything we need now.
+  query_type = tolower($1)
+  service = "n/a"
+  query_time[query_type, host, service, user] += tmp_query_time
+  lock_time[query_type, host, service, user] += tmp_lock_time
+}
+
+// + PARTIAL_QUERY_LINE {
+  query_type = tolower($1)
+  partial = 1
+}
+
+// + END_QUERY_LINE && partial == 1 {
+  partial = 0
+  /.*# (.*)$/ {
+    service = $1
+  }
+  otherwise {
+    service = "n/a"
+  }
+  query_time[query_type, host, service, user] += tmp_query_time
+  lock_time[query_type, host, service, user] += tmp_lock_time
+}
