@@ -20,8 +20,7 @@ test:
 build:
   stage: build
   script:
-    - make install
-    - cp -v ${GOPATH}/bin/mtail ${CI_PROJECT_DIR}/build/mtail
+    - PREFIX=${CI_PROJECT_DIR}/build make install
   artifacts:
     expire_in: 1 week
     when: on_success

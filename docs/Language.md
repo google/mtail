@@ -565,6 +565,8 @@ would mean that the datum indexed by `$session` will be removed 24 hours after t
 The del-after form takes any time period supported by the go
 [`time.ParseDuration`](https://golang.org/pkg/time/#ParseDuration) function.
 
+Expiry is only processed once ever hour, so durations shorter than 1h won't take effect until the next hour has passed.
+
 ### Stopping the program
 
 The program runs from start to finish once per line, but sometimes you may want to stop the program early.  For example, if the log filename does not match a pattern, or some stateful metric indicates work shouldn't be done.

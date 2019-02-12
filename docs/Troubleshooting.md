@@ -87,4 +87,5 @@ any errors encountered.  Adding the `-v=2` flag raises the verbosity.  See the
 [glog](https://github.com/golang/glog) manual for more logging flag options.
 
 The `one_shot` and `logtostderr` flags may come in helpful for quickly
-launching mtail in non-daemon mode in order to flush out deployment issues.
+launching mtail in non-daemon mode in order to flush out deployment issues like
+permissions problems.

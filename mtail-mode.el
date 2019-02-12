@@ -1,10 +1,32 @@
-; Copyright 2011 Google Inc. All Rights Reserved.
-; This file is available under the Apache license.
+;;; mtail-mode.el -- Major mode for editing mtail programs.
+;;;
+;;; Copyright 2011 Google Inc. All Rights Reserved.
+;;; This file is available under the Apache license.
+;;;
+;;; Commentary:
+;;;
+;;; Code:
 
-(defvar mtail-mode-hook nil)
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.mtail$" . mtail-mode))
+
+(defgroup mtail nil
+  "Support for the mtail language."
+  :group 'languages
+  :prefix "mtail-")
+
+
+(defcustom mtail-mode-hook nil
+  "Hook run when entering mtail mode."
+  :type 'hook
+  :group 'mtail)
 
 (defcustom mtail-indent-offset 2
-  "Indent offset for `mtail-mode'.")
+  "Indent offset for `mtail-mode'."
+  :type 'integer
+  :group 'mtail)
+
+;; font locking
 
 (defvar mtail-mode-syntax-table
   (let ((st (make-syntax-table)))
@@ -67,7 +89,7 @@
      )))
 
 ;;;###autoload
-(define-derived-mode mtail-mode awk-mode "emtail"
+(define-derived-mode mtail-mode awk-mode "mtail"
   "Major mode for editing mtail programs."
   :syntax-table mtail-mode-syntax-table
   (set (make-local-variable 'paragraph-separate) "^[ \t]*$")
@@ -82,11 +104,15 @@
 (defun mtail-mode-reload ()
   "Reload mtail-mode.el and put the current buffer into emtail-mode.  Useful for debugging."
   (interactive)
-  (unload-feature 'mtail-mode)
-  (add-to-list 'load-path "/home/jaq/src/mtail")
-  (require 'mtail-mode)
-  (mtail-mode))
+  ;; Store the file that contains mtail-mode, this file.
+  (let ((mtail-mode-filename (symbol-file 'mtail-mode)))
+    (progn
+      (unload-feature 'mtail-mode)
+      (load-file mtail-mode-filename)
+      (require 'mtail-mode)
+      ;; Whatever buffer we're in, reset its mode.
+      (set-auto-mode t))))
 
 (provide 'mtail-mode)
 
-(add-to-list 'auto-mode-alist (cons "\\.em$" #'mtail-mode))
+;;; mtail-mode.el ends here
