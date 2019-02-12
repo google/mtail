@@ -99,7 +99,7 @@ Retry:
 	if err != nil {
 		logErrors.Add(pathname, 1)
 		if shouldRetry() {
-			retries -= 1
+			retries--
 			time.Sleep(retryDelay)
 			retryDelay += retryDelay
 			goto Retry
