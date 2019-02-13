@@ -168,7 +168,7 @@ func (f *File) Read() error {
 	totalBytes := 0
 	for {
 		if err := f.file.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
-			glog.Infof("%s: %s", f.Name, err)
+			glog.V(2).Infof("%s: %s", f.Name, err)
 		}
 		n, err := f.file.Read(b[:cap(b)])
 		glog.V(2).Infof("Read count %v err %v", n, err)
