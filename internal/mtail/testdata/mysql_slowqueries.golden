@@ -1,0 +1,32 @@
+counter query_time_total_count 8 1207033681000000000
+counter query_time_overall_sum 235 1207033681000000000
+counter lock_time_overall_sum 0 1207033681000000000
+counter lock_time_total_count 8 1207033681000000000
+counter query_time {type=update,server=dbhost,service=servicename,user=dbuser} 30 1207033681000000000
+counter query_time {type=update,server=dbhost,service=n/a,user=dbuser} 30 1207033681000000000
+counter query_time {type=update,server=host1,service=servicename,user=dbuser} 30 1207033681000000000
+counter query_time {type=update,server=host1,service=n/a,user=dbuser} 30 1207033681000000000
+counter query_time {type=update,server=host2,service=servicename,user=dbuser} 29 1207033681000000000
+counter query_time {type=update,server=host2,service=n/a,user=dbuser} 29 1207033681000000000
+counter query_time {type=update,server=host3,service=servicename,user=dbuser} 30 1207033681000000000
+counter query_time {type=update,server=host3,service=n/a,user=dbuser} 30 1207033681000000000
+counter query_time {type=update,server=host4,service=servicename,user=dbuser} 58 1207033681000000000
+counter query_time {type=update,server=host4,service=n/a,user=dbuser} 58 1207033681000000000
+counter query_time {type=update,server=host5,service=servicename,user=dbuser} 29 1207033681000000000
+counter query_time {type=update,server=host5,service=n/a,user=dbuser} 29 1207033681000000000
+counter query_time {type=update,server=host6,service=servicename,user=dbuser} 29 1207033681000000000
+counter query_time {type=update,server=host6,service=n/a,user=dbuser} 29 1207033681000000000
+counter lock_time {type=update,server=dbhost,service=servicename,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=dbhost,service=n/a,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host1,service=servicename,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host1,service=n/a,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host2,service=servicename,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host2,service=n/a,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host3,service=servicename,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host3,service=n/a,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host4,service=servicename,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host4,service=n/a,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host5,service=servicename,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host5,service=n/a,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host6,service=servicename,user=dbuser} 0 1207033681000000000
+counter lock_time {type=update,server=host6,service=n/a,user=dbuser} 0 1207033681000000000

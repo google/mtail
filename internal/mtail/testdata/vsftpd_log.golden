@@ -1,0 +1,24 @@
+counter transfers {direction=}
+counter transfer_time {direction=}
+counter bytes_transferred {direction=}
+counter connects 2 2011-02-21T18:31:52Z
+counter logins 2 2011-02-21T18:31:52Z
+counter uploads 2 2011-02-21T18:31:55Z
+counter session_time 1298310264 2011-02-21T18:31:55Z
+counter commands {command=STAT} 4 2011-02-21T17:44:32Z
+counter commands {command=PASV} 4 2011-02-21T18:31:55Z
+counter commands {command=QUIT} 3 2011-02-21T18:31:55Z
+counter commands {command=USER} 2 2011-02-21T18:31:52Z
+counter commands {command=PASS} 2 2011-02-21T18:31:52Z
+counter commands {command=TYPE} 2 2011-02-21T18:31:54Z
+counter commands {command=STOR} 2 2011-02-21T18:31:55Z
+counter responses {response=230} 3 2011-02-21T18:31:53Z
+counter responses {response=211} 8 2011-02-21T17:44:32Z
+counter responses {response=300} 4 2011-02-21T17:44:32Z
+counter responses {response=227} 4 2011-02-21T18:31:55Z
+counter responses {response=221} 3 2011-02-21T18:31:55Z
+counter responses {response=220} 2 2011-02-21T18:31:52Z
+counter responses {response=331} 2 2011-02-21T18:31:52Z
+counter responses {response=200} 2 2011-02-21T18:31:54Z
+counter responses {response=150} 2 2011-02-21T18:31:55Z
+counter responses {response=226} 2 2011-02-21T18:31:55Z

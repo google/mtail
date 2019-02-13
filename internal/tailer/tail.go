@@ -207,16 +207,6 @@ func doFollow(fd *File) {
 	}
 }
 
-// pollHandles walks the handles map and polls them all in series.
-// nolint
-func (t *Tailer) pollHandles() {
-	t.handlesMu.RLock()
-	defer t.handlesMu.RUnlock()
-	for _, fd := range t.handles {
-		doFollow(fd)
-	}
-}
-
 // watchDirname adds the directory containing a path to be watched.
 func (t *Tailer) watchDirname(pathname string) error {
 	absPath, err := filepath.Abs(pathname)

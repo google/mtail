@@ -1,0 +1,12 @@
+# subject_summarizer -- a mtail module which monitors a mbox file
+#
+# This mtail module watches mbox files, and provides a summary of the
+# subject lines it sees.
+
+counter subject_lines_seen by subject
+
+const SUBJECT_LINE /^Subject: (.*)$/
+
+// + SUBJECT_LINE {
+  subject_lines_seen[$1] ++
+}
