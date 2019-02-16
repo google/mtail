@@ -8,7 +8,8 @@ package watcher
 type OpType int
 
 const (
-	Create OpType = iota
+	_ OpType = iota
+	Create
 	Update
 	Delete
 )
