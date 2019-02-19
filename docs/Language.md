@@ -249,7 +249,7 @@ The simplest `mtail` program merely counts lines read:
 ```
 /$/ {
   line_count++
-}`
+}
 ```
 
 This program instructs `mtail` to increment the `line_count` counter variable on
