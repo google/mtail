@@ -327,8 +327,7 @@ func TestWatcherNewFilePolling(t *testing.T) {
 	time.Sleep(250 * time.Millisecond)
 	w.Close()
 	<-done
-	expected := []Event{{Op: Update, Pathname: tmpDir},
-		{Op: Update, Pathname: path.Join(tmpDir, "log")}}
+	expected := []Event{{Op: Update, Pathname: path.Join(tmpDir, "log")}}
 	if diff := testutil.Diff(expected, result); diff != "" {
 		t.Errorf("event unepxected: diff:\n%s", diff)
 	}

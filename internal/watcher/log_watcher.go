@@ -7,6 +7,7 @@ import (
 	"expvar"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sync"
 	"time"
@@ -145,11 +146,19 @@ Exit:
 
 func pollUpdate(c chan Event, fi os.FileInfo, pathname string) {
 	if fi.IsDir() {
-		// walk the dir
-		// look for changes
-		// new files send Create
-		// updated files.. recurse?
+		matches, err := filepath.Glob(path.Join(pathname, "*"))
+		if err != nil {
+			glog.V(1).Info(err)
+			return
+		}
+		// TODO(jaq): only send updates for changed files
+		// also handle directories again?
 		// how do we avoid duplicate notifies for things that are already in the watch list?
+		for _, match := range matches {
+			glog.Infof("sending for %s", match)
+			c <- Event{Update, match}
+		}
+		return
 	}
 	glog.Info("sending")
 	c <- Event{Update, pathname}
