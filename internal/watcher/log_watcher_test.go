@@ -316,7 +316,7 @@ func TestWatcherNewFilePolling(t *testing.T) {
 			glog.Infof("Event: %v", event)
 			result = append(result, event)
 			if event.Op == Update && event.Pathname == tmpDir {
-				w.Add(path.Join(tmpDir, "log"), handle)
+				testutil.FatalIfErr(t, w.Add(path.Join(tmpDir, "log"), handle))
 			}
 			wg.Done()
 		}
@@ -327,7 +327,7 @@ func TestWatcherNewFilePolling(t *testing.T) {
 	time.Sleep(250 * time.Millisecond)
 	w.Close()
 	<-done
-	expected := []Event{{Op: Update, Pathname: path.Join(tmpDir, "log")}}
+	expected := []Event{{Op: Create, Pathname: path.Join(tmpDir, "log")}}
 	if diff := testutil.Diff(expected, result); diff != "" {
 		t.Errorf("event unepxected: diff:\n%s", diff)
 	}

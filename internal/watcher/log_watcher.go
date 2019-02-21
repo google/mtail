@@ -111,57 +111,73 @@ func (w *LogWatcher) runTicks() {
 		return
 	}
 
-Exit:
 	for {
 		select {
 		case <-w.pollTicker.C:
-			w.watchedMu.RLock()
+			w.watchedMu.Lock()
 			for n, watched := range w.watched {
-				glog.Info("stat")
+				glog.V(2).Info("stat")
 				fi, err := os.Stat(n)
 				if err != nil {
-					glog.Info(err)
+					glog.V(1).Info(err)
 					continue
 				}
 
 				if watched.fi != nil {
-					glog.Info("got fi")
+					glog.V(2).Info("got fi")
 					if fi.ModTime().Sub(watched.fi.ModTime()) > 0 {
-						pollUpdate(watched.c, fi, n)
+						w.pollUpdateLocked(watched.c, fi, n)
 					}
 					continue
 				} else {
-					pollUpdate(watched.c, fi, n)
+					w.pollUpdateLocked(watched.c, fi, n)
 				}
-				glog.Info("Update fi")
+				glog.V(2).Info("Update fi")
 				watched.fi = fi
 			}
-			w.watchedMu.RUnlock()
+			w.watchedMu.Unlock()
 		case <-w.stopTicks:
 			w.pollTicker.Stop()
-			break Exit
+			return
 		}
 	}
 }
 
-func pollUpdate(c chan Event, fi os.FileInfo, pathname string) {
-	if fi.IsDir() {
-		matches, err := filepath.Glob(path.Join(pathname, "*"))
-		if err != nil {
-			glog.V(1).Info(err)
-			return
-		}
-		// TODO(jaq): only send updates for changed files
-		// also handle directories again?
-		// how do we avoid duplicate notifies for things that are already in the watch list?
-		for _, match := range matches {
-			glog.Infof("sending for %s", match)
-			c <- Event{Update, match}
-		}
+// pollUpdateLocked polls the filesystem for updates, and w.watchedMu must be locked.
+func (w *LogWatcher) pollUpdateLocked(c chan Event, fi os.FileInfo, pathname string) {
+	if !fi.IsDir() {
+		glog.V(2).Info("sending")
+		c <- Event{Update, pathname}
 		return
 	}
-	glog.Info("sending")
-	c <- Event{Update, pathname}
+	matches, err := filepath.Glob(path.Join(pathname, "*"))
+	if err != nil {
+		glog.V(1).Info(err)
+		return
+	}
+	// TODO(jaq): only send updates for changed files
+	// also handle directories again?
+	// how do we avoid duplicate notifies for things that are already in the watch list?
+	for _, match := range matches {
+		fi, err := os.Stat(match)
+		if err != nil {
+			glog.V(1).Info(err)
+			continue
+		}
+		watched, ok := w.watched[match]
+		glog.V(2).Infof("sending for %s", match)
+		if !ok {
+			c <- Event{Create, match}
+			w.watched[match] = &watch{c: c, fi: fi}
+			continue
+		}
+		if fi.ModTime().Sub(watched.fi.ModTime()) > 0 {
+			c <- Event{Update, match}
+			w.watched[match].fi = fi
+		} else {
+			glog.V(2).Infof("No modtime change for %s, no send", match)
+		}
+	}
 }
 
 // runEvents assumes that w.watcher is not nil
