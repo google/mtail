@@ -6,8 +6,6 @@ run:
   tests: true
   build-tags:
     - integration
-  skip-files:
-    - internal/vm/parser/parser.go
 
 linters-settings:
   govet:
