@@ -53,7 +53,7 @@ var (
 
 	// Ops flags
 	pollInterval                = flag.Duration("poll_interval", 0, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
-	disableFsnotify             = flag.Bool("disable_fsnotify", false, "When enabled no fsnotify watcher is created, and mtail falls back to polling mode only.  Only the files known at program startup will be polled.")
+	disableFsnotify             = flag.Bool("disable_fsnotify", false, "EXPERIMENTAL: When enabled no fsnotify watcher is created, and mtail falls back to polling mode only.  Only the files known at program startup will be polled.")
 	expiredMetricGcTickInterval = flag.Duration("expired_metrics_gc_interval", time.Hour, "interval between expired metric garbage collection runs")
 	staleLogGcTickInterval      = flag.Duration("stale_log_gc_interval", time.Hour, "interval between stale log garbage collection runs")
 
