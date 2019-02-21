@@ -59,3 +59,8 @@ Can't set the timestamp in one line and reuse it in another; must use the
 
 Get a list of non-stdlib deps
 go list -f "{{if not .Standard}}{{.ImportPath}}{{end}}" $(go list -f '{{join .Deps "\n"}}' ./...)
+
+
+Request joining for the log-watcher when sending updates about files, in case
+one's already in the queue.  Maybe helps with fsnotify overflow, and the
+    duplicate notify problem from poll-only mode?
