@@ -117,7 +117,7 @@ Retry:
 func (f *File) Follow() error {
 	s1, err := f.file.Stat()
 	if err != nil {
-		glog.Infof("Stat failed on %q: %s", f.Name, err)
+		glog.V(1).Infof("Stat failed on %q: %s", f.Name, err)
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
 		err := f.doRotation()
 		if err != nil {
