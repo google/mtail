@@ -116,24 +116,7 @@ func (w *LogWatcher) runTicks() {
 		case <-w.pollTicker.C:
 			w.watchedMu.Lock()
 			for n, watched := range w.watched {
-				glog.V(2).Info("stat")
-				fi, err := os.Stat(n)
-				if err != nil {
-					glog.V(1).Info(err)
-					continue
-				}
-
-				if watched.fi != nil {
-					glog.V(2).Info("got fi")
-					if fi.ModTime().Sub(watched.fi.ModTime()) > 0 {
-						w.pollUpdateLocked(watched.c, fi, n)
-					}
-					continue
-				} else {
-					w.pollUpdateLocked(watched.c, fi, n)
-				}
-				glog.V(2).Info("Update fi")
-				watched.fi = fi
+				w.pollWatchedPathLocked(n, watched)
 			}
 			w.watchedMu.Unlock()
 		case <-w.stopTicks:
@@ -143,39 +126,57 @@ func (w *LogWatcher) runTicks() {
 	}
 }
 
-// pollUpdateLocked polls the filesystem for updates, and w.watchedMu must be locked.
-func (w *LogWatcher) pollUpdateLocked(c chan Event, fi os.FileInfo, pathname string) {
-	if !fi.IsDir() {
-		glog.V(2).Info("sending")
-		c <- Event{Update, pathname}
+// pollWatchedPathLocked polls an already-watched path for updates.  w.watchedMu must be locked when called.
+func (w *LogWatcher) pollWatchedPathLocked(pathname string, watched *watch) {
+	glog.V(2).Info("stat")
+	fi, err := os.Stat(pathname)
+	if err != nil {
+		glog.V(1).Info(err)
 		return
 	}
+
+	// fsnotify does not send update events for the directory itself.
+	if fi.IsDir() {
+		w.pollDirectoryLocked(watched.c, pathname)
+	} else if watched.fi == nil || fi.ModTime().Sub(watched.fi.ModTime()) > 0 {
+		glog.V(2).Infof("sending update for %s", pathname)
+		watched.c <- Event{Update, pathname}
+	}
+
+	glog.V(2).Info("Update fi")
+	watched.fi = fi
+}
+
+func (w *LogWatcher) pollDirectoryLocked(c chan Event, pathname string) {
 	matches, err := filepath.Glob(path.Join(pathname, "*"))
 	if err != nil {
 		glog.V(1).Info(err)
 		return
 	}
-	// TODO(jaq): only send updates for changed files
-	// also handle directories again?
-	// how do we avoid duplicate notifies for things that are already in the watch list?
+	// TODO(jaq): how do we avoid duplicate notifies for things that are already in the watch list?
 	for _, match := range matches {
 		fi, err := os.Stat(match)
 		if err != nil {
 			glog.V(1).Info(err)
 			continue
 		}
+
 		watched, ok := w.watched[match]
-		glog.V(2).Infof("sending for %s", match)
-		if !ok {
+		switch {
+		case !ok:
+			glog.V(2).Infof("sending create for %s", match)
 			c <- Event{Create, match}
 			w.watched[match] = &watch{c: c, fi: fi}
-			continue
-		}
-		if fi.ModTime().Sub(watched.fi.ModTime()) > 0 {
+		case fi.ModTime().Sub(watched.fi.ModTime()) > 0:
+			glog.V(2).Infof("sending update for %s", match)
+
 			c <- Event{Update, match}
 			w.watched[match].fi = fi
-		} else {
+		default:
 			glog.V(2).Infof("No modtime change for %s, no send", match)
+		}
+		if fi.IsDir() {
+			w.pollDirectoryLocked(c, match)
 		}
 	}
 }
