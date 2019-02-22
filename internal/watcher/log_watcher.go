@@ -167,9 +167,8 @@ func (w *LogWatcher) pollDirectoryLocked(c chan Event, pathname string) {
 			glog.V(2).Infof("sending create for %s", match)
 			c <- Event{Create, match}
 			w.watched[match] = &watch{c: c, fi: fi}
-		case fi.ModTime().Sub(watched.fi.ModTime()) > 0:
+		case watched.fi != nil && fi.ModTime().Sub(watched.fi.ModTime()) > 0:
 			glog.V(2).Infof("sending update for %s", match)
-
 			c <- Event{Update, match}
 			w.watched[match].fi = fi
 		default:
