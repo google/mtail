@@ -297,38 +297,50 @@ func TestWatcherErrors(t *testing.T) {
 	}
 }
 
-func TestWatcherNewFilePolling(t *testing.T) {
-	//t.Skip("not working")
+func TestWatcherNewFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping log watcher test in short mode")
 	}
-	w, err := NewLogWatcher(10*time.Millisecond, false)
-	testutil.FatalIfErr(t, err)
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
-	handle, eventsChan := w.Events()
-	testutil.FatalIfErr(t, w.Add(tmpDir, handle))
-	result := []Event{}
-	done := make(chan struct{})
-	wg := sync.WaitGroup{}
-	go func() {
-		for event := range eventsChan {
-			glog.Infof("Event: %v", event)
-			result = append(result, event)
-			if event.Op == Update && event.Pathname == tmpDir {
-				w.Add(path.Join(tmpDir, "log"), handle)
+	tests := []struct {
+		d time.Duration
+		b bool
+	}{
+		{0, true},
+		{10 * time.Millisecond, false},
+	}
+	for _, test := range tests {
+		t.Run(fmt.Sprintf("%s %v", test.d, test.b), func(t *testing.T) {
+			w, err := NewLogWatcher(test.d, test.b)
+			testutil.FatalIfErr(t, err)
+			tmpDir, rmTmpDir := testutil.TestTempDir(t)
+			defer rmTmpDir()
+			handle, eventsChan := w.Events()
+			testutil.FatalIfErr(t, w.Add(tmpDir, handle))
+			result := []Event{}
+			done := make(chan struct{})
+			wg := sync.WaitGroup{}
+			go func() {
+				for event := range eventsChan {
+					glog.Infof("Event: %v", event)
+					result = append(result, event)
+					if event.Op == Update && event.Pathname == tmpDir {
+						testutil.FatalIfErr(t, w.Add(path.Join(tmpDir, "log"), handle))
+					}
+					wg.Done()
+				}
+				close(done)
+			}()
+			wg.Add(2)
+			testutil.TestOpenFile(t, path.Join(tmpDir, "log"))
+			time.Sleep(250 * time.Millisecond)
+			w.Close()
+			<-done
+			expected := []Event{ //{Op: Update, Pathname: tmpDir},
+				{Op: Create, Pathname: path.Join(tmpDir, "log")}}
+			if diff := testutil.Diff(expected, result); diff != "" {
+				t.Errorf("event unexpected: diff:\n%s", diff)
+				t.Logf("received:\n%v", result)
 			}
-			wg.Done()
-		}
-		close(done)
-	}()
-	wg.Add(2)
-	testutil.TestOpenFile(t, path.Join(tmpDir, "log"))
-	time.Sleep(250 * time.Millisecond)
-	w.Close()
-	<-done
-	expected := []Event{{Op: Update, Pathname: path.Join(tmpDir, "log")}}
-	if diff := testutil.Diff(expected, result); diff != "" {
-		t.Errorf("event unepxected: diff:\n%s", diff)
+		})
 	}
 }
