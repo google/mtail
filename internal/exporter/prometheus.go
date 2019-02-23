@@ -108,12 +108,27 @@ func promValueForDatum(d datum.Datum) float64 {
 // PrometheusHandler returns an http.Handler capable of exporting all program
 // and internal metrics in the Prometheus format.
 func (e *Exporter) PrometheusHandler() http.Handler {
-	reg := prometheus.NewPedanticRegistry()
+	expvarDescs := map[string]*prometheus.Desc{
+		// internal/tailer/file.go
+		"log_errors_total":    prometheus.NewDesc("log_errors_total", "number of IO errors encountered per log file", []string{"logfile"}, nil),
+		"log_rotations_total": prometheus.NewDesc("log_rotations_total", "number of log rotation events per log file", []string{"logfile"}, nil),
+		"log_truncates_total": prometheus.NewDesc("log_truncates_total", "number of log truncation events log file", []string{"logfile"}, nil),
+		"log_lines_total":     prometheus.NewDesc("log_lines_total", "number of lines read per log file", []string{"logfile"}, nil),
+		// internal/vm/loader.go
+		"line_count":          prometheus.NewDesc("line_count", "number of lines received by the program loader", nil, nil),
+		"prog_loads_total":    prometheus.NewDesc("prog_loads_total", "number of program load events by program source filename", []string{"prog"}, nil),
+		"prog_load_errors":    prometheus.NewDesc("prog_load_errors", "number of errors encountered when loading per program source filename", []string{"prog"}, nil),
+		"prog_runtime_errors": prometheus.NewDesc("prog_runtime_errors", "number of errors encountered when executing programs per source filename", []string{"prog"}, nil),
+		// internal/watcher/log_watcher.go
+		"log_watcher_event_count": prometheus.NewDesc("log_watcher_event_count", "number of events received from fsnotify by type", []string{"type"}, nil),
+		"log_watcher_error_count": prometheus.NewDesc("log_watcher_error_count", "number of errors received from fsnotify", nil, nil),
+	}
+	// Using a non-pedantic registry means we can be looser with metrics that
+	// are not fully specified at startup.
+	reg := prometheus.NewRegistry()
 	reg.MustRegister(e,
 		prometheus.NewGoCollector(),
-		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
-		//prometheus.NewExpvarCollector(
-
-	)
+		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	prometheus.WrapRegistererWithPrefix("mtail_", reg).MustRegister(prometheus.NewExpvarCollector(expvarDescs))
 	return promhttp.HandlerFor(reg, promhttp.HandlerOpts{})
 }
