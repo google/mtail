@@ -236,7 +236,7 @@ func (m *Server) Serve() error {
 	mux.HandleFunc("/favicon.ico", FaviconHandler)
 	mux.Handle("/", m)
 	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
-	mux.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
+	mux.Handle("/metrics", m.e.PrometheusHandler())
 	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
 	mux.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
 	mux.Handle("/debug/vars", expvar.Handler())
