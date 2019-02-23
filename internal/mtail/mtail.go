@@ -27,6 +27,8 @@ import (
 	"github.com/google/mtail/internal/vm"
 	"github.com/google/mtail/internal/watcher"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Server contains the state of the main mtail program.
@@ -38,6 +40,8 @@ type Server struct {
 	t *tailer.Tailer     // t tails the watched files and feeds lines to the VMs.
 	l *vm.Loader         // l loads programs and manages the VM lifecycle.
 	e *exporter.Exporter // e manages the export of metrics from the store.
+
+	reg *prometheus.Registry
 
 	h        *http.Server
 	listener net.Listener
@@ -118,17 +122,45 @@ func (m *Server) initLoader() error {
 	return nil
 }
 
-// initExporter sets up an Exporter for this MtailServer.
+// initExporter sets up an Exporter for this Server.
 func (m *Server) initExporter() (err error) {
 	opts := []func(*exporter.Exporter) error{}
 	if m.omitProgLabel {
 		opts = append(opts, exporter.OmitProgLabel)
 	}
 	m.e, err = exporter.New(m.store, opts...)
-	return
+	if err != nil {
+		return err
+	}
+
+	expvarDescs := map[string]*prometheus.Desc{
+		// internal/tailer/file.go
+		"log_errors_total":    prometheus.NewDesc("log_errors_total", "number of IO errors encountered per log file", []string{"logfile"}, nil),
+		"log_rotations_total": prometheus.NewDesc("log_rotations_total", "number of log rotation events per log file", []string{"logfile"}, nil),
+		"log_truncates_total": prometheus.NewDesc("log_truncates_total", "number of log truncation events log file", []string{"logfile"}, nil),
+		"log_lines_total":     prometheus.NewDesc("log_lines_total", "number of lines read per log file", []string{"logfile"}, nil),
+		// internal/vm/loader.go
+		"line_count":          prometheus.NewDesc("line_count", "number of lines received by the program loader", nil, nil),
+		"prog_loads_total":    prometheus.NewDesc("prog_loads_total", "number of program load events by program source filename", []string{"prog"}, nil),
+		"prog_load_errors":    prometheus.NewDesc("prog_load_errors", "number of errors encountered when loading per program source filename", []string{"prog"}, nil),
+		"prog_runtime_errors": prometheus.NewDesc("prog_runtime_errors", "number of errors encountered when executing programs per source filename", []string{"prog"}, nil),
+		// internal/watcher/log_watcher.go
+		"log_watcher_event_count": prometheus.NewDesc("log_watcher_event_count", "number of events received from fsnotify by type", []string{"type"}, nil),
+		"log_watcher_error_count": prometheus.NewDesc("log_watcher_error_count", "number of errors received from fsnotify", nil, nil),
+	}
+	// Using a non-pedantic registry means we can be looser with metrics that
+	// are not fully specified at startup.
+	m.reg = prometheus.NewRegistry()
+	m.reg.MustRegister(m.e,
+		prometheus.NewGoCollector(),
+		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	// Prefix all expvar metrics with 'mtail_'
+	prometheus.WrapRegistererWithPrefix("mtail_", m.reg).MustRegister(
+		prometheus.NewExpvarCollector(expvarDescs))
+	return nil
 }
 
-// initTailer sets up a Tailer for this MtailServer.
+// initTailer sets up a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
 	opts := []func(*tailer.Tailer) error{}
 	if m.oneShot {
@@ -236,7 +268,7 @@ func (m *Server) Serve() error {
 	mux.HandleFunc("/favicon.ico", FaviconHandler)
 	mux.Handle("/", m)
 	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
-	mux.HandleFunc("/metrics", http.HandlerFunc(m.e.HandlePrometheusMetrics))
+	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
 	mux.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
 	mux.Handle("/debug/vars", expvar.Handler())

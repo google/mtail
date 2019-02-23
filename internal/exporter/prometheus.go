@@ -6,35 +6,34 @@ package exporter
 import (
 	"expvar"
 	"fmt"
-	"net/http"
-	"sort"
 	"strings"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/metrics/datum"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	metricExportTotal = expvar.NewInt("metric_export_total")
 )
 
-const (
-	prometheusFormat = "%s{%s} %s\n"
-)
-
 func noHyphens(s string) string {
 	return strings.Replace(s, "-", "_", -1)
 }
 
-// HandlePrometheusMetrics exports the metrics in a format readable by
-// Prometheus via HTTP.
-func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
+// Describe implements the prometheus.Collector interface.
+func (e *Exporter) Describe(c chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(e, c)
+}
+
+// Collect implements the prometheus.Collector interface.
+func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 	e.store.RLock()
 	defer e.store.RUnlock()
 
-	w.Header().Add("Content-type", "text/plain; version=0.0.4")
-
 	for _, ml := range e.store.Metrics {
-		emittype := true
 		lastSource := ""
 		for _, m := range ml {
 			m.RLock()
@@ -45,49 +44,57 @@ func (e *Exporter) HandlePrometheusMetrics(w http.ResponseWriter, r *http.Reques
 			}
 			metricExportTotal.Add(1)
 
-			if emittype {
-				fmt.Fprintf(w,
-					"# TYPE %s %s\n",
-					noHyphens(m.Name),
-					kindToPrometheusType(m.Kind))
-				emittype = false
-			}
-
-			lc := make(chan *metrics.LabelSet)
-			go m.EmitLabelSets(lc)
-			for l := range lc {
-				if m.Source != "" && m.Source != lastSource {
-					fmt.Fprintf(w, "# %s defined at %s\n", noHyphens(m.Name), m.Source)
-					// suppress redundant source comments
+			lsc := make(chan *metrics.LabelSet)
+			go m.EmitLabelSets(lsc)
+			for ls := range lsc {
+				if lastSource == "" {
 					lastSource = m.Source
 				}
-				line := metricToPrometheus(m, l, e.omitProgLabel)
-				fmt.Fprint(w, line)
+				var keys []string
+				var vals []string
+				if !e.omitProgLabel {
+					keys = append(keys, "prog")
+					vals = append(vals, m.Program)
+				}
+				for k, v := range ls.Labels {
+					keys = append(keys, k)
+					vals = append(vals, v)
+				}
+				pM, err := prometheus.NewConstMetric(
+					prometheus.NewDesc(noHyphens(m.Name),
+						fmt.Sprintf("defined at %s", lastSource), keys, nil),
+					promTypeForKind(m.Kind),
+					promValueForDatum(ls.Datum),
+					vals...)
+				if err != nil {
+					glog.Warning(err)
+					continue
+				}
+				c <- prometheus.NewMetricWithTimestamp(ls.Datum.TimeUTC(), pM)
 			}
 			m.RUnlock()
 		}
 	}
 }
 
-func metricToPrometheus(m *metrics.Metric, l *metrics.LabelSet, omitProgLabel bool) string {
-	s := make([]string, 0, len(l.Labels)+1)
-	for k, v := range l.Labels {
-		// Prometheus quotes the value of each label=value pair.
-		s = append(s, fmt.Sprintf("%s=%q", k, v))
+func promTypeForKind(k metrics.Kind) prometheus.ValueType {
+	switch k {
+	case metrics.Counter:
+		return prometheus.CounterValue
+	case metrics.Gauge:
+		return prometheus.GaugeValue
+	case metrics.Timer:
+		return prometheus.GaugeValue
 	}
-	sort.Strings(s)
-	if !omitProgLabel {
-		s = append(s, fmt.Sprintf("prog=\"%s\"", m.Program))
-	}
-	return fmt.Sprintf(prometheusFormat,
-		noHyphens(m.Name),
-		strings.Join(s, ","),
-		l.Datum.ValueString())
+	return prometheus.UntypedValue
 }
 
-func kindToPrometheusType(kind metrics.Kind) string {
-	if kind != metrics.Timer {
-		return strings.ToLower(kind.String())
+func promValueForDatum(d datum.Datum) float64 {
+	switch n := d.(type) {
+	case *datum.IntDatum:
+		return float64(n.Get())
+	case *datum.FloatDatum:
+		return n.Get()
 	}
-	return "gauge"
+	return 0.
 }
