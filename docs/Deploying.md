@@ -43,8 +43,6 @@ If your system is not supported by `fsnotify` then mtail will fall back to polli
 mtail --progs /etc/mtail --logs /var/log/syslog --poll_interval 250ms
 ```
 
-*N.B.* `mtail` will only discover new files if using `fsnotify`.  If you rely on polling mode, then only the files that mtail sees at program startup will be watched.
-
 ### Disabling `fsnotify`
 
 In some cases, the log watcher can not process update events from the kernel fast enough and you may see
@@ -53,9 +51,11 @@ fsnotify error: fsnotify queue overflow
 ```
 errors in the `mtail` log.  This will also manifest as counters not updating anymore.
 
-If your incoming log rate is high enough to trigger this condition, try forcing mtail to only use polling mode by adding the flag `--disable_fsnotify`.
+If your incoming log rate is high enough to trigger this condition, try forcing mtail to only use polling mode by adding the flag `--disable_fsnotify`.  The poll interval defaults to 250ms, but can be changed with the `--poll_interval` flag, for example
 
-When fsnotify is disabled, new mtail programs and new log files won't be detected after program startup.
+```
+mtail --progs /etc/mtail --logs /var/log/syslog --disable_fsnotify --poll_interval 50ms
+```
 
 ### Setting garbage collection intervals
 
