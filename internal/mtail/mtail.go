@@ -145,7 +145,6 @@ func (m *Server) initExporter() (err error) {
 		"prog_load_errors":    prometheus.NewDesc("prog_load_errors", "number of errors encountered when loading per program source filename", []string{"prog"}, nil),
 		"prog_runtime_errors": prometheus.NewDesc("prog_runtime_errors", "number of errors encountered when executing programs per source filename", []string{"prog"}, nil),
 		// internal/watcher/log_watcher.go
-		"log_watcher_event_count": prometheus.NewDesc("log_watcher_event_count", "number of events received from fsnotify by type", []string{"type"}, nil),
 		"log_watcher_error_count": prometheus.NewDesc("log_watcher_error_count", "number of errors received from fsnotify", nil, nil),
 	}
 	// Using a non-pedantic registry means we can be looser with metrics that

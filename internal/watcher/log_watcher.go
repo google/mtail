@@ -18,7 +18,6 @@ import (
 )
 
 var (
-	eventCount = expvar.NewMap("log_watcher_event_count")
 	errorCount = expvar.NewInt("log_watcher_error_count")
 )
 
@@ -194,7 +193,6 @@ func (w *LogWatcher) runEvents() {
 
 	for e := range w.watcher.Events {
 		glog.V(2).Infof("watcher event %v", e)
-		eventCount.Add(e.Name, 1)
 		switch {
 		case e.Op&fsnotify.Create == fsnotify.Create:
 			w.sendEvent(Event{Create, e.Name})
