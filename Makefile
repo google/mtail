@@ -10,8 +10,8 @@ PREFIX ?= usr/local
 
 # Place to store dependencies.
 DEPDIR = .d
-$(DEPDIR):
-	install -d $(DEPDIR)
+# Can't use a dependency rule here.
+$(shell install -d $(DEPDIR))
 
 # This rule finds all non-standard-library dependencies of each target and emits them to a makefile include.
 # Thanks mrtazz: https://unwiredcouch.com/2016/05/31/go-make.html
