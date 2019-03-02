@@ -40,7 +40,7 @@ collector."](https://groups.google.com/forum/#!msg/prometheus-users/qgxKH6_gYzM/
 We consider the Prometheus behaviour broken, but to avoid any confusion,
 `mtail` by default disables exporting timestamps to Prometheus.
 
-You can turn this behaviour back on with the `--emit_metric_timestamps`
+You can turn this behaviour back on with the `--emit_metric_timestamp`
 commandline flag, and if you have slow moving counters, you should tune your
 Prometheus' `query.lookback-delta` parameter.  See also [Staleness under
 Querying
