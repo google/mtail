@@ -176,7 +176,7 @@ The following relational operators are available in `mtail`:
 *   `>=` greater than or equal
 *   `==` is equal
 *   `!=` is not equal
-*   `~` pattern match
+*   `=~` pattern match
 *   `!~` negated pattern match
 *   `||` logical or
 *   `&&` logical and
@@ -200,6 +200,7 @@ The following arithmetic operators act on exported variables.
 *   `=` assignment
 *   `++` increment
 *   `+=` increment by
+*   `--` decrement
 
 #### `else` Clauses
 
@@ -248,7 +249,7 @@ The simplest `mtail` program merely counts lines read:
 ```
 /$/ {
   line_count++
-}`
+}
 ```
 
 This program instructs `mtail` to increment the `line_count` counter variable on
@@ -450,6 +451,8 @@ bug!)
     triggered.
 *   `float(x)`, a function of one argument that performs type conversion to
     floating point numbers. The same rules apply as for `int()` above.
+*   `string(x)`, a function of one argument that performs conversion to string
+    values.
 *   `strtol(x, y)`, a function of two arguments, which converts a string `x` to
     an integer using base `y`. Useful for translating octal or hexadecimal
     values in log messages.
@@ -548,3 +551,40 @@ grow unbounded as the number of sessions increases. If the programmer knows that
 the `/end/` pattern is the last time a session will be observed, then the datum
 at `$session` will be freed, which keeps `mtail` memory usage under control and
 will improve search time for finding dimensioned metrics.
+
+`del` can be modified with the `after` keyword, signalling that the metric
+should be deleted after some period of no activity.  For example, the
+expression
+
+```
+  del session_start[$session] after 24h
+```
+
+would mean that the datum indexed by `$session` will be removed 24 hours after the last update is recorded.
+
+The del-after form takes any time period supported by the go
+[`time.ParseDuration`](https://golang.org/pkg/time/#ParseDuration) function.
+
+Expiry is only processed once ever hour, so durations shorter than 1h won't take effect until the next hour has passed.
+
+### Stopping the program
+
+The program runs from start to finish once per line, but sometimes you may want to stop the program early.  For example, if the log filename does not match a pattern, or some stateful metric indicates work shouldn't be done.
+
+For this purpose, the `stop` keyword terminates the program immediately.
+
+The simplest and most useless mtail program is thus:
+
+```
+stop
+```
+
+But for more useful situations, perhaps stopping if the log filename doesn't match a pattern:
+
+```
+getfilename() !~ /apache.access.log/ {
+  stop
+}
+
+...
+```

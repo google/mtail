@@ -35,6 +35,39 @@ changes.
 Use `--logs` multiple times to pass in glob patterns that match the logs you
 want to tail.  This includes named pipes.
 
+### Polling the file system
+
+If your system is not supported by `fsnotify` then mtail will fall back to polling mode.  You can also specify this explicitly with the `--poll_interval` flag, for example
+
+```
+mtail --progs /etc/mtail --logs /var/log/syslog --poll_interval 250ms
+```
+
+### Disabling `fsnotify`
+
+In some cases, the log watcher can not process update events from the kernel fast enough and you may see
+```
+fsnotify error: fsnotify queue overflow
+```
+errors in the `mtail` log.  This will also manifest as counters not updating anymore.
+
+If your incoming log rate is high enough to trigger this condition, try forcing mtail to only use polling mode by adding the flag `--disable_fsnotify`.  The poll interval defaults to 250ms, but can be changed with the `--poll_interval` flag, for example
+
+```
+mtail --progs /etc/mtail --logs /var/log/syslog --disable_fsnotify --poll_interval 50ms
+```
+
+### Setting garbage collection intervals
+
+`mtail` accumulates metrics and log files during its operation.  By default, *every hour* both a garbage collection pass occurs looking for expired metrics, and stale log files.
+
+An expired metric is any metric that hasn't been updated in a time specified by a `del after` form in a program.
+
+A stale log file is any log being watched that hasn't been read from in 24 hours.
+
+The interval between garbage collection runs can be changed on the commandline with the `--expired_metrics_gc_interval` and `--stale_log_gc_interval` flags, which accept a time duration string compatible with the Go [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration) function.
+
+
 ### Launching under Docker
 
 `mtail` can be run as a sidecar process if you expose an application container's logs with a volume.

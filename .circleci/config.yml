@@ -3,48 +3,35 @@
 # instructions.
 common-build: &common-build
   working_directory: /go/src/github.com/google/mtail
-  environment:
-    TEST_RESULTS: /tmp/test-results
   steps:
     - checkout
-    - run: mkdir -p $TEST_RESULTS
-    - run: go get github.com/jstemmer/go-junit-report
-    - run: make vm/parser.go
-    - run: make install_coverage_deps
+    - run: make --debug smoke
+    - run: mkdir -p test-results
+    - run: mkdir -p workspace
+    - run: go get gotest.tools/gotestsum
     - run:
-        name: Run tests with race detector
-        command: |
-          trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
-          make testrace | tee ${TEST_RESULTS}/go-test.out
-    - run:
-        name: Run tests with coverage
-        command: |
-          make gover.coverprofile
-          mkdir -p workspace
-          cp gover.coverprofile workspace/${CIRCLE_JOB}.coverprofile
+        name: Run tests and coverage with race detector
+        command: gotestsum --junitfile test-results/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=20m  ./...
+        no_output_timeout: 20m
     - persist_to_workspace:
         root: workspace
         paths:
           - "*.coverprofile"
-    - run: make regtest
-    - run: make bench
     - store_test_results:
-        path: /tmp/test-results
+        path: test-results
+    - store_artifacts:
+        path: test-results
 
 # go* names anchors which define the Go versions to build with, merging the
 # common-build alias above.
+go1_11: &go1_11
+  <<: *common-build
+  docker:
+    - image: circleci/golang:1.11
 go1_10: &go1_10
   <<: *common-build
   docker:
     - image: circleci/golang:1.10
-go1_9: &go1_9
-  <<: *common-build
-  docker:
-    - image: circleci/golang:1.9
-go1_8: &go1_8
-  <<: *common-build
-  docker:
-    - image: circleci/golang:1.8
 
 # concurrency* names anchors which define the the concurrency level to run
 # tests with.
@@ -62,24 +49,18 @@ concurrency_1: &concurrency_1
 version: 2
 jobs:
   # The main build steps are the crossproduct of concurrency and go versions.
+  build-go1.11-4:
+    <<: [*go1_11, *concurrency_4]
+  build-go1.11-2:
+    <<: [*go1_11, *concurrency_2]
+  build-go1.11-1:
+    <<: [*go1_11, *concurrency_1]
   build-go1.10-4:
     <<: [*go1_10, *concurrency_4]
   build-go1.10-2:
     <<: [*go1_10, *concurrency_2]
   build-go1.10-1:
     <<: [*go1_10, *concurrency_1]
-  build-go1.9-4:
-    <<: [*go1_9, *concurrency_4]
-  build-go1.9-2:
-    <<: [*go1_9, *concurrency_2]
-  build-go1.9-1:
-    <<: [*go1_9, *concurrency_1]
-  build-go1.8-4:
-    <<: [*go1_8, *concurrency_4]
-  build-go1.8-2:
-    <<: [*go1_8, *concurrency_2]
-  build-go1.8-1:
-    <<: [*go1_8, *concurrency_1]
 
   # Coverage collects all the coverage reports from each build and merges them,
   # before sending off to Coveralls.
@@ -88,20 +69,20 @@ jobs:
     environment:
       COVERALLS_TOKEN: AQTCw3bl6FDphbQcMMkgVZBIunz5r3H8b
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.11
     steps:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - run: make install_coverage_deps
       - run:
           name: Generate coverage
           command: |
-            gover /tmp/workspace
-            go tool cover -html=gover.coverprofile -o coverage.html
-            goveralls -coverprofile=gover.coverprofile -service=circle-ci
+            ls -lR /tmp/workspace
+            go get github.com/sozorogami/gover
+            gover /tmp/workspace coverprofile
+            make --debug coverage.html upload_to_coveralls
       - store_artifacts:
-          path: gover.coverprofile
+          path: coverprofile
           destination: coverage
       - store_artifacts:
           path: coverage.html
@@ -110,13 +91,12 @@ jobs:
   delivery:
     working_directory: /go/src/github.com/google/mtail
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.11
     steps:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - run: make vm/parser.go
-      - run: make crossbuild
+      - run: make --debug crossbuild
       - run: sha1sum build/*
       - store_artifacts:
           path: build/
@@ -137,54 +117,39 @@ tag-filter: &tag-filter
 # of the build matrix change.
 workflows:
   version: 2
-  build:
+  build_and_deliver:
     jobs:
+      - build-go1.11-4:
+          <<: *tag-filter
+      - build-go1.11-2:
+          <<: *tag-filter
+          requires:
+            - build-go1.11-4
+      - build-go1.11-1:
+          <<: *tag-filter
+          requires:
+            - build-go1.11-4
       - build-go1.10-4:
           <<: *tag-filter
+          requires:
+            - build-go1.11-4
       - build-go1.10-2:
           <<: *tag-filter
           requires:
-            - build-go1.10-4
+            - build-go1.11-4
       - build-go1.10-1:
           <<: *tag-filter
           requires:
-            - build-go1.10-4
-      - build-go1.9-4:
-          <<: *tag-filter
-          requires:
-            - build-go1.10-4
-      - build-go1.9-2:
-          <<: *tag-filter
-          requires:
-            - build-go1.10-4
-      - build-go1.9-1:
-          <<: *tag-filter
-          requires:
-            - build-go1.10-4
-      - build-go1.8-4:
-          <<: *tag-filter
-          requires:
-            - build-go1.10-4
-      - build-go1.8-2:
-          <<: *tag-filter
-          requires:
-            - build-go1.10-4
-      - build-go1.8-1:
-          <<: *tag-filter
-          requires:
-            - build-go1.10-4
+            - build-go1.11-4
       - coverage:
           <<: *tag-filter
           requires:
+            - build-go1.11-4
+            - build-go1.11-2
+            - build-go1.11-1
             - build-go1.10-4
             - build-go1.10-2
             - build-go1.10-1
-            - build-go1.9-4
-            - build-go1.9-2
-            - build-go1.9-1
-            - build-go1.8-4
-            - build-go1.8-2
-            - build-go1.8-1
       - delivery:
           requires:
             - coverage

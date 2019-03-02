@@ -9,9 +9,8 @@ You will need to install Go 1.7 or higher.
 [Clone](http://github.com/google/mtail) the source from GitHub into your `$GOPATH`.  If you don't have a `$GOPATH`, see the next section.
 
 ```
-cd $GOPATH/src
-go get github.com/google/mtail
-cd github.com/google/mtail
+go get -u github.com/google/mtail
+cd $GOPATH/src/github.com/google/mtail
 make
 ```
 
@@ -41,7 +40,9 @@ then back up to the Details above.
 
 ### Building
 
-Unlike the recommendation for Go projects, `mtail` uses a `Makefile` to build the source.
+Unlike the recommendation for Go projects, `mtail` uses a `Makefile` to build the source.  This ensures the generated code is up to date and that the binary is tagged with release information.
+
+(You dont have to use the Makefile and can try `go install github.com/google/mtail/cmd/mtail` directly, but if you have problems you'll be asked for the release information.)
 
 Having fetched the source, use `make` from the top of the source tree.  This will install all the dependencies, and then build `mtail`.  This assumes that your Go environment is already set up -- see above for hints on setting it up.
 
@@ -127,7 +128,7 @@ If `make` gives you the following error:
 ../github.com/google/mtail/vm/lexer.go:28: too many errors
 ```
 
-Then run `make` in that dependency and run `make` again like such:
+Then run `make` in that dependency and run `make` again like so:
 
 ```
 cd ../github.com/google/mtail

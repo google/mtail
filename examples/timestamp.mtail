@@ -1,0 +1,7 @@
+counter mtail_lines_read_count by filename
+gauge mtail_file_lastread_timestamp by filename
+
+/.*/ {
+  mtail_lines_read_count[getfilename()]++
+  mtail_file_lastread_timestamp[getfilename()]=timestamp()
+}

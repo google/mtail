@@ -49,7 +49,7 @@ a [Go time.Parse layout string](https://golang.org/pkg/time/#Parse).
 ```
 
 N.B.  If no timestamp parsing is done, then the reported timestamp of the event
-may add some latency to the mearusrement of when the event really occurred.
+may add some latency to the measurement of when the event really occurred.
 Between your program logging the event, and mtail reading it, there are many
 moving parts: the log writer, some system calls perhaps, some disk IO, some
 more system calls, some more disk IO, and then mtail's virtual machine
@@ -73,7 +73,7 @@ def syslog {
         /\s+(?:\w+@)?(?P<hostname>[\w\.-]+)\s+(?P<application>[\w\.-]+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)/ {
         # If the legacy_date regexp matched, try this format.
         len($legacy_date) > 0 {
-            strptime($2, "Jan _2 15:04:05")
+            strptime($legacy_date, "Jan _2 15:04:05")
         }
         # If the RFC3339 style matched, parse it this way.
         len($rfc3339_date) > 0 {
@@ -201,6 +201,13 @@ the datum referenced by that label from this metric, keeping `mtail`'s memory
 usage under control and speeding up labelset search time (by reducing the
 search space!)
 
+Alternatively, the statement `del connection_time[$pid] after 72h` would do the
+same, but only if `connection_time$pid]` is not changed for 72 hours.  This
+form is more convenient when the connection close event is lossy or difficult
+to determine.
+
+See [state](state.md) for more information.
+
 ## Computing moving averages
 
 `mtail` deliberately does not implement complex mathematical functions.  It
@@ -233,46 +240,57 @@ of a system.
 
 At the moment, `mtail` does not have first class support for a distribution
 type, but a histogram can be easily created by making one label on a
-dimensioned metric the name of the histogram bucket.
+dimensioned metric the name of the histogram bucket. In order to keep bucket label
+consistency we we have to increment by 0 for non-matching buckets.
 
 ```
-counter apache_http_request_time_microseconds by le, server_port, handler, request_method, request_status, request_protocol
+counter apache_http_request_time_seconds_bucket by le, server_port, handler, request_method, request_status, request_protocol
 
 ...
   ###
   # HTTP Requests with histogram buckets.
   #
-  apache_http_request_time_microseconds_count[$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  apache_http_request_time_seconds_count[$server_port][$handler][$request_method][$request_status][$request_protocol]++
 
   # These statements "fall through", so the histogram is cumulative.  The
   # collecting system can compute the percentile bands by taking the ratio of
   # each bucket value over the final bucket.
 
   # 5ms bucket.
-  $time_us < 5000 {
-    apache_http_request_time_microseconds["5000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  $time_us <= 5000 {
+    apache_http_request_time_seconds_bucket["0.005"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  } else {
+    apache_http_request_time_seconds_bucket["0.005"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
   }
 
   # 10ms bucket.
-  $time_us < 10000 {
-    apache_http_request_time_microseconds["10000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  $time_us <= 10000 {
+    apache_http_request_time_seconds_bucket["0.01"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  } else {
+    apache_http_request_time_seconds_bucket["0.01"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
   }
 
   # 25ms bucket.
-  $time_us < 25000 {
-    apache_http_request_time_microseconds["25000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  $time_us <= 25000 {
+    apache_http_request_time_seconds_bucket["0.025"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  } else {
+    apache_http_request_time_seconds_bucket["0.025"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
   }
 
   # 50ms bucket.
-  $time_us < 50000 {
-    apache_http_request_time_microseconds["50000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  $time_us <= 50000 {
+    apache_http_request_time_seconds_bucket["0.05"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  } else {
+    apache_http_request_time_seconds_bucket["0.05"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
   }
 
 ...
 
   # 10s bucket.
-  $time_us < 10000000 {
-    apache_http_request_time_microseconds["10000000"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  $time_us <= 10000000 {
+    apache_http_request_time_seconds_bucket["10"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
+  } else {
+    apache_http_request_time_seconds_bucket["10"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
   }
 
 ```
@@ -284,14 +302,14 @@ In tools like [Prometheus](http://prometheus.io) these can be manipulated in
 aggregate for computing percentiles of response latency.
 
 ```
-apache_http_request_time:rate10s = rate(apache_http_request_time_microseconds[10s])
-apache_http_request_time_count:rate10s = rate(apache_http_request_time_microseconds_count[10s])
+apache_http_request_time:rate10s = rate(apache_http_request_time_seconds_bucket[10s])
+apache_http_request_time_count:rate10s = rate(apache_http_request_time_seconds_count[10s])
 
 
 apache_http_request_time:percentiles = 
   apache_http_request_time:rate10s
     / on (job, port, handler, request_method, request_status, request_protocol)
-  apache_http_request_time_microseconds_count:rate10s
+  apache_http_request_time_seconds_count:rate10s
 ```
 
 This new timeseries can be plotted to see the percentile bands of each bucket,
@@ -310,7 +328,7 @@ responses fall within and without a predefined service level:
 apache_http_request_time:latency_sli = 
   apache_http_request_time:rate10s{le="200"}
     / on (job, port, handler, request_method, request_status, request_protocol)
-  apache_http_request_time_microseconds_count:rate10s
+  apache_http_request_time_seconds_count:rate10s
 
 ALERT LatencyTooHigh
 IF apache_http_request_time:latency_sli < 0.555555555
@@ -325,3 +343,17 @@ In this example, prometheus computes a service level indicator of the ratio of
 requests at or below the target of 200ms against the total count, and then
 fires an alert if the indicator drops below nine fives.
 
+
+# Avoiding unnecessary work
+
+You can stop the program if it's fed data from a log file you know you want to ignore:
+
+```
+getfilename() !~ /apache.access.?log/ {
+  stop
+}
+```
+
+This will check to see if the input filename looks like
+`/var/log/apache/accesslog` and not attempt any further pattern matching on the
+log line if it doesn't.

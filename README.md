@@ -5,14 +5,17 @@
 [![GoDoc](https://godoc.org/github.com/google/mtail?status.png)](http://godoc.org/github.com/google/mtail)
 [![CircleCI Build Status](https://circleci.com/gh/google/mtail.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/google/mtail)
 [![Coverage Status](https://coveralls.io/repos/github/google/mtail/badge.svg?branch=master)](https://coveralls.io/github/google/mtail?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/google/mtail)](https://goreportcard.com/report/github.com/google/mtail)
+[![GolangCI](https://golangci.com/badges/github.com/google/mtail.svg)](https://golangci.com/r/github.com/google/mtail)
 
 `mtail` is a tool for extracting metrics from application logs to be exported
 into a timeseries database or timeseries calculator for alerting and
 dashboarding.
 
-It aims to fill a niche between applications that do not export their own
-internal state, and existing monitoring systems, without patching those
-applications or rewriting the same framework for custom extraction glue code.
+It fills a monitoring niche by being the glue between applications that do not
+export their own internal state (other than via logs) and existing monitoring
+systems, such that system operators do not need to patch those applications to
+instrument them or writing custom extraction code for every such application.
 
 The extraction is controlled by [mtail programs](docs/Programming-Guide.md)
 which define patterns and actions:
@@ -46,13 +49,26 @@ Windows, OSX and Linux binaries are available.
 
 ### Building from source
 
-To build **mtail** from the source code yourself you need to have a working
-Go environment with version 1.9 or greater installed.
+To build `mtail` from the source code yourself you need to have a working Go
+environment with version 1.9 or greater installed.  `mtail` is `go get`able and
+`go install`able from this repository but is best if you use the Makefile to
+build it.
 
-A `Dockerfile` is included in this repository for local development as an
-alternative to installing Go in your environment.
+```
+go get -u github.com/google/mtail
+cd $GOPATH/src/github.com/google/mtail
+make install
+```
+
+If you develop the compiler you will need some additional tools
+like `goyacc` to be able to rebuild the parser.
 
 See the [Build instructions](docs/Building.md) for more details.
+
+A `Dockerfile` is included in this repository for local development as an
+alternative to installing Go in your environment, and takes care of all the
+build dependency installation, if you don't care for that.
+
 
 ## Deployment
 
@@ -65,3 +81,30 @@ alerting tool, like [Prometheus](http://prometheus.io).
 [It deals with the instrumentation so the engineers don't have
 to!](http://www.imdb.com/title/tt0151804/quotes/qt0386890)  It has the
 extraction skills!  It is good at dealing with log files!!
+
+## Read More
+
+Full documentation at http://google.github.io/mtail/
+
+Read more about writing `mtail` programs:
+
+* [Programming Guide](docs/Programming-Guide.md)
+* [Language Reference](docs/Language.md)
+* [Metrics](docs/Metrics.md)
+* [Managing internal state](docs/state.md)
+* [Testing your programs](docs/Testing.md)
+
+Read more about hacking on `mtail`
+
+* [Building from source](docs/Building.md)
+* [Contributing](CONTRIBUTING.md)
+* [Style](docs/style.md)
+
+Read more about deploying `mtail` and your programs in a monitoring environment
+
+* [Deploying](docs/Deploying.md)
+* [Interoperability](docs/Interoperability.md) with other systems
+* [Troubleshooting](docs/Troubleshooting.md)
+* [FAQ](docs/faq.md)
+
+After that, if you have any questions, please email (and optionally join) the mailing list: https://groups.google.com/forum/#!forum/mtail-users or [file a new issue](https://github.com/google/mtail/issues/new).

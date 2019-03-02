@@ -1,0 +1,34 @@
+# Time: 080401  0:08:01
+# User@Host: dbuser[dbuser] @ dbhost [192.0.2.87]
+# Query_time: 30  Lock_time: 0  Rows_sent: 0  Rows_examined: 0
+use db;
+SET timestamp=1207033681;
+UPDATE etc # servicename;
+# User@Host: dbuser[dbuser] @ host1 [192.0.2.80]
+# Query_time: 30  Lock_time: 0  Rows_sent: 0  Rows_examined: 0
+SET timestamp=1207033681;
+UPDATE etc # servicename;
+# User@Host: dbuser[dbuser] @ host2 [192.0.2.85]
+# Query_time: 29  Lock_time: 0  Rows_sent: 0  Rows_examined: 0
+SET timestamp=1207033681;
+UPDATE etc # servicename;
+# User@Host: dbuser[dbuser] @ host3 [192.0.2.86]
+# Query_time: 30  Lock_time: 0  Rows_sent: 0  Rows_examined: 0
+SET timestamp=1207033681;
+UPDATE etc # servicename;
+# User@Host: dbuser[dbuser] @ host4 [192.0.2.79]
+# Query_time: 29  Lock_time: 0  Rows_sent: 0  Rows_examined: 0
+SET timestamp=1207033681;
+UPDATE etc # servicename;
+# User@Host: dbuser[dbuser] @ host5 [192.0.2.39]
+# Query_time: 29  Lock_time: 0  Rows_sent: 0  Rows_examined: 0
+SET timestamp=1207033681;
+UPDATE etc # servicename;
+# User@Host: dbuser[dbuser] @ host6 [192.0.2.84]
+# Query_time: 29  Lock_time: 0  Rows_sent: 0  Rows_examined: 0
+SET timestamp=1207033681;
+UPDATE etc # servicename;
+# User@Host: dbuser[dbuser] @ host4 [192.0.2.79]
+# Query_time: 29  Lock_time: 0  Rows_sent: 0  Rows_examined: 0
+SET timestamp=1207033681;
+UPDATE etc # servicename;

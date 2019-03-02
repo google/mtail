@@ -1,0 +1,1671 @@
+
+state 0
+	$accept: .start $end 
+	stmt_list: .    (2)
+
+	.  reduce 2 (src line 90)
+
+	stmt_list  goto 2
+	start  goto 1
+
+state 1
+	$accept:  start.$end 
+
+	$end  accept
+	.  error
+
+
+state 2
+	start:  stmt_list.    (1)
+	stmt_list:  stmt_list.stmt 
+	hide_spec: .    (89)
+	mark_pos: .    (113)
+
+	$end  reduce 1 (src line 83)
+	INVALID  shift 13
+	CONST  shift 11
+	HIDDEN  shift 24
+	DEF  reduce 113 (src line 610)
+	DEL  shift 20
+	NEXT  shift 10
+	OTHERWISE  shift 15
+	STOP  shift 12
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	DECO  reduce 113 (src line 610)
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	DIV  reduce 113 (src line 610)
+	NOT  shift 40
+	LPAREN  shift 36
+	NL  shift 16
+	.  reduce 89 (src line 469)
+
+	stmt  goto 3
+	conditional_statement  goto 4
+	expression_statement  goto 5
+	expr  goto 17
+	primary_expr  goto 27
+	multiplicative_expr  goto 44
+	additive_expr  goto 41
+	postfix_expr  goto 39
+	unary_expr  goto 28
+	assign_expr  goto 23
+	rel_expr  goto 25
+	shift_expr  goto 29
+	bitwise_expr  goto 21
+	logical_expr  goto 14
+	indexed_expr  goto 31
+	id_expr  goto 43
+	concat_expr  goto 30
+	pattern_expr  goto 26
+	declaration  goto 6
+	decorator_declaration  goto 7
+	decoration_statement  goto 8
+	regex_pattern  goto 42
+	match_expr  goto 22
+	delete_statement  goto 9
+	hide_spec  goto 18
+	mark_pos  goto 19
+
+state 3
+	stmt_list:  stmt_list stmt.    (3)
+
+	.  reduce 3 (src line 95)
+
+
+state 4
+	stmt:  conditional_statement.    (4)
+
+	.  reduce 4 (src line 104)
+
+
+state 5
+	stmt:  expression_statement.    (5)
+
+	.  reduce 5 (src line 107)
+
+
+state 6
+	stmt:  declaration.    (6)
+
+	.  reduce 6 (src line 109)
+
+
+state 7
+	stmt:  decorator_declaration.    (7)
+
+	.  reduce 7 (src line 111)
+
+
+state 8
+	stmt:  decoration_statement.    (8)
+
+	.  reduce 8 (src line 113)
+
+
+state 9
+	stmt:  delete_statement.    (9)
+
+	.  reduce 9 (src line 115)
+
+
+state 10
+	stmt:  NEXT.    (10)
+
+	.  reduce 10 (src line 117)
+
+
+state 11
+	stmt:  CONST.id_expr concat_expr 
+
+	ID  shift 45
+	.  error
+
+	id_expr  goto 46
+
+state 12
+	stmt:  STOP.    (12)
+
+	.  reduce 12 (src line 125)
+
+
+state 13
+	stmt:  INVALID.    (13)
+
+	.  reduce 13 (src line 129)
+
+
+state 14
+	conditional_statement:  logical_expr.compound_statement ELSE compound_statement 
+	conditional_statement:  logical_expr.compound_statement 
+	assign_expr:  logical_expr.    (21)
+	logical_expr:  logical_expr.logical_op opt_nl bitwise_expr 
+	logical_expr:  logical_expr.logical_op opt_nl match_expr 
+
+	AND  shift 50
+	OR  shift 51
+	LCURLY  shift 49
+	.  reduce 21 (src line 174)
+
+	compound_statement  goto 47
+	logical_op  goto 48
+
+state 15
+	conditional_statement:  OTHERWISE.compound_statement 
+
+	LCURLY  shift 49
+	.  error
+
+	compound_statement  goto 52
+
+state 16
+	expression_statement:  NL.    (17)
+
+	.  reduce 17 (src line 155)
+
+
+state 17
+	expression_statement:  expr.NL 
+
+	NL  shift 53
+	.  error
+
+
+state 18
+	declaration:  hide_spec.type_spec declarator 
+	declaration:  hide_spec.hist_spec declarator with_spec 
+
+	COUNTER  shift 56
+	GAUGE  shift 57
+	TIMER  shift 58
+	TEXT  shift 59
+	HISTOGRAM  shift 60
+	.  error
+
+	type_spec  goto 54
+	hist_spec  goto 55
+
+state 19
+	regex_pattern:  mark_pos.DIV in_regex REGEX DIV 
+	decorator_declaration:  mark_pos.DEF ID compound_statement 
+	decoration_statement:  mark_pos.DECO compound_statement 
+
+	DEF  shift 62
+	DECO  shift 63
+	DIV  shift 61
+	.  error
+
+
+state 20
+	delete_statement:  DEL.postfix_expr AFTER DURATIONLITERAL 
+	delete_statement:  DEL.postfix_expr 
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	LPAREN  shift 36
+	.  error
+
+	primary_expr  goto 65
+	postfix_expr  goto 64
+	indexed_expr  goto 31
+	id_expr  goto 43
+
+state 21
+	logical_expr:  bitwise_expr.    (24)
+	bitwise_expr:  bitwise_expr.bitwise_op opt_nl rel_expr 
+
+	BITAND  shift 67
+	XOR  shift 69
+	BITOR  shift 68
+	.  reduce 24 (src line 189)
+
+	bitwise_op  goto 66
+
+state 22
+	logical_expr:  match_expr.    (25)
+
+	.  reduce 25 (src line 192)
+
+
+state 23
+	expr:  assign_expr.    (20)
+
+	.  reduce 20 (src line 169)
+
+
+state 24
+	hide_spec:  HIDDEN.    (90)
+
+	.  reduce 90 (src line 474)
+
+
+state 25
+	bitwise_expr:  rel_expr.    (30)
+	rel_expr:  rel_expr.rel_op opt_nl shift_expr 
+
+	LT  shift 71
+	GT  shift 72
+	LE  shift 73
+	GE  shift 74
+	EQ  shift 75
+	NE  shift 76
+	.  reduce 30 (src line 211)
+
+	rel_op  goto 70
+
+state 26
+	match_expr:  pattern_expr.    (49)
+
+	.  reduce 49 (src line 278)
+
+
+state 27
+	match_expr:  primary_expr.match_op opt_nl pattern_expr 
+	match_expr:  primary_expr.match_op opt_nl primary_expr 
+	postfix_expr:  primary_expr.    (68)
+
+	MATCH  shift 78
+	NOT_MATCH  shift 79
+	.  reduce 68 (src line 354)
+
+	match_op  goto 77
+
+state 28
+	assign_expr:  unary_expr.ASSIGN opt_nl logical_expr 
+	assign_expr:  unary_expr.ADD_ASSIGN opt_nl logical_expr 
+	multiplicative_expr:  unary_expr.    (60)
+
+	ADD_ASSIGN  shift 81
+	ASSIGN  shift 80
+	.  reduce 60 (src line 325)
+
+
+state 29
+	rel_expr:  shift_expr.    (35)
+	shift_expr:  shift_expr.shift_op opt_nl additive_expr 
+
+	SHL  shift 83
+	SHR  shift 84
+	.  reduce 35 (src line 229)
+
+	shift_op  goto 82
+
+state 30
+	pattern_expr:  concat_expr.    (54)
+	concat_expr:  concat_expr.PLUS opt_nl regex_pattern 
+	concat_expr:  concat_expr.PLUS opt_nl id_expr 
+
+	PLUS  shift 85
+	.  reduce 54 (src line 298)
+
+
+state 31
+	primary_expr:  indexed_expr.    (72)
+	indexed_expr:  indexed_expr.LSQUARE arg_expr_list RSQUARE 
+
+	LSQUARE  shift 86
+	.  reduce 72 (src line 370)
+
+
+state 32
+	primary_expr:  BUILTIN.LPAREN RPAREN 
+	primary_expr:  BUILTIN.LPAREN arg_expr_list RPAREN 
+
+	LPAREN  shift 87
+	.  error
+
+
+state 33
+	primary_expr:  CAPREF.    (75)
+
+	.  reduce 75 (src line 381)
+
+
+state 34
+	primary_expr:  CAPREF_NAMED.    (76)
+
+	.  reduce 76 (src line 385)
+
+
+state 35
+	primary_expr:  STRING.    (77)
+
+	.  reduce 77 (src line 389)
+
+
+state 36
+	primary_expr:  LPAREN.expr RPAREN 
+	mark_pos: .    (113)
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  reduce 113 (src line 610)
+
+	expr  goto 88
+	primary_expr  goto 27
+	multiplicative_expr  goto 44
+	additive_expr  goto 41
+	postfix_expr  goto 39
+	unary_expr  goto 28
+	assign_expr  goto 23
+	rel_expr  goto 25
+	shift_expr  goto 29
+	bitwise_expr  goto 21
+	logical_expr  goto 89
+	indexed_expr  goto 31
+	id_expr  goto 43
+	concat_expr  goto 30
+	pattern_expr  goto 26
+	regex_pattern  goto 42
+	match_expr  goto 22
+	mark_pos  goto 90
+
+state 37
+	primary_expr:  INTLITERAL.    (79)
+
+	.  reduce 79 (src line 397)
+
+
+state 38
+	primary_expr:  FLOATLITERAL.    (80)
+
+	.  reduce 80 (src line 401)
+
+
+state 39
+	unary_expr:  postfix_expr.    (66)
+	postfix_expr:  postfix_expr.postfix_op 
+
+	INC  shift 92
+	DEC  shift 93
+	.  reduce 66 (src line 345)
+
+	postfix_op  goto 91
+
+state 40
+	unary_expr:  NOT.unary_expr 
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  error
+
+	primary_expr  goto 65
+	postfix_expr  goto 39
+	unary_expr  goto 94
+	indexed_expr  goto 31
+	id_expr  goto 43
+
+state 41
+	shift_expr:  additive_expr.    (43)
+	additive_expr:  additive_expr.add_op opt_nl multiplicative_expr 
+
+	MINUS  shift 97
+	PLUS  shift 96
+	.  reduce 43 (src line 253)
+
+	add_op  goto 95
+
+state 42
+	concat_expr:  regex_pattern.    (55)
+
+	.  reduce 55 (src line 305)
+
+
+state 43
+	indexed_expr:  id_expr.    (81)
+
+	.  reduce 81 (src line 407)
+
+
+state 44
+	additive_expr:  multiplicative_expr.    (47)
+	multiplicative_expr:  multiplicative_expr.mul_op opt_nl unary_expr 
+
+	DIV  shift 100
+	MOD  shift 101
+	MUL  shift 99
+	POW  shift 102
+	.  reduce 47 (src line 269)
+
+	mul_op  goto 98
+
+state 45
+	id_expr:  ID.    (83)
+
+	.  reduce 83 (src line 421)
+
+
+state 46
+	stmt:  CONST id_expr.concat_expr 
+	mark_pos: .    (113)
+
+	.  reduce 113 (src line 610)
+
+	concat_expr  goto 103
+	regex_pattern  goto 42
+	mark_pos  goto 90
+
+state 47
+	conditional_statement:  logical_expr compound_statement.ELSE compound_statement 
+	conditional_statement:  logical_expr compound_statement.    (15)
+
+	ELSE  shift 104
+	.  reduce 15 (src line 140)
+
+
+state 48
+	logical_expr:  logical_expr logical_op.opt_nl bitwise_expr 
+	logical_expr:  logical_expr logical_op.opt_nl match_expr 
+	opt_nl: .    (115)
+
+	NL  shift 106
+	.  reduce 115 (src line 630)
+
+	opt_nl  goto 105
+
+state 49
+	compound_statement:  LCURLY.stmt_list RCURLY 
+	stmt_list: .    (2)
+
+	.  reduce 2 (src line 90)
+
+	stmt_list  goto 107
+
+state 50
+	logical_op:  AND.    (28)
+
+	.  reduce 28 (src line 204)
+
+
+state 51
+	logical_op:  OR.    (29)
+
+	.  reduce 29 (src line 207)
+
+
+state 52
+	conditional_statement:  OTHERWISE compound_statement.    (16)
+
+	.  reduce 16 (src line 148)
+
+
+state 53
+	expression_statement:  expr NL.    (18)
+
+	.  reduce 18 (src line 158)
+
+
+state 54
+	declaration:  hide_spec type_spec.declarator 
+
+	STRING  shift 110
+	ID  shift 109
+	.  error
+
+	declarator  goto 108
+
+state 55
+	declaration:  hide_spec hist_spec.declarator with_spec 
+
+	STRING  shift 110
+	ID  shift 109
+	.  error
+
+	declarator  goto 111
+
+state 56
+	type_spec:  COUNTER.    (95)
+
+	.  reduce 95 (src line 501)
+
+
+state 57
+	type_spec:  GAUGE.    (96)
+
+	.  reduce 96 (src line 506)
+
+
+state 58
+	type_spec:  TIMER.    (97)
+
+	.  reduce 97 (src line 510)
+
+
+state 59
+	type_spec:  TEXT.    (98)
+
+	.  reduce 98 (src line 514)
+
+
+state 60
+	hist_spec:  HISTOGRAM.    (99)
+
+	.  reduce 99 (src line 520)
+
+
+state 61
+	regex_pattern:  mark_pos DIV.in_regex REGEX DIV 
+	in_regex: .    (114)
+
+	.  reduce 114 (src line 620)
+
+	in_regex  goto 112
+
+state 62
+	decorator_declaration:  mark_pos DEF.ID compound_statement 
+
+	ID  shift 113
+	.  error
+
+
+state 63
+	decoration_statement:  mark_pos DECO.compound_statement 
+
+	LCURLY  shift 49
+	.  error
+
+	compound_statement  goto 114
+
+state 64
+	postfix_expr:  postfix_expr.postfix_op 
+	delete_statement:  DEL postfix_expr.AFTER DURATIONLITERAL 
+	delete_statement:  DEL postfix_expr.    (112)
+
+	AFTER  shift 115
+	INC  shift 92
+	DEC  shift 93
+	.  reduce 112 (src line 601)
+
+	postfix_op  goto 91
+
+state 65
+	postfix_expr:  primary_expr.    (68)
+
+	.  reduce 68 (src line 354)
+
+
+state 66
+	bitwise_expr:  bitwise_expr bitwise_op.opt_nl rel_expr 
+	opt_nl: .    (115)
+
+	NL  shift 106
+	.  reduce 115 (src line 630)
+
+	opt_nl  goto 116
+
+state 67
+	bitwise_op:  BITAND.    (32)
+
+	.  reduce 32 (src line 220)
+
+
+state 68
+	bitwise_op:  BITOR.    (33)
+
+	.  reduce 33 (src line 223)
+
+
+state 69
+	bitwise_op:  XOR.    (34)
+
+	.  reduce 34 (src line 225)
+
+
+state 70
+	rel_expr:  rel_expr rel_op.opt_nl shift_expr 
+	opt_nl: .    (115)
+
+	NL  shift 106
+	.  reduce 115 (src line 630)
+
+	opt_nl  goto 117
+
+state 71
+	rel_op:  LT.    (37)
+
+	.  reduce 37 (src line 238)
+
+
+state 72
+	rel_op:  GT.    (38)
+
+	.  reduce 38 (src line 241)
+
+
+state 73
+	rel_op:  LE.    (39)
+
+	.  reduce 39 (src line 243)
+
+
+state 74
+	rel_op:  GE.    (40)
+
+	.  reduce 40 (src line 245)
+
+
+state 75
+	rel_op:  EQ.    (41)
+
+	.  reduce 41 (src line 247)
+
+
+state 76
+	rel_op:  NE.    (42)
+
+	.  reduce 42 (src line 249)
+
+
+state 77
+	match_expr:  primary_expr match_op.opt_nl pattern_expr 
+	match_expr:  primary_expr match_op.opt_nl primary_expr 
+	opt_nl: .    (115)
+
+	NL  shift 106
+	.  reduce 115 (src line 630)
+
+	opt_nl  goto 118
+
+state 78
+	match_op:  MATCH.    (52)
+
+	.  reduce 52 (src line 291)
+
+
+state 79
+	match_op:  NOT_MATCH.    (53)
+
+	.  reduce 53 (src line 294)
+
+
+state 80
+	assign_expr:  unary_expr ASSIGN.opt_nl logical_expr 
+	opt_nl: .    (115)
+
+	NL  shift 106
+	.  reduce 115 (src line 630)
+
+	opt_nl  goto 119
+
+state 81
+	assign_expr:  unary_expr ADD_ASSIGN.opt_nl logical_expr 
+	opt_nl: .    (115)
+
+	NL  shift 106
+	.  reduce 115 (src line 630)
+
+	opt_nl  goto 120
+
+state 82
+	shift_expr:  shift_expr shift_op.opt_nl additive_expr 
+	opt_nl: .    (115)
+
+	NL  shift 106
+	.  reduce 115 (src line 630)
+
+	opt_nl  goto 121
+
+state 83
+	shift_op:  SHL.    (45)
+
+	.  reduce 45 (src line 262)
+
+
+state 84
+	shift_op:  SHR.    (46)
+
+	.  reduce 46 (src line 265)
+
+
+state 85
+	concat_expr:  concat_expr PLUS.opt_nl regex_pattern 
+	concat_expr:  concat_expr PLUS.opt_nl id_expr 
+	opt_nl: .    (115)
+
+	NL  shift 106
+	.  reduce 115 (src line 630)
+
+	opt_nl  goto 122
+
+state 86
+	indexed_expr:  indexed_expr LSQUARE.arg_expr_list RSQUARE 
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  error
+
+	arg_expr_list  goto 123
+	primary_expr  goto 65
+	multiplicative_expr  goto 44
+	additive_expr  goto 41
+	postfix_expr  goto 39
+	unary_expr  goto 125
+	rel_expr  goto 25
+	shift_expr  goto 29
+	bitwise_expr  goto 124
+	indexed_expr  goto 31
+	id_expr  goto 43
+
+state 87
+	primary_expr:  BUILTIN LPAREN.RPAREN 
+	primary_expr:  BUILTIN LPAREN.arg_expr_list RPAREN 
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	RPAREN  shift 126
+	.  error
+
+	arg_expr_list  goto 127
+	primary_expr  goto 65
+	multiplicative_expr  goto 44
+	additive_expr  goto 41
+	postfix_expr  goto 39
+	unary_expr  goto 125
+	rel_expr  goto 25
+	shift_expr  goto 29
+	bitwise_expr  goto 124
+	indexed_expr  goto 31
+	id_expr  goto 43
+
+state 88
+	primary_expr:  LPAREN expr.RPAREN 
+
+	RPAREN  shift 128
+	.  error
+
+
+state 89
+	assign_expr:  logical_expr.    (21)
+	logical_expr:  logical_expr.logical_op opt_nl bitwise_expr 
+	logical_expr:  logical_expr.logical_op opt_nl match_expr 
+
+	AND  shift 50
+	OR  shift 51
+	.  reduce 21 (src line 174)
+
+	logical_op  goto 48
+
+state 90
+	regex_pattern:  mark_pos.DIV in_regex REGEX DIV 
+
+	DIV  shift 61
+	.  error
+
+
+state 91
+	postfix_expr:  postfix_expr postfix_op.    (69)
+
+	.  reduce 69 (src line 357)
+
+
+state 92
+	postfix_op:  INC.    (70)
+
+	.  reduce 70 (src line 363)
+
+
+state 93
+	postfix_op:  DEC.    (71)
+
+	.  reduce 71 (src line 366)
+
+
+state 94
+	unary_expr:  NOT unary_expr.    (67)
+
+	.  reduce 67 (src line 348)
+
+
+state 95
+	additive_expr:  additive_expr add_op.opt_nl multiplicative_expr 
+	opt_nl: .    (115)
+
+	NL  shift 106
+	.  reduce 115 (src line 630)
+
+	opt_nl  goto 129
+
+state 96
+	add_op:  PLUS.    (58)
+
+	.  reduce 58 (src line 318)
+
+
+state 97
+	add_op:  MINUS.    (59)
+
+	.  reduce 59 (src line 321)
+
+
+state 98
+	multiplicative_expr:  multiplicative_expr mul_op.opt_nl unary_expr 
+	opt_nl: .    (115)
+
+	NL  shift 106
+	.  reduce 115 (src line 630)
+
+	opt_nl  goto 130
+
+state 99
+	mul_op:  MUL.    (62)
+
+	.  reduce 62 (src line 334)
+
+
+state 100
+	mul_op:  DIV.    (63)
+
+	.  reduce 63 (src line 337)
+
+
+state 101
+	mul_op:  MOD.    (64)
+
+	.  reduce 64 (src line 339)
+
+
+state 102
+	mul_op:  POW.    (65)
+
+	.  reduce 65 (src line 341)
+
+
+state 103
+	stmt:  CONST id_expr concat_expr.    (11)
+	concat_expr:  concat_expr.PLUS opt_nl regex_pattern 
+	concat_expr:  concat_expr.PLUS opt_nl id_expr 
+
+	PLUS  shift 85
+	.  reduce 11 (src line 121)
+
+
+state 104
+	conditional_statement:  logical_expr compound_statement ELSE.compound_statement 
+
+	LCURLY  shift 49
+	.  error
+
+	compound_statement  goto 131
+
+state 105
+	logical_expr:  logical_expr logical_op opt_nl.bitwise_expr 
+	logical_expr:  logical_expr logical_op opt_nl.match_expr 
+	mark_pos: .    (113)
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  reduce 113 (src line 610)
+
+	primary_expr  goto 27
+	multiplicative_expr  goto 44
+	additive_expr  goto 41
+	postfix_expr  goto 39
+	unary_expr  goto 125
+	rel_expr  goto 25
+	shift_expr  goto 29
+	bitwise_expr  goto 132
+	indexed_expr  goto 31
+	id_expr  goto 43
+	concat_expr  goto 30
+	pattern_expr  goto 26
+	regex_pattern  goto 42
+	match_expr  goto 133
+	mark_pos  goto 90
+
+state 106
+	opt_nl:  NL.    (116)
+
+	.  reduce 116 (src line 632)
+
+
+state 107
+	stmt_list:  stmt_list.stmt 
+	compound_statement:  LCURLY stmt_list.RCURLY 
+	hide_spec: .    (89)
+	mark_pos: .    (113)
+
+	INVALID  shift 13
+	CONST  shift 11
+	HIDDEN  shift 24
+	DEF  reduce 113 (src line 610)
+	DEL  shift 20
+	NEXT  shift 10
+	OTHERWISE  shift 15
+	STOP  shift 12
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	DECO  reduce 113 (src line 610)
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	DIV  reduce 113 (src line 610)
+	NOT  shift 40
+	RCURLY  shift 134
+	LPAREN  shift 36
+	NL  shift 16
+	.  reduce 89 (src line 469)
+
+	stmt  goto 3
+	conditional_statement  goto 4
+	expression_statement  goto 5
+	expr  goto 17
+	primary_expr  goto 27
+	multiplicative_expr  goto 44
+	additive_expr  goto 41
+	postfix_expr  goto 39
+	unary_expr  goto 28
+	assign_expr  goto 23
+	rel_expr  goto 25
+	shift_expr  goto 29
+	bitwise_expr  goto 21
+	logical_expr  goto 14
+	indexed_expr  goto 31
+	id_expr  goto 43
+	concat_expr  goto 30
+	pattern_expr  goto 26
+	declaration  goto 6
+	decorator_declaration  goto 7
+	decoration_statement  goto 8
+	regex_pattern  goto 42
+	match_expr  goto 22
+	delete_statement  goto 9
+	hide_spec  goto 18
+	mark_pos  goto 19
+
+state 108
+	declaration:  hide_spec type_spec declarator.    (87)
+	declarator:  declarator.by_spec 
+	declarator:  declarator.as_spec 
+
+	AS  shift 138
+	BY  shift 137
+	.  reduce 87 (src line 451)
+
+	as_spec  goto 136
+	by_spec  goto 135
+
+state 109
+	declarator:  ID.    (93)
+
+	.  reduce 93 (src line 491)
+
+
+state 110
+	declarator:  STRING.    (94)
+
+	.  reduce 94 (src line 495)
+
+
+state 111
+	declaration:  hide_spec hist_spec declarator.with_spec 
+	declarator:  declarator.by_spec 
+	declarator:  declarator.as_spec 
+
+	AS  shift 138
+	BY  shift 137
+	WITH  shift 140
+	.  error
+
+	as_spec  goto 136
+	by_spec  goto 135
+	with_spec  goto 139
+
+state 112
+	regex_pattern:  mark_pos DIV in_regex.REGEX DIV 
+
+	REGEX  shift 141
+	.  error
+
+
+state 113
+	decorator_declaration:  mark_pos DEF ID.compound_statement 
+
+	LCURLY  shift 49
+	.  error
+
+	compound_statement  goto 142
+
+state 114
+	decoration_statement:  mark_pos DECO compound_statement.    (110)
+
+	.  reduce 110 (src line 589)
+
+
+state 115
+	delete_statement:  DEL postfix_expr AFTER.DURATIONLITERAL 
+
+	DURATIONLITERAL  shift 143
+	.  error
+
+
+state 116
+	bitwise_expr:  bitwise_expr bitwise_op opt_nl.rel_expr 
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  error
+
+	primary_expr  goto 65
+	multiplicative_expr  goto 44
+	additive_expr  goto 41
+	postfix_expr  goto 39
+	unary_expr  goto 125
+	rel_expr  goto 144
+	shift_expr  goto 29
+	indexed_expr  goto 31
+	id_expr  goto 43
+
+state 117
+	rel_expr:  rel_expr rel_op opt_nl.shift_expr 
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  error
+
+	primary_expr  goto 65
+	multiplicative_expr  goto 44
+	additive_expr  goto 41
+	postfix_expr  goto 39
+	unary_expr  goto 125
+	shift_expr  goto 145
+	indexed_expr  goto 31
+	id_expr  goto 43
+
+state 118
+	match_expr:  primary_expr match_op opt_nl.pattern_expr 
+	match_expr:  primary_expr match_op opt_nl.primary_expr 
+	mark_pos: .    (113)
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	LPAREN  shift 36
+	.  reduce 113 (src line 610)
+
+	primary_expr  goto 147
+	indexed_expr  goto 31
+	id_expr  goto 43
+	concat_expr  goto 30
+	pattern_expr  goto 146
+	regex_pattern  goto 42
+	mark_pos  goto 90
+
+state 119
+	assign_expr:  unary_expr ASSIGN opt_nl.logical_expr 
+	mark_pos: .    (113)
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  reduce 113 (src line 610)
+
+	primary_expr  goto 27
+	multiplicative_expr  goto 44
+	additive_expr  goto 41
+	postfix_expr  goto 39
+	unary_expr  goto 125
+	rel_expr  goto 25
+	shift_expr  goto 29
+	bitwise_expr  goto 21
+	logical_expr  goto 148
+	indexed_expr  goto 31
+	id_expr  goto 43
+	concat_expr  goto 30
+	pattern_expr  goto 26
+	regex_pattern  goto 42
+	match_expr  goto 22
+	mark_pos  goto 90
+
+state 120
+	assign_expr:  unary_expr ADD_ASSIGN opt_nl.logical_expr 
+	mark_pos: .    (113)
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  reduce 113 (src line 610)
+
+	primary_expr  goto 27
+	multiplicative_expr  goto 44
+	additive_expr  goto 41
+	postfix_expr  goto 39
+	unary_expr  goto 125
+	rel_expr  goto 25
+	shift_expr  goto 29
+	bitwise_expr  goto 21
+	logical_expr  goto 149
+	indexed_expr  goto 31
+	id_expr  goto 43
+	concat_expr  goto 30
+	pattern_expr  goto 26
+	regex_pattern  goto 42
+	match_expr  goto 22
+	mark_pos  goto 90
+
+state 121
+	shift_expr:  shift_expr shift_op opt_nl.additive_expr 
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  error
+
+	primary_expr  goto 65
+	multiplicative_expr  goto 44
+	additive_expr  goto 150
+	postfix_expr  goto 39
+	unary_expr  goto 125
+	indexed_expr  goto 31
+	id_expr  goto 43
+
+state 122
+	concat_expr:  concat_expr PLUS opt_nl.regex_pattern 
+	concat_expr:  concat_expr PLUS opt_nl.id_expr 
+	mark_pos: .    (113)
+
+	ID  shift 45
+	.  reduce 113 (src line 610)
+
+	id_expr  goto 152
+	regex_pattern  goto 151
+	mark_pos  goto 90
+
+state 123
+	indexed_expr:  indexed_expr LSQUARE arg_expr_list.RSQUARE 
+	arg_expr_list:  arg_expr_list.COMMA bitwise_expr 
+
+	RSQUARE  shift 153
+	COMMA  shift 154
+	.  error
+
+
+state 124
+	bitwise_expr:  bitwise_expr.bitwise_op opt_nl rel_expr 
+	arg_expr_list:  bitwise_expr.    (84)
+
+	BITAND  shift 67
+	XOR  shift 69
+	BITOR  shift 68
+	.  reduce 84 (src line 428)
+
+	bitwise_op  goto 66
+
+state 125
+	multiplicative_expr:  unary_expr.    (60)
+
+	.  reduce 60 (src line 325)
+
+
+state 126
+	primary_expr:  BUILTIN LPAREN RPAREN.    (73)
+
+	.  reduce 73 (src line 373)
+
+
+state 127
+	primary_expr:  BUILTIN LPAREN arg_expr_list.RPAREN 
+	arg_expr_list:  arg_expr_list.COMMA bitwise_expr 
+
+	RPAREN  shift 155
+	COMMA  shift 154
+	.  error
+
+
+state 128
+	primary_expr:  LPAREN expr RPAREN.    (78)
+
+	.  reduce 78 (src line 393)
+
+
+state 129
+	additive_expr:  additive_expr add_op opt_nl.multiplicative_expr 
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  error
+
+	primary_expr  goto 65
+	multiplicative_expr  goto 156
+	postfix_expr  goto 39
+	unary_expr  goto 125
+	indexed_expr  goto 31
+	id_expr  goto 43
+
+state 130
+	multiplicative_expr:  multiplicative_expr mul_op opt_nl.unary_expr 
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  error
+
+	primary_expr  goto 65
+	postfix_expr  goto 39
+	unary_expr  goto 157
+	indexed_expr  goto 31
+	id_expr  goto 43
+
+state 131
+	conditional_statement:  logical_expr compound_statement ELSE compound_statement.    (14)
+
+	.  reduce 14 (src line 135)
+
+
+state 132
+	logical_expr:  logical_expr logical_op opt_nl bitwise_expr.    (26)
+	bitwise_expr:  bitwise_expr.bitwise_op opt_nl rel_expr 
+
+	BITAND  shift 67
+	XOR  shift 69
+	BITOR  shift 68
+	.  reduce 26 (src line 194)
+
+	bitwise_op  goto 66
+
+state 133
+	logical_expr:  logical_expr logical_op opt_nl match_expr.    (27)
+
+	.  reduce 27 (src line 198)
+
+
+state 134
+	compound_statement:  LCURLY stmt_list RCURLY.    (19)
+
+	.  reduce 19 (src line 162)
+
+
+state 135
+	declarator:  declarator by_spec.    (91)
+
+	.  reduce 91 (src line 480)
+
+
+state 136
+	declarator:  declarator as_spec.    (92)
+
+	.  reduce 92 (src line 486)
+
+
+state 137
+	by_spec:  BY.by_expr_list 
+
+	STRING  shift 160
+	ID  shift 159
+	.  error
+
+	by_expr_list  goto 158
+
+state 138
+	as_spec:  AS.STRING 
+
+	STRING  shift 161
+	.  error
+
+
+state 139
+	declaration:  hide_spec hist_spec declarator with_spec.    (88)
+
+	.  reduce 88 (src line 459)
+
+
+state 140
+	with_spec:  WITH.with_buckets_list 
+
+	FLOATLITERAL  shift 163
+	.  error
+
+	with_buckets_list  goto 162
+
+state 141
+	regex_pattern:  mark_pos DIV in_regex REGEX.DIV 
+
+	DIV  shift 164
+	.  error
+
+
+state 142
+	decorator_declaration:  mark_pos DEF ID compound_statement.    (109)
+
+	.  reduce 109 (src line 582)
+
+
+state 143
+	delete_statement:  DEL postfix_expr AFTER DURATIONLITERAL.    (111)
+
+	.  reduce 111 (src line 596)
+
+
+state 144
+	bitwise_expr:  bitwise_expr bitwise_op opt_nl rel_expr.    (31)
+	rel_expr:  rel_expr.rel_op opt_nl shift_expr 
+
+	LT  shift 71
+	GT  shift 72
+	LE  shift 73
+	GE  shift 74
+	EQ  shift 75
+	NE  shift 76
+	.  reduce 31 (src line 214)
+
+	rel_op  goto 70
+
+state 145
+	rel_expr:  rel_expr rel_op opt_nl shift_expr.    (36)
+	shift_expr:  shift_expr.shift_op opt_nl additive_expr 
+
+	SHL  shift 83
+	SHR  shift 84
+	.  reduce 36 (src line 232)
+
+	shift_op  goto 82
+
+state 146
+	match_expr:  primary_expr match_op opt_nl pattern_expr.    (50)
+
+	.  reduce 50 (src line 281)
+
+
+state 147
+	match_expr:  primary_expr match_op opt_nl primary_expr.    (51)
+
+	.  reduce 51 (src line 285)
+
+
+state 148
+	assign_expr:  unary_expr ASSIGN opt_nl logical_expr.    (22)
+	logical_expr:  logical_expr.logical_op opt_nl bitwise_expr 
+	logical_expr:  logical_expr.logical_op opt_nl match_expr 
+
+	AND  shift 50
+	OR  shift 51
+	.  reduce 22 (src line 179)
+
+	logical_op  goto 48
+
+state 149
+	assign_expr:  unary_expr ADD_ASSIGN opt_nl logical_expr.    (23)
+	logical_expr:  logical_expr.logical_op opt_nl bitwise_expr 
+	logical_expr:  logical_expr.logical_op opt_nl match_expr 
+
+	AND  shift 50
+	OR  shift 51
+	.  reduce 23 (src line 183)
+
+	logical_op  goto 48
+
+state 150
+	shift_expr:  shift_expr shift_op opt_nl additive_expr.    (44)
+	additive_expr:  additive_expr.add_op opt_nl multiplicative_expr 
+
+	MINUS  shift 97
+	PLUS  shift 96
+	.  reduce 44 (src line 256)
+
+	add_op  goto 95
+
+state 151
+	concat_expr:  concat_expr PLUS opt_nl regex_pattern.    (56)
+
+	.  reduce 56 (src line 308)
+
+
+state 152
+	concat_expr:  concat_expr PLUS opt_nl id_expr.    (57)
+
+	.  reduce 57 (src line 312)
+
+
+state 153
+	indexed_expr:  indexed_expr LSQUARE arg_expr_list RSQUARE.    (82)
+
+	.  reduce 82 (src line 412)
+
+
+state 154
+	arg_expr_list:  arg_expr_list COMMA.bitwise_expr 
+
+	BUILTIN  shift 32
+	STRING  shift 35
+	CAPREF  shift 33
+	CAPREF_NAMED  shift 34
+	ID  shift 45
+	INTLITERAL  shift 37
+	FLOATLITERAL  shift 38
+	NOT  shift 40
+	LPAREN  shift 36
+	.  error
+
+	primary_expr  goto 65
+	multiplicative_expr  goto 44
+	additive_expr  goto 41
+	postfix_expr  goto 39
+	unary_expr  goto 125
+	rel_expr  goto 25
+	shift_expr  goto 29
+	bitwise_expr  goto 165
+	indexed_expr  goto 31
+	id_expr  goto 43
+
+state 155
+	primary_expr:  BUILTIN LPAREN arg_expr_list RPAREN.    (74)
+
+	.  reduce 74 (src line 377)
+
+
+state 156
+	additive_expr:  additive_expr add_op opt_nl multiplicative_expr.    (48)
+	multiplicative_expr:  multiplicative_expr.mul_op opt_nl unary_expr 
+
+	DIV  shift 100
+	MOD  shift 101
+	MUL  shift 99
+	POW  shift 102
+	.  reduce 48 (src line 272)
+
+	mul_op  goto 98
+
+state 157
+	multiplicative_expr:  multiplicative_expr mul_op opt_nl unary_expr.    (61)
+
+	.  reduce 61 (src line 328)
+
+
+state 158
+	by_spec:  BY by_expr_list.    (100)
+	by_expr_list:  by_expr_list.COMMA ID 
+	by_expr_list:  by_expr_list.COMMA STRING 
+
+	COMMA  shift 166
+	.  reduce 100 (src line 527)
+
+
+state 159
+	by_expr_list:  ID.    (101)
+
+	.  reduce 101 (src line 534)
+
+
+state 160
+	by_expr_list:  STRING.    (102)
+
+	.  reduce 102 (src line 540)
+
+
+state 161
+	as_spec:  AS STRING.    (105)
+
+	.  reduce 105 (src line 557)
+
+
+state 162
+	with_spec:  WITH with_buckets_list.    (106)
+	with_buckets_list:  with_buckets_list.COMMA FLOATLITERAL 
+
+	COMMA  shift 167
+	.  reduce 106 (src line 564)
+
+
+state 163
+	with_buckets_list:  FLOATLITERAL.    (107)
+
+	.  reduce 107 (src line 570)
+
+
+state 164
+	regex_pattern:  mark_pos DIV in_regex REGEX DIV.    (86)
+
+	.  reduce 86 (src line 441)
+
+
+state 165
+	bitwise_expr:  bitwise_expr.bitwise_op opt_nl rel_expr 
+	arg_expr_list:  arg_expr_list COMMA bitwise_expr.    (85)
+
+	BITAND  shift 67
+	XOR  shift 69
+	BITOR  shift 68
+	.  reduce 85 (src line 434)
+
+	bitwise_op  goto 66
+
+state 166
+	by_expr_list:  by_expr_list COMMA.ID 
+	by_expr_list:  by_expr_list COMMA.STRING 
+
+	STRING  shift 169
+	ID  shift 168
+	.  error
+
+
+state 167
+	with_buckets_list:  with_buckets_list COMMA.FLOATLITERAL 
+
+	FLOATLITERAL  shift 170
+	.  error
+
+
+state 168
+	by_expr_list:  by_expr_list COMMA ID.    (103)
+
+	.  reduce 103 (src line 545)
+
+
+state 169
+	by_expr_list:  by_expr_list COMMA STRING.    (104)
+
+	.  reduce 104 (src line 550)
+
+
+state 170
+	with_buckets_list:  with_buckets_list COMMA FLOATLITERAL.    (108)
+
+	.  reduce 108 (src line 576)
+
+
+66 terminals, 49 nonterminals
+117 grammar rules, 171/8000 states
+0 shift/reduce, 0 reduce/reduce conflicts reported
+98 working sets used
+memory: parser 255/120000
+144 extra closures
+285 shift entries, 8 exceptions
+97 goto entries
+159 entries saved by goto default
+Optimizer space used: output 232/120000
+232 table entries, 0 zero
+maximum spread: 66, maximum offset: 154
