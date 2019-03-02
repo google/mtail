@@ -37,7 +37,7 @@ timestamps for direct instrumentation, only for proxying metrics from another
 monitoring system with a custom
 collector."](https://groups.google.com/forum/#!msg/prometheus-users/qgxKH6_gYzM/LyO5wGO6BwAJ).
 
-We consider the Prometheus behaviour broken, but to avoid any confusion,
+I consider the Prometheus behaviour broken, but to avoid any confusion,
 `mtail` by default disables exporting timestamps to Prometheus.
 
 You can turn this behaviour back on with the `--emit_metric_timestamp`
@@ -47,3 +47,8 @@ Querying
 Basics](https://prometheus.io/docs/prometheus/latest/querying/basics/#staleness)
 in the Prometheus docs.
 
+On the flipside, if you feel lie the latency between your application logging an event, and that event going into a log file, and mtail reading it, and processing it is small enough that you don't care:
+
+    a. awesome! I'll take that as a compliment on `mtail`'s speed.
+    b. you should remove any timestamp processing code from your programs to avoid that unnecessary work
+    
