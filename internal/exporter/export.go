@@ -32,6 +32,7 @@ type Exporter struct {
 	store         *metrics.Store
 	hostname      string
 	omitProgLabel bool
+	emitTimestamp bool
 	pushTargets   []pushOptions
 }
 
@@ -46,6 +47,12 @@ func Hostname(hostname string) func(*Exporter) error {
 // OmitProgLabel sets the Exporter to not put program names in metric labels.
 func OmitProgLabel(e *Exporter) error {
 	e.omitProgLabel = true
+	return nil
+}
+
+// EmitTimestamp instructs the exporter to send metric's timestamps to collectors.
+func EmitTimestamp(e *Exporter) error {
+	e.emitTimestamp = true
 	return nil
 }
 
