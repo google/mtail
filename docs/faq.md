@@ -18,3 +18,32 @@ metric_relabel_configs:
 
 (See [this comment](https://github.com/google/mtail/issues/59#issuecomment-303531070)).
 
+
+## `mtail` isn't propagating the scraped timestamp to Prometheus
+
+`mtail` lets you use the `settimestamp()` function to extract a timestamp from
+a log file, and use that timestamp to carry to the monitoring system the
+closest thing that `mtail` knows to be the actual time of the event, and not
+the time at which `mtail` scraped the log.
+
+However, Prometheus uses the existence of a timestamp to signal that a metric
+can become stale, and so if, for example, a slow moving counter does not get
+updated in some time window (5m by default) Prometheus will forget all about
+it.
+
+`mtail`, being a proxy for metrics, falls under bbrazil's comment on the
+prometheus-users list, in which he says ["It doesn't make sense to have
+timestamps for direct instrumentation, only for proxying metrics from another
+monitoring system with a custom
+collector."](https://groups.google.com/forum/#!msg/prometheus-users/qgxKH6_gYzM/LyO5wGO6BwAJ).
+
+We consider the Prometheus behaviour broken, but to avoid any confusion,
+`mtail` by default disables exporting timestamps to Prometheus.
+
+You can turn this behaviour back on with the `--emit_metric_timestamps`
+commandline flag, and if you have slow moving counters, you should tune your
+Prometheus' `query.lookback-delta` parameter.  See also [Staleness under
+Querying
+Basics](https://prometheus.io/docs/prometheus/latest/querying/basics/#staleness)
+in the Prometheus docs.
+

@@ -67,6 +67,7 @@ type Server struct {
 	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
 	omitMetricSource            bool           // if set, do not link the source program to a metric
 	omitProgLabel               bool           // if set, do not put the program name in the metric labels
+	emitMetricTimestamp         bool           // if set, emit the metric's recorded timestamp
 }
 
 // StartTailing adds each log path pattern to the tailer.
@@ -127,6 +128,9 @@ func (m *Server) initExporter() (err error) {
 	opts := []func(*exporter.Exporter) error{}
 	if m.omitProgLabel {
 		opts = append(opts, exporter.OmitProgLabel)
+	}
+	if m.emitMetricTimestamp {
+		opts = append(opts, exporter.EmitTimestamp)
 	}
 	m.e, err = exporter.New(m.store, opts...)
 	if err != nil {

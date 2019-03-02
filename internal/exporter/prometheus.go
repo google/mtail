@@ -70,7 +70,16 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 					glog.Warning(err)
 					continue
 				}
-				c <- prometheus.NewMetricWithTimestamp(ls.Datum.TimeUTC(), pM)
+				// By default no timestamp is emitted to Prometheus, because a
+				// timestamp signals to Prometheus a staleness and thus slow
+				// moving couters will just disappear from the timeseries
+				// arena.
+				// Read more in docs/faq.md
+				if e.emitTimestamp {
+					c <- prometheus.NewMetricWithTimestamp(ls.Datum.TimeUTC(), pM)
+				} else {
+					c <- pM
+				}
 			}
 			m.RUnlock()
 		}

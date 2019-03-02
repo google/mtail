@@ -50,6 +50,7 @@ var (
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of UTC.")
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
+	emitMetricTimestamp  = flag.Bool("emit_metric_timestamp", false, "Emit the recorded timestamp of a metric.  If disabled (the default) no explicit timestamp is sent to a collector.")
 
 	// Ops flags
 	pollInterval                = flag.Duration("poll_interval", 0, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
@@ -145,6 +146,9 @@ func main() {
 	}
 	if !*emitProgLabel {
 		opts = append(opts, mtail.OmitProgLabel)
+	}
+	if *emitMetricTimestamp {
+		opts = append(opts, mtail.EmitMetricTimestamp)
 	}
 	m, err := mtail.New(metrics.NewStore(), w, opts...)
 	if err != nil {
