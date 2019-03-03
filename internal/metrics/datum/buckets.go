@@ -38,10 +38,10 @@ type BucketsDatum struct {
 func (*BucketsDatum) Type() Type { return Buckets }
 
 func (d *BucketsDatum) ValueString() string {
-	return fmt.Sprintf("%g", d.Get())
+	return fmt.Sprintf("%g", d.Sum())
 }
 
-func (d *BucketsDatum) Set(v float64, ts time.Time) {
+func (d *BucketsDatum) Observe(v float64, ts time.Time) {
 	d.Lock()
 	defer d.Unlock()
 
@@ -58,15 +58,8 @@ func (d *BucketsDatum) Set(v float64, ts time.Time) {
 	d.stamp(ts)
 }
 
-func (d *BucketsDatum) Get() float64 {
-	d.RLock()
-	defer d.RUnlock()
-
-	return d.sum
-}
-
 func (d *BucketsDatum) String() string {
-	return fmt.Sprintf("%g@%d", d.Get(), atomic.LoadInt64(&d.Time))
+	return fmt.Sprintf("%g@%d", d.Sum(), atomic.LoadInt64(&d.Time))
 }
 
 func (d *BucketsDatum) Count() uint64 {

@@ -73,8 +73,8 @@ func (d *BaseDatum) TimeString() string {
 }
 
 func (d *BaseDatum) TimeUTC() time.Time {
-	t_nsec := atomic.LoadInt64(&d.Time)
-	return time.Unix(t_nsec/1e9, t_nsec%1e9)
+	tNsec := atomic.LoadInt64(&d.Time)
+	return time.Unix(tNsec/1e9, tNsec%1e9)
 }
 
 // NewInt creates a new zero integer datum.
@@ -92,9 +92,9 @@ func NewString() Datum {
 	return MakeString("", zeroTime)
 }
 
-// NewBuckets creates a new zero bucket datum.
+// NewBuckets creates a new zero buckets datum.
 func NewBuckets(buckets []Range) Datum {
-	return MakeBuckets(0., buckets, zeroTime)
+	return MakeBuckets(buckets, zeroTime)
 }
 
 // MakeInt creates a new integer datum with the provided value and timestamp.
@@ -118,15 +118,12 @@ func MakeString(v string, ts time.Time) Datum {
 	return d
 }
 
-// MakeBuckets creates a new bucket datum with the provided value and timestamp
-func MakeBuckets(v float64, buckets []Range, ts time.Time) Datum {
+// MakeBuckets creates a new bucket datum with the provided list of ranges and timestamp
+func MakeBuckets(buckets []Range, ts time.Time) Datum {
 	d := &BucketsDatum{}
-
-	for _, r := range buckets {
-		d.AddBucket(r)
+	for _, b := range buckets {
+		d.AddBucket(b)
 	}
-
-	d.Set(v, ts)
 	return d
 }
 
@@ -166,7 +163,7 @@ func SetInt(d Datum, v int64, ts time.Time) {
 	case *IntDatum:
 		d.Set(v, ts)
 	case *BucketsDatum:
-		d.Set(float64(v), ts)
+		d.Observe(float64(v), ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
 	}
@@ -178,7 +175,7 @@ func SetFloat(d Datum, v float64, ts time.Time) {
 	case *FloatDatum:
 		d.Set(v, ts)
 	case *BucketsDatum:
-		d.Set(float64(v), ts)
+		d.Observe(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not a Float", d))
 	}
@@ -211,5 +208,58 @@ func DecIntBy(d Datum, v int64, ts time.Time) {
 		d.DecBy(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
+	}
+}
+
+func GetBuckets(d Datum) *BucketsDatum {
+	switch d := d.(type) {
+	case *BucketsDatum:
+		return d
+	default:
+		panic(fmt.Sprintf("datum %v is not a Buckets", d))
+	}
+}
+
+// Observe records an observation v at time ts in d, or panics if d is not a BucketsDatum
+func Observe(d Datum, v float64, ts time.Time) {
+	switch d := d.(type) {
+	case *BucketsDatum:
+		d.Observe(v, ts)
+	default:
+		panic(fmt.Sprintf("datum %v is not a Buckets", d))
+	}
+}
+
+// GetBucketCount returns the total count of observations in d, or panics if d is not a BucketsDatum
+func GetBucketsCount(d Datum) uint64 {
+	switch d := d.(type) {
+	case *BucketsDatum:
+		return d.Count()
+	default:
+		panic(fmt.Sprintf("datum %v is not a Buckets", d))
+	}
+}
+
+// GetBucketsSum returns the sum of observations in d, or panics if d is not a BucketsDatum
+func GetBucketsSum(d Datum) float64 {
+	switch d := d.(type) {
+	case *BucketsDatum:
+		return d.Sum()
+	default:
+		panic(fmt.Sprintf("datum %v is not a Buckets", d))
+	}
+}
+
+// GetBucketsByMax returns a map of bucket observations by their upper bonds, or panics if d is not a BucketsDatum
+func GetBucketsByMax(d Datum) map[float64]uint64 {
+	switch d := d.(type) {
+	case *BucketsDatum:
+		buckets := make(map[float64]uint64)
+		for r, c := range d.Buckets() {
+			buckets[r.Max] = c
+		}
+		return buckets
+	default:
+		panic(fmt.Sprintf("datum %v is not a Buckets", d))
 	}
 }
