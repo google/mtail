@@ -81,7 +81,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		}
 		var rType types.Type
 		switch n.Kind {
-		case metrics.Counter, metrics.Gauge, metrics.Timer:
+		case metrics.Counter, metrics.Gauge, metrics.Timer, metrics.Histogram:
 			// TODO(jaq): This should be a numeric type, unless we want to
 			// enforce rules like "Counter can only be Int."
 			rType = types.NewVariable()
