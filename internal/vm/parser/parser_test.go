@@ -46,6 +46,13 @@ var parserTests = []struct {
 	{"declare text",
 		"text stringy\n"},
 
+	{"declare histogram",
+		"histogram foo with 0, 1, 2\n"},
+	{"declare histogram float",
+		"histogram foo with 0, 0.01, 0.1, 1, 10\n"},
+	{"declare histogram by ",
+		"histogram foo by code with 0, 1, 2\n"},
+
 	{"simple pattern action",
 		"/foo/ {}\n"},
 

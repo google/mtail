@@ -456,6 +456,7 @@ declaration
     d.Kind = $2
     d.Hidden = $1
   }
+  // TODO(jaq): accept alternate order for as/with here.
   | hide_spec hist_spec declarator with_spec
   {
     $$ = $3
@@ -573,10 +574,20 @@ with_buckets_list
     $$ = make([]float64, 0)
     $$ = append($$, $1)
   }
+  | INTLITERAL
+  {
+    $$ = make([]float64, 0)
+    $$ = append($$, float64($1))
+  }
   | with_buckets_list COMMA FLOATLITERAL
   {
     $$ = $1
     $$ = append($$, $3)
+  }
+  | with_buckets_list COMMA INTLITERAL
+  {
+    $$ = $1
+    $$ = append($$, float64($3))
   }
 
 decorator_declaration

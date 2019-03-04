@@ -19,13 +19,13 @@ state 2
 	start:  stmt_list.    (1)
 	stmt_list:  stmt_list.stmt 
 	hide_spec: .    (89)
-	mark_pos: .    (113)
+	mark_pos: .    (115)
 
 	$end  reduce 1 (src line 83)
 	INVALID  shift 13
 	CONST  shift 11
 	HIDDEN  shift 24
-	DEF  reduce 113 (src line 610)
+	DEF  reduce 115 (src line 620)
 	DEL  shift 20
 	NEXT  shift 10
 	OTHERWISE  shift 15
@@ -35,10 +35,10 @@ state 2
 	CAPREF  shift 33
 	CAPREF_NAMED  shift 34
 	ID  shift 45
-	DECO  reduce 113 (src line 610)
+	DECO  reduce 115 (src line 620)
 	INTLITERAL  shift 37
 	FLOATLITERAL  shift 38
-	DIV  reduce 113 (src line 610)
+	DIV  reduce 115 (src line 620)
 	NOT  shift 40
 	LPAREN  shift 36
 	NL  shift 16
@@ -344,7 +344,7 @@ state 35
 
 state 36
 	primary_expr:  LPAREN.expr RPAREN 
-	mark_pos: .    (113)
+	mark_pos: .    (115)
 
 	BUILTIN  shift 32
 	STRING  shift 35
@@ -355,7 +355,7 @@ state 36
 	FLOATLITERAL  shift 38
 	NOT  shift 40
 	LPAREN  shift 36
-	.  reduce 113 (src line 610)
+	.  reduce 115 (src line 620)
 
 	expr  goto 88
 	primary_expr  goto 27
@@ -460,9 +460,9 @@ state 45
 
 state 46
 	stmt:  CONST id_expr.concat_expr 
-	mark_pos: .    (113)
+	mark_pos: .    (115)
 
-	.  reduce 113 (src line 610)
+	.  reduce 115 (src line 620)
 
 	concat_expr  goto 103
 	regex_pattern  goto 42
@@ -479,10 +479,10 @@ state 47
 state 48
 	logical_expr:  logical_expr logical_op.opt_nl bitwise_expr 
 	logical_expr:  logical_expr logical_op.opt_nl match_expr 
-	opt_nl: .    (115)
+	opt_nl: .    (117)
 
 	NL  shift 106
-	.  reduce 115 (src line 630)
+	.  reduce 117 (src line 640)
 
 	opt_nl  goto 105
 
@@ -568,9 +568,9 @@ state 60
 
 state 61
 	regex_pattern:  mark_pos DIV.in_regex REGEX DIV 
-	in_regex: .    (114)
+	in_regex: .    (116)
 
-	.  reduce 114 (src line 620)
+	.  reduce 116 (src line 630)
 
 	in_regex  goto 112
 
@@ -592,12 +592,12 @@ state 63
 state 64
 	postfix_expr:  postfix_expr.postfix_op 
 	delete_statement:  DEL postfix_expr.AFTER DURATIONLITERAL 
-	delete_statement:  DEL postfix_expr.    (112)
+	delete_statement:  DEL postfix_expr.    (114)
 
 	AFTER  shift 115
 	INC  shift 92
 	DEC  shift 93
-	.  reduce 112 (src line 601)
+	.  reduce 114 (src line 611)
 
 	postfix_op  goto 91
 
@@ -609,10 +609,10 @@ state 65
 
 state 66
 	bitwise_expr:  bitwise_expr bitwise_op.opt_nl rel_expr 
-	opt_nl: .    (115)
+	opt_nl: .    (117)
 
 	NL  shift 106
-	.  reduce 115 (src line 630)
+	.  reduce 117 (src line 640)
 
 	opt_nl  goto 116
 
@@ -636,10 +636,10 @@ state 69
 
 state 70
 	rel_expr:  rel_expr rel_op.opt_nl shift_expr 
-	opt_nl: .    (115)
+	opt_nl: .    (117)
 
 	NL  shift 106
-	.  reduce 115 (src line 630)
+	.  reduce 117 (src line 640)
 
 	opt_nl  goto 117
 
@@ -682,10 +682,10 @@ state 76
 state 77
 	match_expr:  primary_expr match_op.opt_nl pattern_expr 
 	match_expr:  primary_expr match_op.opt_nl primary_expr 
-	opt_nl: .    (115)
+	opt_nl: .    (117)
 
 	NL  shift 106
-	.  reduce 115 (src line 630)
+	.  reduce 117 (src line 640)
 
 	opt_nl  goto 118
 
@@ -703,28 +703,28 @@ state 79
 
 state 80
 	assign_expr:  unary_expr ASSIGN.opt_nl logical_expr 
-	opt_nl: .    (115)
+	opt_nl: .    (117)
 
 	NL  shift 106
-	.  reduce 115 (src line 630)
+	.  reduce 117 (src line 640)
 
 	opt_nl  goto 119
 
 state 81
 	assign_expr:  unary_expr ADD_ASSIGN.opt_nl logical_expr 
-	opt_nl: .    (115)
+	opt_nl: .    (117)
 
 	NL  shift 106
-	.  reduce 115 (src line 630)
+	.  reduce 117 (src line 640)
 
 	opt_nl  goto 120
 
 state 82
 	shift_expr:  shift_expr shift_op.opt_nl additive_expr 
-	opt_nl: .    (115)
+	opt_nl: .    (117)
 
 	NL  shift 106
-	.  reduce 115 (src line 630)
+	.  reduce 117 (src line 640)
 
 	opt_nl  goto 121
 
@@ -743,10 +743,10 @@ state 84
 state 85
 	concat_expr:  concat_expr PLUS.opt_nl regex_pattern 
 	concat_expr:  concat_expr PLUS.opt_nl id_expr 
-	opt_nl: .    (115)
+	opt_nl: .    (117)
 
 	NL  shift 106
-	.  reduce 115 (src line 630)
+	.  reduce 117 (src line 640)
 
 	opt_nl  goto 122
 
@@ -855,10 +855,10 @@ state 94
 
 state 95
 	additive_expr:  additive_expr add_op.opt_nl multiplicative_expr 
-	opt_nl: .    (115)
+	opt_nl: .    (117)
 
 	NL  shift 106
-	.  reduce 115 (src line 630)
+	.  reduce 117 (src line 640)
 
 	opt_nl  goto 129
 
@@ -876,10 +876,10 @@ state 97
 
 state 98
 	multiplicative_expr:  multiplicative_expr mul_op.opt_nl unary_expr 
-	opt_nl: .    (115)
+	opt_nl: .    (117)
 
 	NL  shift 106
-	.  reduce 115 (src line 630)
+	.  reduce 117 (src line 640)
 
 	opt_nl  goto 130
 
@@ -927,7 +927,7 @@ state 104
 state 105
 	logical_expr:  logical_expr logical_op opt_nl.bitwise_expr 
 	logical_expr:  logical_expr logical_op opt_nl.match_expr 
-	mark_pos: .    (113)
+	mark_pos: .    (115)
 
 	BUILTIN  shift 32
 	STRING  shift 35
@@ -938,7 +938,7 @@ state 105
 	FLOATLITERAL  shift 38
 	NOT  shift 40
 	LPAREN  shift 36
-	.  reduce 113 (src line 610)
+	.  reduce 115 (src line 620)
 
 	primary_expr  goto 27
 	multiplicative_expr  goto 44
@@ -957,21 +957,21 @@ state 105
 	mark_pos  goto 90
 
 state 106
-	opt_nl:  NL.    (116)
+	opt_nl:  NL.    (118)
 
-	.  reduce 116 (src line 632)
+	.  reduce 118 (src line 642)
 
 
 state 107
 	stmt_list:  stmt_list.stmt 
 	compound_statement:  LCURLY stmt_list.RCURLY 
 	hide_spec: .    (89)
-	mark_pos: .    (113)
+	mark_pos: .    (115)
 
 	INVALID  shift 13
 	CONST  shift 11
 	HIDDEN  shift 24
-	DEF  reduce 113 (src line 610)
+	DEF  reduce 115 (src line 620)
 	DEL  shift 20
 	NEXT  shift 10
 	OTHERWISE  shift 15
@@ -981,10 +981,10 @@ state 107
 	CAPREF  shift 33
 	CAPREF_NAMED  shift 34
 	ID  shift 45
-	DECO  reduce 113 (src line 610)
+	DECO  reduce 115 (src line 620)
 	INTLITERAL  shift 37
 	FLOATLITERAL  shift 38
-	DIV  reduce 113 (src line 610)
+	DIV  reduce 115 (src line 620)
 	NOT  shift 40
 	RCURLY  shift 134
 	LPAREN  shift 36
@@ -1072,9 +1072,9 @@ state 113
 	compound_statement  goto 142
 
 state 114
-	decoration_statement:  mark_pos DECO compound_statement.    (110)
+	decoration_statement:  mark_pos DECO compound_statement.    (112)
 
-	.  reduce 110 (src line 589)
+	.  reduce 112 (src line 599)
 
 
 state 115
@@ -1134,7 +1134,7 @@ state 117
 state 118
 	match_expr:  primary_expr match_op opt_nl.pattern_expr 
 	match_expr:  primary_expr match_op opt_nl.primary_expr 
-	mark_pos: .    (113)
+	mark_pos: .    (115)
 
 	BUILTIN  shift 32
 	STRING  shift 35
@@ -1144,7 +1144,7 @@ state 118
 	INTLITERAL  shift 37
 	FLOATLITERAL  shift 38
 	LPAREN  shift 36
-	.  reduce 113 (src line 610)
+	.  reduce 115 (src line 620)
 
 	primary_expr  goto 147
 	indexed_expr  goto 31
@@ -1156,7 +1156,7 @@ state 118
 
 state 119
 	assign_expr:  unary_expr ASSIGN opt_nl.logical_expr 
-	mark_pos: .    (113)
+	mark_pos: .    (115)
 
 	BUILTIN  shift 32
 	STRING  shift 35
@@ -1167,7 +1167,7 @@ state 119
 	FLOATLITERAL  shift 38
 	NOT  shift 40
 	LPAREN  shift 36
-	.  reduce 113 (src line 610)
+	.  reduce 115 (src line 620)
 
 	primary_expr  goto 27
 	multiplicative_expr  goto 44
@@ -1188,7 +1188,7 @@ state 119
 
 state 120
 	assign_expr:  unary_expr ADD_ASSIGN opt_nl.logical_expr 
-	mark_pos: .    (113)
+	mark_pos: .    (115)
 
 	BUILTIN  shift 32
 	STRING  shift 35
@@ -1199,7 +1199,7 @@ state 120
 	FLOATLITERAL  shift 38
 	NOT  shift 40
 	LPAREN  shift 36
-	.  reduce 113 (src line 610)
+	.  reduce 115 (src line 620)
 
 	primary_expr  goto 27
 	multiplicative_expr  goto 44
@@ -1243,10 +1243,10 @@ state 121
 state 122
 	concat_expr:  concat_expr PLUS opt_nl.regex_pattern 
 	concat_expr:  concat_expr PLUS opt_nl.id_expr 
-	mark_pos: .    (113)
+	mark_pos: .    (115)
 
 	ID  shift 45
-	.  reduce 113 (src line 610)
+	.  reduce 115 (src line 620)
 
 	id_expr  goto 152
 	regex_pattern  goto 151
@@ -1406,6 +1406,7 @@ state 139
 state 140
 	with_spec:  WITH.with_buckets_list 
 
+	INTLITERAL  shift 164
 	FLOATLITERAL  shift 163
 	.  error
 
@@ -1414,20 +1415,20 @@ state 140
 state 141
 	regex_pattern:  mark_pos DIV in_regex REGEX.DIV 
 
-	DIV  shift 164
+	DIV  shift 165
 	.  error
 
 
 state 142
-	decorator_declaration:  mark_pos DEF ID compound_statement.    (109)
+	decorator_declaration:  mark_pos DEF ID compound_statement.    (111)
 
-	.  reduce 109 (src line 582)
+	.  reduce 111 (src line 592)
 
 
 state 143
-	delete_statement:  DEL postfix_expr AFTER DURATIONLITERAL.    (111)
+	delete_statement:  DEL postfix_expr AFTER DURATIONLITERAL.    (113)
 
-	.  reduce 111 (src line 596)
+	.  reduce 113 (src line 606)
 
 
 state 144
@@ -1537,7 +1538,7 @@ state 154
 	unary_expr  goto 125
 	rel_expr  goto 25
 	shift_expr  goto 29
-	bitwise_expr  goto 165
+	bitwise_expr  goto 166
 	indexed_expr  goto 31
 	id_expr  goto 43
 
@@ -1570,7 +1571,7 @@ state 158
 	by_expr_list:  by_expr_list.COMMA ID 
 	by_expr_list:  by_expr_list.COMMA STRING 
 
-	COMMA  shift 166
+	COMMA  shift 167
 	.  reduce 100 (src line 527)
 
 
@@ -1595,8 +1596,9 @@ state 161
 state 162
 	with_spec:  WITH with_buckets_list.    (106)
 	with_buckets_list:  with_buckets_list.COMMA FLOATLITERAL 
+	with_buckets_list:  with_buckets_list.COMMA INTLITERAL 
 
-	COMMA  shift 167
+	COMMA  shift 168
 	.  reduce 106 (src line 564)
 
 
@@ -1607,12 +1609,18 @@ state 163
 
 
 state 164
+	with_buckets_list:  INTLITERAL.    (108)
+
+	.  reduce 108 (src line 576)
+
+
+state 165
 	regex_pattern:  mark_pos DIV in_regex REGEX DIV.    (86)
 
 	.  reduce 86 (src line 441)
 
 
-state 165
+state 166
 	bitwise_expr:  bitwise_expr.bitwise_op opt_nl rel_expr 
 	arg_expr_list:  arg_expr_list COMMA bitwise_expr.    (85)
 
@@ -1623,49 +1631,57 @@ state 165
 
 	bitwise_op  goto 66
 
-state 166
+state 167
 	by_expr_list:  by_expr_list COMMA.ID 
 	by_expr_list:  by_expr_list COMMA.STRING 
 
-	STRING  shift 169
-	ID  shift 168
-	.  error
-
-
-state 167
-	with_buckets_list:  with_buckets_list COMMA.FLOATLITERAL 
-
-	FLOATLITERAL  shift 170
+	STRING  shift 170
+	ID  shift 169
 	.  error
 
 
 state 168
+	with_buckets_list:  with_buckets_list COMMA.FLOATLITERAL 
+	with_buckets_list:  with_buckets_list COMMA.INTLITERAL 
+
+	INTLITERAL  shift 172
+	FLOATLITERAL  shift 171
+	.  error
+
+
+state 169
 	by_expr_list:  by_expr_list COMMA ID.    (103)
 
 	.  reduce 103 (src line 545)
 
 
-state 169
+state 170
 	by_expr_list:  by_expr_list COMMA STRING.    (104)
 
 	.  reduce 104 (src line 550)
 
 
-state 170
-	with_buckets_list:  with_buckets_list COMMA FLOATLITERAL.    (108)
+state 171
+	with_buckets_list:  with_buckets_list COMMA FLOATLITERAL.    (109)
 
-	.  reduce 108 (src line 576)
+	.  reduce 109 (src line 581)
+
+
+state 172
+	with_buckets_list:  with_buckets_list COMMA INTLITERAL.    (110)
+
+	.  reduce 110 (src line 586)
 
 
 66 terminals, 49 nonterminals
-117 grammar rules, 171/8000 states
+119 grammar rules, 173/8000 states
 0 shift/reduce, 0 reduce/reduce conflicts reported
 98 working sets used
 memory: parser 255/120000
-144 extra closures
-285 shift entries, 8 exceptions
+146 extra closures
+287 shift entries, 8 exceptions
 97 goto entries
 159 entries saved by goto default
-Optimizer space used: output 232/120000
-232 table entries, 0 zero
+Optimizer space used: output 234/120000
+234 table entries, 0 zero
 maximum spread: 66, maximum offset: 154

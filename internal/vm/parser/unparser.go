@@ -182,10 +182,20 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			u.emit("timer ")
 		case metrics.Text:
 			u.emit("text ")
+		case metrics.Histogram:
+			u.emit("histogram ")
 		}
 		u.emit(v.Name)
 		if len(v.Keys) > 0 {
 			u.emit(" by " + strings.Join(v.Keys, ", "))
+		}
+		if len(v.Buckets) > 0 {
+			buckets := strings.Builder{}
+			buckets.WriteString(" with ")
+			for _, f := range v.Buckets {
+				buckets.WriteString(fmt.Sprintf("%f, ", f))
+			}
+			u.emit(buckets.String()[:buckets.Len()-2])
 		}
 
 	case *ast.UnaryExpr:
