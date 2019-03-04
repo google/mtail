@@ -34,8 +34,8 @@ func BindAddress(address, port string) func(*Server) error {
 	}
 }
 
-// BuildInfo sets the mtail program build information in the Server.
-func BuildInfo(info string) func(*Server) error {
+// SetBuildInfo sets the mtail program build information in the Server.
+func SetBuildInfo(info BuildInfo) func(*Server) error {
 	return func(m *Server) error {
 		m.buildInfo = info
 		return nil

@@ -97,11 +97,12 @@ crossclean:
 lint:
 	golangci-lint run ./...
 
+branch := $(shell git rev-parse --abbrev-ref HEAD)
 version := $(shell git describe --tags --always --dirty)
 revision := $(shell git rev-parse HEAD)
 release := $(shell git describe --tags | cut -d"-" -f 1,2)
 
-GO_LDFLAGS := "-X main.Version=${version} -X main.Revision=${revision}"
+GO_LDFLAGS := "-X main.Branch=${branch} -X main.Version=${version} -X main.Revision=${revision}"
 
 # Very specific static pattern rule to only do this for commandline targets.
 # Each commandline must be in a 'main.go' in their respective directory.  The
