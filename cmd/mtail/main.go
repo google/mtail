@@ -69,28 +69,29 @@ func init() {
 
 var (
 	// Version and Revision are supplied by the linker
+	Branch   string
 	Version  string
 	Revision string
-
-	GoVersion = runtime.Version()
 )
 
-func buildInfo() string {
-	return fmt.Sprintf("mtail version %s git revision %s go version %s go arch %s go os %s", Version, Revision, GoVersion, runtime.GOARCH, runtime.GOOS)
-}
-
 func main() {
+	buildInfo := mtail.BuildInfo{
+		Branch:   Branch,
+		Version:  Version,
+		Revision: Revision,
+	}
+
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s\n", buildInfo())
+		fmt.Fprintf(os.Stderr, "%s\n", buildInfo.String())
 		fmt.Fprintf(os.Stderr, "\nUsage:\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 	if *version {
-		fmt.Println(buildInfo())
+		fmt.Println(buildInfo.String())
 		os.Exit(1)
 	}
-	glog.Info(buildInfo())
+	glog.Info(buildInfo.String())
 	glog.Infof("Commandline: %q", os.Args)
 	loc, err := time.LoadLocation(*overrideTimezone)
 	if err != nil {
@@ -121,7 +122,7 @@ func main() {
 		mtail.ProgramPath(*progs),
 		mtail.LogPathPatterns(logs...),
 		mtail.BindAddress(*address, *port),
-		mtail.BuildInfo(buildInfo()),
+		mtail.SetBuildInfo(buildInfo),
 		mtail.OverrideLocation(loc),
 		mtail.ExpiredMetricGcTickInterval(*expiredMetricGcTickInterval),
 		mtail.StaleLogGcTickInterval(*staleLogGcTickInterval),

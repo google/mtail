@@ -15,6 +15,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -29,7 +30,25 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/version"
 )
+
+type BuildInfo struct {
+	Branch   string
+	Version  string
+	Revision string
+}
+
+func (b BuildInfo) String() string {
+	return fmt.Sprintf(
+		"mtail version %s git revision %s go version %s go arch %s go os %s",
+		b.Version,
+		b.Revision,
+		runtime.Version(),
+		runtime.GOARCH,
+		runtime.GOOS,
+	)
+}
 
 // Server contains the state of the main mtail program.
 type Server struct {
@@ -50,10 +69,10 @@ type Server struct {
 	closeQuit chan struct{} // Channel to signal shutdown from code.
 	closeOnce sync.Once     // Ensure shutdown happens only once.
 
-	bindAddress     string   // address to bind HTTP server
-	buildInfo       string   // go build information
-	programPath     string   // path to programs to load
-	logPathPatterns []string // list of patterns to watch for log files to tail
+	bindAddress     string    // address to bind HTTP server
+	buildInfo       BuildInfo // go build information
+	programPath     string    // path to programs to load
+	logPathPatterns []string  // list of patterns to watch for log files to tail
 
 	oneShot      bool // if set, mtail reads log files from the beginning, once, then exits
 	compileOnly  bool // if set, mtail compiles programs then exits
@@ -160,6 +179,12 @@ func (m *Server) initExporter() (err error) {
 	// Prefix all expvar metrics with 'mtail_'
 	prometheus.WrapRegistererWithPrefix("mtail_", m.reg).MustRegister(
 		prometheus.NewExpvarCollector(expvarDescs))
+
+	// Create mtail_build_info metric.
+	version.Branch = m.buildInfo.Branch
+	version.Version = m.buildInfo.Version
+	version.Revision = m.buildInfo.Revision
+	m.reg.MustRegister(version.NewCollector("mtail"))
 	return nil
 }
 
@@ -197,7 +222,7 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		BuildInfo   string
 	}{
 		m.bindAddress,
-		m.buildInfo,
+		m.buildInfo.String(),
 	}
 	w.Header().Add("Content-type", "text/html")
 	w.WriteHeader(http.StatusOK)
