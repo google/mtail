@@ -4,15 +4,14 @@
 package exporter
 
 import (
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/testutil"
+	promtest "github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 var handlePrometheusTests = []struct {
@@ -35,7 +34,8 @@ var handlePrometheusTests = []struct {
 				Kind:        metrics.Counter,
 				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
-		`# TYPE foo counter
+		`# HELP foo defined at 
+# TYPE foo counter
 foo{} 1
 `,
 	},
@@ -48,7 +48,8 @@ foo{} 1
 				Kind:        metrics.Counter,
 				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
-		`# TYPE foo counter
+		`# HELP foo defined at 
+# TYPE foo counter
 foo{prog="test"} 1
 `,
 	},
@@ -63,7 +64,8 @@ foo{prog="test"} 1
 				LabelValues: []*metrics.LabelValue{{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 			},
 		},
-		`# TYPE foo counter
+		`# HELP foo defined at 
+# TYPE foo counter
 foo{a="1",b="2"} 1
 `,
 	},
@@ -76,7 +78,8 @@ foo{a="1",b="2"} 1
 				Kind:        metrics.Gauge,
 				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
-		`# TYPE foo gauge
+		`# HELP foo defined at 
+# TYPE foo gauge
 foo{} 1
 `,
 	},
@@ -89,7 +92,8 @@ foo{} 1
 				Kind:        metrics.Timer,
 				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
 		},
-		`# TYPE foo gauge
+		`# HELP foo defined at 
+# TYPE foo gauge
 foo{} 1
 `,
 	},
@@ -115,7 +119,8 @@ foo{} 1
 				LabelValues: []*metrics.LabelValue{{Labels: []string{"str\"bang\"blah"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
 			},
 		},
-		`# TYPE foo counter
+		`# HELP foo defined at 
+# TYPE foo counter
 foo{a="str\"bang\"blah"} 1
 `,
 	},
@@ -130,33 +135,8 @@ foo{a="str\"bang\"blah"} 1
 				Source:      "location.mtail:37",
 			},
 		},
-		`# TYPE foo counter
-# foo defined at location.mtail:37
-foo{} 1
-`,
-	},
-	{"2 help",
-		false,
-		[]*metrics.Metric{
-			{
-				Name:        "foo",
-				Program:     "test2",
-				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
-				Source:      "location.mtail:37",
-			},
-			{
-				Name:        "foo",
-				Program:     "test1",
-				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
-				Source:      "different.mtail:37",
-			},
-		},
-		`# TYPE foo counter
-# foo defined at location.mtail:37
-foo{} 1
-# foo defined at different.mtail:37
+		`# HELP foo defined at location.mtail:37
+# TYPE foo counter
 foo{} 1
 `,
 	},
@@ -178,10 +158,9 @@ foo{} 1
 				Source:      "different.mtail:37",
 			},
 		},
-		`# TYPE foo counter
-# foo defined at location.mtail:37
+		`# HELP foo defined at location.mtail:37
+# TYPE foo counter
 foo{prog="test2"} 1
-# foo defined at different.mtail:37
 foo{prog="test1"} 1
 `,
 	},
@@ -203,21 +182,10 @@ func TestHandlePrometheus(t *testing.T) {
 				opts = append(opts, OmitProgLabel)
 			}
 			e, err := New(ms, opts...)
-			if err != nil {
-				t.Fatalf("couldn't make exporter: %s", err)
-			}
-			response := httptest.NewRecorder()
-			e.HandlePrometheusMetrics(response, &http.Request{})
-			if response.Code != 200 {
-				t.Errorf("response code not 200: %d", response.Code)
-			}
-			b, err := ioutil.ReadAll(response.Body)
-			if err != nil {
-				t.Errorf(" failed to read response: %s", err)
-			}
-			diff := testutil.Diff(tc.expected, string(b))
-			if diff != "" {
-				t.Error(diff)
+			testutil.FatalIfErr(t, err)
+			r := strings.NewReader(tc.expected)
+			if err = promtest.CollectAndCompare(e, r); err != nil {
+				t.Error(err)
 			}
 		})
 	}
