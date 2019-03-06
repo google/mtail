@@ -15,6 +15,8 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
+const kPrefix = "prefix"
+
 func TestCreateExporter(t *testing.T) {
 	_, err := New(nil)
 	if err == nil {
@@ -94,7 +96,7 @@ func TestMetricToCollectd(t *testing.T) {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
-	*collectdPrefix = "prefix"
+	*collectdPrefix = kPrefix
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/prefixmtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
 	diff = testutil.Diff(expected, r)
@@ -133,7 +135,7 @@ func TestMetricToGraphite(t *testing.T) {
 		t.Errorf("String didn't match:\n%s", diff)
 	}
 
-	*graphitePrefix = "prefix"
+	*graphitePrefix = kPrefix
 	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
 	expected = []string{
 		"prefixprog.bar.host.quux_com 37 1343124840\n",
@@ -181,7 +183,7 @@ func TestMetricToStatsd(t *testing.T) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}
 
-	*statsdPrefix = "prefix"
+	*statsdPrefix = kPrefix
 	r = FakeSocketWrite(metricToStatsd, timingMetric)
 	expected = []string{"prefixprog.foo:37|ms"}
 	if !reflect.DeepEqual(expected, r) {
