@@ -164,6 +164,27 @@ foo{prog="test2"} 1
 foo{prog="test1"} 1
 `,
 	},
+	{"histo",
+		true,
+		[]*metrics.Metric{
+			{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Histogram,
+				Keys:        []string{"a"},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{"bar"}, Value: datum.MakeBuckets([]datum.Range{{0, 1}, {1, 2}}, time.Unix(0, 0))}},
+				Source:      "location.mtail:37",
+			},
+		},
+		`# HELP foo defined at location.mtail:37
+# TYPE foo histogram
+foo_bucket{a="bar",prog="test",le="1"} 0
+foo_bucket{a="bar",prog="test",le="2"} 0
+foo_bucket{a="bar",prog="test",le="+Inf"} 0
+foo_sum{a="bar",prog="test"} 0
+foo_count{a="bar",prog="test"} 0
+`,
+	},
 }
 
 func TestHandlePrometheus(t *testing.T) {

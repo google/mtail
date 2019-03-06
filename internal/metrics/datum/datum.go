@@ -5,6 +5,7 @@ package datum
 
 import (
 	"fmt"
+	"math"
 	"sync/atomic"
 	"time"
 )
@@ -118,11 +119,22 @@ func MakeString(v string, ts time.Time) Datum {
 	return d
 }
 
-// MakeBuckets creates a new bucket datum with the provided list of ranges and timestamp
+// MakeBuckets creates a new bucket datum with the provided list of ranges and
+// timestamp.  If no +inf bucket is provided, one is created.
 func MakeBuckets(buckets []Range, ts time.Time) Datum {
 	d := &BucketsDatum{}
+	seenInf := false
+	highest := 0.0
 	for _, b := range buckets {
 		d.AddBucket(b)
+		if math.IsInf(b.Max, +1) {
+			seenInf = true
+		} else if b.Max > highest {
+			highest = b.Max
+		}
+	}
+	if !seenInf {
+		d.AddBucket(Range{highest, math.Inf(+1)})
 	}
 	return d
 }
