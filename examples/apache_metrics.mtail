@@ -9,10 +9,7 @@ counter http_connections_closed_total by server_port, handler, method, code, pro
 counter http_request_size_bytes_total by server_port, handler, method, code, protocol
 counter http_response_size_bytes_total by server_port, handler, method, code, protocol
 
-counter http_request_duration_seconds_bucket by le, server_port, handler, method, code, protocol
-counter http_request_duration_seconds_sum by server_port, handler, method, code, protocol
-counter http_request_duration_seconds_count by server_port, handler, method, code, protocol
-
+histogram http_request_duration_seconds by server_port, handler, method, code, protocol with 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15
 
 /^/ +
 /(?P<server_port>\S+) / + # %v:%p - The canonical ServerName of the server serving the request. : The canonical port of the server serving the request.
@@ -29,99 +26,7 @@ counter http_request_duration_seconds_count by server_port, handler, method, cod
   ###
   # HTTP Requests with histogram buckets.
   #
-  http_request_duration_seconds_count[$server_port][$handler][$method][$code][$protocol]++
-  http_request_duration_seconds_sum[$server_port][$handler][$method][$code][$protocol] += $time_us * 0.0000001
-
-  # These statements "fall through", so the histogram is cumulative.  The
-  # collecting system can compute the percentile bands by taking the ratio of
-  # each bucket value over the final bucket.
-
-  # 5ms bucket.
-  $time_us <= 5000 {
-    http_request_duration_seconds_bucket["0.005"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["0.005"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # 10ms bucket.
-  $time_us <= 10000 {
-    http_request_duration_seconds_bucket["0.01"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["0.01"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # 25ms bucket.
-  $time_us <= 25000 {
-    http_request_duration_seconds_bucket["0.025"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["0.025"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # 50ms bucket.
-  $time_us <= 50000 {
-    http_request_duration_seconds_bucket["0.05"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["0.05"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # 100ms bucket.
-  $time_us <= 100000 {
-    http_request_duration_seconds_bucket["0.1"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["0.1"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # 250ms bucket.
-  $time_us <= 250000 {
-    http_request_duration_seconds_bucket["0.25"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["0.25"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # 500ms bucket.
-  $time_us <= 500000 {
-    http_request_duration_seconds_bucket["0.5"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["0.5"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # 1s bucket.
-  $time_us <= 1000000 {
-    http_request_duration_seconds_bucket["1"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["1"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # 2.5s bucket.
-  $time_us <= 2500000 {
-    http_request_duration_seconds_bucket["2.5"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["2.5"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # 5s bucket.
-  $time_us <= 5000000 {
-    http_request_duration_seconds_bucket["5"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["5"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # 10s bucket.
-  $time_us <= 10000000 {
-    http_request_duration_seconds_bucket["10"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["10"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # 15s bucket.
-  $time_us <= 15000000 {
-    http_request_duration_seconds_bucket["15"][$server_port][$handler][$method][$code][$protocol]++
-  } else {
-    http_request_duration_seconds_bucket["15"][$server_port][$handler][$method][$code][$protocol] += 0
-  }
-
-  # "inf" bucket, also the total number of requests.
-  http_request_duration_seconds_bucket["+Inf"][$server_port][$handler][$method][$code][$protocol]++
+  http_request_duration_seconds[$server_port][$handler][$method][$code][$protocol] = $time_us * 1000000
 
   ###
   # Sent/Received bytes.
