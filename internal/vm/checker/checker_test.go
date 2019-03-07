@@ -354,7 +354,7 @@ stop
 	{"declare histogram", `
 histogram foo with 1, 2, 3
 /(\d+)/ {
-  foo++
+  foo = $1
 }`},
 }
 
