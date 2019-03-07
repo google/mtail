@@ -5,6 +5,7 @@ package codegen
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"time"
 
@@ -92,6 +93,8 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			dtyp = metrics.Float
 		case types.Equals(types.String, t):
 			dtyp = metrics.String
+		case types.Equals(types.Buckets, t):
+			dtyp = metrics.Buckets
 		default:
 			if !types.IsComplete(t) {
 				glog.Infof("Incomplete type %v for %#v", t, n)
@@ -131,21 +134,24 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 				return nil, n
 			}
 
-			ranges := make([]datum.Range, 0)
-			ranges = append(ranges, datum.Range{n.Buckets[0], n.Buckets[1]})
-
+			m.Buckets = append(m.Buckets, datum.Range{n.Buckets[0], n.Buckets[1]})
+			min := n.Buckets[1]
 			for _, max := range n.Buckets[2:] {
-				min := ranges[len(ranges)-1].Max
 				if max <= min {
 					c.errorf(n.Pos(), "buckets boundaries must be sorted")
 					return nil, n
 				}
-
-				ranges = append(ranges, datum.Range{min, max})
+				m.Buckets = append(m.Buckets, datum.Range{min, max})
+				min = max
 			}
+			m.Buckets = append(m.Buckets, datum.Range{min, math.Inf(+1)})
 
-			for _, r := range ranges {
-				m.Buckets = append(m.Buckets, r)
+			if len(n.Keys) == 0 {
+				_, err := m.GetDatum()
+				if err != nil {
+					c.errorf(n.Pos(), "%s", err)
+					return nil, n
+				}
 			}
 		}
 
