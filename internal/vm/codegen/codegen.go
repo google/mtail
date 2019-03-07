@@ -107,6 +107,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		// don't know the values of the labels yet.  Gauges and Timers we can't
 		// assume start at zero.
 		if len(n.Keys) == 0 && n.Kind == metrics.Counter {
+			// Calling GetDatum here causes the storage to be allocated.
 			d, err := m.GetDatum()
 			if err != nil {
 				c.errorf(n.Pos(), "%s", err)
@@ -147,6 +148,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			m.Buckets = append(m.Buckets, datum.Range{min, math.Inf(+1)})
 
 			if len(n.Keys) == 0 {
+				// Calling GetDatum here causes the storage to be allocated.
 				_, err := m.GetDatum()
 				if err != nil {
 					c.errorf(n.Pos(), "%s", err)
