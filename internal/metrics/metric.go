@@ -256,7 +256,7 @@ func (lv *LabelValue) UnmarshalJSON(b []byte) error {
 func (m *Metric) String() string {
 	m.RLock()
 	defer m.RUnlock()
-	return fmt.Sprintf("Metric: name=%s program=%s kind=%v type=%s hidden=%v keys=%v labelvalues=%v source=%s", m.Name, m.Program, m.Kind, m.Type, m.Hidden, m.Keys, m.LabelValues, m.Source)
+	return fmt.Sprintf("Metric: name=%s program=%s kind=%v type=%s hidden=%v keys=%v labelvalues=%v source=%s buckets=%v", m.Name, m.Program, m.Kind, m.Type, m.Hidden, m.Keys, m.LabelValues, m.Source, m.Buckets)
 }
 
 // SetSource sets the source of a metric, describing where in user programmes it was defined.

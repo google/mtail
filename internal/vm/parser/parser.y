@@ -35,7 +35,7 @@ import (
 %type <n> declaration declarator decorator_declaration decoration_statement regex_pattern match_expr
 %type <n> delete_statement
 %type <kind> type_spec hist_spec
-%type <text> as_spec
+%type <text> as_spec id_or_string
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
 %type <op> rel_op shift_op bitwise_op logical_op add_op mul_op match_op postfix_op
@@ -533,22 +533,12 @@ by_spec
   ;
 
 by_expr_list
-  : ID
+  : id_or_string
   {
     $$ = make([]string, 0)
     $$ = append($$, $1)
   }
-  | STRING
-  {
-    $$ = make([]string, 0)
-    $$ = append($$, $1)
-  }
-  | by_expr_list COMMA ID
-  {
-    $$ = $1
-    $$ = append($$, $3)
-  }
-  | by_expr_list COMMA STRING
+  | by_expr_list COMMA id_or_string
   {
     $$ = $1
     $$ = append($$, $3)
@@ -614,6 +604,16 @@ delete_statement
     $$ = &ast.DelStmt{P: tokenpos(mtaillex), N: $2}
   }
 
+id_or_string
+  : ID
+  {
+    $$ = $1
+  }
+  | STRING
+  {
+    $$ = $1
+  }
+  ;
 
 // mark_pos is an epsilon (marker nonterminal) that records the current token
 // position as the parser position.  Use markedpos() to fetch the position and

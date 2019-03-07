@@ -592,12 +592,12 @@ state 63
 state 64
 	postfix_expr:  postfix_expr.postfix_op 
 	delete_statement:  DEL postfix_expr.AFTER DURATIONLITERAL 
-	delete_statement:  DEL postfix_expr.    (114)
+	delete_statement:  DEL postfix_expr.    (112)
 
 	AFTER  shift 115
 	INC  shift 92
 	DEC  shift 93
-	.  reduce 114 (src line 612)
+	.  reduce 112 (src line 602)
 
 	postfix_op  goto 91
 
@@ -1072,9 +1072,9 @@ state 113
 	compound_statement  goto 142
 
 state 114
-	decoration_statement:  mark_pos DECO compound_statement.    (112)
+	decoration_statement:  mark_pos DECO compound_statement.    (110)
 
-	.  reduce 112 (src line 600)
+	.  reduce 110 (src line 590)
 
 
 state 115
@@ -1384,16 +1384,17 @@ state 136
 state 137
 	by_spec:  BY.by_expr_list 
 
-	STRING  shift 160
-	ID  shift 159
+	STRING  shift 161
+	ID  shift 160
 	.  error
 
+	id_or_string  goto 159
 	by_expr_list  goto 158
 
 state 138
 	as_spec:  AS.STRING 
 
-	STRING  shift 161
+	STRING  shift 162
 	.  error
 
 
@@ -1406,29 +1407,29 @@ state 139
 state 140
 	with_spec:  WITH.with_buckets_list 
 
-	INTLITERAL  shift 164
-	FLOATLITERAL  shift 163
+	INTLITERAL  shift 165
+	FLOATLITERAL  shift 164
 	.  error
 
-	with_buckets_list  goto 162
+	with_buckets_list  goto 163
 
 state 141
 	regex_pattern:  mark_pos DIV in_regex REGEX.DIV 
 
-	DIV  shift 165
+	DIV  shift 166
 	.  error
 
 
 state 142
-	decorator_declaration:  mark_pos DEF ID compound_statement.    (111)
+	decorator_declaration:  mark_pos DEF ID compound_statement.    (109)
 
-	.  reduce 111 (src line 593)
+	.  reduce 109 (src line 583)
 
 
 state 143
-	delete_statement:  DEL postfix_expr AFTER DURATIONLITERAL.    (113)
+	delete_statement:  DEL postfix_expr AFTER DURATIONLITERAL.    (111)
 
-	.  reduce 113 (src line 607)
+	.  reduce 111 (src line 597)
 
 
 state 144
@@ -1538,7 +1539,7 @@ state 154
 	unary_expr  goto 125
 	rel_expr  goto 25
 	shift_expr  goto 29
-	bitwise_expr  goto 166
+	bitwise_expr  goto 167
 	indexed_expr  goto 31
 	id_expr  goto 43
 
@@ -1568,59 +1569,64 @@ state 157
 
 state 158
 	by_spec:  BY by_expr_list.    (100)
-	by_expr_list:  by_expr_list.COMMA ID 
-	by_expr_list:  by_expr_list.COMMA STRING 
+	by_expr_list:  by_expr_list.COMMA id_or_string 
 
-	COMMA  shift 167
+	COMMA  shift 168
 	.  reduce 100 (src line 528)
 
 
 state 159
-	by_expr_list:  ID.    (101)
+	by_expr_list:  id_or_string.    (101)
 
 	.  reduce 101 (src line 535)
 
 
 state 160
-	by_expr_list:  STRING.    (102)
+	id_or_string:  ID.    (113)
 
-	.  reduce 102 (src line 541)
+	.  reduce 113 (src line 607)
 
 
 state 161
-	as_spec:  AS STRING.    (105)
+	id_or_string:  STRING.    (114)
 
-	.  reduce 105 (src line 558)
+	.  reduce 114 (src line 612)
 
 
 state 162
-	with_spec:  WITH with_buckets_list.    (106)
-	with_buckets_list:  with_buckets_list.COMMA FLOATLITERAL 
-	with_buckets_list:  with_buckets_list.COMMA INTLITERAL 
+	as_spec:  AS STRING.    (103)
 
-	COMMA  shift 168
-	.  reduce 106 (src line 565)
+	.  reduce 103 (src line 548)
 
 
 state 163
-	with_buckets_list:  FLOATLITERAL.    (107)
+	with_spec:  WITH with_buckets_list.    (104)
+	with_buckets_list:  with_buckets_list.COMMA FLOATLITERAL 
+	with_buckets_list:  with_buckets_list.COMMA INTLITERAL 
 
-	.  reduce 107 (src line 571)
+	COMMA  shift 169
+	.  reduce 104 (src line 555)
 
 
 state 164
-	with_buckets_list:  INTLITERAL.    (108)
+	with_buckets_list:  FLOATLITERAL.    (105)
 
-	.  reduce 108 (src line 577)
+	.  reduce 105 (src line 561)
 
 
 state 165
+	with_buckets_list:  INTLITERAL.    (106)
+
+	.  reduce 106 (src line 567)
+
+
+state 166
 	regex_pattern:  mark_pos DIV in_regex REGEX DIV.    (86)
 
 	.  reduce 86 (src line 441)
 
 
-state 166
+state 167
 	bitwise_expr:  bitwise_expr.bitwise_op opt_nl rel_expr 
 	arg_expr_list:  arg_expr_list COMMA bitwise_expr.    (85)
 
@@ -1631,16 +1637,16 @@ state 166
 
 	bitwise_op  goto 66
 
-state 167
-	by_expr_list:  by_expr_list COMMA.ID 
-	by_expr_list:  by_expr_list COMMA.STRING 
+state 168
+	by_expr_list:  by_expr_list COMMA.id_or_string 
 
-	STRING  shift 170
-	ID  shift 169
+	STRING  shift 161
+	ID  shift 160
 	.  error
 
+	id_or_string  goto 170
 
-state 168
+state 169
 	with_buckets_list:  with_buckets_list COMMA.FLOATLITERAL 
 	with_buckets_list:  with_buckets_list COMMA.INTLITERAL 
 
@@ -1649,39 +1655,33 @@ state 168
 	.  error
 
 
-state 169
-	by_expr_list:  by_expr_list COMMA ID.    (103)
-
-	.  reduce 103 (src line 546)
-
-
 state 170
-	by_expr_list:  by_expr_list COMMA STRING.    (104)
+	by_expr_list:  by_expr_list COMMA id_or_string.    (102)
 
-	.  reduce 104 (src line 551)
+	.  reduce 102 (src line 541)
 
 
 state 171
-	with_buckets_list:  with_buckets_list COMMA FLOATLITERAL.    (109)
+	with_buckets_list:  with_buckets_list COMMA FLOATLITERAL.    (107)
 
-	.  reduce 109 (src line 582)
+	.  reduce 107 (src line 572)
 
 
 state 172
-	with_buckets_list:  with_buckets_list COMMA INTLITERAL.    (110)
+	with_buckets_list:  with_buckets_list COMMA INTLITERAL.    (108)
 
-	.  reduce 110 (src line 587)
+	.  reduce 108 (src line 577)
 
 
-66 terminals, 49 nonterminals
+66 terminals, 50 nonterminals
 119 grammar rules, 173/8000 states
 0 shift/reduce, 0 reduce/reduce conflicts reported
-98 working sets used
-memory: parser 255/120000
+99 working sets used
+memory: parser 254/120000
 146 extra closures
 287 shift entries, 8 exceptions
-97 goto entries
+99 goto entries
 159 entries saved by goto default
-Optimizer space used: output 234/120000
-234 table entries, 0 zero
-maximum spread: 66, maximum offset: 154
+Optimizer space used: output 238/120000
+238 table entries, 4 zero
+maximum spread: 66, maximum offset: 168
