@@ -238,65 +238,27 @@ Histograms are preferred over averages in many monitoring howtos, blogs, talks,
 and rants, in order to give the operators better visibility into the behaviour
 of a system.
 
-At the moment, `mtail` does not have first class support for a distribution
-type, but a histogram can be easily created by making one label on a
-dimensioned metric the name of the histogram bucket. In order to keep bucket label
-consistency we we have to increment by 0 for non-matching buckets.
+`mtail` supports histograms as a first class metric kind, and should be created with a list of bucket boundaries:
 
 ```
-counter apache_http_request_time_seconds_bucket by le, server_port, handler, request_method, request_status, request_protocol
+histogram foo with 0, 1, 2, 4, 8
+```
+creates a new histogram `foo` with buckets for  the [0-1) range, [1-2) range, [2-4) range, [4-8), and 8 to positive infinity.
 
-...
+You can put labels on a histogram as well:
+```
+histogram apache_http_request_time_seconds by server_port, handler, request_method, request_status, request_protocol with 0.005, 0.01, 0.025, 0.05
+```
+
+At the moment all bucket boundaries (excepting 0 and positive infinity) need to be explicitly named (there is no shorthand form to create geometric progressions).
+
+Assignment to the histogram records the observation:
+```
   ###
   # HTTP Requests with histogram buckets.
   #
-  apache_http_request_time_seconds_count[$server_port][$handler][$request_method][$request_status][$request_protocol]++
-
-  # These statements "fall through", so the histogram is cumulative.  The
-  # collecting system can compute the percentile bands by taking the ratio of
-  # each bucket value over the final bucket.
-
-  # 5ms bucket.
-  $time_us <= 5000 {
-    apache_http_request_time_seconds_bucket["0.005"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
-  } else {
-    apache_http_request_time_seconds_bucket["0.005"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
-  }
-
-  # 10ms bucket.
-  $time_us <= 10000 {
-    apache_http_request_time_seconds_bucket["0.01"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
-  } else {
-    apache_http_request_time_seconds_bucket["0.01"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
-  }
-
-  # 25ms bucket.
-  $time_us <= 25000 {
-    apache_http_request_time_seconds_bucket["0.025"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
-  } else {
-    apache_http_request_time_seconds_bucket["0.025"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
-  }
-
-  # 50ms bucket.
-  $time_us <= 50000 {
-    apache_http_request_time_seconds_bucket["0.05"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
-  } else {
-    apache_http_request_time_seconds_bucket["0.05"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
-  }
-
-...
-
-  # 10s bucket.
-  $time_us <= 10000000 {
-    apache_http_request_time_seconds_bucket["10"][$server_port][$handler][$request_method][$request_status][$request_protocol]++
-  } else {
-    apache_http_request_time_seconds_bucket["10"][$server_port][$handler][$request_method][$request_status][$request_protocol] += 0
-  }
-
+  apache_http_request_time_seconds[$server_port][$handler][$request_method][$request_status][$request_protocol] = $time_us / 1000000
 ```
-
-This example creates a histogram with a bucket label "le" that contains a count
-of all requests that were "less than" the bucket label's value.
 
 In tools like [Prometheus](http://prometheus.io) these can be manipulated in
 aggregate for computing percentiles of response latency.
