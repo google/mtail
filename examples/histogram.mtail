@@ -1,0 +1,10 @@
+histogram hist1 with 0, 1, 2, 4, 8
+histogram hist2 by code with 0, 1, 2, 4, 8
+
+# To make ex_test.go happy
+strptime("2019-03-04T02:56:21Z", "2006-01-02T15:04:05Z07:00")
+
+/^(\d) (\d+)/ {
+  hist1 = $1
+  hist2[$2] = $1
+}
