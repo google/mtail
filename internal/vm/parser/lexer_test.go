@@ -128,7 +128,7 @@ var lexerTests = []lexerTest{
 			{BUILTIN, "string", position.Position{"builtins", 10, 0, 5}},
 			{NL, "\n", position.Position{"builtins", 11, 6, -1}},
 			{EOF, "", position.Position{"builtins", 11, 0, 0}}}},
-	{"numbers", "1 23 3.14 1.61.1 -1 -1.0 1h 0d 3d -1.5h 15m 24h0m0s 1e3 1e-3 .1", []Token{
+	{"numbers", "1 23 3.14 1.61.1 -1 -1.0 1h 0d 3d -1.5h 15m 24h0m0s 1e3 1e-3 .11 123.456e7", []Token{
 		{INTLITERAL, "1", position.Position{"numbers", 0, 0, 0}},
 		{INTLITERAL, "23", position.Position{"numbers", 0, 2, 3}},
 		{FLOATLITERAL, "3.14", position.Position{"numbers", 0, 5, 8}},
@@ -144,8 +144,9 @@ var lexerTests = []lexerTest{
 		{DURATIONLITERAL, "24h0m0s", position.Position{"numbers", 0, 44, 50}},
 		{FLOATLITERAL, "1e3", position.Position{"numbers", 0, 52, 54}},
 		{FLOATLITERAL, "1e-3", position.Position{"numbers", 0, 56, 59}},
-		{FLOATLITERAL, ".1", position.Position{"numbers", 0, 61, 62}},
-		{EOF, "", position.Position{"numbers", 0, 63, 63}},
+		{FLOATLITERAL, ".11", position.Position{"numbers", 0, 61, 63}},
+		{FLOATLITERAL, "123.456e7", position.Position{"numbers", 0, 65, 73}},
+		{EOF, "", position.Position{"numbers", 0, 74, 74}},
 	}},
 	{"identifier", "a be foo\nquux line_count", []Token{
 		{ID, "a", position.Position{"identifier", 0, 0, 0}},
@@ -256,7 +257,6 @@ func TestLex(t *testing.T) {
 	for _, tc := range lexerTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			tokens := collect(&tc)
 
 			if diff := testutil.Diff(tc.tokens, tokens, testutil.AllowUnexported(Token{}, position.Position{})); diff != "" {
