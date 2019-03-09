@@ -128,7 +128,7 @@ var lexerTests = []lexerTest{
 			{BUILTIN, "string", position.Position{"builtins", 10, 0, 5}},
 			{NL, "\n", position.Position{"builtins", 11, 6, -1}},
 			{EOF, "", position.Position{"builtins", 11, 0, 0}}}},
-	{"numbers", "1 23 3.14 1.61.1 -1 -1.0 1h 0d 3d -1.5h 15m 24h0m0s", []Token{
+	{"numbers", "1 23 3.14 1.61.1 -1 -1.0 1h 0d 3d -1.5h 15m 24h0m0s 1e3 1e-3 .1", []Token{
 		{INTLITERAL, "1", position.Position{"numbers", 0, 0, 0}},
 		{INTLITERAL, "23", position.Position{"numbers", 0, 2, 3}},
 		{FLOATLITERAL, "3.14", position.Position{"numbers", 0, 5, 8}},
@@ -142,7 +142,10 @@ var lexerTests = []lexerTest{
 		{DURATIONLITERAL, "-1.5h", position.Position{"numbers", 0, 34, 38}},
 		{DURATIONLITERAL, "15m", position.Position{"numbers", 0, 40, 42}},
 		{DURATIONLITERAL, "24h0m0s", position.Position{"numbers", 0, 44, 50}},
-		{EOF, "", position.Position{"numbers", 0, 51, 51}},
+		{FLOATLITERAL, "1e3", position.Position{"numbers", 0, 52, 54}},
+		{FLOATLITERAL, "1e-3", position.Position{"numbers", 0, 56, 59}},
+		{FLOATLITERAL, ".1", position.Position{"numbers", 0, 61, 62}},
+		{EOF, "", position.Position{"numbers", 0, 63, 63}},
 	}},
 	{"identifier", "a be foo\nquux line_count", []Token{
 		{ID, "a", position.Position{"identifier", 0, 0, 0}},

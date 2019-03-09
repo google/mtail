@@ -102,7 +102,7 @@ func (l *Lexer) NextToken() Token {
 // emit passes a token to the client.
 func (l *Lexer) emit(kind Kind) {
 	pos := position.Position{l.name, l.line, l.startcol, l.col - 1}
-	glog.V(2).Infof("Emitting %v at %v", kind, pos)
+	glog.V(2).Infof("Emitting %v spelled %q at %v", kind, l.text.String(), pos)
 	l.tokens <- Token{kind, l.text.String(), pos}
 	// Reset the current token
 	l.text.Reset()
@@ -382,29 +382,42 @@ Loop:
 
 // Lex a numerical constant.
 func lexNumeric(l *Lexer) stateFn {
-	kind := INTLITERAL
-Loop:
-	for {
-		switch r := l.next(); {
-		case isDigit(r):
+	r := l.next()
+	for isDigit(r) {
+		l.accept()
+		r = l.next()
+	}
+	if r != '.' && r != 'E' && r != 'e' && !isDurationSuffix(r) {
+		l.backup()
+		l.emit(Kind(INTLITERAL))
+		return lexProg
+	}
+	if r == '.' {
+		l.accept()
+		r = l.next()
+		for isDigit(r) {
 			l.accept()
-		case r == '.':
-			if kind == FLOATLITERAL {
-				l.backup()
-				break Loop
-			}
-			kind = FLOATLITERAL
-			l.accept()
-		case isDurationSuffix(r):
-			kind = DURATIONLITERAL
-			l.accept()
-			return lexDuration
-		default:
-			l.backup()
-			break Loop
+			r = l.next()
 		}
 	}
-	l.emit(Kind(kind))
+	if r == 'e' || r == 'E' {
+		l.accept()
+		r = l.next()
+		if r == '+' || r == '-' {
+			l.accept()
+			r = l.next()
+		}
+		for isDigit(r) {
+			l.accept()
+			r = l.next()
+		}
+	}
+	if isDurationSuffix(r) {
+		l.accept()
+		return lexDuration
+	}
+	l.backup()
+	l.emit(Kind(FLOATLITERAL))
 	return lexProg
 }
 
