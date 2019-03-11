@@ -66,3 +66,5 @@ one's already in the queue.  Maybe helps with fsnotify overflow, and the
     duplicate notify problem from poll-only mode?
 
 Programs may not use mtail_ as a metric prefix.
+
+Parse a program with unbalanced {
