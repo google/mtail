@@ -324,7 +324,9 @@ $foo =~ X {
 }
 
 func TestParserRoundTrip(t *testing.T) {
-	mtailDebug = 3
+	if testing.Verbose() {
+		mtailDebug = 3
+	}
 	for _, tc := range parserTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -382,7 +384,7 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	{"unterminated regex",
 		"/foo\n",
 		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\"",
-			"unterminated regex:1:2-4: syntax error: unexpected end of file"}},
+			"unterminated regex:1:2-4: syntax error: unexpected end of file, expecting '/' to end regex"}},
 
 	{"unterminated string",
 		" \"foo }\n",
@@ -391,7 +393,17 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	{"unterminated const regex",
 		"const X /(?P<foo>",
 		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",
-			"unterminated const regex:1:10-17: syntax error: unexpected end of file"}},
+			"unterminated const regex:1:10-17: syntax error: unexpected end of file, expecting '/' to end regex"}},
+
+	{"unbalanced {",
+		"/foo/ {\n",
+		[]string{"unbalanced {:2:1: syntax error: unexpected end of file, expecting '}' to end block"}},
+	{"unbalanced else {",
+		"/foo/ { } else {\n",
+		[]string{"unbalanced else {:2:1: syntax error: unexpected end of file, expecting '}' to end block"}},
+	{"unbalanced otherwise {",
+		"otherwise {\n",
+		[]string{"unbalanced otherwise {:2:1: syntax error: unexpected end of file, expecting '}' to end block"}},
 
 	{"index of non-terminal 1",
 		`// {
@@ -406,10 +418,12 @@ var parserInvalidPrograms = []parserInvalidProgram{
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
+	if testing.Verbose() {
+		mtailDebug = 3
+	}
 	for _, tc := range parserInvalidPrograms {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			p := newParser(tc.name, strings.NewReader(tc.program))
 			mtailParse(p)
 

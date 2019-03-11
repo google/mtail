@@ -77,7 +77,10 @@ import (
 
 // The %error directive takes a list of tokens describing a parser state in error, and an error message.
 // See "Generating LR syntax error messages from examples", Jeffery, ACM TOPLAS Volume 24 Issue 5 Sep 2003.
-%error stmt_list stmt expression_statement mark_pos DIV in_regex INVALID  : "unexpected end of file"
+%error stmt_list stmt expression_statement mark_pos DIV in_regex INVALID  : "unexpected end of file, expecting '/' to end regex"
+%error stmt_list stmt conditional_statement logical_expr LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
+%error stmt_list stmt conditional_statement logical_expr compound_statement ELSE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
+%error stmt_list stmt conditional_statement OTHERWISE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
 %%
 
 start
