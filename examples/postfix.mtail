@@ -55,15 +55,16 @@ const QMGR_REMOVE_LINE /: removed$/
       # 4th field: transmission
       postfix_lmtp_delivery_delay_seconds["transmission"] = $tx
     }
+  }
 
   # Pipe message processing time in seconds.
-  histogram postfix_pipe_delivery_delay_seconds by le, relay, stage with 0.001, 0.01, 0.1, 1, 10, 100, 1e3
+  histogram postfix_pipe_delivery_delay_seconds by relay, stage with 0.001, 0.01, 0.1, 1, 10, 100, 1e3
   # buckets: 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3
 
   $application == "pipe" {
     // + DELIVERY_DELAY_LINE {
       # 1st field: before_queue_manager
-      postfix_pipe_delivery_delay_seconds_bucket["0.001"]["before_queue_manager"] = $bqm
+      postfix_pipe_delivery_delay_seconds[$relay]["before_queue_manager"] = $bqm
 
       # 2nd field: queue_manager
       postfix_pipe_delivery_delay_seconds[$relay]["queue_manager"] = $qm
@@ -74,9 +75,10 @@ const QMGR_REMOVE_LINE /: removed$/
       # 4th field: transmission
       postfix_pipe_delivery_delay_seconds[$relay]["transmission"] = $tx
     }
+  }
 
   # Number of recipients per message inserted into the mail queues.
-  histogram postfix_qmgr_messages_inserted_recipients_bucket with 1, 2, 4, 7, 16, 32, 64, 128
+  histogram postfix_qmgr_messages_inserted_recipients with 1, 2, 4, 7, 16, 32, 64, 128
   # buckets: 1, 2, 4, 8, 16, 32, 64, 128
 
   # Size of messages inserted into the mail queues in bytes.
@@ -89,6 +91,7 @@ const QMGR_REMOVE_LINE /: removed$/
   $application == "qmgr" {
     // + QMGR_INSERT_LINE {
       postfix_qmgr_messages_inserted_recipients = $nrcpt
+      postfix_qmgr_messages_inserted_size_bytes = $size
       }
     // + QMGR_REMOVE_LINE {
       postfix_qmgr_messages_removed_total++
@@ -96,7 +99,7 @@ const QMGR_REMOVE_LINE /: removed$/
     }
 
   # SMTP message processing time in seconds.
-  histogram postfix_smtp_delivery_delay_seconds_bucket by stage with 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3
+  histogram postfix_smtp_delivery_delay_seconds by stage with 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3
   # buckets: 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3
 
   # Total number of outgoing TLS connections.
