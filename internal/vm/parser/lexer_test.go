@@ -67,7 +67,7 @@ var lexerTests = []lexerTest{
 		{DEC, "--", position.Position{"operators", 0, 63, 64}},
 		{EOF, "", position.Position{"operators", 0, 65, 65}}}},
 	{"keywords",
-		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\nafter\nstop\nhistogram\nwith\n", []Token{
+		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\nafter\nstop\nhistogram\nbuckets\n", []Token{
 			{COUNTER, "counter", position.Position{"keywords", 0, 0, 6}},
 			{NL, "\n", position.Position{"keywords", 1, 7, -1}},
 			{GAUGE, "gauge", position.Position{"keywords", 1, 0, 4}},
@@ -100,8 +100,8 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position.Position{"keywords", 15, 4, -1}},
 			{HISTOGRAM, "histogram", position.Position{"keywords", 15, 0, 8}},
 			{NL, "\n", position.Position{"keywords", 16, 9, -1}},
-			{WITH, "with", position.Position{"keywords", 16, 0, 3}},
-			{NL, "\n", position.Position{"keywords", 17, 4, -1}},
+			{BUCKETS, "buckets", position.Position{"keywords", 16, 0, 6}},
+			{NL, "\n", position.Position{"keywords", 17, 7, -1}},
 			{EOF, "", position.Position{"keywords", 17, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\n", []Token{

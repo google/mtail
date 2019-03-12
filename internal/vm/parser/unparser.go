@@ -191,7 +191,7 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		}
 		if len(v.Buckets) > 0 {
 			buckets := strings.Builder{}
-			buckets.WriteString(" with ")
+			buckets.WriteString(" buckets ")
 			for _, f := range v.Buckets {
 				buckets.WriteString(fmt.Sprintf("%f, ", f))
 			}

@@ -48,7 +48,7 @@ const NEXT = 57359
 const OTHERWISE = 57360
 const ELSE = 57361
 const STOP = 57362
-const WITH = 57363
+const BUCKETS = 57363
 const BUILTIN = 57364
 const REGEX = 57365
 const STRING = 57366
@@ -116,7 +116,7 @@ var mtailToknames = [...]string{
 	"OTHERWISE",
 	"ELSE",
 	"STOP",
-	"WITH",
+	"BUCKETS",
 	"BUILTIN",
 	"REGEX",
 	"STRING",

@@ -352,7 +352,7 @@ stop
 }`},
 
 	{"declare histogram", `
-histogram foo with 1, 2, 3
+histogram foo buckets 1, 2, 3
 /(\d+)/ {
   foo = $1
 }`},

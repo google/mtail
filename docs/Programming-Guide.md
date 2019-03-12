@@ -241,13 +241,15 @@ of a system.
 `mtail` supports histograms as a first class metric kind, and should be created with a list of bucket boundaries:
 
 ```
-histogram foo with 0, 1, 2, 4, 8
+histogram foo buckets 1, 2, 4, 8
 ```
-creates a new histogram `foo` with buckets for  the [0-1) range, [1-2) range, [2-4) range, [4-8), and 8 to positive infinity.
+creates a new histogram `foo` with buckets for ranges [0-1), [1-2), [2-4), [4-8), and from 8 to positive infinity.
+
+> *NOTE: The 0-n and m-+Inf buckets are created automatically.*
 
 You can put labels on a histogram as well:
 ```
-histogram apache_http_request_time_seconds by server_port, handler, request_method, request_status, request_protocol with 0.005, 0.01, 0.025, 0.05
+histogram apache_http_request_time_seconds by server_port, handler, request_method, request_status, request_protocol buckets 0.005, 0.01, 0.025, 0.05
 ```
 
 At the moment all bucket boundaries (excepting 0 and positive infinity) need to be explicitly named (there is no shorthand form to create geometric progressions).

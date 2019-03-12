@@ -19,6 +19,7 @@ import (
 var keywords = map[string]Kind{
 	"after":     AFTER,
 	"as":        AS,
+	"buckets":   BUCKETS,
 	"by":        BY,
 	"const":     CONST,
 	"counter":   COUNTER,
@@ -33,7 +34,6 @@ var keywords = map[string]Kind{
 	"stop":      STOP,
 	"text":      TEXT,
 	"timer":     TIMER,
-	"with":      WITH,
 }
 
 // List of builtin functions.  Keep this list sorted!

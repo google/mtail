@@ -46,7 +46,7 @@ import (
 // Types
 %token COUNTER GAUGE TIMER TEXT HISTOGRAM
 // Reserved words
-%token AFTER AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE STOP WITH
+%token AFTER AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE STOP BUCKETS
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -556,7 +556,7 @@ as_spec
   ;
 
 with_spec
-  : WITH with_buckets_list
+  : BUCKETS with_buckets_list
   {
     $$ = $2
   }

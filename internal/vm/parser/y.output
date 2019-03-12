@@ -1049,7 +1049,7 @@ state 111
 
 	AS  shift 138
 	BY  shift 137
-	WITH  shift 140
+	BUCKETS  shift 140
 	.  error
 
 	as_spec  goto 136
@@ -1405,7 +1405,7 @@ state 139
 
 
 state 140
-	with_spec:  WITH.with_buckets_list 
+	with_spec:  BUCKETS.with_buckets_list 
 
 	INTLITERAL  shift 165
 	FLOATLITERAL  shift 164
@@ -1600,7 +1600,7 @@ state 162
 
 
 state 163
-	with_spec:  WITH with_buckets_list.    (104)
+	with_spec:  BUCKETS with_buckets_list.    (104)
 	with_buckets_list:  with_buckets_list.COMMA FLOATLITERAL 
 	with_buckets_list:  with_buckets_list.COMMA INTLITERAL 
 

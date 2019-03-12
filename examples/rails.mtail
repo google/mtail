@@ -9,7 +9,7 @@ counter rails_requests_started by verb
 counter rails_requests_completed_total
 counter rails_requests_completed by status
 
-histogram rails_requests_completed_milliseconds by status with 5, 10, 50, 100, 250, 500, 1000, 2500, 5000, 15000
+histogram rails_requests_completed_milliseconds by status buckets 5, 10, 50, 100, 250, 500, 1000, 2500, 5000, 15000
 
 /^Started (?P<verb>[A-Z]+) .*/ {
   ###

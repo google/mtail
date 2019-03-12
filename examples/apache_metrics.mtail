@@ -9,7 +9,7 @@ counter http_connections_closed_total by server_port, handler, method, code, pro
 counter http_request_size_bytes_total by server_port, handler, method, code, protocol
 counter http_response_size_bytes_total by server_port, handler, method, code, protocol
 
-histogram http_request_duration_seconds by server_port, handler, method, code, protocol with 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15
+histogram http_request_duration_seconds by server_port, handler, method, code, protocol buckets 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15
 
 /^/ +
 /(?P<server_port>\S+) / + # %v:%p - The canonical ServerName of the server serving the request. : The canonical port of the server serving the request.
