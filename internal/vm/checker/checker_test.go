@@ -160,6 +160,13 @@ const ID /bar/
 @x {
 }`,
 		[]string{"def with two nexts:6:5-8: Can't use `next' statement twice in a decorator."}},
+
+	{"counter with buckets",
+		`counter foo buckets 1, 2, 3
+/(\d)/ {
+foo = $1
+}`,
+		[]string{"counter with buckets:1:9-11: Can't specify buckets for non-histogram metric `foo'."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

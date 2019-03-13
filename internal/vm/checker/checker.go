@@ -83,12 +83,16 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		switch n.Kind {
 		case metrics.Counter, metrics.Gauge, metrics.Timer, metrics.Histogram:
 			// TODO(jaq): This should be a numeric type, unless we want to
-			// enforce rules like "Counter can only be Int."
+			// enforce more specific rules like "Counter can only be Int."
 			rType = types.NewVariable()
 		case metrics.Text:
 			rType = types.String
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("internal compiler error: unrecognised Kind %v for declNode %v", n.Kind, n))
+			return nil, n
+		}
+		if len(n.Buckets) > 0 && n.Kind != metrics.Histogram {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Can't specify buckets for non-histogram metric `%s'.", n.Name))
 			return nil, n
 		}
 		if len(n.Keys) > 0 {
@@ -355,7 +359,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			t := types.LeastUpperBound(lT, rT)
 			err := types.Unify(rType, t)
 			if err != nil {
-				c.errors.Add(n.Pos(), err.Error())
+				//c.errors.Add(n.Pos(), err.Error())
 				n.SetType(types.Error)
 				return n
 			}
