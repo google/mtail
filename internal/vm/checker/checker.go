@@ -283,7 +283,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			exprType := types.Function(t, t, t)
 			err := types.Unify(exprType, astType)
 			if err != nil {
-				c.errors.Add(n.Pos(), err.Error())
+				// Commented because these type mismatch errors appear to be unhelpful.
+				//c.errors.Add(n.Pos(), err.Error())
 				n.SetType(types.Error)
 				return n
 			}
@@ -331,7 +332,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			exprType := types.Function(t, t, types.Bool)
 			err := types.Unify(exprType, astType)
 			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				// Commented because these type mismatch errors appear to be unhelpful.
+				//c.errors.Add(n.Pos(), err.Error())
 				n.SetType(types.Error)
 				return n
 			}
@@ -359,6 +361,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			t := types.LeastUpperBound(lT, rT)
 			err := types.Unify(rType, t)
 			if err != nil {
+				// Commented because these type mismatch errors appear to be unhelpful.
 				//c.errors.Add(n.Pos(), err.Error())
 				n.SetType(types.Error)
 				return n
@@ -376,7 +379,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			astType := types.Function(lT, rT, types.NewVariable())
 			err := types.Unify(exprType, astType)
 			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				// Commented because these type mismatch errors appear to be unhelpful.
+				//c.errors.Add(n.Pos(), err.Error())
 				n.SetType(types.Error)
 				return n
 			}
@@ -387,7 +391,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			astType := types.Function(lT, rT, types.NewVariable())
 			err := types.Unify(exprType, astType)
 			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				// Commented because these type mismatch errors appear to be unhelpful.
+				//c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
 				n.SetType(types.Error)
 				return n
 			}
@@ -411,7 +416,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			rType := types.Int
 			err := types.Unify(rType, t)
 			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
+				// Commented because these type mismatch errors appear to be unhelpful.
+				//c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
 				n.SetType(types.Error)
 				return n
 			}
@@ -420,7 +426,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			rType := types.Int
 			err := types.Unify(rType, t)
 			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
+				// Commented because these type mismatch errors appear to be unhelpful.
+				//c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
 				n.SetType(types.Error)
 				return n
 			}
