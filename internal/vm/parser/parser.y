@@ -32,14 +32,14 @@ import (
 %type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
-%type <n> declaration declarator decorator_declaration decoration_statement regex_pattern match_expr
-%type <n> delete_statement
-%type <kind> type_spec hist_spec
+%type <n> declaration decl_attribute_spec decorator_declaration decoration_statement regex_pattern match_expr
+%type <n> delete_statement var_name_spec
+%type <kind> type_spec
 %type <text> as_spec id_or_string
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
 %type <op> rel_op shift_op bitwise_op logical_op add_op mul_op match_op postfix_op
-%type <floats> with_spec with_buckets_list
+%type <floats> buckets_spec buckets_list
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
@@ -452,21 +452,12 @@ regex_pattern
   ;
 
 declaration
-  : hide_spec type_spec declarator
+  : hide_spec type_spec decl_attribute_spec
   {
     $$ = $3
     d := $$.(*ast.VarDecl)
     d.Kind = $2
     d.Hidden = $1
-  }
-  // TODO(jaq): accept alternate order for as/with here.
-  | hide_spec hist_spec declarator with_spec
-  {
-    $$ = $3
-    d := $$.(*ast.VarDecl)
-    d.Kind = $2
-    d.Hidden = $1
-    d.Buckets = $4
   }
   ;
 
@@ -481,18 +472,30 @@ hide_spec
   }
   ;
 
-declarator
-  : declarator by_spec
+decl_attribute_spec
+  : decl_attribute_spec by_spec
   {
     $$ = $1
     $$.(*ast.VarDecl).Keys = $2
   }
-  | declarator as_spec
+  | decl_attribute_spec as_spec
   {
     $$ = $1
     $$.(*ast.VarDecl).ExportedName = $2
   }
-  | ID
+  | decl_attribute_spec buckets_spec
+  {
+    $$ = $1
+    $$.(*ast.VarDecl).Buckets = $2
+  }
+  | var_name_spec
+  {
+    $$ = $1
+  }
+  ;
+
+var_name_spec
+  : ID
   {
     $$ = &ast.VarDecl{P: tokenpos(mtaillex), Name: $1}
   }
@@ -519,10 +522,7 @@ type_spec
   {
     $$ = metrics.Text
   }
-  ;
-
-hist_spec
-  : HISTOGRAM
+  | HISTOGRAM
   {
     $$ = metrics.Histogram
   }
@@ -555,13 +555,13 @@ as_spec
   }
   ;
 
-with_spec
-  : BUCKETS with_buckets_list
+buckets_spec
+  : BUCKETS buckets_list
   {
     $$ = $2
   }
 
-with_buckets_list
+buckets_list
   : FLOATLITERAL
   {
     $$ = make([]float64, 0)
@@ -572,12 +572,12 @@ with_buckets_list
     $$ = make([]float64, 0)
     $$ = append($$, float64($1))
   }
-  | with_buckets_list COMMA FLOATLITERAL
+  | buckets_list COMMA FLOATLITERAL
   {
     $$ = $1
     $$ = append($$, $3)
   }
-  | with_buckets_list COMMA INTLITERAL
+  | buckets_list COMMA INTLITERAL
   {
     $$ = $1
     $$ = append($$, float64($3))

@@ -249,7 +249,7 @@ creates a new histogram `foo` with buckets for ranges [0-1), [1-2), [2-4), [4-8)
 
 You can put labels on a histogram as well:
 ```
-histogram apache_http_request_time_seconds by server_port, handler, request_method, request_status, request_protocol buckets 0.005, 0.01, 0.025, 0.05
+histogram apache_http_request_time_seconds buckets 0.005, 0.01, 0.025, 0.05 by server_port, handler, request_method, request_status, request_protocol
 ```
 
 At the moment all bucket boundaries (excepting 0 and positive infinity) need to be explicitly named (there is no shorthand form to create geometric progressions).

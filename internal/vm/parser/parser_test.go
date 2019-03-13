@@ -52,6 +52,8 @@ var parserTests = []struct {
 		"histogram foo buckets 0, 0.01, 0.1, 1, 10\n"},
 	{"declare histogram by ",
 		"histogram foo by code buckets 0, 1, 2\n"},
+	{"declare histogram reversed syntax ",
+		"histogram foo buckets 0, 1, 2 by code\n"},
 
 	{"simple pattern action",
 		"/foo/ {}\n"},
