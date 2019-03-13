@@ -19,6 +19,7 @@ import (
 {
     intVal int64
     floatVal float64
+    floats []float64
     op int
     text string
     texts []string
@@ -31,20 +32,21 @@ import (
 %type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
-%type <n> declaration declarator decorator_declaration decoration_statement regex_pattern match_expr
-%type <n> delete_statement
+%type <n> declaration decl_attribute_spec decorator_declaration decoration_statement regex_pattern match_expr
+%type <n> delete_statement var_name_spec
 %type <kind> type_spec
-%type <text> as_spec
+%type <text> as_spec id_or_string
 %type <texts> by_spec by_expr_list
 %type <flag> hide_spec
 %type <op> rel_op shift_op bitwise_op logical_op add_op mul_op match_op postfix_op
+%type <floats> buckets_spec buckets_list
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
 // Types
-%token COUNTER GAUGE TIMER TEXT
+%token COUNTER GAUGE TIMER TEXT HISTOGRAM
 // Reserved words
-%token AFTER AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE STOP
+%token AFTER AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE STOP BUCKETS
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -75,7 +77,10 @@ import (
 
 // The %error directive takes a list of tokens describing a parser state in error, and an error message.
 // See "Generating LR syntax error messages from examples", Jeffery, ACM TOPLAS Volume 24 Issue 5 Sep 2003.
-%error stmt_list stmt expression_statement mark_pos DIV in_regex INVALID  : "unexpected end of file"
+%error stmt_list stmt expression_statement mark_pos DIV in_regex INVALID  : "unexpected end of file, expecting '/' to end regex"
+%error stmt_list stmt conditional_statement logical_expr LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
+%error stmt_list stmt conditional_statement logical_expr compound_statement ELSE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
+%error stmt_list stmt conditional_statement OTHERWISE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
 %%
 
 start
@@ -447,7 +452,7 @@ regex_pattern
   ;
 
 declaration
-  : hide_spec type_spec declarator
+  : hide_spec type_spec decl_attribute_spec
   {
     $$ = $3
     d := $$.(*ast.VarDecl)
@@ -467,18 +472,30 @@ hide_spec
   }
   ;
 
-declarator
-  : declarator by_spec
+decl_attribute_spec
+  : decl_attribute_spec by_spec
   {
     $$ = $1
     $$.(*ast.VarDecl).Keys = $2
   }
-  | declarator as_spec
+  | decl_attribute_spec as_spec
   {
     $$ = $1
     $$.(*ast.VarDecl).ExportedName = $2
   }
-  | ID
+  | decl_attribute_spec buckets_spec
+  {
+    $$ = $1
+    $$.(*ast.VarDecl).Buckets = $2
+  }
+  | var_name_spec
+  {
+    $$ = $1
+  }
+  ;
+
+var_name_spec
+  : ID
   {
     $$ = &ast.VarDecl{P: tokenpos(mtaillex), Name: $1}
   }
@@ -505,6 +522,10 @@ type_spec
   {
     $$ = metrics.Text
   }
+  | HISTOGRAM
+  {
+    $$ = metrics.Histogram
+  }
   ;
 
 by_spec
@@ -515,22 +536,12 @@ by_spec
   ;
 
 by_expr_list
-  : ID
+  : id_or_string
   {
     $$ = make([]string, 0)
     $$ = append($$, $1)
   }
-  | STRING
-  {
-    $$ = make([]string, 0)
-    $$ = append($$, $1)
-  }
-  | by_expr_list COMMA ID
-  {
-    $$ = $1
-    $$ = append($$, $3)
-  }
-  | by_expr_list COMMA STRING
+  | by_expr_list COMMA id_or_string
   {
     $$ = $1
     $$ = append($$, $3)
@@ -543,6 +554,34 @@ as_spec
     $$ = $2
   }
   ;
+
+buckets_spec
+  : BUCKETS buckets_list
+  {
+    $$ = $2
+  }
+
+buckets_list
+  : FLOATLITERAL
+  {
+    $$ = make([]float64, 0)
+    $$ = append($$, $1)
+  }
+  | INTLITERAL
+  {
+    $$ = make([]float64, 0)
+    $$ = append($$, float64($1))
+  }
+  | buckets_list COMMA FLOATLITERAL
+  {
+    $$ = $1
+    $$ = append($$, $3)
+  }
+  | buckets_list COMMA INTLITERAL
+  {
+    $$ = $1
+    $$ = append($$, float64($3))
+  }
 
 decorator_declaration
   : mark_pos DEF ID compound_statement
@@ -568,6 +607,16 @@ delete_statement
     $$ = &ast.DelStmt{P: tokenpos(mtaillex), N: $2}
   }
 
+id_or_string
+  : ID
+  {
+    $$ = $1
+  }
+  | STRING
+  {
+    $$ = $1
+  }
+  ;
 
 // mark_pos is an epsilon (marker nonterminal) that records the current token
 // position as the parser position.  Use markedpos() to fetch the position and

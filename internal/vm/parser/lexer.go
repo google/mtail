@@ -19,6 +19,7 @@ import (
 var keywords = map[string]Kind{
 	"after":     AFTER,
 	"as":        AS,
+	"buckets":   BUCKETS,
 	"by":        BY,
 	"const":     CONST,
 	"counter":   COUNTER,
@@ -27,6 +28,7 @@ var keywords = map[string]Kind{
 	"else":      ELSE,
 	"gauge":     GAUGE,
 	"hidden":    HIDDEN,
+	"histogram": HISTOGRAM,
 	"next":      NEXT,
 	"otherwise": OTHERWISE,
 	"stop":      STOP,
@@ -100,7 +102,7 @@ func (l *Lexer) NextToken() Token {
 // emit passes a token to the client.
 func (l *Lexer) emit(kind Kind) {
 	pos := position.Position{l.name, l.line, l.startcol, l.col - 1}
-	glog.V(2).Infof("Emitting %v at %v", kind, pos)
+	glog.V(2).Infof("Emitting %v spelled %q at %v", kind, l.text.String(), pos)
 	l.tokens <- Token{kind, l.text.String(), pos}
 	// Reset the current token
 	l.text.Reset()
@@ -116,7 +118,7 @@ func (l *Lexer) next() rune {
 	l.rune, l.width, err = l.input.ReadRune()
 	if err == io.EOF {
 		l.width = 1
-		return eof
+		l.rune = eof
 	}
 	return l.rune
 }
@@ -124,10 +126,13 @@ func (l *Lexer) next() rune {
 // backup indicates that we haven't yet dealt with the next rune. Use when
 // terminating tokens on unknown runes.
 func (l *Lexer) backup() {
+	l.width = 0
+	if l.rune == eof {
+		return
+	}
 	if err := l.input.UnreadRune(); err != nil {
 		glog.Info(err)
 	}
-	l.width = 0
 }
 
 // stepCursor moves the read cursor.
@@ -380,29 +385,42 @@ Loop:
 
 // Lex a numerical constant.
 func lexNumeric(l *Lexer) stateFn {
-	kind := INTLITERAL
-Loop:
-	for {
-		switch r := l.next(); {
-		case isDigit(r):
+	r := l.next()
+	for isDigit(r) {
+		l.accept()
+		r = l.next()
+	}
+	if r != '.' && r != 'E' && r != 'e' && !isDurationSuffix(r) {
+		l.backup()
+		l.emit(Kind(INTLITERAL))
+		return lexProg
+	}
+	if r == '.' {
+		l.accept()
+		r = l.next()
+		for isDigit(r) {
 			l.accept()
-		case r == '.':
-			if kind == FLOATLITERAL {
-				l.backup()
-				break Loop
-			}
-			kind = FLOATLITERAL
-			l.accept()
-		case isDurationSuffix(r):
-			kind = DURATIONLITERAL
-			l.accept()
-			return lexDuration
-		default:
-			l.backup()
-			break Loop
+			r = l.next()
 		}
 	}
-	l.emit(Kind(kind))
+	if r == 'e' || r == 'E' {
+		l.accept()
+		r = l.next()
+		if r == '+' || r == '-' {
+			l.accept()
+			r = l.next()
+		}
+		for isDigit(r) {
+			l.accept()
+			r = l.next()
+		}
+	}
+	if isDurationSuffix(r) {
+		l.accept()
+		return lexDuration
+	}
+	l.backup()
+	l.emit(Kind(FLOATLITERAL))
 	return lexProg
 }
 

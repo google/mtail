@@ -48,7 +48,7 @@ var table = map[string]node{
 	"decl":          {[][]string{{"hide_spec", "type_spec", "declarator"}}, ""},
 	"hide_spec":     {[][]string{{""}, {"hidden"}}, ""},
 	"declarator":    {[][]string{{"declarator", "by_spec"}, {"declarator", "as_spec"}, {"ID"}, {"STRING"}}, ""},
-	"type_spec":     {[][]string{{"counter"}, {"gauge"}}, ""},
+	"type_spec":     {[][]string{{"counter"}, {"gauge"}, {"timer"}, {"text"}, {"histogram"}}, ""},
 	"by_spec":       {[][]string{{"by", "by_expr_list"}}, ""},
 	"by_expr_list":  {[][]string{{"ID"}, {"STRING"}, {"by_expr_list", ",", "ID"}, {"by_expr_list", ",", "STRING"}}, ""},
 	"as_spec":       {[][]string{{"as", "STRING"}}, ""},

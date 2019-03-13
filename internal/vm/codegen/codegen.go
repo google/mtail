@@ -5,6 +5,7 @@ package codegen
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"time"
 
@@ -92,6 +93,8 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			dtyp = metrics.Float
 		case types.Equals(types.String, t):
 			dtyp = metrics.String
+		case types.Equals(types.Buckets, t):
+			dtyp = metrics.Buckets
 		default:
 			if !types.IsComplete(t) {
 				glog.Infof("Incomplete type %v for %#v", t, n)
@@ -104,6 +107,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		// don't know the values of the labels yet.  Gauges and Timers we can't
 		// assume start at zero.
 		if len(n.Keys) == 0 && n.Kind == metrics.Counter {
+			// Calling GetDatum here causes the storage to be allocated.
 			d, err := m.GetDatum()
 			if err != nil {
 				c.errorf(n.Pos(), "%s", err)
@@ -120,6 +124,39 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 				return nil, n
 			}
 		}
+
+		if n.Kind == metrics.Histogram {
+			if len(n.Buckets) < 2 {
+				c.errorf(n.Pos(), "a histogram need at least two boundaries")
+				return nil, n
+			}
+			if n.Buckets[0] >= n.Buckets[1] {
+				c.errorf(n.Pos(), "buckets boundaries must be sorted")
+				return nil, n
+			}
+
+			m.Buckets = append(m.Buckets, datum.Range{n.Buckets[0], n.Buckets[1]})
+			min := n.Buckets[1]
+			for _, max := range n.Buckets[2:] {
+				if max <= min {
+					c.errorf(n.Pos(), "buckets boundaries must be sorted")
+					return nil, n
+				}
+				m.Buckets = append(m.Buckets, datum.Range{min, max})
+				min = max
+			}
+			m.Buckets = append(m.Buckets, datum.Range{min, math.Inf(+1)})
+
+			if len(n.Keys) == 0 {
+				// Calling GetDatum here causes the storage to be allocated.
+				_, err := m.GetDatum()
+				if err != nil {
+					c.errorf(n.Pos(), "%s", err)
+					return nil, n
+				}
+			}
+		}
+
 		m.Hidden = n.Hidden
 		n.Symbol.Binding = m
 		n.Symbol.Addr = len(c.obj.Metrics)

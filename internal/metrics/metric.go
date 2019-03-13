@@ -35,6 +35,10 @@ const (
 
 	// Text is a special metric type for free text, usually for operating as a 'hidden' metric, as often these values cannot be exported.
 	Text
+
+	// Histogram is a Kind that observes a value and stores the value
+	// in a bucket.
+	Histogram
 )
 
 const (
@@ -44,6 +48,8 @@ const (
 	Float = datum.Float
 	// String indicates this metric contains string values
 	String = datum.String
+	// Buckets indicates this metric is a histogram metric type.
+	Buckets = datum.Buckets
 )
 
 func (m Kind) String() string {
@@ -56,6 +62,8 @@ func (m Kind) String() string {
 		return "Timer"
 	case Text:
 		return "Text"
+	case Histogram:
+		return "Histogram"
 	}
 	return "Unknown"
 }
@@ -87,6 +95,7 @@ type Metric struct {
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
 	Source      string        `json:"-"`
+	Buckets     []datum.Range `json:",omitempty"`
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).
@@ -137,6 +146,12 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 			d = datum.NewFloat()
 		case datum.String:
 			d = datum.NewString()
+		case datum.Buckets:
+			buckets := m.Buckets
+			if buckets == nil {
+				buckets = make([]datum.Range, 0)
+			}
+			d = datum.NewBuckets(buckets)
 		}
 		m.LabelValues = append(m.LabelValues, &LabelValue{Labels: labelvalues, Value: d})
 	}
@@ -241,7 +256,7 @@ func (lv *LabelValue) UnmarshalJSON(b []byte) error {
 func (m *Metric) String() string {
 	m.RLock()
 	defer m.RUnlock()
-	return fmt.Sprintf("Metric: name=%s program=%s kind=%v type=%s hidden=%v keys=%v labelvalues=%v source=%s", m.Name, m.Program, m.Kind, m.Type, m.Hidden, m.Keys, m.LabelValues, m.Source)
+	return fmt.Sprintf("Metric: name=%s program=%s kind=%v type=%s hidden=%v keys=%v labelvalues=%v source=%s buckets=%v", m.Name, m.Program, m.Kind, m.Type, m.Hidden, m.Keys, m.LabelValues, m.Source, m.Buckets)
 }
 
 // SetSource sets the source of a metric, describing where in user programmes it was defined.

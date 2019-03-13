@@ -208,6 +208,7 @@ type VarDecl struct {
 	Name         string
 	Hidden       bool
 	Keys         []string
+	Buckets      []float64
 	Kind         metrics.Kind
 	ExportedName string
 	Symbol       *symbol.Symbol
@@ -218,7 +219,9 @@ func (n *VarDecl) Pos() *position.Position {
 }
 
 func (n *VarDecl) Type() types.Type {
-	if n.Symbol != nil {
+	if n.Kind == metrics.Histogram {
+		return types.Buckets
+	} else if n.Symbol != nil {
 		return n.Symbol.Type
 	}
 	return types.Error

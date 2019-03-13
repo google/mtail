@@ -60,12 +60,24 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 					keys = append(keys, k)
 					vals = append(vals, v)
 				}
-				pM, err := prometheus.NewConstMetric(
-					prometheus.NewDesc(noHyphens(m.Name),
-						fmt.Sprintf("defined at %s", lastSource), keys, nil),
-					promTypeForKind(m.Kind),
-					promValueForDatum(ls.Datum),
-					vals...)
+				var pM prometheus.Metric
+				var err error
+				if m.Kind == metrics.Histogram {
+					pM, err = prometheus.NewConstHistogram(
+						prometheus.NewDesc(noHyphens(m.Name),
+							fmt.Sprintf("defined at %s", lastSource), keys, nil),
+						datum.GetBucketsCount(ls.Datum),
+						datum.GetBucketsSum(ls.Datum),
+						datum.GetBucketsByMax(ls.Datum),
+						vals...)
+				} else {
+					pM, err = prometheus.NewConstMetric(
+						prometheus.NewDesc(noHyphens(m.Name),
+							fmt.Sprintf("defined at %s", lastSource), keys, nil),
+						promTypeForKind(m.Kind),
+						promValueForDatum(ls.Datum),
+						vals...)
+				}
 				if err != nil {
 					glog.Warning(err)
 					continue

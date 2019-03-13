@@ -192,6 +192,8 @@ var (
 	Float   = &Operator{"Float", []Type{}}
 	String  = &Operator{"String", []Type{}}
 	Pattern = &Operator{"Pattern", []Type{}}
+	// TODO(jaq): use composite type so we can typecheck the bucket directly, e.g. hist[j] = i
+	Buckets = &Operator{"Buckets", []Type{}}
 )
 
 // Builtins is a mapping of the builtin language functions to their type definitions.

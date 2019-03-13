@@ -400,10 +400,9 @@ pattern `some event`, and if it does match, increments `variable`.
 
 #### Types
 
-`mtail` has a few internal types on two dimensions.
+`mtail` metrics have a *kind* and a *type*.  The *kind* effects how the metric is recorded, and the *type* describes the data being recorded.
 
-The first dimension has no bearing on the behaviour of `mtail`, but changes how
-the variables are exported:
+Ordinarily `mtail` doesn't treat kinds specially, except when they are being exported.
 
 *   `counter` assumes that the variable is a monotonically increasing measure,
     so that computations on sampled data like rates can be performed without
@@ -411,6 +410,8 @@ the variables are exported:
 *   `gauge` assumes that the variable can be set to any value at any time,
     signalling that rate computations are risky. Use for measures like queue
     length at a point in time.
+* `histogram` is used to record frequency of events broken down by another dimension, for example by latency ranges.  This kind does have special treatment within `mtail`.
+
 
 The second dimension is the internal representation of a value, which is used by
 `mtail` to attempt to generate efficient bytecode.
@@ -422,7 +423,8 @@ The second dimension is the internal representation of a value, which is used by
 
 Some of these types can only be used in certain locations -- for example, you
 can't increment a counter by a string, but `mtail` will fall back to a attempt
-to do so, logging an error if a runtime type conversion fails.
+to do so, logging an error if a runtime type conversion fails.  Likewise, the
+only type that a `histogram` can observe is a Float.
 
 These types are usually inferred from use, but can be influenced by the
 programmer with builtin functions. Read on.

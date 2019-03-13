@@ -67,7 +67,7 @@ var lexerTests = []lexerTest{
 		{DEC, "--", position.Position{"operators", 0, 63, 64}},
 		{EOF, "", position.Position{"operators", 0, 65, 65}}}},
 	{"keywords",
-		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\nafter\nstop\n", []Token{
+		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\nafter\nstop\nhistogram\nbuckets\n", []Token{
 			{COUNTER, "counter", position.Position{"keywords", 0, 0, 6}},
 			{NL, "\n", position.Position{"keywords", 1, 7, -1}},
 			{GAUGE, "gauge", position.Position{"keywords", 1, 0, 4}},
@@ -98,7 +98,11 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position.Position{"keywords", 14, 5, -1}},
 			{STOP, "stop", position.Position{"keywords", 14, 0, 3}},
 			{NL, "\n", position.Position{"keywords", 15, 4, -1}},
-			{EOF, "", position.Position{"keywords", 15, 0, 0}}}},
+			{HISTOGRAM, "histogram", position.Position{"keywords", 15, 0, 8}},
+			{NL, "\n", position.Position{"keywords", 16, 9, -1}},
+			{BUCKETS, "buckets", position.Position{"keywords", 16, 0, 6}},
+			{NL, "\n", position.Position{"keywords", 17, 7, -1}},
+			{EOF, "", position.Position{"keywords", 17, 0, 0}}}},
 	{"builtins",
 		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\n", []Token{
 			{BUILTIN, "strptime", position.Position{"builtins", 0, 0, 7}},
@@ -124,7 +128,7 @@ var lexerTests = []lexerTest{
 			{BUILTIN, "string", position.Position{"builtins", 10, 0, 5}},
 			{NL, "\n", position.Position{"builtins", 11, 6, -1}},
 			{EOF, "", position.Position{"builtins", 11, 0, 0}}}},
-	{"numbers", "1 23 3.14 1.61.1 -1 -1.0 1h 0d 3d -1.5h 15m 24h0m0s", []Token{
+	{"numbers", "1 23 3.14 1.61.1 -1 -1.0 1h 0d 3d -1.5h 15m 24h0m0s 1e3 1e-3 .11 123.456e7", []Token{
 		{INTLITERAL, "1", position.Position{"numbers", 0, 0, 0}},
 		{INTLITERAL, "23", position.Position{"numbers", 0, 2, 3}},
 		{FLOATLITERAL, "3.14", position.Position{"numbers", 0, 5, 8}},
@@ -138,7 +142,11 @@ var lexerTests = []lexerTest{
 		{DURATIONLITERAL, "-1.5h", position.Position{"numbers", 0, 34, 38}},
 		{DURATIONLITERAL, "15m", position.Position{"numbers", 0, 40, 42}},
 		{DURATIONLITERAL, "24h0m0s", position.Position{"numbers", 0, 44, 50}},
-		{EOF, "", position.Position{"numbers", 0, 51, 51}},
+		{FLOATLITERAL, "1e3", position.Position{"numbers", 0, 52, 54}},
+		{FLOATLITERAL, "1e-3", position.Position{"numbers", 0, 56, 59}},
+		{FLOATLITERAL, ".11", position.Position{"numbers", 0, 61, 63}},
+		{FLOATLITERAL, "123.456e7", position.Position{"numbers", 0, 65, 73}},
+		{EOF, "", position.Position{"numbers", 0, 74, 74}},
 	}},
 	{"identifier", "a be foo\nquux line_count", []Token{
 		{ID, "a", position.Position{"identifier", 0, 0, 0}},
@@ -249,7 +257,6 @@ func TestLex(t *testing.T) {
 	for _, tc := range lexerTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			tokens := collect(&tc)
 
 			if diff := testutil.Diff(tc.tokens, tokens, testutil.AllowUnexported(Token{}, position.Position{})); diff != "" {

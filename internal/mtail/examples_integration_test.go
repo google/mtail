@@ -198,12 +198,13 @@ func TestCompileExamplePrograms(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	matches, err := filepath.Glob("examples/*.mtail")
+	matches, err := filepath.Glob("../../examples/*.mtail")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, tc := range matches {
-		t.Run(tc, func(t *testing.T) {
+		name := filepath.Base(tc)
+		t.Run(name, func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
 			mtail, err := mtail.New(s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
