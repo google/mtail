@@ -5,6 +5,8 @@
 # Build these.
 TARGETS = mtail mgen mdot
 
+all: $(TARGETS)
+
 # Install them here
 PREFIX ?= usr/local
 
@@ -83,7 +85,6 @@ GOX = $(BIN)/gox
 $(GOX):
 	go get github.com/mitchellh/gox
 
-all: $(TARGETS)
 
 .PHONY: clean covclean crossclean
 clean: covclean crossclean
