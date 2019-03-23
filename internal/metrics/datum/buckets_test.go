@@ -4,6 +4,7 @@
 package datum_test
 
 import (
+	"math"
 	"testing"
 	"testing/quick"
 	"time"
@@ -35,5 +36,9 @@ func TestMakeBucket(t *testing.T) {
 	}
 	if r := datum.GetBucketsCount(b); r != 1 {
 		t.Errorf("count not 1, got %v", r)
+	}
+	bs := datum.GetBucketsByMax(b)
+	if r := datum.GetBucketsCount(b); r != bs[math.Inf(+1)] {
+		t.Errorf("Inf bucket des not equal total observation count: %v vs %v", r, bs[math.Inf(+1)])
 	}
 }
