@@ -30,15 +30,15 @@ func TestMakeBucket(t *testing.T) {
 	}
 	b := datum.MakeBuckets(r, time.Unix(37, 42))
 	ts := time.Unix(37, 31)
-	datum.Observe(b, 1, ts)
-	if r := datum.GetBucketsSum(b); r != 1 {
-		t.Errorf("sum not 1, got %v", r)
+	datum.Observe(b, 2, ts)
+	if r := datum.GetBucketsSum(b); r != 2 {
+		t.Errorf("sum not 2, got %v", r)
 	}
 	if r := datum.GetBucketsCount(b); r != 1 {
 		t.Errorf("count not 1, got %v", r)
 	}
 	bs := datum.GetBucketsByMax(b)
 	if r := datum.GetBucketsCount(b); r != bs[math.Inf(+1)] {
-		t.Errorf("Inf bucket des not equal total observation count: %v vs %v", r, bs[math.Inf(+1)])
+		t.Errorf("Inf bucket des not equal total observation count: %v vs %v", bs[math.Inf(+1)], r)
 	}
 }

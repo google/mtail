@@ -23,7 +23,7 @@ type bucketCount struct {
 }
 
 func (r *Range) Contains(v float64) bool {
-	return r.Min <= v && v < r.Max
+	return r.Min < v && v <= r.Max
 }
 
 // BucketsDatum describes a floating point value at a given timestamp.

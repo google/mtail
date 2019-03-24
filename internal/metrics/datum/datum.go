@@ -6,6 +6,7 @@ package datum
 import (
 	"fmt"
 	"math"
+	"sort"
 	"sync/atomic"
 	"time"
 )
@@ -267,11 +268,17 @@ func GetBucketsSum(d Datum) float64 {
 func GetBucketsByMax(d Datum) map[float64]uint64 {
 	switch d := d.(type) {
 	case *BucketsDatum:
-		buckets := make(map[float64]uint64)
-		cum := uint64(0)
+		buckets := make(map[float64]uint64, 0)
+		maxes := make([]float64, 0)
 		for r, c := range d.Buckets() {
-			cum += c
-			buckets[r.Max] = cum
+			maxes = append(maxes, r.Max)
+			buckets[r.Max] = c
+		}
+		sort.Sort(sort.Float64Slice(maxes))
+		cum := uint64(0)
+		for _, m := range maxes {
+			cum += buckets[m]
+			buckets[m] = cum
 		}
 		return buckets
 	default:
