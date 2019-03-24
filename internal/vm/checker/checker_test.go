@@ -173,7 +173,6 @@ func TestCheckInvalidPrograms(t *testing.T) {
 	for _, tc := range checkerInvalidPrograms {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
 			if err != nil {
 				t.Fatal(err)
@@ -369,7 +368,6 @@ func TestCheckValidPrograms(t *testing.T) {
 	for _, tc := range checkerValidPrograms {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
 			if err != nil {
 				t.Fatal(err)
@@ -417,7 +415,6 @@ func TestCheckTypeExpressions(t *testing.T) {
 	for _, tc := range checkerTypeExpressionTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			ast, err := checker.Check(tc.expr)
 			if err != nil {
 				t.Fatalf("check error: %s", err)

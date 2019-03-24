@@ -856,7 +856,6 @@ func TestCodegen(t *testing.T) {
 	for _, tc := range testCodeGenPrograms {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.source))
 			if err != nil {
 				t.Fatalf("Parse error: %s", err)

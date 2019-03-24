@@ -92,7 +92,6 @@ func TestHandleJSON(t *testing.T) {
 	for _, tc := range handleJSONTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			ms := metrics.NewStore()
 			for _, metric := range tc.metrics {
 				testutil.FatalIfErr(t, ms.Add(metric))

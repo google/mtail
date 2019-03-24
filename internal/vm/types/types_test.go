@@ -128,7 +128,6 @@ func TestTypeUnification(t *testing.T) {
 	for _, tc := range typeUnificationTests {
 		tc := tc
 		t.Run(fmt.Sprintf("%s %s", tc.a, tc.b), func(t *testing.T) {
-			t.Parallel()
 			err := Unify(tc.a, tc.b)
 			if err != nil {
 				t.Errorf("%s", err)
@@ -210,7 +209,6 @@ func TestInferCaprefType(t *testing.T) {
 	for _, tc := range inferCaprefTypeTests {
 		tc := tc
 		t.Run(tc.pattern, func(t *testing.T) {
-			t.Parallel()
 			re, err := syntax.Parse(`(`+tc.pattern+`)`, syntax.Perl)
 			if err != nil {
 				t.Fatal(err)
