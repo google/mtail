@@ -157,27 +157,7 @@ func (m *Server) initExporter() (err error) {
 	if err != nil {
 		return err
 	}
-
-	expvarDescs := map[string]*prometheus.Desc{
-		// internal/tailer/file.go
-		"log_errors_total":    prometheus.NewDesc("log_errors_total", "number of IO errors encountered per log file", []string{"logfile"}, nil),
-		"log_rotations_total": prometheus.NewDesc("log_rotations_total", "number of log rotation events per log file", []string{"logfile"}, nil),
-		"log_truncates_total": prometheus.NewDesc("log_truncates_total", "number of log truncation events log file", []string{"logfile"}, nil),
-		"log_lines_total":     prometheus.NewDesc("log_lines_total", "number of lines read per log file", []string{"logfile"}, nil),
-		// internal/vm/loader.go
-		"line_count":          prometheus.NewDesc("line_count", "number of lines received by the program loader", nil, nil),
-		"prog_loads_total":    prometheus.NewDesc("prog_loads_total", "number of program load events by program source filename", []string{"prog"}, nil),
-		"prog_load_errors":    prometheus.NewDesc("prog_load_errors", "number of errors encountered when loading per program source filename", []string{"prog"}, nil),
-		"prog_runtime_errors": prometheus.NewDesc("prog_runtime_errors", "number of errors encountered when executing programs per source filename", []string{"prog"}, nil),
-		// internal/watcher/log_watcher.go
-		"log_watcher_error_count": prometheus.NewDesc("log_watcher_error_count", "number of errors received from fsnotify", nil, nil),
-	}
-	m.reg.MustRegister(m.e,
-		prometheus.NewGoCollector(),
-		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
-	// Prefix all expvar metrics with 'mtail_'
-	prometheus.WrapRegistererWithPrefix("mtail_", m.reg).MustRegister(
-		prometheus.NewExpvarCollector(expvarDescs))
+	m.reg.MustRegister(m.e)
 
 	// Create mtail_build_info metric.
 	version.Branch = m.buildInfo.Branch
@@ -251,6 +231,27 @@ func New(store *metrics.Store, w watcher.Watcher, options ...func(*Server) error
 		// are not fully specified at startup.
 		reg: prometheus.NewRegistry(),
 	}
+
+	expvarDescs := map[string]*prometheus.Desc{
+		// internal/tailer/file.go
+		"log_errors_total":    prometheus.NewDesc("log_errors_total", "number of IO errors encountered per log file", []string{"logfile"}, nil),
+		"log_rotations_total": prometheus.NewDesc("log_rotations_total", "number of log rotation events per log file", []string{"logfile"}, nil),
+		"log_truncates_total": prometheus.NewDesc("log_truncates_total", "number of log truncation events log file", []string{"logfile"}, nil),
+		"log_lines_total":     prometheus.NewDesc("log_lines_total", "number of lines read per log file", []string{"logfile"}, nil),
+		// internal/vm/loader.go
+		"line_count":          prometheus.NewDesc("line_count", "number of lines received by the program loader", nil, nil),
+		"prog_loads_total":    prometheus.NewDesc("prog_loads_total", "number of program load events by program source filename", []string{"prog"}, nil),
+		"prog_load_errors":    prometheus.NewDesc("prog_load_errors", "number of errors encountered when loading per program source filename", []string{"prog"}, nil),
+		"prog_runtime_errors": prometheus.NewDesc("prog_runtime_errors", "number of errors encountered when executing programs per source filename", []string{"prog"}, nil),
+		// internal/watcher/log_watcher.go
+		"log_watcher_error_count": prometheus.NewDesc("log_watcher_error_count", "number of errors received from fsnotify", nil, nil),
+	}
+	m.reg.MustRegister(
+		prometheus.NewGoCollector(),
+		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	// Prefix all expvar metrics with 'mtail_'
+	prometheus.WrapRegistererWithPrefix("mtail_", m.reg).MustRegister(
+		prometheus.NewExpvarCollector(expvarDescs))
 	if err := m.SetOption(options...); err != nil {
 		return nil, err
 	}
