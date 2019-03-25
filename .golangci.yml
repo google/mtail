@@ -44,3 +44,6 @@ issues:
   #   #- 'bad syntax for struct tag pair'
      # goyacc generated error in three locations
      - 'this value of `mtailDollar.* is never used'
+     # Incorrectly reports undeclared in same package
+     - "undeclared name:"
+
