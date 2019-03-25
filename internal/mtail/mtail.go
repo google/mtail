@@ -103,7 +103,9 @@ func (m *Server) StartTailing() error {
 
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *Server) initLoader() error {
-	opts := []func(*vm.Loader) error{}
+	opts := []func(*vm.Loader) error{
+		vm.PrometheusRegisterer(m.reg),
+	}
 	if m.compileOnly {
 		opts = append(opts, vm.CompileOnly)
 		if m.oneShot {
@@ -170,9 +172,6 @@ func (m *Server) initExporter() (err error) {
 		// internal/watcher/log_watcher.go
 		"log_watcher_error_count": prometheus.NewDesc("log_watcher_error_count", "number of errors received from fsnotify", nil, nil),
 	}
-	// Using a non-pedantic registry means we can be looser with metrics that
-	// are not fully specified at startup.
-	m.reg = prometheus.NewRegistry()
 	m.reg.MustRegister(m.e,
 		prometheus.NewGoCollector(),
 		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
@@ -248,6 +247,9 @@ func New(store *metrics.Store, w watcher.Watcher, options ...func(*Server) error
 		webquit:   make(chan struct{}),
 		closeQuit: make(chan struct{}),
 		h:         &http.Server{},
+		// Using a non-pedantic registry means we can be looser with metrics that
+		// are not fully specified at startup.
+		reg: prometheus.NewRegistry(),
 	}
 	if err := m.SetOption(options...); err != nil {
 		return nil, err

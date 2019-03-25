@@ -17,15 +17,25 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/golang/groupcache/lru"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/vm/code"
 	"github.com/google/mtail/internal/vm/object"
+)
 
-	"github.com/golang/groupcache/lru"
+var (
+	lineProcessingDurations = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "mtail",
+		Subsystem: "vm",
+		Name:      "line_processing_duration_milliseconds",
+		Help:      "VM line processing time distribution in milliseconds.",
+		Buckets:   prometheus.DefBuckets,
+	}, []string{"prog"})
 )
 
 type thread struct {
@@ -719,6 +729,10 @@ func (v *VM) execute(t *thread, i code.Instr) {
 // fetch-execute cycle on the VM bytecode with the line as input to the
 // program, until termination.
 func (v *VM) processLine(line *logline.LogLine) {
+	start := time.Now()
+	defer func() {
+		lineProcessingDurations.WithLabelValues(v.name).Observe(float64(time.Since(start).Nanoseconds()) / 1.e6)
+	}()
 	t := new(thread)
 	t.matched = false
 	v.t = t

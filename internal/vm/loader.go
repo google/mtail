@@ -24,6 +24,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
@@ -253,9 +254,10 @@ func nameToCode(name string) uint32 {
 // managing the running virtual machines that receive input from the lines
 // channel.
 type Loader struct {
-	ms          *metrics.Store  // pointer to metrics.Store to pass to compiler
-	w           watcher.Watcher // watches for program changes
-	programPath string          // Path that contains mtail programs.
+	ms          *metrics.Store        // pointer to metrics.Store to pass to compiler
+	w           watcher.Watcher       // watches for program changes
+	reg         prometheus.Registerer // plce to reg metrics
+	programPath string                // Path that contains mtail programs.
 
 	eventsHandle int // record the handle with which to add programs to the watcher
 
@@ -328,6 +330,14 @@ func OmitMetricSource(l *Loader) error {
 	return nil
 }
 
+// PrometheusRegisterer passes in a registry for setting up exported metrics.
+func PrometheusRegisterer(reg prometheus.Registerer) func(l *Loader) error {
+	return func(l *Loader) error {
+		l.reg = reg
+		return nil
+	}
+}
+
 // NewLoader creates a new program loader that reads programs from programPath.
 func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.LogLine, w watcher.Watcher, options ...func(*Loader) error) (*Loader, error) {
 	if store == nil || lines == nil {
@@ -344,6 +354,9 @@ func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.L
 	}
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
+	}
+	if l.reg != nil {
+		l.reg.MustRegister(lineProcessingDurations)
 	}
 	handle, eventsChan := l.w.Events()
 	l.eventsHandle = handle
