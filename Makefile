@@ -38,10 +38,10 @@ endif
 # all benchmarks, not per bench.
 benchtimeout := 20m
 
-# Only be verbose with `go get` unless the UPGRADE variable is also set.
-GOGETFLAGS="-v"
-ifeq ($(UPGRADE),"y")
-GOGETFLAGS=$(GOGETFLAGS) "-u"
+# Be verbose with `go get`, if UPDATE is y then also update dependencies.
+GOGETFLAGS = -v
+ifeq ($(UPDATE),y)
+GOGETFLAGS += -u
 endif
 
 GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
@@ -63,23 +63,23 @@ BIN = $(GOPATH)/bin
 
 TOGO = $(BIN)/togo
 $(TOGO):
-	go get $(UPGRADE) -v github.com/flazz/togo
+	go get $(GOGETFLAGS) github.com/flazz/togo
 
 GOYACC = $(BIN)/goyacc
 $(GOYACC):
-	go get $(UPGRADE) -v golang.org/x/tools/cmd/goyacc
+	go get $(GOGETFLAGS) golang.org/x/tools/cmd/goyacc
 
 GOFUZZBUILD = $(BIN)/go-fuzz-build
 $(GOFUZZBUILD):
-	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz-build
+	go get $(GOGETFLAGS) github.com/dvyukov/go-fuzz/go-fuzz-build
 
 GOFUZZ = $(BIN)/go-fuzz
 $(GOFUZZ):
-	go get $(UPGRADE) -v github.com/dvyukov/go-fuzz/go-fuzz
+	go get $(GOGETFLAGS) github.com/dvyukov/go-fuzz/go-fuzz
 
 GOVERALLS = $(BIN)/goveralls
 $(GOVERALLS):
-	go get $(UPGRADE) -v github.com/mattn/goveralls
+	go get $(GOGETFLAGS) github.com/mattn/goveralls
 
 GOX = $(BIN)/gox
 $(GOX):
@@ -221,8 +221,8 @@ fuzz: vm-fuzz.zip | $(GOFUZZ)
 install_deps: .dep-stamp
 .dep-stamp: internal/vm/parser/parser.go
 	@echo "Install all dependencies, ensuring they're updated"
-	go get $(UPGRADE) -v $(IMPORTS)
-	go get $(UPGRADE) -v $(TESTIMPORTS)
+	go get $(GOGETFLAGS) $(IMPORTS)
+	go get $(GOGETFLAGS) $(TESTIMPORTS)
 	touch $@
 
 
