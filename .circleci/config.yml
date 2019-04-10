@@ -88,6 +88,13 @@ jobs:
           path: coverage.html
           destination: coverage
 
+  container:
+    steps:
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run: |
+          make container
+
   delivery:
     working_directory: /go/src/github.com/google/mtail
     docker:
@@ -150,9 +157,12 @@ workflows:
             - build-go1.10-4
             - build-go1.10-2
             - build-go1.10-1
-      - delivery:
+      - container:
           requires:
             - coverage
+      - delivery:
+          requires:
+            - container
           filters:
             tags:
               only: /^v.*/
