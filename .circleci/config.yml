@@ -103,6 +103,7 @@ jobs:
     docker:
       - image: circleci/golang:1.12
     steps:
+      - checkout
       - setup_remote_docker:
           docker_layer_caching: true
       - run: |
