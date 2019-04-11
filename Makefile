@@ -86,13 +86,15 @@ $(GOX):
 	go get github.com/mitchellh/gox
 
 
-.PHONY: clean covclean crossclean
+.PHONY: clean covclean crossclean depclean
 clean: covclean crossclean
-	rm -f $(CLEANFILES) .*dep-stamp
+	rm -f $(CLEANFILES)
 covclean:
 	rm -f *.coverprofile coverage.html $(COVERPROFILES)
 crossclean:
 	rm -rf build
+depclean:
+	rm -f .d/*  .*dep-stamp
 
 .PHONY: lint
 lint:
