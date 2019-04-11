@@ -79,7 +79,7 @@ jobs:
     environment:
       COVERALLS_TOKEN: AQTCw3bl6FDphbQcMMkgVZBIunz5r3H8b
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     steps:
       - checkout
       - attach_workspace:
@@ -99,6 +99,8 @@ jobs:
           destination: coverage
 
   container:
+    docker:
+      - image: circleci/golang:1.12
     steps:
       - setup_remote_docker:
           docker_layer_caching: true
@@ -108,7 +110,7 @@ jobs:
   delivery:
     working_directory: /go/src/github.com/google/mtail
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     steps:
       - checkout
       - attach_workspace:
