@@ -59,8 +59,8 @@ jobs:
     <<: [*go1_12, *concurrency_2]
   build-go1.12-1:
     <<: [*go1_12, *concurrency_1]
-  build-go1.12-4:
-    <<: [*go1_12, *concurrency_4]
+  build-go1.11-4:
+    <<: [*go1_11, *concurrency_4]
   build-go1.11-2:
     <<: [*go1_11, *concurrency_2]
   build-go1.11-1:
