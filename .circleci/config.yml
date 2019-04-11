@@ -99,6 +99,7 @@ jobs:
           destination: coverage
 
   container:
+    working_directory: /go/src/github.com/google/mtail
     docker:
       - image: circleci/golang:1.12
     steps:
