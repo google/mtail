@@ -32,9 +32,9 @@ var (
 	lineProcessingDurations = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "mtail",
 		Subsystem: "vm",
-		Name:      "line_processing_duration_milliseconds",
-		Help:      "VM line processing time distribution in milliseconds.",
-		Buckets:   prometheus.DefBuckets,
+		Name:      "line_processing_duration_seconds",
+		Help:      "VM line processing time distribution in seconds.",
+		Buckets:   prometheus.ExponentialBuckets(0.00002, 2.0, 10),
 	}, []string{"prog"})
 )
 
@@ -731,7 +731,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 func (v *VM) processLine(line *logline.LogLine) {
 	start := time.Now()
 	defer func() {
-		lineProcessingDurations.WithLabelValues(v.name).Observe(float64(time.Since(start).Nanoseconds()) / 1.e6)
+		lineProcessingDurations.WithLabelValues(v.name).Observe(time.Since(start).Seconds())
 	}()
 	t := new(thread)
 	t.matched = false
