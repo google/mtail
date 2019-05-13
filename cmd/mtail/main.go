@@ -93,6 +93,9 @@ func main() {
 	}
 	glog.Info(buildInfo.String())
 	glog.Infof("Commandline: %q", os.Args)
+	if len(flag.Args()) > 0 {
+		glog.Exitf("Too many extra arguments specified: %q\n(the logs flag can be repeated, or the filenames separated by commas.)", flag.Args())
+	}
 	loc, err := time.LoadLocation(*overrideTimezone)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Couldn't parse timezone %q: %s", *overrideTimezone, err)
