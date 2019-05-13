@@ -9,7 +9,7 @@ type LogLine struct {
 	Line     string // The text of the log line itself up to the newline.
 }
 
-// NewLogLine creates a new LogLine object.
-func NewLogLine(filename string, line string) *LogLine {
+// New creates a new LogLine object.
+func New(filename string, line string) *LogLine {
 	return &LogLine{filename, line}
 }

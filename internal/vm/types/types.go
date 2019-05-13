@@ -396,6 +396,8 @@ func InferCaprefType(re *syntax.Regexp, cap int) Type {
 		return None
 	}
 	switch {
+	case groupOnlyMatches(group, "+-"):
+		return String
 	case groupOnlyMatches(group, "+-0123456789"):
 		return Int
 	case groupOnlyMatches(group, "+-0123456789.eE"):

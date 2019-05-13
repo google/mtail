@@ -23,7 +23,7 @@ func TestBasicTail(t *testing.T) {
 		{10 * time.Millisecond, true},
 	}
 	if testing.Verbose() {
-		testutil.TestSetFlag(t, "vmodule", "tail=2,log_watcher=2")
+		defer testutil.TestSetFlag(t, "vmodule", "tail=2,log_watcher=2")()
 	}
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%s %v", test.d, test.b), func(t *testing.T) {

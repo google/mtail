@@ -342,7 +342,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				conv := &ast.ConvExpr{N: n.Lhs}
 				conv.SetType(t)
 				n.Lhs = conv
-				glog.V(2).Infof("Emitting convnode %+v", conv)
+				glog.V(2).Infof("Emitting convnode %#v on %#v", conv, n)
 			}
 			if !types.Equals(t, rT) {
 				conv := &ast.ConvExpr{N: n.Rhs}
