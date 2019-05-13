@@ -69,9 +69,9 @@ func init() {
 
 var (
 	// Version and Revision are supplied by the linker
-	Branch   string
-	Version  string
-	Revision string
+	Branch   string = "invalid-use-make"
+	Version  string = "invalid-use-make"
+	Revision string = "invalid-use-make"
 )
 
 func main() {
