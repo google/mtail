@@ -484,7 +484,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		}
 
 	case code.Timestamp:
-		// Put the time register onto the stack, unless it's zero in which case code.use system time.
+		// Put the time register onto the stack, unless it's zero in which case use system time.
 		if t.time.IsZero() {
 			t.Push(time.Now().Unix())
 		} else {
