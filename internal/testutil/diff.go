@@ -21,3 +21,7 @@ func IgnoreUnexported(types ...interface{}) cmp.Option {
 func AllowUnexported(types ...interface{}) cmp.Option {
 	return cmp.AllowUnexported(types...)
 }
+
+func IgnoreFields(typ interface{}, names ...string) cmp.Option {
+	return cmpopts.IgnoreFields(typ, names...)
+}

@@ -7,19 +7,21 @@ import (
 	"bufio"
 	"expvar"
 	"strings"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
 )
 
 var vmTests = []struct {
-	name string
-	prog string
-	log  string
+	name    string
+	prog    string
+	log     string
+	metrics map[string][]*metrics.Metric
 }{
 	{"single-dash-parseint",
 		`counter c
@@ -32,11 +34,27 @@ var vmTests = []struct {
 `, `123 a
 - b
 `,
+		map[string][]*metrics.Metric{
+			"c": {
+				&metrics.Metric{
+					Name:    "c",
+					Program: "single-dash-parseint",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Hidden:  false,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						&metrics.LabelValue{
+							Value: &datum.IntDatum{Value: 1},
+						},
+					},
+				},
+			},
+		},
 	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
-	t.Skip("busted")
 	if testing.Verbose() {
 		defer testutil.TestSetFlag(t, "vmodule", "vm=2,loader=2")()
 	}
@@ -57,27 +75,16 @@ func TestVmEndToEnd(t *testing.T) {
 				lines <- logline.New(tc.name, scanner.Text())
 			}
 			close(lines)
-			w.Close()
+			<-l.VMsDone
 
-			check := func() (bool, error) {
-				if expvar.Get("line_count").String() != string(lineCount) {
-					return false, nil
-				}
-				return true, nil
-			}
-			ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
-			if err != nil {
-				t.Errorf("Busted, timeout waiting for line count.")
-			}
-
-			if !ok {
-				t.Errorf("Incorrect lines read: expected %d received %s", lineCount, expvar.Get("line_count"))
-			}
-			// This is not good.
+			// This is not good; can the loader abort on error?
 			if expvar.Get("prog_runtime_errors").(*expvar.Map).Get(tc.name).String() != "0" {
 				t.Errorf("Nonzero runtime errors from program: got %s", expvar.Get("prog_runtime_errors").(*expvar.Map).Get(tc.name))
 			}
-			t.Logf("Store is %v", store)
+			// t.Logf("Store is %v", store)
+			if res := testutil.Diff(store.Metrics, tc.metrics, testutil.IgnoreUnexported(sync.RWMutex{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time")); res != "" {
+				t.Errorf("Store didn't match:\n got %v\nwant %v\n%s", store.Metrics, tc.metrics, res)
+			}
 		})
 	}
 }
