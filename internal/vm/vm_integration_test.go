@@ -56,7 +56,7 @@ var vmTests = []struct {
 
 func TestVmEndToEnd(t *testing.T) {
 	if testing.Verbose() {
-		defer testutil.TestSetFlag(t, "vmodule", "vm=2,loader=2")()
+		defer testutil.TestSetFlag(t, "vmodule", "vm=2,loader=2,checker=2")()
 	}
 	for _, tc := range vmTests {
 		tc := tc
@@ -78,8 +78,10 @@ func TestVmEndToEnd(t *testing.T) {
 			<-l.VMsDone
 
 			// This is not good; can the loader abort on error?
-			if expvar.Get("prog_runtime_errors").(*expvar.Map).Get(tc.name).String() != "0" {
-				t.Errorf("Nonzero runtime errors from program: got %s", expvar.Get("prog_runtime_errors").(*expvar.Map).Get(tc.name))
+			if m := expvar.Get("prog_runtime_errors"); m != nil {
+				if val := m.(*expvar.Map).Get(tc.name); val != nil && val.String() != "0" {
+					t.Errorf("Nonzero runtime errors from program: got %s", val)
+				}
 			}
 			// t.Logf("Store is %v", store)
 			if res := testutil.Diff(store.Metrics, tc.metrics, testutil.IgnoreUnexported(sync.RWMutex{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time")); res != "" {
