@@ -10,7 +10,7 @@ func TestDoOrTimeout(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 
-	ok, err := doOrTimeout(func() (bool, error) {
+	ok, err := DoOrTimeout(func() (bool, error) {
 		return false, nil
 	}, 10*time.Millisecond, time.Millisecond)
 	if ok || err == nil {
@@ -18,7 +18,7 @@ func TestDoOrTimeout(t *testing.T) {
 	}
 
 	i := 5
-	ok, err = doOrTimeout(func() (bool, error) {
+	ok, err = DoOrTimeout(func() (bool, error) {
 		i--
 		if i > 0 {
 			return false, nil
@@ -29,7 +29,7 @@ func TestDoOrTimeout(t *testing.T) {
 		t.Errorf("Expected OK, got %v, %v", ok, err)
 	}
 
-	ok, err = doOrTimeout(func() (bool, error) {
+	ok, err = DoOrTimeout(func() (bool, error) {
 		return true, nil
 	}, 10*time.Millisecond, time.Millisecond)
 	if !ok || err != nil {
