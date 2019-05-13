@@ -211,6 +211,9 @@ var inferCaprefTypeTests = []struct {
 	{`\d+\.\d+\.\d+\.\d+`,
 		String,
 	},
+	{`-`,
+		String,
+	},
 }
 
 func TestInferCaprefType(t *testing.T) {
