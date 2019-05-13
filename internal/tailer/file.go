@@ -216,7 +216,7 @@ func (f *File) Read() error {
 
 // sendLine sends the contents of the partial buffer off for processing.
 func (f *File) sendLine() {
-	f.lines <- logline.NewLogLine(f.Name, f.partial.String())
+	f.lines <- logline.New(f.Name, f.partial.String())
 	lineCount.Add(f.Name, 1)
 	glog.V(2).Info("Line sent")
 	// reset partial accumulator

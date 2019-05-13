@@ -478,7 +478,7 @@ func TestInstrs(t *testing.T) {
 				v.t.Push(item)
 			}
 			v.t.matches = make(map[int][]string)
-			v.input = logline.NewLogLine(testFilename, "aaaab")
+			v.input = logline.New(testFilename, "aaaab")
 			v.execute(v.t, tc.i)
 			if v.terminate {
 				t.Fatalf("Execution failed, see info log.")
@@ -509,7 +509,7 @@ func makeVM(i code.Instr, m []*metrics.Metric) *VM {
 	v.t = new(thread)
 	v.t.stack = make([]interface{}, 0)
 	v.t.matches = make(map[int][]string)
-	v.input = logline.NewLogLine(testFilename, "aaaab")
+	v.input = logline.New(testFilename, "aaaab")
 	return v
 
 }

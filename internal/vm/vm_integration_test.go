@@ -53,7 +53,7 @@ func TestVmEndToEnd(t *testing.T) {
 			lineCount := 0
 			for scanner.Scan() {
 				lineCount++
-				lines <- logline.NewLogLine(tc.name, scanner.Text())
+				lines <- logline.New(tc.name, scanner.Text())
 			}
 			close(lines)
 			w.Close()
