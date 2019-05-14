@@ -19,7 +19,6 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
-	"github.com/pkg/errors"
 )
 
 const testProgram = "/$/ { }\n"
@@ -61,59 +60,6 @@ func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	}
 	return m
 }
-
-func doOrTimeout(do func() (bool, error), deadline, interval time.Duration) (bool, error) {
-	timeout := time.After(deadline)
-	ticker := time.Tick(interval)
-	for {
-		select {
-		case <-timeout:
-			return false, errors.Errorf("timeout after %s", deadline)
-		case <-ticker:
-			glog.V(2).Infof("tick")
-			ok, err := do()
-			glog.V(2).Infof("ok, err: %v %v", ok, err)
-			if err != nil {
-				return false, err
-			} else if ok {
-				return true, nil
-			}
-		}
-	}
-}
-
-func TestDoOrTimeout(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-
-	ok, err := doOrTimeout(func() (bool, error) {
-		return false, nil
-	}, 10*time.Millisecond, time.Millisecond)
-	if ok || err == nil {
-		t.Errorf("Expected timeout, got %v, %v", ok, err)
-	}
-
-	i := 5
-	ok, err = doOrTimeout(func() (bool, error) {
-		i--
-		if i > 0 {
-			return false, nil
-		}
-		return true, nil
-	}, 100*time.Millisecond, time.Millisecond)
-	if !ok || err != nil {
-		t.Errorf("Expected OK, got %v, %v", ok, err)
-	}
-
-	ok, err = doOrTimeout(func() (bool, error) {
-		return true, nil
-	}, 10*time.Millisecond, time.Millisecond)
-	if !ok || err != nil {
-		t.Errorf("Expected OK, got %v, %v", ok, err)
-	}
-}
-
 func TestHandleLogUpdates(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
@@ -141,7 +87,7 @@ func TestHandleLogUpdates(t *testing.T) {
 			}
 			return true, nil
 		}
-		ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
+		ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -265,7 +211,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
+	ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
 	if err != nil {
 		t.Error(err)
 	}
@@ -334,7 +280,7 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err := doOrTimeout(check3, 1*time.Second, 10*time.Millisecond)
+	ok, err := testutil.DoOrTimeout(check3, 1*time.Second, 10*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +317,7 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err = doOrTimeout(check6, 100*time.Millisecond, 10*time.Millisecond)
+	ok, err = testutil.DoOrTimeout(check6, 100*time.Millisecond, 10*time.Millisecond)
 	if err != nil {
 		buf := make([]byte, 1<<16)
 		count := runtime.Stack(buf, true)
@@ -442,7 +388,7 @@ func TestGlob(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err := doOrTimeout(check, 10*time.Second, 100*time.Millisecond)
+	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -502,7 +448,7 @@ func TestGlobAfterStart(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err := doOrTimeout(check, 10*time.Second, 100*time.Millisecond)
+	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -538,7 +484,7 @@ func TestGlobAfterStart(t *testing.T) {
 // 		}
 // 		return true, nil
 // 	}
-// 	ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
+// 	ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
 // 	if err != nil {
 // 		buf := make([]byte, 1<<16)
 // 		count := runtime.Stack(buf, true)
@@ -579,7 +525,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err := doOrTimeout(check, 10*time.Second, 10*time.Millisecond)
+	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -596,7 +542,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err = doOrTimeout(check2, 10*time.Second, 10*time.Millisecond)
+	ok, err = testutil.DoOrTimeout(check2, 10*time.Second, 10*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -649,7 +595,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 			}
 			return true, nil
 		}
-		ok, err := doOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
+		ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -718,7 +664,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err := doOrTimeout(check, time.Second, 10*time.Millisecond)
+	ok, err := testutil.DoOrTimeout(check, time.Second, 10*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -751,7 +697,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err = doOrTimeout(checkFoo, time.Second, 10*time.Millisecond)
+	ok, err = testutil.DoOrTimeout(checkFoo, time.Second, 10*time.Millisecond)
 	if err != nil {
 		t.Error(err)
 	}
@@ -781,7 +727,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		}
 		return true, nil
 	}
-	ok, err = doOrTimeout(check2, time.Second, 10*time.Millisecond)
+	ok, err = testutil.DoOrTimeout(check2, time.Second, 10*time.Millisecond)
 	if err != nil {
 		t.Error(err)
 	}

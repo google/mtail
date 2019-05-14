@@ -71,3 +71,5 @@ Measure the time / throughput of lines.  VM processing time is most interesting
     to programmer optimisation, but line from tail to VM also matters.  Could
     use opencensus to trace the whole thing.  Can we opencensus a span that
     doesn't get closed in the same scope it's opened?
+
+Theory: Implicitly cast Int shouldn't get the S2i conversion applied to them.  Do we need to name Implicit Int separate from Int and then not create s2i or other conversions for implicits.  (and we need to keep the runtime conversions?)

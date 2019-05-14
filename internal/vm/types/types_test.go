@@ -169,6 +169,14 @@ var groupOnlyMatchesTests = []struct {
 		"0123456789.eE+-",
 		true,
 	},
+	{`(?P<x>-)`,
+		"+-",
+		true,
+	},
+	{`(?P<x>-)`,
+		"+-0123456789",
+		true,
+	},
 }
 
 func TestGroupOnlyMatches(t *testing.T) {
@@ -201,6 +209,9 @@ var inferCaprefTypeTests = []struct {
 		Float,
 	},
 	{`\d+\.\d+\.\d+\.\d+`,
+		String,
+	},
+	{`-`,
 		String,
 	},
 }

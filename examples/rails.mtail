@@ -9,7 +9,7 @@ counter rails_requests_started by verb
 counter rails_requests_completed_total
 counter rails_requests_completed by status
 
-histogram rails_requests_completed_milliseconds by status buckets 5, 10, 50, 100, 250, 500, 1000, 2500, 5000, 15000
+histogram rails_requests_completed_seconds by status buckets 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 15.0
 
 /^Started (?P<verb>[A-Z]+) .*/ {
   ###
@@ -19,7 +19,7 @@ histogram rails_requests_completed_milliseconds by status buckets 5, 10, 50, 100
   rails_requests_started[$verb]++
 }
 
-/^Completed (?P<status>\d{3}) .+ in (?P<request_milliseconds>\d+)ms .*$/ {
+/^Completed (?P<status>\d{3}) .+ in (?P<request_seconds>\d+)ms .*$/ {
   ###
   # Total numer of completed requests by status
   #
@@ -33,5 +33,5 @@ histogram rails_requests_completed_milliseconds by status buckets 5, 10, 50, 100
   # collecting system can compute the percentile bands by taking the ratio of
   # each bucket value over the final bucket.
 
-  rails_requests_completed_milliseconds[$status] = $request_milliseconds
+  rails_requests_completed_seconds[$status] = $request_seconds / 1000.0
 }
