@@ -6,6 +6,7 @@ package vm
 import (
 	"bufio"
 	"expvar"
+	"math"
 	"strings"
 	"sync"
 	"testing"
@@ -52,6 +53,105 @@ var vmTests = []struct {
 			},
 		},
 	},
+	{"histogram",
+		`histogram hist1 buckets 1, 2, 4, 8
+histogram hist2 by code buckets 0, 1, 2, 4, 8
+histogram hist3 by f buckets -1, 0, 1
+
+/^(.) (\d+)/ {
+  hist1 = $2
+  hist2[$1] = $2
+}
+
+/^(?P<foo>[a-z]+) (?P<time>\d+)$/ {
+  hist3[$foo] = $time
+}
+`,
+		`b 3
+b 3
+b 3
+`,
+		map[string][]*metrics.Metric{
+			"hist1": {
+				&metrics.Metric{
+					Name:    "hist1",
+					Program: "histogram",
+					Kind:    metrics.Histogram,
+					Type:    metrics.Buckets,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						&metrics.LabelValue{
+							Value: &datum.BucketsDatum{
+								Buckets: []datum.BucketCount{
+									{Range: datum.Range{Min: 0, Max: 1}},
+									{Range: datum.Range{Min: 1, Max: 2}},
+									{Range: datum.Range{Min: 2, Max: 4},
+										Count: 3},
+									{Range: datum.Range{Min: 4, Max: 8}},
+									{Range: datum.Range{Min: 8, Max: math.Inf(+1)}},
+								},
+								Count: 3,
+								Sum:   9,
+							},
+						},
+					},
+					Buckets: []datum.Range{{Min: 0, Max: 1}, {Min: 1, Max: 2}, {Min: 2, Max: 4}, {Min: 4, Max: 8}, {Min: 8, Max: math.Inf(+1)}},
+				},
+			},
+			"hist2": {
+				&metrics.Metric{
+					Name:    "hist2",
+					Program: "histogram",
+					Kind:    metrics.Histogram,
+					Type:    metrics.Buckets,
+					Keys:    []string{"code"},
+					LabelValues: []*metrics.LabelValue{
+						&metrics.LabelValue{
+							Labels: []string{"b"},
+							Value: &datum.BucketsDatum{
+								Buckets: []datum.BucketCount{
+									{Range: datum.Range{Min: 0, Max: 1}},
+									{Range: datum.Range{Min: 1, Max: 2}},
+									{Range: datum.Range{Min: 2, Max: 4},
+										Count: 3},
+									{Range: datum.Range{Min: 4, Max: 8}},
+									{Range: datum.Range{Min: 8, Max: math.Inf(+1)}},
+								},
+								Count: 3,
+								Sum:   9,
+							},
+						},
+					},
+					Buckets: []datum.Range{{Min: 0, Max: 1}, {Min: 1, Max: 2}, {Min: 2, Max: 4}, {Min: 4, Max: 8}, {Min: 8, Max: math.Inf(+1)}},
+				},
+			},
+			"hist3": {
+				&metrics.Metric{
+					Name:    "hist3",
+					Program: "histogram",
+					Kind:    metrics.Histogram,
+					Type:    metrics.Buckets,
+					Keys:    []string{"f"},
+					LabelValues: []*metrics.LabelValue{
+						&metrics.LabelValue{
+							Labels: []string{"b"},
+							Value: &datum.BucketsDatum{
+								Buckets: []datum.BucketCount{
+									{Range: datum.Range{Min: -1, Max: 0}},
+									{Range: datum.Range{Min: 0, Max: 1}},
+									{Range: datum.Range{Min: 1, Max: math.Inf(+1)},
+										Count: 3},
+								},
+								Count: 3,
+								Sum:   9,
+							},
+						},
+					},
+					Buckets: []datum.Range{{Min: -1, Max: 0}, {Min: 0, Max: 1}, {Min: 1, Max: math.Inf(+1)}},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
@@ -84,8 +184,8 @@ func TestVmEndToEnd(t *testing.T) {
 				}
 			}
 			// t.Logf("Store is %v", store)
-			if res := testutil.Diff(store.Metrics, tc.metrics, testutil.IgnoreUnexported(sync.RWMutex{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time")); res != "" {
-				t.Errorf("Store didn't match:\n got %v\nwant %v\n%s", store.Metrics, tc.metrics, res)
+			if d := testutil.Diff(tc.metrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time")); d != "" {
+				t.Errorf("Store didn't match:\n%s", d)
 			}
 		})
 	}
