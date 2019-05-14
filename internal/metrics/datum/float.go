@@ -36,11 +36,6 @@ func (d *FloatDatum) Get() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&d.Valuebits))
 }
 
-// String returns a string representation of the FloatDatum.
-func (d *FloatDatum) String() string {
-	return fmt.Sprintf("%g@%d", d.Get(), atomic.LoadInt64(&d.Time))
-}
-
 // MarshalJSON returns a JSON encoding of the FloatDatum.
 func (d *FloatDatum) MarshalJSON() ([]byte, error) {
 	j := struct {

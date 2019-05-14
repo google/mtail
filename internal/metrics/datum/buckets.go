@@ -58,10 +58,6 @@ func (d *BucketsDatum) Observe(v float64, ts time.Time) {
 	d.stamp(ts)
 }
 
-func (d *BucketsDatum) String() string {
-	return fmt.Sprintf("%g@%d", d.GetSum(), atomic.LoadInt64(&d.Time))
-}
-
 func (d *BucketsDatum) GetCount() uint64 {
 	return atomic.LoadUint64(&d.Count)
 }
