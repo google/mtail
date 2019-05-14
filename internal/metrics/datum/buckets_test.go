@@ -41,4 +41,7 @@ func TestMakeBucket(t *testing.T) {
 	if r := datum.GetBucketsCount(b); r != bs[math.Inf(+1)] {
 		t.Errorf("Inf bucket des not equal total observation count: %v vs %v", bs[math.Inf(+1)], r)
 	}
+	if len(bs) != len(r)+1 {
+		t.Errorf("missing buckets from BucketsByMax: expected %d, got %v", len(r)+1, len(bs))
+	}
 }

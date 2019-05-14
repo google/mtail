@@ -42,11 +42,6 @@ func (d *IntDatum) Get() int64 {
 	return atomic.LoadInt64(&d.Value)
 }
 
-// String returns a string representation of the IntDatum.
-func (d *IntDatum) String() string {
-	return fmt.Sprintf("%d@%d", atomic.LoadInt64(&d.Value), atomic.LoadInt64(&d.Time))
-}
-
 // ValueString returns the value of the IntDatum as a string.
 func (d *IntDatum) ValueString() string {
 	return fmt.Sprintf("%d", atomic.LoadInt64(&d.Value))

@@ -108,9 +108,9 @@ func (m *Server) initLoader() error {
 	}
 	if m.compileOnly {
 		opts = append(opts, vm.CompileOnly)
-		if m.oneShot {
-			opts = append(opts, vm.ErrorsAbort)
-		}
+	}
+	if m.oneShot {
+		opts = append(opts, vm.ErrorsAbort)
 	}
 	if m.dumpAst {
 		opts = append(opts, vm.DumpAst)

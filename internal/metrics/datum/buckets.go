@@ -17,7 +17,7 @@ type Range struct {
 	Max float64
 }
 
-type bucketCount struct {
+type BucketCount struct {
 	Range Range
 	Count uint64
 }
@@ -30,62 +30,58 @@ func (r *Range) Contains(v float64) bool {
 type BucketsDatum struct {
 	BaseDatum
 	sync.RWMutex
-	buckets []bucketCount
-	count   uint64
-	sum     float64
+	Buckets []BucketCount
+	Count   uint64
+	Sum     float64
 }
 
 func (*BucketsDatum) Type() Type { return Buckets }
 
 func (d *BucketsDatum) ValueString() string {
-	return fmt.Sprintf("%g", d.Sum())
+	return fmt.Sprintf("%g", d.GetSum())
 }
 
 func (d *BucketsDatum) Observe(v float64, ts time.Time) {
 	d.Lock()
 	defer d.Unlock()
 
-	for i, b := range d.buckets {
+	for i, b := range d.Buckets {
 		if b.Range.Contains(v) {
-			d.buckets[i].Count++
+			d.Buckets[i].Count++
 			break
 		}
 	}
 
-	d.count++
-	d.sum += v
+	d.Count++
+	d.Sum += v
 
 	d.stamp(ts)
 }
 
-func (d *BucketsDatum) String() string {
-	return fmt.Sprintf("%g@%d", d.Sum(), atomic.LoadInt64(&d.Time))
+func (d *BucketsDatum) GetCount() uint64 {
+	return atomic.LoadUint64(&d.Count)
 }
 
-func (d *BucketsDatum) Count() uint64 {
-	return atomic.LoadUint64(&d.count)
-}
-
-func (d *BucketsDatum) Sum() float64 {
+func (d *BucketsDatum) GetSum() float64 {
 	d.RLock()
 	defer d.RUnlock()
 
-	return d.sum
+	return d.Sum
 }
 
 func (d *BucketsDatum) AddBucket(r Range) {
 	d.Lock()
 	defer d.Unlock()
 
-	d.buckets = append(d.buckets, bucketCount{r, 0})
+	d.Buckets = append(d.Buckets, BucketCount{r, 0})
 }
 
-func (d *BucketsDatum) Buckets() map[Range]uint64 {
+func (d *BucketsDatum) GetBuckets() map[Range]uint64 {
 	d.RLock()
 	defer d.RUnlock()
 
 	b := make(map[Range]uint64)
-	for _, bc := range d.buckets {
+	for _, bc := range d.Buckets {
 		b[bc.Range] = bc.Count
 	}
 	return b
@@ -97,7 +93,7 @@ func (d *BucketsDatum) MarshalJSON() ([]byte, error) {
 
 	bs := make(map[string]uint64, 0)
 
-	for _, b := range d.buckets {
+	for _, b := range d.Buckets {
 		bs[strconv.FormatFloat(b.Range.Max, 'g', -1, 64)] = b.Count
 	}
 
@@ -106,7 +102,7 @@ func (d *BucketsDatum) MarshalJSON() ([]byte, error) {
 		Count   uint64
 		Sum     float64
 		Time    int64
-	}{bs, d.count, d.sum, atomic.LoadInt64(&d.Time)}
+	}{bs, d.Count, d.Sum, atomic.LoadInt64(&d.Time)}
 
 	return json.Marshal(j)
 }

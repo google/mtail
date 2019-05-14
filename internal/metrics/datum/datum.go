@@ -247,7 +247,7 @@ func Observe(d Datum, v float64, ts time.Time) {
 func GetBucketsCount(d Datum) uint64 {
 	switch d := d.(type) {
 	case *BucketsDatum:
-		return d.Count()
+		return d.GetCount()
 	default:
 		panic(fmt.Sprintf("datum %v is not a Buckets", d))
 	}
@@ -257,7 +257,7 @@ func GetBucketsCount(d Datum) uint64 {
 func GetBucketsSum(d Datum) float64 {
 	switch d := d.(type) {
 	case *BucketsDatum:
-		return d.Sum()
+		return d.GetSum()
 	default:
 		panic(fmt.Sprintf("datum %v is not a Buckets", d))
 	}
@@ -270,7 +270,7 @@ func GetBucketsByMax(d Datum) map[float64]uint64 {
 	case *BucketsDatum:
 		buckets := make(map[float64]uint64, 0)
 		maxes := make([]float64, 0)
-		for r, c := range d.Buckets() {
+		for r, c := range d.GetBuckets() {
 			maxes = append(maxes, r.Max)
 			buckets[r.Max] = c
 		}
