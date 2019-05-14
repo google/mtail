@@ -37,7 +37,7 @@ var vmTests = []struct {
 `,
 		map[string][]*metrics.Metric{
 			"c": {
-				&metrics.Metric{
+				{
 					Name:    "c",
 					Program: "single-dash-parseint",
 					Kind:    metrics.Counter,
@@ -45,7 +45,7 @@ var vmTests = []struct {
 					Hidden:  false,
 					Keys:    []string{},
 					LabelValues: []*metrics.LabelValue{
-						&metrics.LabelValue{
+						{
 							Value: &datum.IntDatum{Value: 1},
 						},
 					},
@@ -73,14 +73,14 @@ b 3
 `,
 		map[string][]*metrics.Metric{
 			"hist1": {
-				&metrics.Metric{
+				{
 					Name:    "hist1",
 					Program: "histogram",
 					Kind:    metrics.Histogram,
 					Type:    metrics.Buckets,
 					Keys:    []string{},
 					LabelValues: []*metrics.LabelValue{
-						&metrics.LabelValue{
+						{
 							Value: &datum.BucketsDatum{
 								Buckets: []datum.BucketCount{
 									{Range: datum.Range{Min: 0, Max: 1}},
@@ -106,7 +106,7 @@ b 3
 					Type:    metrics.Buckets,
 					Keys:    []string{"code"},
 					LabelValues: []*metrics.LabelValue{
-						&metrics.LabelValue{
+						{
 							Labels: []string{"b"},
 							Value: &datum.BucketsDatum{
 								Buckets: []datum.BucketCount{
@@ -133,7 +133,7 @@ b 3
 					Type:    metrics.Buckets,
 					Keys:    []string{"f"},
 					LabelValues: []*metrics.LabelValue{
-						&metrics.LabelValue{
+						{
 							Labels: []string{"b"},
 							Value: &datum.BucketsDatum{
 								Buckets: []datum.BucketCount{
