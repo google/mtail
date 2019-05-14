@@ -4,6 +4,7 @@
 package exporter
 
 import (
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -183,6 +184,43 @@ foo_bucket{a="bar",prog="test",le="2"} 0
 foo_bucket{a="bar",prog="test",le="+Inf"} 0
 foo_sum{a="bar",prog="test"} 0
 foo_count{a="bar",prog="test"} 0
+`,
+	},
+	{"histo-count-eq-inf",
+		true,
+		[]*metrics.Metric{
+			{
+				Name:    "foo",
+				Program: "test",
+				Kind:    metrics.Histogram,
+				Keys:    []string{"a"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"bar"},
+						Value: &datum.BucketsDatum{
+							Buckets: []datum.BucketCount{
+								{Range: datum.Range{Min: 0, Max: 1},
+									Count: 1},
+								{Range: datum.Range{Min: 1, Max: 2},
+									Count: 1},
+								{Range: datum.Range{Min: 2, Max: math.Inf(+1)},
+									Count: 2},
+							},
+							Count: 4,
+							Sum:   5,
+						},
+					},
+				},
+				Source: "location.mtail:37",
+			},
+		},
+		`# HELP foo defined at location.mtail:37
+# TYPE foo histogram
+foo_bucket{a="bar",prog="test",le="1"} 1
+foo_bucket{a="bar",prog="test",le="2"} 2
+foo_bucket{a="bar",prog="test",le="+Inf"} 4
+foo_sum{a="bar",prog="test"} 5
+foo_count{a="bar",prog="test"} 4
 `,
 	},
 }
