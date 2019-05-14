@@ -26,8 +26,8 @@ func (r *Range) Contains(v float64) bool {
 	return r.Min < v && v <= r.Max
 }
 
-// BucketsDatum describes a floating point value at a given timestamp.
-type BucketsDatum struct {
+// Buckets describes a floating point value at a given timestamp.
+type Buckets struct {
 	BaseDatum
 	sync.RWMutex
 	Buckets []BucketCount
@@ -35,11 +35,11 @@ type BucketsDatum struct {
 	Sum     float64
 }
 
-func (d *BucketsDatum) ValueString() string {
+func (d *Buckets) ValueString() string {
 	return fmt.Sprintf("%g", d.GetSum())
 }
 
-func (d *BucketsDatum) Observe(v float64, ts time.Time) {
+func (d *Buckets) Observe(v float64, ts time.Time) {
 	d.Lock()
 	defer d.Unlock()
 
@@ -56,25 +56,25 @@ func (d *BucketsDatum) Observe(v float64, ts time.Time) {
 	d.stamp(ts)
 }
 
-func (d *BucketsDatum) GetCount() uint64 {
+func (d *Buckets) GetCount() uint64 {
 	return atomic.LoadUint64(&d.Count)
 }
 
-func (d *BucketsDatum) GetSum() float64 {
+func (d *Buckets) GetSum() float64 {
 	d.RLock()
 	defer d.RUnlock()
 
 	return d.Sum
 }
 
-func (d *BucketsDatum) AddBucket(r Range) {
+func (d *Buckets) AddBucket(r Range) {
 	d.Lock()
 	defer d.Unlock()
 
 	d.Buckets = append(d.Buckets, BucketCount{r, 0})
 }
 
-func (d *BucketsDatum) GetBuckets() map[Range]uint64 {
+func (d *Buckets) GetBuckets() map[Range]uint64 {
 	d.RLock()
 	defer d.RUnlock()
 
@@ -85,7 +85,7 @@ func (d *BucketsDatum) GetBuckets() map[Range]uint64 {
 	return b
 }
 
-func (d *BucketsDatum) MarshalJSON() ([]byte, error) {
+func (d *Buckets) MarshalJSON() ([]byte, error) {
 	d.RLock()
 	defer d.RUnlock()
 

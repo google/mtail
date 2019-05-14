@@ -180,7 +180,7 @@ func TestExamplePrograms(t *testing.T) {
 				t.Error(err)
 			}
 
-			diff := testutil.Diff(goldenStore, store, testutil.IgnoreUnexported(sync.RWMutex{}, datum.StringDatum{}))
+			diff := testutil.Diff(goldenStore, store, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
 
 			if diff != "" {
 				t.Error(diff)

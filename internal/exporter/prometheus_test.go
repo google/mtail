@@ -197,7 +197,7 @@ foo_count{a="bar",prog="test"} 0
 				LabelValues: []*metrics.LabelValue{
 					{
 						Labels: []string{"bar"},
-						Value: &datum.BucketsDatum{
+						Value: &datum.Buckets{
 							Buckets: []datum.BucketCount{
 								{Range: datum.Range{Min: 0, Max: 1},
 									Count: 1},

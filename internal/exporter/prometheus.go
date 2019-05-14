@@ -112,9 +112,9 @@ func promTypeForKind(k metrics.Kind) prometheus.ValueType {
 
 func promValueForDatum(d datum.Datum) float64 {
 	switch n := d.(type) {
-	case *datum.IntDatum:
+	case *datum.Int:
 		return float64(n.Get())
-	case *datum.FloatDatum:
+	case *datum.Float:
 		return n.Get()
 	}
 	return 0.

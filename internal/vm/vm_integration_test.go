@@ -46,7 +46,7 @@ var vmTests = []struct {
 					Keys:    []string{},
 					LabelValues: []*metrics.LabelValue{
 						{
-							Value: &datum.IntDatum{Value: 1},
+							Value: &datum.Int{Value: 1},
 						},
 					},
 				},
@@ -81,7 +81,7 @@ b 3
 					Keys:    []string{},
 					LabelValues: []*metrics.LabelValue{
 						{
-							Value: &datum.BucketsDatum{
+							Value: &datum.Buckets{
 								Buckets: []datum.BucketCount{
 									{Range: datum.Range{Min: 0, Max: 1}},
 									{Range: datum.Range{Min: 1, Max: 2}},
@@ -108,7 +108,7 @@ b 3
 					LabelValues: []*metrics.LabelValue{
 						{
 							Labels: []string{"b"},
-							Value: &datum.BucketsDatum{
+							Value: &datum.Buckets{
 								Buckets: []datum.BucketCount{
 									{Range: datum.Range{Min: 0, Max: 1}},
 									{Range: datum.Range{Min: 1, Max: 2}},
@@ -135,7 +135,7 @@ b 3
 					LabelValues: []*metrics.LabelValue{
 						{
 							Labels: []string{"b"},
-							Value: &datum.BucketsDatum{
+							Value: &datum.Buckets{
 								Buckets: []datum.BucketCount{
 									{Range: datum.Range{Min: -1, Max: 0}},
 									{Range: datum.Range{Min: 0, Max: 1}},

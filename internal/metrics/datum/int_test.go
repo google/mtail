@@ -9,7 +9,7 @@ import (
 )
 
 func BenchmarkIncrementScalarInt(b *testing.B) {
-	d := &IntDatum{}
+	d := &Int{}
 	ts := time.Now().UTC()
 	for i := 0; i < b.N; i++ {
 		d.IncBy(1, ts)
@@ -17,7 +17,7 @@ func BenchmarkIncrementScalarInt(b *testing.B) {
 }
 
 func BenchmarkDecrementScalarInt(b *testing.B) {
-	d := &IntDatum{}
+	d := &Int{}
 	ts := time.Now().UTC()
 	for i := 0; i < b.N; i++ {
 		d.DecBy(1, ts)
@@ -25,7 +25,7 @@ func BenchmarkDecrementScalarInt(b *testing.B) {
 }
 
 func TestDecrementScalarInt(t *testing.T) {
-	d := &IntDatum{}
+	d := &Int{}
 	ts := time.Now().UTC()
 	d.IncBy(1, ts)
 	r := d.Get()

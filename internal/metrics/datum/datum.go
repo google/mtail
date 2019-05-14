@@ -73,21 +73,21 @@ func NewBuckets(buckets []Range) Datum {
 
 // MakeInt creates a new integer datum with the provided value and timestamp.
 func MakeInt(v int64, ts time.Time) Datum {
-	d := &IntDatum{}
+	d := &Int{}
 	d.Set(v, ts)
 	return d
 }
 
 // MakeFloat creates a new floating-point datum with the provided value and timestamp.
 func MakeFloat(v float64, ts time.Time) Datum {
-	d := &FloatDatum{}
+	d := &Float{}
 	d.Set(v, ts)
 	return d
 }
 
 // MakeString creates a new string datum with the provided value and timestamp
 func MakeString(v string, ts time.Time) Datum {
-	d := &StringDatum{}
+	d := &String{}
 	d.Set(v, ts)
 	return d
 }
@@ -95,7 +95,7 @@ func MakeString(v string, ts time.Time) Datum {
 // MakeBuckets creates a new bucket datum with the provided list of ranges and
 // timestamp.  If no +inf bucket is provided, one is created.
 func MakeBuckets(buckets []Range, ts time.Time) Datum {
-	d := &BucketsDatum{}
+	d := &Buckets{}
 	seenInf := false
 	highest := 0.0
 	for _, b := range buckets {
@@ -115,7 +115,7 @@ func MakeBuckets(buckets []Range, ts time.Time) Datum {
 // GetInt returns the integer value of a datum, or error.
 func GetInt(d Datum) int64 {
 	switch d := d.(type) {
-	case *IntDatum:
+	case *Int:
 		return d.Get()
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
@@ -125,7 +125,7 @@ func GetInt(d Datum) int64 {
 // GetFloat returns the floating-point value of a datum, or error.
 func GetFloat(d Datum) float64 {
 	switch d := d.(type) {
-	case *FloatDatum:
+	case *Float:
 		return d.Get()
 	default:
 		panic(fmt.Sprintf("datum %v is not a Float", d))
@@ -135,7 +135,7 @@ func GetFloat(d Datum) float64 {
 // GetString returns the string of a datum, or error.
 func GetString(d Datum) string {
 	switch d := d.(type) {
-	case *StringDatum:
+	case *String:
 		return d.Get()
 	default:
 		panic(fmt.Sprintf("datum %v is not a String", d))
@@ -145,9 +145,9 @@ func GetString(d Datum) string {
 // SetInt sets an integer datum to the provided value and timestamp, or panics if the Datum is not an IntDatum.
 func SetInt(d Datum, v int64, ts time.Time) {
 	switch d := d.(type) {
-	case *IntDatum:
+	case *Int:
 		d.Set(v, ts)
-	case *BucketsDatum:
+	case *Buckets:
 		d.Observe(float64(v), ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
@@ -157,9 +157,9 @@ func SetInt(d Datum, v int64, ts time.Time) {
 // SetFloat sets a floating-point Datum to the provided value and timestamp, or panics if the Datum is not a FloatDatum.
 func SetFloat(d Datum, v float64, ts time.Time) {
 	switch d := d.(type) {
-	case *FloatDatum:
+	case *Float:
 		d.Set(v, ts)
-	case *BucketsDatum:
+	case *Buckets:
 		d.Observe(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not a Float", d))
@@ -169,7 +169,7 @@ func SetFloat(d Datum, v float64, ts time.Time) {
 // SetString sets a string Datum to the provided value and timestamp, or panics if the Datym is not a String Datum
 func SetString(d Datum, v string, ts time.Time) {
 	switch d := d.(type) {
-	case *StringDatum:
+	case *String:
 		d.Set(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not a String", d))
@@ -179,7 +179,7 @@ func SetString(d Datum, v string, ts time.Time) {
 // IncIntBy increments an integer Datum by the provided value, at time ts, or panics if the Datum is not an IntDatum.
 func IncIntBy(d Datum, v int64, ts time.Time) {
 	switch d := d.(type) {
-	case *IntDatum:
+	case *Int:
 		d.IncBy(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
@@ -189,16 +189,16 @@ func IncIntBy(d Datum, v int64, ts time.Time) {
 // DecIntBy increments an integer Datum by the provided value, at time ts, or panics if the Datum is not an IntDatum.
 func DecIntBy(d Datum, v int64, ts time.Time) {
 	switch d := d.(type) {
-	case *IntDatum:
+	case *Int:
 		d.DecBy(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not an Int", d))
 	}
 }
 
-func GetBuckets(d Datum) *BucketsDatum {
+func GetBuckets(d Datum) *Buckets {
 	switch d := d.(type) {
-	case *BucketsDatum:
+	case *Buckets:
 		return d
 	default:
 		panic(fmt.Sprintf("datum %v is not a Buckets", d))
@@ -208,7 +208,7 @@ func GetBuckets(d Datum) *BucketsDatum {
 // Observe records an observation v at time ts in d, or panics if d is not a BucketsDatum
 func Observe(d Datum, v float64, ts time.Time) {
 	switch d := d.(type) {
-	case *BucketsDatum:
+	case *Buckets:
 		d.Observe(v, ts)
 	default:
 		panic(fmt.Sprintf("datum %v is not a Buckets", d))
@@ -218,7 +218,7 @@ func Observe(d Datum, v float64, ts time.Time) {
 // GetBucketCount returns the total count of observations in d, or panics if d is not a BucketsDatum
 func GetBucketsCount(d Datum) uint64 {
 	switch d := d.(type) {
-	case *BucketsDatum:
+	case *Buckets:
 		return d.GetCount()
 	default:
 		panic(fmt.Sprintf("datum %v is not a Buckets", d))
@@ -228,7 +228,7 @@ func GetBucketsCount(d Datum) uint64 {
 // GetBucketsSum returns the sum of observations in d, or panics if d is not a BucketsDatum
 func GetBucketsSum(d Datum) float64 {
 	switch d := d.(type) {
-	case *BucketsDatum:
+	case *Buckets:
 		return d.GetSum()
 	default:
 		panic(fmt.Sprintf("datum %v is not a Buckets", d))
@@ -239,7 +239,7 @@ func GetBucketsSum(d Datum) float64 {
 // upper bonds, or panics if d is not a BucketsDatum.
 func GetBucketsCumByMax(d Datum) map[float64]uint64 {
 	switch d := d.(type) {
-	case *BucketsDatum:
+	case *Buckets:
 		buckets := make(map[float64]uint64, 0)
 		maxes := make([]float64, 0)
 		for r, c := range d.GetBuckets() {
