@@ -17,9 +17,6 @@ type FloatDatum struct {
 	Valuebits uint64
 }
 
-// Type returns the Type of this Datum.
-func (*FloatDatum) Type() Type { return Float }
-
 // ValueString returns the value of the FloatDatum as a string.
 func (d *FloatDatum) ValueString() string {
 	return fmt.Sprintf("%g", d.Get())

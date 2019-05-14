@@ -87,7 +87,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		if types.IsDimension(t) {
 			t = t.(*types.Operator).Args[len(t.(*types.Operator).Args)-1]
 		}
-		var dtyp datum.Type
+		var dtyp metrics.Type
 		switch {
 		case types.Equals(types.Float, t):
 			dtyp = metrics.Float

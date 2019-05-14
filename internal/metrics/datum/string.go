@@ -5,7 +5,6 @@ package datum
 
 import (
 	"encoding/json"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,9 +16,6 @@ type StringDatum struct {
 	mu    sync.RWMutex
 	Value string
 }
-
-// Type returns the Type of an StringDatum, String.
-func (*StringDatum) Type() Type { return String }
 
 // Set sets the value of the StringDatum to the value at timestamp.
 func (d *StringDatum) Set(value string, timestamp time.Time) {
@@ -34,11 +30,6 @@ func (d *StringDatum) Get() string {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	return d.Value
-}
-
-// String returns a string representation of the StringDatum.
-func (d *StringDatum) String() string {
-	return fmt.Sprintf("%q@%d", d.Get(), atomic.LoadInt64(&d.Time))
 }
 
 // ValueString returns the value of the StringDatum as a string.

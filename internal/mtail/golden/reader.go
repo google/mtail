@@ -72,7 +72,7 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 			kind = metrics.Histogram
 		}
 		glog.V(2).Infof("match[4]: %q", match[4])
-		typ := datum.Int
+		typ := metrics.Int
 		var (
 			ival int64
 			fval float64
@@ -83,11 +83,11 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 			ival, err = strconv.ParseInt(match[4], 10, 64)
 			if err != nil {
 				fval, err = strconv.ParseFloat(match[4], 64)
-				typ = datum.Float
+				typ = metrics.Float
 				if err != nil || fval == 0.0 {
 					sval = match[4]
 					err = nil
-					typ = datum.String
+					typ = metrics.String
 				}
 			}
 			glog.V(2).Infof("type is %q", typ)

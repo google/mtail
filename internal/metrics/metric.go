@@ -41,17 +41,6 @@ const (
 	Histogram
 )
 
-const (
-	// Int indicates this metric is an integer metric type.
-	Int = datum.Int
-	// Float indicates this metric is a floating-point metric type.
-	Float = datum.Float
-	// String indicates this metric contains string values
-	String = datum.String
-	// Buckets indicates this metric is a histogram metric type.
-	Buckets = datum.Buckets
-)
-
 func (m Kind) String() string {
 	switch m {
 	case Counter:
@@ -86,7 +75,7 @@ type Metric struct {
 	Name        string // Name
 	Program     string // Instantiating program
 	Kind        Kind
-	Type        datum.Type
+	Type        Type
 	Hidden      bool          `json:",omitempty"`
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
@@ -95,7 +84,7 @@ type Metric struct {
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).
-func NewMetric(name string, prog string, kind Kind, typ datum.Type, keys ...string) *Metric {
+func NewMetric(name string, prog string, kind Kind, typ Type, keys ...string) *Metric {
 	m := newMetric(len(keys))
 	m.Name = name
 	m.Program = prog
@@ -136,13 +125,13 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 		d = lv.Value
 	} else {
 		switch m.Type {
-		case datum.Int:
+		case Int:
 			d = datum.NewInt()
-		case datum.Float:
+		case Float:
 			d = datum.NewFloat()
-		case datum.String:
+		case String:
 			d = datum.NewString()
-		case datum.Buckets:
+		case Buckets:
 			buckets := m.Buckets
 			if buckets == nil {
 				buckets = make([]datum.Range, 0)

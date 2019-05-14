@@ -11,38 +11,10 @@ import (
 	"time"
 )
 
-// Type describes the type of value stored in a Datum.
-type Type int
-
-const (
-	// Int describes an integer datum
-	Int Type = iota
-	// Float describes a floating point datum
-	Float
-	// String describes printable strings of text
-	String
-	// Buckets describes histograms
-	Buckets
-)
-
-func (t Type) String() string {
-	switch t {
-	case Int:
-		return "Int"
-	case Float:
-		return "Float"
-	case String:
-		return "String"
-	case Buckets:
-		return "Buckets"
-	}
-	return "?"
-}
-
 // Datum is an interface for metric datums, with a type, value and timestamp to be exported.
 type Datum interface {
-	// Type returns the Datum type.
-	Type() Type
+	// // Type returns the Datum type.
+	// Type() metrics.Type
 
 	// ValueString returns the value of a Datum as a string.
 	ValueString() string

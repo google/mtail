@@ -60,19 +60,3 @@ func TestMarshalJSON(t *testing.T) {
 		}
 	}
 }
-
-func TestType(t *testing.T) {
-	if x := NewInt().Type(); x != Int {
-		t.Errorf("Int type was %v, not Int", x)
-	}
-	if x := NewFloat().Type(); x != Float {
-		t.Errorf("Float type was %v, not Float", x)
-	}
-	if x := NewString().Type(); x != String {
-		t.Errorf("String type was %v, not String", x)
-
-	}
-	if x := NewBuckets([]Range{{0, 1}}).Type(); x != Buckets {
-		t.Errorf("Buckets type was %v, not Buckets", x)
-	}
-}

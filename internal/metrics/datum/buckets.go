@@ -35,8 +35,6 @@ type BucketsDatum struct {
 	Sum     float64
 }
 
-func (*BucketsDatum) Type() Type { return Buckets }
-
 func (d *BucketsDatum) ValueString() string {
 	return fmt.Sprintf("%g", d.GetSum())
 }

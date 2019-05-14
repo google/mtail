@@ -87,7 +87,7 @@ var expectedMetrics = map[string][]*metrics.Metric{
 			Name:    "floaty",
 			Program: "reader_test",
 			Kind:    metrics.Gauge,
-			Type:    datum.Float,
+			Type:    metrics.Float,
 			Keys:    []string{},
 			LabelValues: []*metrics.LabelValue{
 				{
@@ -102,7 +102,7 @@ var expectedMetrics = map[string][]*metrics.Metric{
 			Name:    "stringy",
 			Program: "reader_test",
 			Kind:    metrics.Text,
-			Type:    datum.String,
+			Type:    metrics.String,
 			Keys:    []string{},
 			LabelValues: []*metrics.LabelValue{
 				{

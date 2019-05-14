@@ -16,9 +16,6 @@ type IntDatum struct {
 	Value int64
 }
 
-// Type returns the Type of an IntDatum, Int.
-func (*IntDatum) Type() Type { return Int }
-
 // Set sets the value of the IntDatum to the value at timestamp.
 func (d *IntDatum) Set(value int64, timestamp time.Time) {
 	atomic.StoreInt64(&d.Value, value)
