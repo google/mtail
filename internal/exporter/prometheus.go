@@ -68,7 +68,7 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 							fmt.Sprintf("defined at %s", lastSource), keys, nil),
 						datum.GetBucketsCount(ls.Datum),
 						datum.GetBucketsSum(ls.Datum),
-						datum.GetBucketsByMax(ls.Datum),
+						datum.GetBucketsCumByMax(ls.Datum),
 						vals...)
 				} else {
 					pM, err = prometheus.NewConstMetric(

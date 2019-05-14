@@ -263,9 +263,9 @@ func GetBucketsSum(d Datum) float64 {
 	}
 }
 
-// GetBucketsByMax returns a map of cumulative bucket observations by their
+// GetBucketsCumByMax returns a map of cumulative bucket observations by their
 // upper bonds, or panics if d is not a BucketsDatum.
-func GetBucketsByMax(d Datum) map[float64]uint64 {
+func GetBucketsCumByMax(d Datum) map[float64]uint64 {
 	switch d := d.(type) {
 	case *BucketsDatum:
 		buckets := make(map[float64]uint64, 0)
