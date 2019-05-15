@@ -52,3 +52,27 @@ On the flipside, if you feel lie the latency between your application logging an
     a. awesome! I'll take that as a compliment on `mtail`'s speed.
     b. you should remove any timestamp processing code from your programs to avoid that unnecessary work
     
+
+## Why doesn't `mtail` persist variables and metric values between restarts?
+
+`mtail` is intended to be stateless, deferring the problem of long term metric
+storage to a timeseries database and collector like
+[Prometheus](https://prometheus.io).
+
+Partially this reason is technical -- not having to save checkpoints and restore them makes the program much simpler.
+
+This means that mtail programs should prefer metrics that perform better in
+stateless systems, like counters rather than gauges.  Prometheus for example is
+capable of handling counter resets in its rate and delta calculations, so mtail
+not remembering the value of a metric should not be cause for concern.
+
+Another reason is that failure is normal, and thus Prometheus handles these
+counter restarts because they are normal.  If `mtail` checkpointed its state,
+filesystem and state file corruption will still occur, and in those edge cases
+a counter reset would still be observed, and thus need to be handled
+regardless.
+
+So, given that the monitoring system needs to handle missing and resetting data
+already in a distributed system, there is no compelling reason to implement
+metric checkpointing in `mtail` as well.  It just adds complexity for little
+overall gain.
