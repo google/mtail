@@ -79,9 +79,9 @@ func TestReadPartial(t *testing.T) {
 		t.Errorf("partial line not empty: %q", f.partial)
 	}
 	expected := []*logline.LogLine{
-		{logfile, "ohi"},
+		{context.TODO(), logfile, "ohi"},
 	}
-	diff := testutil.Diff(expected, result)
+	diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 	if diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}

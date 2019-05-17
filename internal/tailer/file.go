@@ -226,7 +226,7 @@ func (f *File) Read(ctx context.Context) error {
 func (f *File) sendLine(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "file.sendLine")
 	defer span.End()
-	f.lines <- logline.New(f.Name, f.partial.String())
+	f.lines <- logline.New(ctx, f.Name, f.partial.String())
 	lineCount.Add(f.Name, 1)
 	glog.V(2).Info("Line sent")
 	// reset partial accumulator
