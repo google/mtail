@@ -152,6 +152,40 @@ b 3
 			},
 		},
 	},
+	{"numbers",
+		`counter error_log_count
+
+/^/ +
+/(?P<date>\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) / +
+/.*/ +
+/$/ {
+    strptime($date, "2006/01/02 15:04:05")
+
+    error_log_count++
+}
+`,
+		`2019/05/14 11:10:05 [warn] ...
+2019/05/14 11:11:06 [warn] ...
+`,
+		map[string][]*metrics.Metric{
+			"error_log_count": {
+				{
+					Name:    "error_log_count",
+					Program: "numbers",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{
+								Value: 2,
+							},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {

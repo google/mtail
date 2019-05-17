@@ -48,6 +48,16 @@ a [Go time.Parse layout string](https://golang.org/pkg/time/#Parse).
     strptime($date, "Jan _2 15:04:05")
 ```
 
+Don't try to disassemble timestamps into component parts (e.g. year, month, day) separately.  Keep them in the same format as the log file presents them and change the strptime format string to match it.
+
+```
+/^/ +
+/(?P<date>\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) / +
+/.*/ +
+/$/ {
+    strptime($date, "2006/01/02 15:04:05")
+```
+
 N.B.  If no timestamp parsing is done, then the reported timestamp of the event
 may add some latency to the measurement of when the event really occurred.
 Between your program logging the event, and mtail reading it, there are many
@@ -58,7 +68,7 @@ offsets in time between what mtail reports and the event really occurring.  For
 this reason, it's recommended to always use the log file's timestamp if one is
 available.
 
-## Common timestamp parsing
+## Repeating common timestamp parsing
 
 The decorator syntax was designed with common timestamp parsing in mind.  It
 allows the code for getting the timestamp out of the log line to be reused and
