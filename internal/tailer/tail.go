@@ -11,6 +11,7 @@ package tailer
 // directory.
 
 import (
+	"context"
 	"expvar"
 	"html/template"
 	"io"
@@ -37,6 +38,7 @@ var (
 type Tailer struct {
 	lines chan<- *logline.LogLine // Logfile lines being emitted.
 	w     watcher.Watcher
+	ctx   context.Context
 
 	handlesMu sync.RWMutex     // protects `handles'
 	handles   map[string]*File // File handles for each pathname.
@@ -55,6 +57,14 @@ type Tailer struct {
 func OneShot(t *Tailer) error {
 	t.oneShot = true
 	return nil
+}
+
+// Context sets the context of the tailer
+func Context(ctx context.Context) func(*Tailer) error {
+	return func(t *Tailer) error {
+		t.ctx = ctx
+		return nil
+	}
 }
 
 // New creates a new Tailer.
@@ -196,12 +206,12 @@ func (t *Tailer) handleLogEvent(pathname string) {
 		t.handleCreateGlob(pathname)
 		return
 	}
-	doFollow(fd)
+	doFollow(t.ctx, fd)
 }
 
 // doFollow performs the Follow on an existing file descriptor, logging any errors
-func doFollow(fd *File) {
-	err := fd.Follow()
+func doFollow(ctx context.Context, fd *File) {
+	err := fd.Follow(ctx)
 	if err != nil && err != io.EOF {
 		glog.Info(err)
 	}
@@ -240,7 +250,7 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	if err := t.setHandle(pathname, f); err != nil {
 		return err
 	}
-	if err := f.Read(); err != nil && err != io.EOF {
+	if err := f.Read(t.ctx); err != nil && err != io.EOF {
 		return err
 	}
 	glog.Infof("Tailing %s", f.Pathname)
@@ -378,7 +388,7 @@ func (t *Tailer) Gc() error {
 			if err := t.w.Remove(v.Pathname); err != nil {
 				glog.Info(err)
 			}
-			if err := v.Close(); err != nil {
+			if err := v.Close(t.ctx); err != nil {
 				glog.Info(err)
 			}
 			delete(t.handles, k)

@@ -4,6 +4,7 @@
 package tailer
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/user"
@@ -23,7 +24,7 @@ func makeTestTail(t *testing.T) (*Tailer, chan *logline.LogLine, *watcher.FakeWa
 
 	w := watcher.NewFakeWatcher()
 	lines := make(chan *logline.LogLine, 1)
-	ta, err := New(lines, w)
+	ta, err := New(lines, w, Context(context.Background()))
 	if err != nil {
 		t.Fatal(err)
 	}

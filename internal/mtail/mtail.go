@@ -169,7 +169,8 @@ func (m *Server) initExporter() (err error) {
 
 // initTailer sets up a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
-	opts := []func(*tailer.Tailer) error{}
+	opts := []func(*tailer.Tailer) error{
+		tailer.Context(context.Background())}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
 	}

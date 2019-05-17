@@ -5,6 +5,7 @@ package tailer
 
 import (
 	"bytes"
+	"context"
 	"expvar"
 	"io"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 var (
@@ -114,12 +116,14 @@ Retry:
 }
 
 // Follow reads from the file until EOF.  It tracks log rotations (i.e new inode or device).
-func (f *File) Follow() error {
+func (f *File) Follow(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "file.Follow")
+	defer span.End()
 	s1, err := f.file.Stat()
 	if err != nil {
 		glog.V(1).Infof("Stat failed on %q: %s", f.Name, err)
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
-		err := f.doRotation()
+		err := f.doRotation(ctx)
 		if err != nil {
 			return err
 		}
@@ -131,7 +135,7 @@ func (f *File) Follow() error {
 	}
 	if !os.SameFile(s1, s2) {
 		glog.V(1).Infof("New inode detected for %s, treating as rotation", f.Pathname)
-		err = f.doRotation()
+		err = f.doRotation(ctx)
 		if err != nil {
 			return err
 		}
@@ -141,13 +145,15 @@ func (f *File) Follow() error {
 	}
 
 	glog.V(2).Info("doing the normal read")
-	return f.Read()
+	return f.Read(ctx)
 }
 
 // doRotation reads the remaining content of the currently opened file, then reopens the new one.
-func (f *File) doRotation() error {
+func (f *File) doRotation(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "file.doRotation")
+	defer span.End()
 	glog.V(2).Info("doing the rotation flush read")
-	if err := f.Read(); err != nil {
+	if err := f.Read(ctx); err != nil {
 		glog.Info(err)
 	}
 	logRotations.Add(f.Name, 1)
@@ -163,7 +169,9 @@ func (f *File) doRotation() error {
 // channel as newlines are encountered.  If EOF is read, the partial line is
 // stored to be concatenated to on the next call.  At EOF, checks for
 // truncation and resets the file offset if so.
-func (f *File) Read() error {
+func (f *File) Read(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "file.Read")
+	defer span.End()
 	b := make([]byte, 0, 4096)
 	totalBytes := 0
 	for {
@@ -179,7 +187,7 @@ func (f *File) Read() error {
 		// we're a regular file, check for truncation.
 		if err == io.EOF && totalBytes == 0 && f.regular {
 			glog.V(2).Info("Suspected truncation.")
-			truncated, terr := f.checkForTruncate()
+			truncated, terr := f.checkForTruncate(ctx)
 			if terr != nil {
 				glog.Infof("checkForTruncate returned with error '%v'", terr)
 			}
@@ -199,7 +207,7 @@ func (f *File) Read() error {
 			case rune != '\n':
 				f.partial.WriteRune(rune)
 			default:
-				f.sendLine()
+				f.sendLine(ctx)
 			}
 		}
 
@@ -215,7 +223,9 @@ func (f *File) Read() error {
 }
 
 // sendLine sends the contents of the partial buffer off for processing.
-func (f *File) sendLine() {
+func (f *File) sendLine(ctx context.Context) {
+	ctx, span := trace.StartSpan(ctx, "file.sendLine")
+	defer span.End()
 	f.lines <- logline.New(f.Name, f.partial.String())
 	lineCount.Add(f.Name, 1)
 	glog.V(2).Info("Line sent")
@@ -226,7 +236,9 @@ func (f *File) sendLine() {
 // checkForTruncate checks to see if the current offset into the file
 // is past the end of the file based on its size, and if so seeks to
 // the start again.
-func (f *File) checkForTruncate() (bool, error) {
+func (f *File) checkForTruncate(ctx context.Context) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "file.checkForTruncate")
+	defer span.End()
 	currentOffset, err := f.file.Seek(0, io.SeekCurrent)
 	glog.V(2).Infof("current seek position at %d", currentOffset)
 	if err != nil {
@@ -247,7 +259,7 @@ func (f *File) checkForTruncate() (bool, error) {
 	// We're about to lose all data because of the truncate so if there's
 	// anything in the buffer, send it out.
 	if f.partial.Len() > 0 {
-		f.sendLine()
+		f.sendLine(ctx)
 	}
 
 	p, serr := f.file.Seek(0, io.SeekStart)
@@ -260,9 +272,11 @@ func (f *File) Stat() (os.FileInfo, error) {
 	return f.file.Stat()
 }
 
-func (f *File) Close() error {
+func (f *File) Close(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "file.Close")
+	defer span.End()
 	if f.partial.Len() > 0 {
-		f.sendLine()
+		f.sendLine(ctx)
 	}
 	return f.file.Close()
 }
