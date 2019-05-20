@@ -1,10 +1,27 @@
-histogram hist1 buckets 0, 1, 2, 4, 8
-histogram hist2 by code buckets 0, 1, 2, 4, 8
+# use mtail to extract the values you want in your histogram, and any labels like 'httpcode' and it will create the buckets and histogram metrics for you.
+# this example might be something you put on a web server that logs latency. ex;
+# GET /foo/bar.html latency=1s httpcode=200 
+# GET /foo/baz.html latency=0s httpcode=200
+# would produce this:
+# webserver_latency_by_code_bucket{httpcode="200",prog="software_errors.mtail",le="1"} 1
+# webserver_latency_by_code_bucket{httpcode="200",prog="software_errors.mtail",le="2"} 1
+# webserver_latency_by_code_bucket{httpcode="200",prog="software_errors.mtail",le="4"} 1
+# webserver_latency_by_code_bucket{httpcode="200",prog="software_errors.mtail",le="8"} 1
+# webserver_latency_by_code_bucket{httpcode="200",prog="software_errors.mtail",le="+Inf"} 1
+# webserver_latency_by_code_sum{httpcode="200",prog="software_errors.mtail"} 1
+# webserver_latency_by_code_count{httpcode="200",prog="software_errors.mtail"} 2
+#
+
+histogram webserver_latency_by_code by code buckets 0, 1, 2, 4, 8
+/latency=(?P<latency>\d+)s httpcode=(?P<httpcode>\d+)/ {
+    webserver_latency_by_code [$httpcode] = $latency
+}
+
+# or if you don't need the http code label/dimension furthering the example, just use this
+histogram webserver_latency buckets 0, 1, 2, 4, 8
+/latency=(?P<latency>\d+)/ {
+    webserver_latency = $latency
+}
 
 # To make ex_test.go happy
 strptime("2019-03-04T02:56:21Z", "2006-01-02T15:04:05Z07:00")
-
-/^(\d) (\d+)/ {
-  hist1 = $1
-  hist2[$2] = $1
-}
