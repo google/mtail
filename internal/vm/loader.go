@@ -25,6 +25,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opencensus.io/trace"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
@@ -415,13 +416,16 @@ func (l *Loader) processLines(lines <-chan *logline.LogLine) {
 	defer close(l.VMsDone)
 
 	// Copy all input LogLines to each VM's LogLine input channel.
-	for logline := range lines {
+	for ll := range lines {
+		ctx, span := trace.StartSpan(ll.Context, "loader.processLines")
+		ll := logline.New(ctx, ll.Filename, ll.Line)
 		LineCount.Add(1)
 		l.handleMu.RLock()
 		for prog := range l.handles {
-			l.handles[prog].lines <- logline
+			l.handles[prog].lines <- ll
 		}
 		l.handleMu.RUnlock()
+		span.End()
 	}
 	// When lines is closed, the tailer has shut down which signals that it's
 	// time to shut down the program loader.
