@@ -24,6 +24,14 @@ func LogPathPatterns(patterns ...string) func(*Server) error {
 	}
 }
 
+// IgnoreRegexPattern sets the regex pattern to ignore files.
+func IgnoreRegexPattern(pattern string) func(*Server) error {
+	return func(m *Server) error {
+		m.ignoreRegexPattern = pattern
+		return nil
+	}
+}
+
 // BindAddress sets the HTTP server address in Server.
 func BindAddress(address, port string) func(*Server) error {
 	return func(m *Server) error {
