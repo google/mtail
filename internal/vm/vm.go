@@ -20,6 +20,7 @@ import (
 	"github.com/golang/groupcache/lru"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opencensus.io/trace"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
@@ -729,6 +730,8 @@ func (v *VM) execute(t *thread, i code.Instr) {
 // fetch-execute cycle on the VM bytecode with the line as input to the
 // program, until termination.
 func (v *VM) processLine(line *logline.LogLine) {
+	ctx, span := trace.StartSpan(line.Context, "vm.processLine."+v.name)
+	defer span.End()
 	start := time.Now()
 	defer func() {
 		lineProcessingDurations.WithLabelValues(v.name).Observe(time.Since(start).Seconds())
@@ -739,6 +742,7 @@ func (v *VM) processLine(line *logline.LogLine) {
 	v.input = line
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, len(v.re))
+	_, span1 := trace.StartSpan(ctx, "execute loop")
 	for {
 		if t.pc >= len(v.prog) {
 			return
@@ -752,6 +756,7 @@ func (v *VM) processLine(line *logline.LogLine) {
 			return
 		}
 	}
+	span1.End()
 }
 
 // Run executes the virtual machine on each line of input received.  When the
