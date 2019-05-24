@@ -31,6 +31,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
+	"go.opencensus.io/zpages"
 )
 
 type BuildInfo struct {
@@ -309,6 +310,7 @@ func (m *Server) Serve() error {
 	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	zpages.Handle(mux, "/")
 	m.h.Handler = mux
 	m.e.StartMetricPush()
 
