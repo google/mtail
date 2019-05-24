@@ -22,6 +22,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/watcher"
@@ -194,7 +195,7 @@ func (t *Tailer) TailPath(pathname string) error {
 // line onto lines channel.  Because we handle rotations and truncates when
 // reaching EOF in the file reader itself, we don't care what the signal is
 // from the filewatcher.
-func (t *Tailer) handleLogEvent(pathname string) {
+func (t *Tailer) handleLogEvent(ctx context.Context, pathname string) {
 	glog.V(2).Infof("handleLogUpdate %s", pathname)
 	fd, ok := t.handleForPath(pathname)
 	if !ok {
@@ -203,10 +204,10 @@ func (t *Tailer) handleLogEvent(pathname string) {
 		// unreadable before now; but we have to copmare against the glob to be
 		// sure we don't just add all the files in a watched directory as they
 		// get modified.
-		t.handleCreateGlob(pathname)
+		t.handleCreateGlob(ctx, pathname)
 		return
 	}
-	doFollow(t.ctx, fd)
+	doFollow(ctx, fd)
 }
 
 // doFollow performs the Follow on an existing file descriptor, logging any errors
@@ -259,7 +260,9 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 }
 
 // handleCreateGlob matches the pathname against the glob patterns and starts tailing the file.
-func (t *Tailer) handleCreateGlob(pathname string) {
+func (t *Tailer) handleCreateGlob(ctx context.Context, pathname string) {
+	ctx, span := trace.StartSpan(ctx, "handleCreateGlob")
+	defer span.End()
 	t.globPatternsMu.RLock()
 	defer t.globPatternsMu.RUnlock()
 
@@ -291,8 +294,10 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 	defer close(t.runDone)
 
 	for e := range events {
+		ctx, span := trace.StartSpan(t.ctx, "tailer.run")
 		glog.V(2).Infof("Event type %#v", e)
-		t.handleLogEvent(e.Pathname)
+		t.handleLogEvent(ctx, e.Pathname)
+		span.End()
 	}
 	glog.Infof("Closing lines channel.")
 	close(t.lines)
