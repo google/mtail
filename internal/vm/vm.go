@@ -743,6 +743,7 @@ func (v *VM) processLine(line *logline.LogLine) {
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, len(v.re))
 	_, span1 := trace.StartSpan(ctx, "execute loop")
+	defer span1.End()
 	for {
 		if t.pc >= len(v.prog) {
 			return
@@ -756,7 +757,6 @@ func (v *VM) processLine(line *logline.LogLine) {
 			return
 		}
 	}
-	span1.End()
 }
 
 // Run executes the virtual machine on each line of input received.  When the
