@@ -188,7 +188,7 @@ const statusTemplate = `
 <h1>mtail on {{.BindAddress}}</h1>
 <p>Build: {{.BuildInfo}}</p>
 <p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
-<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a></p>
+<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a>, <a href="/tracez">tracez</a></p>
 `
 
 func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
