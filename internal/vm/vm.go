@@ -768,7 +768,6 @@ func (v *VM) Run(_ uint32, lines <-chan *logline.LogLine, shutdown chan<- struct
 	glog.Infof("Starting program %s", v.name)
 	close(started)
 	for line := range lines {
-		// TODO(jaq): measure and export the processLine runtime per VM as a histo.
 		v.processLine(line)
 	}
 	glog.Infof("Stopping program %s", v.name)
