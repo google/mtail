@@ -65,7 +65,7 @@ var (
 
 	// Tracing
 	zipkinAddress     = flag.String("zipkin_address", "http://localhost:9411:/api/v2/spans", "If set, URL of zipkin remote spans service.")
-	traceSamplePeriod = flag.Int("trace_sample_period", 0, "Sample period for traces")
+	traceSamplePeriod = flag.Int("trace_sample_period", 0, "Sample period for traces.  If non-zero, every nth trace will be sampled.")
 )
 
 func init() {
