@@ -19,15 +19,14 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/golang/groupcache/lru"
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"go.opencensus.io/trace"
-
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/vm/code"
 	"github.com/google/mtail/internal/vm/object"
+	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"go.opencensus.io/trace"
 )
 
 var (
