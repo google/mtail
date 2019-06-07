@@ -20,23 +20,10 @@ func TestNewLoader(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
 	inLines := make(chan *logline.LogLine)
-	l, err := NewLoader("", store, inLines, w)
+	_, err := NewLoader("", store, inLines, w)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
-	done := make(chan struct{})
-	outLines := make(chan *logline.LogLine)
-	handle := &vmHandle{outLines, done, nil}
-	l.handleMu.Lock()
-	l.handles["test"] = handle
-	l.handleMu.Unlock()
-	go func() {
-		for range outLines {
-		}
-		close(done)
-	}()
-	close(inLines)
-	<-outLines
 }
 
 func TestCompileAndRun(t *testing.T) {

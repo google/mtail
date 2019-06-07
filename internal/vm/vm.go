@@ -762,16 +762,6 @@ func (v *VM) ProcessLogLine(ctx context.Context, line *logline.LogLine) {
 	}
 }
 
-// Run executes the virtual machine on each line of input received.  When the
-// input closes, it signals to the loader that it has terminated by closing the
-// shutdown channel.
-func (v *VM) Run(id uint32, lines <-chan *logline.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
-	defer close(shutdown)
-
-	glog.Infof("Starting program %s", v.name)
-	close(started)
-}
-
 // New creates a new virtual machine with the given name, and compiler
 // artifacts for executable and data segments.
 func New(name string, obj *object.Object, syslogUseCurrentYear bool, loc *time.Location) *VM {

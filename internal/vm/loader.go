@@ -227,27 +227,8 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
 
-	// Stop any previous VM.
-	if handle, ok := l.handles[name]; ok {
-		glog.Infof("END OF LINE, %s", name)
-		close(handle.lines)
-		<-handle.done
-		glog.Infof("Stopped %s", name)
-	}
-
-	l.handles[name] = &vmHandle{make(chan *logline.LogLine, 1), make(chan struct{}), v}
-	nameCode := nameToCode(name)
-	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
-	started := make(chan struct{})
-	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done, started)
-	<-started
-	glog.Infof("Started %s", name)
-
+	l.handles[name] = v
 	return nil
-}
-
-func nameToCode(name string) uint32 {
-	return uint32(name[0])<<24 | uint32(name[1])<<16 | uint32(name[2])<<8 | uint32(name[3])
 }
 
 // Loader handles the lifecycle of programs and virtual machines, by watching
@@ -262,8 +243,8 @@ type Loader struct {
 
 	eventsHandle int // record the handle with which to add programs to the watcher
 
-	handleMu sync.RWMutex         // guards accesses to handles
-	handles  map[string]*vmHandle // map of program names to virtual machines
+	handleMu sync.RWMutex   // guards accesses to handles
+	handles  map[string]*VM // map of program names to virtual machines
 
 	programErrorMu sync.RWMutex     // guards access to programErrors
 	programErrors  map[string]error // errors from the last compile attempt of the program
@@ -348,7 +329,7 @@ func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.L
 		ms:            store,
 		w:             w,
 		programPath:   programPath,
-		handles:       make(map[string]*vmHandle),
+		handles:       make(map[string]*VM),
 		programErrors: make(map[string]error),
 		watcherDone:   make(chan struct{}),
 		VMsDone:       make(chan struct{}),
@@ -374,12 +355,6 @@ func (l *Loader) SetOption(options ...func(*Loader) error) error {
 		}
 	}
 	return nil
-}
-
-type vmHandle struct {
-	lines chan *logline.LogLine
-	done  chan struct{}
-	vm    logline.Processor
 }
 
 // processEvents manages program lifecycle triggered by events from the
@@ -420,11 +395,10 @@ func (l *Loader) processLines(lines <-chan *logline.LogLine) {
 	for ll := range lines {
 		ctx, span := trace.StartSpan(ll.Context, "loader.processLines")
 		span.AddMessageReceiveEvent(1, int64(len(ll.Line)), int64(len(ll.Line)))
-		ll := logline.New(ctx, ll.Filename, ll.Line)
 		LineCount.Add(1)
 		l.handleMu.RLock()
 		for prog := range l.handles {
-			l.handles[prog].vm.ProcessLogLine(ctx, ll)
+			l.handles[prog].ProcessLogLine(ctx, ll)
 		}
 		l.handleMu.RUnlock()
 		span.End()
@@ -438,11 +412,7 @@ func (l *Loader) processLines(lines <-chan *logline.LogLine) {
 	<-l.watcherDone
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
-	glog.Info("Closing VM lines channels.")
 	for prog := range l.handles {
-		// Close the per-VM lines channel, and wait for it to signal it's done.
-		close(l.handles[prog].lines)
-		<-l.handles[prog].done
 		delete(l.handles, prog)
 	}
 }
@@ -456,9 +426,7 @@ func (l *Loader) UnloadProgram(pathname string) {
 	name := filepath.Base(pathname)
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
-	if handle, ok := l.handles[name]; ok {
-		close(handle.lines)
-		<-handle.done
+	if _, ok := l.handles[name]; ok {
 		delete(l.handles, name)
 	}
 }
