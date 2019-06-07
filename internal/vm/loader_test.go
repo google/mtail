@@ -26,7 +26,7 @@ func TestNewLoader(t *testing.T) {
 	}
 	done := make(chan struct{})
 	outLines := make(chan *logline.LogLine)
-	handle := &vmHandle{outLines, done}
+	handle := &vmHandle{outLines, done, nil}
 	l.handleMu.Lock()
 	l.handles["test"] = handle
 	l.handleMu.Unlock()

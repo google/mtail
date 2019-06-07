@@ -235,7 +235,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		glog.Infof("Stopped %s", name)
 	}
 
-	l.handles[name] = &vmHandle{make(chan *logline.LogLine, 1), make(chan struct{})}
+	l.handles[name] = &vmHandle{make(chan *logline.LogLine, 1), make(chan struct{}), v}
 	nameCode := nameToCode(name)
 	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
 	started := make(chan struct{})
@@ -379,6 +379,7 @@ func (l *Loader) SetOption(options ...func(*Loader) error) error {
 type vmHandle struct {
 	lines chan *logline.LogLine
 	done  chan struct{}
+	vm    logline.Processor
 }
 
 // processEvents manages program lifecycle triggered by events from the
