@@ -6,15 +6,21 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
+	openzipkin "github.com/openzipkin/zipkin-go"
+	zipkinHTTP "github.com/openzipkin/zipkin-go/reporter/http"
+
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/watcher"
+	"go.opencensus.io/exporter/zipkin"
+	"go.opencensus.io/trace"
 )
 
 type seqStringFlag []string
@@ -117,6 +123,17 @@ func main() {
 			glog.Exitf("mtail requires the names of logs to follow in order to extract logs from them; please use the flag -logs one or more times to specify glob patterns describing these logs.")
 		}
 	}
+
+	localEndpoint, err := openzipkin.NewEndpoint("mtail", "127.0.0.1:3903")
+	if err != nil {
+		log.Fatalf("Failed to create the local zipkinEndpoint: %v", err)
+	}
+	reporter := zipkinHTTP.NewReporter("http://localhost:9411/api/v2/spans")
+	ze := zipkin.NewExporter(reporter, localEndpoint)
+	trace.RegisterExporter(ze)
+
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+
 	w, err := watcher.NewLogWatcher(*pollInterval, !*disableFsnotify)
 	if err != nil {
 		glog.Exitf("Failure to create log watcher: %s", err)
