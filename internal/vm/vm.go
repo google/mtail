@@ -736,7 +736,6 @@ func (v *VM) processLine(line *logline.LogLine) {
 	defer func() {
 		lineProcessingDurations.WithLabelValues(v.name).Observe(time.Since(start).Seconds())
 	}()
-	span.AddAttributes(trace.StringAttribute("vm.prog", v.name))
 	t := new(thread)
 	t.matched = false
 	v.t = t
@@ -765,13 +764,18 @@ func (v *VM) processLine(line *logline.LogLine) {
 // Run executes the virtual machine on each line of input received.  When the
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
-func (v *VM) Run(_ uint32, lines <-chan *logline.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
+func (v *VM) Run(id uint32, lines <-chan *logline.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
 	defer close(shutdown)
 
 	glog.Infof("Starting program %s", v.name)
 	close(started)
 	for line := range lines {
-		v.processLine(line)
+		ctx, span := trace.StartSpan(line.Context, "vm.Run")
+		span.AddAttributes(trace.StringAttribute("vm.prog", v.name))
+		span.AddMessageReceiveEvent(int64(id), int64(len(line.Line)), int64(len(line.Line)))
+		ll := logline.New(ctx, line.Filename, line.Line)
+		v.processLine(ll)
+		span.End()
 	}
 	glog.Infof("Stopping program %s", v.name)
 }

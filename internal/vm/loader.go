@@ -418,10 +418,13 @@ func (l *Loader) processLines(lines <-chan *logline.LogLine) {
 	// Copy all input LogLines to each VM's LogLine input channel.
 	for ll := range lines {
 		ctx, span := trace.StartSpan(ll.Context, "loader.processLines")
+		span.AddMessageReceiveEvent(1, int64(len(ll.Line)), int64(len(ll.Line)))
 		ll := logline.New(ctx, ll.Filename, ll.Line)
 		LineCount.Add(1)
 		l.handleMu.RLock()
 		for prog := range l.handles {
+			span.AddMessageSendEvent(int64(nameToCode(prog)), int64(len(ll.Line)), int64(len(ll.Line)))
+
 			l.handles[prog].lines <- ll
 		}
 		l.handleMu.RUnlock()
