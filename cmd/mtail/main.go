@@ -6,20 +6,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
-	openzipkin "github.com/openzipkin/zipkin-go"
-	zipkinHTTP "github.com/openzipkin/zipkin-go/reporter/http"
-
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/watcher"
-	"go.opencensus.io/exporter/zipkin"
 	"go.opencensus.io/trace"
 )
 
@@ -67,6 +62,10 @@ var (
 	// Debugging flags
 	blockProfileRate     = flag.Int("block_profile_rate", 0, "Nanoseconds of block time before goroutine blocking events reported. 0 turns off.  See https://golang.org/pkg/runtime/#SetBlockProfileRate")
 	mutexProfileFraction = flag.Int("mutex_profile_fraction", 0, "Fraction of mutex contention events reported.  0 turns off.  See http://golang.org/pkg/runtime/#SetMutexProfileFraction")
+
+	// Tracing
+	zipkinAddress     = flag.String("zipkin_address", "http://localhost:9411:/api/v2/spans", "If set, URL of zipkin remote spans service.")
+	traceSamplePeriod = flag.Int("trace_sample_period", 0, "Sample period for traces")
 )
 
 func init() {
@@ -124,15 +123,9 @@ func main() {
 		}
 	}
 
-	localEndpoint, err := openzipkin.NewEndpoint("mtail", "127.0.0.1:3903")
-	if err != nil {
-		log.Fatalf("Failed to create the local zipkinEndpoint: %v", err)
+	if *traceSamplePeriod > 0 {
+		trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(1 / float64(*traceSamplePeriod))})
 	}
-	reporter := zipkinHTTP.NewReporter("http://localhost:9411/api/v2/spans")
-	ze := zipkin.NewExporter(reporter, localEndpoint)
-	trace.RegisterExporter(ze)
-
-	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 
 	w, err := watcher.NewLogWatcher(*pollInterval, !*disableFsnotify)
 	if err != nil {
@@ -170,6 +163,9 @@ func main() {
 	}
 	if *emitMetricTimestamp {
 		opts = append(opts, mtail.EmitMetricTimestamp)
+	}
+	if *zipkinAddress != "" {
+		opts = append(opts, mtail.ZipkinReporter(*zipkinAddress))
 	}
 	m, err := mtail.New(metrics.NewStore(), w, opts...)
 	if err != nil {

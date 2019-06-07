@@ -61,7 +61,8 @@ type Server struct {
 	l *vm.Loader         // l loads programs and manages the VM lifecycle.
 	e *exporter.Exporter // e manages the export of metrics from the store.
 
-	reg *prometheus.Registry
+	reg    *prometheus.Registry
+	zipkin string
 
 	h        *http.Server
 	listener net.Listener
