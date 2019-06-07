@@ -235,7 +235,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		glog.Infof("Stopped %s", name)
 	}
 
-	l.handles[name] = &vmHandle{make(chan *logline.LogLine), make(chan struct{})}
+	l.handles[name] = &vmHandle{make(chan *logline.LogLine, 1), make(chan struct{})}
 	nameCode := nameToCode(name)
 	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
 	started := make(chan struct{})
