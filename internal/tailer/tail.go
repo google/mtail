@@ -11,6 +11,7 @@ package tailer
 // directory.
 
 import (
+	"context"
 	"expvar"
 	"html/template"
 	"io"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/watcher"
@@ -37,6 +39,7 @@ var (
 type Tailer struct {
 	lines chan<- *logline.LogLine // Logfile lines being emitted.
 	w     watcher.Watcher
+	ctx   context.Context
 
 	handlesMu sync.RWMutex     // protects `handles'
 	handles   map[string]*File // File handles for each pathname.
@@ -55,6 +58,14 @@ type Tailer struct {
 func OneShot(t *Tailer) error {
 	t.oneShot = true
 	return nil
+}
+
+// Context sets the context of the tailer
+func Context(ctx context.Context) func(*Tailer) error {
+	return func(t *Tailer) error {
+		t.ctx = ctx
+		return nil
+	}
 }
 
 // New creates a new Tailer.
@@ -184,7 +195,7 @@ func (t *Tailer) TailPath(pathname string) error {
 // line onto lines channel.  Because we handle rotations and truncates when
 // reaching EOF in the file reader itself, we don't care what the signal is
 // from the filewatcher.
-func (t *Tailer) handleLogEvent(pathname string) {
+func (t *Tailer) handleLogEvent(ctx context.Context, pathname string) {
 	glog.V(2).Infof("handleLogUpdate %s", pathname)
 	fd, ok := t.handleForPath(pathname)
 	if !ok {
@@ -193,15 +204,15 @@ func (t *Tailer) handleLogEvent(pathname string) {
 		// unreadable before now; but we have to copmare against the glob to be
 		// sure we don't just add all the files in a watched directory as they
 		// get modified.
-		t.handleCreateGlob(pathname)
+		t.handleCreateGlob(ctx, pathname)
 		return
 	}
-	doFollow(fd)
+	doFollow(ctx, fd)
 }
 
 // doFollow performs the Follow on an existing file descriptor, logging any errors
-func doFollow(fd *File) {
-	err := fd.Follow()
+func doFollow(ctx context.Context, fd *File) {
+	err := fd.Follow(ctx)
 	if err != nil && err != io.EOF {
 		glog.Info(err)
 	}
@@ -240,7 +251,7 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	if err := t.setHandle(pathname, f); err != nil {
 		return err
 	}
-	if err := f.Read(); err != nil && err != io.EOF {
+	if err := f.Read(t.ctx); err != nil && err != io.EOF {
 		return err
 	}
 	glog.Infof("Tailing %s", f.Pathname)
@@ -249,7 +260,9 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 }
 
 // handleCreateGlob matches the pathname against the glob patterns and starts tailing the file.
-func (t *Tailer) handleCreateGlob(pathname string) {
+func (t *Tailer) handleCreateGlob(ctx context.Context, pathname string) {
+	ctx, span := trace.StartSpan(ctx, "handleCreateGlob")
+	defer span.End()
 	t.globPatternsMu.RLock()
 	defer t.globPatternsMu.RUnlock()
 
@@ -281,8 +294,10 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 	defer close(t.runDone)
 
 	for e := range events {
+		ctx, span := trace.StartSpan(t.ctx, "tailer.run")
 		glog.V(2).Infof("Event type %#v", e)
-		t.handleLogEvent(e.Pathname)
+		t.handleLogEvent(ctx, e.Pathname)
+		span.End()
 	}
 	glog.Infof("Closing lines channel.")
 	close(t.lines)
@@ -378,7 +393,7 @@ func (t *Tailer) Gc() error {
 			if err := t.w.Remove(v.Pathname); err != nil {
 				glog.Info(err)
 			}
-			if err := v.Close(); err != nil {
+			if err := v.Close(t.ctx); err != nil {
 				glog.Info(err)
 			}
 			delete(t.handles, k)

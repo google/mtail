@@ -6,6 +6,13 @@ package mtail
 import (
 	"net"
 	"time"
+
+	openzipkin "github.com/openzipkin/zipkin-go"
+	zipkinHTTP "github.com/openzipkin/zipkin-go/reporter/http"
+
+	"github.com/pkg/errors"
+	"go.opencensus.io/exporter/zipkin"
+	"go.opencensus.io/trace"
 )
 
 // ProgramPath sets the path to find mtail programs in the Server.
@@ -118,4 +125,19 @@ func OmitMetricSource(m *Server) error {
 func EmitMetricTimestamp(m *Server) error {
 	m.emitMetricTimestamp = true
 	return nil
+}
+
+// ZipkinReporter creates a new zipkin reporter that sends to the given Zipkin address.
+// This must be called after BindAddress succeeds.
+func ZipkinReporter(zipkinAddress string) func(*Server) error {
+	return func(m *Server) error {
+		localEndpoint, err := openzipkin.NewEndpoint("mtail", m.Addr())
+		if err != nil {
+			return errors.Errorf("Failed to create the local zipkinEndpoint: %v", err)
+		}
+		reporter := zipkinHTTP.NewReporter(zipkinAddress)
+		ze := zipkin.NewExporter(reporter, localEndpoint)
+		trace.RegisterExporter(ze)
+		return nil
+	}
 }

@@ -7,6 +7,7 @@ package vm
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 	"regexp"
@@ -18,14 +19,14 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/golang/groupcache/lru"
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/vm/code"
 	"github.com/google/mtail/internal/vm/object"
+	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"go.opencensus.io/trace"
 )
 
 var (
@@ -728,7 +729,9 @@ func (v *VM) execute(t *thread, i code.Instr) {
 // processLine handles the incoming lines from the input channel, by running a
 // fetch-execute cycle on the VM bytecode with the line as input to the
 // program, until termination.
-func (v *VM) processLine(line *logline.LogLine) {
+func (v *VM) processLine(ctx context.Context, line *logline.LogLine) {
+	ctx, span := trace.StartSpan(ctx, "vm.processLine")
+	defer span.End()
 	start := time.Now()
 	defer func() {
 		lineProcessingDurations.WithLabelValues(v.name).Observe(time.Since(start).Seconds())
@@ -739,14 +742,18 @@ func (v *VM) processLine(line *logline.LogLine) {
 	v.input = line
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, len(v.re))
+	_, span1 := trace.StartSpan(ctx, "execute loop")
+	defer span1.End()
 	for {
 		if t.pc >= len(v.prog) {
+			span1.AddAttributes(trace.BoolAttribute("vm.terminated", false))
 			return
 		}
 		i := v.prog[t.pc]
 		t.pc++
 		v.execute(t, i)
 		if v.terminate || v.abort {
+			span1.AddAttributes(trace.BoolAttribute("vm.terminated", true))
 			// Terminate only stops this invocation on this line of input; reset the terminate flag.
 			v.terminate = false
 			return
@@ -757,14 +764,17 @@ func (v *VM) processLine(line *logline.LogLine) {
 // Run executes the virtual machine on each line of input received.  When the
 // input closes, it signals to the loader that it has terminated by closing the
 // shutdown channel.
-func (v *VM) Run(_ uint32, lines <-chan *logline.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
+func (v *VM) Run(id uint32, lines <-chan *logline.LogLine, shutdown chan<- struct{}, started chan<- struct{}) {
 	defer close(shutdown)
 
 	glog.Infof("Starting program %s", v.name)
 	close(started)
 	for line := range lines {
-		// TODO(jaq): measure and export the processLine runtime per VM as a histo.
-		v.processLine(line)
+		ctx, span := trace.StartSpan(line.Context, "vm.Run")
+		span.AddAttributes(trace.StringAttribute("vm.prog", v.name))
+		span.AddMessageReceiveEvent(int64(id), int64(len(line.Line)), int64(len(line.Line)))
+		v.processLine(ctx, line)
+		span.End()
 	}
 	glog.Infof("Stopping program %s", v.name)
 }

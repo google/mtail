@@ -4,6 +4,7 @@
 package tailer
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -42,7 +43,7 @@ func TestReadPartial(t *testing.T) {
 		}
 		close(done)
 	}()
-	err = f.Read()
+	err = f.Read(context.Background())
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
@@ -54,7 +55,7 @@ func TestReadPartial(t *testing.T) {
 	// memmapfs shares data structure here and in code under test so reset the file offset
 	_, err = fd.Seek(0, 0)
 	testutil.FatalIfErr(t, err)
-	err = f.Read()
+	err = f.Read(context.Background())
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
@@ -67,7 +68,7 @@ func TestReadPartial(t *testing.T) {
 	testutil.WriteString(t, fd, "\n")
 	_, err = fd.Seek(-1, io.SeekEnd)
 	testutil.FatalIfErr(t, err)
-	err = f.Read()
+	err = f.Read(context.Background())
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
 	}
@@ -78,9 +79,9 @@ func TestReadPartial(t *testing.T) {
 		t.Errorf("partial line not empty: %q", f.partial)
 	}
 	expected := []*logline.LogLine{
-		{logfile, "ohi"},
+		{context.TODO(), logfile, "ohi"},
 	}
-	diff := testutil.Diff(expected, result)
+	diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 	if diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}

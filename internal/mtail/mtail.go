@@ -31,6 +31,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
+	"go.opencensus.io/zpages"
 )
 
 type BuildInfo struct {
@@ -60,7 +61,8 @@ type Server struct {
 	l *vm.Loader         // l loads programs and manages the VM lifecycle.
 	e *exporter.Exporter // e manages the export of metrics from the store.
 
-	reg *prometheus.Registry
+	reg    *prometheus.Registry
+	zipkin string
 
 	h        *http.Server
 	listener net.Listener
@@ -169,7 +171,8 @@ func (m *Server) initExporter() (err error) {
 
 // initTailer sets up a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
-	opts := []func(*tailer.Tailer) error{}
+	opts := []func(*tailer.Tailer) error{
+		tailer.Context(context.Background())}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
 	}
@@ -186,7 +189,7 @@ const statusTemplate = `
 <h1>mtail on {{.BindAddress}}</h1>
 <p>Build: {{.BuildInfo}}</p>
 <p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
-<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a></p>
+<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a>, <a href="/tracez">tracez</a></p>
 `
 
 func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -308,6 +311,7 @@ func (m *Server) Serve() error {
 	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	zpages.Handle(mux, "/")
 	m.h.Handler = mux
 	m.e.StartMetricPush()
 

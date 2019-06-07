@@ -5,6 +5,7 @@ package vm
 
 import (
 	"bufio"
+	"context"
 	"expvar"
 	"math"
 	"strings"
@@ -206,7 +207,7 @@ func TestVmEndToEnd(t *testing.T) {
 			lineCount := 0
 			for scanner.Scan() {
 				lineCount++
-				lines <- logline.New(tc.name, scanner.Text())
+				lines <- logline.New(context.Background(), tc.name, scanner.Text())
 			}
 			close(lines)
 			<-l.VMsDone

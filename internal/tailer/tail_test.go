@@ -4,6 +4,7 @@
 package tailer
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/user"
@@ -23,7 +24,7 @@ func makeTestTail(t *testing.T) (*Tailer, chan *logline.LogLine, *watcher.FakeWa
 
 	w := watcher.NewFakeWatcher()
 	lines := make(chan *logline.LogLine, 1)
-	ta, err := New(lines, w)
+	ta, err := New(lines, w, Context(context.Background()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,12 +86,12 @@ func TestHandleLogUpdate(t *testing.T) {
 	<-done
 
 	expected := []*logline.LogLine{
-		{logfile, "a"},
-		{logfile, "b"},
-		{logfile, "c"},
-		{logfile, "d"},
+		{context.Background(), logfile, "a"},
+		{context.Background(), logfile, "b"},
+		{context.Background(), logfile, "c"},
+		{context.Background(), logfile, "d"},
 	}
-	if diff := testutil.Diff(expected, result); diff != "" {
+	if diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context")); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
@@ -146,13 +147,13 @@ func TestHandleLogTruncate(t *testing.T) {
 	<-done
 
 	expected := []*logline.LogLine{
-		{logfile, "a"},
-		{logfile, "b"},
-		{logfile, "c"},
-		{logfile, "d"},
-		{logfile, "e"},
+		{context.Background(), logfile, "a"},
+		{context.Background(), logfile, "b"},
+		{context.Background(), logfile, "c"},
+		{context.Background(), logfile, "d"},
+		{context.Background(), logfile, "e"},
 	}
-	if diff := testutil.Diff(expected, result); diff != "" {
+	if diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context")); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
@@ -202,9 +203,9 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	<-done
 
 	expected := []*logline.LogLine{
-		{logfile, "ab"},
+		{context.Background(), logfile, "ab"},
 	}
-	diff := testutil.Diff(expected, result)
+	diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 	if diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
@@ -344,10 +345,10 @@ func TestHandleLogRotate(t *testing.T) {
 	<-done
 
 	expected := []*logline.LogLine{
-		{logfile, "1"},
-		{logfile, "2"},
+		{context.Background(), logfile, "1"},
+		{context.Background(), logfile, "2"},
 	}
-	diff := testutil.Diff(expected, result)
+	diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 	if diff != "" {
 		t.Errorf("result didn't match expected:\n%s", diff)
 	}
@@ -400,10 +401,10 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 	<-done
 
 	expected := []*logline.LogLine{
-		{logfile, "1"},
-		{logfile, "2"},
+		{context.Background(), logfile, "1"},
+		{context.Background(), logfile, "2"},
 	}
-	diff := testutil.Diff(expected, result)
+	diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 	if diff != "" {
 		t.Errorf("result didn't match expected:\n%s", diff)
 	}
