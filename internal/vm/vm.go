@@ -730,12 +730,13 @@ func (v *VM) execute(t *thread, i code.Instr) {
 // fetch-execute cycle on the VM bytecode with the line as input to the
 // program, until termination.
 func (v *VM) processLine(line *logline.LogLine) {
-	ctx, span := trace.StartSpan(line.Context, "vm.processLine."+v.name)
+	ctx, span := trace.StartSpan(line.Context, "vm.processLine")
 	defer span.End()
 	start := time.Now()
 	defer func() {
 		lineProcessingDurations.WithLabelValues(v.name).Observe(time.Since(start).Seconds())
 	}()
+	span.AddAttributes(trace.StringAttribute("vm.prog", v.name))
 	t := new(thread)
 	t.matched = false
 	v.t = t
@@ -746,12 +747,14 @@ func (v *VM) processLine(line *logline.LogLine) {
 	defer span1.End()
 	for {
 		if t.pc >= len(v.prog) {
+			span1.AddAttributes(trace.BoolAttribute("vm.terminated", false))
 			return
 		}
 		i := v.prog[t.pc]
 		t.pc++
 		v.execute(t, i)
 		if v.terminate || v.abort {
+			span1.AddAttributes(trace.BoolAttribute("vm.terminated", true))
 			// Terminate only stops this invocation on this line of input; reset the terminate flag.
 			v.terminate = false
 			return
