@@ -7,6 +7,7 @@ package vm
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 	"regexp"
@@ -729,8 +730,8 @@ func (v *VM) execute(t *thread, i code.Instr) {
 // processLine handles the incoming lines from the input channel, by running a
 // fetch-execute cycle on the VM bytecode with the line as input to the
 // program, until termination.
-func (v *VM) processLine(line *logline.LogLine) {
-	ctx, span := trace.StartSpan(line.Context, "vm.processLine")
+func (v *VM) processLine(ctx context.Context, line *logline.LogLine) {
+	ctx, span := trace.StartSpan(ctx, "vm.processLine")
 	defer span.End()
 	start := time.Now()
 	defer func() {
@@ -773,8 +774,7 @@ func (v *VM) Run(id uint32, lines <-chan *logline.LogLine, shutdown chan<- struc
 		ctx, span := trace.StartSpan(line.Context, "vm.Run")
 		span.AddAttributes(trace.StringAttribute("vm.prog", v.name))
 		span.AddMessageReceiveEvent(int64(id), int64(len(line.Line)), int64(len(line.Line)))
-		ll := logline.New(ctx, line.Filename, line.Line)
-		v.processLine(ll)
+		v.processLine(ctx, line)
 		span.End()
 	}
 	glog.Infof("Stopping program %s", v.name)
