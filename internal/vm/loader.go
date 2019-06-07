@@ -11,6 +11,7 @@ package vm
 // of mtail programs.
 
 import (
+	"context"
 	"expvar"
 	"html/template"
 	"io"
@@ -396,11 +397,7 @@ func (l *Loader) processLines(lines <-chan *logline.LogLine) {
 		ctx, span := trace.StartSpan(ll.Context, "loader.processLines")
 		span.AddMessageReceiveEvent(1, int64(len(ll.Line)), int64(len(ll.Line)))
 		LineCount.Add(1)
-		l.handleMu.RLock()
-		for prog := range l.handles {
-			l.handles[prog].ProcessLogLine(ctx, ll)
-		}
-		l.handleMu.RUnlock()
+		l.ProcessLogLine(ctx, ll)
 		span.End()
 	}
 	// When lines is closed, the tailer has shut down which signals that it's
@@ -414,6 +411,17 @@ func (l *Loader) processLines(lines <-chan *logline.LogLine) {
 	defer l.handleMu.Unlock()
 	for prog := range l.handles {
 		delete(l.handles, prog)
+	}
+}
+
+// ProcessLogLine satisfies the LogLine.Processor interface.
+func (l *Loader) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
+	ctx, span := trace.StartSpan(ctx, "Loader.ProcessLogLine")
+	defer span.End()
+	l.handleMu.RLock()
+	defer l.handleMu.RUnlock()
+	for prog := range l.handles {
+		l.handles[prog].ProcessLogLine(ctx, ll)
 	}
 }
 
