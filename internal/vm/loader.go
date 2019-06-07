@@ -424,9 +424,7 @@ func (l *Loader) processLines(lines <-chan *logline.LogLine) {
 		LineCount.Add(1)
 		l.handleMu.RLock()
 		for prog := range l.handles {
-			span.AddMessageSendEvent(int64(nameToCode(prog)), int64(len(ll.Line)), int64(len(ll.Line)))
-
-			l.handles[prog].lines <- ll
+			l.handles[prog].vm.ProcessLogLine(ctx, ll)
 		}
 		l.handleMu.RUnlock()
 		span.End()

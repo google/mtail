@@ -732,6 +732,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 func (v *VM) ProcessLogLine(ctx context.Context, line *logline.LogLine) {
 	ctx, span := trace.StartSpan(ctx, "VM.ProcessLogLine")
 	defer span.End()
+	span.AddAttributes(trace.StringAttribute("vm.prog", v.name))
 	start := time.Now()
 	defer func() {
 		lineProcessingDurations.WithLabelValues(v.name).Observe(time.Since(start).Seconds())
@@ -769,14 +770,6 @@ func (v *VM) Run(id uint32, lines <-chan *logline.LogLine, shutdown chan<- struc
 
 	glog.Infof("Starting program %s", v.name)
 	close(started)
-	for line := range lines {
-		ctx, span := trace.StartSpan(line.Context, "vm.Run")
-		span.AddAttributes(trace.StringAttribute("vm.prog", v.name))
-		span.AddMessageReceiveEvent(int64(id), int64(len(line.Line)), int64(len(line.Line)))
-		v.ProcessLogLine(ctx, line)
-		span.End()
-	}
-	glog.Infof("Stopping program %s", v.name)
 }
 
 // New creates a new virtual machine with the given name, and compiler

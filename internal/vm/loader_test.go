@@ -57,20 +57,11 @@ func TestCompileAndRun(t *testing.T) {
 	}
 	l.handleMu.Unlock()
 	l.handleMu.Lock()
-	c := l.handles["Test"].done
-	if c == nil {
-		t.Errorf("No done channel in handles: %v", l.handles)
+	h := l.handles["Test"]
+	if h == nil {
+		t.Errorf("No handle for Test: %v", l.handles)
 	}
 	l.handleMu.Unlock()
-	close(lines)
-	<-c
-	{
-		l.handleMu.Lock()
-		defer l.handleMu.Unlock()
-		if len(l.handles) != 0 {
-			t.Errorf("some vm handles: %v", l.handles)
-		}
-	}
 }
 
 var testProcessEvents = []struct {
