@@ -13,10 +13,12 @@ package tailer
 import (
 	"context"
 	"expvar"
+	"fmt"
 	"html/template"
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"time"
 
@@ -44,8 +46,9 @@ type Tailer struct {
 	handlesMu sync.RWMutex     // protects `handles'
 	handles   map[string]*File // File handles for each pathname.
 
-	globPatternsMu sync.RWMutex        // protects `globPatterns'
-	globPatterns   map[string]struct{} // glob patterns to match newly created files in dir paths against
+	globPatternsMu     sync.RWMutex        // protects `globPatterns'
+	globPatterns       map[string]struct{} // glob patterns to match newly created files in dir paths against
+	ignoreRegexPattern *regexp.Regexp
 
 	runDone chan struct{} // Signals termination of the run goroutine.
 
@@ -169,11 +172,50 @@ func (t *Tailer) TailPattern(pattern string) error {
 		return errors.Errorf("No matches for pattern %q", pattern)
 	}
 	for _, pathname := range matches {
-		err := t.TailPath(pathname)
+		ignore, err := t.Ignore(pathname)
+		if err != nil {
+			return err
+		}
+		if ignore {
+			continue
+		}
+		err = t.TailPath(pathname)
 		if err != nil {
 			return errors.Wrapf(err, "attempting to tail %q", pathname)
 		}
 	}
+	return nil
+}
+
+func (t *Tailer) Ignore(pathname string) (bool, error) {
+	absPath, err := filepath.Abs(pathname)
+	if err != nil {
+		return false, err
+	}
+	fi, err := os.Stat(absPath)
+	if err != nil {
+		return false, err
+	}
+	if fi.Mode().IsDir() {
+		// do directory stuff
+		glog.V(2).Infof("ignore path %q because it is a folder", pathname)
+		return true, nil
+	}
+	return t.ignoreRegexPattern != nil && t.ignoreRegexPattern.MatchString(fi.Name()), nil
+}
+
+func (t *Tailer) SetIgnorePattern(pattern string) error {
+	if len(pattern) == 0 {
+		return nil
+	}
+	glog.V(2).Infof("Set filename ignore regex pattern %q", pattern)
+	ignoreRegexPattern, err := regexp.Compile(pattern)
+	if err != nil {
+		glog.V(2).Infof("Couldn't compile regex %q: %s", pattern, err)
+		fmt.Println(fmt.Sprintf("error: %v", err))
+		return err
+	}
+	t.ignoreRegexPattern = ignoreRegexPattern
 	return nil
 }
 
@@ -274,6 +316,15 @@ func (t *Tailer) handleCreateGlob(ctx context.Context, pathname string) {
 		}
 		if !matched {
 			glog.V(2).Infof("%q did not match pattern %q", pathname, pattern)
+			continue
+		}
+		ignore, err := t.Ignore(pathname)
+		if err != nil {
+			glog.Warningf("Unexpected bad pathname %q", pathname)
+			continue
+		}
+		if ignore {
+			glog.V(2).Infof("%q is ignored", pathname)
 			continue
 		}
 		glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
