@@ -37,9 +37,9 @@ var (
 // lines from files. It also handles new log file creation events and log
 // rotations.
 type Tailer struct {
-	lines chan<- *logline.LogLine // Logfile lines being emitted.
-	w     watcher.Watcher
-	ctx   context.Context
+	w   watcher.Watcher
+	ctx context.Context
+	llp logline.Processor
 
 	handlesMu sync.RWMutex     // protects `handles'
 	handles   map[string]*File // File handles for each pathname.
@@ -69,15 +69,12 @@ func Context(ctx context.Context) func(*Tailer) error {
 }
 
 // New creates a new Tailer.
-func New(lines chan<- *logline.LogLine, w watcher.Watcher, options ...func(*Tailer) error) (*Tailer, error) {
-	if lines == nil {
-		return nil, errors.New("can't create tailer without lines channel")
-	}
+func New(llp logline.Processor, w watcher.Watcher, options ...func(*Tailer) error) (*Tailer, error) {
 	if w == nil {
 		return nil, errors.New("can't create tailer without W")
 	}
 	t := &Tailer{
-		lines:        lines,
+		llp:          llp,
 		w:            w,
 		handles:      make(map[string]*File),
 		globPatterns: make(map[string]struct{}),
@@ -192,7 +189,7 @@ func (t *Tailer) TailPath(pathname string) error {
 
 // handleLogEvent is dispatched when an Event is received, causing the tailer
 // to read all available bytes from an already-opened file and send each log
-// line onto lines channel.  Because we handle rotations and truncates when
+// line to the logline.Processor.  Because we handle rotations and truncates when
 // reaching EOF in the file reader itself, we don't care what the signal is
 // from the filewatcher.
 func (t *Tailer) handleLogEvent(ctx context.Context, pathname string) {
@@ -234,7 +231,7 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	if err := t.watchDirname(pathname); err != nil {
 		return err
 	}
-	f, err := NewFile(pathname, t.lines, seekToStart || t.oneShot)
+	f, err := NewFile(pathname, t.llp, seekToStart || t.oneShot)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
@@ -299,8 +296,6 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 		t.handleLogEvent(ctx, e.Pathname)
 		span.End()
 	}
-	glog.Infof("Closing lines channel.")
-	close(t.lines)
 	glog.Infof("Shutting down tailer.")
 }
 

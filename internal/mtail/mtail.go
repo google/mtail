@@ -176,7 +176,7 @@ func (m *Server) initTailer() (err error) {
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
 	}
-	m.t, err = tailer.New(m.lines, m.w, opts...)
+	m.t, err = tailer.New(m.l, m.w, opts...)
 	return
 }
 
@@ -376,7 +376,7 @@ func (m *Server) Close() error {
 		}
 		// If we have a loader, wait for it to signal that it has completed shutdown.
 		if m.l != nil {
-			<-m.l.VMsDone
+			m.l.Close()
 		} else {
 			glog.V(2).Info("No loader, so not waiting for loader shutdown.")
 		}

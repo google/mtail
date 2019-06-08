@@ -251,7 +251,6 @@ type Loader struct {
 	programErrors  map[string]error // errors from the last compile attempt of the program
 
 	watcherDone chan struct{} // Synchronise shutdown of the watcher processEvents goroutine
-	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
 	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
 	compileOnly          bool           // Only compile programs and report errors, do not load VMs.
@@ -333,7 +332,6 @@ func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.L
 		handles:       make(map[string]*VM),
 		programErrors: make(map[string]error),
 		watcherDone:   make(chan struct{}),
-		VMsDone:       make(chan struct{}),
 	}
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
@@ -387,19 +385,19 @@ func (l *Loader) processEvents(events <-chan watcher.Event) {
 
 // processLines provides fanout of the input log lines to each virtual machine
 // running.  Upon close of the incoming lines channel, it also communicates
-// shutdown to the target VMs via channel close.  At termination it signals via
-// VMsDone that the goroutine has finished, and thus all VMs are terminated.
+// shutdown to the target VMs via channel close.
 func (l *Loader) processLines(lines <-chan *logline.LogLine) {
-	defer close(l.VMsDone)
-
 	// Copy all input LogLines to each VM's LogLine input channel.
 	for ll := range lines {
 		ctx, span := trace.StartSpan(ll.Context, "loader.processLines")
 		span.AddMessageReceiveEvent(1, int64(len(ll.Line)), int64(len(ll.Line)))
-		LineCount.Add(1)
 		l.ProcessLogLine(ctx, ll)
 		span.End()
 	}
+	l.Close()
+}
+
+func (l *Loader) Close() {
 	// When lines is closed, the tailer has shut down which signals that it's
 	// time to shut down the program loader.
 	glog.Info("Shutting down loader.")
@@ -418,6 +416,7 @@ func (l *Loader) processLines(lines <-chan *logline.LogLine) {
 func (l *Loader) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
 	ctx, span := trace.StartSpan(ctx, "Loader.ProcessLogLine")
 	defer span.End()
+	LineCount.Add(1)
 	l.handleMu.RLock()
 	defer l.handleMu.RUnlock()
 	for prog := range l.handles {

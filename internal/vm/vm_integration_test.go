@@ -173,10 +173,10 @@ func TestVmEndToEnd(t *testing.T) {
 			lineCount := 0
 			for scanner.Scan() {
 				lineCount++
-				lines <- logline.New(context.Background(), tc.name, scanner.Text())
+				l.ProcessLogLine(context.Background(), logline.New(context.Background(), tc.name, scanner.Text()))
 			}
 			close(lines)
-			<-l.VMsDone
+			l.Close()
 
 			// This is not good; can the loader abort on error?
 			if m := expvar.Get("prog_runtime_errors"); m != nil {
