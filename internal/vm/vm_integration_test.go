@@ -163,9 +163,8 @@ func TestVmEndToEnd(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
-			lines := make(chan *logline.LogLine, 0)
 			store := metrics.NewStore()
-			l, err := NewLoader("", store, lines, w, ErrorsAbort, DumpAst, DumpAstTypes, DumpBytecode, OmitMetricSource)
+			l, err := NewLoader("", store, w, ErrorsAbort, DumpAst, DumpAstTypes, DumpBytecode, OmitMetricSource)
 			testutil.FatalIfErr(t, err)
 			compileErrors := l.CompileAndRun(tc.name, strings.NewReader(tc.prog))
 			testutil.FatalIfErr(t, compileErrors)
@@ -175,7 +174,6 @@ func TestVmEndToEnd(t *testing.T) {
 				lineCount++
 				l.ProcessLogLine(context.Background(), logline.New(context.Background(), tc.name, scanner.Text()))
 			}
-			close(lines)
 			l.Close()
 
 			// This is not good; can the loader abort on error?

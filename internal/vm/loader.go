@@ -321,9 +321,9 @@ func PrometheusRegisterer(reg prometheus.Registerer) func(l *Loader) error {
 }
 
 // NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.LogLine, w watcher.Watcher, options ...func(*Loader) error) (*Loader, error) {
-	if store == nil || lines == nil {
-		return nil, errors.New("loader needs a store and lines")
+func NewLoader(programPath string, store *metrics.Store, w watcher.Watcher, options ...func(*Loader) error) (*Loader, error) {
+	if store == nil {
+		return nil, errors.New("loader needs a store")
 	}
 	l := &Loader{
 		ms:            store,
@@ -342,7 +342,6 @@ func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.L
 	handle, eventsChan := l.w.Events()
 	l.eventsHandle = handle
 	go l.processEvents(eventsChan)
-	go l.processLines(lines)
 	return l, nil
 }
 
@@ -383,23 +382,7 @@ func (l *Loader) processEvents(events <-chan watcher.Event) {
 	}
 }
 
-// processLines provides fanout of the input log lines to each virtual machine
-// running.  Upon close of the incoming lines channel, it also communicates
-// shutdown to the target VMs via channel close.
-func (l *Loader) processLines(lines <-chan *logline.LogLine) {
-	// Copy all input LogLines to each VM's LogLine input channel.
-	for ll := range lines {
-		ctx, span := trace.StartSpan(ll.Context, "loader.processLines")
-		span.AddMessageReceiveEvent(1, int64(len(ll.Line)), int64(len(ll.Line)))
-		l.ProcessLogLine(ctx, ll)
-		span.End()
-	}
-	l.Close()
-}
-
 func (l *Loader) Close() {
-	// When lines is closed, the tailer has shut down which signals that it's
-	// time to shut down the program loader.
 	glog.Info("Shutting down loader.")
 	if err := l.w.Close(); err != nil {
 		glog.Infof("error closing watcher: %s", err)

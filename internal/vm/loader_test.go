@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
@@ -19,8 +18,7 @@ import (
 func TestNewLoader(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
-	inLines := make(chan *logline.LogLine)
-	_, err := NewLoader("", store, inLines, w)
+	_, err := NewLoader("", store, w)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
@@ -29,9 +27,8 @@ func TestNewLoader(t *testing.T) {
 func TestCompileAndRun(t *testing.T) {
 	var testProgram = "/$/ {}\n"
 	store := metrics.NewStore()
-	lines := make(chan *logline.LogLine)
 	w := watcher.NewFakeWatcher()
-	l, err := NewLoader("", store, lines, w)
+	l, err := NewLoader("", store, w)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
@@ -93,11 +90,10 @@ func TestProcessEvents(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
-			lines := make(chan *logline.LogLine)
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
 
-			l, err := NewLoader(tmpDir, store, lines, w)
+			l, err := NewLoader(tmpDir, store, w)
 			if err != nil {
 				t.Fatalf("couldn't create loader: %s", err)
 			}
@@ -143,7 +139,6 @@ func TestProcessEvents(t *testing.T) {
 				t.Errorf("%q: loaded programs don't match.\nl.handles: %+#v\n%s", tt.name, l.handles, diff)
 			}
 			l.handleMu.RUnlock()
-			close(lines)
 		})
 	}
 }
@@ -157,10 +152,9 @@ var testProgFiles = []string{
 func TestLoadProg(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
-	inLines := make(chan *logline.LogLine)
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
-	l, err := NewLoader(tmpDir, store, inLines, w)
+	l, err := NewLoader(tmpDir, store, w)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
