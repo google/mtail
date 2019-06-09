@@ -10,8 +10,8 @@ import (
 	openzipkin "github.com/openzipkin/zipkin-go"
 	zipkinHTTP "github.com/openzipkin/zipkin-go/reporter/http"
 
+	"contrib.go.opencensus.io/exporter/zipkin"
 	"github.com/pkg/errors"
-	"go.opencensus.io/exporter/zipkin"
 	"go.opencensus.io/trace"
 )
 
@@ -27,6 +27,14 @@ func ProgramPath(path string) func(*Server) error {
 func LogPathPatterns(patterns ...string) func(*Server) error {
 	return func(m *Server) error {
 		m.logPathPatterns = patterns
+		return nil
+	}
+}
+
+// IgnoreRegexPattern sets the regex pattern to ignore files.
+func IgnoreRegexPattern(pattern string) func(*Server) error {
+	return func(m *Server) error {
+		m.ignoreRegexPattern = pattern
 		return nil
 	}
 }

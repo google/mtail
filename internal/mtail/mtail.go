@@ -71,10 +71,11 @@ type Server struct {
 	closeQuit chan struct{} // Channel to signal shutdown from code.
 	closeOnce sync.Once     // Ensure shutdown happens only once.
 
-	bindAddress     string    // address to bind HTTP server
-	buildInfo       BuildInfo // go build information
-	programPath     string    // path to programs to load
-	logPathPatterns []string  // list of patterns to watch for log files to tail
+	bindAddress        string    // address to bind HTTP server
+	buildInfo          BuildInfo // go build information
+	programPath        string    // path to programs to load
+	logPathPatterns    []string  // list of patterns to watch for log files to tail
+	ignoreRegexPattern string
 
 	oneShot      bool // if set, mtail reads log files from the beginning, once, then exits
 	compileOnly  bool // if set, mtail compiles programs then exits
@@ -94,6 +95,9 @@ type Server struct {
 // StartTailing adds each log path pattern to the tailer.
 func (m *Server) StartTailing() error {
 	var err error
+	if err = m.t.SetIgnorePattern(m.ignoreRegexPattern); err != nil {
+		glog.Warning(err)
+	}
 	for _, pattern := range m.logPathPatterns {
 		glog.V(1).Infof("Tail pattern %q", pattern)
 		if err = m.t.TailPattern(pattern); err != nil {
