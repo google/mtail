@@ -5,6 +5,8 @@
 // notifying observers when they occur.
 package watcher
 
+import "context"
+
 type OpType int
 
 const (
@@ -26,4 +28,9 @@ type Watcher interface {
 	Close() error
 	Remove(name string) error
 	Events() (handle int, ch <-chan Event)
+}
+
+// Processor describes an interface for receiving watcher.Events
+type Processor interface {
+	ProcessFileEvent(context.Context, Event)
 }

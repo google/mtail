@@ -379,7 +379,7 @@ func (l *Loader) ProcessFileEvent(ctx context.Context, event watcher.Event) {
 	case watcher.Create:
 		if err := l.w.Add(event.Pathname, l.eventsHandle); err != nil {
 			glog.Info(err)
-			continue
+			return
 		}
 		if err := l.LoadProgram(event.Pathname); err != nil {
 			glog.Info(err)

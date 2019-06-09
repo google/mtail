@@ -229,13 +229,14 @@ func (t *Tailer) TailPath(pathname string) error {
 	return t.openLogPath(pathname, false)
 }
 
-// handleLogEvent is dispatched when an Event is received, causing the tailer
+// ProcessFileEvent is dispatched when an Event is received, causing the tailer
 // to read all available bytes from an already-opened file and send each log
 // line to the logline.Processor.  Because we handle rotations and truncates when
 // reaching EOF in the file reader itself, we don't care what the signal is
 // from the filewatcher.
-func (t *Tailer) handleLogEvent(ctx context.Context, pathname string) {
-	glog.V(2).Infof("handleLogUpdate %s", pathname)
+func (t *Tailer) ProcessFileEvent(ctx context.Context, pathname string) {
+	ctx, span := trace.StartSpan(ctx, "Tailer.ProcessFileEvent")
+	defer span.End()
 	fd, ok := t.handleForPath(pathname)
 	if !ok {
 		glog.V(1).Infof("No file handle found for %q, but is being watched", pathname)
@@ -344,7 +345,7 @@ func (t *Tailer) run(events <-chan watcher.Event) {
 	for e := range events {
 		ctx, span := trace.StartSpan(t.ctx, "tailer.run")
 		glog.V(2).Infof("Event type %#v", e)
-		t.handleLogEvent(ctx, e.Pathname)
+		t.ProcessFileEvent(ctx, e.Pathname)
 		span.End()
 	}
 	glog.Infof("Shutting down tailer.")
