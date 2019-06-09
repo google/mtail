@@ -10,8 +10,8 @@ import (
 	openzipkin "github.com/openzipkin/zipkin-go"
 	zipkinHTTP "github.com/openzipkin/zipkin-go/reporter/http"
 
+	"contrib.go.opencensus.io/exporter/zipkin"
 	"github.com/pkg/errors"
-	"go.opencensus.io/exporter/zipkin"
 	"go.opencensus.io/trace"
 )
 
