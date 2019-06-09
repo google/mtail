@@ -221,7 +221,7 @@ fuzz: vm-fuzz.zip | $(GOFUZZ)
 #
 .PHONY: install_deps
 install_deps: .dep-stamp
-.dep-stamp: internal/vm/parser/parser.go internal/mtail/logo.ico.go
+.dep-stamp: $(GOGENFILES)
 	@echo "Install all dependencies, ensuring they're updated"
 	go get $(GOGETFLAGS) $(IMPORTS)
 	go get $(GOGETFLAGS) $(TESTIMPORTS)
