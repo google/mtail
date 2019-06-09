@@ -361,24 +361,31 @@ func (l *Loader) processEvents(events <-chan watcher.Event) {
 	defer close(l.watcherDone)
 
 	for event := range events {
-		switch event.Op {
-		case watcher.Delete:
-			l.UnloadProgram(event.Pathname)
-		case watcher.Update:
-			if err := l.LoadProgram(event.Pathname); err != nil {
-				glog.Info(err)
-			}
-		case watcher.Create:
-			if err := l.w.Add(event.Pathname, l.eventsHandle); err != nil {
-				glog.Info(err)
-				continue
-			}
-			if err := l.LoadProgram(event.Pathname); err != nil {
-				glog.Info(err)
-			}
-		default:
-			glog.V(1).Infof("Unexpected event type %+#v", event)
+		l.ProcessFileEvent(context.Background(), event)
+	}
+}
+
+func (l *Loader) ProcessFileEvent(ctx context.Context, event watcher.Event) {
+	ctx, span := trace.StartSpan(ctx, "Loader.ProcessFileEvent")
+	defer span.End()
+
+	switch event.Op {
+	case watcher.Delete:
+		l.UnloadProgram(event.Pathname)
+	case watcher.Update:
+		if err := l.LoadProgram(event.Pathname); err != nil {
+			glog.Info(err)
 		}
+	case watcher.Create:
+		if err := l.w.Add(event.Pathname, l.eventsHandle); err != nil {
+			glog.Info(err)
+			continue
+		}
+		if err := l.LoadProgram(event.Pathname); err != nil {
+			glog.Info(err)
+		}
+	default:
+		glog.V(1).Infof("Unexpected event type %+#v", event)
 	}
 }
 
