@@ -1,7 +1,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
-
+export GO111MODULE ?= off
 # Build these.
 TARGETS = mtail mgen mdot
 
@@ -112,7 +112,6 @@ GO_LDFLAGS := "-X main.Branch=${branch} -X main.Version=${version} -X main.Revis
 # MAKEDEPEND rule generates a list of dependencies for the next make run -- the
 # first time the rule executes because the target doesn't exist, subsequent
 # runs can read the dependencies and update iff they change.
-$(TARGETS): export GO111MODULE=off
 $(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d | .dep-stamp
 	$(MAKEDEPEND)
 	GO111MODULE=on go build -ldflags $(GO_LDFLAGS) -o $@ $<
