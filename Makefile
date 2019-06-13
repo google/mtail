@@ -1,7 +1,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
-
+export GO111MODULE ?= off
 # Build these.
 TARGETS = mtail mgen mdot
 
@@ -114,7 +114,7 @@ GO_LDFLAGS := "-X main.Branch=${branch} -X main.Version=${version} -X main.Revis
 # runs can read the dependencies and update iff they change.
 $(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d | .dep-stamp
 	$(MAKEDEPEND)
-	go build -ldflags $(GO_LDFLAGS) -o $@ $<
+	GO111MODULE=on go build -ldflags $(GO_LDFLAGS) -o $@ $<
 
 internal/vm/parser/parser.go: internal/vm/parser/parser.y | $(GOYACC)
 	go generate -x ./$(@D)
