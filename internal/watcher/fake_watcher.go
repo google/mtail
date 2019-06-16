@@ -4,6 +4,7 @@
 package watcher
 
 import (
+	"context"
 	"path"
 	"sync"
 
@@ -20,6 +21,9 @@ type FakeWatcher struct {
 	events   []chan Event
 
 	isClosed bool
+
+	observersMu sync.RWMutex
+	observers   []Processor
 }
 
 // NewFakeWatcher returns a fake Watcher for use in tests.
@@ -38,6 +42,13 @@ func (w *FakeWatcher) Add(name string, handle int) error {
 	w.watches[name] = handle
 	w.watchesMu.Unlock()
 	w.eventsMu.RUnlock()
+	return nil
+}
+
+func (w *FakeWatcher) Observe(name string, p Processor) error {
+	w.observersMu.Lock()
+	w.observers = append(w.observers, p)
+	w.observersMu.Unlock()
 	return nil
 }
 
@@ -76,6 +87,14 @@ func (w *FakeWatcher) Events() (int, <-chan Event) {
 	return handle, ch
 }
 
+func (w *FakeWatcher) SendEvent(e Event) {
+	w.observersMu.RLock()
+	for _, p := range w.observers {
+		p.ProcessFileEvent(context.Background(), e)
+	}
+	w.observersMu.RUnlock()
+}
+
 // InjectCreate lets a test inject a fake creation event.
 func (w *FakeWatcher) InjectCreate(name string) {
 	dirname := path.Dir(name)
@@ -89,6 +108,7 @@ func (w *FakeWatcher) InjectCreate(name string) {
 	w.eventsMu.RLock()
 	w.events[h] <- Event{Create, name}
 	w.eventsMu.RUnlock()
+	w.SendEvent(Event{Create, name})
 	if err := w.Add(name, h); err != nil {
 		glog.Warning(err)
 	}
@@ -106,6 +126,7 @@ func (w *FakeWatcher) InjectUpdate(name string) {
 	w.eventsMu.RLock()
 	w.events[h] <- Event{Update, name}
 	w.eventsMu.RUnlock()
+	w.SendEvent(Event{Update, name})
 }
 
 // InjectDelete lets a test inject a fake deletion event.
@@ -120,6 +141,7 @@ func (w *FakeWatcher) InjectDelete(name string) {
 	w.eventsMu.RLock()
 	w.events[h] <- Event{Delete, name}
 	w.eventsMu.RUnlock()
+	w.SendEvent(Event{Delete, name})
 	if err := w.Remove(name); err != nil {
 		glog.Warning(err)
 	}

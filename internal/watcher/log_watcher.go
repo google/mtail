@@ -4,6 +4,7 @@
 package watcher
 
 import (
+	"context"
 	"expvar"
 	"fmt"
 	"os"
@@ -23,6 +24,7 @@ var (
 
 type watch struct {
 	c  chan Event
+	ps []Processor
 	fi os.FileInfo
 }
 
@@ -97,10 +99,15 @@ func (w *LogWatcher) sendEvent(e Event) {
 		w.watchedMu.RUnlock()
 	}
 	if ok {
-		watch.c <- e
+		if watch.c != nil {
+			watch.c <- e
+		}
+		for _, p := range watch.ps {
+			p.ProcessFileEvent(context.TODO(), e)
+		}
 		return
 	}
-	glog.V(2).Infof("No channel for path %q", e.Pathname)
+	glog.V(2).Infof("No watch for path %q", e.Pathname)
 }
 
 func (w *LogWatcher) runTicks() {
@@ -232,6 +239,30 @@ func (w *LogWatcher) Close() (err error) {
 	return nil
 }
 
+// Observe adds a path to the list of watched items.
+// If the path has a new event, then the processor is sent the event.
+func (w *LogWatcher) Observe(path string, processor Processor) error {
+	absPath, err := w.addWatch(path)
+	if err != nil {
+		return err
+	}
+	w.watchedMu.Lock()
+	defer w.watchedMu.Unlock()
+	watched, ok := w.watched[absPath]
+	if !ok {
+		w.watched[absPath] = &watch{ps: []Processor{processor}}
+		return nil
+	}
+	for _, p := range watched.ps {
+		if p == processor {
+			return nil
+		}
+	}
+	watched.ps = append(watched.ps, processor)
+	return nil
+
+}
+
 // Add adds a path to the list of watched items.
 // If the path is already being watched, then nothing is changed -- the new handle does not replace the old one.
 func (w *LogWatcher) Add(path string, handle int) error {
@@ -243,9 +274,22 @@ func (w *LogWatcher) Add(path string, handle int) error {
 	if w.IsWatching(path) {
 		return nil
 	}
+	absPath, err := w.addWatch(path)
+	if err != nil {
+		return err
+	}
+	w.watchedMu.Lock()
+	w.eventsMu.RLock()
+	w.watched[absPath] = &watch{c: w.events[handle]}
+	w.eventsMu.RUnlock()
+	w.watchedMu.Unlock()
+	return nil
+}
+
+func (w *LogWatcher) addWatch(path string) (string, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to lookup absolutepath of %q", path)
+		return "", errors.Wrapf(err, "Failed to lookup absolutepath of %q", path)
 	}
 	glog.V(2).Infof("Adding a watch on resolved path %q", absPath)
 	if w.watcher != nil {
@@ -254,16 +298,11 @@ func (w *LogWatcher) Add(path string, handle int) error {
 			if os.IsPermission(err) {
 				glog.V(2).Infof("Skipping permission denied error on adding a watch.")
 			} else {
-				return errors.Wrapf(err, "Failed to create a new watch on %q", absPath)
+				return "", errors.Wrapf(err, "Failed to create a new watch on %q", absPath)
 			}
 		}
 	}
-	w.watchedMu.Lock()
-	w.eventsMu.RLock()
-	w.watched[absPath] = &watch{c: w.events[handle]}
-	w.eventsMu.RUnlock()
-	w.watchedMu.Unlock()
-	return nil
+	return absPath, nil
 }
 
 // IsWatching indicates if the path is being watched. It includes both
