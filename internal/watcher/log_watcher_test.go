@@ -4,6 +4,7 @@
 package watcher
 
 import (
+	"context"
 	"errors"
 	"expvar"
 	"fmt"
@@ -342,4 +343,21 @@ func TestWatcherNewFile(t *testing.T) {
 			}
 		})
 	}
+}
+
+type testStubProcessor struct {
+	Events []Event
+}
+
+func (t *testStubProcessor) ProcessFileEvent(ctx context.Context, e Event) {
+	t.Events = append(t.Events, e)
+}
+
+func TestLogWatcherObserve(t *testing.T) {
+	p := &testStubProcessor{}
+	w, err := NewLogWatcher(0, false)
+	testing.FatalIfErr(err)
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+	testing.FatalIfErr(t, w.Observe(path.Join(tmpDir, "f"), p))
 }
