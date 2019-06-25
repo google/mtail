@@ -65,8 +65,9 @@ var (
 	mutexProfileFraction = flag.Int("mutex_profile_fraction", 0, "Fraction of mutex contention events reported.  0 turns off.  See http://golang.org/pkg/runtime/#SetMutexProfileFraction")
 
 	// Tracing
-	//zipkinAddress     = flag.String("zipkin_address", "http://localhost:9411:/api/v2/spans", "If set, URL of zipkin remote spans service.")
+	//zipkinAddress     = flag.String("zipkin_address", "http://localhost:9411/api/v2/spans", "If set, URL of zipkin remote spans service.")
 	zipkinAddress     = flag.String("zipkin_address", "", "If set, URL of zipkin remote spans service.")
+	jaegerEndpoint    = flag.String("jaeger_endpoint", "", "If set, collector endpoint URL of jaeger thrift service")
 	traceSamplePeriod = flag.Int("trace_sample_period", 0, "Sample period for traces.  If non-zero, every nth trace will be sampled.")
 )
 
@@ -169,6 +170,9 @@ func main() {
 	}
 	if *zipkinAddress != "" {
 		opts = append(opts, mtail.ZipkinReporter(*zipkinAddress))
+	}
+	if *jaegerEndpoint != "" {
+		opts = append(opts, mtail.JaegerReporter(*jaegerEndpoint))
 	}
 	m, err := mtail.New(metrics.NewStore(), w, opts...)
 	if err != nil {

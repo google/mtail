@@ -10,6 +10,7 @@ import (
 	openzipkin "github.com/openzipkin/zipkin-go"
 	zipkinHTTP "github.com/openzipkin/zipkin-go/reporter/http"
 
+	"contrib.go.opencensus.io/exporter/jaeger"
 	"contrib.go.opencensus.io/exporter/zipkin"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -146,6 +147,22 @@ func ZipkinReporter(zipkinAddress string) func(*Server) error {
 		reporter := zipkinHTTP.NewReporter(zipkinAddress)
 		ze := zipkin.NewExporter(reporter, localEndpoint)
 		trace.RegisterExporter(ze)
+		return nil
+	}
+}
+
+func JaegerReporter(jaegerEndpoint string) func(*Server) error {
+	return func(m *Server) error {
+		je, err := jaeger.NewExporter(jaeger.Options{
+			CollectorEndpoint: jaegerEndpoint,
+			Process: jaeger.Process{
+				ServiceName: "mtail",
+			},
+		})
+		if err != nil {
+			return err
+		}
+		trace.RegisterExporter(je)
 		return nil
 	}
 }
