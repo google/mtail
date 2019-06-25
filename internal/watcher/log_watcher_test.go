@@ -356,8 +356,8 @@ func (t *testStubProcessor) ProcessFileEvent(ctx context.Context, e Event) {
 func TestLogWatcherObserve(t *testing.T) {
 	p := &testStubProcessor{}
 	w, err := NewLogWatcher(0, false)
-	testing.FatalIfErr(err)
+	testutil.FatalIfErr(t, err)
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
-	testing.FatalIfErr(t, w.Observe(path.Join(tmpDir, "f"), p))
+	testutil.FatalIfErr(t, w.Observe(path.Join(tmpDir, "f"), p))
 }
