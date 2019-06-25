@@ -82,6 +82,16 @@ Obvious problems seen in the goroutine stack dump are long-waiting gorotines, us
 minutes]:`) which usually also manifest as a logjam (no pun intended) in the
 loader, tailer, and watcher goroutines (in state 'chan send').
 
+## Distributed Tracing
+
+`mtail` can export traces to the [Jaeger](https://www.jaegertracing.io/) trace collector.  Specify the Jaeger endpoint with the `--jaeger_endpoint` flag
+
+```
+mtail --jaeger_endpoint http://localhost:14268/api/traces
+```
+
+The `--trace_sample_period` flag can be used to set how often a trace is sampled and sent to the collector.  Set it to `100` to collect one in 100 traces.
+
 ## Deployment problems
 
 The INFO log at `/tmp/mtail.INFO` by default contains lots of information about
