@@ -240,7 +240,7 @@ func (w *LogWatcher) Close() (err error) {
 }
 
 // Observe adds a path to the list of watched items.
-// If the path has a new event, then the processor is sent the event.
+// If this path has a new event, then the processor being registered will be sent the event.
 func (w *LogWatcher) Observe(path string, processor Processor) error {
 	absPath, err := w.addWatch(path)
 	if err != nil {

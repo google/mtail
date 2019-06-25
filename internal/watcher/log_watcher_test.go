@@ -355,9 +355,26 @@ func (t *testStubProcessor) ProcessFileEvent(ctx context.Context, e Event) {
 
 func TestLogWatcherObserve(t *testing.T) {
 	p := &testStubProcessor{}
-	w, err := NewLogWatcher(0, false)
+	w, err := NewLogWatcher(0, true)
 	testutil.FatalIfErr(t, err)
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
-	testutil.FatalIfErr(t, w.Observe(path.Join(tmpDir, "f"), p))
+	testutil.FatalIfErr(t, w.Observe(tmpDir, p))
+	_, err = os.Create(path.Join(tmpDir, "f"))
+	testutil.FatalIfErr(t, err)
+	check := func() (bool, error) {
+		if len(p.Events) == 0 {
+			return false, nil
+		}
+		return true, nil
+	}
+	ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
+	testutil.FatalIfErr(t, err)
+	if !ok {
+		t.Fatal("never got event")
+	}
+	expected := []Event{{Op: Create, Pathname: path.Join(tmpDir, "f")}}
+	if diff := testutil.Diff(expected, p.Events); diff != "" {
+		t.Errorf("event unexpected, diff:\n%s", diff)
+	}
 }
