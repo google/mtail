@@ -55,7 +55,7 @@ func (l *Loader) LoadAllPrograms() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to stat %q", l.programPath)
 	}
-	if err = l.w.Add(l.programPath, l.eventsHandle); err != nil {
+	if err = l.w.Observe(l.programPath, l); err != nil {
 		glog.Infof("Failed to add watch on %q but continuing: %s", l.programPath, err)
 	}
 	switch {
@@ -242,15 +242,11 @@ type Loader struct {
 	reg         prometheus.Registerer // plce to reg metrics
 	programPath string                // Path that contains mtail programs.
 
-	eventsHandle int // record the handle with which to add programs to the watcher
-
 	handleMu sync.RWMutex   // guards accesses to handles
 	handles  map[string]*VM // map of program names to virtual machines
 
 	programErrorMu sync.RWMutex     // guards access to programErrors
 	programErrors  map[string]error // errors from the last compile attempt of the program
-
-	watcherDone chan struct{} // Synchronise shutdown of the watcher processEvents goroutine
 
 	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
 	compileOnly          bool           // Only compile programs and report errors, do not load VMs.
@@ -331,7 +327,6 @@ func NewLoader(programPath string, store *metrics.Store, w watcher.Watcher, opti
 		programPath:   programPath,
 		handles:       make(map[string]*VM),
 		programErrors: make(map[string]error),
-		watcherDone:   make(chan struct{}),
 	}
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
@@ -339,9 +334,6 @@ func NewLoader(programPath string, store *metrics.Store, w watcher.Watcher, opti
 	if l.reg != nil {
 		l.reg.MustRegister(lineProcessingDurations)
 	}
-	handle, eventsChan := l.w.Events()
-	l.eventsHandle = handle
-	go l.processEvents(eventsChan)
 	return l, nil
 }
 
@@ -353,16 +345,6 @@ func (l *Loader) SetOption(options ...func(*Loader) error) error {
 		}
 	}
 	return nil
-}
-
-// processEvents manages program lifecycle triggered by events from the
-// filesystem watcher.
-func (l *Loader) processEvents(events <-chan watcher.Event) {
-	defer close(l.watcherDone)
-
-	for event := range events {
-		l.ProcessFileEvent(context.Background(), event)
-	}
 }
 
 func (l *Loader) ProcessFileEvent(ctx context.Context, event watcher.Event) {
@@ -377,7 +359,7 @@ func (l *Loader) ProcessFileEvent(ctx context.Context, event watcher.Event) {
 			glog.Info(err)
 		}
 	case watcher.Create:
-		if err := l.w.Add(event.Pathname, l.eventsHandle); err != nil {
+		if err := l.w.Observe(event.Pathname, l); err != nil {
 			glog.Info(err)
 			return
 		}
@@ -394,7 +376,6 @@ func (l *Loader) Close() {
 	if err := l.w.Close(); err != nil {
 		glog.Infof("error closing watcher: %s", err)
 	}
-	<-l.watcherDone
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
 	for prog := range l.handles {
@@ -406,6 +387,7 @@ func (l *Loader) Close() {
 func (l *Loader) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
 	ctx, span := trace.StartSpan(ctx, "Loader.ProcessLogLine")
 	defer span.End()
+	glog.Infof("Loader.ProcessLogLine: %v", ll)
 	LineCount.Add(1)
 	l.handleMu.RLock()
 	defer l.handleMu.RUnlock()

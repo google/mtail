@@ -4,6 +4,7 @@
 package vm
 
 import (
+	"context"
 	"os"
 	"path"
 	"strings"
@@ -84,7 +85,7 @@ var testProcessEvents = []struct {
 
 var testProgram = "/$/ {}\n"
 
-func TestProcessEvents(t *testing.T) {
+func TestProcessFileEvent(t *testing.T) {
 	for _, tt := range testProcessEvents {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
@@ -105,13 +106,11 @@ func TestProcessEvents(t *testing.T) {
 					if e.Pathname != "notexist.mtail" {
 						testutil.TestOpenFile(t, path.Join(tmpDir, e.Pathname))
 					}
-					w.InjectCreate(path.Join(tmpDir, e.Pathname))
 				case watcher.Delete:
 					err := os.Remove(path.Join(tmpDir, e.Pathname))
 					if err != nil {
 						t.Fatalf("Remove failed for %s: %s", e.Pathname, err)
 					}
-					w.InjectDelete(path.Join(tmpDir, e.Pathname))
 				case watcher.Update:
 					if e.Pathname != "notexist.mtail" {
 						f := testutil.TestOpenFile(t, path.Join(tmpDir, e.Pathname))
@@ -123,11 +122,10 @@ func TestProcessEvents(t *testing.T) {
 							t.Fatalf("Close failed: %s", err)
 						}
 					}
-					w.InjectUpdate(path.Join(tmpDir, e.Pathname))
 				}
+				l.ProcessFileEvent(context.Background(), watcher.Event{e.Op, path.Join(tmpDir, e.Pathname)})
 			}
 			w.Close()
-			<-l.watcherDone
 			l.handleMu.RLock()
 			programs := make([]string, 0)
 			for program := range l.handles {

@@ -86,9 +86,6 @@ func New(llp logline.Processor, w watcher.Watcher, options ...func(*Tailer) erro
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
-	handle, eventsChan := t.w.Events()
-	t.eventsHandle = handle
-	go t.run(eventsChan)
 	return t, nil
 }
 
@@ -222,7 +219,7 @@ func (t *Tailer) TailPath(pathname string) error {
 		glog.V(2).Infof("already watching %q", pathname)
 		return nil
 	}
-	if err := t.w.Add(pathname, t.eventsHandle); err != nil {
+	if err := t.w.Observe(pathname, t); err != nil {
 		return err
 	}
 	// New file at start of program, seek to EOF.
@@ -234,17 +231,17 @@ func (t *Tailer) TailPath(pathname string) error {
 // line to the logline.Processor.  Because we handle rotations and truncates when
 // reaching EOF in the file reader itself, we don't care what the signal is
 // from the filewatcher.
-func (t *Tailer) ProcessFileEvent(ctx context.Context, pathname string) {
+func (t *Tailer) ProcessFileEvent(ctx context.Context, event watcher.Event) {
 	ctx, span := trace.StartSpan(ctx, "Tailer.ProcessFileEvent")
 	defer span.End()
-	fd, ok := t.handleForPath(pathname)
+	fd, ok := t.handleForPath(event.Pathname)
 	if !ok {
-		glog.V(1).Infof("No file handle found for %q, but is being watched", pathname)
+		glog.V(1).Infof("No file handle found for %q, but is being watched", event.Pathname)
 		// We want to open files we have watches on in case the file was
 		// unreadable before now; but we have to copmare against the glob to be
 		// sure we don't just add all the files in a watched directory as they
 		// get modified.
-		t.handleCreateGlob(ctx, pathname)
+		t.handleCreateGlob(ctx, event.Pathname)
 		return
 	}
 	doFollow(ctx, fd)
@@ -265,7 +262,7 @@ func (t *Tailer) watchDirname(pathname string) error {
 		return err
 	}
 	d := filepath.Dir(absPath)
-	return t.w.Add(d, t.eventsHandle)
+	return t.w.Observe(d, t)
 }
 
 // openLogPath opens a log file named by pathname.
@@ -285,7 +282,7 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 		return err
 	}
 	glog.V(2).Infof("Adding a file watch on %q", f.Pathname)
-	if err := t.w.Add(f.Pathname, t.eventsHandle); err != nil {
+	if err := t.w.Observe(f.Pathname, t); err != nil {
 		return err
 	}
 	if err := t.setHandle(pathname, f); err != nil {
@@ -336,27 +333,11 @@ func (t *Tailer) handleCreateGlob(ctx context.Context, pathname string) {
 	glog.V(2).Infof("did not start tailing %q", pathname)
 }
 
-// run the main event loop for the Tailer.  It receives notification of
-// log file changes from the watcher channel, and dispatches the log event
-// handler.
-func (t *Tailer) run(events <-chan watcher.Event) {
-	defer close(t.runDone)
-
-	for e := range events {
-		ctx, span := trace.StartSpan(t.ctx, "tailer.run")
-		glog.V(2).Infof("Event type %#v", e)
-		t.ProcessFileEvent(ctx, e.Pathname)
-		span.End()
-	}
-	glog.Infof("Shutting down tailer.")
-}
-
 // Close signals termination to the watcher.
 func (t *Tailer) Close() error {
 	if err := t.w.Close(); err != nil {
 		return err
 	}
-	<-t.runDone
 	return nil
 }
 
@@ -437,7 +418,7 @@ func (t *Tailer) Gc() error {
 	defer t.handlesMu.Unlock()
 	for k, v := range t.handles {
 		if time.Since(v.LastRead) > (time.Hour * 24) {
-			if err := t.w.Remove(v.Pathname); err != nil {
+			if err := t.w.Unobserve(v.Pathname, t); err != nil {
 				glog.Info(err)
 			}
 			if err := v.Close(t.ctx); err != nil {
