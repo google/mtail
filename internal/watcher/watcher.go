@@ -24,11 +24,9 @@ type Event struct {
 
 // Watcher describes an interface for filesystem watching.
 type Watcher interface {
-	Add(name string, handle int) error
 	Observe(name string, processor Processor) error
+	Unobserve(name string, processor Processor) error
 	Close() error
-	Remove(name string) error
-	Events() (handle int, ch <-chan Event)
 }
 
 // Processor describes an interface for receiving watcher.Events
