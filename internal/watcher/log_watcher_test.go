@@ -5,27 +5,33 @@ package watcher
 
 import (
 	"context"
-	"errors"
 	"expvar"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/testutil"
+	"github.com/pkg/errors"
 )
 
 // This test requires disk access, and cannot be injected without internal
 // knowledge of the fsnotify code. Make the wait deadlines long.
 const deadline = 5 * time.Second
+
+type testStubProcessor struct {
+	Events []Event
+}
+
+func (t *testStubProcessor) ProcessFileEvent(ctx context.Context, e Event) {
+	t.Events = append(t.Events, e)
+}
 
 func TestLogWatcher(t *testing.T) {
 	if testing.Short() {
@@ -33,16 +39,8 @@ func TestLogWatcher(t *testing.T) {
 		t.Skip("skipping log watcher test in short mode")
 	}
 
-	workdir, err := ioutil.TempDir("", "log_watcher_test")
-	if err != nil {
-		t.Fatalf("could not create temporary working directory: %s", err)
-	}
-
-	defer func() {
-		if err = os.RemoveAll(workdir); err != nil {
-			t.Fatalf("could not remove temp dir %s: %s:", workdir, err)
-		}
-	}()
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	w, err := NewLogWatcher(0, true)
 	if err != nil {
@@ -53,113 +51,94 @@ func TestLogWatcher(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	handle, eventsChannel := w.Events()
 
-	if err = w.Add(workdir, handle); err != nil {
+	s := &stubProcessor{}
+
+	if err = w.Observe(workdir, s); err != nil {
 		t.Fatal(err)
 	}
 	f, err := os.Create(filepath.Join(workdir, "logfile"))
-	if err != nil {
-		t.Fatalf("couldn't make a logfile in temp dir: %s\n", err)
-	}
-	select {
-	case e := <-eventsChannel:
-		switch e.Op {
-		case Create:
-			if e.Pathname != filepath.Join(workdir, "logfile") {
-				t.Errorf("create doesn't match")
+	testutil.FatalIfErr(t, err)
+	check := func(count int) func() (bool, error) {
+		return func() (bool, error) {
+			if len(s.Events) == count {
+				return true, nil
 			}
-		default:
-			t.Errorf("Wrong event type: %q", e)
-		}
-	case <-time.After(deadline):
-		t.Errorf("didn't receive create message before timeout")
-	}
-	if n, err := f.WriteString("hi"); err != nil {
-		t.Fatal(err)
-		if n != 2 {
-			t.Fatalf("wrote %d instead of 2", n)
+			return false, nil
 		}
 	}
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
+	ok, err := testutil.DoOrTimeout(check(1), 100*time.Millisecond, 10*time.Millisecond)
+	testutil.FatalIfErr(t, err)
+	if len(s.Events) == 0 {
+		t.Errorf("no event received")
 	}
-	select {
-	case e := <-eventsChannel:
-		switch e.Op {
-		case Update:
-			if e.Pathname != filepath.Join(workdir, "logfile") {
-				t.Errorf("update doesn't match")
-			}
-		default:
-			t.Errorf("Wrong event type: %q", e)
-		}
-	case <-time.After(deadline):
-		t.Errorf("didn't receive update message before timeout")
+	if s.Events[0].Op != Create {
+		t.Errorf("wrong event type: %q", s.Events[0])
 	}
-	if err := os.Rename(filepath.Join(workdir, "logfile"), filepath.Join(workdir, "logfile2")); err != nil {
-		t.Fatal(err)
+	if s.Events[0].Pathname != filepath.Join(workdir, "logfile") {
+		t.Errorf("pathname doesn't match: %q", s.Events[0])
 	}
-	select {
-	case e := <-eventsChannel:
-		switch e.Op {
-		case Delete:
-			if e.Pathname != filepath.Join(workdir, "logfile") {
-				t.Errorf("delete doesn't match")
-			}
-		default:
 
-			t.Errorf("wrong event type: %v", e)
-		}
-	case <-time.After(deadline):
-		t.Errorf("didn't receive delete before timeout")
+	n, err := f.WriteString("hi")
+	testutil.FatalIfErr(t, err)
+	if n != 2 {
+		t.Fatalf("wrote %d instead of 2", n)
 	}
-	select {
-	case e := <-eventsChannel:
-		switch e.Op {
-		case Create:
-			if e.Pathname != filepath.Join(workdir, "logfile2") {
-				t.Errorf("create doesn't match")
-			}
-		default:
+	testutil.FatalIfErr(t, f.Close())
+	ok, err = testutil.DoOrTimeout(check(2), 100*time.Millisecond, 10*time.Millisecond)
+	testutil.FatalIfErr(t, err)
+	if !ok {
+		t.Errorf("no event received")
+	}
+	if s.Events[1].Op != Update {
+		t.Errorf("wrong event type: %q", s.Events[1])
+	}
+	if s.Events[1].Pathname != filepath.Join(workdir, "logfile") {
+		t.Errorf("pathname doesn't match: %q", s.Events[1])
+	}
+	testutil.FatalIfErr(t, os.Rename(filepath.Join(workdir, "logfile"), filepath.Join(workdir, "logfile2")))
+	ok, err = testutil.DoOrTimeout(check(4), 100*time.Millisecond, 10*time.Millisecond)
+	testutil.FatalIfErr(t, err)
+	if !ok {
+		t.Errorf("no events received")
+	}
+	if s.Events[2].Op != Delete {
+		t.Errorf("wrong event type: %q", s.Events[2])
+	}
+	if s.Events[2].Pathname != filepath.Join(workdir, "logfile") {
+		t.Errorf("pathname doesn't match: %q", s.Events[2])
+	}
+	if s.Events[3].Op != Create {
+		t.Errorf("wrong event type: %q", s.Events[3])
+	}
+	if s.Events[3].Pathname != filepath.Join(workdir, "logfile2") {
+		t.Errorf("pathname doesn't match: %q", s.Events[3])
+	}
 
-			t.Errorf("wrong event type: %v", e)
-		}
-	case <-time.After(deadline):
-		t.Errorf("didn't receive create message before timeout")
+	testutil.FatalIfErr(t, os.Chmod(filepath.Join(workdir, "logfile2"), os.ModePerm))
+	ok, err = testutil.DoOrTimeout(check(5), 100*time.Millisecond, 10*time.Millisecond)
+	testutil.FatalIfErr(t, err)
+	if !ok {
+		t.Errorf("no event recieved")
 	}
-	if err := os.Chmod(filepath.Join(workdir, "logfile2"), os.ModePerm); err != nil {
-		t.Fatal(err)
+	if s.Events[4].Op != Update {
+		t.Errorf("wrong event type: %q", s.Events[4])
 	}
-	select {
-	case e := <-eventsChannel:
-		switch e.Op {
-		case Update:
-			if e.Pathname != filepath.Join(workdir, "logfile2") {
-				t.Errorf("update doesn't match")
-			}
-		default:
+	if s.Events[4].Pathname != filepath.Join(workdir, "logfile2") {
+		t.Errorf("pathname doesn't match: %q", s.Events[4])
+	}
 
-			t.Errorf("wrong event type: %v", e)
-		}
-	case <-time.After(deadline):
-		t.Errorf("didn't receive update message before timeout")
+	testutil.FatalIfErr(t, os.Remove(filepath.Join(workdir, "logfile2")))
+	ok, err = testutil.DoOrTimeout(check(6), 100*time.Millisecond, 10*time.Millisecond)
+	testutil.FatalIfErr(t, err)
+	if !ok {
+		t.Errorf("no event received")
 	}
-	if err := os.Remove(filepath.Join(workdir, "logfile2")); err != nil {
-		t.Fatal(err)
+	if s.Events[5].Op != Delete {
+		t.Errorf("wrong event type: %q", s.Events[5])
 	}
-	select {
-	case e := <-eventsChannel:
-		switch e.Op {
-		case Delete:
-			if e.Pathname != filepath.Join(workdir, "logfile2") {
-				t.Errorf("delete doesn't match")
-			}
-		default:
-			t.Errorf("Wrong event type: %q", e)
-		}
-	case <-time.After(deadline):
-		t.Errorf("didn't receive delete message before timeout")
+	if s.Events[5].Pathname != filepath.Join(workdir, "logfile2") {
+		t.Errorf("pathname doesn't match: %q", s.Events[5])
 	}
 }
 
@@ -196,17 +175,8 @@ func TestLogWatcherAddError(t *testing.T) {
 		t.Skip("skipping log watcher test in short mode")
 	}
 
-	workdir, err := ioutil.TempDir("", "log_watcher_test")
-	if err != nil {
-		t.Fatalf("could not create temporary working directory: %s", err)
-	}
-
-	defer func() {
-		err = os.RemoveAll(workdir)
-		if err != nil {
-			t.Fatalf("could not remove temp dir %s: %s:", workdir, err)
-		}
-	}()
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	w, err := NewLogWatcher(0, true)
 	if err != nil {
@@ -217,9 +187,9 @@ func TestLogWatcherAddError(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	handle, _ := w.Events()
+	s := &stubProcessor{}
 	filename := filepath.Join(workdir, "test")
-	err = w.Add(filename, handle)
+	err = w.Observe(filename, s)
 	if err == nil {
 		t.Errorf("did not receive an error for nonexistent file")
 	}
@@ -237,17 +207,8 @@ func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
 		t.Skip("Skipping test when run as root")
 	}
 
-	workdir, err := ioutil.TempDir("", "log_watcher_test")
-	if err != nil {
-		t.Fatalf("could not create temporary working directory: %s", err)
-	}
-
-	defer func() {
-		err = os.RemoveAll(workdir)
-		if err != nil {
-			t.Fatalf("could not remove temp dir %s: %s:", workdir, err)
-		}
-	}()
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	w, err := NewLogWatcher(0, true)
 	if err != nil {
@@ -266,8 +227,8 @@ func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
 	if err = os.Chmod(filename, 0); err != nil {
 		t.Fatalf("couldn't chmod file: %s", err)
 	}
-	handle, _ := w.Events()
-	err = w.Add(filename, handle)
+	s := &stubProcessor{}
+	err = w.Observe(filename, s)
 	if err != nil {
 		t.Errorf("failed to add watch on permission denied")
 	}
@@ -315,66 +276,16 @@ func TestWatcherNewFile(t *testing.T) {
 			testutil.FatalIfErr(t, err)
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
-			handle, eventsChan := w.Events()
-			testutil.FatalIfErr(t, w.Add(tmpDir, handle))
-			result := []Event{}
-			done := make(chan struct{})
-			wg := sync.WaitGroup{}
-			go func() {
-				for event := range eventsChan {
-					glog.Infof("Event: %v", event)
-					result = append(result, event)
-					if event.Op == Update && event.Pathname == tmpDir {
-						testutil.FatalIfErr(t, w.Add(path.Join(tmpDir, "log"), handle))
-					}
-					wg.Done()
-				}
-				close(done)
-			}()
-			wg.Add(2)
+			s := &stubProcessor{}
+			testutil.FatalIfErr(t, w.Observe(tmpDir, s))
 			testutil.TestOpenFile(t, path.Join(tmpDir, "log"))
 			time.Sleep(250 * time.Millisecond)
 			w.Close()
-			<-done
 			expected := []Event{{Op: Create, Pathname: path.Join(tmpDir, "log")}}
-			if diff := testutil.Diff(expected, result); diff != "" {
+			if diff := testutil.Diff(expected, s.Events); diff != "" {
 				t.Errorf("event unexpected: diff:\n%s", diff)
-				t.Logf("received:\n%v", result)
+				t.Logf("received:\n%v", s.Events)
 			}
 		})
-	}
-}
-
-type testStubProcessor struct {
-	Events []Event
-}
-
-func (t *testStubProcessor) ProcessFileEvent(ctx context.Context, e Event) {
-	t.Events = append(t.Events, e)
-}
-
-func TestLogWatcherObserve(t *testing.T) {
-	p := &testStubProcessor{}
-	w, err := NewLogWatcher(0, true)
-	testutil.FatalIfErr(t, err)
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
-	testutil.FatalIfErr(t, w.Observe(tmpDir, p))
-	_, err = os.Create(path.Join(tmpDir, "f"))
-	testutil.FatalIfErr(t, err)
-	check := func() (bool, error) {
-		if len(p.Events) == 0 {
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
-	testutil.FatalIfErr(t, err)
-	if !ok {
-		t.Fatal("never got event")
-	}
-	expected := []Event{{Op: Create, Pathname: path.Join(tmpDir, "f")}}
-	if diff := testutil.Diff(expected, p.Events); diff != "" {
-		t.Errorf("event unexpected, diff:\n%s", diff)
 	}
 }
