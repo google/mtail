@@ -283,10 +283,23 @@ func (w *LogWatcher) IsWatching(path string) bool {
 	return ok
 }
 
-func (w *LogWatcher) Remove(path string) error {
+func (w *LogWatcher) Unobserve(path string, processor Processor) error {
 	w.watchedMu.Lock()
-	delete(w.watched, path)
-	w.watchedMu.Unlock()
+	defer w.watchedMu.Unlock()
+	_, ok := w.watched[path]
+	if !ok {
+		return nil
+	}
+
+	for i, p := range w.watched[path].ps {
+		if p == processor {
+			w.watched[path].ps = append(w.watched[path].ps[0:i], w.watched[path].ps[i+1:]...)
+			break
+		}
+	}
+	if len(w.watched[path].ps) == 0 {
+		delete(w.watched, path)
+	}
 	if w.watcher != nil {
 		return w.watcher.Remove(path)
 	}

@@ -60,17 +60,17 @@ func (w *FakeWatcher) Unobserve(name string, p Processor) error {
 
 func (w *FakeWatcher) SendEvent(e Event) {
 	w.watchesMu.RLock()
-	defer w.watchesMu.RUnlock()
 	name := e.Pathname
 	if e.Op == Create {
 		name = path.Dir(name)
 	}
-	_, ok := w.watches[name]
+	watches, ok := w.watches[name]
+	w.watchesMu.RUnlock()
 	if !ok {
 		glog.Infof("Didn't find %s in watched list", name)
 		return
 	}
-	for p := range w.watches[name] {
+	for p := range watches {
 		p.ProcessFileEvent(context.Background(), e)
 	}
 }
