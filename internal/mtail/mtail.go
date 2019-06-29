@@ -365,8 +365,7 @@ func (m *Server) Close() error {
 		glog.Info("Shutdown requested.")
 		close(m.closeQuit)
 		// If we have a tailer (i.e. not in test) then signal the tailer to
-		// shut down, which will cause the watcher to shut down and for the
-		// lines channel to close, causing the loader to start shutdown.
+		// shut down, which will cause the watcher to shut down.
 		if m.t != nil {
 			err := m.t.Close()
 			if err != nil {
@@ -377,7 +376,7 @@ func (m *Server) Close() error {
 			glog.V(2).Info("No tailer, closing lines channel directly.")
 			close(m.lines)
 		}
-		// If we have a loader, wait for it to signal that it has completed shutdown.
+		// If we have a loader, shut it down.
 		if m.l != nil {
 			m.l.Close()
 		} else {
