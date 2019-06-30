@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/pkg/errors"
 )
@@ -121,7 +120,7 @@ func TestLogWatcher(t *testing.T) {
 		}
 		return true
 	}
-	if diff := testutil.Diff(expected, results, cmpopts.SortSlices(sorter)); diff != "" {
+	if diff := testutil.Diff(expected, results, testutil.SortSlices(sorter)); diff != "" {
 		t.Errorf("diff:\n%s", diff)
 	}
 
