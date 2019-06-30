@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/pkg/errors"
 )
@@ -26,11 +27,17 @@ import (
 const deadline = 5 * time.Second
 
 type testStubProcessor struct {
-	Events []Event
+	Events chan Event
 }
 
 func (t *testStubProcessor) ProcessFileEvent(ctx context.Context, e Event) {
-	t.Events = append(t.Events, e)
+	go func() {
+		t.Events <- e
+	}()
+}
+
+func newStubProcessor() *testStubProcessor {
+	return &testStubProcessor{Events: make(chan Event, 1)}
 }
 
 func TestLogWatcher(t *testing.T) {
@@ -52,31 +59,21 @@ func TestLogWatcher(t *testing.T) {
 		}
 	}()
 
-	s := &stubProcessor{}
+	s := newStubProcessor()
 
 	if err = w.Observe(workdir, s); err != nil {
 		t.Fatal(err)
 	}
 	f, err := os.Create(filepath.Join(workdir, "logfile"))
 	testutil.FatalIfErr(t, err)
-	check := func(count int) func() (bool, error) {
-		return func() (bool, error) {
-			if len(s.Events) == count {
-				return true, nil
-			}
-			return false, nil
+	select {
+	case e := <-s.Events:
+		expected := Event{Create, filepath.Join(workdir, "logfile")}
+		if diff := testutil.Diff(expected, e); diff != "" {
+			t.Errorf("want: %q, got %q; diff:\n%s", expected, e, diff)
 		}
-	}
-	ok, err := testutil.DoOrTimeout(check(1), 100*time.Millisecond, 10*time.Millisecond)
-	testutil.FatalIfErr(t, err)
-	if len(s.Events) == 0 {
-		t.Errorf("no event received")
-	}
-	if s.Events[0].Op != Create {
-		t.Errorf("wrong event type: %q", s.Events[0])
-	}
-	if s.Events[0].Pathname != filepath.Join(workdir, "logfile") {
-		t.Errorf("pathname doesn't match: %q", s.Events[0])
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("no event received before timeout")
 	}
 
 	n, err := f.WriteString("hi")
@@ -85,60 +82,69 @@ func TestLogWatcher(t *testing.T) {
 		t.Fatalf("wrote %d instead of 2", n)
 	}
 	testutil.FatalIfErr(t, f.Close())
-	ok, err = testutil.DoOrTimeout(check(2), 100*time.Millisecond, 10*time.Millisecond)
-	testutil.FatalIfErr(t, err)
-	if !ok {
-		t.Errorf("no event received")
+	select {
+	case e := <-s.Events:
+		expected := Event{Update, filepath.Join(workdir, "logfile")}
+		if diff := testutil.Diff(expected, e); diff != "" {
+			t.Errorf("want: %q, got %q; diff:\n%s", expected, e, diff)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("no event received before timeout")
 	}
-	if s.Events[1].Op != Update {
-		t.Errorf("wrong event type: %q", s.Events[1])
-	}
-	if s.Events[1].Pathname != filepath.Join(workdir, "logfile") {
-		t.Errorf("pathname doesn't match: %q", s.Events[1])
-	}
+
 	testutil.FatalIfErr(t, os.Rename(filepath.Join(workdir, "logfile"), filepath.Join(workdir, "logfile2")))
-	ok, err = testutil.DoOrTimeout(check(4), 100*time.Millisecond, 10*time.Millisecond)
-	testutil.FatalIfErr(t, err)
-	if !ok {
-		t.Errorf("no events received")
+	results := make([]Event, 0)
+	for i := 0; i < 2; i++ {
+		select {
+		case e := <-s.Events:
+			results = append(results, e)
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("no event received before timeout")
+		}
 	}
-	if s.Events[2].Op != Delete {
-		t.Errorf("wrong event type: %q", s.Events[2])
+	expected := []Event{
+		{Create, filepath.Join(workdir, "logfile2")},
+		{Delete, filepath.Join(workdir, "logfile")},
 	}
-	if s.Events[2].Pathname != filepath.Join(workdir, "logfile") {
-		t.Errorf("pathname doesn't match: %q", s.Events[2])
+	sorter := func(a, b Event) bool {
+		if a.Op < b.Op {
+			return true
+		}
+		if a.Op > b.Op {
+			return false
+		}
+		if a.Pathname < b.Pathname {
+			return true
+		}
+		if a.Pathname > b.Pathname {
+			return false
+		}
+		return true
 	}
-	if s.Events[3].Op != Create {
-		t.Errorf("wrong event type: %q", s.Events[3])
-	}
-	if s.Events[3].Pathname != filepath.Join(workdir, "logfile2") {
-		t.Errorf("pathname doesn't match: %q", s.Events[3])
+	if diff := testutil.Diff(expected, results, cmpopts.SortSlices(sorter)); diff != "" {
+		t.Errorf("diff:\n%s", diff)
 	}
 
 	testutil.FatalIfErr(t, os.Chmod(filepath.Join(workdir, "logfile2"), os.ModePerm))
-	ok, err = testutil.DoOrTimeout(check(5), 100*time.Millisecond, 10*time.Millisecond)
-	testutil.FatalIfErr(t, err)
-	if !ok {
-		t.Errorf("no event recieved")
-	}
-	if s.Events[4].Op != Update {
-		t.Errorf("wrong event type: %q", s.Events[4])
-	}
-	if s.Events[4].Pathname != filepath.Join(workdir, "logfile2") {
-		t.Errorf("pathname doesn't match: %q", s.Events[4])
+	select {
+	case e := <-s.Events:
+		expected := Event{Update, filepath.Join(workdir, "logfile2")}
+		if diff := testutil.Diff(expected, e); diff != "" {
+			t.Errorf("want %q got %q; diff:\n%s", expected, e, diff)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("no event recieved before timeout")
 	}
 
 	testutil.FatalIfErr(t, os.Remove(filepath.Join(workdir, "logfile2")))
-	ok, err = testutil.DoOrTimeout(check(6), 100*time.Millisecond, 10*time.Millisecond)
-	testutil.FatalIfErr(t, err)
-	if !ok {
-		t.Errorf("no event received")
-	}
-	if s.Events[5].Op != Delete {
-		t.Errorf("wrong event type: %q", s.Events[5])
-	}
-	if s.Events[5].Pathname != filepath.Join(workdir, "logfile2") {
-		t.Errorf("pathname doesn't match: %q", s.Events[5])
+	select {
+	case e := <-s.Events:
+		expected := Event{Delete, filepath.Join(workdir, "logfile2")}
+		if diff := testutil.Diff(expected, e); diff != "" {
+			t.Errorf("want %q got %q; diff:\n%s", expected, e, diff)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("no event received before timeout")
 	}
 }
 
