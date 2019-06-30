@@ -726,9 +726,8 @@ func (v *VM) execute(t *thread, i code.Instr) {
 	}
 }
 
-// ProcessLogLine handles the incoming lines from the input channel, by running a
-// fetch-execute cycle on the VM bytecode with the line as input to the
-// program, until termination.
+// ProcessLogLine handles the incoming lines by running a fetch-execute cycle
+// on the VM bytecode with the line as input to the program, until termination.
 func (v *VM) ProcessLogLine(ctx context.Context, line *logline.LogLine) {
 	ctx, span := trace.StartSpan(ctx, "VM.ProcessLogLine")
 	defer span.End()

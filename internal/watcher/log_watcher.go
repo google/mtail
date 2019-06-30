@@ -229,7 +229,6 @@ func (w *LogWatcher) Close() (err error) {
 			close(w.stopTicks)
 			<-w.ticksDone
 		}
-		glog.Info("Closing events channels")
 	})
 	return nil
 }
