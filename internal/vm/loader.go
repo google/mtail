@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	// LineCount counts the number of lines read by the program loader from the input channel.
+	// LineCount counts the number of lines read by the program loader.
 	LineCount = expvar.NewInt("line_count")
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
@@ -234,8 +234,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 
 // Loader handles the lifecycle of programs and virtual machines, by watching
 // the configured program source directory, compiling changes to programs, and
-// managing the running virtual machines that receive input from the lines
-// channel.
+// managing the virtual machines.
 type Loader struct {
 	ms          *metrics.Store        // pointer to metrics.Store to pass to compiler
 	w           watcher.Watcher       // watches for program changes
