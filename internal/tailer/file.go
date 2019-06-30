@@ -165,10 +165,10 @@ func (f *File) doRotation(ctx context.Context) error {
 	return nil
 }
 
-// Read blocks of 4096 bytes from the File, sending LogLines to the given
-// channel as newlines are encountered.  If EOF is read, the partial line is
-// stored to be concatenated to on the next call.  At EOF, checks for
-// truncation and resets the file offset if so.
+// Read blocks of 4096 bytes from the File, sending LogLines as newlines are
+// encountered.  If EOF is read, the partial line is stored to be concatenated
+// to on the next call.  At EOF, checks for truncation and resets the file
+// offset if so.
 func (f *File) Read(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "file.Read")
 	defer span.End()

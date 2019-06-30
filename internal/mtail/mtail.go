@@ -22,7 +22,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/exporter"
-	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/vm"
@@ -53,11 +52,10 @@ func (b BuildInfo) String() string {
 
 // Server contains the state of the main mtail program.
 type Server struct {
-	lines chan *logline.LogLine // Channel of lines from tailer to VM engine.
-	store *metrics.Store        // Metrics storage.
+	store *metrics.Store // Metrics storage.
 	w     watcher.Watcher
 
-	t *tailer.Tailer     // t tails the watched files and feeds lines to the VMs.
+	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs.
 	l *vm.Loader         // l loads programs and manages the VM lifecycle.
 	e *exporter.Exporter // e manages the export of metrics from the store.
 
@@ -228,7 +226,6 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func New(store *metrics.Store, w watcher.Watcher, options ...func(*Server) error) (*Server, error) {
 	m := &Server{
 		store:     store,
-		lines:     make(chan *logline.LogLine),
 		w:         w,
 		webquit:   make(chan struct{}),
 		closeQuit: make(chan struct{}),
@@ -371,10 +368,6 @@ func (m *Server) Close() error {
 			if err != nil {
 				glog.Infof("tailer close failed: %s", err)
 			}
-		} else {
-			// Without a tailer, MtailServer has ownership of the lines channel.
-			glog.V(2).Info("No tailer, closing lines channel directly.")
-			close(m.lines)
 		}
 		// If we have a loader, shut it down.
 		if m.l != nil {
@@ -394,9 +387,9 @@ func (m *Server) Close() error {
 	return nil
 }
 
-// Run starts MtailServer's primary function, in which it watches the log
-// files for changes and sends any new lines found into the lines channel for
-// pick up by the virtual machines. If OneShot mode is enabled, it will exit.
+// Run starts MtailServer's primary function, in which it watches the log files
+// for changes and sends any new lines found to the virtual machines. If
+// OneShot mode is enabled, it will exit.
 func (m *Server) Run() error {
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
