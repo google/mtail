@@ -108,11 +108,13 @@ func (w *LogWatcher) runTicks() {
 	for {
 		select {
 		case <-w.pollTicker.C:
-			w.watchedMu.Lock()
-			for n, watched := range w.watched {
-				w.pollWatchedPathLocked(n, watched)
+			w.watchedMu.RLock()
+			for n, watch := range w.watched {
+				w.watchedMu.RUnlock()
+				w.pollWatchedPath(n, watch)
+				w.watchedMu.RLock()
 			}
-			w.watchedMu.Unlock()
+			w.watchedMu.RUnlock()
 		case <-w.stopTicks:
 			w.pollTicker.Stop()
 			return
@@ -120,8 +122,8 @@ func (w *LogWatcher) runTicks() {
 	}
 }
 
-// pollWatchedPathLocked polls an already-watched path for updates.  w.watchedMu must be locked when called.
-func (w *LogWatcher) pollWatchedPathLocked(pathname string, watched *watch) {
+// pollWatchedPathLocked polls an already-watched path for updates.
+func (w *LogWatcher) pollWatchedPath(pathname string, watched *watch) {
 	glog.V(2).Info("stat")
 	fi, err := os.Stat(pathname)
 	if err != nil {
@@ -131,17 +133,21 @@ func (w *LogWatcher) pollWatchedPathLocked(pathname string, watched *watch) {
 
 	// fsnotify does not send update events for the directory itself.
 	if fi.IsDir() {
-		w.pollDirectoryLocked(watched, pathname)
+		w.pollDirectory(watched, pathname)
 	} else if watched.fi == nil || fi.ModTime().Sub(watched.fi.ModTime()) > 0 {
 		glog.V(2).Infof("sending update for %s", pathname)
 		w.sendWatchedEvent(watched, Event{Update, pathname})
 	}
 
 	glog.V(2).Info("Update fi")
-	watched.fi = fi
+	w.watchedMu.Lock()
+	if _, ok := w.watched[pathname]; ok {
+		w.watched[pathname].fi = fi
+	}
+	w.watchedMu.Unlock()
 }
 
-func (w *LogWatcher) pollDirectoryLocked(pwatch *watch, pathname string) {
+func (w *LogWatcher) pollDirectory(parentWatch *watch, pathname string) {
 	matches, err := filepath.Glob(path.Join(pathname, "*"))
 	if err != nil {
 		glog.V(1).Info(err)
@@ -155,21 +161,27 @@ func (w *LogWatcher) pollDirectoryLocked(pwatch *watch, pathname string) {
 			continue
 		}
 
+		w.watchedMu.RLock()
 		watched, ok := w.watched[match]
+		w.watchedMu.RUnlock()
 		switch {
 		case !ok:
 			glog.V(2).Infof("sending create for %s", match)
-			w.sendWatchedEvent(pwatch, Event{Create, match})
-			w.watched[match] = &watch{ps: pwatch.ps, fi: fi}
+			w.sendWatchedEvent(parentWatch, Event{Create, match})
+			w.watchedMu.Lock()
+			w.watched[match] = &watch{ps: parentWatch.ps, fi: fi}
+			w.watchedMu.Unlock()
 		case watched.fi != nil && fi.ModTime().Sub(watched.fi.ModTime()) > 0:
 			glog.V(2).Infof("sending update for %s", match)
 			w.sendWatchedEvent(watched, Event{Update, match})
+			w.watchedMu.Lock()
 			w.watched[match].fi = fi
+			w.watchedMu.Unlock()
 		default:
 			glog.V(2).Infof("No modtime change for %s, no send", match)
 		}
 		if fi.IsDir() {
-			w.pollDirectoryLocked(pwatch, match)
+			w.pollDirectory(parentWatch, match)
 		}
 	}
 }
