@@ -50,8 +50,6 @@ type Tailer struct {
 	globPatterns       map[string]struct{} // glob patterns to match newly created files in dir paths against
 	ignoreRegexPattern *regexp.Regexp
 
-	runDone chan struct{} // Signals termination of the run goroutine.
-
 	eventsHandle int // record the handle with which to add new log files to the watcher
 
 	oneShot bool
@@ -81,7 +79,6 @@ func New(llp logline.Processor, w watcher.Watcher, options ...func(*Tailer) erro
 		w:            w,
 		handles:      make(map[string]*File),
 		globPatterns: make(map[string]struct{}),
-		runDone:      make(chan struct{}),
 	}
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
