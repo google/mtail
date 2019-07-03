@@ -73,3 +73,9 @@ Measure the time / throughput of lines.  VM processing time is most interesting
     doesn't get closed in the same scope it's opened?
 
 Theory: Implicitly cast Int shouldn't get the S2i conversion applied to them.  Do we need to name Implicit Int separate from Int and then not create s2i or other conversions for implicits.  (and we need to keep the runtime conversions?)
+
+
+=~ isn't documented in the language or programming guide docs
+
+
+if you comment out the MATCH_NETWORK clase in dhcpd.mtail it gets 30x faster... because the regexp no longer backtracks... why...
