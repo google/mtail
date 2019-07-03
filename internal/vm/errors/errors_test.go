@@ -13,7 +13,8 @@ func TestNilErrorPosition(t *testing.T) {
 	e := errors.ErrorList{}
 	e.Add(nil, "error")
 	r := e.Error()
-	if r != "error" {
-		t.Errorf("want 'error', got %q", r)
+	expected := ":0:0: error"
+	if r != expected {
+		t.Errorf("want %q, got %q", expected, r)
 	}
 }
