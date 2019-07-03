@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
@@ -19,16 +18,16 @@ import (
 	"github.com/google/mtail/internal/watcher"
 )
 
-func makeTestTail(t *testing.T) (*Tailer, chan *logline.LogLine, *watcher.FakeWatcher, string, func()) {
+func makeTestTail(t *testing.T) (*Tailer, *stubProcessor, *watcher.FakeWatcher, string, func()) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 
 	w := watcher.NewFakeWatcher()
-	lines := make(chan *logline.LogLine, 1)
-	ta, err := New(lines, w, Context(context.Background()))
+	llp := NewStubProcessor()
+	ta, err := New(llp, w, Context(context.Background()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ta, lines, w, tmpDir, rmTmpDir
+	return ta, llp, w, tmpDir, rmTmpDir
 }
 
 func TestTail(t *testing.T) {
@@ -52,38 +51,26 @@ func TestTail(t *testing.T) {
 }
 
 func TestHandleLogUpdate(t *testing.T) {
-	ta, lines, w, dir, cleanup := makeTestTail(t)
+	ta, llp, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
-	result := []*logline.LogLine{}
-	done := make(chan struct{})
-	wg := sync.WaitGroup{}
-	go func() {
-		for line := range lines {
-			glog.V(2).Infof("line %v", line)
-			result = append(result, line)
-			wg.Done()
-		}
-		close(done)
-	}()
 
 	err := ta.TailPath(logfile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wg.Add(4)
+	llp.Add(4)
 	testutil.WriteString(t, f, "a\nb\nc\nd\n")
 	// f.Seek(0, 0)
 	w.InjectUpdate(logfile)
 
-	wg.Wait()
+	llp.Wait()
 	if err := w.Close(); err != nil {
 		t.Log(err)
 	}
-	<-done
 
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "a"},
@@ -91,7 +78,7 @@ func TestHandleLogUpdate(t *testing.T) {
 		{context.Background(), logfile, "c"},
 		{context.Background(), logfile, "d"},
 	}
-	if diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context")); diff != "" {
+	if diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context")); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
@@ -100,31 +87,21 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	ta, lines, w, dir, cleanup := makeTestTail(t)
+	ta, llp, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
-	result := []*logline.LogLine{}
-	done := make(chan struct{})
-	wg := sync.WaitGroup{}
-	go func() {
-		for line := range lines {
-			result = append(result, line)
-			wg.Done()
-		}
-		close(done)
-	}()
 
 	if err := ta.TailPath(logfile); err != nil {
 		t.Fatal(err)
 	}
 
-	wg.Add(3)
+	llp.Add(3)
 	testutil.WriteString(t, f, "a\nb\nc\n")
 	//time.Sleep(10 * time.Millisecond)
 	w.InjectUpdate(logfile)
-	wg.Wait()
+	llp.Wait()
 
 	if err := f.Truncate(0); err != nil {
 		t.Fatal(err)
@@ -135,16 +112,15 @@ func TestHandleLogTruncate(t *testing.T) {
 	w.InjectUpdate(logfile)
 	//time.Sleep(10 * time.Millisecond)
 
-	wg.Add(2)
+	llp.Add(2)
 	testutil.WriteString(t, f, "d\ne\n")
 	w.InjectUpdate(logfile)
 	//time.Sleep(10 * time.Millisecond)
 
-	wg.Wait()
+	llp.Wait()
 	if err := w.Close(); err != nil {
 		t.Log(err)
 	}
-	<-done
 
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "a"},
@@ -153,28 +129,18 @@ func TestHandleLogTruncate(t *testing.T) {
 		{context.Background(), logfile, "d"},
 		{context.Background(), logfile, "e"},
 	}
-	if diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context")); diff != "" {
+	if diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context")); diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
-	ta, lines, w, dir, cleanup := makeTestTail(t)
+	ta, llp, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
-	result := []*logline.LogLine{}
-	done := make(chan struct{})
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		for line := range lines {
-			result = append(result, line)
-			wg.Done()
-		}
-		close(done)
-	}()
+	llp.Add(1)
 
 	err := ta.TailPath(logfile)
 	if err != nil {
@@ -198,14 +164,13 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	//f.Seek(2, 0)
 	w.InjectUpdate(logfile)
 
-	wg.Wait()
+	llp.Wait()
 	w.Close()
-	<-done
 
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "ab"},
 	}
-	diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 	if diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}
@@ -221,7 +186,7 @@ func TestTailerOpenRetries(t *testing.T) {
 	if u.Uid == "0" {
 		t.Skip("Skipping test when run as root")
 	}
-	ta, lines, w, dir, cleanup := makeTestTail(t)
+	ta, llp, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -229,15 +194,7 @@ func TestTailerOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	done := make(chan struct{})
-	wg := sync.WaitGroup{}
-	wg.Add(1) // lines written
-	go func() {
-		for range lines {
-			wg.Done()
-		}
-		close(done)
-	}()
+	llp.Add(1) // lines written
 	testutil.FatalIfErr(t, ta.AddPattern(logfile))
 
 	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
@@ -268,11 +225,10 @@ func TestTailerOpenRetries(t *testing.T) {
 	testutil.WriteString(t, f, "\n")
 	w.InjectUpdate(logfile)
 
-	wg.Wait()
+	llp.Wait()
 	if err := w.Close(); err != nil {
 		t.Log(err)
 	}
-	<-done
 }
 
 func TestTailerInitErrors(t *testing.T) {
@@ -280,7 +236,7 @@ func TestTailerInitErrors(t *testing.T) {
 	if err == nil {
 		t.Error("expected error")
 	}
-	lines := make(chan *logline.LogLine)
+	lines := &stubProcessor{}
 	_, err = New(lines, nil, nil)
 	if err == nil {
 		t.Error("expected error")
@@ -301,26 +257,16 @@ func TestTailerInitErrors(t *testing.T) {
 }
 
 func TestHandleLogRotate(t *testing.T) {
-	ta, lines, w, dir, cleanup := makeTestTail(t)
+	ta, llp, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
-	result := []*logline.LogLine{}
-	done := make(chan struct{})
-	wg := sync.WaitGroup{}
-	go func() {
-		for line := range lines {
-			result = append(result, line)
-			wg.Done()
-		}
-		close(done)
-	}()
 
 	if err := ta.TailPath(logfile); err != nil {
 		t.Fatal(err)
 	}
-	wg.Add(2)
+	llp.Add(2)
 	testutil.WriteString(t, f, "1\n")
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
@@ -340,40 +286,29 @@ func TestHandleLogRotate(t *testing.T) {
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
 
-	wg.Wait()
+	llp.Wait()
 	w.Close()
-	<-done
 
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "1"},
 		{context.Background(), logfile, "2"},
 	}
-	diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 	if diff != "" {
 		t.Errorf("result didn't match expected:\n%s", diff)
 	}
 }
 
 func TestHandleLogRotateSignalsWrong(t *testing.T) {
-	ta, lines, w, dir, cleanup := makeTestTail(t)
+	ta, llp, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
-	result := []*logline.LogLine{}
-	done := make(chan struct{})
-	wg := sync.WaitGroup{}
-	go func() {
-		for line := range lines {
-			result = append(result, line)
-			wg.Done()
-		}
-		close(done)
-	}()
 
 	if err := ta.TailPath(logfile); err != nil {
 		t.Fatal(err)
 	}
-	wg.Add(2)
+	llp.Add(2)
 	testutil.WriteString(t, f, "1\n")
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
@@ -396,35 +331,22 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
 
-	wg.Wait()
+	llp.Wait()
 	w.Close()
-	<-done
 
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "1"},
 		{context.Background(), logfile, "2"},
 	}
-	diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 	if diff != "" {
 		t.Errorf("result didn't match expected:\n%s", diff)
 	}
 }
 
 func TestTailExpireStaleHandles(t *testing.T) {
-	ta, lines, w, dir, cleanup := makeTestTail(t)
+	ta, llp, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
-
-	result := []*logline.LogLine{}
-	done := make(chan struct{})
-	wg := sync.WaitGroup{}
-	go func() {
-		for line := range lines {
-			glog.V(2).Infof("line %v", line)
-			result = append(result, line)
-			wg.Done()
-		}
-		close(done)
-	}()
 
 	log1 := filepath.Join(dir, "log1")
 	f1 := testutil.TestOpenFile(t, log1)
@@ -437,16 +359,15 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	if err := ta.TailPath(log2); err != nil {
 		t.Fatal(err)
 	}
-	wg.Add(2)
+	llp.Add(2)
 	testutil.WriteString(t, f1, "1\n")
 	testutil.WriteString(t, f2, "2\n")
 	w.InjectUpdate(log1)
 	w.InjectUpdate(log2)
-	wg.Wait()
+	llp.Wait()
 	if err := w.Close(); err != nil {
 		t.Log(err)
 	}
-	<-done
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
 	}

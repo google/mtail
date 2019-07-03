@@ -25,9 +25,9 @@ const timeoutMultiplier = 3
 
 // TestMakeServer makes a new Server for use in tests, but does not start
 // the server.  It returns the server, or any errors the new server creates.
-func TestMakeServer(tb testing.TB, pollInterval time.Duration, disableFsNotify bool, options ...func(*Server) error) (*Server, error) {
+func TestMakeServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*Server) error) (*Server, error) {
 	tb.Helper()
-	w, err := watcher.NewLogWatcher(pollInterval, !disableFsNotify)
+	w, err := watcher.NewLogWatcher(pollInterval, enableFsNotify)
 	if err != nil {
 		tb.Fatal(err)
 	}
@@ -37,11 +37,11 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, disableFsNotify b
 
 // TestStartServer creates a new Server and starts it running.  It
 // returns the server, and a cleanup function.
-func TestStartServer(tb testing.TB, pollInterval time.Duration, disableFsNotify bool, options ...func(*Server) error) (*Server, func()) {
+func TestStartServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*Server) error) (*Server, func()) {
 	tb.Helper()
 	options = append(options, BindAddress("", "0"))
 
-	m, err := TestMakeServer(tb, pollInterval, disableFsNotify, options...)
+	m, err := TestMakeServer(tb, pollInterval, enableFsNotify, options...)
 	if err != nil {
 		tb.Fatal(err)
 	}

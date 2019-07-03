@@ -4,13 +4,13 @@
 package vm
 
 import (
+	"context"
 	"os"
 	"path"
 	"strings"
 	"testing"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
@@ -19,32 +19,17 @@ import (
 func TestNewLoader(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
-	inLines := make(chan *logline.LogLine)
-	l, err := NewLoader("", store, inLines, w)
+	_, err := NewLoader("", store, w)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
-	done := make(chan struct{})
-	outLines := make(chan *logline.LogLine)
-	handle := &vmHandle{outLines, done}
-	l.handleMu.Lock()
-	l.handles["test"] = handle
-	l.handleMu.Unlock()
-	go func() {
-		for range outLines {
-		}
-		close(done)
-	}()
-	close(inLines)
-	<-outLines
 }
 
 func TestCompileAndRun(t *testing.T) {
 	var testProgram = "/$/ {}\n"
 	store := metrics.NewStore()
-	lines := make(chan *logline.LogLine)
 	w := watcher.NewFakeWatcher()
-	l, err := NewLoader("", store, lines, w)
+	l, err := NewLoader("", store, w)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}
@@ -57,20 +42,11 @@ func TestCompileAndRun(t *testing.T) {
 	}
 	l.handleMu.Unlock()
 	l.handleMu.Lock()
-	c := l.handles["Test"].done
-	if c == nil {
-		t.Errorf("No done channel in handles: %v", l.handles)
+	h := l.handles["Test"]
+	if h == nil {
+		t.Errorf("No handle for Test: %v", l.handles)
 	}
 	l.handleMu.Unlock()
-	close(lines)
-	<-c
-	{
-		l.handleMu.Lock()
-		defer l.handleMu.Unlock()
-		if len(l.handles) != 0 {
-			t.Errorf("some vm handles: %v", l.handles)
-		}
-	}
 }
 
 var testProcessEvents = []struct {
@@ -109,17 +85,16 @@ var testProcessEvents = []struct {
 
 var testProgram = "/$/ {}\n"
 
-func TestProcessEvents(t *testing.T) {
+func TestProcessFileEvent(t *testing.T) {
 	for _, tt := range testProcessEvents {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
-			lines := make(chan *logline.LogLine)
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
 
-			l, err := NewLoader(tmpDir, store, lines, w)
+			l, err := NewLoader(tmpDir, store, w)
 			if err != nil {
 				t.Fatalf("couldn't create loader: %s", err)
 			}
@@ -131,13 +106,11 @@ func TestProcessEvents(t *testing.T) {
 					if e.Pathname != "notexist.mtail" {
 						testutil.TestOpenFile(t, path.Join(tmpDir, e.Pathname))
 					}
-					w.InjectCreate(path.Join(tmpDir, e.Pathname))
 				case watcher.Delete:
 					err := os.Remove(path.Join(tmpDir, e.Pathname))
 					if err != nil {
 						t.Fatalf("Remove failed for %s: %s", e.Pathname, err)
 					}
-					w.InjectDelete(path.Join(tmpDir, e.Pathname))
 				case watcher.Update:
 					if e.Pathname != "notexist.mtail" {
 						f := testutil.TestOpenFile(t, path.Join(tmpDir, e.Pathname))
@@ -149,11 +122,10 @@ func TestProcessEvents(t *testing.T) {
 							t.Fatalf("Close failed: %s", err)
 						}
 					}
-					w.InjectUpdate(path.Join(tmpDir, e.Pathname))
 				}
+				l.ProcessFileEvent(context.Background(), watcher.Event{e.Op, path.Join(tmpDir, e.Pathname)})
 			}
 			w.Close()
-			<-l.watcherDone
 			l.handleMu.RLock()
 			programs := make([]string, 0)
 			for program := range l.handles {
@@ -165,7 +137,6 @@ func TestProcessEvents(t *testing.T) {
 				t.Errorf("%q: loaded programs don't match.\nl.handles: %+#v\n%s", tt.name, l.handles, diff)
 			}
 			l.handleMu.RUnlock()
-			close(lines)
 		})
 	}
 }
@@ -179,10 +150,9 @@ var testProgFiles = []string{
 func TestLoadProg(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
-	inLines := make(chan *logline.LogLine)
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
-	l, err := NewLoader(tmpDir, store, inLines, w)
+	l, err := NewLoader(tmpDir, store, w)
 	if err != nil {
 		t.Fatalf("couldn't create loader: %s", err)
 	}

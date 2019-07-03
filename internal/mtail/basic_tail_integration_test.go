@@ -16,21 +16,21 @@ import (
 
 func TestBasicTail(t *testing.T) {
 	tests := []struct {
-		d time.Duration
-		b bool
+		pollInterval   time.Duration
+		enableFsNotify bool
 	}{
-		{0, false},
-		{10 * time.Millisecond, true},
+		{0, true},
+		{10 * time.Millisecond, false},
 	}
 	if testing.Verbose() {
 		defer testutil.TestSetFlag(t, "vmodule", "tail=2,log_watcher=2")()
 	}
 	for _, test := range tests {
-		t.Run(fmt.Sprintf("%s %v", test.d, test.b), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s %v", test.pollInterval, test.enableFsNotify), func(t *testing.T) {
 			logDir, rmLogDir := testutil.TestTempDir(t)
 			defer rmLogDir()
 
-			m, stopM := mtail.TestStartServer(t, test.d, test.b, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
+			m, stopM := mtail.TestStartServer(t, test.pollInterval, test.enableFsNotify, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
 			defer stopM()
 
 			startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
@@ -51,6 +51,7 @@ func TestBasicTail(t *testing.T) {
 			lineCount := endLineCount.(float64) - startLineCount.(float64)
 			if lineCount != 3. {
 				t.Errorf("output didn't have expected line count increase: want 3 got %#v", lineCount)
+				t.Logf("Line Count, and log lines total: %s, %s", mtail.TestGetMetric(t, m.Addr(), "line_count"), mtail.TestGetMetric(t, m.Addr(), "log_lines_total"))
 			}
 		})
 	}

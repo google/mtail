@@ -166,11 +166,10 @@ bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 
 .PHONY: bench_cpu
 bench_cpu: | .dep-stamp
-	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -cpuprofile=cpu.out
+	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
 .PHONY: bench_mem
 bench_mem: | .dep-stamp
-	go test -tags=integration
--bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out
+	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out internal/mtail/examples_integration_test.go
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
@@ -221,7 +220,7 @@ fuzz: vm-fuzz.zip | $(GOFUZZ)
 #
 .PHONY: install_deps
 install_deps: .dep-stamp
-.dep-stamp: internal/vm/parser/parser.go internal/mtail/logo.ico.go
+.dep-stamp: $(GOGENFILES)
 	@echo "Install all dependencies, ensuring they're updated"
 	go get $(GOGETFLAGS) $(IMPORTS)
 	go get $(GOGETFLAGS) $(TESTIMPORTS)

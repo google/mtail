@@ -587,6 +587,4 @@ But for more useful situations, perhaps stopping if the log filename doesn't mat
 getfilename() !~ /apache.access.log/ {
   stop
 }
-
-...
 ```

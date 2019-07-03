@@ -11,6 +11,7 @@ package vm
 // of mtail programs.
 
 import (
+	"context"
 	"expvar"
 	"html/template"
 	"io"
@@ -33,7 +34,7 @@ import (
 )
 
 var (
-	// LineCount counts the number of lines read by the program loader from the input channel.
+	// LineCount counts the number of lines read by the program loader.
 	LineCount = expvar.NewInt("line_count")
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
@@ -54,7 +55,7 @@ func (l *Loader) LoadAllPrograms() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to stat %q", l.programPath)
 	}
-	if err = l.w.Add(l.programPath, l.eventsHandle); err != nil {
+	if err = l.w.Observe(l.programPath, l); err != nil {
 		glog.Infof("Failed to add watch on %q but continuing: %s", l.programPath, err)
 	}
 	switch {
@@ -227,49 +228,24 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
 
-	// Stop any previous VM.
-	if handle, ok := l.handles[name]; ok {
-		glog.Infof("END OF LINE, %s", name)
-		close(handle.lines)
-		<-handle.done
-		glog.Infof("Stopped %s", name)
-	}
-
-	l.handles[name] = &vmHandle{make(chan *logline.LogLine, 1), make(chan struct{})}
-	nameCode := nameToCode(name)
-	glog.Infof("Program %s has goroutine marker 0x%x", name, nameCode)
-	started := make(chan struct{})
-	go v.Run(nameCode, l.handles[name].lines, l.handles[name].done, started)
-	<-started
-	glog.Infof("Started %s", name)
-
+	l.handles[name] = v
 	return nil
-}
-
-func nameToCode(name string) uint32 {
-	return uint32(name[0])<<24 | uint32(name[1])<<16 | uint32(name[2])<<8 | uint32(name[3])
 }
 
 // Loader handles the lifecycle of programs and virtual machines, by watching
 // the configured program source directory, compiling changes to programs, and
-// managing the running virtual machines that receive input from the lines
-// channel.
+// managing the virtual machines.
 type Loader struct {
 	ms          *metrics.Store        // pointer to metrics.Store to pass to compiler
 	w           watcher.Watcher       // watches for program changes
 	reg         prometheus.Registerer // plce to reg metrics
 	programPath string                // Path that contains mtail programs.
 
-	eventsHandle int // record the handle with which to add programs to the watcher
-
-	handleMu sync.RWMutex         // guards accesses to handles
-	handles  map[string]*vmHandle // map of program names to virtual machines
+	handleMu sync.RWMutex   // guards accesses to handles
+	handles  map[string]*VM // map of program names to virtual machines
 
 	programErrorMu sync.RWMutex     // guards access to programErrors
 	programErrors  map[string]error // errors from the last compile attempt of the program
-
-	watcherDone chan struct{} // Synchronise shutdown of the watcher processEvents goroutine
-	VMsDone     chan struct{} // Notify mtail when all running VMs are shutdown.
 
 	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
 	compileOnly          bool           // Only compile programs and report errors, do not load VMs.
@@ -340,18 +316,16 @@ func PrometheusRegisterer(reg prometheus.Registerer) func(l *Loader) error {
 }
 
 // NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.LogLine, w watcher.Watcher, options ...func(*Loader) error) (*Loader, error) {
-	if store == nil || lines == nil {
-		return nil, errors.New("loader needs a store and lines")
+func NewLoader(programPath string, store *metrics.Store, w watcher.Watcher, options ...func(*Loader) error) (*Loader, error) {
+	if store == nil {
+		return nil, errors.New("loader needs a store")
 	}
 	l := &Loader{
 		ms:            store,
 		w:             w,
 		programPath:   programPath,
-		handles:       make(map[string]*vmHandle),
+		handles:       make(map[string]*VM),
 		programErrors: make(map[string]error),
-		watcherDone:   make(chan struct{}),
-		VMsDone:       make(chan struct{}),
 	}
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
@@ -359,10 +333,6 @@ func NewLoader(programPath string, store *metrics.Store, lines <-chan *logline.L
 	if l.reg != nil {
 		l.reg.MustRegister(lineProcessingDurations)
 	}
-	handle, eventsChan := l.w.Events()
-	l.eventsHandle = handle
-	go l.processEvents(eventsChan)
-	go l.processLines(lines)
 	return l, nil
 }
 
@@ -376,90 +346,64 @@ func (l *Loader) SetOption(options ...func(*Loader) error) error {
 	return nil
 }
 
-type vmHandle struct {
-	lines chan *logline.LogLine
-	done  chan struct{}
-}
+func (l *Loader) ProcessFileEvent(ctx context.Context, event watcher.Event) {
+	ctx, span := trace.StartSpan(ctx, "Loader.ProcessFileEvent")
+	defer span.End()
 
-// processEvents manages program lifecycle triggered by events from the
-// filesystem watcher.
-func (l *Loader) processEvents(events <-chan watcher.Event) {
-	defer close(l.watcherDone)
-
-	for event := range events {
-		switch event.Op {
-		case watcher.Delete:
-			l.UnloadProgram(event.Pathname)
-		case watcher.Update:
-			if err := l.LoadProgram(event.Pathname); err != nil {
-				glog.Info(err)
-			}
-		case watcher.Create:
-			if err := l.w.Add(event.Pathname, l.eventsHandle); err != nil {
-				glog.Info(err)
-				continue
-			}
-			if err := l.LoadProgram(event.Pathname); err != nil {
-				glog.Info(err)
-			}
-		default:
-			glog.V(1).Infof("Unexpected event type %+#v", event)
+	switch event.Op {
+	case watcher.Delete:
+		l.UnloadProgram(event.Pathname)
+	case watcher.Update:
+		if err := l.LoadProgram(event.Pathname); err != nil {
+			glog.Info(err)
 		}
+	case watcher.Create:
+		if err := l.w.Observe(event.Pathname, l); err != nil {
+			glog.Info(err)
+			return
+		}
+		if err := l.LoadProgram(event.Pathname); err != nil {
+			glog.Info(err)
+		}
+	default:
+		glog.V(1).Infof("Unexpected event type %+#v", event)
 	}
 }
 
-// processLines provides fanout of the input log lines to each virtual machine
-// running.  Upon close of the incoming lines channel, it also communicates
-// shutdown to the target VMs via channel close.  At termination it signals via
-// VMsDone that the goroutine has finished, and thus all VMs are terminated.
-func (l *Loader) processLines(lines <-chan *logline.LogLine) {
-	defer close(l.VMsDone)
-
-	// Copy all input LogLines to each VM's LogLine input channel.
-	for ll := range lines {
-		ctx, span := trace.StartSpan(ll.Context, "loader.processLines")
-		span.AddMessageReceiveEvent(1, int64(len(ll.Line)), int64(len(ll.Line)))
-		ll := logline.New(ctx, ll.Filename, ll.Line)
-		LineCount.Add(1)
-		l.handleMu.RLock()
-		for prog := range l.handles {
-			span.AddMessageSendEvent(int64(nameToCode(prog)), int64(len(ll.Line)), int64(len(ll.Line)))
-
-			l.handles[prog].lines <- ll
-		}
-		l.handleMu.RUnlock()
-		span.End()
-	}
-	// When lines is closed, the tailer has shut down which signals that it's
-	// time to shut down the program loader.
+func (l *Loader) Close() {
 	glog.Info("Shutting down loader.")
 	if err := l.w.Close(); err != nil {
 		glog.Infof("error closing watcher: %s", err)
 	}
-	<-l.watcherDone
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
-	glog.Info("Closing VM lines channels.")
 	for prog := range l.handles {
-		// Close the per-VM lines channel, and wait for it to signal it's done.
-		close(l.handles[prog].lines)
-		<-l.handles[prog].done
 		delete(l.handles, prog)
+	}
+}
+
+// ProcessLogLine satisfies the LogLine.Processor interface.
+func (l *Loader) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
+	ctx, span := trace.StartSpan(ctx, "Loader.ProcessLogLine")
+	defer span.End()
+	LineCount.Add(1)
+	l.handleMu.RLock()
+	defer l.handleMu.RUnlock()
+	for prog := range l.handles {
+		l.handles[prog].ProcessLogLine(ctx, ll)
 	}
 }
 
 // UnloadProgram removes the named program from the watcher to prevent future
 // updates, and terminates any currently running VM goroutine.
 func (l *Loader) UnloadProgram(pathname string) {
-	if err := l.w.Remove(pathname); err != nil {
+	if err := l.w.Unobserve(pathname, l); err != nil {
 		glog.V(2).Infof("Remove watch on %s failed: %s", pathname, err)
 	}
 	name := filepath.Base(pathname)
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
-	if handle, ok := l.handles[name]; ok {
-		close(handle.lines)
-		<-handle.done
+	if _, ok := l.handles[name]; ok {
 		delete(l.handles, name)
 	}
 }

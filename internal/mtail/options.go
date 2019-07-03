@@ -7,11 +7,7 @@ import (
 	"net"
 	"time"
 
-	openzipkin "github.com/openzipkin/zipkin-go"
-	zipkinHTTP "github.com/openzipkin/zipkin-go/reporter/http"
-
-	"contrib.go.opencensus.io/exporter/zipkin"
-	"github.com/pkg/errors"
+	"contrib.go.opencensus.io/exporter/jaeger"
 	"go.opencensus.io/trace"
 )
 
@@ -135,17 +131,19 @@ func EmitMetricTimestamp(m *Server) error {
 	return nil
 }
 
-// ZipkinReporter creates a new zipkin reporter that sends to the given Zipkin address.
-// This must be called after BindAddress succeeds.
-func ZipkinReporter(zipkinAddress string) func(*Server) error {
+// JaegerReporter creates a new jaeger reporter that sends to the given Jaeger endpoint address.
+func JaegerReporter(jaegerEndpoint string) func(*Server) error {
 	return func(m *Server) error {
-		localEndpoint, err := openzipkin.NewEndpoint("mtail", m.Addr())
+		je, err := jaeger.NewExporter(jaeger.Options{
+			CollectorEndpoint: jaegerEndpoint,
+			Process: jaeger.Process{
+				ServiceName: "mtail",
+			},
+		})
 		if err != nil {
-			return errors.Errorf("Failed to create the local zipkinEndpoint: %v", err)
+			return err
 		}
-		reporter := zipkinHTTP.NewReporter(zipkinAddress)
-		ze := zipkin.NewExporter(reporter, localEndpoint)
-		trace.RegisterExporter(ze)
+		trace.RegisterExporter(je)
 		return nil
 	}
 }

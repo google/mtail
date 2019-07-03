@@ -4,141 +4,92 @@
 package watcher
 
 import (
-	"sync"
+	"context"
 	"testing"
 
 	"github.com/google/mtail/internal/testutil"
 )
 
+type stubProcessor struct {
+	Events []Event
+}
+
+func (s *stubProcessor) ProcessFileEvent(ctx context.Context, event Event) {
+	s.Events = append(s.Events, event)
+}
+
 func TestFakeWatcher(t *testing.T) {
 	w := NewFakeWatcher()
 	defer w.Close()
 
-	handle, eventsChannel := w.Events()
+	s := &stubProcessor{}
 
-	testutil.FatalIfErr(t, w.Add("/tmp", handle))
+	testutil.FatalIfErr(t, w.Observe("/tmp", s))
 	if _, ok := w.watches["/tmp"]; !ok {
 		t.Errorf("Not watching /tmp, w contains: %+#v", w.watches)
 	}
 
-	testutil.FatalIfErr(t, w.Remove("/tmp"))
+	testutil.FatalIfErr(t, w.Unobserve("/tmp", s))
 	if _, ok := w.watches["/tmp"]; ok {
 		t.Errorf("Still watching /tmp, w contains: %+#v", w.watches)
 	}
 
-	testutil.FatalIfErr(t, w.Add("/tmp", handle))
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-
-	go func() {
-		e := <-eventsChannel
-		switch e.Op {
-		case Create:
-			if e.Pathname != "/tmp/log" {
-				t.Errorf("event doesn't match: %q\n", e)
-			}
-		default:
-			t.Errorf("Wrong event type: %q", e)
-		}
-		wg.Done()
-	}()
+	testutil.FatalIfErr(t, w.Observe("/tmp", s))
 	w.InjectCreate("/tmp/log")
-	wg.Wait()
+	if len(s.Events) != 1 {
+		t.Errorf("No event received")
+	}
+	if s.Events[0].Pathname != "/tmp/log" {
+		t.Errorf("event doesn't match: %q\n", s.Events[0])
+	}
+	if s.Events[0].Op != Create {
+		t.Errorf("Wrong event type; %q", s.Events[0])
+	}
 
-	testutil.FatalIfErr(t, w.Add("/tmp/foo", handle))
-	wg = sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		e := <-eventsChannel
-		switch e.Op {
-		case Update:
-			if e.Pathname != "/tmp/foo" {
-				t.Errorf("event doesn't match name: %q\n", e)
-			}
-		default:
-			t.Errorf("Wrong event type: %q", e)
-		}
-		wg.Done()
-	}()
+	testutil.FatalIfErr(t, w.Observe("/tmp/foo", s))
 	w.InjectUpdate("/tmp/foo")
-	wg.Wait()
+	if len(s.Events) != 2 {
+		t.Errorf("no even treceived")
+	}
+	if s.Events[1].Pathname != "/tmp/foo" {
+		t.Errorf("event doesn't match name: %q\n", s.Events[1])
+	}
+	if s.Events[1].Op != Update {
+		t.Errorf("Wrong event type: %q", s.Events[1])
+	}
 
-	wg = sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		e := <-eventsChannel
-		switch e.Op {
-		case Delete:
-			if e.Pathname != "/tmp/foo" {
-				t.Errorf("event doesn't match name: %q\n", e)
-			}
-		default:
-			t.Errorf("Wrong event type: %q", e)
-		}
-		wg.Done()
-	}()
 	w.InjectDelete("/tmp/foo")
-	wg.Wait()
+	if len(s.Events) != 3 {
+		t.Errorf("no event received")
+	}
+	if s.Events[2].Pathname != "/tmp/foo" {
+		t.Errorf("event doesn't match name: %q\n", s.Events[2])
+	}
+	if s.Events[2].Op != Delete {
+		t.Errorf("Wrong event type: %q", s.Events[2])
+	}
 }
 
 func TestFakeWatcherUnwatchedFiles(t *testing.T) {
 	w := NewFakeWatcher()
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	_, eventsChannel := w.Events()
-	go func() {
-		for e := range eventsChannel {
-			switch e.Op {
-			case Create, Delete, Update:
-				t.Errorf("Received an event, expecting nothing: %q", e)
-			default:
-			}
-		}
-		wg.Done()
-	}()
+	s := &stubProcessor{}
 	w.InjectCreate("/tmp/log")
 	w.Close()
-	wg.Wait()
+	if len(s.Events) > 0 {
+		t.Errorf("Received an event, expecting nothing: %q", s.Events)
+	}
 
 	w = NewFakeWatcher()
-	wg = sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		for e := range eventsChannel {
-			switch e.Op {
-			case Create, Delete, Update:
-				t.Errorf("Received an event, expecting nothing: %q", e)
-			default:
-			}
-		}
-		wg.Done()
-	}()
 	w.InjectUpdate("/tmp/foo")
 	w.Close()
-	wg.Wait()
+	if len(s.Events) > 0 {
+		t.Errorf("Received an event, expecting nothing: %q", s.Events)
+	}
 
 	w = NewFakeWatcher()
-	wg = sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		for e := range eventsChannel {
-			switch e.Op {
-			case Create, Delete, Update:
-				t.Errorf("Received an event, expecting nothing: %q", e)
-			default:
-			}
-		}
-		wg.Done()
-	}()
 	w.InjectDelete("/tmp/foo")
 	w.Close()
-	wg.Wait()
-}
-
-func TestNoSuchHandle(t *testing.T) {
-	w := NewFakeWatcher()
-	err := w.Add("foo", 1)
-	if err == nil {
-		t.Error("expecting error, got nil")
+	if len(s.Events) > 0 {
+		t.Errorf("Received an event, expecting nothing: %q", s.Events)
 	}
 }

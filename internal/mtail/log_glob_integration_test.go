@@ -24,14 +24,8 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 
 			logDir := path.Join(tmpDir, "logs")
 			progDir := path.Join(tmpDir, "progs")
-			err := os.Mkdir(logDir, 0700)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = os.Mkdir(progDir, 0700)
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
+			testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 			defer testutil.TestChdir(t, logDir)()
 
 			m, stopM := mtail.TestStartServer(t, pollInterval, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log*"))
@@ -44,9 +38,7 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 				logFile := path.Join(logDir, "log")
 				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
-				if err != nil {
-					t.Fatal(err)
-				}
+				testutil.FatalIfErr(t, err)
 				glog.Infof("Wrote %d bytes", n)
 				time.Sleep(time.Second)
 
@@ -66,9 +58,7 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 				logFile := path.Join(logDir, "log1")
 				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
-				if err != nil {
-					t.Fatal(err)
-				}
+				testutil.FatalIfErr(t, err)
 				glog.Infof("Wrote %d bytes", n)
 				time.Sleep(time.Second)
 

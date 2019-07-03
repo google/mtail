@@ -25,3 +25,7 @@ func AllowUnexported(types ...interface{}) cmp.Option {
 func IgnoreFields(typ interface{}, names ...string) cmp.Option {
 	return cmpopts.IgnoreFields(typ, names...)
 }
+
+func SortSlices(lessFunc interface{}) cmp.Option {
+	return cmpopts.SortSlices(lessFunc)
+}

@@ -11,7 +11,6 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
-	"sync"
 	"testing"
 
 	"github.com/google/mtail/internal/logline"
@@ -19,30 +18,19 @@ import (
 )
 
 func TestReadPartial(t *testing.T) {
-	lines := make(chan *logline.LogLine, 1)
-
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
 	logfile := path.Join(tmpDir, "t")
 
+	llp := NewStubProcessor()
+
 	fd := testutil.TestOpenFile(t, logfile)
-	f, err := NewFile(logfile, lines, false)
+	f, err := NewFile(logfile, llp, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	done := make(chan struct{})
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	var result []*logline.LogLine
-	go func() {
-		for line := range lines {
-			result = append(result, line)
-			wg.Done()
-		}
-		close(done)
-	}()
 	err = f.Read(context.Background())
 	if err != io.EOF {
 		t.Errorf("error returned not EOF: %v", err)
@@ -52,7 +40,7 @@ func TestReadPartial(t *testing.T) {
 	}
 	testutil.WriteString(t, fd, "o")
 	testutil.WriteString(t, fd, "hi")
-	// memmapfs shares data structure here and in code under test so reset the file offset
+
 	_, err = fd.Seek(0, 0)
 	testutil.FatalIfErr(t, err)
 	err = f.Read(context.Background())
@@ -66,6 +54,8 @@ func TestReadPartial(t *testing.T) {
 	_, err = fd.Seek(3, io.SeekStart)
 	testutil.FatalIfErr(t, err)
 	testutil.WriteString(t, fd, "\n")
+	llp.Add(1)
+
 	_, err = fd.Seek(-1, io.SeekEnd)
 	testutil.FatalIfErr(t, err)
 	err = f.Read(context.Background())
@@ -73,15 +63,14 @@ func TestReadPartial(t *testing.T) {
 		t.Errorf("error returned not EOF: %v", err)
 	}
 	// sync with reader goroutine
-	close(lines)
-	<-done
 	if f.partial.String() != "" {
 		t.Errorf("partial line not empty: %q", f.partial)
 	}
+	llp.Wait()
 	expected := []*logline.LogLine{
 		{context.TODO(), logfile, "ohi"},
 	}
-	diff := testutil.Diff(expected, result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 	if diff != "" {
 		t.Errorf("result didn't match:\n%s", diff)
 	}

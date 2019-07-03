@@ -40,7 +40,7 @@ type File struct {
 	regular  bool      // Remember if this is a regular file (or a pipe)
 	file     *os.File
 	partial  *bytes.Buffer
-	lines    chan<- *logline.LogLine // output channel for lines read
+	llp      logline.Processor // processor to receive LogLines
 }
 
 // NewFile returns a new File named by the given pathname.  `seenBefore` indicates
@@ -48,7 +48,7 @@ type File struct {
 // retry on error to open the file. `seekToStart` indicates that the file
 // should be tailed from offset 0, not EOF; the latter is true for rotated
 // files and for files opened when mtail is in oneshot mode.
-func NewFile(pathname string, lines chan<- *logline.LogLine, seekToStart bool) (*File, error) {
+func NewFile(pathname string, llp logline.Processor, seekToStart bool) (*File, error) {
 	glog.V(2).Infof("file.New(%s, %v)", pathname, seekToStart)
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
@@ -81,7 +81,7 @@ func NewFile(pathname string, lines chan<- *logline.LogLine, seekToStart bool) (
 	default:
 		return nil, errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, absPath)
 	}
-	return &File{pathname, absPath, time.Now(), regular, f, bytes.NewBufferString(""), lines}, nil
+	return &File{pathname, absPath, time.Now(), regular, f, bytes.NewBufferString(""), llp}, nil
 }
 
 func open(pathname string, seenBefore bool) (*os.File, error) {
@@ -165,10 +165,10 @@ func (f *File) doRotation(ctx context.Context) error {
 	return nil
 }
 
-// Read blocks of 4096 bytes from the File, sending LogLines to the given
-// channel as newlines are encountered.  If EOF is read, the partial line is
-// stored to be concatenated to on the next call.  At EOF, checks for
-// truncation and resets the file offset if so.
+// Read blocks of 4096 bytes from the File, sending LogLines as newlines are
+// encountered.  If EOF is read, the partial line is stored to be concatenated
+// to on the next call.  At EOF, checks for truncation and resets the file
+// offset if so.
 func (f *File) Read(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "file.Read")
 	defer span.End()
@@ -226,8 +226,7 @@ func (f *File) Read(ctx context.Context) error {
 func (f *File) sendLine(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "file.sendLine")
 	defer span.End()
-	span.AddMessageSendEvent(1, int64(f.partial.Len()), int64(f.partial.Len()))
-	f.lines <- logline.New(ctx, f.Name, f.partial.String())
+	f.llp.ProcessLogLine(ctx, logline.New(ctx, f.Name, f.partial.String()))
 	lineCount.Add(f.Name, 1)
 	glog.V(2).Info("Line sent")
 	// reset partial accumulator
