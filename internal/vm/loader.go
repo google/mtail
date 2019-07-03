@@ -386,7 +386,6 @@ func (l *Loader) Close() {
 func (l *Loader) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
 	ctx, span := trace.StartSpan(ctx, "Loader.ProcessLogLine")
 	defer span.End()
-	glog.Infof("Loader.ProcessLogLine: %v", ll)
 	LineCount.Add(1)
 	l.handleMu.RLock()
 	defer l.handleMu.RUnlock()

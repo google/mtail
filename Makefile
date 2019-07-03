@@ -166,10 +166,10 @@ bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 
 .PHONY: bench_cpu
 bench_cpu: | .dep-stamp
-	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -cpuprofile=cpu.out ./...
+	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
 .PHONY: bench_mem
 bench_mem: | .dep-stamp
-	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out ./...
+	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out internal/mtail/examples_integration_test.go
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
