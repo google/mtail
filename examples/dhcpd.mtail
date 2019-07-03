@@ -58,7 +58,7 @@ const MATCH_MAC /(?P<mac>([\da-f]{2}:){5}[\da-f]{2})/
         request_total[tolower($1)]++
 
         # DHCP Discover
-        /DHCPDISCOVER from / + MATCH_MAC {
+        $message =~ /^DHCPDISCOVER from / + MATCH_MAC {
             # Counts the discovery requests per mac address, which can help
             # identify bad clients on the network.
             dhcpdiscovers[$mac]++
