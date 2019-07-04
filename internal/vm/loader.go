@@ -421,7 +421,6 @@ func (l *Loader) ProgzHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		fmt.Fprintf(w, v.DumpByteCode(prog))
-		w.WriteHeader(http.StatusOK)
 		return
 	}
 	l.handleMu.RLock()
@@ -432,5 +431,4 @@ func (l *Loader) ProgzHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<li><a href=\"?prog=%s\">%s</a></li>", prog, prog)
 	}
 	fmt.Fprintf(w, "</ul>")
-	w.WriteHeader(http.StatusOK)
 }
