@@ -6,6 +6,7 @@ require (
 	contrib.go.opencensus.io/exporter/jaeger v0.1.0
 	github.com/flazz/togo v0.0.0-20170320145504-babdbf21cff0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
+	github.com/gogo/protobuf v1.2.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef
 	github.com/google/go-cmp v0.3.0
