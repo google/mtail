@@ -34,7 +34,7 @@ import (
 func Parse(name string, input io.Reader) (ast.Node, error) {
 	p := newParser(name, input)
 	r := mtailParse(p)
-	if r != 0 || p == nil || p.errors != nil {
+	if r != 0 || p.errors != nil {
 		return nil, p.errors
 	}
 	return p.root, nil
