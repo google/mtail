@@ -13,9 +13,11 @@ package vm
 import (
 	"context"
 	"expvar"
+	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -135,7 +137,7 @@ const loaderTemplate = `
 </tr>
 <tr>
 {{range $name, $errors := $.Errors}}
-<td>{{$name}}</td>
+<td><a href="/progz?prog={{$name}}">{{$name}}</a></td>
 <td>
 {{if $errors}}
 {{$errors}}
@@ -406,4 +408,29 @@ func (l *Loader) UnloadProgram(pathname string) {
 	if _, ok := l.handles[name]; ok {
 		delete(l.handles, name)
 	}
+}
+
+func (l *Loader) ProgzHandler(w http.ResponseWriter, r *http.Request) {
+	prog := r.URL.Query().Get("prog")
+	if prog != "" {
+		l.handleMu.RLock()
+		v, ok := l.handles[prog]
+		l.handleMu.RUnlock()
+		if !ok {
+			http.Error(w, "No program found", http.StatusNotFound)
+			return
+		}
+		fmt.Fprintf(w, v.DumpByteCode(prog))
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	l.handleMu.RLock()
+	defer l.handleMu.RUnlock()
+	w.Header().Add("Content-type", "text/html")
+	fmt.Fprintf(w, "<ul>")
+	for prog := range l.handles {
+		fmt.Fprintf(w, "<li><a href=\"?prog=%s\">%s</a></li>", prog, prog)
+	}
+	fmt.Fprintf(w, "</ul>")
+	w.WriteHeader(http.StatusOK)
 }

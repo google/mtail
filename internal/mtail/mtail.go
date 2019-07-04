@@ -190,7 +190,7 @@ const statusTemplate = `
 <h1>mtail on {{.BindAddress}}</h1>
 <p>Build: {{.BuildInfo}}</p>
 <p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
-<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a>, <a href="/tracez">tracez</a></p>
+<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a>, <a href="/tracez">tracez</a>, <a href="/progz">progz</a></p>
 `
 
 func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -301,6 +301,7 @@ func (m *Server) Serve() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/favicon.ico", FaviconHandler)
 	mux.Handle("/", m)
+	mux.Handle("/progz", http.HandlerFunc(m.l.ProgzHandler))
 	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
