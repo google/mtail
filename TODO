@@ -64,6 +64,7 @@ go list -f "{{if not .Standard}}{{.ImportPath}}{{end}}" $(go list -f '{{join .De
 Request joining (request coalescing) for the log-watcher when sending updates about files, in case
 one's already in the queue.  Maybe helps with fsnotify overflow, and the
     duplicate notify problem from poll-only mode?
+    Can we do this with a one-element channel per file, and a select on send to abort if the send blocks?
 
 Programs may not use mtail_ as a metric prefix.
 
@@ -79,3 +80,6 @@ if you comment out the MATCH_NETWORK clase in dhcpd.mtail it gets 30x faster... 
 Avoid byte to string conversions in the tailer and vm FindStringSubmatch > https://dave.cheney.net/high-performance-go-workshop/dotgo-paris.html#strings_and_bytes
 
 Use FindSubmatchIndex to avoid copies?
+
+
+Move the non-program examples to the vm integration test.

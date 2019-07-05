@@ -162,14 +162,14 @@ smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 
 .PHONY: bench
 bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
-	go test -tags=integration -bench=. -timeout=${benchtimeout} -run=XXX ./...
+	go test -tags=integration -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
 
 .PHONY: bench_cpu
 bench_cpu: | .dep-stamp
-	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
+	go test -tags=integration -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
 .PHONY: bench_mem
 bench_mem: | .dep-stamp
-	go test -tags=integration -bench=. -run=XXX -timeout=${benchtimeout} -memprofile=mem.out internal/mtail/examples_integration_test.go
+	go test -tags=integration -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -memprofile=mem.out internal/mtail/examples_integration_test.go
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
