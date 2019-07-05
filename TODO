@@ -67,11 +67,6 @@ one's already in the queue.  Maybe helps with fsnotify overflow, and the
 
 Programs may not use mtail_ as a metric prefix.
 
-Measure the time / throughput of lines.  VM processing time is most interesting
-    to programmer optimisation, but line from tail to VM also matters.  Could
-    use opencensus to trace the whole thing.  Can we opencensus a span that
-    doesn't get closed in the same scope it's opened?
-
 Theory: Implicitly cast Int shouldn't get the S2i conversion applied to them.  Do we need to name Implicit Int separate from Int and then not create s2i or other conversions for implicits.  (and we need to keep the runtime conversions?)
 
 
@@ -79,3 +74,8 @@ Theory: Implicitly cast Int shouldn't get the S2i conversion applied to them.  D
 
 
 if you comment out the MATCH_NETWORK clase in dhcpd.mtail it gets 30x faster... because the regexp no longer backtracks... why...
+
+
+Avoid byte to string conversions in the tailer and vm FindStringSubmatch > https://dave.cheney.net/high-performance-go-workshop/dotgo-paris.html#strings_and_bytes
+
+Use FindSubmatchIndex to avoid copies?
