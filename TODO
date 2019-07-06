@@ -83,3 +83,5 @@ Use FindSubmatchIndex to avoid copies?
 
 
 Move the non-program examples to the vm integration test.
+
+Why is strings.Builder slower than bytes.Buffer when the latter's docstring recommends the former?
