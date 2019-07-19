@@ -50,8 +50,6 @@ type Tailer struct {
 	globPatterns       map[string]struct{} // glob patterns to match newly created files in dir paths against
 	ignoreRegexPattern *regexp.Regexp
 
-	eventsHandle int // record the handle with which to add new log files to the watcher
-
 	oneShot bool
 }
 
