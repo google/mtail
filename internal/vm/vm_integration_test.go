@@ -211,7 +211,7 @@ func TestVmEndToEnd(t *testing.T) {
 			l.Close()
 
 			// This is not good; can the loader abort on error?
-			if m := expvar.Get("prog_runtime_errors"); m != nil {
+			if m := expvar.Get("prog_runtime_errors_total"); m != nil {
 				if val := m.(*expvar.Map).Get(tc.name); val != nil && val.String() != "0" {
 					t.Errorf("Nonzero runtime errors from program: got %s", val)
 				}

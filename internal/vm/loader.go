@@ -41,8 +41,8 @@ var (
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
 	// ProgLoadErrors counts the number of program load errors.
-	ProgLoadErrors    = expvar.NewMap("prog_load_errors")
-	progRuntimeErrors = expvar.NewMap("prog_runtime_errors")
+	ProgLoadErrors    = expvar.NewMap("prog_load_errors_total")
+	progRuntimeErrors = expvar.NewMap("prog_runtime_errors_total")
 )
 
 const (
