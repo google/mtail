@@ -246,9 +246,9 @@ func TestWatcherErrors(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping log watcher test in short mode")
 	}
-	orig, err := strconv.ParseInt(expvar.Get("log_watcher_error_count").String(), 10, 64)
+	orig, err := strconv.ParseInt(expvar.Get("log_watcher_errors_total").String(), 10, 64)
 	if err != nil {
-		t.Fatalf("couldn't convert expvar %q", expvar.Get("log_watcher_error_count").String())
+		t.Fatalf("couldn't convert expvar %q", expvar.Get("log_watcher_errors_total").String())
 	}
 	w, err := NewLogWatcher(0, true)
 	if err != nil {
@@ -259,7 +259,7 @@ func TestWatcherErrors(t *testing.T) {
 		t.Fatalf("watcher close failed: %q", err)
 	}
 	expected := strconv.FormatInt(orig+1, 10)
-	if diff := testutil.Diff(expected, expvar.Get("log_watcher_error_count").String()); diff != "" {
+	if diff := testutil.Diff(expected, expvar.Get("log_watcher_errors_total").String()); diff != "" {
 		t.Errorf("log watcher error count not increased:\n%s", diff)
 	}
 }

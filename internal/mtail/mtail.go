@@ -244,10 +244,10 @@ func New(store *metrics.Store, w watcher.Watcher, options ...func(*Server) error
 		// internal/vm/loader.go
 		"line_count":          prometheus.NewDesc("line_count", "number of lines received by the program loader", nil, nil),
 		"prog_loads_total":    prometheus.NewDesc("prog_loads_total", "number of program load events by program source filename", []string{"prog"}, nil),
-		"prog_load_errors":    prometheus.NewDesc("prog_load_errors", "number of errors encountered when loading per program source filename", []string{"prog"}, nil),
-		"prog_runtime_errors": prometheus.NewDesc("prog_runtime_errors", "number of errors encountered when executing programs per source filename", []string{"prog"}, nil),
+		"prog_load_errors_total":    prometheus.NewDesc("prog_load_errors_total", "number of errors encountered when loading per program source filename", []string{"prog"}, nil),
+		"prog_runtime_errors_total": prometheus.NewDesc("prog_runtime_errors_total", "number of errors encountered when executing programs per source filename", []string{"prog"}, nil),
 		// internal/watcher/log_watcher.go
-		"log_watcher_error_count": prometheus.NewDesc("log_watcher_error_count", "number of errors received from fsnotify", nil, nil),
+		"log_watcher_errors_total": prometheus.NewDesc("log_watcher_errors_total", "number of errors received from fsnotify", nil, nil),
 	}
 	m.reg.MustRegister(
 		prometheus.NewGoCollector(),
