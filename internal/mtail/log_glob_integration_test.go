@@ -32,7 +32,7 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 			defer stopM()
 
 			startLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-			startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+			startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 
 			{
 				logFile := path.Join(logDir, "log")
@@ -43,7 +43,7 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 				time.Sleep(time.Second)
 
 				logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-				lineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+				lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 
 				if logCount.(float64)-startLogCount.(float64) != 1. {
 					t.Errorf("Unexpected log count: got %g, want 1", logCount.(float64)-startLogCount.(float64))
@@ -63,7 +63,7 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 				time.Sleep(time.Second)
 
 				logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-				lineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+				lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 
 				if logCount.(float64)-startLogCount.(float64) != 2. {
 					t.Errorf("Unexpected log count: got %g, want 2", logCount.(float64)-startLogCount.(float64))

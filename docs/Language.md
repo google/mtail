@@ -52,7 +52,7 @@ Variables, which have type `counter` or `gauge`, must be declared before their
 use.
 
 ```
-counter line_count
+counter lines_total
 gauge queue_length
 ```
 
@@ -61,7 +61,7 @@ to use characters that would cause a parse error. This example causes the metric
 to be named `line-count` in the collecting monitoring system.
 
 ```
-counter line_count as "line-count"
+counter lines_total as "line-count"
 ```
 
 Variables can be dimensioned with one or more axes, with the `by` keyword,
@@ -248,11 +248,11 @@ The simplest `mtail` program merely counts lines read:
 
 ```
 /$/ {
-  line_count++
+  lines_total++
 }
 ```
 
-This program instructs `mtail` to increment the `line_count` counter variable on
+This program instructs `mtail` to increment the `lines_total` counter variable on
 every line received (specifically anytime an end-of-line is matched.)
 
 #### Capture Groups
