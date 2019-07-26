@@ -21,9 +21,9 @@ The extraction is controlled by [mtail programs](docs/Programming-Guide.md)
 which define patterns and actions:
 
     # simple line counter
-    counter line_count
+    counter lines_total
     /$/ {
-      line_count++
+      lines_total++
     }
 
 Metrics are exported for scraping by a collector as JSON or Prometheus format

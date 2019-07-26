@@ -148,14 +148,14 @@ var lexerTests = []lexerTest{
 		{FLOATLITERAL, "123.456e7", position.Position{"numbers", 0, 65, 73}},
 		{EOF, "", position.Position{"numbers", 0, 74, 74}},
 	}},
-	{"identifier", "a be foo\nquux line_count", []Token{
+	{"identifier", "a be foo\nquux lines_total", []Token{
 		{ID, "a", position.Position{"identifier", 0, 0, 0}},
 		{ID, "be", position.Position{"identifier", 0, 2, 3}},
 		{ID, "foo", position.Position{"identifier", 0, 5, 7}},
 		{NL, "\n", position.Position{"identifier", 1, 8, -1}},
 		{ID, "quux", position.Position{"identifier", 1, 0, 3}},
-		{ID, "line_count", position.Position{"identifier", 1, 5, 14}},
-		{EOF, "", position.Position{"identifier", 1, 15, 15}}}},
+		{ID, "lines_total", position.Position{"identifier", 1, 5, 15}},
+		{EOF, "", position.Position{"identifier", 1, 16, 16}}}},
 	{"regex", "/asdf/", []Token{
 		{DIV, "/", position.Position{"regex", 0, 0, 0}},
 		{REGEX, "asdf", position.Position{"regex", 0, 1, 4}},

@@ -242,8 +242,8 @@ func New(store *metrics.Store, w watcher.Watcher, options ...func(*Server) error
 		"log_truncates_total": prometheus.NewDesc("log_truncates_total", "number of log truncation events log file", []string{"logfile"}, nil),
 		"log_lines_total":     prometheus.NewDesc("log_lines_total", "number of lines read per log file", []string{"logfile"}, nil),
 		// internal/vm/loader.go
-		"line_count":          prometheus.NewDesc("line_count", "number of lines received by the program loader", nil, nil),
-		"prog_loads_total":    prometheus.NewDesc("prog_loads_total", "number of program load events by program source filename", []string{"prog"}, nil),
+		"lines_total":               prometheus.NewDesc("lines_total", "number of lines received by the program loader", nil, nil),
+		"prog_loads_total":          prometheus.NewDesc("prog_loads_total", "number of program load events by program source filename", []string{"prog"}, nil),
 		"prog_load_errors_total":    prometheus.NewDesc("prog_load_errors_total", "number of errors encountered when loading per program source filename", []string{"prog"}, nil),
 		"prog_runtime_errors_total": prometheus.NewDesc("prog_runtime_errors_total", "number of errors encountered when executing programs per source filename", []string{"prog"}, nil),
 		// internal/watcher/log_watcher.go

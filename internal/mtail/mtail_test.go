@@ -38,7 +38,7 @@ func removeTempDir(t *testing.T, workdir string) {
 }
 
 func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
-	expvar.Get("line_count").(*expvar.Int).Set(0)
+	expvar.Get("lines_total").(*expvar.Int).Set(0)
 	expvar.Get("log_count").(*expvar.Int).Set(0)
 	expvar.Get("log_rotations_total").(*expvar.Map).Init()
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
@@ -82,7 +82,7 @@ func TestHandleLogUpdates(t *testing.T) {
 		// check log line count increase
 		expected := fmt.Sprintf("%d", i+1)
 		check := func() (bool, error) {
-			if expvar.Get("line_count").String() != expected {
+			if expvar.Get("lines_total").String() != expected {
 				return false, nil
 			}
 			return true, nil
@@ -92,7 +92,7 @@ func TestHandleLogUpdates(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !ok {
-			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("line_count").String())
+			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("lines_total").String())
 			buf := make([]byte, 1<<16)
 			count := runtime.Stack(buf, true)
 			fmt.Println(string(buf[:count]))
@@ -165,8 +165,8 @@ Loop:
 		t.Fatal(err)
 	}
 	expected := "10"
-	if diff := testutil.Diff(expected, expvar.Get("line_count").String()); diff != "" {
-		t.Errorf("line_count metric didn't match\n%s", diff)
+	if diff := testutil.Diff(expected, expvar.Get("lines_total").String()); diff != "" {
+		t.Errorf("lines_total metric didn't match\n%s", diff)
 	}
 	rotationsMap := expvar.Get("log_rotations_total").(*expvar.Map)
 	v := rotationsMap.Get(logFilepath)
@@ -206,7 +206,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		if expvar.Get("log_count").String() != expectedLogCount {
 			return false, nil
 		}
-		if expvar.Get("line_count").String() != expectedLineCount {
+		if expvar.Get("lines_total").String() != expectedLineCount {
 			return false, nil
 		}
 		return true, nil
@@ -217,7 +217,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	}
 	if !ok {
 		t.Errorf("Log count\n\texpected: %s\n\treceived: %s", expectedLogCount, expvar.Get("log_count").String())
-		t.Errorf("Line count\n\texpected: %s\n\treceived: %s", expectedLineCount, expvar.Get("line_count").String())
+		t.Errorf("Line count\n\texpected: %s\n\treceived: %s", expectedLineCount, expvar.Get("lines_total").String())
 	}
 }
 
@@ -520,7 +520,7 @@ func TestHandleLogTruncate(t *testing.T) {
 	testutil.WriteString(t, logFile, "x\n")
 	glog.Info("Write")
 	check := func() (bool, error) {
-		if expvar.Get("line_count").String() != "1" {
+		if expvar.Get("lines_total").String() != "1" {
 			return false, nil
 		}
 		return true, nil
@@ -537,7 +537,7 @@ func TestHandleLogTruncate(t *testing.T) {
 	testutil.WriteString(t, logFile, "x\n")
 	glog.Info("Write")
 	check2 := func() (bool, error) {
-		if expvar.Get("line_count").String() != "2" {
+		if expvar.Get("lines_total").String() != "2" {
 			return false, nil
 		}
 		return true, nil
@@ -590,7 +590,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 		// check log line count increase
 		expected := fmt.Sprintf("%d", i+1)
 		check := func() (bool, error) {
-			if expvar.Get("line_count").String() != expected {
+			if expvar.Get("lines_total").String() != expected {
 				return false, nil
 			}
 			return true, nil
@@ -600,7 +600,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !ok {
-			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("line_count").String())
+			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("lines_total").String())
 			buf := make([]byte, 1<<16)
 			count := runtime.Stack(buf, true)
 			fmt.Println(string(buf[:count]))

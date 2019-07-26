@@ -37,7 +37,7 @@ func TestPartialLineRead(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+	startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 
 	{
 		n, err := f.WriteString("line 1\n")
@@ -47,7 +47,7 @@ func TestPartialLineRead(t *testing.T) {
 		glog.Infof("Wrote %d bytes", n)
 		time.Sleep(time.Second)
 
-		lineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+		lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 
 		mtail.ExpectMetricDelta(t, lineCount, startLineCount, 1)
 	}
@@ -61,7 +61,7 @@ func TestPartialLineRead(t *testing.T) {
 		glog.Infof("Wrote %d bytes", n)
 		time.Sleep(time.Second)
 
-		lineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+		lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 
 		mtail.ExpectMetricDelta(t, lineCount, startLineCount, 1)
 	}
@@ -74,7 +74,7 @@ func TestPartialLineRead(t *testing.T) {
 		glog.Infof("Wrote %d bytes", n)
 		time.Sleep(time.Second)
 
-		lineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+		lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 
 		mtail.ExpectMetricDelta(t, lineCount, startLineCount, 2)
 	}
