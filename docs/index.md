@@ -8,9 +8,9 @@ It aims to fill a niche between applications that do not export their own intern
 The extraction is controlled by `mtail` programs which define patterns and actions:
 
     # simple line counter
-    counter line_count
+    counter lines_total
     /$/ {
-      line_count++
+      lines_total++
     }
 
 Metrics are exported for scraping by a collector as JSON or Prometheus format

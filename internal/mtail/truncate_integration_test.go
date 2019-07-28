@@ -33,7 +33,7 @@ func TestTruncatedLogRead(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+	startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 	startLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
 
 	logFile := path.Join(logDir, "log")
@@ -62,7 +62,7 @@ func TestTruncatedLogRead(t *testing.T) {
 	glog.Infof("Wrote %d bytes", n)
 	time.Sleep(time.Second)
 
-	endLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+	endLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 	endLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
 
 	mtail.ExpectMetricDelta(t, endLineCount, startLineCount, 2)

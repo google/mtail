@@ -22,7 +22,7 @@ var testCodeGenPrograms = []struct {
 }{
 	// Composite literals require too many explicit conversions.
 	{"simple line counter",
-		"counter line_count\n/$/ { line_count++\n }\n",
+		"counter lines_total\n/$/ { lines_total++\n }\n",
 		[]code.Instr{
 			{code.Match, 0},
 			{code.Jnm, 7},
