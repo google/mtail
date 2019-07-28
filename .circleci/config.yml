@@ -136,9 +136,9 @@ tag-filter: &tag-filter
     tags:
       only: /^v.*/
 
-# tag-filter ensures that jobs run only for *only* version-tagged changes;
-# excluding all branches to avoid triggering on all commits. Use for all
-# release jobs.
+# tag-and-branch-filter ensures that jobs run only for *only* version-tagged
+# changes; excluding all branches to avoid triggering on all commits. Use for
+# all release jobs.
 tag-and-branch-filter: &tag-and-branch-filter
   filters:
     tags:
