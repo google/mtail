@@ -49,8 +49,8 @@ func (c *codegen) errorf(pos *position.Position, format string, args ...interfac
 	c.errors.Add(pos, e)
 }
 
-func (c *codegen) emit(i code.Instr) {
-	c.obj.Program = append(c.obj.Program, i)
+func (c *codegen) emit(n ast.Node, opcode code.Opcode, operand interface{}) {
+	c.obj.Program = append(c.obj.Program, code.Instr{opcode, operand, n.Pos().Line})
 }
 
 // newLabel creates a new label to jump to
@@ -171,15 +171,15 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		lEnd := c.newLabel()
 		if n.Cond != nil {
 			n.Cond = ast.Walk(c, n.Cond)
-			c.emit(code.Instr{code.Jnm, lElse})
+			c.emit(n, code.Jnm, lElse)
 		}
 		// Set matched flag false for children.
-		c.emit(code.Instr{code.Setmatched, false})
+		c.emit(n, code.Setmatched, false)
 		n.Truth = ast.Walk(c, n.Truth)
 		// Re-set matched flag to true for rest of current block.
-		c.emit(code.Instr{code.Setmatched, true})
+		c.emit(n, code.Setmatched, true)
 		if n.Else != nil {
-			c.emit(code.Instr{code.Jmp, lEnd})
+			c.emit(n, code.Jmp, lEnd)
 		}
 		c.setLabel(lElse)
 		if n.Else != nil {
@@ -197,20 +197,20 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		c.obj.Regexps = append(c.obj.Regexps, re)
 		// Store the location of this regular expression in the patterNode
 		n.Index = len(c.obj.Regexps) - 1
-		c.emit(code.Instr{code.Match, n.Index})
+		c.emit(n, code.Match, n.Index)
 
 	case *ast.StringLit:
 		c.obj.Strings = append(c.obj.Strings, n.Text)
-		c.emit(code.Instr{code.Str, len(c.obj.Strings) - 1})
+		c.emit(n, code.Str, len(c.obj.Strings)-1)
 
 	case *ast.IntLit:
-		c.emit(code.Instr{code.Push, n.I})
+		c.emit(n, code.Push, n.I)
 
 	case *ast.FloatLit:
-		c.emit(code.Instr{code.Push, n.F})
+		c.emit(n, code.Push, n.F)
 
 	case *ast.StopStmt:
-		c.emit(code.Instr{code.Stop, nil})
+		c.emit(n, code.Stop, nil)
 
 	case *ast.IdTerm:
 		if n.Symbol == nil || n.Symbol.Kind != symbol.VarSymbol {
@@ -220,9 +220,9 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			c.errorf(n.Pos(), "No metric bound to identifier %q", n.Name)
 			return nil, n
 		}
-		c.emit(code.Instr{code.Mload, n.Symbol.Addr})
+		c.emit(n, code.Mload, n.Symbol.Addr)
 		m := n.Symbol.Binding.(*metrics.Metric)
-		c.emit(code.Instr{code.Dload, len(m.Keys)})
+		c.emit(n, code.Dload, len(m.Keys))
 
 		if !n.Lvalue {
 			t := n.Type()
@@ -233,11 +233,11 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 
 			switch {
 			case types.Equals(t, types.Float):
-				c.emit(code.Instr{code.Fget, nil})
+				c.emit(n, code.Fget, nil)
 			case types.Equals(t, types.Int):
-				c.emit(code.Instr{code.Iget, nil})
+				c.emit(n, code.Iget, nil)
 			case types.Equals(t, types.String):
-				c.emit(code.Instr{code.Sget, nil})
+				c.emit(n, code.Sget, nil)
 			default:
 				c.errorf(n.Pos(), "invalid type for get %q in %#v", n.Type(), n)
 			}
@@ -251,13 +251,13 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		rn := n.Symbol.Binding.(*ast.PatternExpr)
 		// rn.index contains the index of the compiled regular expression object
 		// in the re slice of the object code
-		c.emit(code.Instr{code.Push, rn.Index})
+		c.emit(n, code.Push, rn.Index)
 		// n.Symbol.Addr is the capture group offset
-		c.emit(code.Instr{code.Capref, n.Symbol.Addr})
+		c.emit(n, code.Capref, n.Symbol.Addr)
 		if types.Equals(n.Type(), types.Float) {
-			c.emit(code.Instr{code.S2f, nil})
+			c.emit(n, code.S2f, nil)
 		} else if types.Equals(n.Type(), types.Int) {
-			c.emit(code.Instr{code.S2i, nil})
+			c.emit(n, code.S2i, nil)
 		}
 
 	case *ast.IndexedExpr:
@@ -265,9 +265,9 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			for _, arg := range args.Children {
 				_ = ast.Walk(c, arg)
 				if types.Equals(arg.Type(), types.Float) {
-					c.emit(code.Instr{code.F2s, nil})
+					c.emit(n, code.F2s, nil)
 				} else if types.Equals(arg.Type(), types.Int) {
-					c.emit(code.Instr{code.I2s, nil})
+					c.emit(n, code.I2s, nil)
 				}
 			}
 		}
@@ -297,11 +297,11 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		return nil, n
 
 	case *ast.OtherwiseStmt:
-		c.emit(code.Instr{Opcode: code.Otherwise})
+		c.emit(n, code.Otherwise, nil)
 
 	case *ast.DelStmt:
 		if n.Expiry > 0 {
-			c.emit(code.Instr{code.Push, n.Expiry})
+			c.emit(n, code.Push, n.Expiry)
 		}
 		ast.Walk(c, n.N)
 		// overwrite the dload instruction
@@ -317,13 +317,13 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			lFalse := c.newLabel()
 			lEnd := c.newLabel()
 			ast.Walk(c, n.Lhs)
-			c.emit(code.Instr{code.Jnm, lFalse})
+			c.emit(n, code.Jnm, lFalse)
 			ast.Walk(c, n.Rhs)
-			c.emit(code.Instr{code.Jnm, lFalse})
-			c.emit(code.Instr{code.Push, true})
-			c.emit(code.Instr{code.Jmp, lEnd})
+			c.emit(n, code.Jnm, lFalse)
+			c.emit(n, code.Push, true)
+			c.emit(n, code.Jmp, lEnd)
 			c.setLabel(lFalse)
-			c.emit(code.Instr{code.Push, false})
+			c.emit(n, code.Push, false)
 			c.setLabel(lEnd)
 			return nil, n
 
@@ -331,13 +331,13 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			lTrue := c.newLabel()
 			lEnd := c.newLabel()
 			ast.Walk(c, n.Lhs)
-			c.emit(code.Instr{code.Jm, lTrue})
+			c.emit(n, code.Jm, lTrue)
 			ast.Walk(c, n.Rhs)
-			c.emit(code.Instr{code.Jm, lTrue})
-			c.emit(code.Instr{code.Push, false})
-			c.emit(code.Instr{code.Jmp, lEnd})
+			c.emit(n, code.Jm, lTrue)
+			c.emit(n, code.Push, false)
+			c.emit(n, code.Jmp, lEnd)
 			c.setLabel(lTrue)
-			c.emit(code.Instr{code.Push, true})
+			c.emit(n, code.Push, true)
 			c.setLabel(lEnd)
 			return nil, n
 
@@ -416,22 +416,22 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 				c.errorf(n.Pos(), "too many arguments to builtin %q: %#v", n.Name, n)
 				return n
 			}
-			if err := c.emitConversion(n.Args.(*ast.ExprList).Children[0].Type(), n.Type()); err != nil {
+			if err := c.emitConversion(n, n.Args.(*ast.ExprList).Children[0].Type(), n.Type()); err != nil {
 				c.errorf(n.Pos(), "%s on node %v", err.Error(), n)
 				return n
 			}
 
 		default:
-			c.emit(code.Instr{builtin[n.Name], arglen})
+			c.emit(n, builtin[n.Name], arglen)
 		}
 	case *ast.UnaryExpr:
 		switch n.Op {
 		case parser.INC:
-			c.emit(code.Instr{Opcode: code.Inc})
+			c.emit(n, code.Inc, nil)
 		case parser.DEC:
-			c.emit(code.Instr{Opcode: code.Dec})
+			c.emit(n, code.Dec, nil)
 		case parser.NOT:
-			c.emit(code.Instr{Opcode: code.Neg})
+			c.emit(n, code.Neg, nil)
 		}
 	case *ast.BinaryExpr:
 		switch n.Op {
@@ -473,18 +473,18 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 					cmpOp = code.Cmp
 				}
 			}
-			c.emit(code.Instr{cmpOp, cmpArg})
-			c.emit(code.Instr{jumpOp, lFail})
-			c.emit(code.Instr{code.Push, true})
-			c.emit(code.Instr{code.Jmp, lEnd})
+			c.emit(n, cmpOp, cmpArg)
+			c.emit(n, jumpOp, lFail)
+			c.emit(n, code.Push, true)
+			c.emit(n, code.Jmp, lEnd)
 			c.setLabel(lFail)
-			c.emit(code.Instr{code.Push, false})
+			c.emit(n, code.Push, false)
 			c.setLabel(lEnd)
 		case parser.ADD_ASSIGN:
 			// When operand is not nil, inc pops the delta from the stack.
 			switch {
 			case types.Equals(n.Type(), types.Int):
-				c.emit(code.Instr{code.Inc, 0})
+				c.emit(n, code.Inc, 0)
 			case types.Equals(n.Type(), types.Float), types.Equals(n.Type(), types.String):
 				// Already walked the lhs and rhs of this expression
 				opcode, err := getOpcodeForType(parser.PLUS, n.Type())
@@ -492,14 +492,14 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 					c.errorf(n.Pos(), "%s", err)
 					return n
 				}
-				c.emit(code.Instr{Opcode: opcode})
+				c.emit(n, opcode, nil)
 				// And a second lhs
 				opcode, err = getOpcodeForType(parser.ASSIGN, n.Type())
 				if err != nil {
 					c.errorf(n.Pos(), "%s", err)
 					return n
 				}
-				c.emit(code.Instr{Opcode: opcode})
+				c.emit(n, opcode, nil)
 			default:
 				c.errorf(n.Pos(), "invalid type for add-assignment: %v", n.Type())
 				return n
@@ -510,17 +510,17 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 				c.errorf(n.Pos(), "%s", err)
 				return n
 			}
-			c.emit(code.Instr{Opcode: opcode})
+			c.emit(n, opcode, nil)
 		case parser.BITAND:
-			c.emit(code.Instr{Opcode: code.And})
+			c.emit(n, code.And, nil)
 		case parser.BITOR:
-			c.emit(code.Instr{Opcode: code.Or})
+			c.emit(n, code.Or, nil)
 		case parser.XOR:
-			c.emit(code.Instr{Opcode: code.Xor})
+			c.emit(n, code.Xor, nil)
 		case parser.SHL:
-			c.emit(code.Instr{Opcode: code.Shl})
+			c.emit(n, code.Shl, nil)
 		case parser.SHR:
-			c.emit(code.Instr{Opcode: code.Shr})
+			c.emit(n, code.Shr, nil)
 
 		case parser.MATCH:
 			// Cross fingers that last branch was a patternExprNode
@@ -529,7 +529,7 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 		case parser.NOT_MATCH:
 			// Cross fingers that last branch was a patternExprNode
 			c.obj.Program[c.pc()].Opcode = code.Smatch
-			c.emit(code.Instr{Opcode: code.Not})
+			c.emit(n, code.Not, nil)
 
 		case parser.CONCAT:
 			// skip
@@ -539,7 +539,7 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 		}
 
 	case *ast.ConvExpr:
-		if err := c.emitConversion(n.N.Type(), n.Type()); err != nil {
+		if err := c.emitConversion(n, n.N.Type(), n.Type()); err != nil {
 			c.errorf(n.Pos(), "internal error: %s on node %v", err.Error(), n)
 			return n
 		}
@@ -547,19 +547,19 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 	return node
 }
 
-func (c *codegen) emitConversion(inType, outType types.Type) error {
+func (c *codegen) emitConversion(n ast.Node, inType, outType types.Type) error {
 	glog.V(2).Infof("Conversion: %q to %q", inType, outType)
 	switch {
 	case types.Equals(types.Int, inType) && types.Equals(types.Float, outType):
-		c.emit(code.Instr{Opcode: code.I2f})
+		c.emit(n, code.I2f, nil)
 	case types.Equals(types.String, inType) && types.Equals(types.Float, outType):
-		c.emit(code.Instr{Opcode: code.S2f})
+		c.emit(n, code.S2f, nil)
 	case types.Equals(types.String, inType) && types.Equals(types.Int, outType):
-		c.emit(code.Instr{Opcode: code.S2i})
+		c.emit(n, code.S2i, nil)
 	case types.Equals(types.Float, inType) && types.Equals(types.String, outType):
-		c.emit(code.Instr{Opcode: code.F2s})
+		c.emit(n, code.F2s, nil)
 	case types.Equals(types.Int, inType) && types.Equals(types.String, outType):
-		c.emit(code.Instr{Opcode: code.I2s})
+		c.emit(n, code.I2s, nil)
 	case types.Equals(types.Pattern, inType) && types.Equals(types.Bool, outType):
 		// nothing, pattern is implicit bool
 	case types.Equals(inType, outType):
