@@ -5,6 +5,8 @@ common-build: &common-build
   working_directory: /go/src/github.com/google/mtail
   steps:
     - checkout
+    - restore_cache:
+        key: v1-pkg-cache
     - run: make --debug smoke
     - run: mkdir -p test-results
     - run: mkdir -p workspace
@@ -13,6 +15,10 @@ common-build: &common-build
         name: Run tests and coverage with race detector
         command: gotestsum --junitfile test-results/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=20m  ./...
         no_output_timeout: 20m
+    - save_cache:
+        key: v1-pkg-cache
+        paths:
+          - "/go/pkg"
     - persist_to_workspace:
         root: workspace
         paths:
