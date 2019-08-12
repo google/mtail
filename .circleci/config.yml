@@ -7,6 +7,7 @@ common-build: &common-build
     - checkout
     - restore_cache:
         key: v1-pkg-cache
+    - run: make --debug install_deps
     - run: make --debug smoke
     - run: mkdir -p test-results
     - run: mkdir -p workspace
@@ -90,6 +91,9 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
+      - restore_cache:
+          key: v1-pkg-cache
+      - run: make --debug install_deps
       - run:
           name: Generate coverage
           command: |
@@ -110,6 +114,8 @@ jobs:
       - image: circleci/golang:1.12
     steps:
       - checkout
+      - restore_cache:
+          key: v1-pkg-cache
       - setup_remote_docker:
           docker_layer_caching: true
       - run: |
@@ -123,6 +129,9 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
+      - restore_cache:
+          key: v1-pkg-cache
+      - run: make --debug install_deps
       - run: make --debug crossbuild
       - run: sha1sum build/*
       - store_artifacts:
