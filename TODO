@@ -54,7 +54,7 @@ Can't chain two matches in same expresison like getfilename() =~ 'name' &&
     EXPR_RE because $0 is redefined
 
 
-Can't set the timestamp in one line and reuse it in another; must use the
+Can't set the timestamp when processing one log line and reuse it in another; must use the
     caching state metric pattern, hidden gauge time.
 
 Get a list of non-stdlib deps

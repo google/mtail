@@ -14,6 +14,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"text/tabwriter"
 	"time"
 
@@ -68,6 +69,9 @@ type VM struct {
 	terminate bool // Flag to stop the VM on this line of input.
 	abort     bool // Flag to abort the VM.
 
+	runtimeErrorMu sync.RWMutex //protects runtimeError
+	runtimeError   string       // records the last runtime error from errorf()
+
 	syslogUseCurrentYear bool           // Overwrite zero years with the current year in a strptime.
 	loc                  *time.Location // Override local timezone with provided, if not empty
 }
@@ -87,19 +91,28 @@ func (t *thread) Pop() (value interface{}) {
 
 // Log a runtime error and terminate the program
 func (v *VM) errorf(format string, args ...interface{}) {
+	i := v.prog[v.t.pc-1]
 	progRuntimeErrors.Add(v.name, 1)
-	glog.Infof(v.name+": Runtime error: "+format+"\n", args...)
-	glog.Infof("VM stack:\n%s", debug.Stack())
-	glog.Infof("Dumping vm state")
-	glog.Infof("Name: %s", v.name)
-	glog.Infof("Input: %#v", v.input)
-	glog.Infof("Thread:")
-	glog.Infof(" PC %v", v.t.pc-1)
-	glog.Infof(" Matched %v", v.t.matched)
-	glog.Infof(" Matches %v", v.t.matches)
-	glog.Infof(" Timestamp %v", v.t.time)
-	glog.Infof(" Stack %v", v.t.stack)
-	glog.Infof(v.DumpByteCode(v.name))
+	v.runtimeErrorMu.Lock()
+	v.runtimeError = fmt.Sprintf(format+"\n", args...)
+	v.runtimeError += fmt.Sprintf(
+		"Error occurred at instruction %d {%s, %v}, originating in %s at line %d\n",
+		v.t.pc-1, i.Opcode, i.Operand, v.name, i.SourceLine+1)
+	v.runtimeError += fmt.Sprintf("Full input text from %q was %q", v.input.Filename, v.input.Line)
+	glog.Info(v.name + ": Runtime error: " + v.runtimeError)
+	v.runtimeErrorMu.Unlock()
+	glog.Infof("Set logging verbosity higher (-v1 or more) to see full VM state dump.")
+	glog.V(1).Infof("VM stack:\n%s", debug.Stack())
+	glog.V(1).Infof("Dumping vm state")
+	glog.V(1).Infof("Name: %s", v.name)
+	glog.V(1).Infof("Input: %#v", v.input)
+	glog.V(1).Infof("Thread:")
+	glog.V(1).Infof(" PC %v", v.t.pc-1)
+	glog.V(1).Infof(" Matched %v", v.t.matched)
+	glog.V(1).Infof(" Matches %v", v.t.matches)
+	glog.V(1).Infof(" Timestamp %v", v.t.time)
+	glog.V(1).Infof(" Stack %v", v.t.stack)
+	glog.V(1).Infof(v.DumpByteCode(v.name))
 	v.terminate = true
 }
 
@@ -805,4 +818,11 @@ func (v *VM) DumpByteCode(name string) string {
 		glog.Infof("flush error: %s", err)
 	}
 	return b.String()
+}
+
+// RuntimeErrorString returns the last runtime erro rthat the program enountered.
+func (v *VM) RuntimeErrorString() string {
+	v.runtimeErrorMu.RLock()
+	defer v.runtimeErrorMu.RUnlock()
+	return v.runtimeError
 }

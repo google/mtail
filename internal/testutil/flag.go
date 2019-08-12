@@ -16,7 +16,6 @@ func TestSetFlag(tb testing.TB, name, value string) func() {
 	if err := flag.Set(name, value); err != nil {
 		tb.Fatal(err)
 	}
-	flag.Parse()
 
 	return func() {
 		if val != nil {

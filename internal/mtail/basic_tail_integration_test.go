@@ -33,7 +33,7 @@ func TestBasicTail(t *testing.T) {
 			m, stopM := mtail.TestStartServer(t, test.pollInterval, test.enableFsNotify, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
 			defer stopM()
 
-			startLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+			startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 
 			time.Sleep(1 * time.Second)
 
@@ -46,12 +46,12 @@ func TestBasicTail(t *testing.T) {
 				time.Sleep(1 * time.Second)
 			}
 
-			endLineCount := mtail.TestGetMetric(t, m.Addr(), "line_count")
+			endLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 
 			lineCount := endLineCount.(float64) - startLineCount.(float64)
 			if lineCount != 3. {
 				t.Errorf("output didn't have expected line count increase: want 3 got %#v", lineCount)
-				t.Logf("Line Count, and log lines total: %s, %s", mtail.TestGetMetric(t, m.Addr(), "line_count"), mtail.TestGetMetric(t, m.Addr(), "log_lines_total"))
+				t.Logf("Line Count, and log lines total: %s, %s", mtail.TestGetMetric(t, m.Addr(), "lines_total"), mtail.TestGetMetric(t, m.Addr(), "log_lines_total"))
 			}
 		})
 	}

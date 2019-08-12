@@ -11,7 +11,7 @@ import (
 )
 
 func TestInstrString(t *testing.T) {
-	expected := "{match 0}"
+	expected := "{match 0 0}"
 
 	if diff := testutil.Diff(code.Instr{Opcode: code.Match, Operand: 0}.String(), expected); diff != "" {
 		t.Errorf("instr string didn't match:\n%s", diff)

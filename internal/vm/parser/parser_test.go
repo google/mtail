@@ -23,10 +23,10 @@ var parserTests = []struct {
 		"\n"},
 
 	{"declare counter",
-		"counter line_count\n"},
+		"counter lines_total\n"},
 
 	{"declare counter string name",
-		"counter line_count as \"line-count\"\n"},
+		"counter lines_total as \"line-count\"\n"},
 
 	{"declare dimensioned counter",
 		"counter foo by bar\n"},
@@ -59,9 +59,9 @@ var parserTests = []struct {
 		"/foo/ {}\n"},
 
 	{"more complex action, increment counter",
-		"counter line_count\n" +
+		"counter lines_total\n" +
 			"/foo/ {\n" +
-			"  line_count++\n" +
+			"  lines_total++\n" +
 			"}\n"},
 
 	{"decrement counter",
@@ -236,12 +236,12 @@ foo = 3.14
 		"otherwise {}\n"},
 
 	{"pattern action then otherwise action",
-		`counter line_count by type
+		`counter lines_total by type
 		/foo/ {
-			line_count["foo"]++
+			lines_total["foo"]++
 		}
 		otherwise {
-			line_count["misc"] += 10
+			lines_total["misc"] += 10
 		}`},
 
 	{"simple else clause",

@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	errorCount = expvar.NewInt("log_watcher_error_count")
+	errorCount = expvar.NewInt("log_watcher_errors_total")
 )
 
 type watch struct {

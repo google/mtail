@@ -37,12 +37,12 @@ import (
 
 var (
 	// LineCount counts the number of lines read by the program loader.
-	LineCount = expvar.NewInt("line_count")
+	LineCount = expvar.NewInt("lines_total")
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
 	// ProgLoadErrors counts the number of program load errors.
-	ProgLoadErrors    = expvar.NewMap("prog_load_errors")
-	progRuntimeErrors = expvar.NewMap("prog_runtime_errors")
+	ProgLoadErrors    = expvar.NewMap("prog_load_errors_total")
+	progRuntimeErrors = expvar.NewMap("prog_runtime_errors_total")
 )
 
 const (
@@ -134,6 +134,7 @@ const loaderTemplate = `
 <th>load errors</th>
 <th>load successes</th>
 <th>runtime errors</th>
+<th>last runtime error</th>
 </tr>
 <tr>
 {{range $name, $errors := $.Errors}}
@@ -148,6 +149,7 @@ No compile errors
 <td>{{index $.Loaderrors $name}}</td>
 <td>{{index $.Loadsuccess $name}}</td>
 <td>{{index $.RuntimeErrors $name}}</td>
+<td><pre>{{index $.RuntimeErrorString $name}}</pre></td>
 </tr>
 {{end}}
 </table>
@@ -162,12 +164,14 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 	l.programErrorMu.RLock()
 	defer l.programErrorMu.RUnlock()
 	data := struct {
-		Errors        map[string]error
-		Loaderrors    map[string]string
-		Loadsuccess   map[string]string
-		RuntimeErrors map[string]string
+		Errors             map[string]error
+		Loaderrors         map[string]string
+		Loadsuccess        map[string]string
+		RuntimeErrors      map[string]string
+		RuntimeErrorString map[string]string
 	}{
 		l.programErrors,
+		make(map[string]string),
 		make(map[string]string),
 		make(map[string]string),
 		make(map[string]string),
@@ -182,6 +186,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 		if progRuntimeErrors.Get(name) != nil {
 			data.RuntimeErrors[name] = progRuntimeErrors.Get(name).String()
 		}
+		data.RuntimeErrorString[name] = l.handles[name].RuntimeErrorString()
 	}
 	return t.Execute(w, data)
 }
@@ -421,6 +426,7 @@ func (l *Loader) ProgzHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		fmt.Fprintf(w, v.DumpByteCode(prog))
+		fmt.Fprintf(w, "\nLast runtime error:\n%s", v.RuntimeErrorString())
 		return
 	}
 	l.handleMu.RLock()
