@@ -6,7 +6,8 @@ common-build: &common-build
   steps:
     - checkout
     - restore_cache:
-        key: v1-pkg-cache
+        keys:
+          - go-mod-v1-{{ checksum "go.sum" }}
     - run: make --debug install_deps
     - run: make --debug smoke
     - run: mkdir -p test-results
@@ -17,9 +18,9 @@ common-build: &common-build
         command: gotestsum --junitfile test-results/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=20m  ./...
         no_output_timeout: 20m
     - save_cache:
-        key: v1-pkg-cache
+        key: go-mod-v1-{{ checksum "go.sum" }}
         paths:
-          - "/go/pkg"
+          - "/go/pkg/mod"
     - persist_to_workspace:
         root: workspace
         paths:
@@ -39,10 +40,6 @@ go1_11: &go1_11
   <<: *common-build
   docker:
     - image: circleci/golang:1.11
-go1_10: &go1_10
-  <<: *common-build
-  docker:
-    - image: circleci/golang:1.10
 
 # concurrency* names anchors which define the the concurrency level to run
 # tests with.
@@ -72,12 +69,6 @@ jobs:
     <<: [*go1_11, *concurrency_2]
   build-go1.11-1:
     <<: [*go1_11, *concurrency_1]
-  build-go1.10-4:
-    <<: [*go1_10, *concurrency_4]
-  build-go1.10-2:
-    <<: [*go1_10, *concurrency_2]
-  build-go1.10-1:
-    <<: [*go1_10, *concurrency_1]
 
   # Coverage collects all the coverage reports from each build and merges them,
   # before sending off to Coveralls.
@@ -92,7 +83,8 @@ jobs:
       - attach_workspace:
           at: /tmp/workspace
       - restore_cache:
-          key: v1-pkg-cache
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
       - run: make --debug install_deps
       - run:
           name: Generate coverage
@@ -115,7 +107,8 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v1-pkg-cache
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
       - setup_remote_docker:
           docker_layer_caching: true
       - run: |
@@ -130,7 +123,8 @@ jobs:
       - attach_workspace:
           at: /tmp/workspace
       - restore_cache:
-          key: v1-pkg-cache
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
       - run: make --debug install_deps
       - run: make --debug crossbuild
       - run: sha1sum build/*
@@ -192,18 +186,6 @@ workflows:
           <<: *tag-filter
           requires:
             - build-go1.12-4
-      - build-go1.10-4:
-          <<: *tag-filter
-          requires:
-            - build-go1.12-4
-      - build-go1.10-2:
-          <<: *tag-filter
-          requires:
-            - build-go1.12-4
-      - build-go1.10-1:
-          <<: *tag-filter
-          requires:
-            - build-go1.12-4
       - coverage:
           <<: *tag-filter
           requires:
@@ -213,9 +195,6 @@ workflows:
             - build-go1.11-4
             - build-go1.11-2
             - build-go1.11-1
-            - build-go1.10-4
-            - build-go1.10-2
-            - build-go1.10-1
       - container:
           <<: *tag-and-branch-filter
           requires:
