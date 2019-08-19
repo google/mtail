@@ -130,7 +130,7 @@ jobs:
             go get github.com/tcnksm/ghr
             ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace ${CIRCLE_TAG?} build/
 
-  fuzz-fuzzing:
+  fuzzing:
     working_directory: /go/src/github.com/google/mtail
     docker:
       - image: circleci/golang:1.12-buster
@@ -142,7 +142,7 @@ jobs:
           keys:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: |
-          sudo wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
+          sudo wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| sudo apt-key add -
           sudo apt-add-repository "deb http://apt.llvm.org/buster llvm-toolchain-buster main"
           sudo apt update && sudo apt install -y clang-9 lldb-9 lld-9
           go get -u github.com/dvyukov/go-fuzz/go-fuzz-build
@@ -199,7 +199,7 @@ workflows:
             - build-go1.12-4
             - build-go1.12-2
             - build-go1.12-1
-      - fuzz-fuzzing:
+      - fuzzing:
           <<: *tag-filter
           requires:
             - coverage
