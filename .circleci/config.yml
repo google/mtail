@@ -150,9 +150,9 @@ jobs:
           keys:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: |
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
-          apt-add-repository "deb http://apt.llvm.org/buster llvm-toolchain-buster main"
-          apt update && apt install -y clang-9 lldb-9 lld-9
+          sudo wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
+          sudo apt-add-repository "deb http://apt.llvm.org/buster llvm-toolchain-buster main"
+          sudo apt update && sudo apt install -y clang-9 lldb-9 lld-9
           go get -u github.com/dvyukov/go-fuzz/go-fuzz-build
           wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/download/v2.4.12/fuzzit_Linux_x86_64
           chmod a+x fuzzit
