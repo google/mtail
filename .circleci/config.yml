@@ -36,10 +36,6 @@ go1_12: &go1_12
   <<: *common-build
   docker:
     - image: circleci/golang:1.12
-go1_11: &go1_11
-  <<: *common-build
-  docker:
-    - image: circleci/golang:1.11
 
 # concurrency* names anchors which define the the concurrency level to run
 # tests with.
@@ -63,12 +59,8 @@ jobs:
     <<: [*go1_12, *concurrency_2]
   build-go1.12-1:
     <<: [*go1_12, *concurrency_1]
-  build-go1.11-4:
-    <<: [*go1_11, *concurrency_4]
-  build-go1.11-2:
-    <<: [*go1_11, *concurrency_2]
-  build-go1.11-1:
-    <<: [*go1_11, *concurrency_1]
+  
+  
 
   # Coverage collects all the coverage reports from each build and merges them,
   # before sending off to Coveralls.
@@ -201,27 +193,12 @@ workflows:
           <<: *tag-filter
           requires:
             - build-go1.12-4
-      - build-go1.11-4:
-          <<: *tag-filter
-          requires:
-            - build-go1.12-4
-      - build-go1.11-2:
-          <<: *tag-filter
-          requires:
-            - build-go1.12-4
-      - build-go1.11-1:
-          <<: *tag-filter
-          requires:
-            - build-go1.12-4
       - coverage:
           <<: *tag-filter
           requires:
             - build-go1.12-4
             - build-go1.12-2
             - build-go1.12-1
-            - build-go1.11-4
-            - build-go1.11-2
-            - build-go1.11-1
       - fuzz-fuzzing:
           <<: *tag-filter
           requires:
