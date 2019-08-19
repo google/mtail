@@ -138,7 +138,7 @@ jobs:
             go get github.com/tcnksm/ghr
             ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace ${CIRCLE_TAG?} build/
 
-  fuzz:
+  fuzz-fuzzing:
     working_directory: /go/src/github.com/google/mtail
     docker:
       - image: circleci/golang:1.12-buster
@@ -222,6 +222,10 @@ workflows:
             - build-go1.11-4
             - build-go1.11-2
             - build-go1.11-1
+      - fuzz-fuzzing:
+          <<: *tag-filter
+          requires:
+            - coverage
       - container:
           <<: *tag-and-branch-filter
           requires:
