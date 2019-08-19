@@ -93,7 +93,7 @@ jobs:
             go get github.com/sozorogami/gover
             gover /tmp/workspace coverprofile
             make --debug coverage.html
-            #make upload_to_coveralls
+            make upload_to_coveralls
       - store_artifacts:
           path: coverprofile
           destination: coverage
