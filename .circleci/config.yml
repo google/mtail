@@ -138,6 +138,30 @@ jobs:
             go get github.com/tcnksm/ghr
             ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace ${CIRCLE_TAG?} build/
 
+  fuzz:
+    working_directory: /go/src/github.com/google/mtail
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - restore_cache:
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
+      - run: go get -u github.com/dvyukov/go-fuzz/go-fuzz-build
+      - run: |
+          cd internal/vm
+          go-fuzz-build -libfuzzer -o fuzzer.a ./
+          clang -fsanitize=fuzzer fuzzer.a -o fuzzer
+      - run: |
+
+          wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/download/v2.4.12/fuzzit_Linux_x86_64
+          chmod a+x fuzzit
+      - run: fuzzit auth $FUZZIT_API_KEY
+      - run 
+          
+
 # tag-filter ensures that jobs run for version-tagged changes as well as
 # regular commits.  Use for all normal build and test and stats (coverage)
 # jobs.
