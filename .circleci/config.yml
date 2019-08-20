@@ -198,7 +198,7 @@ workflows:
       - fuzzing:
           <<: *tag-filter
           requires:
-            - coverage
+            - build-go1.12-4
       - container:
           <<: *tag-and-branch-filter
           requires:
