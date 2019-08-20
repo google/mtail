@@ -133,7 +133,7 @@ jobs:
   fuzzing:
     working_directory: /go/src/github.com/google/mtail
     docker:
-      - image: circleci/golang:1.12-buster
+      - image: fuzzitdev/golang:1.12.7-buster
     steps:
       - checkout
       - attach_workspace:
@@ -142,12 +142,7 @@ jobs:
           keys:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: |
-          sudo wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| sudo apt-key add -
-          echo "deb http://apt.llvm.org/buster/ llvm-toolchain-buster main" | sudo tee /etc/apt/sources.list
-          sudo apt update
-          sudo apt install -y clang-9 lldb-9 lld-9
-          go get -u github.com/dvyukov/go-fuzz/go-fuzz-build
-          wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/download/v2.4.12/fuzzit_Linux_x86_64
+          wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/download/v2.4.17/fuzzit_Linux_x86_64
           chmod a+x fuzzit
       - run: |
           cd internal/vm
@@ -155,7 +150,7 @@ jobs:
           clang-9 -fsanitize=fuzzer fuzzer.a -o fuzzer
       - run: |
           ./fuzzit auth $FUZZIT_API_KEY
-          ./fuzzit create job --type fuzzing --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} internal/vm ./fuzzer
+          ./fuzzit create job --type fuzzing --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} internal/vm internal/vm/fuzzer
 
 # tag-filter ensures that jobs run for version-tagged changes as well as
 # regular commits.  Use for all normal build and test and stats (coverage)
