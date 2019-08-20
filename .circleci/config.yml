@@ -151,7 +151,7 @@ jobs:
           clang-9 -fsanitize=fuzzer fuzzer.a -o fuzzer
       - run: |
           ./fuzzit auth $FUZZIT_API_KEY
-          ./fuzzit create job --type fuzzing --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} internal/vm internal/vm/fuzzer
+          ./fuzzit create job --type fuzzing --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} mtail/internal-vm internal/vm/fuzzer
 
 # tag-filter ensures that jobs run for version-tagged changes as well as
 # regular commits.  Use for all normal build and test and stats (coverage)
