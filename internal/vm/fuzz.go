@@ -10,7 +10,7 @@ import (
 )
 
 func Fuzz(data []byte) int {
-	if _, err := Compile("fuzz", bytes.NewReader(data), true, true, false, nil); err != nil {
+	if _, err := Compile("fuzz", bytes.NewReader(data), false, false, false, nil); err != nil {
 		return 0
 	}
 	return 1
