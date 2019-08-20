@@ -7,13 +7,9 @@ package vm
 
 import (
 	"bytes"
-	"flag"
 )
 
 func Fuzz(data []byte) int {
-	flag.Set("logtostderr", "true")
-	flag.Set("v", "2")
-	flag.Parse()
 	if _, err := Compile("fuzz", bytes.NewReader(data), true, true, false, nil); err != nil {
 		return 0
 	}
