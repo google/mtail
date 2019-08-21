@@ -10,6 +10,11 @@ import (
 )
 
 func Fuzz(data []byte) int {
+	// We need to successfully parse flags to initialize the glog logger used
+	// by the compiler, but the fuzzer gets called with flags captured by the
+	// libfuzzer main, which we don't want to intercept here.
+	flag.Commandline = flag.NewFlagSet("", flag.ContinueOnError)
+	flag.Parse()
 	if _, err := Compile("fuzz", bytes.NewReader(data), false, false, false, nil); err != nil {
 		return 0
 	}
