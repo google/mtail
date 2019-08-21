@@ -7,6 +7,7 @@ package vm
 
 import (
 	"bytes"
+	"flag"
 )
 
 func Fuzz(data []byte) int {
