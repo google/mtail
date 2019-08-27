@@ -25,3 +25,4 @@ workdir/*
 /mdot
 /mgen
 /internal/vm/fuzzer.a
+/internal/vm/fuzzer
