@@ -230,11 +230,18 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.NextStmt:
-		// The last element in this list will be the empty stack created by the DecoDecl on the way in.
+		// The last element in this list will be the empty stack created by the
+		// DecoDecl on the way in.  If there's no last element, then we can't
+		// have entered a DecoDecl yet.
 		last := len(c.decoScopes) - 1
+		if last < 0 {
+			c.errors.Add(n.Pos(), fmt.Sprintf("Can't use `next' outside of a decorator."))
+			return n
+		}
 		decoScope := c.decoScopes[last]
 		if len(decoScope.Symbols) > 0 {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Can't use `next' statement twice in a decorator."))
+			return n
 		}
 		// Merge the current scope into it.
 		decoScope.CopyFrom(c.scope)
