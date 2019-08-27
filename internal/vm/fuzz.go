@@ -18,6 +18,11 @@ func Fuzz(data []byte) int {
 	// by the compiler, but the fuzzer gets called with flags captured by the
 	// libfuzzer main, which we don't want to intercept here.
 	flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
+	if dumpDebug {
+		flag.CommandLine.Parse([]string{})
+	} else {
+		flag.CommandLine.Parse([]string{"--vmodule=checker=0"})
+	}
 	if _, err := Compile("fuzz", bytes.NewReader(data), dumpDebug, dumpDebug, false, nil); err != nil {
 		if dumpDebug {
 			fmt.Print(err)
