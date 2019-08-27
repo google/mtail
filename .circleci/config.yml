@@ -198,6 +198,10 @@ workflows:
             - build-go1.12-1
       - fuzzing:
           <<: *tag-filter
+          filters:
+            branches:
+              # pull requests don't have access to the Fuzzit API key.
+              ignore: /pull\/.*/
           requires:
             - build-go1.12-4
       - container:
