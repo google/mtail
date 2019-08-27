@@ -167,16 +167,6 @@ const ID /bar/
 foo = $1
 }`,
 		[]string{"counter with buckets:1:9-11: Can't specify buckets for non-histogram metric `foo'."}},
-
-	{"next outside of decorator",
-		`def x{
-next
-}
-@x {
-next
-}
-`,
-		[]string{"next outside of decorator:5:1-4: Can't use `next' outside of a decorator."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
