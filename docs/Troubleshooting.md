@@ -12,6 +12,24 @@ Please when reporting a problem, include the `mtail` version:
  * the first lines of the INFO log (`/tmp/mtail.INFO` by default)
  * the top of the status page (on HTTP port 3903 by default)
 
+## `go get` or build problems
+
+### `package github.com/google/mtail: no Go files`
+
+You're using go 1.11 or higher, which now starts to use go modules, and doesn't like source code layouts like `mtail` which doesn't have any Go files in the top directory.
+
+Either set `GO111MODULE=on` environment variable first, or `go get` the binary directly:
+
+`go get github.com/google/mtail/cmd/mtail`
+
+vs
+
+```
+GO111MODULE=on go get -u github.com/google/mtail
+cd $GOPATH/src/github.com/google/mtail
+make install
+```
+
 ## Compilation problems
 
 Compilation problems will be emitted to the standard INFO log

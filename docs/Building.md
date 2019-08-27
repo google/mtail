@@ -2,16 +2,24 @@
 
 mtail is implemented in [Go](http://golang.org).
 
-You will need to install Go 1.7 or higher.
+You will need to install a recent Go.
 
-## Go
+## `go get`, quick and easy, no version information.
+
+Fetch, build, and install the binary directly with `go get`
+
+`go install github.com/google/mtail/cmd/mtail`
+
+If you do it this way, you won't have a supported version of `mtail`.
+
+## The "Right Way"
 
 [Clone](http://github.com/google/mtail) the source from GitHub into your `$GOPATH`.  If you don't have a `$GOPATH`, see the next section.
 
 ```
-go get -u github.com/google/mtail
+GO111MODULE=on go get -u github.com/google/mtail
 cd $GOPATH/src/github.com/google/mtail
-make
+make install
 ```
 
 ### For Go First-Timers
@@ -36,7 +44,7 @@ export GOPATH=$HOME/go
 mkdir -p $GOPATH/src
 ```
 
-then back up to the Details above.
+then back up to the _The "Right Way"_ above.
 
 ### Building
 
@@ -80,14 +88,14 @@ Number of parallel builds: 3
 
 ## No Go
 
-You can still build and develop **mtail** with Docker.
+You can still run `mtail` and its programs programs with Docker.
 
 ```
 docker build -t mtail .
 docker run -it --rm mtail --help
 ```
 
-**mtail** is not much use without a configuration file or logs to parse, you will need to mount a path containing them into the container, like so:
+`mtail` is not much use without a configuration file or logs to parse, you will need to mount a path containing them into the container, like so:
 
 ```
 docker run -it --rm -v examples/linecount.mtail:/progs/linecount.mtail -v /var/log:/logs mtail -logtostderr -one_shot -progs /progs/linecount.mtail -logs /logs/messages.log

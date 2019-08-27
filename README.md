@@ -7,7 +7,8 @@
 [![Coverage Status](https://coveralls.io/repos/github/google/mtail/badge.svg?branch=master)](https://coveralls.io/github/google/mtail?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/google/mtail)](https://goreportcard.com/report/github.com/google/mtail)
 [![GolangCI](https://golangci.com/badges/github.com/google/mtail.svg)](https://golangci.com/r/github.com/google/mtail)
-[![Fuzzit.dev](https://app.fuzzit.dev/static/fuzzit-passing-green.svg)](https://app.fuzzit.dev/orgs/mtail/)
+[![Fuzzit.dev](https://app.fuzzit.dev/static/fuzzit-passing-green.svg)](
+https://app.fuzzit.dev/orgs/mtail/)
 
 `mtail` is a tool for extracting metrics from application logs to be exported
 into a timeseries database or timeseries calculator for alerting and
@@ -50,13 +51,16 @@ Windows, OSX and Linux binaries are available.
 
 ### Building from source
 
-To build `mtail` from the source code yourself you need to have a working Go
-environment with version 1.9 or greater installed.  `mtail` is `go get`able and
-`go install`able from this repository but is best if you use the Makefile to
-build it.
+The simplest way to get `mtail` is to `go get` it directly.
+
+`go get github.com/google/mtail/cmd/mtail`
+
+This assumes you have a working Go environment with a recent Go version.  Usually mtail is tested to work with the last two minor versions  (e.g. Go 1.12 and Go 1.11).
+
+If you want to fetch everything, you need to turn on Go Modules to succeed because of the way Go Modules have changed the way go get treats source trees with no Go code at the top level.
 
 ```
-go get -u github.com/google/mtail
+GO111MODULE=on go get -u github.com/google/mtail
 cd $GOPATH/src/github.com/google/mtail
 make install
 ```
