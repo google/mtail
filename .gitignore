@@ -26,3 +26,4 @@ workdir/*
 /mgen
 /internal/vm/fuzzer.a
 /internal/vm/fuzzer
+/internal/vm/fuzzit
