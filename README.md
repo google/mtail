@@ -7,7 +7,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/google/mtail/badge.svg?branch=master)](https://coveralls.io/github/google/mtail?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/google/mtail)](https://goreportcard.com/report/github.com/google/mtail)
 [![GolangCI](https://golangci.com/badges/github.com/google/mtail.svg)](https://golangci.com/r/github.com/google/mtail)
-[![Fuzzit.dev](https://app.fuzzit.dev/static/fuzzit-passing-green.svg)](
+[![fuzzit](https://app.fuzzit.dev/badge?org_id=mtail)](https://app.fuzzit.dev/orgs/mtail/dashboard)
 https://app.fuzzit.dev/orgs/mtail/)
 
 `mtail` is a tool for extracting metrics from application logs to be exported
