@@ -8,6 +8,7 @@ package vm
 import (
 	"bytes"
 	"flag"
+	"fmt"
 )
 
 func Fuzz(data []byte) int {
@@ -16,6 +17,7 @@ func Fuzz(data []byte) int {
 	// libfuzzer main, which we don't want to intercept here.
 	flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
 	if _, err := Compile("fuzz", bytes.NewReader(data), false, false, false, nil); err != nil {
+		fmt.Print(err)
 		return 0
 	}
 	return 1
