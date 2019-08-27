@@ -173,7 +173,7 @@ jobs:
           go-fuzz-build -libfuzzer -o fuzzer.a .
           clang-9 -fsanitize=fuzzer fuzzer.a -o fuzzer
       - run: |
-          ./fuzzit create job --type regression --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} mtail/internal-vm internal/vm/fuzzer
+          ./fuzzit create job --type local-regression --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} mtail/internal-vm internal/vm/fuzzer
 
 # tag-filter ensures that jobs run for version-tagged changes as well as
 # regular commits.  Use for all normal build and test and stats (coverage)
