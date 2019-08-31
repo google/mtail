@@ -202,7 +202,7 @@ var Builtins = map[string]Type{
 	"bool":        Function(NewVariable(), Bool),
 	"float":       Function(NewVariable(), Float),
 	"string":      Function(NewVariable(), String),
-	"timestamp":   Function(Int),
+	"timestamp":   Function(Float),
 	"len":         Function(String, Int),
 	"settime":     Function(Int, None),
 	"strptime":    Function(String, String, None),
