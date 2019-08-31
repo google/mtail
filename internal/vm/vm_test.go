@@ -5,6 +5,7 @@ package vm
 
 import (
 	"context"
+	"math"
 	"regexp"
 	"testing"
 	"time"
@@ -845,15 +846,15 @@ func TestDeleteInstrs(t *testing.T) {
 
 func TestTimestampInstr(t *testing.T) {
 	var m []*metrics.Metric
-	now := time.Now().UTC()
+	t0 := time.Now().UTC()
 	v := makeVM(code.Instr{code.Timestamp, nil, 0}, m)
 	v.execute(v.t, v.prog[0])
 	if v.terminate {
 		t.Fatal("execution failed, see info log")
 	}
-	tos := time.Unix(v.t.Pop().(int64), 0).UTC()
-	if now.Before(tos) {
-		t.Errorf("Expecting timestamp to be after %s, was %s", now, tos)
+	tos := timeFloat(v.t.Pop().(float64)).UTC()
+	if !t0.Before(tos) {
+		t.Errorf("Expecting timestamp to be after %s, was %s", t0, tos)
 	}
 
 	newT := time.Unix(37, 0).UTC()
@@ -863,8 +864,44 @@ func TestTimestampInstr(t *testing.T) {
 	if v.terminate {
 		t.Fatal("execution failed, see info log")
 	}
-	tos = time.Unix(v.t.Pop().(int64), 0).UTC()
+	tos = timeFloat(v.t.Pop().(float64)).UTC()
 	if tos != newT {
 		t.Errorf("Expecting timestamp to be %s, was %s", newT, tos)
+	}
+}
+
+func Test_unixFloat(t *testing.T) {
+	tests := []struct {
+		name string
+		t    time.Time
+		want float64
+	}{
+		{"layout", time.Date(2006, 1, 2, 3, 4, 5, 600000000, time.UTC), 1136171045.6},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := unixFloat(tt.t); got != tt.want {
+				t.Errorf("unixFloat() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_timeFloat(t *testing.T) {
+	tests := []struct {
+		name string
+		t    float64
+		want time.Time
+	}{
+		{"epoch", 0.0, time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{"microsecs", 0.654321, time.Date(1970, 1, 1, 0, 0, 0, 654321000, time.UTC)},
+		{"pie", 3.141593, time.Date(1970, 1, 1, 0, 0, 3, 141593000, time.UTC)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := timeFloat(tt.t).UTC(); math.Abs(tt.want.Sub(got).Seconds()) > 1e-9 {
+				t.Errorf("timeFloat(%v) = %v, want %v", tt.t, got, tt.want)
+			}
+		})
 	}
 }

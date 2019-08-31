@@ -116,6 +116,18 @@ func (v *VM) errorf(format string, args ...interface{}) {
 	v.terminate = true
 }
 
+// unixFloat returns t as a Unix time, the number of seconds elapsed
+// since January 1, 1970 UTC.
+func unixFloat(t time.Time) float64 {
+	return float64(t.Unix()) + float64(t.Nanosecond())/1e9
+}
+
+// timeFloat returns the time.Time corresponding to the given Unix time.
+func timeFloat(unix float64) time.Time {
+	sec, frac := math.Modf(unix)
+	return time.Unix(int64(sec), int64(frac*1e9))
+}
+
 func (t *thread) PopInt() (int64, error) {
 	val := t.Pop()
 	switch n := val.(type) {
@@ -499,12 +511,11 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 	case code.Timestamp:
 		// Put the time register onto the stack, unless it's zero in which case use system time.
-		if t.time.IsZero() {
-			t.Push(time.Now().Unix())
-		} else {
-			// Put the time register onto the stack
-			t.Push(t.time.Unix())
+		ts := t.time
+		if ts.IsZero() {
+			ts = time.Now()
 		}
+		t.Push(unixFloat(ts))
 
 	case code.Settime:
 		// Pop TOS and store in time register
