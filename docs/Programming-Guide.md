@@ -212,7 +212,7 @@ usage under control and speeding up labelset search time (by reducing the
 search space!)
 
 Alternatively, the statement `del connection_time[$pid] after 72h` would do the
-same, but only if `connection_time$pid]` is not changed for 72 hours.  This
+same, but only if `connection_time[$pid]` is not changed for 72 hours.  This
 form is more convenient when the connection close event is lossy or difficult
 to determine.
 
@@ -240,7 +240,7 @@ gauge average
 }
 ```
 
-However this doesn't take into aaccount the likely situation that the matches arrive irregularly (the time interval between them is not constant.)  Unfortunately the formula for this requires the exp() function (`e^N`) as described here: http://stackoverflow.com/questions/1023860/exponential-moving-average-sampled-at-varying-times .  I recommend you defer this computation to the collection system
+However this doesn't take into account the likely situation that the matches arrive irregularly (the time interval between them is not constant.)  Unfortunately the formula for this requires the exp() function (`e^N`) as described here: http://stackoverflow.com/questions/1023860/exponential-moving-average-sampled-at-varying-times .  I recommend you defer this computation to the collection system
 
 ## Histograms
 
