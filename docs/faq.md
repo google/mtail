@@ -26,19 +26,22 @@ a log file, and use that timestamp to carry to the monitoring system the
 closest thing that `mtail` knows to be the actual time of the event, and not
 the time at which `mtail` scraped the log.
 
-However, Prometheus uses the existence of a timestamp to signal that a metric
-can become stale, and so if, for example, a slow moving counter does not get
-updated in some time window (5m by default) Prometheus will forget all about
-it.
+However, Prometheus needs to track the existence of a metric in the time series
+database in order to avoid showing very old data when querying the same metric
+for multile instances at a specific timestamp. Exposing the timestamp can lead
+to triggering this staleness handling.
 
-`mtail`, being a proxy for metrics, falls under bbrazil's comment on the
+`mtail`, being a metric creator, falls under bbrazil's comment on the
 prometheus-users list, in which he says ["It doesn't make sense to have
 timestamps for direct instrumentation, only for proxying metrics from another
 monitoring system with a custom
 collector."](https://groups.google.com/forum/#!msg/prometheus-users/qgxKH6_gYzM/LyO5wGO6BwAJ).
 
-I consider the Prometheus behaviour broken, but to avoid any confusion,
-`mtail` by default disables exporting timestamps to Prometheus.
+The `mtail` timestamp handling is also broken for counters. The timestamp is
+set to 0 (UNIX epoch) at startup. If no matches are made, the initial zero
+count will never be ingested and the metric will only appear when first
+incremented. To avoid this, `mtail` disables exporting timestamps to Prometheus
+by default.
 
 You can turn this behaviour back on with the `--emit_metric_timestamp`
 commandline flag, and if you have slow moving counters, you should tune your
@@ -47,11 +50,9 @@ Querying
 Basics](https://prometheus.io/docs/prometheus/latest/querying/basics/#staleness)
 in the Prometheus docs.
 
-On the flipside, if you feel lie the latency between your application logging an event, and that event going into a log file, and mtail reading it, and processing it is small enough that you don't care:
-
-    a. awesome! I'll take that as a compliment on `mtail`'s speed.
-    b. you should remove any timestamp processing code from your programs to avoid that unnecessary work
-    
+If you are looking to expose the timestamp of an event, like the start time of
+a process, you can create a timestamp metric. This is a metric that contains
+the timestamp as the value. See [this example](/examples/timestamp.mtail).
 
 ## Why doesn't `mtail` persist variables and metric values between restarts?
 
