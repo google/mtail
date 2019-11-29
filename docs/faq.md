@@ -28,7 +28,7 @@ the time at which `mtail` scraped the log.
 
 However, Prometheus needs to track the existence of a metric in the time series
 database in order to avoid showing very old data when querying the same metric
-for multile instances at a specific timestamp. Exposing the timestamp can lead
+for multiple instances at a specific timestamp. Exposing the timestamp can lead
 to triggering this staleness handling.
 
 `mtail`, being a metric creator, falls under bbrazil's comment on the
