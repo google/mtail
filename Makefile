@@ -1,7 +1,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
-export GO111MODULE ?= off
+export GO111MODULE ?= on
 # Build these.
 TARGETS = mtail mgen mdot
 
@@ -230,8 +230,12 @@ fuzz: vm-fuzz.zip | $(GOFUZZ)
 install_deps: .dep-stamp
 .dep-stamp: $(GOGENFILES)
 	@echo "Install all dependencies, ensuring they're updated"
+ifeq ($(GO111MODULE),on)
+	go get $(GOGETFLAGS) -t ./...
+else
 	go get $(GOGETFLAGS) $(IMPORTS)
 	go get $(GOGETFLAGS) $(TESTIMPORTS)
+endif
 	touch $@
 
 
