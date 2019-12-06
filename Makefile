@@ -223,6 +223,10 @@ fuzz: vm-fuzz.zip | $(GOFUZZ)
 	cp examples/*.mtail workdir/corpus
 	$(GOFUZZ) -bin=vm-fuzz.zip -workdir=workdir
 
+clang-fuzzer: | $(GOFUZZBUILD)
+	GO111MODULE=off $(GOFUZZBUILD) -libfuzzer -o fuzzer.a github.com/google/mtail/internal/vm
+	clang-9 -fsanitize=fuzzer fuzzer.a -o clang-fuzzer
+
 ###
 ## dependency section
 #
