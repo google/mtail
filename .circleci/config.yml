@@ -3,13 +3,11 @@
 # instructions.
 common-build: &common-build
   working_directory: /go/src/github.com/google/mtail
-  environment:
-    - GO111MODULE: on
   steps:
     - checkout
     - restore_cache:
         keys:
-          - go-mod-v1-{{ checksum "go.sum" }}
+          - go-pkg-cache-v1
     - run: make --debug install_deps
     - run: make --debug smoke
     - run: mkdir -p test-results
@@ -20,9 +18,9 @@ common-build: &common-build
         command: gotestsum --junitfile test-results/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=20m  ./...
         no_output_timeout: 20m
     - save_cache:
-        key: go-mod-v1-{{ checksum "go.sum" }}
+        key: go-pkg-cache-v1
         paths:
-          - "/go/pkg/mod"
+          - "/go/pkg"
     - persist_to_workspace:
         root: workspace
         paths:
@@ -78,7 +76,7 @@ jobs:
           at: /tmp/workspace
       - restore_cache:
           keys:
-            - go-mod-v1-{{ checksum "go.sum" }}
+            - go-pkg-cache-v1
       - run: make --debug install_deps
       - run:
           name: Generate coverage
@@ -103,7 +101,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - go-mod-v1-{{ checksum "go.sum" }}
+            - go-pkg-cache-v1
       - setup_remote_docker:
           docker_layer_caching: true
       - run: |
@@ -119,7 +117,7 @@ jobs:
           at: /tmp/workspace
       - restore_cache:
           keys:
-            - go-mod-v1-{{ checksum "go.sum" }}
+            - go-pkg-cache-v1
       - run: make --debug install_deps
       - run: make --debug crossbuild
       - run: sha1sum build/*
@@ -142,7 +140,7 @@ jobs:
           at: /tmp/workspace
       - restore_cache:
           keys:
-            - go-mod-v1-{{ checksum "go.sum" }}
+            - go-pkg-cache-v1
       - run: |
           wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/latest/download/fuzzit_Linux_x86_64
           chmod a+x fuzzit
@@ -167,7 +165,7 @@ jobs:
           at: /tmp/workspace
       - restore_cache:
           keys:
-            - go-mod-v1-{{ checksum "go.sum" }}
+            - go-pkg-cache-v1
       - run: |
           wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/latest/download/fuzzit_Linux_x86_64
           chmod a+x fuzzit

@@ -1,7 +1,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
-export GO111MODULE ?= on
+export GO111MODULE ?= auto
 # Build these.
 TARGETS = mtail mgen mdot
 
