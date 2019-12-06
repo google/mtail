@@ -3,6 +3,8 @@
 # instructions.
 common-build: &common-build
   working_directory: /go/src/github.com/google/mtail
+  environment:
+    GO111MODULE: on
   steps:
     - checkout
     - restore_cache:
