@@ -2,7 +2,7 @@ FROM golang:1.12.3-alpine3.9 AS builder
 RUN apk add --update git make
 WORKDIR /go/src/github.com/google/mtail
 COPY . /go/src/github.com/google/mtail
-RUN  make depclean && make install_deps && PREFIX=/go make -B install
+RUN  make depclean && make install_deps && PREFIX=/go make STATIC=y -B install
 
 
 FROM alpine:3.9

@@ -105,7 +105,15 @@ version := $(shell git describe --tags --always --dirty)
 revision := $(shell git rev-parse HEAD)
 release := $(shell git describe --tags | cut -d"-" -f 1,2)
 
-GO_LDFLAGS := "-X main.Branch=${branch} -X main.Version=${version} -X main.Revision=${revision}"
+GO_LDFLAGS := -X main.Branch=${branch} -X main.Version=${version} -X main.Revision=${revision}
+
+ifeq ($(STATIC),y)
+	# -s Omit symbol table and debug info
+	# -w Omit DWARF symbol table
+	# -extldflags -static and CGO_ENABLED=0 to make pure static
+	GO_LDFLAGS += -w -s -extldflags "-static"
+	export CGO_ENABLED=0
+endif
 
 # Very specific static pattern rule to only do this for commandline targets.
 # Each commandline must be in a 'main.go' in their respective directory.  The
@@ -114,7 +122,7 @@ GO_LDFLAGS := "-X main.Branch=${branch} -X main.Version=${version} -X main.Revis
 # runs can read the dependencies and update iff they change.
 $(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d | .dep-stamp
 	$(MAKEDEPEND)
-	GO111MODULE=on go build -ldflags $(GO_LDFLAGS) -o $@ $<
+	GO111MODULE=on go build -ldflags "$(GO_LDFLAGS)" -o $@ $<
 
 internal/vm/parser/parser.go: internal/vm/parser/parser.y | $(GOYACC)
 	go generate -x ./$(@D)
@@ -146,7 +154,7 @@ GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 .PHONY: crossbuild
 crossbuild: $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp
 	mkdir -p build
-	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags $(GO_LDFLAGS) ./cmd/mtail
+	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags "$(GO_LDFLAGS)" ./cmd/mtail
 
 .PHONY: test check
 check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
