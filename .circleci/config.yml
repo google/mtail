@@ -59,8 +59,8 @@ jobs:
     <<: [*go1_12, *concurrency_2]
   build-go1.12-1:
     <<: [*go1_12, *concurrency_1]
-  
-  
+
+
 
   # Coverage collects all the coverage reports from each build and merges them,
   # before sending off to Coveralls.
