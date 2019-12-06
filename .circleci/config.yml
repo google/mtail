@@ -214,18 +214,18 @@ workflows:
             - build-go1.12-4
             - build-go1.12-2
             - build-go1.12-1
-      - fuzz-regression:
-          <<: *tag-filter
-          requires:
-            - build-go1.12-4
-      - fuzzing:
-          <<: *tag-filter
-          filters:
-            branches:
-              # pull requests don't have access to the Fuzzit API key.
-              ignore: /pull\/.*/
-          requires:
-            - build-go1.12-4
+      # - fuzz-regression:
+      #     <<: *tag-filter
+      #     requires:
+      #       - build-go1.12-4
+      # - fuzzing:
+      #     <<: *tag-filter
+      #     filters:
+      #       branches:
+      #         # pull requests don't have access to the Fuzzit API key.
+      #         ignore: /pull\/.*/
+      #     requires:
+      #       - build-go1.12-4
       - container:
           <<: *tag-and-branch-filter
           requires:
