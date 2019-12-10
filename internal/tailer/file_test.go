@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/testutil"
+	"golang.org/x/sys/unix"
 )
 
 func TestReadPartial(t *testing.T) {
@@ -27,9 +28,7 @@ func TestReadPartial(t *testing.T) {
 
 	fd := testutil.TestOpenFile(t, logfile)
 	f, err := NewFile(logfile, llp, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	err = f.Read(context.Background())
 	if err != io.EOF {
@@ -96,5 +95,30 @@ func TestOpenRetries(t *testing.T) {
 
 	if _, err := NewFile(logfile, nil, false); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
+	}
+}
+
+func TestOpenPipe(t *testing.T) {
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+
+	llp := NewStubProcessor()
+
+	logpipe := filepath.Join(tmpDir, "fifo")
+	err := unix.Mkfifo(logpipe, 0666)
+	testutil.FatalIfErr(t, err)
+	_, err = os.Stat(logpipe)
+	testutil.FatalIfErr(t, err)
+
+	p, err := os.OpenFile(logpipe, os.O_RDWR, os.ModeNamedPipe)
+	testutil.FatalIfErr(t, err)
+
+	p.WriteString("1\n")
+	llp.Add(1)
+	f, err := NewFile(logpipe, llp, false)
+	testutil.FatalIfErr(t, err)
+	err = f.Read(context.Background())
+	if err != io.EOF {
+		testutil.FatalIfErr(t, err)
 	}
 }

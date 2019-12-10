@@ -196,6 +196,10 @@ func (f *File) Read(ctx context.Context) error {
 				continue
 			}
 		}
+		if e, ok := err.(*os.PathError); ok && e.Timeout() && !f.regular && n == 0 {
+			// Named Pipes don't have an end of file, so will loop forever unless we detect a timeout on read.
+			return io.EOF
+		}
 
 		var (
 			rune  rune
