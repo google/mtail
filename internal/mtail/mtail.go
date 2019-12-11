@@ -397,7 +397,7 @@ func (m *Server) Run() error {
 		return nil
 	}
 	if err := m.StartTailing(); err != nil {
-		glog.Exitf("tailing failed: %s", err)
+		return err
 	}
 	if m.oneShot {
 		err := m.Close()
