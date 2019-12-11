@@ -23,31 +23,18 @@ func TestReadFromPipe(t *testing.T) {
 
 	logDir := path.Join(tmpDir, "logs")
 	progDir := path.Join(tmpDir, "progs")
-	err := os.Mkdir(logDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = os.Mkdir(progDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
+	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 	defer testutil.TestChdir(t, logDir)()
 
 	logFile := path.Join(logDir, "logpipe")
 
-	err = unix.Mkfifo(logFile, 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, unix.Mkfifo(logFile, 0600))
+
 	f, err := os.OpenFile(logFile, os.O_RDWR|syscall.O_NONBLOCK, 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	defer func() {
-		err = f.Close()
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, f.Close())
 	}()
 
 	time.Sleep(time.Second)
@@ -60,9 +47,7 @@ func TestReadFromPipe(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	n, err := f.WriteString("1\n2\n3\n")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	glog.Infof("Wrote %d bytes", n)
 	time.Sleep(1 * time.Second)
 
