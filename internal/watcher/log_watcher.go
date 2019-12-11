@@ -66,6 +66,7 @@ func NewLogWatcher(pollInterval time.Duration, enableFsnotify bool) (*LogWatcher
 		w.stopTicks = make(chan struct{})
 		w.ticksDone = make(chan struct{})
 		go w.runTicks()
+		glog.V(2).Infof("started ticker with %s interval", pollInterval)
 	}
 	if f != nil {
 		w.eventsDone = make(chan struct{})
@@ -124,7 +125,7 @@ func (w *LogWatcher) runTicks() {
 
 // pollWatchedPathLocked polls an already-watched path for updates.
 func (w *LogWatcher) pollWatchedPath(pathname string, watched *watch) {
-	glog.V(2).Info("stat")
+	glog.V(2).Infof("Stat %q", pathname)
 	fi, err := os.Stat(pathname)
 	if err != nil {
 		glog.V(1).Info(err)

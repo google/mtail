@@ -183,6 +183,8 @@ func (f *File) Read(ctx context.Context) error {
 		totalBytes += n
 		b = b[:n]
 
+		glog.V(2).Infof("Error: %T", err)
+
 		// If this time we've read no bytes at all and then hit an EOF, and
 		// we're a regular file, check for truncation.
 		if err == io.EOF && totalBytes == 0 && f.regular {
