@@ -99,6 +99,9 @@ func TestOpenRetries(t *testing.T) {
 }
 
 func TestOpenPipe(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode, has delays")
+	}
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
