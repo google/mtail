@@ -97,11 +97,12 @@ func TestGetMetric(tb testing.TB, addr, name string) interface{} {
 	buf := new(bytes.Buffer)
 	n, err := buf.ReadFrom(resp.Body)
 	testutil.FatalIfErr(tb, err)
-	glog.Infof("Read %d bytes", n)
+	glog.V(2).Infof("TestGetMetric: http client read %d bytes from debug/vars", n)
 	var r map[string]interface{}
 	if err := json.Unmarshal(buf.Bytes(), &r); err != nil {
 		tb.Fatalf("%s: body was %s", err, buf.String())
 	}
+	glog.Infof("TestGetMetric: returned value for %s: %v", name, r[name])
 	return r[name]
 }
 

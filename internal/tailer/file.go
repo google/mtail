@@ -183,6 +183,8 @@ func (f *File) Read(ctx context.Context) error {
 		totalBytes += n
 		b = b[:n]
 
+		glog.V(2).Infof("Error: %T", err)
+
 		// If this time we've read no bytes at all and then hit an EOF, and
 		// we're a regular file, check for truncation.
 		if err == io.EOF && totalBytes == 0 && f.regular {
@@ -195,6 +197,10 @@ func (f *File) Read(ctx context.Context) error {
 				// Try again: offset was greater than filesize and now we've seeked to start.
 				continue
 			}
+		}
+		if e, ok := err.(*os.PathError); ok && e.Timeout() && !f.regular && n == 0 {
+			// Named Pipes don't have an end of file, so will loop forever unless we detect a timeout on read.
+			return io.EOF
 		}
 
 		var (
