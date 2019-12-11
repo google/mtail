@@ -32,10 +32,10 @@ common-build: &common-build
 
 # go* names anchors which define the Go versions to build with, merging the
 # common-build alias above.
-go1_12: &go1_12
+go1_13: &go1_13
   <<: *common-build
   docker:
-    - image: circleci/golang:1.12
+    - image: circleci/golang:1.13
 
 # concurrency* names anchors which define the the concurrency level to run
 # tests with.
@@ -53,12 +53,12 @@ concurrency_1: &concurrency_1
 version: 2
 jobs:
   # The main build steps are the crossproduct of concurrency and go versions.
-  build-go1.12-4:
-    <<: [*go1_12, *concurrency_4]
-  build-go1.12-2:
-    <<: [*go1_12, *concurrency_2]
-  build-go1.12-1:
-    <<: [*go1_12, *concurrency_1]
+  build-go1.13-4:
+    <<: [*go1_13, *concurrency_4]
+  build-go1.13-2:
+    <<: [*go1_13, *concurrency_2]
+  build-go1.13-1:
+    <<: [*go1_13, *concurrency_1]
 
 
 
@@ -198,26 +198,26 @@ workflows:
   version: 2
   build_and_deliver:
     jobs:
-      - build-go1.12-4:
+      - build-go1.13-4:
           <<: *tag-filter
-      - build-go1.12-2:
-          <<: *tag-filter
-          requires:
-            - build-go1.12-4
-      - build-go1.12-1:
+      - build-go1.13-2:
           <<: *tag-filter
           requires:
-            - build-go1.12-4
+            - build-go1.13-4
+      - build-go1.13-1:
+          <<: *tag-filter
+          requires:
+            - build-go1.13-4
       - coverage:
           <<: *tag-filter
           requires:
-            - build-go1.12-4
-            - build-go1.12-2
-            - build-go1.12-1
+            - build-go1.13-4
+            - build-go1.13-2
+            - build-go1.13-1
       # - fuzz-regression:
       #     <<: *tag-filter
       #     requires:
-      #       - build-go1.12-4
+      #       - build-go1.13-4
       # - fuzzing:
       #     <<: *tag-filter
       #     filters:
@@ -225,7 +225,7 @@ workflows:
       #         # pull requests don't have access to the Fuzzit API key.
       #         ignore: /pull\/.*/
       #     requires:
-      #       - build-go1.12-4
+      #       - build-go1.13-4
       - container:
           <<: *tag-and-branch-filter
           requires:
