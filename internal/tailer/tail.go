@@ -237,7 +237,11 @@ func (t *Tailer) ProcessFileEvent(ctx context.Context, event watcher.Event) {
 		// sure we don't just add all the files in a watched directory as they
 		// get modified.
 		t.handleCreateGlob(ctx, event.Pathname)
-		return
+		fd, ok = t.handleForPath(event.Pathname)
+		if !ok {
+			glog.Warningf("Internal error finding file handle for %q after create", event.Pathname)
+			return
+		}
 	}
 	doFollow(ctx, fd)
 }
