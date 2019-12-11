@@ -276,3 +276,8 @@ endif
 .PHONY: upload_to_coveralls
 upload_to_coveralls: | coverprofile $(GOVERALLS)
 	$(GOVERALLS) -coverprofile=coverprofile -service=$(COVERALLS_SERVICE)
+
+
+.PHONY: circleci-validate
+circleci-validate: .circleci/config.yml
+	circleci config validate

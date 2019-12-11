@@ -6,7 +6,7 @@ common-build: &common-build
   executor: go
   steps:
     - checkout
-    - go/load_cache:
+    - go/load-cache:
         key: v1
     - run: make --debug install_deps
     - run: make --debug smoke
@@ -17,7 +17,7 @@ common-build: &common-build
         name: Run tests and coverage with race detector
         command: gotestsum --junitfile test-results/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=20m  ./...
         no_output_timeout: 20m
-    - go/save_cache
+    - go/save-cache:
         key: v1
     - persist_to_workspace:
         root: workspace
@@ -57,11 +57,11 @@ executors:
       - image: circleci/golang:1.13
 jobs:
   # The main build steps are the crossproduct of concurrency and go versions.
-  build-go1.13-4:
+  build-go1_13-4:
     <<: [*go1_13, *concurrency_4]
-  build-go1.13-2:
+  build-go1_13-2:
     <<: [*go1_13, *concurrency_2]
-  build-go1.13-1:
+  build-go1_13-1:
     <<: [*go1_13, *concurrency_1]
 
   # Coverage collects all the coverage reports from each build and merges them,
@@ -197,26 +197,26 @@ workflows:
   version: 2
   build_and_deliver:
     jobs:
-      - build-go1.13-4:
+      - build-go1_13-4:
           <<: *tag-filter
-      - build-go1.13-2:
-          <<: *tag-filter
-          requires:
-            - build-go1.13-4
-      - build-go1.13-1:
+      - build-go1_13-2:
           <<: *tag-filter
           requires:
-            - build-go1.13-4
+            - build-go1_13-4
+      - build-go1_13-1:
+          <<: *tag-filter
+          requires:
+            - build-go1_13-4
       - coverage:
           <<: *tag-filter
           requires:
-            - build-go1.13-4
-            - build-go1.13-2
-            - build-go1.13-1
+            - build-go1_13-4
+            - build-go1_13-2
+            - build-go1_13-1
       # - fuzz-regression:
       #     <<: *tag-filter
       #     requires:
-      #       - build-go1.13-4
+      #       - build-go1_13-4
       # - fuzzing:
       #     <<: *tag-filter
       #     filters:
@@ -224,7 +224,7 @@ workflows:
       #         # pull requests don't have access to the Fuzzit API key.
       #         ignore: /pull\/.*/
       #     requires:
-      #       - build-go1.13-4
+      #       - build-go1_13-4
       - container:
           <<: *tag-and-branch-filter
           requires:
