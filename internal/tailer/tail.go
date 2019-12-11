@@ -287,8 +287,15 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	if err := t.setHandle(pathname, f); err != nil {
 		return err
 	}
-	if err := f.Read(t.ctx); err != nil && err != io.EOF {
-		return err
+	// This is here for testing support mostly -- we don't want to read the
+	// file before we've finished bootstrap because, for example, named pipes
+	// don't have EOFs and files that update continuously can block Read from
+	// termination.
+	if t.oneShot {
+		glog.V(2).Infof("Starting oneshot read at startup of %q", f.Pathname)
+		if err := f.Read(t.ctx); err != nil && err != io.EOF {
+			return err
+		}
 	}
 	glog.Infof("Tailing %s", f.Pathname)
 	logCount.Add(1)
