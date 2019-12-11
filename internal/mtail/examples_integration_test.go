@@ -162,9 +162,9 @@ func TestExamplePrograms(t *testing.T) {
 				t.Fatalf("create mtail failed: %s", err)
 			}
 
-			err = mtail.StartTailing()
+			err = mtail.Run()
 			if err != nil {
-				t.Fatalf("Start tailling failed: %s", err)
+				t.Fatalf("Run failed: %s", err)
 			}
 
 			g, err := os.Open(tc.goldenfile)
