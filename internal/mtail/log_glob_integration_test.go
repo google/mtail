@@ -17,8 +17,8 @@ import (
 )
 
 func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
-	for _, pollInterval := range []time.Duration{0, 250 * time.Millisecond} {
-		t.Run(fmt.Sprintf("%s", pollInterval), func(t *testing.T) {
+	for _, pollInterval := range []time.Duration{0, 10 * time.Millisecond} {
+		t.Run(fmt.Sprintf("pollInterval=%s", pollInterval), func(t *testing.T) {
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
 
