@@ -174,6 +174,7 @@ func (f *File) Read(ctx context.Context) error {
 	defer span.End()
 	b := make([]byte, 0, 4096)
 	totalBytes := 0
+	// TODO(jaq): Set the deadline based on ctx.
 	for {
 		if err := f.file.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
 			glog.V(2).Infof("%s: %s", f.Name, err)
