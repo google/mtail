@@ -223,9 +223,16 @@ fuzz: vm-fuzz.zip | $(GOFUZZ)
 	cp examples/*.mtail workdir/corpus
 	$(GOFUZZ) -bin=vm-fuzz.zip -workdir=workdir
 
-clang-fuzzer: | $(GOFUZZBUILD)
-	GO111MODULE=off $(GOFUZZBUILD) -libfuzzer -o fuzzer.a github.com/google/mtail/internal/vm
-	clang-9 -fsanitize=fuzzer fuzzer.a -o clang-fuzzer
+
+# These flags set compatibility with OSS-Fuzz
+CXX ?= clang-9
+CXXFLAGS ?=
+LIB_FUZZING_ENGINE ?= -libfuzzer
+OUT ?= .
+
+$(OUT)/vm-fuzzer: | $(GOFUZZBUILD)
+	$(GOFUZZBUILD) -libfuzzer -o fuzzer.a github.com/google/mtail/internal/vm
+	$(CXX) $(CXXFLAGS) $(LIB_FUZZING_ENGINE) fuzzer.a -o $(OUT)/vm-fuzzer
 
 ###
 ## dependency section
