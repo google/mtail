@@ -122,7 +122,7 @@ endif
 # runs can read the dependencies and update iff they change.
 $(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d | .dep-stamp
 	$(MAKEDEPEND)
-	GO111MODULE=on go build -ldflags "$(GO_LDFLAGS)" -o $@ $<
+	go build -ldflags "$(GO_LDFLAGS)" -o $@ $<
 
 internal/vm/parser/parser.go: internal/vm/parser/parser.y | $(GOYACC)
 	go generate -x ./$(@D)
@@ -231,7 +231,7 @@ LIB_FUZZING_ENGINE ?= -libfuzzer
 OUT ?= .
 
 $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
-	$(GOFUZZBUILD) -libfuzzer -o fuzzer.a ./internal/vm
+	GO111MODULE=off $(GOFUZZBUILD) -libfuzzer -o fuzzer.a ./internal/vm
 	$(CXX) $(CXXFLAGS) $(LIB_FUZZING_ENGINE) fuzzer.a -o $(OUT)/vm-fuzzer
 
 ###
