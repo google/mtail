@@ -74,9 +74,8 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - restore_cache:
-          keys:
-            - go-pkg-cache-v1
+      - go/load-cache:
+          key: v1
       - run: make --debug install_deps
       - run:
           name: Generate coverage
@@ -98,9 +97,8 @@ jobs:
     executor: go
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - go-pkg-cache-v1
+      - go/load-cache:
+          key: v1
       - setup_remote_docker:
           docker_layer_caching: true
       - run: |
@@ -113,9 +111,8 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - restore_cache:
-          keys:
-            - go-pkg-cache-v1
+      - go/load-cache:
+          key: v1
       - run: make --debug install_deps
       - run: make --debug crossbuild
       - run: sha1sum build/*
@@ -136,9 +133,8 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - restore_cache:
-          keys:
-            - go-pkg-cache-v1
+      - go/load-cache:
+          key: v1
       - run: |
           wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/latest/download/fuzzit_Linux_x86_64
           chmod a+x fuzzit
@@ -158,9 +154,8 @@ jobs:
           docker_layer_caching: true
       - attach_workspace:
           at: /tmp/workspace
-      - restore_cache:
-          keys:
-            - go-pkg-cache-v1
+      - go/load-cache:
+          key: v1
       - run: |
           wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/latest/download/fuzzit_Linux_x86_64
           chmod a+x fuzzit
