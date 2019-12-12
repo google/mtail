@@ -30,7 +30,7 @@ common-build: &common-build
 
 # go* names anchors which define the Go versions to build with, merging the
 # common-build alias above.
-go1_13: &go1_13
+go1_12: &go1_12
   <<: *common-build
   executor: go
 
@@ -53,15 +53,15 @@ orbs:
 executors:
   go:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.12
 jobs:
   # The main build steps are the crossproduct of concurrency and go versions.
-  build-go1_13-4:
-    <<: [*go1_13, *concurrency_4]
-  build-go1_13-2:
-    <<: [*go1_13, *concurrency_2]
-  build-go1_13-1:
-    <<: [*go1_13, *concurrency_1]
+  build-go1_12-4:
+    <<: [*go1_12, *concurrency_4]
+  build-go1_12-2:
+    <<: [*go1_12, *concurrency_2]
+  build-go1_12-1:
+    <<: [*go1_12, *concurrency_1]
 
   # Coverage collects all the coverage reports from each build and merges them,
   # before sending off to Coveralls.
@@ -191,22 +191,19 @@ workflows:
   version: 2
   build_and_deliver:
     jobs:
-      - build-go1_13-4:
+      - build-go1_12-4:
           <<: *tag-filter
-      - build-go1_13-2:
-          <<: *tag-filter
-          requires:
-            - build-go1_13-4
-      - build-go1_13-1:
+      - build-go1_12-2:
           <<: *tag-filter
           requires:
-            - build-go1_13-4
+            - build-go1_12-4
+      - build-go1_12-1:
+          <<: *tag-filter
+          requires:
+            - build-go1_12-4
       - coverage:
           <<: *tag-filter
           requires:
-            - build-go1_13-4
-            - build-go1_13-2
-            - build-go1_13-1
       # - fuzz-regression:
       #     <<: *tag-filter
       #     requires:
@@ -219,6 +216,9 @@ workflows:
       #         ignore: /pull\/.*/
       #     requires:
       #       - build-go1_13-4
+            - build-go1_12-4
+            - build-go1_12-2
+            - build-go1_12-1
       - container:
           <<: *tag-and-branch-filter
           requires:
