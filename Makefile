@@ -278,6 +278,21 @@ upload_to_coveralls: | coverprofile $(GOVERALLS)
 	$(GOVERALLS) -coverprofile=coverprofile -service=$(COVERALLS_SERVICE)
 
 
+###
+## CircleCI development targets
+#
+
 .PHONY: circleci-validate
 circleci-validate: .circleci/config.yml
 	circleci config validate
+
+# Override this on the make command to say which job to run
+CIRCLEJOB ?= fuzzing
+.PHONY: circleci-execute
+.INTERMEDIATE: tmpconfig.yml
+circleci-execute: .circleci/config.yml
+ifeq ($(CIRCLECI),true)
+	$(error "Don't run this target from within CircleCI!")
+endif
+	circleci config process $< > tmpconfig.yml
+	circleci local execute -c tmpconfig.yml --job $(CIRCLEJOB)
