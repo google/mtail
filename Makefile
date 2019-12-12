@@ -230,8 +230,8 @@ CXXFLAGS ?=
 LIB_FUZZING_ENGINE ?= -libfuzzer
 OUT ?= .
 
-$(OUT)/vm-fuzzer: | $(GOFUZZBUILD)
-	$(GOFUZZBUILD) -libfuzzer -o fuzzer.a github.com/google/mtail/internal/vm
+$(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
+	$(GOFUZZBUILD) -libfuzzer -o fuzzer.a ./internal/vm
 	$(CXX) $(CXXFLAGS) $(LIB_FUZZING_ENGINE) fuzzer.a -o $(OUT)/vm-fuzzer
 
 ###
