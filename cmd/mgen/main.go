@@ -10,12 +10,15 @@ import (
 	"fmt"
 	"math/big"
 	mrand "math/rand"
+
+	"github.com/google/mtail/internal/vm/parser"
 )
 
 var (
 	useCryptoRand = flag.Bool("use_crypto_rand", false, "Use crypto/rand instead of math/rand")
 	randSeed      = flag.Int64("rand_seed", 1, "Seed to use for math.rand.")
 	minIterations = flag.Int64("min_iterations", 5000, "Minimum number of iterations before stopping program generation.")
+	dictionary    = flag.Bool("dictionary", false, "Generate a fuzz dictionary to stdout only.")
 )
 
 type node struct {
@@ -97,9 +100,7 @@ func rand(n int) (r int) {
 	return
 }
 
-func main() {
-	flag.Parse()
-
+func generateProgram() {
 	mrand.Seed(*randSeed)
 
 	c := make(chan string, 1)
@@ -145,4 +146,20 @@ func main() {
 		runs--
 	}
 	c <- "\n"
+}
+
+func generateDictionary() {
+	for _, k := range parser.Dictionary() {
+		fmt.Println(k)
+	}
+}
+
+func main() {
+	flag.Parse()
+
+	if *dictionary {
+		generateDictionary()
+	} else {
+		generateProgram()
+	}
 }

@@ -234,6 +234,9 @@ $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
 	$(GOFUZZBUILD) -libfuzzer -o fuzzer.a ./internal/vm
 	$(CXX) $(CXXFLAGS) $(LIB_FUZZING_ENGINE) fuzzer.a -o $(OUT)/vm-fuzzer
 
+$(OUT)/vm-fuzzer.dict: mgen
+	./mgen --dictionary | sort > $@
+
 ###
 ## dependency section
 #

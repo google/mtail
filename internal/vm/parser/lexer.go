@@ -51,6 +51,17 @@ var builtins = []string{
 	"tolower",
 }
 
+// Dictionary returns a list of all keywords and builtins of the language.
+func Dictionary() (r []string) {
+	for k := range keywords {
+		r = append(r, k)
+	}
+	for _, b := range builtins {
+		r = append(r, b)
+	}
+	return
+}
+
 // A stateFn represents each state the scanner can be in.
 type stateFn func(*Lexer) stateFn
 
