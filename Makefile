@@ -290,7 +290,7 @@ circleci-validate: .circleci/config.yml
 CIRCLEJOB ?= fuzzing
 .PHONY: circleci-execute
 .INTERMEDIATE: tmpconfig.yml
-circleci-execute: .circleci/config.yml
+circleci-execute: .circleci/config.yml circleci-validate
 ifeq ($(CIRCLECI),true)
 	$(error "Don't run this target from within CircleCI!")
 endif
