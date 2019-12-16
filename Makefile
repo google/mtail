@@ -103,7 +103,7 @@ lint:
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 version := $(shell git describe --tags --always --dirty)
 revision := $(shell git rev-parse HEAD)
-release := $(shell git describe --tags | cut -d"-" -f 1,2)
+release := $(shell git describe --tags --always --dirty | cut -d"-" -f 1,2)
 
 GO_LDFLAGS := -X main.Branch=${branch} -X main.Version=${version} -X main.Revision=${revision}
 
