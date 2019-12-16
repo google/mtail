@@ -231,7 +231,7 @@ LIB_FUZZING_ENGINE ?= -libfuzzer
 OUT ?= .
 
 $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
-	GO111MODULE=off $(GOFUZZBUILD) -libfuzzer -o fuzzer.a ./internal/vm
+	$(GOFUZZBUILD) -libfuzzer -o fuzzer.a ./internal/vm
 	$(CXX) $(CXXFLAGS) $(LIB_FUZZING_ENGINE) fuzzer.a -o $(OUT)/vm-fuzzer
 
 ###

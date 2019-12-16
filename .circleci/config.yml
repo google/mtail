@@ -54,6 +54,9 @@ executors:
   go:
     docker:
       - image: circleci/golang:1.12
+  fuzzit:
+    docker:
+      - image: fuzzitdev/golang:1.12.7-buster
 jobs:
   # The main build steps are the crossproduct of concurrency and go versions.
   build-go1_12-4:
@@ -127,8 +130,7 @@ jobs:
 
   fuzzing:
     working_directory: /go/src/github.com/google/mtail
-    docker:
-      - image: fuzzitdev/golang:1.12.7-buster
+    executor: fuzzit
     steps:
       - checkout
       - attach_workspace:
@@ -139,15 +141,16 @@ jobs:
           wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/latest/download/fuzzit_Linux_x86_64
           chmod a+x fuzzit
       - run: |
-          make ./vm-fuzzer
+          make GO111MODULE=off --debug install_deps
+          go mod vendor
+          make GO111MODULE=off --debug ./vm-fuzzer
       - run: |
           ./fuzzit auth $FUZZIT_API_KEY
           ./fuzzit create job --type fuzzing --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} mtail/internal-vm ./vm-fuzzer
 
   fuzz-regression:
     working_directory: /go/src/github.com/google/mtail
-    docker:
-      - image: fuzzitdev/golang:1.12.7-buster
+    executor: fuzzit
     steps:
       - checkout
       - setup_remote_docker:
@@ -160,7 +163,9 @@ jobs:
           wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/latest/download/fuzzit_Linux_x86_64
           chmod a+x fuzzit
       - run: |
-          make ./vm-fuzzer
+          make GO111MODULE=off --debug install_deps
+          go mod vendor
+          make GO111MODULE=off --debug ./vm-fuzzer
       - run: |
           ./fuzzit create job --type local-regression --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} mtail/internal-vm ./vm-fuzzer
 
@@ -204,21 +209,21 @@ workflows:
       - coverage:
           <<: *tag-filter
           requires:
-      # - fuzz-regression:
-      #     <<: *tag-filter
-      #     requires:
-      #       - build-go1_13-4
-      # - fuzzing:
-      #     <<: *tag-filter
-      #     filters:
-      #       branches:
-      #         # pull requests don't have access to the Fuzzit API key.
-      #         ignore: /pull\/.*/
-      #     requires:
-      #       - build-go1_13-4
             - build-go1_12-4
             - build-go1_12-2
             - build-go1_12-1
+      - fuzz-regression:
+          <<: *tag-filter
+          requires:
+            - build-go1_12-4
+      - fuzzing:
+          <<: *tag-filter
+          filters:
+            branches:
+              # pull requests don't have access to the Fuzzit API key.
+              ignore: /pull\/.*/
+          requires:
+            - build-go1_12-4
       - container:
           <<: *tag-and-branch-filter
           requires:
