@@ -59,7 +59,7 @@ CLEANFILES+=\
 	internal/mtail/logo.ico\
 
 # A place to install tool dependencies.
-BIN = $(GOPATH)/bin
+BIN = $(firstword $(subst :, ,$(GOPATH)))/bin
 
 TOGO = $(BIN)/togo
 $(TOGO):
