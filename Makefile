@@ -59,29 +59,29 @@ CLEANFILES+=\
 	internal/mtail/logo.ico\
 
 # A place to install tool dependencies.
-BIN = $(firstword $(subst :, ,$(GOPATH)))/bin
+GOBIN ?= $(firstword $(subst :, ,$(GOPATH)))/bin
 
-TOGO = $(BIN)/togo
+TOGO = $(GOBIN)/togo
 $(TOGO):
 	go get $(GOGETFLAGS) github.com/flazz/togo
 
-GOYACC = $(BIN)/goyacc
+GOYACC = $(GOBIN)/goyacc
 $(GOYACC):
 	go get $(GOGETFLAGS) golang.org/x/tools/cmd/goyacc
 
-GOFUZZBUILD = $(BIN)/go-fuzz-build
+GOFUZZBUILD = $(GOBIN)/go-fuzz-build
 $(GOFUZZBUILD):
 	go get $(GOGETFLAGS) github.com/dvyukov/go-fuzz/go-fuzz-build
 
-GOFUZZ = $(BIN)/go-fuzz
+GOFUZZ = $(GOBIN)/go-fuzz
 $(GOFUZZ):
 	go get $(GOGETFLAGS) github.com/dvyukov/go-fuzz/go-fuzz
 
-GOVERALLS = $(BIN)/goveralls
+GOVERALLS = $(GOBIN)/goveralls
 $(GOVERALLS):
 	go get $(GOGETFLAGS) github.com/mattn/goveralls
 
-GOX = $(BIN)/gox
+GOX = $(GOBIN)/gox
 $(GOX):
 	go get github.com/mitchellh/gox
 
