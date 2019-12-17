@@ -32,3 +32,8 @@ workdir/*
 /vm-fuzzer
 /corpus
 /crashes
+/fuzzer.a
+/CORPUS
+/SEED
+/vm-fuzzer_seed_corpus.zip
+/crash-*
