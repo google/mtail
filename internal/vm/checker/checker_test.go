@@ -195,6 +195,10 @@ del $0
 // + e
 `,
 		[]string{"pattern fragment plus anything:2:6: Can't append variable `e' to this pattern.", "\tTry using a `const'-defined pattern fragment."}},
+
+	{"recursive pattern fragment",
+		`const P//+P`,
+		[]string{"recursive pattern fragment:1:11: Can't evaluate pattern fragment `P' here.", "\tTry defining it earlier in the program."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

@@ -683,13 +683,10 @@ func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			p.errors.Add(v.Pos(), fmt.Sprintf("Can't append %s `%s' to this pattern.\n\tTry using a `const'-defined pattern fragment.", v.Symbol.Kind, v.Symbol.Name))
 			return nil, n
 		}
-		idPattern := pf.Pattern
-		if idPattern == "" {
-			idEvaluator := &patternEvaluator{scope: p.scope}
-			_ = ast.Walk(idEvaluator, pf)
-			idPattern = idEvaluator.pattern.String()
+		if pf.Pattern == "" {
+			p.errors.Add(v.Pos(), fmt.Sprintf("Can't evaluate pattern fragment `%s' here.\n\tTry defining it earlier in the program.", pf.Symbol.Name))
 		}
-		p.pattern.WriteString(idPattern)
+		p.pattern.WriteString(pf.Pattern)
 		return p, v
 	}
 	return p, n
