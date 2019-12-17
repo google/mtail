@@ -612,8 +612,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.DelStmt:
-		n.N.(*ast.IndexedExpr).Lhs.(*ast.IdTerm).Lvalue = true
-		return n
+		if ix, ok := n.N.(*ast.IndexedExpr); ok {
+			ix.Lhs.(*ast.IdTerm).Lvalue = true
+			return n
+		}
+		c.errors.Add(n.Pos(), fmt.Sprintf("Cannot delete this.\n\tTry deleting from a dimensioned metric with this as an index."))
 
 	}
 

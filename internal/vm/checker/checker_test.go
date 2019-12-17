@@ -183,6 +183,12 @@ next
 @x {}
 }`,
 		[]string{"use decorator in decorator:2:1-2: Decorator `@x' is not completely defined yet.", "\tTry removing @x from here.", "use decorator in decorator:2:1-2: No symbols found in decorator `@x'.", "\tTry adding a `next' statement inside the `{}' block."}},
+
+	{"delete incorrect object",
+		`/(.*)/ {
+del $0
+}`,
+		[]string{"delete incorrect object:3:7: Cannot delete this.", "\tTry deleting from a dimensioned metric with this as an index."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
