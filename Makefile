@@ -213,17 +213,6 @@ export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPAT
 ## Fuzz testing
 #
 
-vm-fuzz.zip: $(GOFILES) | $(GOFUZZBUILD)
-	$(GOFUZZBUILD) github.com/google/mtail/internal/vm
-
-.PHONY: fuzz
-fuzz: vm-fuzz.zip | $(GOFUZZ)
-#	rm -rf workdir
-	mkdir -p workdir/corpus
-	cp examples/*.mtail workdir/corpus
-	$(GOFUZZ) -bin=vm-fuzz.zip -workdir=workdir
-
-
 # These flags set compatibility with OSS-Fuzz
 CXX ?= clang-9
 CXXFLAGS ?=
@@ -239,6 +228,13 @@ $(OUT)/vm-fuzzer.dict: mgen
 
 $(OUT)/vm-fuzzer_seed_corpus.zip: $(wildcard examples/*.mtail)
 	zip -j $@ $^
+
+
+.PHONY: fuzz
+fuzz: $(OUT)/vm-fuzzer_seed_corpus.zip $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
+	mkdir -p CORPUS SEED
+	unzip -o -d SEED $(OUT)/vm-fuzzer_seed_corpus.zip
+	$(OUT)/vm-fuzzer -dict=$(OUT)/vm-fuzzer.dict CORPUS SEED
 
 ###
 ## dependency section
