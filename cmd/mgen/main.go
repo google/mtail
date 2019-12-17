@@ -150,7 +150,7 @@ func generateProgram() {
 
 func generateDictionary() {
 	for _, k := range parser.Dictionary() {
-		fmt.Println(k)
+		fmt.Printf("\"%s\"\n", k)
 	}
 }
 
