@@ -3,7 +3,11 @@
 
 package ast
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/golang/glog"
+)
 
 // Visitor VisitBefore method is invoked for each node encountered by Walk.
 // If the result Visitor v is not nil, Walk visits each of the children of that
@@ -24,6 +28,8 @@ func walknodelist(v Visitor, list []Node) []Node {
 
 // Walk traverses (walks) an AST node with the provided Visitor v.
 func Walk(v Visitor, node Node) Node {
+
+	glog.V(2).Infof("About to VisitBefore node at %s", node.Pos())
 	// Returning nil from VisitBefore signals to Walk that the Visitor has
 	// handled the children of this node.  VisitAfter will not be called.
 	if v, node = v.VisitBefore(node); v == nil {
@@ -83,6 +89,7 @@ func Walk(v Visitor, node Node) Node {
 		panic(fmt.Sprintf("Walk: unexpected node type %T: %v", n, n))
 	}
 
+	glog.V(2).Infof("About to VisitAfter node at %s", node.Pos())
 	node = v.VisitAfter(node)
 	return node
 }
