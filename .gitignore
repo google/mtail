@@ -28,3 +28,7 @@ workdir/*
 /internal/vm/fuzzer
 /internal/vm/fuzzit
 /vm-fuzzer.dict
+/vendor
+/vm-fuzzer
+/corpus
+/crashes
