@@ -594,21 +594,21 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		// Evaluate the expression.
 		pe := &patternEvaluator{scope: c.scope, errors: &c.errors}
 		n = ast.Walk(pe, n).(*ast.PatternExpr)
-		if pe.pattern == "" {
+		if pe.pattern.String() == "" {
 			return n
 		}
-		n.Pattern = pe.pattern
-		c.checkRegex(pe.pattern, n)
+		n.Pattern = pe.pattern.String()
+		c.checkRegex(n.Pattern, n)
 		return n
 
 	case *ast.PatternFragment:
 		// Evaluate the expression.
 		pe := &patternEvaluator{scope: c.scope, errors: &c.errors}
 		n.Expr = ast.Walk(pe, n.Expr)
-		if pe.pattern == "" {
+		if pe.pattern.String() == "" {
 			return n
 		}
-		n.Pattern = pe.pattern
+		n.Pattern = pe.pattern.String()
 		return n
 
 	case *ast.DelStmt:
@@ -659,7 +659,7 @@ func (c *checker) checkRegex(pattern string, n ast.Node) {
 type patternEvaluator struct {
 	scope   *symbol.Scope
 	errors  *errors.ErrorList
-	pattern string
+	pattern strings.Builder
 }
 
 func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
@@ -671,7 +671,7 @@ func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		}
 		return p, v
 	case *ast.PatternLit:
-		p.pattern += v.Pattern
+		p.pattern.WriteString(v.Pattern)
 		return p, v
 	case *ast.IdTerm:
 		// Already looked up sym, if still nil undefined.
@@ -682,9 +682,9 @@ func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		if idPattern == "" {
 			idEvaluator := &patternEvaluator{scope: p.scope}
 			_ = ast.Walk(idEvaluator, v.Symbol.Binding.(*ast.PatternFragment))
-			idPattern = idEvaluator.pattern
+			idPattern = idEvaluator.pattern.String()
 		}
-		p.pattern += idPattern
+		p.pattern.WriteString(idPattern)
 		return p, v
 	}
 	return p, n
