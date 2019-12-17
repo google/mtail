@@ -56,7 +56,7 @@ executors:
       - image: circleci/golang:1.12
   fuzzit:
     docker:
-      - image: fuzzitdev/golang:1.12.7-buster
+      - image: gcr.io/fuzzit-public/buster-golang12:2dc7875
 jobs:
   # The main build steps are the crossproduct of concurrency and go versions.
   build-go1_12-4:
