@@ -33,7 +33,7 @@ var checkerInvalidPrograms = []struct {
 
 	{"undefined decorator",
 		"@foo {}\n",
-		[]string{"undefined decorator:1:1-4: Decorator `foo' not defined.", "\tTry adding a definition `def foo {}' earlier in the program."}},
+		[]string{"undefined decorator:1:1-4: Decorator `@foo' is not defined.", "\tTry adding a definition `def foo {}' earlier in the program."}},
 
 	{"undefined identifier",
 		"// { x++ \n}\n",
@@ -55,7 +55,7 @@ var checkerInvalidPrograms = []struct {
 	{"duplicate declaration",
 		"counter foo\ncounter foo\n",
 		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11",
-			"duplicate declaration:1:9-11: Declaration of variable `foo' is never used"}},
+			"duplicate declaration:1:9-11: Declaration of variable `foo' here is never used."}},
 
 	{"indexedExpr parameter count",
 		`counter n
@@ -121,8 +121,8 @@ const ID /bar/
 /asdf/ {
 }
 `,
-		[]string{"unused symbols:1:9-11: Declaration of variable `foo' is never used",
-			"unused symbols:2:7-8: Declaration of named pattern constant `ID' is never used"}},
+		[]string{"unused symbols:1:9-11: Declaration of variable `foo' here is never used.",
+			"unused symbols:2:7-8: Declaration of named pattern constant `ID' here is never used."}},
 	{"invalid del index count",
 		`gauge t by x, y
 /.*/ {
@@ -142,12 +142,12 @@ const ID /bar/
 	// 	[]string{"counter as string:4:4-11: Can't assign rhs of type String to lhs of type Int"}},
 	{"def without usage",
 		`def x{next}`,
-		[]string{"def without usage:1:1-10: Declaration of decorator `x' is never used"}},
+		[]string{"def without usage:1:1-10: Declaration of decorator `x' here is never used."}},
 	{"def without next",
 		`def x{}
 @x {
 }`,
-		[]string{"def without next:1:1-3: No symbols found in decorator `@x', try adding a `next' statement."}},
+		[]string{"def without next:1:1-3: No symbols found in decorator `@x'.", "\tTry adding a `next' statement inside the `{}' block."}},
 	{"def with two nexts",
 		`def x{
   /a/ {
@@ -177,6 +177,12 @@ next
 }
 `,
 		[]string{"next outside of decorator:5:1-4: Can't use `next' outside of a decorator."}},
+
+	{"use decorator in decorator",
+		`def x {
+@x {}
+}`,
+		[]string{"use decorator in decorator:2:1-2: Decorator `@x' is not completely defined yet.", "\tTry removing @x from here.", "use decorator in decorator:2:1-2: No symbols found in decorator `@x'.", "\tTry adding a `next' statement inside the `{}' block."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
