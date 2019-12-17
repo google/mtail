@@ -189,6 +189,12 @@ next
 del $0
 }`,
 		[]string{"delete incorrect object:3:7: Cannot delete this.", "\tTry deleting from a dimensioned metric with this as an index."}},
+
+	{"pattern fragment plus anything",
+		`gauge e
+// + e
+`,
+		[]string{"pattern fragment plus anything:2:6: Can't append variable `e' to this pattern.", "\tTry using a `const'-defined pattern fragment."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
