@@ -143,9 +143,8 @@ jobs:
       - run: |
           make GO111MODULE=off --debug install_deps
           GO111MODULE=on go mod vendor
-          make GO111MODULE=off --debug ./vm-fuzzer
+          make GO111MODULE=off CXX=clang CXXFLAGS=-fsanitize=fuzzer LIB_FUZZING_ENGINE= --debug ./vm-fuzzer
       - run: |
-          ./fuzzit auth $FUZZIT_API_KEY
           ./fuzzit create job --type fuzzing --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} mtail/internal-vm ./vm-fuzzer
 
   fuzz-regression:
@@ -165,7 +164,7 @@ jobs:
       - run: |
           make GO111MODULE=off --debug install_deps
           GO111MODULE=on go mod vendor
-          make GO111MODULE=off --debug ./vm-fuzzer
+          make GO111MODULE=off CXX=clang CXXFLAGS=-fsanitize=fuzzer LIB_FUZZING_ENGINE= --debug ./vm-fuzzer
       - run: |
           ./fuzzit create job --type local-regression --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} mtail/internal-vm ./vm-fuzzer
 
