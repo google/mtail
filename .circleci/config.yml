@@ -102,8 +102,7 @@ jobs:
       - checkout
       - go/load-cache:
           key: v1
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - setup_remote_docker
       - run: |
           make container
 
@@ -152,8 +151,7 @@ jobs:
     executor: fuzzit
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - setup_remote_docker
       - attach_workspace:
           at: /tmp/workspace
       - go/load-cache:
