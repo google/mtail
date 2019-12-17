@@ -237,6 +237,9 @@ $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
 $(OUT)/vm-fuzzer.dict: mgen
 	./mgen --dictionary | sort > $@
 
+$(OUT)/vm-fuzzer_seed_corpus.zip: $(wildcard examples/*.mtail)
+	zip -j $@ $^
+
 ###
 ## dependency section
 #
