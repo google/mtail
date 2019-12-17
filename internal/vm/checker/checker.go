@@ -137,7 +137,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		n.Symbol = symbol.NewSymbol(n.Name, symbol.DecoSymbol, n.Pos())
 		n.Symbol.Binding = n
 		if alt := c.scope.Insert(n.Symbol); alt != nil {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `%s' previously declared at %s", n.Name, alt.Pos))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `@%s' previously declared at %s", n.Name, alt.Pos))
 			return nil, n
 		}
 		// Append a scope placeholder for the recursion into the block.  It has no parent, it'll be cloned when the decorator is instantiated.
@@ -153,11 +153,23 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			sym.Used = true
 			n.Decl = sym.Binding.(*ast.DecoDecl)
 		} else {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `%s' not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.Name, n.Name))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `@%s' is not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.Name, n.Name))
 			return nil, n
 		}
 		// Create a new scope for the decorator instantiation.
 		n.Scope = symbol.NewScope(c.scope)
+
+		if n.Decl == nil {
+			glog.V(2).Infof("No DecoDecl on DecoStmt: %v", n)
+			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no declaration for decorator: %#v", n))
+			return nil, n
+		}
+		if n.Decl.Scope == nil {
+			glog.V(2).Infof("No Scope on DecoDecl: %#v", n.Decl)
+			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `@%s' is not completely defined yet.\n\tTry removing @%s from here.", n.Name, n.Name))
+			return nil, n
+		}
+
 		// Clone the DecoDecl scope zygote into this scope.
 		n.Scope.CopyFrom(n.Decl.Scope)
 		c.scope = n.Scope
@@ -202,7 +214,7 @@ func (c *checker) checkSymbolUsage() {
 				glog.Infof("declaration of capture group reference `%s' at %s appears to be unused", sym.Name, sym.Pos)
 				continue
 			}
-			c.errors.Add(sym.Pos, fmt.Sprintf("Declaration of %s `%s' is never used", sym.Kind, sym.Name))
+			c.errors.Add(sym.Pos, fmt.Sprintf("Declaration of %s `%s' here is never used.", sym.Kind, sym.Name))
 		}
 	}
 }
@@ -252,8 +264,9 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		last := len(c.decoScopes) - 1
 		decoScope := c.decoScopes[last]
 		if len(decoScope.Symbols) == 0 {
-			c.errors.Add(n.Pos(), fmt.Sprintf("No symbols found in decorator `@%s', try adding a `next' statement.", n.Name))
+			c.errors.Add(n.Pos(), fmt.Sprintf("No symbols found in decorator `@%s'.\n\tTry adding a `next' statement inside the `{}' block.", n.Name))
 		}
+		// Store the zygote from the scope stack on this declaration.
 		n.Scope = decoScope
 		c.decoScopes = c.decoScopes[:last]
 		return n
