@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/user"
 	"path"
@@ -123,5 +124,33 @@ func TestOpenPipe(t *testing.T) {
 	err = f.Read(context.Background())
 	if err != io.EOF {
 		testutil.FatalIfErr(t, err)
+	}
+}
+
+func TestOpenSocket(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+
+	llp := NewStubProcessor()
+
+	logsock := filepath.Join(tmpDir, "sock")
+	l, err := net.Listen("unix", logsock)
+	testutil.FatalIfErr(t, err)
+
+	f, err := NewFile(logsock, llp, false)
+	testutil.FatalIfErr(t, err)
+	go func() {
+		c, err := l.Accept()
+		testutil.FatalIfErr(t, err)
+		_, err = c.Write([]byte("adf"))
+		testutil.FatalIfErr(t, err)
+	}()
+	err = f.Read(context.Background())
+	testutil.FatalIfErr(t, err)
+	if f.partial.String() != "adf" {
+		t.Errorf("want %q got %q", "adf", f.partial.String())
 	}
 }
