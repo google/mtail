@@ -280,8 +280,8 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 		}
 		return err
 	}
-	glog.V(2).Infof("Adding a file watch on %q", f.Pathname)
-	if err := t.w.Observe(f.Pathname, t); err != nil {
+	glog.V(2).Infof("Adding a file watch on %q", f.Pathname())
+	if err := t.w.Observe(f.Pathname(), t); err != nil {
 		return err
 	}
 	if err := t.setHandle(pathname, f); err != nil {
@@ -292,12 +292,12 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	// don't have EOFs and files that update continuously can block Read from
 	// termination.
 	if t.oneShot {
-		glog.V(2).Infof("Starting oneshot read at startup of %q", f.Pathname)
+		glog.V(2).Infof("Starting oneshot read at startup of %q", f.Pathname())
 		if err := f.Read(t.ctx); err != nil && err != io.EOF {
 			return err
 		}
 	}
-	glog.Infof("Tailing %s", f.Pathname)
+	glog.Infof("Tailing %s", f.Pathname())
 	logCount.Add(1)
 	return nil
 }
@@ -423,8 +423,8 @@ func (t *Tailer) Gc() error {
 	t.handlesMu.Lock()
 	defer t.handlesMu.Unlock()
 	for k, v := range t.handles {
-		if time.Since(v.LastRead) > (time.Hour * 24) {
-			if err := t.w.Unobserve(v.Pathname, t); err != nil {
+		if time.Since(v.LastReadTime()) > (time.Hour * 24) {
+			if err := t.w.Unobserve(v.Pathname(), t); err != nil {
 				glog.Info(err)
 			}
 			if err := v.Close(t.ctx); err != nil {

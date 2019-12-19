@@ -35,8 +35,8 @@ var (
 // by `mtail`.
 type File struct {
 	Name     string    // Given name for the file (possibly relative, used for displau)
-	Pathname string    // Full absolute path of the file used internally
-	LastRead time.Time // time of the last read received on this handle
+	pathname string    // Full absolute path of the file used internally
+	lastRead time.Time // time of the last read received on this handle
 	regular  bool      // Remember if this is a regular file (or a pipe)
 	file     *os.File
 	partial  *bytes.Buffer
@@ -128,20 +128,20 @@ func (f *File) Follow(ctx context.Context) error {
 			return err
 		}
 	}
-	s2, err := os.Stat(f.Pathname)
+	s2, err := os.Stat(f.pathname)
 	if err != nil {
-		glog.Infof("Stat failed on %q: %s", f.Pathname, err)
+		glog.Infof("Stat failed on %q: %s", f.Pathname(), err)
 		return nil
 	}
 	if !os.SameFile(s1, s2) {
-		glog.V(1).Infof("New inode detected for %s, treating as rotation", f.Pathname)
+		glog.V(1).Infof("New inode detected for %s, treating as rotation", f.Pathname())
 		err = f.doRotation(ctx)
 		if err != nil {
 			return err
 		}
 	} else {
 		glog.V(1).Infof("Path %s already being watched, and inode not changed.",
-			f.Pathname)
+			f.Pathname())
 	}
 
 	glog.V(2).Info("doing the normal read")
@@ -157,7 +157,7 @@ func (f *File) doRotation(ctx context.Context) error {
 		glog.Info(err)
 	}
 	logRotations.Add(f.Name, 1)
-	newFile, err := open(f.Pathname, true /*seenBefore*/)
+	newFile, err := open(f.pathname, true /*seenBefore*/)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (f *File) Read(ctx context.Context) error {
 		if err != nil {
 			// Update the last read time if we were able to read anything.
 			if totalBytes > 0 {
-				f.LastRead = time.Now()
+				f.lastRead = time.Now()
 			}
 			return err
 		}
@@ -286,4 +286,12 @@ func (f *File) Close(ctx context.Context) error {
 		f.sendLine(ctx)
 	}
 	return f.file.Close()
+}
+
+func (f *File) LastReadTime() time.Time {
+	return f.lastRead
+}
+
+func (f *File) Pathname() string {
+	return f.pathname
 }
