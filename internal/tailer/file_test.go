@@ -137,15 +137,15 @@ func TestOpenSocket(t *testing.T) {
 	llp := NewStubProcessor()
 
 	logsock := filepath.Join(tmpDir, "sock")
-	l, err := net.Listen("unix", logsock)
-	testutil.FatalIfErr(t, err)
 
 	f, err := NewSocket(logsock, logsock, llp)
 	testutil.FatalIfErr(t, err)
+
+	l, err := net.DialUnix("unixgram", nil, &net.UnixAddr{logsock, "unixgram"})
+	testutil.FatalIfErr(t, err)
+
 	go func() {
-		c, err := l.Accept()
-		testutil.FatalIfErr(t, err)
-		_, err = c.Write([]byte("adf\n"))
+		_, err = l.Write([]byte("adf\n"))
 		llp.Add(1)
 		testutil.FatalIfErr(t, err)
 	}()

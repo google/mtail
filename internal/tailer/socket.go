@@ -29,7 +29,7 @@ type Socket struct {
 // `llp' is a logline Processor that receivres the bytes when read by Read().
 func NewSocket(pathname, absPath string, llp logline.Processor) (*Socket, error) {
 	glog.V(2).Infof("tailer.NewSocket(%s)", absPath)
-	c, err := net.Dial("unix", absPath)
+	c, err := net.ListenUnixgram("unixgram", &net.UnixAddr{absPath, "unixgram"})
 	if err != nil {
 		return nil, err
 	}
