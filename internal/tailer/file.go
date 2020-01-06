@@ -9,7 +9,6 @@ import (
 	"expvar"
 	"io"
 	"os"
-	"path/filepath"
 	"syscall"
 	"time"
 	"unicode/utf8"
@@ -34,7 +33,7 @@ var (
 // File provides an abstraction over files and named pipes being tailed
 // by `mtail`.
 type File struct {
-	Name     string    // Given name for the file (possibly relative, used for displau)
+	name     string    // Given name for the file (possibly relative, used for displau)
 	pathname string    // Full absolute path of the file used internally
 	lastRead time.Time // time of the last read received on this handle
 	regular  bool      // Remember if this is a regular file (or a pipe)
@@ -48,12 +47,8 @@ type File struct {
 // retry on error to open the file. `seekToStart` indicates that the file
 // should be tailed from offset 0, not EOF; the latter is true for rotated
 // files and for files opened when mtail is in oneshot mode.
-func NewFile(pathname string, llp logline.Processor, seekToStart bool) (*File, error) {
+func NewFile(pathname, absPath string, llp logline.Processor, seekToStart bool) (*File, error) {
 	glog.V(2).Infof("file.New(%s, %v)", pathname, seekToStart)
-	absPath, err := filepath.Abs(pathname)
-	if err != nil {
-		return nil, err
-	}
 	f, err := open(absPath, false)
 	if err != nil {
 		return nil, err
@@ -121,7 +116,7 @@ func (f *File) Follow(ctx context.Context) error {
 	defer span.End()
 	s1, err := f.file.Stat()
 	if err != nil {
-		glog.V(1).Infof("Stat failed on %q: %s", f.Name, err)
+		glog.V(1).Infof("Stat failed on %q: %s", f.name, err)
 		// We have a fd but it's invalid, handle as a rotation (delete/create)
 		err := f.doRotation(ctx)
 		if err != nil {
@@ -156,7 +151,7 @@ func (f *File) doRotation(ctx context.Context) error {
 	if err := f.Read(ctx); err != nil {
 		glog.Info(err)
 	}
-	logRotations.Add(f.Name, 1)
+	logRotations.Add(f.name, 1)
 	newFile, err := open(f.pathname, true /*seenBefore*/)
 	if err != nil {
 		return err
@@ -177,7 +172,7 @@ func (f *File) Read(ctx context.Context) error {
 	// TODO(jaq): Set the deadline based on ctx.
 	for {
 		if err := f.file.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
-			glog.V(2).Infof("%s: %s", f.Name, err)
+			glog.V(2).Infof("%s: %s", f.name, err)
 		}
 		n, err := f.file.Read(b[:cap(b)])
 		glog.V(2).Infof("Read count %v err %v", n, err)
@@ -233,8 +228,8 @@ func (f *File) Read(ctx context.Context) error {
 func (f *File) sendLine(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "file.sendLine")
 	defer span.End()
-	f.llp.ProcessLogLine(ctx, logline.New(ctx, f.Name, f.partial.String()))
-	lineCount.Add(f.Name, 1)
+	f.llp.ProcessLogLine(ctx, logline.New(ctx, f.name, f.partial.String()))
+	lineCount.Add(f.name, 1)
 	glog.V(2).Info("Line sent")
 	// reset partial accumulator
 	f.partial.Reset()
@@ -271,7 +266,7 @@ func (f *File) checkForTruncate(ctx context.Context) (bool, error) {
 
 	p, serr := f.file.Seek(0, io.SeekStart)
 	glog.V(2).Infof("Truncated?  Seeked to %d: %v", p, serr)
-	logTruncs.Add(f.Name, 1)
+	logTruncs.Add(f.name, 1)
 	return true, serr
 }
 
@@ -294,4 +289,8 @@ func (f *File) LastReadTime() time.Time {
 
 func (f *File) Pathname() string {
 	return f.pathname
+}
+
+func (f *File) Name() string {
+	return f.name
 }

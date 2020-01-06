@@ -28,7 +28,7 @@ func TestReadPartial(t *testing.T) {
 	llp := NewStubProcessor()
 
 	fd := testutil.TestOpenFile(t, logfile)
-	f, err := NewFile(logfile, llp, false)
+	f, err := NewFile(logfile, logfile, llp, false)
 	testutil.FatalIfErr(t, err)
 
 	err = f.Read(context.Background())
@@ -94,7 +94,7 @@ func TestOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := NewFile(logfile, nil, false); err == nil || !os.IsPermission(err) {
+	if _, err := NewFile(logfile, logfile, nil, false); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
 }
@@ -119,7 +119,7 @@ func TestOpenPipe(t *testing.T) {
 
 	p.WriteString("1\n")
 	llp.Add(1)
-	f, err := NewFile(logpipe, llp, false)
+	f, err := NewFile(logpipe, logpipe, llp, false)
 	testutil.FatalIfErr(t, err)
 	err = f.Read(context.Background())
 	if err != io.EOF {
@@ -140,7 +140,7 @@ func TestOpenSocket(t *testing.T) {
 	l, err := net.Listen("unix", logsock)
 	testutil.FatalIfErr(t, err)
 
-	f, err := NewSocket(logsock, llp)
+	f, err := NewSocket(logsock, logsock, llp)
 	testutil.FatalIfErr(t, err)
 	go func() {
 		c, err := l.Accept()

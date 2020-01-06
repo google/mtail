@@ -21,7 +21,8 @@ type Log interface {
 	Read(context.Context) error   // Read bytes from the log source and send to processor
 	Close(context.Context) error  // Close the log
 	LastReadTime() time.Time      // Return the time when the last bytes were read from the source
-	Pathname() string             // Return the filesystem name of the log source.
+	Name() string                 // Return the user-provided name of the log source.
+	Pathname() string             // Return the filesystem full pathname of the log source.
 }
 
 // NewLog returns an implementation of the Log interface that handles the given
@@ -40,12 +41,12 @@ func NewLog(pathname string, llp logline.Processor, seekToStart bool) (Log, erro
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular() || m&os.ModeType == os.ModeNamedPipe:
-		return NewFile(absPath, llp, seekToStart)
+		return NewFile(pathname, absPath, llp, seekToStart)
 	case m&os.ModeType == os.ModeSocket:
 		if seekToStart {
 			glog.V(2).Infof("ignoring seekToStart=%v as %q is a socket", seekToStart, absPath)
 		}
-		return NewSocket(absPath, llp)
+		return NewSocket(pathname, absPath, llp)
 	default:
 		return nil, fmt.Errorf("don't know how to open %q", absPath)
 	}

@@ -17,6 +17,7 @@ import (
 
 // Socket provides an abstraction over unix sockets being tailed by `mtail'.
 type Socket struct {
+	name     string
 	pathname string
 	lastRead time.Time
 	sock     net.Conn
@@ -26,17 +27,21 @@ type Socket struct {
 
 // NewSocket returns a new Socket named by the given pathname.
 // `llp' is a logline Processor that receivres the bytes when read by Read().
-func NewSocket(pathname string, llp logline.Processor) (*Socket, error) {
-	glog.V(2).Infof("tailer.NewSocket(%s)", pathname)
-	c, err := net.Dial("unix", pathname)
+func NewSocket(pathname, absPath string, llp logline.Processor) (*Socket, error) {
+	glog.V(2).Infof("tailer.NewSocket(%s)", absPath)
+	c, err := net.Dial("unix", absPath)
 	if err != nil {
 		return nil, err
 	}
-	return &Socket{pathname, time.Now(), c, bytes.NewBufferString(""), llp}, nil
+	return &Socket{pathname, absPath, time.Now(), c, bytes.NewBufferString(""), llp}, nil
 }
 
 func (s *Socket) LastReadTime() time.Time {
 	return s.lastRead
+}
+
+func (s *Socket) Name() string {
+	return s.name
 }
 
 func (s *Socket) Pathname() string {
@@ -99,8 +104,8 @@ func (s *Socket) sendLine(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "Socket.sendLine")
 	defer span.End()
 	glog.Infof("Sending a line %q", s.partial.String())
-	s.llp.ProcessLogLine(ctx, logline.New(ctx, s.pathname, s.partial.String()))
-	lineCount.Add(s.pathname, 1)
+	s.llp.ProcessLogLine(ctx, logline.New(ctx, s.name, s.partial.String()))
+	lineCount.Add(s.name, 1)
 	s.partial.Reset()
 }
 
