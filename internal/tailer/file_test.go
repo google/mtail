@@ -140,17 +140,26 @@ func TestOpenSocket(t *testing.T) {
 	l, err := net.Listen("unix", logsock)
 	testutil.FatalIfErr(t, err)
 
-	f, err := NewFile(logsock, llp, false)
+	f, err := NewSocket(logsock, llp)
 	testutil.FatalIfErr(t, err)
 	go func() {
 		c, err := l.Accept()
 		testutil.FatalIfErr(t, err)
-		_, err = c.Write([]byte("adf"))
+		_, err = c.Write([]byte("adf\n"))
+		llp.Add(1)
 		testutil.FatalIfErr(t, err)
 	}()
 	err = f.Read(context.Background())
 	testutil.FatalIfErr(t, err)
-	if f.partial.String() != "adf" {
-		t.Errorf("want %q got %q", "adf", f.partial.String())
+	llp.Wait()
+	if f.partial.String() != "" {
+		t.Errorf("partial line not empty: %q", f.partial)
+	}
+	expected := []*logline.LogLine{
+		{context.TODO(), logsock, "adf"},
+	}
+	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	if diff != "" {
+		t.Errorf("result didn't match:\n%s", diff)
 	}
 }

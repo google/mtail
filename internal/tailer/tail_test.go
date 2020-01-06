@@ -377,7 +377,7 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	}
 	ta.handlesMu.RUnlock()
 	ta.handlesMu.Lock()
-	ta.handles[log1].lastRead = time.Now().Add(-time.Hour*24 + time.Minute)
+	ta.handles[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 + time.Minute)
 	ta.handlesMu.Unlock()
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
@@ -388,7 +388,7 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	}
 	ta.handlesMu.RUnlock()
 	ta.handlesMu.Lock()
-	ta.handles[log1].lastRead = time.Now().Add(-time.Hour*24 - time.Minute)
+	ta.handles[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 - time.Minute)
 	ta.handlesMu.Unlock()
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)

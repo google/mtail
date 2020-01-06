@@ -43,11 +43,11 @@ type Tailer struct {
 	ctx context.Context
 	llp logline.Processor
 
-	handlesMu sync.RWMutex     // protects `handles'
-	handles   map[string]*File // File handles for each pathname.
+	handlesMu sync.RWMutex   // protects `handles'
+	handles   map[string]Log // Log handles for each pathname.
 
 	globPatternsMu     sync.RWMutex        // protects `globPatterns'
-	globPatterns       map[string]struct{} // glob patterns to match newly created files in dir paths against
+	globPatterns       map[string]struct{} // glob patterns to match newly created logs in dir paths against
 	ignoreRegexPattern *regexp.Regexp
 
 	oneShot bool
@@ -75,7 +75,7 @@ func New(llp logline.Processor, w watcher.Watcher, options ...func(*Tailer) erro
 	t := &Tailer{
 		llp:          llp,
 		w:            w,
-		handles:      make(map[string]*File),
+		handles:      make(map[string]Log),
 		globPatterns: make(map[string]struct{}),
 	}
 	if err := t.SetOption(options...); err != nil {
@@ -95,7 +95,7 @@ func (t *Tailer) SetOption(options ...func(*Tailer) error) error {
 }
 
 // setHandle sets a file handle under it's pathname
-func (t *Tailer) setHandle(pathname string, f *File) error {
+func (t *Tailer) setHandle(pathname string, f Log) error {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to lookup abspath of %q", pathname)
@@ -107,7 +107,7 @@ func (t *Tailer) setHandle(pathname string, f *File) error {
 }
 
 // handleForPath retrives a file handle for a pathname.
-func (t *Tailer) handleForPath(pathname string) (*File, bool) {
+func (t *Tailer) handleForPath(pathname string) (Log, bool) {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		glog.V(2).Infof("Couldn't resolve path %q: %s", pathname, err)
@@ -247,7 +247,7 @@ func (t *Tailer) ProcessFileEvent(ctx context.Context, event watcher.Event) {
 }
 
 // doFollow performs the Follow on an existing file descriptor, logging any errors
-func doFollow(ctx context.Context, fd *File) {
+func doFollow(ctx context.Context, fd Log) {
 	err := fd.Follow(ctx)
 	if err != nil && err != io.EOF {
 		glog.Info(err)
@@ -270,7 +270,7 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	if err := t.watchDirname(pathname); err != nil {
 		return err
 	}
-	f, err := NewFile(pathname, t.llp, seekToStart || t.oneShot)
+	f, err := NewLog(pathname, t.llp, seekToStart || t.oneShot)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
@@ -388,7 +388,7 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	t.globPatternsMu.RLock()
 	defer t.globPatternsMu.RUnlock()
 	data := struct {
-		Handles   map[string]*File
+		Handles   map[string]Log
 		Patterns  map[string]struct{}
 		Rotations map[string]string
 		Lines     map[string]string
