@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/user"
 	"path"
@@ -27,7 +28,7 @@ func TestReadPartial(t *testing.T) {
 	llp := NewStubProcessor()
 
 	fd := testutil.TestOpenFile(t, logfile)
-	f, err := NewFile(logfile, llp, false)
+	f, err := NewFile(logfile, logfile, llp, false)
 	testutil.FatalIfErr(t, err)
 
 	err = f.Read(context.Background())
@@ -93,7 +94,7 @@ func TestOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := NewFile(logfile, nil, false); err == nil || !os.IsPermission(err) {
+	if _, err := NewFile(logfile, logfile, nil, false); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
 }
@@ -118,10 +119,47 @@ func TestOpenPipe(t *testing.T) {
 
 	p.WriteString("1\n")
 	llp.Add(1)
-	f, err := NewFile(logpipe, llp, false)
+	f, err := NewFile(logpipe, logpipe, llp, false)
 	testutil.FatalIfErr(t, err)
 	err = f.Read(context.Background())
 	if err != io.EOF {
 		testutil.FatalIfErr(t, err)
+	}
+}
+
+func TestOpenSocket(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+
+	llp := NewStubProcessor()
+
+	logsock := filepath.Join(tmpDir, "sock")
+	l, err := net.Listen("unix", logsock)
+	testutil.FatalIfErr(t, err)
+
+	f, err := NewSocket(logsock, logsock, llp)
+	testutil.FatalIfErr(t, err)
+	go func() {
+		c, err := l.Accept()
+		testutil.FatalIfErr(t, err)
+		_, err = c.Write([]byte("adf\n"))
+		llp.Add(1)
+		testutil.FatalIfErr(t, err)
+	}()
+	err = f.Read(context.Background())
+	testutil.FatalIfErr(t, err)
+	llp.Wait()
+	if f.partial.String() != "" {
+		t.Errorf("partial line not empty: %q", f.partial)
+	}
+	expected := []*logline.LogLine{
+		{context.TODO(), logsock, "adf"},
+	}
+	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	if diff != "" {
+		t.Errorf("result didn't match:\n%s", diff)
 	}
 }
