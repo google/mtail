@@ -87,3 +87,9 @@ Move the non-program examples to the vm integration test.
 Why is strings.Builder slower than bytes.Buffer when the latter's docstring recommends the former?
 
 file-test.go relies on the ReadDeadline timeouts in file.go and socket.go.  Remove to make tests faster.
+
+minimisation:
+./vm-fuzzer -minimise_crash=1 -runs=10000 example
+
+make a fuzzer locally with clang and libfuzzer:
+make vm-fuzzer CXX=clang CXXFLAGS=-fsanitize=fuzzer,address LIB_FUZZING_ENGINE=
