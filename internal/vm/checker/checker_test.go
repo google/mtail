@@ -199,6 +199,12 @@ del $0
 	{"recursive pattern fragment",
 		`const P//+P`,
 		[]string{"recursive pattern fragment:1:11: Can't evaluate pattern fragment `P' here.", "\tTry defining it earlier in the program."}},
+
+	{"delete a histogram",
+		`histogram#
+m del#
+m`,
+		[]string{"delete a histogram:3:2: Cannot delete this.", "\tTry deleting an index from this dimensioned metric."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
