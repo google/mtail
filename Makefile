@@ -3,7 +3,7 @@
 
 export GO111MODULE ?= auto
 # Build these.
-TARGETS = mtail mgen mdot
+TARGETS = mtail mgen mdot mfmt
 
 all: $(TARGETS)
 

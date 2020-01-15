@@ -37,3 +37,4 @@ workdir/*
 /SEED
 /vm-fuzzer_seed_corpus.zip
 /crash-*
+/mfmt
