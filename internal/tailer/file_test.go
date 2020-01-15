@@ -144,11 +144,10 @@ func TestOpenSocket(t *testing.T) {
 	l, err := net.DialUnix("unixgram", nil, &net.UnixAddr{logsock, "unixgram"})
 	testutil.FatalIfErr(t, err)
 
-	go func() {
-		_, err = l.Write([]byte("adf\n"))
-		llp.Add(1)
-		testutil.FatalIfErr(t, err)
-	}()
+	_, err = l.Write([]byte("adf\n"))
+	testutil.FatalIfErr(t, err)
+	llp.Add(1)
+
 	err = f.Read(context.Background())
 	testutil.FatalIfErr(t, err)
 	llp.Wait()
