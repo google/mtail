@@ -239,7 +239,7 @@ fuzz: $(OUT)/vm-fuzzer_seed_corpus.zip $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 # make fuzz-min CRASH=example crash
 .PHONY: fuzz-min
 fuzz-min: $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
-	$(OUT)/vm-fuzzer -dict=$(OUT)/vm-fuzzer.dict -minimse_crash=1 -runs=10000 $(CRASH)
+	$(OUT)/vm-fuzzer -dict=$(OUT)/vm-fuzzer.dict -minimize_crash=1 -runs=10000 $(CRASH)
 
 ###
 ## dependency section
