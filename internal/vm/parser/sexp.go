@@ -197,7 +197,14 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	case *ast.StopStmt:
 		s.emit("stop")
 
-	case *ast.IndexedExpr, *ast.StmtList, *ast.ExprList, *ast.CondStmt, *ast.DecoDecl, *ast.DecoStmt, *ast.PatternExpr: // normal walk
+	case *ast.DecoDecl:
+		s.emit(fmt.Sprintf("%q", v.Name))
+		s.newline()
+	case *ast.DecoStmt:
+		s.emit(fmt.Sprintf("%q", v.Name))
+		s.newline()
+
+	case *ast.IndexedExpr, *ast.StmtList, *ast.ExprList, *ast.CondStmt, *ast.PatternExpr: // normal walk
 
 	default:
 		panic(fmt.Sprintf("sexp found undefined type %T", n))
