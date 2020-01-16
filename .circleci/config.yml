@@ -144,7 +144,7 @@ jobs:
           GO111MODULE=on go mod vendor
           make GO111MODULE=off CXX=clang CXXFLAGS=-fsanitize=fuzzer LIB_FUZZING_ENGINE= --debug ./vm-fuzzer
       - run: |
-          ./fuzzit create job --type fuzzing --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} mtail/internal-vm ./vm-fuzzer
+          ./fuzzit create job --type=fuzzing --branch=${CIRCLE_BRANCH} --revision=${CIRCLE_SHA1} mtail/internal-vm ./vm-fuzzer
 
   fuzz-regression:
     working_directory: /go/src/github.com/google/mtail
@@ -164,7 +164,7 @@ jobs:
           GO111MODULE=on go mod vendor
           make GO111MODULE=off CXX=clang CXXFLAGS=-fsanitize=fuzzer LIB_FUZZING_ENGINE= --debug ./vm-fuzzer
       - run: |
-          ./fuzzit create job --type local-regression --branch ${CIRCLE_BRANCH} --revision ${CIRCLE_SHA1} mtail/internal-vm ./vm-fuzzer
+          ./fuzzit create job --type=local-regression --branch=${CIRCLE_BRANCH} --revision=${CIRCLE_SHA1} mtail/internal-vm ./vm-fuzzer
 
 # tag-filter ensures that jobs run for version-tagged changes as well as
 # regular commits.  Use for all normal build and test and stats (coverage)
