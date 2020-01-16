@@ -236,6 +236,11 @@ fuzz: $(OUT)/vm-fuzzer_seed_corpus.zip $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 	unzip -o -d SEED $(OUT)/vm-fuzzer_seed_corpus.zip
 	$(OUT)/vm-fuzzer -dict=$(OUT)/vm-fuzzer.dict CORPUS SEED
 
+# make fuzz-min CRASH=example crash
+.PHONY: fuzz-min
+fuzz-min: $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
+	$(OUT)/vm-fuzzer -dict=$(OUT)/vm-fuzzer.dict -minimse_crash=1 -runs=10000 $(CRASH)
+
 ###
 ## dependency section
 #
