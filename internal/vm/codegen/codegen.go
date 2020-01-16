@@ -280,6 +280,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 
 	case *ast.DecoStmt:
 		// Put the current block on the stack
+		decoLen := len(c.decos)
 		c.decos = append(c.decos, n)
 		if n.Decl == nil {
 			c.errorf(n.Pos(), "No definition found for decorator %q", n.Name)
@@ -287,12 +288,16 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		}
 		// then iterate over the decorator's nodes
 		ast.Walk(c, n.Decl.Block)
-		c.decos = c.decos[:len(c.decos)-1]
+		if len(c.decos) > decoLen {
+			glog.V(1).Info("Too many blocks on stack, was there no `next' in the last one?")
+		}
 		return nil, n
 
 	case *ast.NextStmt:
 		// Visit the 'next' block on the decorated block stack
-		deco := c.decos[len(c.decos)-1]
+		top := len(c.decos) - 1
+		deco := c.decos[top]
+		c.decos = c.decos[:top]
 		ast.Walk(c, deco.Block)
 		return nil, n
 

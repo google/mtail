@@ -850,6 +850,18 @@ stop
 		{code.Stop, nil, 2},
 		{code.Setmatched, true, 1},
 	}},
+
+	{"nested decorators",
+		`def b {
+  def b {
+    next
+  }
+  @b {
+    next
+  }
+}
+@b {
+}`, nil},
 }
 
 func TestCodegen(t *testing.T) {
