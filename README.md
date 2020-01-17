@@ -8,6 +8,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/google/mtail)](https://goreportcard.com/report/github.com/google/mtail)
 [![GolangCI](https://golangci.com/badges/github.com/google/mtail.svg)](https://golangci.com/r/github.com/google/mtail)
 [![fuzzit](https://app.fuzzit.dev/badge?org_id=mtail)](https://app.fuzzit.dev/orgs/mtail/dashboard)
+[![OSS-Fuzz](https://oss-fuzz-build-logs.storage.googleapis.com/badges/mtail.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:mtail)
+
 
 `mtail` is a tool for extracting metrics from application logs to be exported
 into a timeseries database or timeseries calculator for alerting and
