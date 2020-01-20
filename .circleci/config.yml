@@ -28,11 +28,10 @@ common-build: &common-build
     - store_artifacts:
         path: test-results
 
-# go* names anchors which define the Go versions to build with, merging the
-# common-build alias above.
-go1_12: &go1_12
+# Used for setting up the build matrix.
+go_latest: &go_latest
   <<: *common-build
-  executor: go
+  executor: go_latest
 
 # concurrency* names anchors which define the the concurrency level to run
 # tests with.
@@ -51,20 +50,20 @@ version: 2.1
 orbs:
   go: circleci/go@0.2.0
 executors:
-  go:
+  go_latest:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
   fuzzit:
     docker:
       - image: gcr.io/fuzzit-public/buster-golang12:2dc7875
 jobs:
   # The main build steps are the crossproduct of concurrency and go versions.
-  build-go1_12-4:
-    <<: [*go1_12, *concurrency_4]
-  build-go1_12-2:
-    <<: [*go1_12, *concurrency_2]
-  build-go1_12-1:
-    <<: [*go1_12, *concurrency_1]
+  build-go_latest-4:
+    <<: [*go_latest, *concurrency_4]
+  build-go_latest-2:
+    <<: [*go_latest, *concurrency_2]
+  build-go_latest-1:
+    <<: [*go_latest, *concurrency_1]
 
   # Coverage collects all the coverage reports from each build and merges them,
   # before sending off to Coveralls.
@@ -72,7 +71,7 @@ jobs:
     working_directory: /go/src/github.com/google/mtail
     environment:
       COVERALLS_TOKEN: AQTCw3bl6FDphbQcMMkgVZBIunz5r3H8b
-    executor: go
+    executor: go_latest
     steps:
       - checkout
       - attach_workspace:
@@ -97,7 +96,7 @@ jobs:
 
   container:
     working_directory: /go/src/github.com/google/mtail
-    executor: go
+    executor: go_latest
     steps:
       - checkout
       - go/load-cache:
@@ -108,7 +107,7 @@ jobs:
 
   delivery:
     working_directory: /go/src/github.com/google/mtail
-    executor: go
+    executor: go_latest
     steps:
       - checkout
       - attach_workspace:
@@ -193,26 +192,26 @@ workflows:
   version: 2
   build_and_deliver:
     jobs:
-      - build-go1_12-4:
+      - build-go_latest-4:
           <<: *tag-filter
-      - build-go1_12-2:
-          <<: *tag-filter
-          requires:
-            - build-go1_12-4
-      - build-go1_12-1:
+      - build-go_latest-2:
           <<: *tag-filter
           requires:
-            - build-go1_12-4
+            - build-go_latest-4
+      - build-go_latest-1:
+          <<: *tag-filter
+          requires:
+            - build-go_latest-4
       - coverage:
           <<: *tag-filter
           requires:
-            - build-go1_12-4
-            - build-go1_12-2
-            - build-go1_12-1
+            - build-go_latest-4
+            - build-go_latest-2
+            - build-go_latest-1
       - fuzz-regression:
           <<: *tag-filter
           requires:
-            - build-go1_12-4
+            - build-go_latest-4
       - fuzzing:
           <<: *tag-filter
           filters:
@@ -220,7 +219,7 @@ workflows:
               # pull requests don't have access to the Fuzzit API key.
               ignore: /pull\/.*/
           requires:
-            - build-go1_12-4
+            - build-go_latest-4
       - container:
           <<: *tag-and-branch-filter
           requires:
