@@ -38,3 +38,4 @@ workdir/*
 /vm-fuzzer_seed_corpus.zip
 /crash-*
 /mfmt
+/tmpconfig.yml
