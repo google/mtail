@@ -85,9 +85,13 @@ jobs:
             ls -lR /tmp/workspace
             go get github.com/sozorogami/gover
             gover /tmp/workspace coverprofile
+            make --debug coverage.html
             make upload_to_coveralls
       - store_artifacts:
           path: coverprofile
+          destination: coverage
+      - store_artifacts:
+          path: coverage.html
           destination: coverage
 
   container:
