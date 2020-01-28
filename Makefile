@@ -120,7 +120,7 @@ endif
 # MAKEDEPEND rule generates a list of dependencies for the next make run -- the
 # first time the rule executes because the target doesn't exist, subsequent
 # runs can read the dependencies and update iff they change.
-$(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d | .dep-stamp
+$(TARGETS): %: print-version cmd/%/main.go $(DEPDIR)/%.d | .dep-stamp
 	$(MAKEDEPEND)
 	go build -ldflags "$(GO_LDFLAGS)" -o $@ $<
 
@@ -133,6 +133,13 @@ internal/mtail/logo.ico: logo.png
 internal/mtail/logo.ico.go: | internal/mtail/logo.ico $(TOGO)
 	$(TOGO) -pkg mtail -name logoFavicon -input internal/mtail/logo.ico
 
+
+###
+## Emit the current toolchain version at the start of every goal, if that goal depends on this.
+#
+.PHONY: print-version
+print-version:
+	@go version
 
 ###
 ## Install rules
@@ -152,39 +159,39 @@ GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 #GOX_OSARCH := ""
 
 .PHONY: crossbuild
-crossbuild: $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp
+crossbuild: print-version $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp
 	mkdir -p build
 	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags "$(GO_LDFLAGS)" ./cmd/mtail
 
 .PHONY: test check
-check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
+check test: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
 	go test -timeout 10s ./...
 
 .PHONY: testrace
-testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
+testrace: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
 	go test -timeout ${timeout} -race -v -tags=integration ./...
 
 .PHONY: smoke
-smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
+smoke: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -timeout 1s -test.short ./...
 
 .PHONY: bench
-bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
+bench: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -tags=integration -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
 
 .PHONY: bench_cpu
-bench_cpu: | .dep-stamp
+bench_cpu: print-version | .dep-stamp
 	go test -tags=integration -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
 .PHONY: bench_mem
-bench_mem: | .dep-stamp
+bench_mem: print-version | .dep-stamp
 	go test -tags=integration -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -memprofile=mem.out internal/mtail/examples_integration_test.go
 
 .PHONY: recbench
-recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
+recbench: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: regtest
-regtest: | .dep-stamp
+regtest: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
 	go test -v -tags=integration -timeout=${timeout} ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
@@ -234,7 +241,7 @@ $(OUT)/vm-fuzzer_seed_corpus.zip: $(wildcard examples/*.mtail)
 fuzz: $(OUT)/vm-fuzzer_seed_corpus.zip $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 	mkdir -p CORPUS SEED
 	unzip -o -d SEED $(OUT)/vm-fuzzer_seed_corpus.zip
-	$(OUT)/vm-fuzzer -dict=$(OUT)/vm-fuzzer.dict CORPUS SEED
+	$(OUT)/vm-fuzzer -dict=$(OUT)/vm-fuzzer.dict CORPUS SEE
 
 # make fuzz-min CRASH=example crash
 .PHONY: fuzz-min
@@ -246,7 +253,7 @@ fuzz-min: $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 #
 .PHONY: install_deps
 install_deps: .dep-stamp
-.dep-stamp: $(GOGENFILES)
+.dep-stamp: print-version $(GOGENFILES)
 	@echo "Install all dependencies, ensuring they're updated"
 ifeq ($(GO111MODULE),on)
 	go get $(GOGETFLAGS) -t ./...
@@ -264,10 +271,10 @@ endif
 
 coverage: coverprofile
 
-coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
+coverprofile: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
 	go test -v -covermode=count -coverprofile=$@ -tags=integration -timeout=${timeout} $(PACKAGES)
 
-coverage.html: coverprofile
+coverage.html: print-version coverprofile
 	go tool cover -html=$< -o $@
 
 covrep: coverage.html
