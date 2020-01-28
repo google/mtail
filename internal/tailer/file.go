@@ -94,6 +94,7 @@ Retry:
 	// TODO(jaq): Can we avoid the NONBLOCK open on fifos with a goroutine per file?
 	f, err := os.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
 	if err != nil {
+		glog.V(2).Infof("Open failed with %v", err)
 		logErrors.Add(pathname, 1)
 		if shouldRetry() {
 			retries--
@@ -103,7 +104,7 @@ Retry:
 		}
 	}
 	if err != nil {
-		glog.Infof("open failed all retries")
+		glog.Infof("open failed all retries, last error was %v", err)
 		return nil, err
 	}
 	glog.V(2).Infof("open succeeded %s", pathname)
