@@ -82,11 +82,14 @@ jobs:
       - run:
           name: Generate coverage
           command: |
+            set +e
             ls -lR /tmp/workspace
             go get github.com/sozorogami/gover
             gover /tmp/workspace coverprofile
             make --debug coverage.html
             make upload_to_coveralls
+            # allow this to fail and not upset the build
+            true
       - store_artifacts:
           path: coverprofile
           destination: coverage
