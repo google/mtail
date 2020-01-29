@@ -48,11 +48,13 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	case *ast.StmtList:
 		n.Scope = symbol.NewScope(c.scope)
 		c.scope = n.Scope
+		glog.V(2).Infof("Created new scope %v in stmtlist", n.Scope)
 		return c, n
 
 	case *ast.CondStmt:
 		n.Scope = symbol.NewScope(c.scope)
 		c.scope = n.Scope
+		glog.V(2).Infof("Created new scope %v in condstmt", n.Scope)
 		return c, n
 
 	case *ast.CaprefTerm:
@@ -67,6 +69,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 				c.errors.Add(n.Pos(), msg)
 				return nil, n
 			} else {
+				glog.V(2).Infof("Found %q as %v in scope %v", n.Name, sym, c.scope)
 				sym.Used = true
 				n.Symbol = sym
 			}
@@ -112,11 +115,11 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	case *ast.IdTerm:
 		if n.Symbol == nil {
 			if sym := c.scope.Lookup(n.Name, symbol.VarSymbol); sym != nil {
-				glog.V(2).Infof("found sym %v", sym)
+				glog.V(2).Infof("found varsymbol sym %v", sym)
 				sym.Used = true
 				n.Symbol = sym
 			} else if sym := c.scope.Lookup(n.Name, symbol.PatternSymbol); sym != nil {
-				glog.V(2).Infof("Found Sym %v", sym)
+				glog.V(2).Infof("Found patternsymbol Sym %v", sym)
 				sym.Used = true
 				n.Symbol = sym
 			} else {
@@ -651,6 +654,7 @@ func (c *checker) checkRegex(pattern string, n ast.Node) {
 					// No return, let this loop collect all errors
 				}
 			}
+			glog.V(2).Infof("Added capref %v to scope %v", sym, c.scope)
 		}
 	} else {
 		c.errors.Add(n.Pos(), err.Error())

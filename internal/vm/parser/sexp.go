@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/vm/ast"
+	"github.com/google/mtail/internal/vm/symbol"
 )
 
 // Sexp is for converting program syntax trees into typed s-expression for printing
@@ -200,11 +201,19 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	case *ast.DecoDecl:
 		s.emit(fmt.Sprintf("%q", v.Name))
 		s.newline()
+		s.emitScope(v.Scope)
+
 	case *ast.DecoStmt:
 		s.emit(fmt.Sprintf("%q", v.Name))
 		s.newline()
 
-	case *ast.IndexedExpr, *ast.StmtList, *ast.ExprList, *ast.CondStmt, *ast.PatternExpr: // normal walk
+	case *ast.StmtList:
+		s.emitScope(v.Scope)
+
+	case *ast.CondStmt:
+		s.emitScope(v.Scope)
+
+	case *ast.IndexedExpr, *ast.ExprList, *ast.PatternExpr: // normal walk
 
 	default:
 		panic(fmt.Sprintf("sexp found undefined type %T", n))
@@ -221,6 +230,14 @@ func (s *Sexp) VisitAfter(node ast.Node) ast.Node {
 	s.emit(")")
 	s.newline()
 	return node
+}
+
+func (s *Sexp) emitScope(scope *symbol.Scope) {
+	s.emit(fmt.Sprintf("Scope: %s", scope))
+	if scope != nil {
+		s.emit(fmt.Sprintf("%s", scope.Symbols))
+	}
+	s.newline()
 }
 
 // Dump begins the dumping of the syntax tree, returning the s-expression as a single string
