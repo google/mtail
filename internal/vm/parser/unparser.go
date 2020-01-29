@@ -78,6 +78,7 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		if v.Else != nil {
 			u.outdent()
 			u.emit("} else {")
+			u.newline()
 			u.indent()
 			ast.Walk(u, v.Else)
 		}
