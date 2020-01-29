@@ -253,7 +253,7 @@ fuzz-min: $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 #
 .PHONY: install_deps
 install_deps: .dep-stamp
-.dep-stamp: $(GOGENFILES) print-version
+.dep-stamp: $(GOGENFILES) | print-version
 	@echo "Install all dependencies, ensuring they're updated"
 ifeq ($(GO111MODULE),on)
 	go get $(GOGETFLAGS) -t ./...
