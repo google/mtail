@@ -120,7 +120,7 @@ endif
 # MAKEDEPEND rule generates a list of dependencies for the next make run -- the
 # first time the rule executes because the target doesn't exist, subsequent
 # runs can read the dependencies and update iff they change.
-$(TARGETS): %: print-version cmd/%/main.go $(DEPDIR)/%.d | .dep-stamp
+$(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d print-version |.dep-stamp
 	$(MAKEDEPEND)
 	go build -ldflags "$(GO_LDFLAGS)" -o $@ $<
 
@@ -159,24 +159,24 @@ GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
 #GOX_OSARCH := ""
 
 .PHONY: crossbuild
-crossbuild: print-version $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp
+crossbuild: $(GOFILES) $(GOGENFILES) print-version | $(GOX) .dep-stamp
 	mkdir -p build
 	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags "$(GO_LDFLAGS)" ./cmd/mtail
 
 .PHONY: test check
-check test: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
+check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) print-version | $(LOGO_GO) .dep-stamp
 	go test -timeout 10s ./...
 
 .PHONY: testrace
-testrace: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
+testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) print-version | $(LOGO_GO) .dep-stamp
 	go test -timeout ${timeout} -race -v -tags=integration ./...
 
 .PHONY: smoke
-smoke: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
+smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) print-version | .dep-stamp
 	go test -timeout 1s -test.short ./...
 
 .PHONY: bench
-bench: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
+bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) print-version | .dep-stamp
 	go test -tags=integration -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
 
 .PHONY: bench_cpu
@@ -187,11 +187,11 @@ bench_mem: print-version | .dep-stamp
 	go test -tags=integration -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -memprofile=mem.out internal/mtail/examples_integration_test.go
 
 .PHONY: recbench
-recbench: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
+recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) print-version | .dep-stamp
 	go test -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: regtest
-regtest: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | .dep-stamp
+regtest: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) print-version | .dep-stamp
 	go test -v -tags=integration -timeout=${timeout} ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
@@ -253,7 +253,7 @@ fuzz-min: $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 #
 .PHONY: install_deps
 install_deps: .dep-stamp
-.dep-stamp: print-version $(GOGENFILES)
+.dep-stamp: $(GOGENFILES) print-version
 	@echo "Install all dependencies, ensuring they're updated"
 ifeq ($(GO111MODULE),on)
 	go get $(GOGETFLAGS) -t ./...
@@ -271,10 +271,10 @@ endif
 
 coverage: coverprofile
 
-coverprofile: print-version $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(LOGO_GO) .dep-stamp
+coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) print-version | $(LOGO_GO) .dep-stamp
 	go test -v -covermode=count -coverprofile=$@ -tags=integration -timeout=${timeout} $(PACKAGES)
 
-coverage.html: print-version coverprofile
+coverage.html: coverprofile print-version
 	go tool cover -html=$< -o $@
 
 covrep: coverage.html
