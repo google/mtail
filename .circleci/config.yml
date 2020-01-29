@@ -7,7 +7,6 @@ references:
     working_directory: /go/src/github.com/google/mtail
     executor: go
     steps:
-      - run: ls -al /tmp/_circleci_local_build_repo
       - checkout
       - go/load-cache:
           key: v1
