@@ -239,7 +239,9 @@ func (t *Tailer) ProcessFileEvent(ctx context.Context, event watcher.Event) {
 		t.handleCreateGlob(ctx, event.Pathname)
 		fd, ok = t.handleForPath(event.Pathname)
 		if !ok {
-			glog.Warningf("Internal error finding file handle for %q after create", event.Pathname)
+			// This usually happens when a non-watched file in the same directory as a watched file gets updated.
+			// TODO(jaq): add a unit test for this.
+			glog.V(2).Infof("Internal error finding file handle for %q after create", event.Pathname)
 			return
 		}
 	}
