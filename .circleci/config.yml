@@ -1,49 +1,72 @@
 ---
-# common-build names an anchor which contains all the reusable build
-# instructions.
-common-build: &common-build
-  working_directory: /go/src/github.com/google/mtail
-  executor: go
-  steps:
-    - checkout
-    - go/load-cache:
-        key: v1
-    - run: make --debug install_deps
-    - run: make --debug smoke
-    - run: mkdir -p test-results
-    - run: mkdir -p workspace
-    - run: go get gotest.tools/gotestsum
-    - run:
-        name: Run tests and coverage with race detector
-        command: gotestsum --junitfile test-results/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=20m  ./...
-        no_output_timeout: 20m
-    - go/save-cache:
-        key: v1
-    - persist_to_workspace:
-        root: workspace
-        paths:
-          - "*.coverprofile"
-    - store_test_results:
-        path: test-results
-    - store_artifacts:
-        path: test-results
+# A collection of anchors for reusable snippets.
+references:
+  # common-build names an anchor which contains all the reusable build
+  # instructions.
+  common-build: &common-build
+    working_directory: /go/src/github.com/google/mtail
+    executor: go
+    steps:
+      - run: ls -al /tmp/_circleci_local_build_repo
+      - checkout
+      - go/load-cache:
+          key: v1
+      - run: make --debug install_deps
+      - run: make --debug smoke
+      - run: mkdir -p test-results
+      - run: mkdir -p workspace
+      - run: go get gotest.tools/gotestsum
+      - run:
+          name: Run tests and coverage with race detector
+          command: gotestsum --junitfile test-results/test-output.xml -- -race -coverprofile=workspace/${CIRCLE_JOB}.coverprofile --covermode=atomic -tags=integration -v -timeout=20m  ./...
+          no_output_timeout: 20m
+      - go/save-cache:
+          key: v1
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - "*.coverprofile"
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
 
-# Used for setting up the build matrix.
-go_latest: &go_latest
-  <<: *common-build
-  executor: go_latest
+  # Used for setting up the build matrix.
+  go_latest: &go_latest
+    <<: *common-build
+    executor: go_latest
 
-# concurrency* names anchors which define the the concurrency level to run
-# tests with.
-concurrency_4: &concurrency_4
-  environment:
-    GOMAXPROCS: 4
-concurrency_2: &concurrency_2
-  environment:
-    GOMAXPROCS: 2
-concurrency_1: &concurrency_1
-  environment:
-    GOMAXPROCS: 1
+  # concurrency* names anchors which define the the concurrency level to run
+  # tests with.
+  concurrency_4: &concurrency_4
+    environment:
+      GOMAXPROCS: 4
+  concurrency_2: &concurrency_2
+    environment:
+      GOMAXPROCS: 2
+  concurrency_1: &concurrency_1
+    environment:
+      GOMAXPROCS: 1
+
+  # tag-filter ensures that jobs run for version-tagged changes as well as
+  # regular commits.  Use for all normal build and test and stats (coverage)
+  # jobs.
+  tag-filter: &tag-filter
+    filters:
+      tags:
+        only: /^v.*/
+
+  # tag-and-branch-filter ensures that jobs run only for *only* version-tagged
+  # changes; excluding all branches to avoid triggering on all commits. Use for
+  # all release jobs.
+  tag-and-branch-filter: &tag-and-branch-filter
+    filters:
+      tags:
+        only: /^v.*/
+      # Explicitly disable all branches, otherwise we match on every
+      # commit.
+      branches:
+        ignore: /.*/
 
 # The main circle-ci configuration.
 version: 2.1
@@ -167,26 +190,6 @@ jobs:
           make GO111MODULE=off CXX=clang CXXFLAGS=-fsanitize=fuzzer LIB_FUZZING_ENGINE= --debug ./vm-fuzzer
       - run: |
           ./fuzzit create job --type=local-regression --branch=${CIRCLE_BRANCH} --revision=${CIRCLE_SHA1} mtail/internal-vm ./vm-fuzzer
-
-# tag-filter ensures that jobs run for version-tagged changes as well as
-# regular commits.  Use for all normal build and test and stats (coverage)
-# jobs.
-tag-filter: &tag-filter
-  filters:
-    tags:
-      only: /^v.*/
-
-# tag-and-branch-filter ensures that jobs run only for *only* version-tagged
-# changes; excluding all branches to avoid triggering on all commits. Use for
-# all release jobs.
-tag-and-branch-filter: &tag-and-branch-filter
-  filters:
-    tags:
-      only: /^v.*/
-    # Explicitly disable all branches, otherwise we match on every
-    # commit.
-    branches:
-      ignore: /.*/
 
 # Using workflows to sequence each of our builds in parallel, and coverage
 # depending on all of them.  These two lists need to be updated when the inputs
