@@ -67,7 +67,8 @@ type VM struct {
 	input *logline.LogLine // Log line input to this round of execution.
 
 	terminate bool // Flag to stop the VM on this line of input.
-	abort     bool // Flag to abort the VM.
+
+	HardCrash bool // User settable flag to make the VM crash instead of recover on panic.
 
 	runtimeErrorMu sync.RWMutex //protects runtimeError
 	runtimeError   string       // records the last runtime error from errorf()
@@ -305,17 +306,19 @@ func (v *VM) ParseTime(layout, value string) (tm time.Time) {
 // execute performs an instruction cycle in the VM. acting on the instruction
 // i in thread t.
 func (v *VM) execute(t *thread, i code.Instr) {
-	defer func() {
-		if r := recover(); r != nil {
-			v.errorf("panic in thread %#v at instr %q: %s", t, i, r)
-			v.abort = true
-		}
-	}()
+	// In normal operation, recover from panics.
+	if !v.HardCrash {
+		defer func() {
+			if r := recover(); r != nil {
+				v.errorf("panic in thread %#v at instr %q: %s", t, i, r)
+				v.terminate = true
+			}
+		}()
+	}
 
 	switch i.Opcode {
 	case code.Bad:
-		v.errorf("Invalid instruction.  Aborting.")
-		v.abort = true
+		panic("Invalid instruction.  Aborting.")
 
 	case code.Stop:
 		v.terminate = true
@@ -765,7 +768,7 @@ func (v *VM) ProcessLogLine(ctx context.Context, line *logline.LogLine) {
 		i := v.prog[t.pc]
 		t.pc++
 		v.execute(t, i)
-		if v.terminate || v.abort {
+		if v.terminate {
 			span1.AddAttributes(trace.BoolAttribute("vm.terminated", true))
 			// Terminate only stops this invocation on this line of input; reset the terminate flag.
 			v.terminate = false
