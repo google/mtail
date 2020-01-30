@@ -4,6 +4,8 @@ go 1.13
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.0
+	github.com/dvyukov/go-fuzz v0.0.0-20191206100749-a378175e205c // indirect
+	github.com/flazz/togo v0.0.0-20170320145504-babdbf21cff0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
@@ -15,6 +17,7 @@ require (
 	go.opencensus.io v0.22.2
 	golang.org/x/net v0.0.0-20191204025024-5ee1b9f4859a // indirect
 	golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9
+	golang.org/x/tools v0.0.0-20200129045341-207d3de1faaf // indirect
 	google.golang.org/api v0.15.0 // indirect
 	google.golang.org/genproto v0.0.0-20200117163144-32f20d992d24 // indirect
 	google.golang.org/grpc v1.26.0 // indirect
