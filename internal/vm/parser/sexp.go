@@ -233,10 +233,25 @@ func (s *Sexp) VisitAfter(node ast.Node) ast.Node {
 }
 
 func (s *Sexp) emitScope(scope *symbol.Scope) {
-	s.emit(fmt.Sprintf("Scope: %s", scope))
+	s.emit(fmt.Sprintf("Scope: %p (", scope))
+	s.newline()
 	if scope != nil {
-		s.emit(fmt.Sprintf("%s", scope.Symbols))
+		if scope.Parent != nil {
+			s.indent()
+			s.emit(fmt.Sprintf("Parent: %p", scope.Parent))
+			s.newline()
+			s.outdent()
+		}
+		if len(scope.Symbols) > 0 {
+			s.indent()
+			for name, sym := range scope.Symbols {
+				s.emit(fmt.Sprintf("%q: %v %q %v", name, sym.Kind, sym.Name, sym.Used))
+				s.newline()
+			}
+			s.outdent()
+		}
 	}
+	s.emit(")")
 	s.newline()
 }
 
