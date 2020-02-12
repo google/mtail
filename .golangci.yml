@@ -25,6 +25,8 @@ linters:
     - gochecknoinits
     # Flags are fine, as are test tables.
     - gochecknoglobals
+    # wsl doesn't explain any of its recommendations
+    - wsl
 
 issues:
   max-per-linter: 0
