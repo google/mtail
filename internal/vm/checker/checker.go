@@ -44,7 +44,6 @@ func Check(node ast.Node) (ast.Node, error) {
 // are guaranteed to exist before their use.
 func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	switch n := node.(type) {
-
 	case *ast.StmtList:
 		n.Scope = symbol.NewScope(c.scope)
 		c.scope = n.Scope
@@ -59,7 +58,8 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 
 	case *ast.CaprefTerm:
 		if n.Symbol == nil {
-			if sym := c.scope.Lookup(n.Name, symbol.CaprefSymbol); sym == nil {
+			sym := c.scope.Lookup(n.Name, symbol.CaprefSymbol)
+			if sym == nil {
 				msg := fmt.Sprintf("Capture group `$%s' was not defined by a regular expression visible to this scope.", n.Name)
 				if n.IsNamed {
 					msg = fmt.Sprintf("%s\n\tTry using `(?P<%s>...)' to name the capture group.", msg, n.Name)
@@ -68,11 +68,10 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 				}
 				c.errors.Add(n.Pos(), msg)
 				return nil, n
-			} else {
-				glog.V(2).Infof("Found %q as %v in scope %v", n.Name, sym, c.scope)
-				sym.Used = true
-				n.Symbol = sym
 			}
+			glog.V(2).Infof("Found %q as %v in scope %v", n.Name, sym, c.scope)
+			sym.Used = true
+			n.Symbol = sym
 		}
 		return c, n
 
@@ -196,7 +195,6 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	case *ast.DelStmt:
 		n.N = ast.Walk(c, n.N)
 		return c, n
-
 	}
 	return c, node
 }
@@ -233,6 +231,21 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.CondStmt:
+		condOK := false
+
+		switch cond := n.Cond.(type) {
+		case *ast.BinaryExpr, *ast.PatternExpr, *ast.PatternFragment, *ast.OtherwiseStmt:
+			condOK = true
+
+		case *ast.IndexedExpr:
+			// Usage of a Pattern const shows up as an IndexedExpr because we can't tell them apart from identifiers yet.
+			if cond.Type() == types.Pattern {
+				condOK = true
+			}
+		}
+		if !condOK {
+			c.errors.Add(n.Cond.Pos(), fmt.Sprintf("Can't interpret %s as a boolean expression here.\n\tTry using comparison operators to make the condition explicit.", n.Cond.Type()))
+		}
 		c.checkSymbolUsage()
 		// Pop the scope.
 		c.scope = n.Scope.Parent
@@ -624,7 +637,6 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			return n
 		}
 		c.errors.Add(n.Pos(), fmt.Sprintf("Cannot delete this.\n\tTry deleting from a dimensioned metric with this as an index."))
-
 	}
 
 	return node

@@ -206,6 +206,10 @@ del $0
 m del#
 m`,
 		[]string{"delete a histogram:3:2: Cannot delete this.", "\tTry deleting an index from this dimensioned metric."}},
+
+	{"int as bool",
+		`1 {}`,
+		[]string{"int as bool:1:1: Can't interpret Int as a boolean expression here.", "\tTry using comparison operators to make the condition explicit."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

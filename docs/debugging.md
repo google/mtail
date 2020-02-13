@@ -36,7 +36,7 @@ Walking backwards from state 0 (`$start`), we can get a list of nonterminal name
 Build the fuzzer locally with clang and libfuzzer:
 
 ```
-make vm-fuzzer CXX=clang CXXFLAGS=-fsanitize=fuzzer,address LIB_FUZZING_ENGINE=
+make vm-fuzzer fuzz CXX=clang CXXFLAGS=-fsanitize=fuzzer,address LIB_FUZZING_ENGINE=
 ```
 
 Then we can run the fuzzer with our example crash; make sure it has no weird characters because the upstream fuzz executor doesn't shell-escape arguments.
@@ -68,3 +68,9 @@ Once we have the smallest program we can add it to the crash corpus in [`interna
 
 Or, variants of the program can be added to the various `*Invalid` tests in parts of the `vm` module, e.g. [`parser_test.go`](../internal/vm/parser/parser_test.go) or [`checker_test.go`](../internal/vm/checker/checker_test.go) depending on where in the compiler the defect is occuring.
 
+If the crash is in `vm.go` then we can dump the program to see what AST and types, and bytecode it generates.
+
+```
+make mtail
+./mtail --logtostderr --dump_ast_types --dump_bytecode --mtailDebug=3 --compile_only --progs crash.mtail
+```
