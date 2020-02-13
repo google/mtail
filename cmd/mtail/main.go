@@ -98,7 +98,7 @@ func main() {
 	flag.Parse()
 	if *version {
 		fmt.Println(buildInfo.String())
-		os.Exit(1)
+		os.Exit(0)
 	}
 	glog.Info(buildInfo.String())
 	glog.Infof("Commandline: %q", os.Args)
