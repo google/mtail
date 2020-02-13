@@ -410,12 +410,12 @@ var parserInvalidPrograms = []parserInvalidProgram{
 		`// {
 	foo++[$1]++
 	}`,
-		[]string{"index of non-terminal 1:2:7: syntax error: unexpected LSQUARE, expecting NL"}},
+		[]string{"index of non-terminal 1:2:7: syntax error: unexpected indexing of an expression"}},
 	{"index of non-terminal 2",
 		`// {
 	0[$1]++
 	}`,
-		[]string{"index of non-terminal 2:2:3: syntax error: unexpected LSQUARE, expecting NL"}},
+		[]string{"index of non-terminal 2:2:3: syntax error: unexpected indexing of an expression"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
