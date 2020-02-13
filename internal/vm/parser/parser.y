@@ -82,6 +82,7 @@ import (
 %error stmt_list stmt conditional_statement logical_expr compound_statement ELSE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
 %error stmt_list stmt conditional_statement OTHERWISE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
 %error stmt_list stmt conditional_statement logical_expr compound_statement conditional_statement logical_expr LSQUARE : "unexpected indexing of an expression"
+%error stmt_list stmt conditional_statement logical_expr NL : "statement with no effect, missing an assignment?"
 %%
 
 start
@@ -173,14 +174,12 @@ compound_statement
 expr
   : assign_expr
   { $$ = $1 }
+  | postfix_expr
+  { $$ = $1 }
   ;
 
 assign_expr
-  : logical_expr
-  {
-    $$ = $1
-  }
-  | unary_expr ASSIGN opt_nl logical_expr
+  : unary_expr ASSIGN opt_nl logical_expr
   {
     $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
@@ -394,7 +393,7 @@ primary_expr
   {
     $$ = &ast.StringLit{tokenpos(mtaillex), $1}
   }
-  | LPAREN expr RPAREN
+  | LPAREN logical_expr RPAREN
   {
     $$ = $2
   }

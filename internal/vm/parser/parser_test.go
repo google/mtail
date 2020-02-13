@@ -136,14 +136,14 @@ var parserTests = []struct {
 	{"additive",
 		"counter time_total\n" +
 			"/(?P<foo>.*)/ {\n" +
-			"  timestamp() - time_total\n" +
+			" time_total = timestamp() - time_total\n" +
 			"}\n"},
 
 	{"multiplicative",
 		"counter a\n" +
 			"counter b\n" +
-			"   /foo/ {\n   a * b\n" +
-			"      a ** b\n" +
+			"   /foo/ {\n   a = a * b\n" +
+			"      a = a ** b\n" +
 			"}\n"},
 
 	{"additive and mem storage",
@@ -211,13 +211,14 @@ var parserTests = []struct {
 		`const IP /\d+(\.\d+){3}/`},
 
 	{"bitwise",
-		`/foo(\d)/ {
-  $1 & 7
-  $1 | 8
-  $1 << 4
-  $1 >> 20
-  $1 ^ 15
-  ~ 1
+		`gauge a
+/foo(\d)/ {
+  a = $1 & 7
+  a = $1 | 8
+  a = $1 << 4
+  a = $1 >> 20
+  a = $1 ^ 15
+  a = ~ 1
 }`},
 
 	{"logical",
@@ -251,8 +252,9 @@ foo = 3.14
 		"/foo/ { / bar/ {}  } else { /quux/ {} else {} }"},
 
 	{"mod operator",
-		`/foo/ {
-  3 % 1
+		`gauge a
+/foo/ {
+  a = 3 % 1
 }`},
 
 	{"delete",
@@ -416,6 +418,17 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	0[$1]++
 	}`,
 		[]string{"index of non-terminal 2:2:3: syntax error: unexpected indexing of an expression"}},
+
+	{"statement with no effect",
+		`/(\d)foo/ {
+ timestamp() - $1
+}`, []string{"statement with no effect:3:18: syntax error: statement with no effect, missing an assignment?"}},
+
+	// 	{"pattern without block",
+	// 		`/(?P<a>.)/
+	// /(?P<b>.)/ {}
+	// `,
+	// 		[]string{"pattern without block:2:11: syntax error: pattern has no action block following it, is it missing a `+' to concatenate with the next line?"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
