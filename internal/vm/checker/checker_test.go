@@ -192,7 +192,8 @@ del $0
 
 	{"pattern fragment plus anything",
 		`gauge e
-// + e
+// + e {
+}
 `,
 		[]string{"pattern fragment plus anything:2:6: Can't append variable `e' to this pattern.", "\tTry using a `const'-defined pattern fragment."}},
 
