@@ -422,13 +422,13 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	{"statement with no effect",
 		`/(\d)foo/ {
  timestamp() - $1
-}`, []string{"statement with no effect:3:18: syntax error: statement with no effect, missing an assignment?"}},
+}`, []string{"statement with no effect:3:18: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"}},
 
-	// 	{"pattern without block",
-	// 		`/(?P<a>.)/
-	// /(?P<b>.)/ {}
-	// `,
-	// 		[]string{"pattern without block:2:11: syntax error: pattern has no action block following it, is it missing a `+' to concatenate with the next line?"}},
+	{"pattern without block",
+		`/(?P<a>.)/
+	/(?P<b>.)/ {}
+	`,
+		[]string{"pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {

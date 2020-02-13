@@ -82,7 +82,8 @@ import (
 %error stmt_list stmt conditional_statement logical_expr compound_statement ELSE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
 %error stmt_list stmt conditional_statement OTHERWISE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
 %error stmt_list stmt conditional_statement logical_expr compound_statement conditional_statement logical_expr LSQUARE : "unexpected indexing of an expression"
-%error stmt_list stmt conditional_statement logical_expr NL : "statement with no effect, missing an assignment?"
+%error stmt_list stmt conditional_statement pattern_expr NL : "statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"
+
 %%
 
 start
