@@ -275,42 +275,57 @@ var testCodeGenPrograms = []struct {
 			{code.Setmatched, false, 0},
 			{code.Setmatched, true, 0}}},
 	{"bitwise", `
-1 & 7 ^ 15 | 8
-~ 16 << 2
-1 >> 20
+gauge a
+
+a = 1 & 7 ^ 15 | 8
+a = ~ 16 << 2
+a = 1 >> 20
 `,
 		[]code.Instr{
-			{code.Push, int64(1), 1},
-			{code.Push, int64(7), 1},
-			{code.And, nil, 1},
-			{code.Push, int64(15), 1},
-			{code.Xor, nil, 1},
-			{code.Push, int64(8), 1},
-			{code.Or, nil, 1},
-			{code.Push, int64(16), 2},
-			{code.Neg, nil, 2},
-			{code.Push, int64(2), 2},
-			{code.Shl, nil, 2},
+			{code.Mload, 0, 3},
+			{code.Dload, 0, 3},
 			{code.Push, int64(1), 3},
-			{code.Push, int64(20), 3},
-			{code.Shr, nil, 3}}},
+			{code.Push, int64(7), 3},
+			{code.And, nil, 3},
+			{code.Push, int64(15), 3},
+			{code.Xor, nil, 3},
+			{code.Push, int64(8), 3},
+			{code.Or, nil, 3},
+			{code.Iset, nil, 3},
+			{code.Mload, 0, 4},
+			{code.Dload, 0, 4},
+			{code.Push, int64(16), 4},
+			{code.Neg, nil, 4},
+			{code.Push, int64(2), 4},
+			{code.Shl, nil, 4},
+			{code.Iset, nil, 4},
+			{code.Mload, 0, 5},
+			{code.Dload, 0, 5},
+			{code.Push, int64(1), 5},
+			{code.Push, int64(20), 5},
+			{code.Shr, nil, 5},
+			{code.Iset, nil, 5}}},
 	{"pow", `
+gauge a
 /(\d+) (\d+)/ {
-$1 ** $2
+  a = $1 ** $2
 }
 `,
 		[]code.Instr{
-			{code.Match, 0, 1},
-			{code.Jnm, 11, 1},
-			{code.Setmatched, false, 1},
-			{code.Push, 0, 2},
-			{code.Capref, 1, 2},
-			{code.S2i, nil, 2},
-			{code.Push, 0, 2},
-			{code.Capref, 2, 2},
-			{code.S2i, nil, 2},
-			{code.Ipow, nil, 2},
-			{code.Setmatched, true, 1}}},
+			{code.Match, 0, 2},
+			{code.Jnm, 14, 2},
+			{code.Setmatched, false, 2},
+			{code.Mload, 0, 3},
+			{code.Dload, 0, 3},
+			{code.Push, 0, 3},
+			{code.Capref, 1, 3},
+			{code.S2i, nil, 3},
+			{code.Push, 0, 3},
+			{code.Capref, 2, 3},
+			{code.S2i, nil, 3},
+			{code.Ipow, nil, 3},
+			{code.Iset, nil, 3},
+			{code.Setmatched, true, 2}}},
 	{"indexed expr", `
 counter a by b
 a["string"]++
@@ -376,12 +391,16 @@ counter bar
 	},
 	{"mod",
 		`
-3 % 1
+gauge a
+a = 3 % 1
 `,
 		[]code.Instr{
-			{code.Push, int64(3), 1},
-			{code.Push, int64(1), 1},
-			{code.Imod, nil, 1},
+			{code.Mload, 0, 2},
+			{code.Dload, 0, 2},
+			{code.Push, int64(3), 2},
+			{code.Push, int64(1), 2},
+			{code.Imod, nil, 2},
+			{code.Iset, nil, 2},
 		},
 	},
 	{"del", `

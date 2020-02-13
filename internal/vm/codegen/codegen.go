@@ -356,7 +356,6 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			// Didn't handle it, let normal walk proceed
 			return c, n
 		}
-
 	}
 
 	return c, node
