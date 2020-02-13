@@ -1,0 +1,2 @@
+gauge time/()/{time=$1
+}settime(time)

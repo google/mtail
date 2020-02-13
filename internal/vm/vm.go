@@ -511,7 +511,12 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 	case code.Settime:
 		// Pop TOS and store in time register
-		t.time = time.Unix(t.Pop().(int64), 0).UTC()
+		val := t.Pop()
+		ts, ok := val.(int64)
+		if !ok {
+			v.errorf("Failed to pop a timestamp off the stack: %v instead", v)
+		}
+		t.time = time.Unix(ts, 0).UTC()
 
 	case code.Capref:
 		// Put a capture group reference onto the stack.

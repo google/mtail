@@ -39,3 +39,4 @@ workdir/*
 /crash-*
 /mfmt
 /tmpconfig.yml
+/bug/
