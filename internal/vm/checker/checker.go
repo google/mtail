@@ -645,6 +645,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 // checkRegex is a helper method to compile and check a regular expression, and
 // to generate its capture groups as symbols.
 func (c *checker) checkRegex(pattern string, n ast.Node) {
+	plen := len(pattern)
+	if plen > 256 {
+		c.errors.Add(n.Pos(), fmt.Sprintf("Exceeded maximum regular expression pattern length of 256 bytes with %d.\n\tExcessively long patterns are likely to cause compilation and runtime performance problems.", plen))
+		return
+	}
 	if reAst, err := syntax.Parse(pattern, syntax.Perl); err == nil {
 		// We reserve the names of the capturing groups as declarations
 		// of those symbols, so that future CAPREF tokens parsed can

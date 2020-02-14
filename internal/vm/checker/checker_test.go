@@ -210,6 +210,10 @@ m`,
 	{"int as bool",
 		`1 {}`,
 		[]string{"int as bool:1:1: Can't interpret Int as a boolean expression here.", "\tTry using comparison operators to make the condition explicit."}},
+
+	{"regexp too long",
+		"/" + strings.Repeat("c", 257) + "/ {}",
+		[]string{"regexp too long:1:1-259: Exceeded maximum regular expression pattern length of 256 bytes with 257.", "\tExcessively long patterns are likely to cause compilation and runtime performance problems."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
