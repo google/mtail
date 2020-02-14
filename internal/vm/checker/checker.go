@@ -602,7 +602,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 					n.SetType(types.Error)
 					return n
 				}
+			} else {
+				c.errors.Add(n.Pos(), "Expecting a format string for argument 2 of strptime().")
+				return n
 			}
+
 		}
 		return n
 

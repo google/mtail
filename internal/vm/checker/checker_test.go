@@ -214,6 +214,11 @@ m`,
 	{"regexp too long",
 		"/" + strings.Repeat("c", 257) + "/ {}",
 		[]string{"regexp too long:1:1-259: Exceeded maximum regular expression pattern length of 256 bytes with 257.", "\tExcessively long patterns are likely to cause compilation and runtime performance problems."}},
+
+	{"strptime invalid args",
+		`strptime("",8)
+`,
+		[]string{"strptime invalid args:1:14: Expecting a format string for argument 2 of strptime()."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
