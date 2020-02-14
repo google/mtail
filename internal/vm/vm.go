@@ -479,7 +479,11 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 	case code.Strptime:
 		// Parse a time string into the time register
-		layout := t.Pop().(string)
+		val := t.Pop()
+		layout, ok := val.(string)
+		if !ok {
+			v.errorf("Value on stack was not a string: %T %q", val, val)
+		}
 
 		var ts string
 		switch s := t.Pop().(type) {
