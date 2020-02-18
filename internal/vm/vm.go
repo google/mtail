@@ -682,7 +682,11 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 	case code.Length:
 		// Compute the length of a string from TOS, and push result back.
-		s := t.Pop().(string)
+		val := t.Pop()
+		s, ok := val.(string)
+		if !ok {
+			v.errorf("Expecting String for param 1 of `len()`, not %v", val)
+		}
 		t.Push(len(s))
 
 	case code.S2i:
