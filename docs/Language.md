@@ -189,7 +189,7 @@ The following arithmetic operators are available in `mtail`:
 *   `^` bitwise xor
 *   `+` addition
 *   `-` subtraction
-*   `*` multiplcation
+*   `*` multiplication
 *   `/` division
 *   `<<` bitwise shift left
 *   `>>` bitwise shift right
