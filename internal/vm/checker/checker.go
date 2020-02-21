@@ -467,6 +467,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(types.Error)
 				return n
 			}
+			if !types.Equals(t, types.Int) {
+				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("Expecting an Int for %s, not %v.", parser.Kind(n.Op), t))
+				n.SetType(types.Error)
+				return n
+			}
+			glog.Infof("Return type is %v", rType)
 			n.SetType(rType)
 			switch v := n.Expr.(type) {
 			case *ast.IdTerm:
@@ -585,6 +591,10 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		n.SetType(rType)
 
 		if n.Name == "strptime" {
+			if !types.Equals(fn.Args[1], types.String) {
+				c.errors.Add(n.Args.(*ast.ExprList).Children[1].Pos(), fmt.Sprintf("Expecting a format string for argument 2 of strptime(), not %v.", fn.Args[1]))
+				return n
+			}
 			// Second argument to strptime is the format string.  If it is
 			// defined at compile time, we can verify it can be use as a format
 			// string by parsing itself.
@@ -603,10 +613,9 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 					return n
 				}
 			} else {
-				c.errors.Add(n.Pos(), "Expecting a format string for argument 2 of strptime().")
+				c.errors.Add(n.Pos(), "Internal error: exprlist child is not string literal.")
 				return n
 			}
-
 		}
 		return n
 

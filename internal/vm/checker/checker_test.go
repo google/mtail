@@ -218,7 +218,13 @@ m`,
 	{"strptime invalid args",
 		`strptime("",8)
 `,
-		[]string{"strptime invalid args:1:14: Expecting a format string for argument 2 of strptime()."}},
+		[]string{"strptime invalid args:1:13: Expecting a format string for argument 2 of strptime(), not Int."}},
+
+	{"len invalid args",
+		`text l
+l++
+`,
+		[]string{"len invalid args:2:1: Expecting an Int for INC, not String."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
