@@ -339,6 +339,16 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.Rhs = conv
 			}
 
+			if n.Op == parser.DIV || n.Op == parser.MOD {
+				if i, ok := n.Rhs.(*ast.IntLit); ok {
+					if i.I == 0 {
+						c.errors.Add(n.Pos(), "Can't divide by zero.")
+						n.SetType(types.Error)
+						return n
+					}
+				}
+			}
+
 		case parser.SHL, parser.SHR, parser.BITAND, parser.BITOR, parser.XOR, parser.NOT:
 			// bitwise
 			// O ⊢ e1 :Int, O ⊢ e2 : Int

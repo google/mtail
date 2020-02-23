@@ -225,6 +225,10 @@ m`,
 l++
 `,
 		[]string{"len invalid args:2:1: Expecting an Int for INC, not String."}},
+
+	{"mod by zero",
+		`2=9%0
+`, []string{"mod by zero:1:3-5: Can't divide by zero."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
