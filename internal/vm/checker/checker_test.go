@@ -212,8 +212,8 @@ m`,
 		[]string{"int as bool:1:1: Can't interpret Int as a boolean expression here.", "\tTry using comparison operators to make the condition explicit."}},
 
 	{"regexp too long",
-		"/" + strings.Repeat("c", 257) + "/ {}",
-		[]string{"regexp too long:1:1-259: Exceeded maximum regular expression pattern length of 256 bytes with 257.", "\tExcessively long patterns are likely to cause compilation and runtime performance problems."}},
+		"/" + strings.Repeat("c", 1025) + "/ {}",
+		[]string{"regexp too long:1:1-1027: Exceeded maximum regular expression pattern length of 1024 bytes with 1025.", "\tExcessively long patterns are likely to cause compilation and runtime performance problems."}},
 
 	{"strptime invalid args",
 		`strptime("",8)

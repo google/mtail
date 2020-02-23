@@ -18,6 +18,8 @@ import (
 	"github.com/google/mtail/internal/vm/types"
 )
 
+const kMaxRegexpLen = 1024
+
 // checker holds data for a semantic checker
 type checker struct {
 	scope *symbol.Scope // the current scope
@@ -659,8 +661,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 // to generate its capture groups as symbols.
 func (c *checker) checkRegex(pattern string, n ast.Node) {
 	plen := len(pattern)
-	if plen > 256 {
-		c.errors.Add(n.Pos(), fmt.Sprintf("Exceeded maximum regular expression pattern length of 256 bytes with %d.\n\tExcessively long patterns are likely to cause compilation and runtime performance problems.", plen))
+	if plen > kMaxRegexpLen {
+		c.errors.Add(n.Pos(), fmt.Sprintf("Exceeded maximum regular expression pattern length of %d bytes with %d.\n\tExcessively long patterns are likely to cause compilation and runtime performance problems.", kMaxRegexpLen, plen))
 		return
 	}
 	if reAst, err := syntax.Parse(pattern, syntax.Perl); err == nil {
