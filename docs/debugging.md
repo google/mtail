@@ -74,3 +74,12 @@ If the crash is in `vm.go` then we can dump the program to see what AST and type
 make mtail
 ./mtail --logtostderr --dump_ast_types --dump_bytecode --mtailDebug=3 --compile_only --progs crash.mtail
 ```
+
+
+### Fuzzer crashes, part 2
+
+Run the fuzz-repro target with the CRASH variable set, it'll do all of the above:
+
+```
+make fuzz-repro CXX=clang CXXFLAGS=-fsanitize=fuzzer,address LIB_FUZZING_ENGINE= CRASH=bug/20720.mtail
+```

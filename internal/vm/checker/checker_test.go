@@ -212,13 +212,28 @@ m`,
 		[]string{"int as bool:1:1: Can't interpret Int as a boolean expression here.", "\tTry using comparison operators to make the condition explicit."}},
 
 	{"regexp too long",
-		"/" + strings.Repeat("c", 257) + "/ {}",
-		[]string{"regexp too long:1:1-259: Exceeded maximum regular expression pattern length of 256 bytes with 257.", "\tExcessively long patterns are likely to cause compilation and runtime performance problems."}},
+		"/" + strings.Repeat("c", 1025) + "/ {}",
+		[]string{"regexp too long:1:1-1027: Exceeded maximum regular expression pattern length of 1024 bytes with 1025.", "\tExcessively long patterns are likely to cause compilation and runtime performance problems."}},
 
 	{"strptime invalid args",
 		`strptime("",8)
 `,
-		[]string{"strptime invalid args:1:14: Expecting a format string for argument 2 of strptime()."}},
+		[]string{"strptime invalid args:1:13: Expecting a format string for argument 2 of strptime(), not Int."}},
+
+	{"len invalid args",
+		`text l
+l++
+`,
+		[]string{"len invalid args:2:1: Expecting an Int for INC, not String."}},
+
+	{"mod by zero",
+		`2=9%0
+`, []string{"mod by zero:1:3-5: Can't divide by zero."}},
+
+	{"assign to rvalue",
+		`gauge l
+l++=l
+`, []string{"assign to rvalue:2:1-3: Can't assign to this expression on the left."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

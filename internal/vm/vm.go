@@ -348,6 +348,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		match, err := compare(a, b, i.Operand.(int))
 		if err != nil {
 			v.errorf("%+v", err)
+			return
 		}
 
 		t.Push(match)
@@ -356,14 +357,17 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		b, berr := t.PopInt()
 		if berr != nil {
 			v.errorf("%v", berr)
+			return
 		}
 		a, aerr := t.PopInt()
 		if aerr != nil {
 			v.errorf("%v", aerr)
+			return
 		}
 		match, err := compareInt(a, b, i.Operand.(int))
 		if err != nil {
 			v.errorf("%+v", err)
+			return
 		}
 
 		t.Push(match)
@@ -371,6 +375,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		b, berr := t.PopFloat()
 		if berr != nil {
 			v.errorf("%v", berr)
+			return
 		}
 		a, aerr := t.PopFloat()
 		if aerr != nil {
@@ -379,6 +384,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		match, err := compareFloat(a, b, i.Operand.(int))
 		if err != nil {
 			v.errorf("%+v", err)
+			return
 		}
 
 		t.Push(match)
@@ -388,6 +394,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		match, err := compareString(a, b, i.Operand.(int))
 		if err != nil {
 			v.errorf("%+v", err)
+			return
 		}
 
 		t.Push(match)
@@ -416,12 +423,14 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			delta, err = t.PopInt()
 			if err != nil {
 				v.errorf("%s", err)
+				return
 			}
 		}
 		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.IncIntBy(n, delta, t.time)
 		} else {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
+			return
 		}
 
 	case code.Dec:
@@ -433,12 +442,14 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			delta, err = t.PopInt()
 			if err != nil {
 				v.errorf("%s", err)
+				return
 			}
 		}
 		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.DecIntBy(n, delta, t.time)
 		} else {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
+			return
 		}
 
 	case code.Iset:
@@ -446,11 +457,13 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		value, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.SetInt(n, value, t.time)
 		} else {
 			v.errorf("Unexpected type to iset: %T %q", n, n)
+			return
 		}
 
 	case code.Fset:
@@ -458,11 +471,13 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		value, err := t.PopFloat()
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.SetFloat(n, value, t.time)
 		} else {
 			v.errorf("Unexpected type to fset: %T %q", n, n)
+			return
 		}
 
 	case code.Sset:
@@ -470,11 +485,13 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		value, ok := t.Pop().(string)
 		if !ok {
 			v.errorf("Value on stack was not a string: %T %q", value, value)
+			return
 		}
 		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.SetString(n, value, t.time)
 		} else {
 			v.errorf("Unexpected type to sset: %T %q", n, n)
+			return
 		}
 
 	case code.Strptime:
@@ -483,6 +500,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		layout, ok := val.(string)
 		if !ok {
 			v.errorf("Value on stack was not a string: %T %q", val, val)
+			return
 		}
 
 		var ts string
@@ -519,6 +537,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		ts, ok := val.(int64)
 		if !ok {
 			v.errorf("Failed to pop a timestamp off the stack: %v instead", v)
+			return
 		}
 		t.time = time.Unix(ts, 0).UTC()
 
@@ -541,10 +560,12 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		b, err := t.PopFloat()
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		a, err := t.PopFloat()
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		switch i.Opcode {
 		case code.Fadd:
@@ -566,10 +587,12 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		b, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		a, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		switch i.Opcode {
 		case code.Iadd:
@@ -579,9 +602,17 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		case code.Imul:
 			t.Push(a * b)
 		case code.Idiv:
+			if b == 0 {
+				v.errorf("Divide by zero %d %% %d", a, b)
+				return
+			}
 			// Integer division
 			t.Push(a / b)
 		case code.Imod:
+			if b == 0 {
+				v.errorf("Divide by zero %d %% %d", a, b)
+				return
+			}
 			t.Push(a % b)
 		case code.Ipow:
 			// TODO(jaq): replace with type coercion
@@ -602,6 +633,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		a, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		t.Push(^a)
 
@@ -631,6 +663,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		d, err := m.GetDatum(keys...)
 		if err != nil {
 			v.errorf("dload (GetDatum) failed: %s", err)
+			return
 		}
 		//fmt.Printf("Found %v\n", d)
 		t.Push(d)
@@ -639,6 +672,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		d, ok := t.Pop().(datum.Datum)
 		if !ok {
 			v.errorf("Unexpected value on stack: %q", d)
+			return
 		}
 		switch i.Opcode {
 		case code.Iget:
@@ -660,6 +694,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		err := m.RemoveDatum(keys...)
 		if err != nil {
 			v.errorf("del (RemoveDatum) failed: %s", err)
+			return
 		}
 
 	case code.Expire:
@@ -673,6 +708,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		expiry := t.Pop().(time.Duration)
 		if err := m.ExpireDatum(expiry, keys...); err != nil {
 			v.errorf("%s", err)
+			return
 		}
 
 	case code.Tolower:
@@ -682,7 +718,12 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 	case code.Length:
 		// Compute the length of a string from TOS, and push result back.
-		s := t.Pop().(string)
+		val := t.Pop()
+		s, ok := val.(string)
+		if !ok {
+			v.errorf("Expecting String for param 1 of `len()`, not %v", val)
+			return
+		}
 		t.Push(len(s))
 
 	case code.S2i:
@@ -693,12 +734,14 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			base, err = t.PopInt()
 			if err != nil {
 				v.errorf("%s", err)
+				return
 			}
 		}
 		str := t.Pop().(string)
 		i, err := strconv.ParseInt(str, int(base), 64)
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		t.Push(i)
 
@@ -707,6 +750,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		f, err := strconv.ParseFloat(str, 64)
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		t.Push(f)
 
@@ -714,6 +758,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		i, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		t.Push(float64(i))
 
@@ -721,6 +766,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		i, err := t.PopInt()
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		t.Push(fmt.Sprintf("%d", i))
 
@@ -728,6 +774,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		f, err := t.PopFloat()
 		if err != nil {
 			v.errorf("%s", err)
+			return
 		}
 		t.Push(fmt.Sprintf("%g", f))
 

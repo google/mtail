@@ -159,11 +159,11 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	case *ast.UnaryExpr:
 		switch v.Op {
 		case INC:
-			s.emit("++")
+			s.emit("increment")
 		case DEC:
-			s.emit("--")
+			s.emit("decrement")
 		case NOT:
-			s.emit("~")
+			s.emit("unary-not")
 		default:
 			s.emit(fmt.Sprintf("Unexpected op: %s", Kind(v.Op)))
 		}

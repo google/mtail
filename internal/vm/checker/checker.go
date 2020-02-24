@@ -18,6 +18,8 @@ import (
 	"github.com/google/mtail/internal/vm/types"
 )
 
+const kMaxRegexpLen = 1024
+
 // checker holds data for a semantic checker
 type checker struct {
 	scope *symbol.Scope // the current scope
@@ -337,6 +339,16 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.Rhs = conv
 			}
 
+			if n.Op == parser.DIV || n.Op == parser.MOD {
+				if i, ok := n.Rhs.(*ast.IntLit); ok {
+					if i.I == 0 {
+						c.errors.Add(n.Pos(), "Can't divide by zero.")
+						n.SetType(types.Error)
+						return n
+					}
+				}
+			}
+
 		case parser.SHL, parser.SHR, parser.BITAND, parser.BITOR, parser.XOR, parser.NOT:
 			// bitwise
 			// O ⊢ e1 :Int, O ⊢ e2 : Int
@@ -407,6 +419,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				v.Lvalue = true
 			case *ast.IndexedExpr:
 				v.Lhs.(*ast.IdTerm).Lvalue = true
+			default:
+				glog.V(2).Infof("The lhs is a %T %v", n.Lhs, n.Lhs)
+				c.errors.Add(n.Lhs.Pos(), "Can't assign to this expression on the left.")
+				n.SetType(types.Error)
+				return n
 			}
 
 		case parser.CONCAT:
@@ -467,6 +484,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(types.Error)
 				return n
 			}
+			if !types.Equals(t, types.Int) {
+				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("Expecting an Int for %s, not %v.", parser.Kind(n.Op), t))
+				n.SetType(types.Error)
+				return n
+			}
+			glog.Infof("Return type is %v", rType)
 			n.SetType(rType)
 			switch v := n.Expr.(type) {
 			case *ast.IdTerm:
@@ -585,6 +608,10 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		n.SetType(rType)
 
 		if n.Name == "strptime" {
+			if !types.Equals(fn.Args[1], types.String) {
+				c.errors.Add(n.Args.(*ast.ExprList).Children[1].Pos(), fmt.Sprintf("Expecting a format string for argument 2 of strptime(), not %v.", fn.Args[1]))
+				return n
+			}
 			// Second argument to strptime is the format string.  If it is
 			// defined at compile time, we can verify it can be use as a format
 			// string by parsing itself.
@@ -603,10 +630,9 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 					return n
 				}
 			} else {
-				c.errors.Add(n.Pos(), "Expecting a format string for argument 2 of strptime().")
+				c.errors.Add(n.Pos(), "Internal error: exprlist child is not string literal.")
 				return n
 			}
-
 		}
 		return n
 
@@ -650,8 +676,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 // to generate its capture groups as symbols.
 func (c *checker) checkRegex(pattern string, n ast.Node) {
 	plen := len(pattern)
-	if plen > 256 {
-		c.errors.Add(n.Pos(), fmt.Sprintf("Exceeded maximum regular expression pattern length of 256 bytes with %d.\n\tExcessively long patterns are likely to cause compilation and runtime performance problems.", plen))
+	if plen > kMaxRegexpLen {
+		c.errors.Add(n.Pos(), fmt.Sprintf("Exceeded maximum regular expression pattern length of %d bytes with %d.\n\tExcessively long patterns are likely to cause compilation and runtime performance problems.", kMaxRegexpLen, plen))
 		return
 	}
 	if reAst, err := syntax.Parse(pattern, syntax.Perl); err == nil {
