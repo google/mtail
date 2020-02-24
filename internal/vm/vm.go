@@ -8,6 +8,7 @@ package vm
 import (
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"math"
 	"regexp"
@@ -38,6 +39,8 @@ var (
 		Help:      "VM line processing time distribution in seconds.",
 		Buckets:   prometheus.ExponentialBuckets(0.00002, 2.0, 10),
 	}, []string{"prog"})
+
+	runtimeLogError = flag.Bool("vm_logs_runtime_errors", true, "Enables logging of runtime errors to the standard log.  Set to false to only have the errors printed to the HTTP console.")
 )
 
 type thread struct {
@@ -100,20 +103,25 @@ func (v *VM) errorf(format string, args ...interface{}) {
 		"Error occurred at instruction %d {%s, %v}, originating in %s at line %d\n",
 		v.t.pc-1, i.Opcode, i.Operand, v.name, i.SourceLine+1)
 	v.runtimeError += fmt.Sprintf("Full input text from %q was %q", v.input.Filename, v.input.Line)
-	glog.Info(v.name + ": Runtime error: " + v.runtimeError)
+	if *runtimeLogError || bool(glog.V(1)) {
+		glog.Info(v.name + ": Runtime error: " + v.runtimeError)
+
+		glog.Infof("Set logging verbosity higher (-v1 or more) to see full VM state dump.")
+	}
+	if glog.V(1) {
+		glog.Infof("VM stack:\n%s", debug.Stack())
+		glog.Infof("Dumping vm state")
+		glog.Infof("Name: %s", v.name)
+		glog.Infof("Input: %#v", v.input)
+		glog.Infof("Thread:")
+		glog.Infof(" PC %v", v.t.pc-1)
+		glog.Infof(" Matched %v", v.t.matched)
+		glog.Infof(" Matches %v", v.t.matches)
+		glog.Infof(" Timestamp %v", v.t.time)
+		glog.Infof(" Stack %v", v.t.stack)
+		glog.Infof(v.DumpByteCode(v.name))
+	}
 	v.runtimeErrorMu.Unlock()
-	glog.Infof("Set logging verbosity higher (-v1 or more) to see full VM state dump.")
-	glog.V(1).Infof("VM stack:\n%s", debug.Stack())
-	glog.V(1).Infof("Dumping vm state")
-	glog.V(1).Infof("Name: %s", v.name)
-	glog.V(1).Infof("Input: %#v", v.input)
-	glog.V(1).Infof("Thread:")
-	glog.V(1).Infof(" PC %v", v.t.pc-1)
-	glog.V(1).Infof(" Matched %v", v.t.matched)
-	glog.V(1).Infof(" Matches %v", v.t.matches)
-	glog.V(1).Infof(" Timestamp %v", v.t.time)
-	glog.V(1).Infof(" Stack %v", v.t.stack)
-	glog.V(1).Infof(v.DumpByteCode(v.name))
 	v.terminate = true
 }
 
