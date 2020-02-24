@@ -229,6 +229,11 @@ l++
 	{"mod by zero",
 		`2=9%0
 `, []string{"mod by zero:1:3-5: Can't divide by zero."}},
+
+	{"assign to rvalue",
+		`gauge l
+l++=l
+`, []string{"assign to rvalue:2:1-3: Can't assign to this expression on the left."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

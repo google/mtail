@@ -419,6 +419,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				v.Lvalue = true
 			case *ast.IndexedExpr:
 				v.Lhs.(*ast.IdTerm).Lvalue = true
+			default:
+				glog.V(2).Infof("The lhs is a %T %v", n.Lhs, n.Lhs)
+				c.errors.Add(n.Lhs.Pos(), "Can't assign to this expression on the left.")
+				n.SetType(types.Error)
+				return n
 			}
 
 		case parser.CONCAT:
