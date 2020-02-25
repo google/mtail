@@ -1,0 +1,9 @@
+container:
+  image: golang:latest
+
+test_task:
+  modules_cache:
+    fingerprint_script: cat go.sum
+    folder: $GOPATH/pkg/mod
+  build_script: make --debug install_deps all
+  test_script: make --debug install_deps smoke
