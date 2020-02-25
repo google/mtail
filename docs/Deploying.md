@@ -68,6 +68,12 @@ A stale log file is any log being watched that hasn't been read from in 24 hours
 The interval between garbage collection runs can be changed on the commandline with the `--expired_metrics_gc_interval` and `--stale_log_gc_interval` flags, which accept a time duration string compatible with the Go [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration) function.
 
 
+### Runtime error log rate
+
+If your programs deliberately fail to parse some log lines then you may end up generating lots of runtime errors which are normally logged at the standard INFO level, which can fill your disk.
+
+You can disable this with `--novm_logs_runtime_errors` or `--vm_logs_runtime_errors=false` on the commandline, and then you will only be able to see the most recent runtime error in the HTTP status console.
+
 ### Launching under Docker
 
 `mtail` can be run as a sidecar process if you expose an application container's logs with a volume.
