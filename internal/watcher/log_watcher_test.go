@@ -8,7 +8,6 @@ import (
 	"expvar"
 	"fmt"
 	"os"
-	"os/user"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -204,13 +203,9 @@ func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping log watcher test in short mode")
 	}
-	u, err := user.Current()
-	if err != nil {
-		t.Skip(fmt.Sprintf("Couldn't determine current user id: %s", err))
-	}
-	if u.Uid == "0" {
-		t.Skip("Skipping test when run as root")
-	}
+
+	// Can't force a permission denied error if run as root.
+	testutil.SkipIfRoot(t)
 
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()

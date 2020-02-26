@@ -5,9 +5,7 @@ package tailer
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 	"testing"
 	"time"
@@ -179,13 +177,8 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 
 func TestTailerOpenRetries(t *testing.T) {
 	// Can't force a permission denied error if run as root.
-	u, err := user.Current()
-	if err != nil {
-		t.Skip(fmt.Sprintf("Couldn't determine current user id: %s", err))
-	}
-	if u.Uid == "0" {
-		t.Skip("Skipping test when run as root")
-	}
+	testutil.SkipIfRoot(t)
+
 	ta, llp, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
