@@ -30,7 +30,7 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 
 	logDir := path.Join(tmpDir, "logs")
 	progDir := path.Join(tmpDir, "progs")
-	err := os.Mkdir(logDir, 0700)
+	err = os.Mkdir(logDir, 0700)
 	if err != nil {
 		t.Fatal(err)
 	}
