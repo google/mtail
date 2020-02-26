@@ -4,7 +4,8 @@ container:
 
 test_task:
   modules_cache:
+    populate_script: make --debug install_deps
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
-  build_script: make --debug install_deps all
-  test_script: make --debug install_deps smoke
+  build_script: make --debug all
+  test_script: make --debug smoke regtest
