@@ -5,7 +5,9 @@
 package mtail_test
 
 import (
+	"fmt"
 	"os"
+	"os/user"
 	"path"
 	"testing"
 	"time"
@@ -15,6 +17,14 @@ import (
 )
 
 func TestPermissionDeniedOnLog(t *testing.T) {
+	u, err := user.Current()
+	if err != nil {
+		t.Skip(fmt.Sprintf("Couldn't determine current user id: %s", err))
+	}
+	if u.Uid == "0" {
+		t.Skip("Skipping test when run as root")
+	}
+
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
