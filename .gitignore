@@ -40,3 +40,4 @@ workdir/*
 /mfmt
 /tmpconfig.yml
 /bug/
+/coverprofile

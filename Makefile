@@ -34,6 +34,9 @@ endif
 ifeq ($(CIRCLECI),true)
 timeout := 20m
 endif
+ifeq ($(CIRRUSCI),true)
+timeout := 20m
+endif
 # Let the benchmarks run for a long time.  The timeout is for the total time of
 # all benchmarks, not per bench.
 benchtimeout := 20m
@@ -84,6 +87,10 @@ $(GOVERALLS):
 GOX = $(GOBIN)/gox
 $(GOX):
 	go get github.com/mitchellh/gox
+
+GOTESTSUM = $(GOBIN)/gotestsum
+$(GOTESTSUM):
+	go get gotest.tools/gotestsum
 
 
 .PHONY: clean covclean crossclean depclean
@@ -194,6 +201,14 @@ recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
 regtest: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
 	go test -v -tags=integration -timeout=${timeout} ./...
 
+TESTRESULTS ?= test-results
+TESTCOVERPROFILE ?= out.coverprofile
+
+.PHONY: junit-regtest
+junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
+$(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
+	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -tags=integration -v -timeout=${timeout} ./...
+
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
 .PHONY: testall
@@ -287,6 +302,9 @@ coverage.html: coverprofile | print-version
 covrep: coverage.html
 	xdg-open $<
 
+ifeq ($(CIRRUSCI),true)
+  COVERALLS_SERVICE := cirrus-ci
+endif
 ifeq ($(CIRCLECI),true)
   COVERALLS_SERVICE := circle-ci
 endif
