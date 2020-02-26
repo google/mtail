@@ -1,3 +1,4 @@
+# Based on the cirrus example.
 container:
   image: golang:latest
 
