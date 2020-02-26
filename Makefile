@@ -207,6 +207,7 @@ TESTCOVERPROFILE ?= out.coverprofile
 .PHONY: junit-regtest
 junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
+	mkdir -p $(TESTRESULTS)
 	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -tags=integration -v -timeout=${timeout} ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")

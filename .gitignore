@@ -41,3 +41,4 @@ workdir/*
 /tmpconfig.yml
 /bug/
 /coverprofile
+/test-results/
