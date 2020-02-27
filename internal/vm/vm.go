@@ -408,15 +408,29 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		t.Push(match)
 
 	case code.Jnm:
-		match := t.Pop().(bool)
-		if !match {
-			t.pc = i.Operand.(int)
+		val := t.Pop()
+		switch match := val.(type) {
+		case bool:
+			if !match {
+				t.pc = i.Operand.(int)
+			}
+		case int64:
+			if match == 0 {
+				t.pc = i.Operand.(int)
+			}
 		}
 
 	case code.Jm:
-		match := t.Pop().(bool)
-		if match {
-			t.pc = i.Operand.(int)
+		val := t.Pop()
+		switch match := val.(type) {
+		case bool:
+			if match {
+				t.pc = i.Operand.(int)
+			}
+		case int64:
+			if match != 0 {
+				t.pc = i.Operand.(int)
+			}
 		}
 
 	case code.Jmp:
