@@ -436,6 +436,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		}
 		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.IncIntBy(n, delta, t.time)
+			t.Push(datum.GetInt(n))
 		} else {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 			return
@@ -455,6 +456,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		}
 		if n, ok := t.Pop().(datum.Datum); ok {
 			datum.DecIntBy(n, delta, t.time)
+			t.Push(datum.GetInt(n))
 		} else {
 			v.errorf("Unexpected type to increment: %T %q", n, n)
 			return
