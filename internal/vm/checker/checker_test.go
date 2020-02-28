@@ -234,6 +234,10 @@ l++
 		`gauge l
 l++=l
 `, []string{"assign to rvalue:2:1-3: Can't assign to this expression on the left."}},
+
+	{"tolower non string",
+		`tolower(2)
+`, []string{"tolower non string:1:9: Expecting a String for argument 1 of tolower(), not Int."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

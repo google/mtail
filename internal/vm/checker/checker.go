@@ -607,9 +607,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		}
 		n.SetType(rType)
 
-		if n.Name == "strptime" {
+		switch n.Name {
+		case "strptime":
 			if !types.Equals(fn.Args[1], types.String) {
 				c.errors.Add(n.Args.(*ast.ExprList).Children[1].Pos(), fmt.Sprintf("Expecting a format string for argument 2 of strptime(), not %v.", fn.Args[1]))
+				n.SetType(types.Error)
 				return n
 			}
 			// Second argument to strptime is the format string.  If it is
@@ -631,6 +633,13 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				}
 			} else {
 				c.errors.Add(n.Pos(), "Internal error: exprlist child is not string literal.")
+				return n
+			}
+
+		case "tolower":
+			if !types.Equals(fn.Args[0], types.String) {
+				c.errors.Add(n.Args.(*ast.ExprList).Children[0].Pos(), fmt.Sprintf("Expecting a String for argument 1 of tolower(), not %v.", fn.Args[0]))
+				n.SetType(types.Error)
 				return n
 			}
 		}
