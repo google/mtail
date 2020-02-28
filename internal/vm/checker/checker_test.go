@@ -238,6 +238,10 @@ l++=l
 	{"tolower non string",
 		`tolower(2)
 `, []string{"tolower non string:1:9: Expecting a String for argument 1 of tolower(), not Int."}},
+
+	{"dec non var",
+		`strptime("", "")--
+`, []string{"dec non var:1:16: Expecting a variable here."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

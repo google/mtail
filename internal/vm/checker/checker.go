@@ -470,17 +470,29 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			err := types.Unify(rType, t)
 			if err != nil {
 				// Commented because these type mismatch errors appear to be unhelpful.
-				//c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
+				//	c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
 				n.SetType(types.Error)
 				return n
 			}
 			n.SetType(rType)
 		case parser.INC, parser.DEC:
+			// First check what sort of expression it is
+			switch v := n.Expr.(type) {
+			case *ast.IdTerm:
+				v.Lvalue = true
+			case *ast.IndexedExpr:
+				v.Lhs.(*ast.IdTerm).Lvalue = true
+			default:
+				glog.V(2).Infof("the expr is a %T %v", n.Expr, n.Expr)
+				c.errors.Add(n.Expr.Pos(), "Expecting a variable here.")
+				n.SetType(types.Error)
+				return n
+			}
 			rType := types.Int
 			err := types.Unify(rType, t)
 			if err != nil {
 				// Commented because these type mismatch errors appear to be unhelpful.
-				//c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
+				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
 				n.SetType(types.Error)
 				return n
 			}
@@ -489,14 +501,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(types.Error)
 				return n
 			}
-			glog.Infof("Return type is %v", rType)
+			glog.V(2).Infof("Return type is %v", rType)
 			n.SetType(rType)
-			switch v := n.Expr.(type) {
-			case *ast.IdTerm:
-				v.Lvalue = true
-			case *ast.IndexedExpr:
-				v.Lhs.(*ast.IdTerm).Lvalue = true
-			}
 
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", parser.Kind(n.Op), n))
