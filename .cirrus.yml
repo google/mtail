@@ -29,8 +29,8 @@ fuzzing_task:
     populate_script: |
       make GO111MODULE=off --debug install_deps
       GO111MODULE=on go mod vendor
-    fingerprint_script: cat go.sum
-    folder: $GOPATH/pkg/mod
+    fingerprint_script: cat go.sum && echo VENDOR
+    folder: $CIRRUS_WORKING_DIR/vendor
   setup_script: |
     wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/latest/download/fuzzit_Linux_x86_64
     chmod a+x fuzzit
