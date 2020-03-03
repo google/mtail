@@ -765,7 +765,7 @@ func TestDatumFetchInstrs(t *testing.T) {
 		}
 		i, err := v.t.PopInt()
 		if err != nil {
-			t.Fatalf("Execution failed, see info")
+			t.Fatalf("Execution failed, see info; %v", err)
 		}
 		if i != 37 {
 			t.Errorf("unexpected value %d", i)
@@ -787,7 +787,7 @@ func TestDatumFetchInstrs(t *testing.T) {
 		}
 		i, err := v.t.PopFloat()
 		if err != nil {
-			t.Fatalf("Execution failed, see info")
+			t.Fatalf("Execution failed, see info: %v", err)
 		}
 		if i != 12.1 {
 			t.Errorf("unexpected value %f", i)
@@ -807,9 +807,9 @@ func TestDatumFetchInstrs(t *testing.T) {
 		if v.terminate {
 			t.Fatalf("Execution failed, see info log.")
 		}
-		i, ok := v.t.Pop().(string)
-		if !ok {
-			t.Fatalf("Execution failed, see info")
+		i, err := v.t.PopString()
+		if err != nil {
+			t.Fatalf("Execution failed, see info log: %v", err)
 		}
 		if i != "aba" {
 			t.Errorf("unexpected value %q", i)

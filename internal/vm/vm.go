@@ -165,6 +165,23 @@ func (t *thread) PopFloat() (float64, error) {
 	return 0, errors.Errorf("unexpected float type %T %q", val, val)
 }
 
+func (t *thread) PopString() (string, error) {
+	val := t.Pop()
+	switch n := val.(type) {
+	case string:
+		return n, nil
+	case float64:
+		return strconv.FormatFloat(n, 'G', -1, 64), nil
+	case int:
+		return strconv.Itoa(n), nil
+	case int64:
+		return strconv.FormatInt(n, 10), nil
+	case datum.Datum:
+		return datum.GetString(n), nil
+	}
+	return "", errors.Errorf("unexpected type for string %T %q", val, val)
+}
+
 func compareInt(a, b int64, opnd int) (bool, error) {
 	switch opnd {
 	case -1:
@@ -342,7 +359,11 @@ func (v *VM) execute(t *thread, i code.Instr) {
 	case code.Smatch:
 		// match regex against item on the stack
 		index := i.Operand.(int)
-		line := t.Pop().(string)
+		line, err := t.PopString()
+		if err != nil {
+			v.errorf("+%v", err)
+			return
+		}
 		t.matches[index] = v.re[index].FindStringSubmatch(line)
 		t.Push(t.matches[index] != nil)
 
@@ -364,12 +385,12 @@ func (v *VM) execute(t *thread, i code.Instr) {
 	case code.Icmp:
 		b, berr := t.PopInt()
 		if berr != nil {
-			v.errorf("%v", berr)
+			v.errorf("%+v", berr)
 			return
 		}
 		a, aerr := t.PopInt()
 		if aerr != nil {
-			v.errorf("%v", aerr)
+			v.errorf("%+v", aerr)
 			return
 		}
 		match, err := compareInt(a, b, i.Operand.(int))
@@ -382,12 +403,12 @@ func (v *VM) execute(t *thread, i code.Instr) {
 	case code.Fcmp:
 		b, berr := t.PopFloat()
 		if berr != nil {
-			v.errorf("%v", berr)
+			v.errorf("%+v", berr)
 			return
 		}
 		a, aerr := t.PopFloat()
 		if aerr != nil {
-			v.errorf("%v", aerr)
+			v.errorf("%+v", aerr)
 		}
 		match, err := compareFloat(a, b, i.Operand.(int))
 		if err != nil {
@@ -397,8 +418,16 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 		t.Push(match)
 	case code.Scmp:
-		b := t.Pop().(string)
-		a := t.Pop().(string)
+		b, berr := t.PopString()
+		if berr != nil {
+			v.errorf("%+v", berr)
+			return
+		}
+		a, aerr := t.PopString()
+		if aerr != nil {
+			v.errorf("%+v", aerr)
+			return
+		}
 		match, err := compareString(a, b, i.Operand.(int))
 		if err != nil {
 			v.errorf("%+v", err)
@@ -506,9 +535,9 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 	case code.Sset:
 		// Set a string datum
-		value, ok := t.Pop().(string)
-		if !ok {
-			v.errorf("Value on stack was not a string: %T %q", value, value)
+		value, err := t.PopString()
+		if err != nil {
+			v.errorf("%+v", err)
 			return
 		}
 		if n, ok := t.Pop().(datum.Datum); ok {
@@ -520,10 +549,9 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 	case code.Strptime:
 		// Parse a time string into the time register
-		val := t.Pop()
-		layout, ok := val.(string)
-		if !ok {
-			v.errorf("Value on stack was not a string: %T %q", val, val)
+		layout, err := t.PopString()
+		if err != nil {
+			v.errorf("%+v", err)
 			return
 		}
 
@@ -678,7 +706,11 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		keys := make([]string, index)
 		//fmt.Printf("keys: %v\n", keys)
 		for a := index - 1; a >= 0; a-- {
-			s := t.Pop().(string)
+			s, err := t.PopString()
+			if err != nil {
+				v.errorf("%+v", err)
+				return
+			}
 			//fmt.Printf("s: %v\n", s)
 			keys[a] = s
 			//fmt.Printf("Keys: %v\n", keys)
@@ -712,7 +744,11 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		index := i.Operand.(int)
 		keys := make([]string, index)
 		for j := index - 1; j >= 0; j-- {
-			s := t.Pop().(string)
+			s, err := t.PopString()
+			if err != nil {
+				v.errorf("%+v", err)
+				return
+			}
 			keys[j] = s
 		}
 		err := m.RemoveDatum(keys...)
@@ -726,7 +762,11 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		index := i.Operand.(int)
 		keys := make([]string, index)
 		for j := index - 1; j >= 0; j-- {
-			s := t.Pop().(string)
+			s, err := t.PopString()
+			if err != nil {
+				v.errorf("%+v", err)
+				return
+			}
 			keys[j] = s
 		}
 		expiry := t.Pop().(time.Duration)
@@ -737,15 +777,18 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 	case code.Tolower:
 		// Lowercase code.a string from TOS, and push result back.
-		s := t.Pop().(string)
+		s, err := t.PopString()
+		if err != nil {
+			v.errorf("%+v", err)
+			return
+		}
 		t.Push(strings.ToLower(s))
 
 	case code.Length:
 		// Compute the length of a string from TOS, and push result back.
-		val := t.Pop()
-		s, ok := val.(string)
-		if !ok {
-			v.errorf("Expecting String for param 1 of `len()`, not %v", val)
+		s, err := t.PopString()
+		if err != nil {
+			v.errorf("%+v", err)
 			return
 		}
 		t.Push(len(s))
@@ -761,7 +804,11 @@ func (v *VM) execute(t *thread, i code.Instr) {
 				return
 			}
 		}
-		str := t.Pop().(string)
+		str, err := t.PopString()
+		if err != nil {
+			v.errorf("%+v", err)
+			return
+		}
 		i, err := strconv.ParseInt(str, int(base), 64)
 		if err != nil {
 			v.errorf("%s", err)
@@ -770,7 +817,11 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		t.Push(i)
 
 	case code.S2f:
-		str := t.Pop().(string)
+		str, err := t.PopString()
+		if err != nil {
+			v.errorf("%+v", err)
+			return
+		}
 		f, err := strconv.ParseFloat(str, 64)
 		if err != nil {
 			v.errorf("%s", err)
@@ -813,9 +864,17 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		t.Push(v.input.Filename)
 
 	case code.Cat:
-		s1 := t.Pop().(string)
-		s2 := t.Pop().(string)
-		t.Push(s2 + s1)
+		b, berr := t.PopString()
+		if berr != nil {
+			v.errorf("%+v", berr)
+			return
+		}
+		a, aerr := t.PopString()
+		if aerr != nil {
+			v.errorf("%+v", aerr)
+			return
+		}
+		t.Push(a + b)
 
 	default:
 		v.errorf("illegal instruction: %d", i.Opcode)
