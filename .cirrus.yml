@@ -22,7 +22,7 @@ fuzzing_task:
     FUZZIT_API_KEY: ENCRYPTED[576877027ac2ddfdc467b47005d53181d998cb29a7ce4c381b112b6771be0e91ef146dc22804c0ba709afc6685debccd]
     matrix:
       - TYPE: fuzzing
-      - TYPE: local-regresson
+      - TYPE: local-regression
   container:
     image: gcr.io/fuzzit-public/buster-golang12:2dc7875
   modules_cache:
