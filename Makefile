@@ -252,12 +252,19 @@ $(OUT)/vm-fuzzer.dict: mgen
 $(OUT)/vm-fuzzer_seed_corpus.zip: $(wildcard examples/*.mtail) $(wildcard internal/vm/fuzz/*.mtail)
 	zip -j $@ $^
 
+.INTERMEDIATE: SEED
+SEED: $(OUT)/vm-fuzzer_seed_corpus.zip
+	mkdir -p SEED
+	unzip -o -d SEED $<
 
 .PHONY: fuzz
-fuzz: $(OUT)/vm-fuzzer_seed_corpus.zip $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
-	mkdir -p CORPUS SEED
-	unzip -o -d SEED $(OUT)/vm-fuzzer_seed_corpus.zip
+fuzz: SEED $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
+	mkdir -p CORPUS
 	$(OUT)/vm-fuzzer -dict=$(OUT)/vm-fuzzer.dict CORPUS SEED
+
+.PHONY: fuzz-regtest
+fuzz-regtest: $(OUT)/vm-fuzzer SEED
+	$(OUT)/vm-fuzzer $(wildcard SEED/*.mtail)
 
 CRASH ?=
 
