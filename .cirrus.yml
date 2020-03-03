@@ -35,4 +35,4 @@ fuzzing_task:
     wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/latest/download/fuzzit_Linux_x86_64
     chmod a+x fuzzit
   build_script: make GO111MODULE=off CXX=clang CXXFLAGS=-fsanitize=fuzzer LIB_FUZZING_ENGINE= --debug ./vm-fuzzer
-  test_script: ./fuzzit create job --type=${TYPE} --branch=${CIRRUS_BRANCH} --revision=${CIRRUS_CHANGE_IN_REPO} mtail/internal-v ./vm-fuzzer
+  test_script: ./fuzzit create job --type=${TYPE} --branch=${CIRRUS_BRANCH} --revision=${CIRRUS_CHANGE_IN_REPO} mtail/internal-vm ./vm-fuzzer
