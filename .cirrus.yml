@@ -49,6 +49,8 @@ fuzzing_task:
   test_script: ./fuzzit create job --type=${TYPE} --branch=${CIRRUS_BRANCH} --revision=${CIRRUS_CHANGE_IN_REPO} mtail/internal-vm ./vm-fuzzer
 
 coverage_task:
+  container:
+    image: golang:1.12
   depends_on:
     - test
   env:
