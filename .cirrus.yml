@@ -10,13 +10,20 @@ test_task:
     populate_script: make --debug install_deps
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
+  coverprofile_cache:
+    ppopulate_script: mkdir -p coverprofile
+    fingerprint_script: echo $CIRRUS_BUILD_ID
+    folder: coverprofiles
+    reload_on_changes: true
   build_script: make --debug all
-  test_script: make --debug junit-regtest
+  test_script: make --debug junit-regtest TESTCOVERPROFILE=coverprofiles/${CIRRUS_TASK_ID}.coverprofile
   always:
     junit_result_artifacts:
       path: "**/test-results/**/*.xml"
       format: junit
       type: text/xml
+    coverprofile_artfacts:
+      path: "coverprofile/${CIRRUS_TASK_ID).coverprofile"
 
 fuzzing_task:
   depends_on:
@@ -40,3 +47,23 @@ fuzzing_task:
     chmod a+x fuzzit
   build_script: make GO111MODULE=off CXX=clang CXXFLAGS=-fsanitize=fuzzer LIB_FUZZING_ENGINE= --debug ./vm-fuzzer
   test_script: ./fuzzit create job --type=${TYPE} --branch=${CIRRUS_BRANCH} --revision=${CIRRUS_CHANGE_IN_REPO} mtail/internal-vm ./vm-fuzzer
+
+coverage_task:
+  depends_on:
+    - test
+  env:
+    COVERALLS_TOKEN: ENCRYPTED[5a842e3c8a8d608cb2d8204cc80bed9d6a89390b54b6a32e0064fc368a80e413a8d2d22d001e847b67acba3ba5a8e43c]
+  modules_cache:
+    populate_script: make --debug install_deps
+    fingerprint_script: cat go.sum
+    folder: $GOPATH/pkg/mod
+  coverprofile_cache:
+    fingerprint_script: echo $CIRRUS_BUILD_ID
+    folder: coverprofiles
+  setup_script: |
+    go get github.com/sozorogami/gover
+  build_script: |
+    gover coverprofiles coverprofile
+    make --debug coverage.html
+    make upload_to_coveralls
+  allow_failures: true
