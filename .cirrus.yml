@@ -65,7 +65,8 @@ coverage_task:
   setup_script: |
     go get github.com/sozorogami/gover
   build_script: |
+    ls coverprofiles
     gover coverprofiles coverprofile
     #make --debug coverage.html
-    make upload_to_coveralls
+    make --debug upload_to_coveralls
   allow_failures: true
