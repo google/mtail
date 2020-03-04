@@ -67,6 +67,7 @@ coverage_task:
   build_script: |
     ls coverprofiles
     gover coverprofiles coverprofile
+    ls coverprofiles
     #make --debug coverage.html
     make --debug upload_to_coveralls
   allow_failures: true
