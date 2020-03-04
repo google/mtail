@@ -11,7 +11,7 @@ test_task:
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
   coverprofile_cache:
-    ppopulate_script: mkdir -p coverprofile
+    populate_script: mkdir -p coverprofile
     fingerprint_script: echo $CIRRUS_BUILD_ID
     folder: coverprofiles
     reload_on_changes: true
