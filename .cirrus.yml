@@ -2,9 +2,6 @@
 container:
   image: golang:latest
 
-env:
-  GOPROXY: https://proxy.golang.org
-
 test_task:
   modules_cache:
     populate_script: make --debug install_deps
