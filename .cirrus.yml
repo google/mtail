@@ -14,7 +14,7 @@ test_task:
     populate_script: mkdir -p coverprofile
     fingerprint_script: echo $CIRRUS_BUILD_ID
     folder: coverprofiles
-    reload_on_changes: true
+    reupload_on_changes: true
   build_script: make --debug all
   test_script: make --debug junit-regtest TESTCOVERPROFILE=coverprofiles/${CIRRUS_TASK_ID}.coverprofile
   always:
