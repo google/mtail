@@ -12,7 +12,7 @@ test_task:
     folder: $GOPATH/pkg/mod
   coverprofile_cache:
     populate_script: mkdir -p coverprofiles
-    fingerprint_script: echo $CIRRUS_BUILD_ID
+    fingerprint_script: echo ${CIRRUS_BUILD_ID}
     folder: coverprofiles
     reupload_on_changes: true
   build_script: make --debug all
@@ -23,7 +23,7 @@ test_task:
       format: junit
       type: text/xml
     coverprofile_save_artifacts:
-      path: "coverprofile/${CIRRUS_TASK_ID).coverprofile"
+      path: "coverprofile/${CIRRUS_TASK_ID}.coverprofile"
 
 fuzzing_task:
   depends_on:
@@ -58,7 +58,7 @@ coverage_task:
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
   coverprofile_cache:
-    fingerprint_script: echo $CIRRUS_BUILD_ID
+    fingerprint_script: echo ${CIRRUS_BUILD_ID}
     folder: coverprofiles
   setup_script: |
     go get github.com/sozorogami/gover
