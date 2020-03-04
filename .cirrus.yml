@@ -22,7 +22,7 @@ test_task:
       path: "**/test-results/**/*.xml"
       format: junit
       type: text/xml
-    coverprofile_artifacts:
+    coverprofile_save_artifacts:
       path: "coverprofile/${CIRRUS_TASK_ID).coverprofile"
 
 fuzzing_task:
