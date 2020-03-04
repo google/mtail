@@ -52,10 +52,10 @@ coverage_task:
     - test
   env:
     COVERALLS_TOKEN: ENCRYPTED[5a842e3c8a8d608cb2d8204cc80bed9d6a89390b54b6a32e0064fc368a80e413a8d2d22d001e847b67acba3ba5a8e43c]
-  modules_cache:
-    populate_script: make --debug install_deps
-    fingerprint_script: cat go.sum && go version
-    folder: $GOPATH/pkg/mod
+  #modules_cache:
+  #  populate_script: make --debug install_deps
+  #  fingerprint_script: cat go.sum && go version
+  #  folder: $GOPATH/pkg/mod
   coverprofile_cache:
     fingerprint_script: echo ${CIRRUS_BUILD_ID}
     folder: coverprofiles
@@ -63,6 +63,6 @@ coverage_task:
     go get github.com/sozorogami/gover
   build_script: |
     gover coverprofiles coverprofile
-    make --debug coverage.html
+    #make --debug coverage.html
     make upload_to_coveralls
   allow_failures: true
