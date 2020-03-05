@@ -33,9 +33,10 @@ matrix_test_task:
       - image: golang:1.14
       - image: golang:1.13
   env:
-    - GOMAXPROCS: 4
-    - GOMAXPROCS: 2
-    - GOMAXPROCS: 1
+    matrix:
+      - GOMAXPROCS: 4
+      - GOMAXPROCS: 2
+      - GOMAXPROCS: 1
   depends_on:
     - test
 
