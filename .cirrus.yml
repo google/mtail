@@ -10,24 +10,22 @@ test_task:
     matrix:
       - image: golang:latest
       - image: golang:1.13
+  env:
+    - CODECOV_TOKEN: ENCRYPTED[534076e5934c38da40279df5b57569586a029f455a2a2bf00fbae6ae24bd9df40b9a23102a40cfe175619346d2f9b912]
   modules_cache:
     populate_script: make --debug install_deps
     fingerprint_script: cat go.sum && go version
     folder: $GOPATH/pkg/mod
-  coverprofile_cache:
-    populate_script: mkdir -p coverprofiles
-    fingerprint_script: echo ${CIRRUS_BUILD_ID}
-    folder: coverprofiles
-    reupload_on_changes: true
   build_script: make --debug all
   test_script: make --debug junit-regtest TESTCOVERPROFILE=coverprofiles/${CIRRUS_TASK_ID}.coverprofile
+  coverage_script: bash <(curl -s https://codecov.io/bash)
   always:
     junit_result_artifacts:
       path: "**/test-results/**/*.xml"
       format: junit
       type: text/xml
     coverprofile_save_artifacts:
-      path: "coverprofile/${CIRRUS_TASK_ID}.coverprofile"
+      path: "coverprofiles/${CIRRUS_TASK_ID}.coverprofile"
 
 fuzzing_task:
   depends_on:
@@ -51,19 +49,3 @@ fuzzing_task:
     chmod a+x fuzzit
   build_script: make GO111MODULE=off CXX=clang CXXFLAGS=-fsanitize=fuzzer LIB_FUZZING_ENGINE= --debug ./vm-fuzzer
   test_script: ./fuzzit create job --type=${TYPE} --branch=${CIRRUS_BRANCH} --revision=${CIRRUS_CHANGE_IN_REPO} mtail/internal-vm ./vm-fuzzer
-
-coverage_task:
-  depends_on:
-    - test
-  env:
-    COVERALLS_TOKEN: ENCRYPTED[5a842e3c8a8d608cb2d8204cc80bed9d6a89390b54b6a32e0064fc368a80e413a8d2d22d001e847b67acba3ba5a8e43c]
-  coverprofile_cache:
-    fingerprint_script: echo ${CIRRUS_BUILD_ID}
-    folder: coverprofiles
-  setup_script: |
-    go get github.com/sozorogami/gover
-    go get github.com/mattn/goveralls
-  build_script: |
-    gover coverprofiles coverprofile
-    goveralls -coverprofile=coverprofile -service=cirrus-ci
-  allow_failures: true
