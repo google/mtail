@@ -57,3 +57,13 @@ fuzzing_task:
     chmod a+x fuzzit
   build_script: make GO111MODULE=off CXX=clang CXXFLAGS=-fsanitize=fuzzer LIB_FUZZING_ENGINE= --debug ./vm-fuzzer
   test_script: ./fuzzit create job --type=${TYPE} --branch=${CIRRUS_BRANCH} --revision=${CIRRUS_CHANGE_IN_REPO} mtail/internal-vm ./vm-fuzzer
+
+docker_builder:
+  depends_on:
+    - coverage
+  modules_cache:
+    populate_script: make --debug install_deps
+    fingerprint_script: cat go.sum && go version
+    folder: $GOPATH/pkg/mod
+  build_script: make --debug container
+  
