@@ -6,15 +6,16 @@ RUN  make depclean && make install_deps && PREFIX=/go make STATIC=y -B install
 
 
 FROM scratch
+COPY --from=builder /go/bin/mtail /usr/bin/mtail
+ENTRYPOINT ["/usr/bin/mtail"]
+EXPOSE 3903
+
 
 ARG version=0.0.0-local
 ARG build_date=unknown
 ARG commit_hash=unknown
 ARG vcs_url=unknown
 ARG vcs_branch=unknown
-
-EXPOSE 3903
-ENTRYPOINT ["/usr/bin/mtail"]
 
 LABEL org.opencontainers.image.ref.name="google/mtail" \
       org.opencontainers.image.vendor="Google" \
@@ -28,5 +29,3 @@ LABEL org.opencontainers.image.ref.name="google/mtail" \
       org.opencontainers.image.documentation="https://github.com/google/mtail/tree/master/docs" \
       org.opencontainers.image.created=$build_date \
       org.opencontainers.image.url="https://github.com/google/mtail"
-
-COPY --from=builder /go/bin/mtail /usr/bin/mtail
