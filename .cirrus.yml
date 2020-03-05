@@ -62,10 +62,8 @@ coverage_task:
     folder: coverprofiles
   setup_script: |
     go get github.com/sozorogami/gover
+    go get github.com/mattn/goveralls
   build_script: |
-    ls -al coverprofile*
     gover coverprofiles coverprofile
-    ls -al coverprofile*    
-    #make --debug coverage.html
-    make --debug upload_to_coveralls
+    goveralls -coverprofile=coverprofile -service=cirrus-ci
   allow_failures: true
