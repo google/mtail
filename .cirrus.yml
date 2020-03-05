@@ -63,6 +63,7 @@ fuzzing_task:
   test_script: ./fuzzit create job --type=${TYPE} --branch=${CIRRUS_BRANCH} --revision=${CIRRUS_CHANGE_IN_REPO} mtail/internal-vm ./vm-fuzzer
 
 docker_builder:
+  name: container
   depends_on:
     - matrix_test
   build_script: make --debug container
