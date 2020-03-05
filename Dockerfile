@@ -5,7 +5,7 @@ COPY . /go/src/github.com/google/mtail
 RUN  make depclean && make install_deps && PREFIX=/go make STATIC=y -B install
 
 
-FROM alpine:3.9
+FROM alpine:latest
 
 ARG version=0.0.0-local
 ARG build_date=unknown
