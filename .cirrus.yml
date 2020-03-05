@@ -32,6 +32,10 @@ matrix_test_task:
     matrix:
       - image: golang:1.14
       - image: golang:1.13
+  env:
+  - GOMAXPROCS: 4
+  - GOMAXPROCS: 2
+  - GOMAXPROCS: 1
   depends_on:
     - test
 
@@ -66,4 +70,3 @@ docker_builder:
     fingerprint_script: cat go.sum && go version
     folder: $GOPATH/pkg/mod
   build_script: make --debug container
-  
