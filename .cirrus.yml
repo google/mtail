@@ -20,8 +20,6 @@ test_task_template: &TEST_TASK_TEMPLATE
       path: "**/test-results/**/*.xml"
       format: junit
       type: text/xml
-    coverprofile_save_artifacts:
-      path: "coverprofile"
 
 test_task:
   <<: *TEST_TASK_TEMPLATE
@@ -68,3 +66,23 @@ docker_builder:
   depends_on:
     - matrix_test
   build_script: make --debug container
+
+release_task:
+  depends_on:
+    - matrix_test
+    - container
+  only_if: ${CIRRUS_TAG} =~ '^v.*'
+  env:
+    - GITHUB_TOKEN: ENCRYPTED[d81bdfa3956148455e9a5de062e25e4e4bd9cb3031bc577d0d7e3652f3d5cf09d66b6fe9edbd739ce39210558d9b8ae3]
+  modules_cache:
+    populate_script: make --debug install_deps
+    fingerprint_script: cat go.sum && go version
+    folder: $GOPATH/pkg/mod
+  build_script: |
+    make --debug crossbuild
+    sha1sum build/*
+  binary_artifacts:
+    path: "build/*"
+  upload_script: |
+    go get github.com/tcnksm/ghr
+    ghr -t ${GITHUB_TOKEN} -u ${CIRRUS_REPO_OWNER} -r ${CIRRUS_REPO_NAME} --replace ${CIRRUS_TAG?} build/
