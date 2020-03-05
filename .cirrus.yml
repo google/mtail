@@ -65,8 +65,4 @@ fuzzing_task:
 docker_builder:
   depends_on:
     - matrix_test
-  modules_cache:
-    populate_script: make --debug install_deps
-    fingerprint_script: cat go.sum && go version
-    folder: $GOPATH/pkg/mod
   build_script: make --debug container
