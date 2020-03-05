@@ -5,11 +5,7 @@ container:
 env:
   GOPROXY: https://proxy.golang.org
 
-test_task:
-  container:
-    matrix:
-      - image: golang:latest
-      - image: golang:1.13
+test_task_template: &TEST_TASK_TEMPLATE
   env:
     - CODECOV_TOKEN: ENCRYPTED[534076e5934c38da40279df5b57569586a029f455a2a2bf00fbae6ae24bd9df40b9a23102a40cfe175619346d2f9b912]
   modules_cache:
@@ -26,6 +22,18 @@ test_task:
       type: text/xml
     coverprofile_save_artifacts:
       path: "coverprofile"
+
+test_task:
+  <<: *TEST_TASK_TEMPLATE
+
+matrix_test_task:
+  <<: *TEST_TASK_TEMPLATE
+  container:
+    matrix:
+      - image: golang:1.14
+      - image: golang:1.13
+  depends_on:
+    - test
 
 fuzzing_task:
   depends_on:
