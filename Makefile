@@ -34,7 +34,7 @@ endif
 ifeq ($(CIRCLECI),true)
 timeout := 20m
 endif
-ifeq ($(CIRRUSCI),true)
+ifeq ($(CIRRUS_CI),true)
 timeout := 20m
 endif
 # Let the benchmarks run for a long time.  The timeout is for the total time of
@@ -310,7 +310,7 @@ coverage.html: coverprofile | print-version
 covrep: coverage.html
 	xdg-open $<
 
-ifeq ($(CIRRUSCI),true)
+ifeq ($(CIRRUS_CI),true)
   COVERALLS_SERVICE := cirrus-ci
 endif
 ifeq ($(CIRCLECI),true)
