@@ -27,6 +27,7 @@ $(DEPDIR)/%.d: ;
 -include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
 
 # Set the timeout for tests run under the race detector.
+timeout := 10m
 ifeq ($(CI),true)
 timeout := 20m
 endif
