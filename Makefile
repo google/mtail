@@ -27,14 +27,7 @@ $(DEPDIR)/%.d: ;
 -include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
 
 # Set the timeout for tests run under the race detector.
-timeout := 10m
-ifeq ($(TRAVIS),true)
-timeout := 20m
-endif
-ifeq ($(CIRCLECI),true)
-timeout := 20m
-endif
-ifeq ($(CIRRUS_CI),true)
+ifeq ($(CI),true)
 timeout := 20m
 endif
 # Let the benchmarks run for a long time.  The timeout is for the total time of
@@ -309,22 +302,3 @@ coverage.html: coverprofile | print-version
 
 covrep: coverage.html
 	xdg-open $<
-
-###
-## CircleCI development targets
-#
-
-.PHONY: circleci-validate
-circleci-validate: .circleci/config.yml
-	circleci config validate
-
-# Override this on the make command to say which job to run
-CIRCLEJOB ?= fuzzing
-.PHONY: circleci-execute
-.INTERMEDIATE: tmpconfig.yml
-circleci-execute: .circleci/config.yml circleci-validate
-ifeq ($(CIRCLECI),true)
-	$(error "Don't run this target from within CircleCI!")
-endif
-	circleci config process $< > tmpconfig.yml
-	circleci local execute -c tmpconfig.yml --job $(CIRCLEJOB)
