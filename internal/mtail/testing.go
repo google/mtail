@@ -116,7 +116,8 @@ func ExpectMetricDelta(tb testing.TB, a, b interface{}, want float64) {
 	if b == nil {
 		b = 0.
 	}
-	if a.(float64)-b.(float64) != want {
-		tb.Errorf("Unexpected delta: got %v - %v, want %g", a, b, want)
+	delta := a.(float64) - b.(float64)
+	if delta != want {
+		tb.Errorf("Unexpected delta: got %v - %v = %g, want %g", a, b, delta, want)
 	}
 }

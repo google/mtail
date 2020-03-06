@@ -19,8 +19,8 @@ func TestBasicTail(t *testing.T) {
 		pollInterval   time.Duration
 		enableFsNotify bool
 	}{
-		{0, true},
-		{10 * time.Millisecond, false},
+		{0, true},                      // notify only
+		{10 * time.Millisecond, false}, // poll only
 	}
 	if testing.Verbose() {
 		defer testutil.TestSetFlag(t, "vmodule", "tail=2,log_watcher=2")()
@@ -51,7 +51,7 @@ func TestBasicTail(t *testing.T) {
 			lineCount := endLineCount.(float64) - startLineCount.(float64)
 			if lineCount != 3. {
 				t.Errorf("output didn't have expected line count increase: want 3 got %#v", lineCount)
-				t.Logf("Line Count, and log lines total: %s, %s", mtail.TestGetMetric(t, m.Addr(), "lines_total"), mtail.TestGetMetric(t, m.Addr(), "log_lines_total"))
+				t.Logf("Line Count, and log lines total: %#v, %#v", mtail.TestGetMetric(t, m.Addr(), "lines_total"), mtail.TestGetMetric(t, m.Addr(), "log_lines_total"))
 			}
 		})
 	}
