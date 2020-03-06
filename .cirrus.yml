@@ -81,8 +81,6 @@ release_task:
   build_script: |
     make --debug crossbuild
     sha1sum build/*
-  binary_artifacts:
-    path: "build/*"
   upload_script: |
     go get github.com/tcnksm/ghr
     ghr -t ${GITHUB_TOKEN} -u ${CIRRUS_REPO_OWNER} -r ${CIRRUS_REPO_NAME} --replace ${CIRRUS_TAG?} build/
