@@ -310,21 +310,6 @@ coverage.html: coverprofile | print-version
 covrep: coverage.html
 	xdg-open $<
 
-ifeq ($(CIRRUS_CI),true)
-  COVERALLS_SERVICE := cirrus-ci
-endif
-ifeq ($(CIRCLECI),true)
-  COVERALLS_SERVICE := circle-ci
-endif
-ifeq ($(TRAVIS),true)
-  COVERALLS_SERVICE := travis-ci
-endif
-
-.PHONY: upload_to_coveralls
-upload_to_coveralls: | coverprofile $(GOVERALLS)
-	$(GOVERALLS) -coverprofile=coverprofile -service=$(COVERALLS_SERVICE)
-
-
 ###
 ## CircleCI development targets
 #
