@@ -8,7 +8,7 @@
 [![OSS-Fuzz](https://oss-fuzz-build-logs.storage.googleapis.com/badges/mtail.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:mtail)
 [![CirrusCI Build Status](https://api.cirrus-ci.com/github/google/mtail.svg)](https://cirrus-ci.com/github/google/mtail)
 [![codecov](https://codecov.io/gh/google/mtail/branch/master/graph/badge.svg)](https://codecov.io/gh/google/mtail)
-[![.github/workflows/reviewdog.yml](https://github.com/google/mtail/workflows/.github/workflows/reviewdog.yml/badge.svg)]
+[![.github/workflows/reviewdog.yml](https://github.com/google/mtail/workflows/.github/workflows/reviewdog.yml/badge.svg)](https://github.com/google/mtail/actions?query=workflow%3A.github%2Fworkflows%2Freviewdog.yml)
 
 `mtail` is a tool for extracting metrics from application logs to be exported
 into a timeseries database or timeseries calculator for alerting and
