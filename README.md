@@ -3,10 +3,7 @@
 # mtail - extract whitebox monitoring data from application logs for collection into a timeseries database
 
 [![GoDoc](https://godoc.org/github.com/google/mtail?status.png)](http://godoc.org/github.com/google/mtail)
-[![CircleCI Build Status](https://circleci.com/gh/google/mtail.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/google/mtail)
-[![Coverage Status](https://coveralls.io/repos/github/google/mtail/badge.svg?branch=master)](https://coveralls.io/github/google/mtail?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/google/mtail)](https://goreportcard.com/report/github.com/google/mtail)
-[![GolangCI](https://golangci.com/badges/github.com/google/mtail.svg)](https://golangci.com/r/github.com/google/mtail)
 [![fuzzit](https://app.fuzzit.dev/badge?org_id=mtail)](https://app.fuzzit.dev/orgs/mtail/dashboard)
 [![OSS-Fuzz](https://oss-fuzz-build-logs.storage.googleapis.com/badges/mtail.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:mtail)
 [![CirrusCI Build Status](https://api.cirrus-ci.com/github/google/mtail.svg)](https://cirrus-ci.com/github/google/mtail)
