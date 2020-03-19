@@ -1,5 +1,5 @@
 name: reviewdog
-on: [push, pull_request]
+on: [pull_request]
 jobs:
   golangci-lint:
     name: runner / golangci-lint
@@ -11,3 +11,4 @@ jobs:
         uses: reviewdog/action-golangci-lint@v1
         with:
           github_token: ${{ secrets.github_token }}
+          level: warning
