@@ -3,7 +3,7 @@ on: [pull_request]
 jobs:
   golangci-lint:
     name: rnuner / golangci-lint
-    runs-on: ubuntu-latest:
+    runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
         uses: actions:/checkout@v1
