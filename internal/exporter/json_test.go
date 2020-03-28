@@ -5,6 +5,7 @@ package exporter
 
 import (
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -81,6 +82,48 @@ var handleJSONTests = []struct {
           "Value": 1,
           "Time": 0
         }
+      }
+    ]
+  }
+]`,
+	},
+	{"histogram",
+		[]*metrics.Metric{
+			{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Histogram,
+				Keys:        []string{"a", "b"},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+				Buckets:     []datum.Range{datum.Range{Min: 0, Max: math.Inf(1)}},
+			},
+		},
+		`[
+  {
+    "Name": "foo",
+    "Program": "test",
+    "Kind": 5,
+    "Type": 0,
+    "Keys": [
+      "a",
+      "b"
+    ],
+    "LabelValues": [
+      {
+        "Labels": [
+          "1",
+          "2"
+        ],
+        "Value": {
+          "Value": 1,
+          "Time": 0
+        }
+      }
+    ],
+    "Buckets": [
+      {
+        "Min": "0",
+        "Max": "+Inf"
       }
     ]
   }
