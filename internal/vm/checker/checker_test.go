@@ -242,6 +242,11 @@ l++=l
 	{"dec non var",
 		`strptime("", "")--
 `, []string{"dec non var:1:16: Expecting a variable here."}},
+
+	// TODO(jaq): This is an instance of bug #190, the capref is ambiguous.
+	// 	{"regexp with no zero capref",
+	// 		`//||/;0/ {$0||// {}}
+	// `, []string{"regexp with no zero capref:1:5-6: Nonexistent capref =."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
