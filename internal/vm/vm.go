@@ -596,9 +596,23 @@ func (v *VM) execute(t *thread, i code.Instr) {
 	case code.Capref:
 		// Put a capture group reference onto the stack.
 		// First find the match storage index on the stack,
-		re := t.Pop().(int)
+		val := t.Pop()
+		re, ok := val.(int)
+		if !ok {
+			v.errorf("Invalid re index %v, not an int", val)
+			return
+		}
 		// Push the result from the re'th match at operandth index
-		t.Push(t.matches[re][i.Operand.(int)])
+		op, ok := i.Operand.(int)
+		if !ok {
+			v.errorf("Invalid operand %v, not an int", i.Operand)
+			return
+		}
+		if len(t.matches[re]) <= op {
+			v.errorf("Not enough capture groups matched from %v to select %dth", t.matches[re], op)
+			return
+		}
+		t.Push(t.matches[re][op])
 
 	case code.Str:
 		// Put a string constant onto the stack
