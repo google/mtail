@@ -79,6 +79,7 @@ type Server struct {
 	dumpAst      bool // if set, mtail prints the program syntax tree after parse
 	dumpAstTypes bool // if set, mtail prints the program syntax tree after type checking
 	dumpBytecode bool // if set, mtail prints the program bytecode after code generation
+	debug        bool // if set, enable debug endpoints
 
 	overrideLocation            *time.Location // Timezone location to use when parsing timestamps
 	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
@@ -299,19 +300,23 @@ func (m *Server) Serve() error {
 		return errors.Errorf("No bind address provided.")
 	}
 	mux := http.NewServeMux()
+	if m.debug {
+		mux.Handle("/", m)
+		mux.Handle("/debug/vars", expvar.Handler())
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+		mux.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
+		mux.Handle("/progz", http.HandlerFunc(m.l.ProgzHandler))
+	}
 	mux.HandleFunc("/favicon.ico", FaviconHandler)
-	mux.Handle("/", m)
-	mux.Handle("/progz", http.HandlerFunc(m.l.ProgzHandler))
+
 	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
-	mux.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
-	mux.Handle("/debug/vars", expvar.Handler())
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
 	zpages.Handle(mux, "/")
 	m.h.Handler = mux
 	m.e.StartMetricPush()

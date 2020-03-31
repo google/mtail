@@ -107,6 +107,12 @@ func DumpBytecode(m *Server) error {
 	return nil
 }
 
+// Debug enables debug http endpoints
+func Debug(m *Server) error {
+	m.debug = true
+	return nil
+}
+
 // SyslogUseCurrentYear instructs the Server to use the current year for year-less log timestamp during parsing.
 func SyslogUseCurrentYear(m *Server) error {
 	m.syslogUseCurrentYear = true

@@ -47,6 +47,7 @@ var (
 	dumpAst      = flag.Bool("dump_ast", false, "Dump AST of programs after parse (to INFO log).")
 	dumpAstTypes = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck (to INFO log).")
 	dumpBytecode = flag.Bool("dump_bytecode", false, "Dump bytecode of programs (to INFO log).")
+	debug        = flag.Bool("debug", false, "Enable debugging endpoints.")
 
 	// VM Runtime behaviour flags
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
@@ -159,6 +160,9 @@ func main() {
 	}
 	if *dumpBytecode {
 		opts = append(opts, mtail.DumpBytecode)
+	}
+	if *debug {
+		opts = append(opts, mtail.Debug)
 	}
 	if *syslogUseCurrentYear {
 		opts = append(opts, mtail.SyslogUseCurrentYear)
