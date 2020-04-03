@@ -1,0 +1,40 @@
+version: 2.1
+executors:
+  docker-publisher:
+    docker:
+      - image: circleci/buildpack-deps:stretch
+jobs:
+  publish:
+    description: Push docker image to dockerhub
+    executor: docker-publisher
+    parameters:
+      imageRepo:
+        description: "DockerHub repo for image"
+        type: string
+      imageName:
+        description: "DockerHub image name in repo"
+        type: string
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Publish docker image
+          command: |
+            REPO=<< parameters.imageRepo >>
+            NAME=<< parameters.imageName >>
+            SHA=$CIRCLE_SHA1
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker build . -f Dockerfile -t $REPO/$NAME:$SHA -t $REPO/$NAME:latest
+            docker push $REPO/$NAME:$SHA
+            docker push $REPO/$NAME:latest-test
+workflows:
+  version: 2
+  build_publish:
+    jobs:
+      - publish:
+          imageRepo: "bisontrails"
+          imageName: "mtail"
+          context: docker_hub
+#          filters:
+#            branches:
+#              only: master
