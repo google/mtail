@@ -7,6 +7,7 @@ RUN  make depclean && make install_deps && PREFIX=/go make STATIC=y -B install
 
 FROM scratch
 COPY --from=builder /go/bin/mtail /usr/bin/mtail
+WORKDIR /tmp
 ENTRYPOINT ["/usr/bin/mtail"]
 EXPOSE 3903
 
