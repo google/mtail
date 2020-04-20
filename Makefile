@@ -303,3 +303,20 @@ coverage.html: coverprofile | print-version
 
 covrep: coverage.html
 	xdg-open $<
+
+###
+## Github issue tracking
+#
+GHI = $(GOBIN)/ghi
+$(GHI):
+	go get $(GOGETFLAGS) github.com/markbates/ghi
+
+issue-fetch: | $(GHI)
+	$(GHI) fetch
+
+issue-list: | $(GHI)
+	$(GHI) list
+
+ISSUE?=1
+issue-show: | $(GHI)
+	$(GHI) show $(ISSUE)
