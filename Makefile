@@ -109,11 +109,11 @@ release := $(shell git describe --tags --always --dirty | cut -d"-" -f 1,2)
 GO_LDFLAGS := -X main.Branch=${branch} -X main.Version=${version} -X main.Revision=${revision}
 
 ifeq ($(STATIC),y)
-	# -s Omit symbol table and debug info
-	# -w Omit DWARF symbol table
-	# -extldflags -static and CGO_ENABLED=0 to make pure static
-	GO_LDFLAGS += -w -s -extldflags "-static"
-	export CGO_ENABLED=0
+# -s Omit symbol table and debug info
+# -w Omit DWARF symbol table
+# -extldflags -static and CGO_ENABLED=0 to make pure static
+GO_LDFLAGS += -w -s -extldflags "-static"
+export CGO_ENABLED=0
 endif
 
 # Very specific static pattern rule to only do this for commandline targets.
