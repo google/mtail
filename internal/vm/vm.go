@@ -970,7 +970,7 @@ func (v *VM) DumpByteCode(name string) string {
 
 	fmt.Fprintln(w, "disasm\tl\top\topnd\tline\t")
 	for n, i := range v.prog {
-		fmt.Fprintf(w, "\t%d\t%s\t%v\t%d\t\n", n, i.Opcode, i.Operand, i.SourceLine)
+		fmt.Fprintf(w, "\t%d\t%s\t%v\t%d\t\n", n, i.Opcode, i.Operand, i.SourceLine+1)
 	}
 	if err := w.Flush(); err != nil {
 		glog.Infof("flush error: %s", err)
