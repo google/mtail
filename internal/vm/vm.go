@@ -331,15 +331,17 @@ func (v *VM) ParseTime(layout, value string) (tm time.Time) {
 // execute performs an instruction cycle in the VM. acting on the instruction
 // i in thread t.
 func (v *VM) execute(t *thread, i code.Instr) {
-	// In normal operation, recover from panics.
-	if !v.HardCrash {
-		defer func() {
-			if r := recover(); r != nil {
-				v.errorf("panic in thread %#v at instr %q: %s", t, i, r)
-				v.terminate = true
+	// In normal operation, recover from panics, otherwise dump that state and repanic.
+	defer func() {
+		if r := recover(); r != nil {
+			if v.HardCrash {
+				fmt.Printf("panic in thread %#v at instr %q: %s\n", t, i, r)
+				panic(r)
 			}
-		}()
-	}
+			v.errorf("panic in thread %#v at instr %q: %s", t, i, r)
+			v.terminate = true
+		}
+	}()
 
 	switch i.Opcode {
 	case code.Bad:
