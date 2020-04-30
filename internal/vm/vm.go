@@ -966,9 +966,9 @@ func (v *VM) DumpByteCode(name string) string {
 	w := new(tabwriter.Writer)
 	w.Init(b, 0, 0, 1, ' ', tabwriter.AlignRight)
 
-	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
+	fmt.Fprintln(w, "disasm\tl\top\topnd\tline\t")
 	for n, i := range v.prog {
-		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, i.Opcode, i.Operand)
+		fmt.Fprintf(w, "\t%d\t%s\t%v\t%d\t\n", n, i.Opcode, i.Operand, i.SourceLine)
 	}
 	if err := w.Flush(); err != nil {
 		glog.Infof("flush error: %s", err)
