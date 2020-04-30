@@ -440,6 +440,9 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(types.Error)
 				return n
 			}
+			if !types.Equals(rT, types.Pattern) {
+				n.Rhs = ast.Walk(c, &ast.PatternExpr{Expr: n.Rhs})
+			}
 
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %v in node %#v", n.Op, n))
