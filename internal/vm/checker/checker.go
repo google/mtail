@@ -233,19 +233,10 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.CondStmt:
-		condOK := false
-
-		switch cond := n.Cond.(type) {
+		switch n.Cond.(type) {
 		case *ast.BinaryExpr, *ast.PatternExpr, *ast.PatternFragment, *ast.OtherwiseStmt:
-			condOK = true
-
-		case *ast.IndexedExpr:
-			// Usage of a Pattern const shows up as an IndexedExpr because we can't tell them apart from identifiers yet.
-			if cond.Type() == types.Pattern {
-				condOK = true
-			}
-		}
-		if !condOK {
+			// OK as conditions
+		default:
 			c.errors.Add(n.Cond.Pos(), fmt.Sprintf("Can't interpret %s as a boolean expression here.\n\tTry using comparison operators to make the condition explicit.", n.Cond.Type()))
 		}
 		c.checkSymbolUsage()
@@ -524,6 +515,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.IndexedExpr:
+
 		argTypes := []types.Type{}
 		if args, ok := n.Index.(*ast.ExprList); ok {
 			for _, arg := range args.Children {
@@ -546,9 +538,18 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(types.Error)
 				return n
 			}
-			// ok
+
+			if v.Type() == types.Pattern {
+				// We now have enough information to tell that something the
+				// parser thought was an IdTerm is really a pattern constant.
+				// Let's now rewrite the AST correctly.
+				// TODO: Haven't checked that this IndexedExpr has no args.
+				return ast.Walk(c, &ast.PatternExpr{Expr: v})
+			}
+
 			if t, ok := v.Type().(*types.Operator); ok && types.IsDimension(t) {
 				glog.V(1).Infof("Our idNode is a dimension type")
+				// TODO: should this call n.SetType like below?
 			} else {
 				if len(argTypes) > 0 {
 					glog.V(1).Infof("Our idNode is not a dimension type")
@@ -559,6 +560,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				}
 				return n
 			}
+
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
 			n.SetType(types.Error)

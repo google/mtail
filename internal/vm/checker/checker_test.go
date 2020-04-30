@@ -442,6 +442,16 @@ histogram foo buckets 1, 2, 3
 /(\d+)/ {
   foo = $1
 }`},
+
+	{"match a pattern in cond", `
+const N /n/
+N {
+}`},
+
+	{"match a pattern in a binary expr in cond", `
+const N /n/
+N && 1 {
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {
