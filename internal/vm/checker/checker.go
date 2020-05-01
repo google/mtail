@@ -435,8 +435,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			astType := types.Function(lT, rT, types.NewVariable())
 			err := types.Unify(exprType, astType)
 			if err != nil {
-				// Commented because these type mismatch errors appear to be unhelpful.
-				//c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Parameter to =~ has a %s", err))
 				n.SetType(types.Error)
 				return n
 			}
