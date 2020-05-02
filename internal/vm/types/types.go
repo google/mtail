@@ -385,6 +385,11 @@ func LeastUpperBound(a, b Type) Type {
 		(Equals(a1, Pattern) && Equals(b1, String)) {
 		return Pattern
 	}
+	// A pattern and an Int are Bool
+	if (Equals(a1, Pattern) && Equals(b1, Int)) ||
+		(Equals(a1, Int) && Equals(b1, Pattern)) {
+		return Bool
+	}
 	return Error
 }
 

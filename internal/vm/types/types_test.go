@@ -122,6 +122,11 @@ var typeUnificationTests = []struct {
 		String, Pattern,
 		Pattern,
 	},
+	// Patterns and Ints can both be Bool.
+	{
+		Pattern, Int,
+		Bool,
+	},
 }
 
 func TestTypeUnification(t *testing.T) {
