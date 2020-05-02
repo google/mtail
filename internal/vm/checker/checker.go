@@ -51,7 +51,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	c.depth++
 	if c.depth > 100 {
 		if !c.tooDeep {
-			c.errors.Add(node.Pos(), "Exceeded maximum recursion depth.")
+			c.errors.Add(node.Pos(), "Expression exceeded maximum recursion depth.")
 			c.tooDeep = true
 		}
 		c.depth--
