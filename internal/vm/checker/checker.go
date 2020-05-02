@@ -27,6 +27,9 @@ type checker struct {
 	decoScopes []*symbol.Scope // A stack of scopes used for resolving symbols in decorated nodes
 
 	errors errors.ErrorList
+
+	depth   int
+	tooDeep bool
 }
 
 // Check performs a semantic check of the astNode, and returns a potentially
@@ -45,6 +48,15 @@ func Check(node ast.Node) (ast.Node, error) {
 // VisitBefore performs most of the symbol table construction, so that symbols
 // are guaranteed to exist before their use.
 func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
+	c.depth++
+	if c.depth > 100 {
+		if !c.tooDeep {
+			c.errors.Add(node.Pos(), "Exceeded maximum recursion depth.")
+			c.tooDeep = true
+		}
+		c.depth--
+		return nil, node
+	}
 	switch n := node.(type) {
 	case *ast.StmtList:
 		n.Scope = symbol.NewScope(c.scope)
@@ -69,6 +81,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 					msg = fmt.Sprintf("%s\n\tCheck that there are at least %s pairs of parentheses.", msg, n.Name)
 				}
 				c.errors.Add(n.Pos(), msg)
+				c.depth--
 				return nil, n
 			}
 			glog.V(2).Infof("Found %q as %v in scope %v", n.Name, sym, c.scope)
@@ -81,6 +94,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		n.Symbol = symbol.NewSymbol(n.Name, symbol.VarSymbol, n.Pos())
 		if alt := c.scope.Insert(n.Symbol); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.Name, alt.Pos))
+			c.depth--
 			return nil, n
 		}
 		var rType types.Type
@@ -93,10 +107,12 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			rType = types.String
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("internal compiler error: unrecognised Kind %v for declNode %v", n.Kind, n))
+			c.depth--
 			return nil, n
 		}
 		if len(n.Buckets) > 0 && n.Kind != metrics.Histogram {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Can't specify buckets for non-histogram metric `%s'.", n.Name))
+			c.depth--
 			return nil, n
 		}
 		if len(n.Keys) > 0 {
@@ -132,6 +148,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 					sug = fmt.Sprintf("Try adding `const %s /.../' earlier in the program.", n.Name)
 				}
 				c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\t%s", n.Name, sug))
+				c.depth--
 				return nil, n
 			}
 		}
@@ -142,6 +159,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		n.Symbol.Binding = n
 		if alt := c.scope.Insert(n.Symbol); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `@%s' previously declared at %s", n.Name, alt.Pos))
+			c.depth--
 			return nil, n
 		}
 		// Append a scope placeholder for the recursion into the block.  It has no parent, it'll be cloned when the decorator is instantiated.
@@ -152,12 +170,14 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		if sym := c.scope.Lookup(n.Name, symbol.DecoSymbol); sym != nil {
 			if sym.Binding == nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.Name))
+				c.depth--
 				return nil, n
 			}
 			sym.Used = true
 			n.Decl = sym.Binding.(*ast.DecoDecl)
 		} else {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `@%s' is not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.Name, n.Name))
+			c.depth--
 			return nil, n
 		}
 		// Create a new scope for the decorator instantiation.
@@ -166,11 +186,13 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		if n.Decl == nil {
 			glog.V(2).Infof("No DecoDecl on DecoStmt: %v", n)
 			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no declaration for decorator: %#v", n))
+			c.depth--
 			return nil, n
 		}
 		if n.Decl.Scope == nil {
 			glog.V(2).Infof("No Scope on DecoDecl: %#v", n.Decl)
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `@%s' is not completely defined yet.\n\tTry removing @%s from here.", n.Name, n.Name))
+			c.depth--
 			return nil, n
 		}
 
@@ -183,11 +205,13 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		id, ok := n.Id.(*ast.IdTerm)
 		if !ok {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no identifier attached to pattern fragment %#v", n))
+			c.depth--
 			return nil, n
 		}
 		n.Symbol = symbol.NewSymbol(id.Name, symbol.PatternSymbol, id.Pos())
 		if alt := c.scope.Insert(n.Symbol); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", id.Name, alt.Pos))
+			c.depth--
 			return nil, n
 		}
 		n.Symbol.Binding = n
@@ -225,6 +249,11 @@ func (c *checker) checkSymbolUsage() {
 // VisitAfter performs the type annotation and checking, once the child nodes of
 // expressions have been annotated and checked.
 func (c *checker) VisitAfter(node ast.Node) ast.Node {
+	if c.tooDeep {
+		return node
+	}
+	defer func() { c.depth-- }()
+
 	switch n := node.(type) {
 	case *ast.StmtList:
 		c.checkSymbolUsage()
