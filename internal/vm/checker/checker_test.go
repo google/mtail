@@ -247,6 +247,10 @@ l++=l
 	// 	{"regexp with no zero capref",
 	// 		`//||/;0/ {$0||// {}}
 	// `, []string{"regexp with no zero capref:1:5-6: Nonexistent capref =."}},
+
+	{"cmp to None",
+		`strptime("","")<5{}
+`, []string{"cmp to None:1:15-17: Can't compare LHS of type None with RHS of type Int."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {

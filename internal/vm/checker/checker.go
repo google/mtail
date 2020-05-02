@@ -360,14 +360,13 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : Bool
 			rType = types.Bool
-			if types.IsErrorType(rType) {
-				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
-				n.SetType(rType)
+			astType := types.Function(lT, rT, rType)
+			t := types.LeastUpperBound(lT, rT)
+			if types.IsErrorType(t) {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Can't compare LHS of type %s with RHS of type %s.", lT, rT))
+				n.SetType(t)
 				return n
 			}
-			astType := types.Function(lT, rT, rType)
-
-			t := types.LeastUpperBound(lT, rT)
 			exprType := types.Function(t, t, types.Bool)
 			err := types.Unify(exprType, astType)
 			if err != nil {
