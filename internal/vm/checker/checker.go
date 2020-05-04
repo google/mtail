@@ -790,6 +790,15 @@ func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		}
 		p.pattern.WriteString(pf.Pattern)
 		return p, v
+	case *ast.IntLit:
+		p.pattern.WriteString(fmt.Sprintf("%d", v.I))
+		return p, v
+	case *ast.FloatLit:
+		p.pattern.WriteString(fmt.Sprintf("%g", v.F))
+		return p, v
+	case *ast.StringLit:
+		p.pattern.WriteString(v.Text)
+		return p, v
 	}
 	return p, n
 }
