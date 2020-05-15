@@ -9,6 +9,7 @@ FROM scratch
 COPY --from=builder /go/bin/mtail /usr/bin/mtail
 ENTRYPOINT ["/usr/bin/mtail"]
 EXPOSE 3903
+WORKDIR /tmp
 
 
 ARG version=0.0.0-local
