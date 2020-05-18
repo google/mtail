@@ -120,7 +120,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			case metrics.Float:
 				datum.SetFloat(d, 0, time.Unix(0, 0))
 			default:
-				c.errorf(n.Pos(), "Can't initialize to zero a %v", n)
+				c.errorf(n.Pos(), "Can't initialize to zero a %#v", n)
 				return nil, n
 			}
 		}

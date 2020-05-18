@@ -362,6 +362,14 @@ func LeastUpperBound(a, b Type) Type {
 	if _, ok := b1.(*Variable); ok {
 		return a1
 	}
+	// If either is Undef, other is the lub
+	if Equals(a1, Undef) {
+		return b1
+	}
+	if Equals(b1, Undef) {
+		return a1
+	}
+	// Easy substitutions
 	if (Equals(a1, Float) && Equals(b1, Int)) ||
 		(Equals(b1, Float) && Equals(a1, Int)) {
 		return Float
@@ -400,16 +408,34 @@ func InferCaprefType(re *syntax.Regexp, cap int) Type {
 	if group == nil {
 		return None
 	}
+
+	if group.Op != syntax.OpAlternate {
+		return inferGroupType(group)
+	}
+
+	subType := Type(Undef)
+	for _, sub := range group.Sub {
+		subType = LeastUpperBound(subType, inferGroupType(sub))
+	}
+	return subType
+}
+
+func inferGroupType(group *syntax.Regexp) Type {
 	switch {
 	case groupOnlyMatches(group, "+-"):
 		return String
 	case groupOnlyMatches(group, "+-0123456789"):
+		// Must be at least one digit in the group.
+		if !groupOnlyMatches(group, "0123456789") {
+			return String
+		}
 		return Int
 	case groupOnlyMatches(group, "+-0123456789.eE"):
-		if strings.Count(group.String(), ".") <= 1 {
-			return Float
+		// Only one decimal point allowed.
+		if strings.Count(group.String(), ".") > 1 {
+			return String
 		}
-		return String
+		return Float
 	}
 	return String
 }
@@ -418,7 +444,7 @@ func InferCaprefType(re *syntax.Regexp, cap int) Type {
 // in re.
 func getCaptureGroup(re *syntax.Regexp, cap int) *syntax.Regexp {
 	if re.Op == syntax.OpCapture && re.Cap == cap {
-		return re
+		return re.Sub[0]
 	}
 	for _, sub := range re.Sub {
 		r := getCaptureGroup(sub, cap)
@@ -429,11 +455,11 @@ func getCaptureGroup(re *syntax.Regexp, cap int) *syntax.Regexp {
 	return nil
 }
 
-// groupOnlyMatches returns true iff re only matches for runes in the s.
-func groupOnlyMatches(re *syntax.Regexp, s string) bool {
-	switch re.Op {
+// groupOnlyMatches returns true iff group only matches runes in s.
+func groupOnlyMatches(group *syntax.Regexp, s string) bool {
+	switch group.Op {
 	case syntax.OpLiteral:
-		for _, r := range re.Rune {
+		for _, r := range group.Rune {
 			if !strings.ContainsRune(s, r) {
 				return false
 			}
@@ -441,8 +467,8 @@ func groupOnlyMatches(re *syntax.Regexp, s string) bool {
 		return true
 
 	case syntax.OpCharClass:
-		for i := 0; i < len(re.Rune); i += 2 {
-			lo, hi := re.Rune[i], re.Rune[i+1]
+		for i := 0; i < len(group.Rune); i += 2 {
+			lo, hi := group.Rune[i], group.Rune[i+1]
 			for r := lo; r <= hi; r++ {
 				if !strings.ContainsRune(s, r) {
 					return false
@@ -452,10 +478,10 @@ func groupOnlyMatches(re *syntax.Regexp, s string) bool {
 		return true
 
 	case syntax.OpStar, syntax.OpPlus, syntax.OpRepeat, syntax.OpQuest, syntax.OpCapture:
-		return groupOnlyMatches(re.Sub[0], s)
+		return groupOnlyMatches(group.Sub[0], s)
 
 	case syntax.OpConcat, syntax.OpAlternate:
-		for _, sub := range re.Sub {
+		for _, sub := range group.Sub {
 			if !groupOnlyMatches(sub, s) {
 				return false
 			}
