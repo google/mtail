@@ -127,6 +127,19 @@ var typeUnificationTests = []struct {
 		Pattern, Int,
 		Bool,
 	},
+	// Undef secedes to oether
+	{
+		Undef, Int,
+		Int,
+	},
+	{
+		String, Undef,
+		String,
+	},
+	{
+		Undef, Undef,
+		Undef,
+	},
 }
 
 func TestTypeUnification(t *testing.T) {

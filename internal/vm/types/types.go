@@ -362,6 +362,14 @@ func LeastUpperBound(a, b Type) Type {
 	if _, ok := b1.(*Variable); ok {
 		return a1
 	}
+	// If either is Undef, other is the lub
+	if Equals(a1, Undef) {
+		return b1
+	}
+	if Equals(b1, Undef) {
+		return a1
+	}
+	// Easy substitutions
 	if (Equals(a1, Float) && Equals(b1, Int)) ||
 		(Equals(b1, Float) && Equals(a1, Int)) {
 		return Float
