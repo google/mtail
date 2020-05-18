@@ -435,7 +435,7 @@ func InferCaprefType(re *syntax.Regexp, cap int) Type {
 // in re.
 func getCaptureGroup(re *syntax.Regexp, cap int) *syntax.Regexp {
 	if re.Op == syntax.OpCapture && re.Cap == cap {
-		return re
+		return re.Sub[0]
 	}
 	for _, sub := range re.Sub {
 		r := getCaptureGroup(sub, cap)
