@@ -408,6 +408,19 @@ func InferCaprefType(re *syntax.Regexp, cap int) Type {
 	if group == nil {
 		return None
 	}
+
+	if group.Op != syntax.OpAlternate {
+		return inferGroupType(group)
+	}
+
+	subType := Type(Undef)
+	for _, sub := range group.Sub {
+		subType = LeastUpperBound(subType, inferGroupType(sub))
+	}
+	return subType
+}
+
+func inferGroupType(group *syntax.Regexp) Type {
 	switch {
 	case groupOnlyMatches(group, "+-"):
 		return String
@@ -420,10 +433,6 @@ func InferCaprefType(re *syntax.Regexp, cap int) Type {
 	case groupOnlyMatches(group, "+-0123456789.eE"):
 		// Only one decimal point allowed.
 		if strings.Count(group.String(), ".") > 1 {
-			return String
-		}
-		// Must be at least one digit in the group.
-		if !groupOnlyMatches(group, "0123456789") {
 			return String
 		}
 		return Float
