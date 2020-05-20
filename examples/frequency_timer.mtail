@@ -1,3 +1,8 @@
+# Copyright 2020 ashish varshney <e.ashish.av@gmail.com>. All Rights Reserved.
+# This file is available under the Apache license.
+#
+# Rails production log parsing
+
 #Variable declaration
 gauge execution_time by task_name
 counter task_frequence by task_name
