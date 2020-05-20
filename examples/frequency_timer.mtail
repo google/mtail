@@ -1,0 +1,19 @@
+#Variable declaration
+gauge execution_time by task_name
+counter task_frequence by task_name
+
+
+# To make ex_test.go happy
+strptime("2018-06-10T00:32:42Z", "2006-01-02T15:04:05Z07:00")
+
+#only read from specific log file else halt the program
+getfilename() !~ /specific.log/ {
+  stop
+}
+
+
+#log_example: 2020-05-11 00:43:43,481 root execution_time 155461
+/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2},\d+\s+.*:\s+(?P<task_name>\S+.*)\s+(?P<time>\d+)/ {
+  execution_time[$task_name] = $time
+  task_frequence[$task_name]++
+}
