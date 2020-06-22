@@ -179,4 +179,13 @@ const QMGR_REMOVE_LINE /: removed$/
       postfix_smtpd_tls_connections_total[$1][$2][$3][$4][$5]++
       }
     }
+
+  # Total number of deferred messages (550 error)
+  counter postfix_error_messages_deferred
+
+  $application == "error" {
+    / status=deferred/ {
+      postfix_error_messages_deferred++
+      }
+    }
   }
