@@ -57,7 +57,9 @@ func (d *Buckets) Observe(v float64, ts time.Time) {
 }
 
 func (d *Buckets) GetCount() uint64 {
-	return atomic.LoadUint64(&d.Count)
+	d.RLock()
+	defer d.RUnlock()
+	return d.Count
 }
 
 func (d *Buckets) GetSum() float64 {
