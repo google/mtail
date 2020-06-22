@@ -27,6 +27,9 @@ type checker struct {
 	decoScopes []*symbol.Scope // A stack of scopes used for resolving symbols in decorated nodes
 
 	errors errors.ErrorList
+
+	depth   int
+	tooDeep bool
 }
 
 // Check performs a semantic check of the astNode, and returns a potentially
@@ -45,6 +48,15 @@ func Check(node ast.Node) (ast.Node, error) {
 // VisitBefore performs most of the symbol table construction, so that symbols
 // are guaranteed to exist before their use.
 func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
+	c.depth++
+	if c.depth > 100 {
+		if !c.tooDeep {
+			c.errors.Add(node.Pos(), "Expression exceeded maximum recursion depth.")
+			c.tooDeep = true
+		}
+		c.depth--
+		return nil, node
+	}
 	switch n := node.(type) {
 	case *ast.StmtList:
 		n.Scope = symbol.NewScope(c.scope)
@@ -69,6 +81,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 					msg = fmt.Sprintf("%s\n\tCheck that there are at least %s pairs of parentheses.", msg, n.Name)
 				}
 				c.errors.Add(n.Pos(), msg)
+				c.depth--
 				return nil, n
 			}
 			glog.V(2).Infof("Found %q as %v in scope %v", n.Name, sym, c.scope)
@@ -81,6 +94,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		n.Symbol = symbol.NewSymbol(n.Name, symbol.VarSymbol, n.Pos())
 		if alt := c.scope.Insert(n.Symbol); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of metric `%s' previously declared at %s", n.Name, alt.Pos))
+			c.depth--
 			return nil, n
 		}
 		var rType types.Type
@@ -93,10 +107,12 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			rType = types.String
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("internal compiler error: unrecognised Kind %v for declNode %v", n.Kind, n))
+			c.depth--
 			return nil, n
 		}
 		if len(n.Buckets) > 0 && n.Kind != metrics.Histogram {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Can't specify buckets for non-histogram metric `%s'.", n.Name))
+			c.depth--
 			return nil, n
 		}
 		if len(n.Keys) > 0 {
@@ -132,6 +148,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 					sug = fmt.Sprintf("Try adding `const %s /.../' earlier in the program.", n.Name)
 				}
 				c.errors.Add(n.Pos(), fmt.Sprintf("Identifier `%s' not declared.\n\t%s", n.Name, sug))
+				c.depth--
 				return nil, n
 			}
 		}
@@ -142,6 +159,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		n.Symbol.Binding = n
 		if alt := c.scope.Insert(n.Symbol); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redeclaration of decorator `@%s' previously declared at %s", n.Name, alt.Pos))
+			c.depth--
 			return nil, n
 		}
 		// Append a scope placeholder for the recursion into the block.  It has no parent, it'll be cloned when the decorator is instantiated.
@@ -152,12 +170,14 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		if sym := c.scope.Lookup(n.Name, symbol.DecoSymbol); sym != nil {
 			if sym.Binding == nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: Decorator %q not bound to its definition.", n.Name))
+				c.depth--
 				return nil, n
 			}
 			sym.Used = true
 			n.Decl = sym.Binding.(*ast.DecoDecl)
 		} else {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `@%s' is not defined.\n\tTry adding a definition `def %s {}' earlier in the program.", n.Name, n.Name))
+			c.depth--
 			return nil, n
 		}
 		// Create a new scope for the decorator instantiation.
@@ -166,11 +186,13 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		if n.Decl == nil {
 			glog.V(2).Infof("No DecoDecl on DecoStmt: %v", n)
 			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no declaration for decorator: %#v", n))
+			c.depth--
 			return nil, n
 		}
 		if n.Decl.Scope == nil {
 			glog.V(2).Infof("No Scope on DecoDecl: %#v", n.Decl)
 			c.errors.Add(n.Pos(), fmt.Sprintf("Decorator `@%s' is not completely defined yet.\n\tTry removing @%s from here.", n.Name, n.Name))
+			c.depth--
 			return nil, n
 		}
 
@@ -183,11 +205,13 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		id, ok := n.Id.(*ast.IdTerm)
 		if !ok {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no identifier attached to pattern fragment %#v", n))
+			c.depth--
 			return nil, n
 		}
 		n.Symbol = symbol.NewSymbol(id.Name, symbol.PatternSymbol, id.Pos())
 		if alt := c.scope.Insert(n.Symbol); alt != nil {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Redefinition of pattern constant `%s' previously defined at %s", id.Name, alt.Pos))
+			c.depth--
 			return nil, n
 		}
 		n.Symbol.Binding = n
@@ -225,6 +249,11 @@ func (c *checker) checkSymbolUsage() {
 // VisitAfter performs the type annotation and checking, once the child nodes of
 // expressions have been annotated and checked.
 func (c *checker) VisitAfter(node ast.Node) ast.Node {
+	if c.tooDeep {
+		return node
+	}
+	defer func() { c.depth-- }()
+
 	switch n := node.(type) {
 	case *ast.StmtList:
 		c.checkSymbolUsage()
@@ -233,19 +262,10 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.CondStmt:
-		condOK := false
-
-		switch cond := n.Cond.(type) {
+		switch n.Cond.(type) {
 		case *ast.BinaryExpr, *ast.PatternExpr, *ast.PatternFragment, *ast.OtherwiseStmt:
-			condOK = true
-
-		case *ast.IndexedExpr:
-			// Usage of a Pattern const shows up as an IndexedExpr because we can't tell them apart from identifiers yet.
-			if cond.Type() == types.Pattern {
-				condOK = true
-			}
-		}
-		if !condOK {
+			// OK as conditions
+		default:
 			c.errors.Add(n.Cond.Pos(), fmt.Sprintf("Can't interpret %s as a boolean expression here.\n\tTry using comparison operators to make the condition explicit.", n.Cond.Type()))
 		}
 		c.checkSymbolUsage()
@@ -369,14 +389,13 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : Bool
 			rType = types.Bool
-			if types.IsErrorType(rType) {
-				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
-				n.SetType(rType)
+			astType := types.Function(lT, rT, rType)
+			t := types.LeastUpperBound(lT, rT)
+			if types.IsErrorType(t) {
+				c.errors.Add(n.Pos(), fmt.Sprintf("Can't compare LHS of type %s with RHS of type %s.", lT, rT))
+				n.SetType(t)
 				return n
 			}
-			astType := types.Function(lT, rT, rType)
-
-			t := types.LeastUpperBound(lT, rT)
 			exprType := types.Function(t, t, types.Bool)
 			err := types.Unify(exprType, astType)
 			if err != nil {
@@ -444,10 +463,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			astType := types.Function(lT, rT, types.NewVariable())
 			err := types.Unify(exprType, astType)
 			if err != nil {
-				// Commented because these type mismatch errors appear to be unhelpful.
-				//c.errors.Add(n.Pos(), fmt.Sprintf("Type mismatch: %s", err))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Parameter to =~ has a %s", err))
 				n.SetType(types.Error)
 				return n
+			}
+			if !types.Equals(rT, types.Pattern) {
+				n.Rhs = ast.Walk(c, &ast.PatternExpr{Expr: n.Rhs})
 			}
 
 		default:
@@ -524,6 +545,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.IndexedExpr:
+
 		argTypes := []types.Type{}
 		if args, ok := n.Index.(*ast.ExprList); ok {
 			for _, arg := range args.Children {
@@ -546,9 +568,18 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(types.Error)
 				return n
 			}
-			// ok
+
+			if v.Type() == types.Pattern {
+				// We now have enough information to tell that something the
+				// parser thought was an IdTerm is really a pattern constant.
+				// Let's now rewrite the AST correctly.
+				// TODO: Haven't checked that this IndexedExpr has no args.
+				return ast.Walk(c, &ast.PatternExpr{Expr: v})
+			}
+
 			if t, ok := v.Type().(*types.Operator); ok && types.IsDimension(t) {
 				glog.V(1).Infof("Our idNode is a dimension type")
+				// TODO: should this call n.SetType like below?
 			} else {
 				if len(argTypes) > 0 {
 					glog.V(1).Infof("Our idNode is not a dimension type")
@@ -559,6 +590,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				}
 				return n
 			}
+
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
 			n.SetType(types.Error)
@@ -757,6 +789,15 @@ func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			p.errors.Add(v.Pos(), fmt.Sprintf("Can't evaluate pattern fragment `%s' here.\n\tTry defining it earlier in the program.", pf.Symbol.Name))
 		}
 		p.pattern.WriteString(pf.Pattern)
+		return p, v
+	case *ast.IntLit:
+		p.pattern.WriteString(fmt.Sprintf("%d", v.I))
+		return p, v
+	case *ast.FloatLit:
+		p.pattern.WriteString(fmt.Sprintf("%g", v.F))
+		return p, v
+	case *ast.StringLit:
+		p.pattern.WriteString(v.Text)
 		return p, v
 	}
 	return p, n

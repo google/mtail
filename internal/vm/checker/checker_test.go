@@ -242,6 +242,15 @@ l++=l
 	{"dec non var",
 		`strptime("", "")--
 `, []string{"dec non var:1:16: Expecting a variable here."}},
+
+	// TODO(jaq): This is an instance of bug #190, the capref is ambiguous.
+	// 	{"regexp with no zero capref",
+	// 		`//||/;0/ {$0||// {}}
+	// `, []string{"regexp with no zero capref:1:5-6: Nonexistent capref =."}},
+
+	{"cmp to None",
+		`strptime("","")<5{}
+`, []string{"cmp to None:1:15-17: Can't compare LHS of type None with RHS of type Int."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
@@ -436,6 +445,16 @@ stop
 histogram foo buckets 1, 2, 3
 /(\d+)/ {
   foo = $1
+}`},
+
+	{"match a pattern in cond", `
+const N /n/
+N {
+}`},
+
+	{"match a pattern in a binary expr in cond", `
+const N /n/
+N && 1 {
 }`},
 }
 

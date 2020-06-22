@@ -34,6 +34,7 @@ func TestBasicTail(t *testing.T) {
 			defer stopM()
 
 			startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
+			startLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
 
 			time.Sleep(1 * time.Second)
 
@@ -47,12 +48,10 @@ func TestBasicTail(t *testing.T) {
 			}
 
 			endLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
+			endLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
 
-			lineCount := endLineCount.(float64) - startLineCount.(float64)
-			if lineCount != 3. {
-				t.Errorf("output didn't have expected line count increase: want 3 got %#v", lineCount)
-				t.Logf("Line Count, and log lines total: %#v, %#v", mtail.TestGetMetric(t, m.Addr(), "lines_total"), mtail.TestGetMetric(t, m.Addr(), "log_lines_total"))
-			}
+			mtail.ExpectMetricDelta(t, endLineCount, startLineCount, 3)
+			mtail.ExpectMetricDelta(t, endLogCount, startLogCount, 1)
 		})
 	}
 }

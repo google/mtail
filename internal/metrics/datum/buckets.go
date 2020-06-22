@@ -106,3 +106,12 @@ func (d *Buckets) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(j)
 }
+
+func (r *Range) MarshalJSON() ([]byte, error) {
+	j := struct {
+		Min string
+		Max string
+	}{fmt.Sprintf("%v", r.Min), fmt.Sprintf("%v", r.Max)}
+
+	return json.Marshal(j)
+}

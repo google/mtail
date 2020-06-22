@@ -122,6 +122,24 @@ var typeUnificationTests = []struct {
 		String, Pattern,
 		Pattern,
 	},
+	// Patterns and Ints can both be Bool.
+	{
+		Pattern, Int,
+		Bool,
+	},
+	// Undef secedes to oether
+	{
+		Undef, Int,
+		Int,
+	},
+	{
+		String, Undef,
+		String,
+	},
+	{
+		Undef, Undef,
+		Undef,
+	},
 }
 
 func TestTypeUnification(t *testing.T) {
@@ -177,6 +195,18 @@ var groupOnlyMatchesTests = []struct {
 		"+-0123456789",
 		true,
 	},
+	{`\-`,
+		"+-",
+		true,
+	},
+	{`\-`,
+		"+-0123456789",
+		true,
+	},
+	{`\-|[0-9]`,
+		"+-",
+		false,
+	},
 }
 
 func TestGroupOnlyMatches(t *testing.T) {
@@ -214,6 +244,18 @@ var inferCaprefTypeTests = []struct {
 	{`-`,
 		String,
 	},
+	{`\-`,
+		String,
+	},
+	{`\-|[0-9]`,
+		String,
+	},
+	{`\d+\.\d+|\-`,
+		String,
+	},
+	{`\-|\d+\.\d+`,
+		String,
+	},
 }
 
 func TestInferCaprefType(t *testing.T) {
@@ -226,7 +268,7 @@ func TestInferCaprefType(t *testing.T) {
 			}
 			r := InferCaprefType(re, 1)
 			if !Equals(tc.typ, r) {
-				t.Errorf("Types don't match: %q infers %v, not %v", tc.pattern, r, tc.typ)
+				t.Errorf("Types don't match: %q inferred %v, not %v", tc.pattern, r, tc.typ)
 			}
 		})
 	}

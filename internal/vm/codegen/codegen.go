@@ -120,7 +120,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			case metrics.Float:
 				datum.SetFloat(d, 0, time.Unix(0, 0))
 			default:
-				c.errorf(n.Pos(), "Can't initialize to zero a %v", n)
+				c.errorf(n.Pos(), "Can't initialize to zero a %#v", n)
 				return nil, n
 			}
 		}
@@ -195,9 +195,10 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			return nil, n
 		}
 		c.obj.Regexps = append(c.obj.Regexps, re)
-		// Store the location of this regular expression in the patterNode
+		// Store the location of this regular expression in the patternNode
 		n.Index = len(c.obj.Regexps) - 1
 		c.emit(n, code.Match, n.Index)
+		return nil, n
 
 	case *ast.StringLit:
 		c.obj.Strings = append(c.obj.Strings, n.Text)
@@ -527,11 +528,17 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			c.emit(n, code.Shr, nil)
 
 		case parser.MATCH:
-			// Cross fingers that last branch was a patternExprNode
+			if c.obj.Program[c.pc()].Opcode != code.Match {
+				c.errorf(n.Pos(), "internal compiler error: attempting to convert a patternexprnode match to smatch but saw a %s instead", c.obj.Program[c.pc()].Opcode)
+				return n
+			}
 			c.obj.Program[c.pc()].Opcode = code.Smatch
 
 		case parser.NOT_MATCH:
-			// Cross fingers that last branch was a patternExprNode
+			if c.obj.Program[c.pc()].Opcode != code.Match {
+				c.errorf(n.Pos(), "internal compiler error: attempting to convert a patternexprnode match to smatch but saw a %s instead", c.obj.Program[c.pc()].Opcode)
+				return n
+			}
 			c.obj.Program[c.pc()].Opcode = code.Smatch
 			c.emit(n, code.Not, nil)
 

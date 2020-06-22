@@ -42,3 +42,4 @@ workdir/*
 /bug/
 /coverprofile
 /test-results/
+/fuzzit

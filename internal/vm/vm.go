@@ -331,15 +331,17 @@ func (v *VM) ParseTime(layout, value string) (tm time.Time) {
 // execute performs an instruction cycle in the VM. acting on the instruction
 // i in thread t.
 func (v *VM) execute(t *thread, i code.Instr) {
-	// In normal operation, recover from panics.
-	if !v.HardCrash {
-		defer func() {
-			if r := recover(); r != nil {
-				v.errorf("panic in thread %#v at instr %q: %s", t, i, r)
-				v.terminate = true
+	// In normal operation, recover from panics, otherwise dump that state and repanic.
+	defer func() {
+		if r := recover(); r != nil {
+			if v.HardCrash {
+				fmt.Printf("panic in thread %#v at instr %q: %s\n", t, i, r)
+				panic(r)
 			}
-		}()
-	}
+			v.errorf("panic in thread %#v at instr %q: %s", t, i, r)
+			v.terminate = true
+		}
+	}()
 
 	switch i.Opcode {
 	case code.Bad:
@@ -596,9 +598,23 @@ func (v *VM) execute(t *thread, i code.Instr) {
 	case code.Capref:
 		// Put a capture group reference onto the stack.
 		// First find the match storage index on the stack,
-		re := t.Pop().(int)
+		val := t.Pop()
+		re, ok := val.(int)
+		if !ok {
+			v.errorf("Invalid re index %v, not an int", val)
+			return
+		}
 		// Push the result from the re'th match at operandth index
-		t.Push(t.matches[re][i.Operand.(int)])
+		op, ok := i.Operand.(int)
+		if !ok {
+			v.errorf("Invalid operand %v, not an int", i.Operand)
+			return
+		}
+		if len(t.matches[re]) <= op {
+			v.errorf("Not enough capture groups matched from %v to select %dth", t.matches[re], op)
+			return
+		}
+		t.Push(t.matches[re][op])
 
 	case code.Str:
 		// Put a string constant onto the stack
@@ -952,9 +968,9 @@ func (v *VM) DumpByteCode(name string) string {
 	w := new(tabwriter.Writer)
 	w.Init(b, 0, 0, 1, ' ', tabwriter.AlignRight)
 
-	fmt.Fprintln(w, "disasm\tl\top\topnd\t")
+	fmt.Fprintln(w, "disasm\tl\top\topnd\tline\t")
 	for n, i := range v.prog {
-		fmt.Fprintf(w, "\t%d\t%s\t%v\t\n", n, i.Opcode, i.Operand)
+		fmt.Fprintf(w, "\t%d\t%s\t%v\t%d\t\n", n, i.Opcode, i.Operand, i.SourceLine+1)
 	}
 	if err := w.Flush(); err != nil {
 		glog.Infof("flush error: %s", err)

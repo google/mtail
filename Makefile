@@ -28,13 +28,7 @@ $(DEPDIR)/%.d: ;
 
 # Set the timeout for tests run under the race detector.
 timeout := 10m
-ifeq ($(TRAVIS),true)
-timeout := 20m
-endif
-ifeq ($(CIRCLECI),true)
-timeout := 20m
-endif
-ifeq ($(CIRRUS_CI),true)
+ifeq ($(CI),true)
 timeout := 20m
 endif
 # Let the benchmarks run for a long time.  The timeout is for the total time of
@@ -115,11 +109,11 @@ release := $(shell git describe --tags --always --dirty | cut -d"-" -f 1,2)
 GO_LDFLAGS := -X main.Branch=${branch} -X main.Version=${version} -X main.Revision=${revision}
 
 ifeq ($(STATIC),y)
-	# -s Omit symbol table and debug info
-	# -w Omit DWARF symbol table
-	# -extldflags -static and CGO_ENABLED=0 to make pure static
-	GO_LDFLAGS += -w -s -extldflags "-static"
-	export CGO_ENABLED=0
+# -s Omit symbol table and debug info
+# -w Omit DWARF symbol table
+# -extldflags -static and CGO_ENABLED=0 to make pure static
+GO_LDFLAGS += -w -s -extldflags "-static"
+export CGO_ENABLED=0
 endif
 
 # Very specific static pattern rule to only do this for commandline targets.
@@ -162,7 +156,7 @@ $(PREFIX)/bin/%: %
 	install -m 755 $< $@
 
 
-GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64"
+GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64 linux/ppc64"
 #GOX_OSARCH := ""
 
 .PHONY: crossbuild
@@ -208,7 +202,7 @@ TESTCOVERPROFILE ?= out.coverprofile
 junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
-	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -tags=integration -v -timeout=${timeout} ./...
+	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -tags=integration -v -timeout=${timeout} ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
@@ -271,7 +265,7 @@ CRASH ?=
 .PHONY: fuzz-repro
 fuzz-repro: $(OUT)/vm-fuzzer mtail
 	$(OUT)/vm-fuzzer $(CRASH) || true  # Want to continue
-	./mtail --logtostderr --vmodule=checker=2,types=2 --mtailDebug=3 --dump_ast_types --dump_bytecode --compile_only --progs $(CRASH)
+	./mtail --logtostderr --vmodule=loader=2,checker=2,types=2 --mtailDebug=3 --dump_ast_types --dump_bytecode --compile_only --progs $(CRASH)
 
 # make fuzz-min CRASH=example crash
 .PHONY: fuzz-min
@@ -310,36 +304,19 @@ coverage.html: coverprofile | print-version
 covrep: coverage.html
 	xdg-open $<
 
-ifeq ($(CIRRUS_CI),true)
-  COVERALLS_SERVICE := cirrus-ci
-endif
-ifeq ($(CIRCLECI),true)
-  COVERALLS_SERVICE := circle-ci
-endif
-ifeq ($(TRAVIS),true)
-  COVERALLS_SERVICE := travis-ci
-endif
-
-.PHONY: upload_to_coveralls
-upload_to_coveralls: | coverprofile $(GOVERALLS)
-	$(GOVERALLS) -coverprofile=coverprofile -service=$(COVERALLS_SERVICE)
-
-
 ###
-## CircleCI development targets
+## Github issue tracking
 #
+GHI = $(GOBIN)/ghi
+$(GHI):
+	go get $(GOGETFLAGS) github.com/markbates/ghi
 
-.PHONY: circleci-validate
-circleci-validate: .circleci/config.yml
-	circleci config validate
+issue-fetch: | $(GHI)
+	$(GHI) fetch
 
-# Override this on the make command to say which job to run
-CIRCLEJOB ?= fuzzing
-.PHONY: circleci-execute
-.INTERMEDIATE: tmpconfig.yml
-circleci-execute: .circleci/config.yml circleci-validate
-ifeq ($(CIRCLECI),true)
-	$(error "Don't run this target from within CircleCI!")
-endif
-	circleci config process $< > tmpconfig.yml
-	circleci local execute -c tmpconfig.yml --job $(CIRCLEJOB)
+issue-list: | $(GHI)
+	$(GHI) list
+
+ISSUE?=1
+issue-show: | $(GHI)
+	$(GHI) show $(ISSUE)
