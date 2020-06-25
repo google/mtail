@@ -15,6 +15,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"syscall"
@@ -96,6 +97,25 @@ func (m *Server) StartTailing() error {
 		glog.Warning(err)
 	}
 	for _, pattern := range m.logPathPatterns {
+		glog.V(1).Infof("Tail pattern %q", pattern)
+		if err = m.t.TailPattern(pattern); err != nil {
+			glog.Warning(err)
+		}
+	}
+	return nil
+}
+
+// Scan the wildcard directory address regularly and add to the wildcard address scanning
+func (m *Server) PollLogPathPatterns() error {
+	for _, pattern := range m.logPathPatterns {
+		absPath, err := filepath.Abs(pattern)
+		if err != nil {
+			return err
+		}
+		d := filepath.Dir(absPath)
+		if !m.t.HasMeta(d) {
+			continue
+		}
 		glog.V(1).Infof("Tail pattern %q", pattern)
 		if err = m.t.TailPattern(pattern); err != nil {
 			glog.Warning(err)
@@ -326,7 +346,20 @@ func (m *Server) Serve() error {
 		}
 		errc <- err
 	}()
+	pollQuit := make(chan int, 1) // Channel to stop PollLogPathPatterns.
+	go func(chan int) {
+		ticker := time.NewTicker(time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				m.PollLogPathPatterns()
+			case <-pollQuit:
+				return
+			}
+		}
+	}(pollQuit)
 	m.WaitForShutdown()
+	pollQuit <- 1
 	return <-errc
 }
 
