@@ -38,29 +38,6 @@ matrix_test_task:
   depends_on:
     - test
 
-fuzzing_task:
-  depends_on:
-    - test
-  env:
-    FUZZIT_API_KEY: ENCRYPTED[576877027ac2ddfdc467b47005d53181d998cb29a7ce4c381b112b6771be0e91ef146dc22804c0ba709afc6685debccd]
-    matrix:
-      - TYPE: fuzzing
-      # local-regression needs to talk to a local docker which we don't have in this environment.
-      #- TYPE: local-regression
-  container:
-    image: gcr.io/fuzzit-public/buster-golang12:2dc7875
-  modules_cache:
-    populate_script: |
-      make GO111MODULE=off --debug install_deps
-      GO111MODULE=on go mod vendor
-    fingerprint_script: cat go.sum && go version && echo VENDOR
-    folder: $CIRRUS_WORKING_DIR/vendor
-  setup_script: |
-    wget -q -O fuzzit https://github.com/fuzzitdev/fuzzit/releases/latest/download/fuzzit_Linux_x86_64
-    chmod a+x fuzzit
-  build_script: make GO111MODULE=off CXX=clang CXXFLAGS=-fsanitize=fuzzer LIB_FUZZING_ENGINE= --debug ./vm-fuzzer
-  test_script: ./fuzzit create job --type=${TYPE} --branch=${CIRRUS_BRANCH} --revision=${CIRRUS_CHANGE_IN_REPO} mtail/internal-vm ./vm-fuzzer
-
 docker_builder:
   name: container
   depends_on:
