@@ -19,6 +19,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -263,7 +265,18 @@ func (t *Tailer) watchDirname(pathname string) error {
 		return err
 	}
 	d := filepath.Dir(absPath)
+	if t.HasMeta(d) {
+		return nil
+	}
 	return t.w.Observe(d, t)
+}
+
+func (t *Tailer) HasMeta(path string) bool {
+	magicChars := `*?[`
+	if runtime.GOOS != "windows" {
+		magicChars = `*?[\`
+	}
+	return strings.ContainsAny(path, magicChars)
 }
 
 // openLogPath opens a log file named by pathname.
