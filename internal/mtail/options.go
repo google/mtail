@@ -45,6 +45,16 @@ func BindAddress(address, port string) func(*Server) error {
 	}
 }
 
+// BindUnixSocket sets the UNIX socket path in Server.
+func BindUnixSocket(unixSocketPath string) func(*Server) error {
+	return func(m *Server) error {
+		m.bindUnixSocket = unixSocketPath
+		var err error
+		m.listener, err = net.Listen("unix", unixSocketPath)
+		return err
+	}
+}
+
 // SetBuildInfo sets the mtail program build information in the Server.
 func SetBuildInfo(info BuildInfo) func(*Server) error {
 	return func(m *Server) error {
