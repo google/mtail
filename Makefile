@@ -156,7 +156,7 @@ $(PREFIX)/bin/%: %
 	install -m 755 $< $@
 
 
-GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64 linux/ppc64"
+GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64 linux/arm linux/arm64 linux/ppc64"
 #GOX_OSARCH := ""
 
 .PHONY: crossbuild
