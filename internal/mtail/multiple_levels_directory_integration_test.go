@@ -7,6 +7,7 @@ package mtail_test
 import (
 	"os"
 	"path"
+	"sync"
 	"testing"
 	"time"
 
@@ -41,15 +42,35 @@ func TestPollLogPathPatterns(t *testing.T) {
 	glog.Infof("Wrote %d bytes", n)
 	time.Sleep(time.Second)
 
-	logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-	lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-	if logCount.(float64)-startLogCount.(float64) != 1. {
-		t.Errorf("Unexpected log count: got %g, want 1", logCount.(float64)-startLogCount.(float64))
-	}
-	if lineCount.(float64)-startLineCount.(float64) != 1. {
-		t.Errorf("Unexpected line count: got %g, want 1", lineCount.(float64)-startLineCount.(float64))
-	}
-	time.Sleep(time.Second)
-
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		check := func() (bool, error) {
+			logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
+			return mtail.TestMetricDelta(logCount, startLogCount) == 1., nil
+		}
+		ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			t.Error()
+		}
+		wg.Done()
+	}()
+	go func() {
+		check := func() (bool, error) {
+			logCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
+			return mtail.TestMetricDelta(logCount, startLineCount) == 1., nil
+		}
+		ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			t.Error()
+		}
+		wg.Done()
+	}()
+	wg.Wait()
 }
