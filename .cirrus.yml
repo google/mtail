@@ -28,6 +28,7 @@ matrix_test_task:
   <<: *TEST_TASK_TEMPLATE
   container:
     matrix:
+      - image: golang:1.15
       - image: golang:1.14
       - image: golang:1.13
   env:
