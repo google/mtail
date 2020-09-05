@@ -66,9 +66,9 @@ GOYACC = $(GOBIN)/goyacc
 $(GOYACC):
 	go get $(GOGETFLAGS) golang.org/x/tools/cmd/goyacc
 
-GOFUZZBUILD = $(GOBIN)/go-fuzz-build
+GOFUZZBUILD = $(GOBIN)/go114-fuzz-build
 $(GOFUZZBUILD):
-	go get $(GOGETFLAGS) github.com/dvyukov/go-fuzz/go-fuzz-build
+	go get $(GOGETFLAGS) github.com/mdempsky/go114-fuzz-build
 
 GOFUZZ = $(GOBIN)/go-fuzz
 $(GOFUZZ):
@@ -233,11 +233,11 @@ export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPAT
 # These flags set compatibility with OSS-Fuzz
 CXX ?= clang-9
 CXXFLAGS ?=
-LIB_FUZZING_ENGINE ?= -libfuzzer
+LIB_FUZZING_ENGINE ?= -fsanitize=fuzzer
 OUT ?= .
 
 $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
-	$(GOFUZZBUILD) -libfuzzer -o fuzzer.a ./internal/vm
+	$(GOFUZZBUILD) -o fuzzer.a ./internal/vm
 	$(CXX) $(CXXFLAGS) $(LIB_FUZZING_ENGINE) fuzzer.a -lpthread -o $(OUT)/vm-fuzzer
 
 $(OUT)/vm-fuzzer.dict: mgen
