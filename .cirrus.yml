@@ -39,7 +39,7 @@ matrix_test_task:
   depends_on:
     - test
 
-fuzz_build_test:
+fuzz_build_task:
   modules_cache:
     populate_script: make --debug install_deps
     fingerprint_script: cat go.sum && go version
