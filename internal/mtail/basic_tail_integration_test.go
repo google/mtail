@@ -51,6 +51,7 @@ func TestBasicTail(t *testing.T) {
 			var wg sync.WaitGroup
 			wg.Add(2)
 			go func() {
+				defer wg.Done()
 				check := func() (bool, error) {
 					end := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 					return mtail.TestMetricDelta(end, startLineCount) == 3, nil
@@ -62,21 +63,21 @@ func TestBasicTail(t *testing.T) {
 				if !ok {
 					t.Error()
 				}
-				wg.Done()
 			}()
 			go func() {
+				defer wg.Done()
 				check := func() (bool, error) {
 					end := mtail.TestGetMetric(t, m.Addr(), "log_count")
 					return mtail.TestMetricDelta(end, startLogCount) == 1, nil
 				}
 				ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
 				if err != nil {
+
 					t.Fatal(err)
 				}
 				if !ok {
 					t.Error(err)
 				}
-				wg.Done()
 			}()
 			wg.Wait()
 		})
