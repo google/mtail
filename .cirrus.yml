@@ -39,8 +39,17 @@ matrix_test_task:
   depends_on:
     - test
 
+fuzz_build_test:
+  modules_cache:
+    populate_script: make --debug install_deps
+    fingerprint_script: cat go.sum && go version
+    folder: $GOPATH/pkg/mod
+  depends_on:
+    - matrix_test
+  build_script: make CXX=clang LIB_FUZZING_ENGINE=-fsanitize=fuzzer ./vm-fuzzer
+
 docker_builder:
-  name: container
+  name: container_build
   depends_on:
     - matrix_test
   build_script: make --debug container
@@ -48,7 +57,8 @@ docker_builder:
 release_task:
   depends_on:
     - matrix_test
-    - container
+    - container_build
+    - fuzz_build
   only_if: $CIRRUS_TAG =~ 'v.*'
   env:
     - GITHUB_TOKEN: ENCRYPTED[d81bdfa3956148455e9a5de062e25e4e4bd9cb3031bc577d0d7e3652f3d5cf09d66b6fe9edbd739ce39210558d9b8ae3]
