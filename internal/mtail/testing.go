@@ -106,17 +106,23 @@ func TestGetMetric(tb testing.TB, addr, name string) interface{} {
 	return r[name]
 }
 
-// ExpectMetricDelta checks to see if the difference between a and b is want;
+// TestMetricDelta checks to see if the difference between a and b is want;
 // it assumes both values are float64s that came from a TestGetMetric.
-func ExpectMetricDelta(tb testing.TB, a, b interface{}, want float64) {
-	tb.Helper()
+func TestMetricDelta(a, b interface{}) float64 {
 	if a == nil {
 		a = 0.
 	}
 	if b == nil {
 		b = 0.
 	}
-	delta := a.(float64) - b.(float64)
+	return a.(float64) - b.(float64)
+}
+
+// ExpectMetricDelta checks to see if the difference between a and b is want;
+// it assumes both values are float64s that came from a TestGetMetric.
+func ExpectMetricDelta(tb testing.TB, a, b interface{}, want float64) {
+	tb.Helper()
+	delta := TestMetricDelta(a, b)
 	if delta != want {
 		tb.Errorf("Unexpected delta: got %v - %v = %g, want %g", a, b, delta, want)
 	}

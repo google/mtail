@@ -7,6 +7,7 @@ package mtail_test
 import (
 	"fmt"
 	"path"
+	"sync"
 	"testing"
 	"time"
 
@@ -47,11 +48,37 @@ func TestBasicTail(t *testing.T) {
 				time.Sleep(1 * time.Second)
 			}
 
-			endLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-			endLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-
-			mtail.ExpectMetricDelta(t, endLineCount, startLineCount, 3)
-			mtail.ExpectMetricDelta(t, endLogCount, startLogCount, 1)
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				check := func() (bool, error) {
+					end := mtail.TestGetMetric(t, m.Addr(), "lines_total")
+					return mtail.TestMetricDelta(end, startLineCount) == 3, nil
+				}
+				ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !ok {
+					t.Error()
+				}
+				wg.Done()
+			}()
+			go func() {
+				check := func() (bool, error) {
+					end := mtail.TestGetMetric(t, m.Addr(), "log_count")
+					return mtail.TestMetricDelta(end, startLogCount) == 1, nil
+				}
+				ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !ok {
+					t.Error(err)
+				}
+				wg.Done()
+			}()
+			wg.Wait()
 		})
 	}
 }
