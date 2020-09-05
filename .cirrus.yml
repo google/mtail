@@ -47,6 +47,8 @@ fuzz_build_task:
   depends_on:
     - matrix_test
   build_script: make CXX=clang LIB_FUZZING_ENGINE=-fsanitize=fuzzer ./vm-fuzzer
+  container:
+    image: gcr.io/oss-fuzz-base/base-builder
 
 docker_builder:
   name: container_build
