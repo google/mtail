@@ -46,7 +46,7 @@ fuzz_build_task:
     folder: $GOPATH/pkg/mod
   depends_on:
     - matrix_test
-  build_script: make CXX=clang LIB_FUZZING_ENGINE=-fsanitize=fuzzer ./vm-fuzzer
+  build_script: make --debug CXX=clang LIB_FUZZING_ENGINE=-fsanitize=fuzzer ./vm-fuzzer ./vm-fuzzer.dict ./vm-fuzzer_seed_corpus.zip
   container:
     image: gcr.io/oss-fuzz-base/base-builder
 
