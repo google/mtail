@@ -39,17 +39,25 @@ func TestPartialLineRead(t *testing.T) {
 
 	startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 
+	check := func() (bool, error) {
+		lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
+		return mtail.TestMetricDelta(lineCount, startLineCount) == 1., nil
+	}
+
 	{
 		n, err := f.WriteString("line 1\n")
 		if err != nil {
 			t.Fatal(err)
 		}
 		glog.Infof("Wrote %d bytes", n)
-		time.Sleep(time.Second)
 
-		lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-		mtail.ExpectMetricDelta(t, lineCount, startLineCount, 1)
+		ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			t.Error()
+		}
 	}
 
 	{
@@ -59,11 +67,14 @@ func TestPartialLineRead(t *testing.T) {
 			t.Fatal(err)
 		}
 		glog.Infof("Wrote %d bytes", n)
-		time.Sleep(time.Second)
 
-		lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-		mtail.ExpectMetricDelta(t, lineCount, startLineCount, 1)
+		ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			t.Error()
+		}
 	}
 	{
 
@@ -72,10 +83,12 @@ func TestPartialLineRead(t *testing.T) {
 			t.Fatal(err)
 		}
 		glog.Infof("Wrote %d bytes", n)
-		time.Sleep(time.Second)
-
-		lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-		mtail.ExpectMetricDelta(t, lineCount, startLineCount, 2)
+		ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			t.Error()
+		}
 	}
 }
