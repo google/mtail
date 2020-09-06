@@ -43,3 +43,4 @@ workdir/*
 /coverprofile
 /test-results/
 /fuzzit
+/fuzzer.h
