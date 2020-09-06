@@ -258,7 +258,7 @@ fuzz: SEED $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 
 .PHONY: fuzz-regtest
 fuzz-regtest: $(OUT)/vm-fuzzer SEED
-	$(OUT)/vm-fuzzer -rss_limit_mb=4096 $(wildcard SEED/*.mtail)
+	$(OUT)/vm-fuzzer -rss_limit_mb=4096 $(shell ls SEED/*.mtail)
 
 CRASH ?=
 
