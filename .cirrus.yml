@@ -44,7 +44,7 @@ fuzz_test_task:
     populate_script: make --debug install_deps
     fingerprint_script: cat go.sum && go version
     folder: $GOPATH/pkg/mod
-  build_script: ls -al && make --debug CXX=clang LIB_FUZZING_ENGINE=-fsanitize=fuzzer fuzz-regtest
+  test_script: echo ${OUT} && make --debug CXX=clang LIB_FUZZING_ENGINE=-fsanitize=fuzzer fuzz-regtest
   container:
     image: gcr.io/oss-fuzz-base/base-builder
 
