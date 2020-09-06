@@ -56,7 +56,7 @@ func TestBasicTail(t *testing.T) {
 					end := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 					return mtail.TestMetricDelta(end, startLineCount) == 3, nil
 				}
-				ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
+				ok, err := testutil.DoOrTimeout(check, 1*time.Minute, 10*time.Millisecond)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -72,7 +72,6 @@ func TestBasicTail(t *testing.T) {
 				}
 				ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
 				if err != nil {
-
 					t.Fatal(err)
 				}
 				if !ok {
