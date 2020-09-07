@@ -34,8 +34,8 @@ func TestTruncatedLogRead(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 2, time.Minute)
-	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1, time.Minute)
+	linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 2)
+	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
 
 	logFile := path.Join(logDir, "log")
 	f := testutil.TestOpenFile(t, logFile)

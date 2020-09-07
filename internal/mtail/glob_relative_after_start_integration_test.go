@@ -10,7 +10,6 @@ import (
 	"path"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
@@ -39,8 +38,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 			defer stopM()
 
 			{
-				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1, time.Minute)
-				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 
 				logFile := path.Join(logDir, "log.1.txt")
 				f := testutil.TestOpenFile(t, logFile)
@@ -67,8 +66,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 			{
 
-				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1, time.Minute)
-				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 
 				logFile := path.Join(logDir, "log.2.txt")
 				f := testutil.TestOpenFile(t, logFile)
@@ -91,8 +90,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 				wg.Wait()
 			}
 			{
-				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 0, time.Minute)
-				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 0)
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 
 				logFile := path.Join(logDir, "log.2.txt")
 				f := testutil.TestOpenFile(t, logFile)

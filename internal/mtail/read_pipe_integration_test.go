@@ -9,7 +9,6 @@ import (
 	"path"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
@@ -40,7 +39,7 @@ func TestReadFromPipe(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
 	defer stopM()
 
-	lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 3, time.Minute)
+	lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 3)
 
 	n, err := f.WriteString("1\n2\n3\n")
 	testutil.FatalIfErr(t, err)

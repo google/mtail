@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"testing"
-	"time"
 
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
@@ -32,7 +31,7 @@ func TestNewProg(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
 	defer stopM()
 
-	progLoadsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("prog_loads_total", "nocode.mtail", 1, time.Minute)
+	progLoadsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("prog_loads_total", "nocode.mtail", 1)
 
 	testutil.TestOpenFile(t, progDir+"/nocode.mtail")
 

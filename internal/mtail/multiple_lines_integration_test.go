@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
@@ -38,7 +37,7 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 	defer stopM()
 
 	{
-		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
+		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 		n, err := f.WriteString("line 1\n")
 		if err != nil {
 			t.Fatal(err)
@@ -48,7 +47,7 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 	}
 
 	{
-		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 2, time.Minute)
+		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 2)
 		n, err := f.WriteString("line 2\nline 3\n")
 		if err != nil {
 			t.Fatal(err)

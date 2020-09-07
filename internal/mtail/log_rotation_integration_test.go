@@ -40,7 +40,7 @@ func TestLogRotation(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	{
-		logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1, time.Minute)
+		logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1)
 
 		testutil.WriteString(t, f, "line 2\n")
 		time.Sleep(1 * time.Second)
@@ -55,7 +55,7 @@ func TestLogRotation(t *testing.T) {
 	f = testutil.TestOpenFile(t, logFile)
 
 	{
-		logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1, time.Minute)
+		logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1)
 
 		testutil.WriteString(t, f, "line 1\n")
 		time.Sleep(1 * time.Second)

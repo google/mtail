@@ -34,8 +34,8 @@ func TestBasicTail(t *testing.T) {
 			m, stopM := mtail.TestStartServer(t, test.pollInterval, test.enableFsNotify, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
 			defer stopM()
 
-			lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 3, time.Minute)
-			logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1, time.Minute)
+			lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 3)
+			logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
 
 			logFile := path.Join(logDir, "log")
 

@@ -28,6 +28,9 @@ type TestServer struct {
 	*Server
 
 	tb testing.TB
+
+	// Set this to change the poll deadline when using DoOrTimeout within this TestServer.
+	DoOrTimeoutDeadline time.Duration
 }
 
 // TestMakeServer makes a new TestServer for use in tests, but does not start
@@ -149,8 +152,12 @@ func ExpectMetricDelta(tb testing.TB, a, b interface{}, want float64) {
 }
 
 // ExpectMetricDeltaWithDeadline returns a deferrable function which tests if the metric with name has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
-func (ts *TestServer) ExpectMetricDeltaWithDeadline(name string, want float64, deadline time.Duration) func() {
+func (ts *TestServer) ExpectMetricDeltaWithDeadline(name string, want float64) func() {
 	ts.tb.Helper()
+	deadline := ts.DoOrTimeoutDeadline
+	if deadline == 0 {
+		deadline = time.Minute
+	}
 	start := TestGetMetric(ts.tb, ts.Addr(), name)
 	check := func() (bool, error) {
 		now := TestGetMetric(ts.tb, ts.Addr(), name)
@@ -171,8 +178,12 @@ func (ts *TestServer) ExpectMetricDeltaWithDeadline(name string, want float64, d
 }
 
 // ExpectMapMetricDeltaWithDeadline returns a deferrable function which tests if the map metric with name and key has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
-func (ts *TestServer) ExpectMapMetricDeltaWithDeadline(name, key string, want float64, deadline time.Duration) func() {
+func (ts *TestServer) ExpectMapMetricDeltaWithDeadline(name, key string, want float64) func() {
 	ts.tb.Helper()
+	deadline := ts.DoOrTimeoutDeadline
+	if deadline == 0 {
+		deadline = time.Minute
+	}
 	start := TestGetMetric(ts.tb, ts.Addr(), name).(map[string]interface{})
 	check := func() (bool, error) {
 		now := TestGetMetric(ts.tb, ts.Addr(), name).(map[string]interface{})
