@@ -160,6 +160,7 @@ func (ts *TestServer) ExpectMetricDeltaWithDeadline(name string, want float64) f
 	}
 	start := TestGetMetric(ts.tb, ts.Addr(), name)
 	check := func() (bool, error) {
+		ts.tb.Helper()
 		now := TestGetMetric(ts.tb, ts.Addr(), name)
 		return TestMetricDelta(now, start) == want, nil
 	}
@@ -186,10 +187,12 @@ func (ts *TestServer) ExpectMapMetricDeltaWithDeadline(name, key string, want fl
 	}
 	start := TestGetMetric(ts.tb, ts.Addr(), name).(map[string]interface{})
 	check := func() (bool, error) {
+		ts.tb.Helper()
 		now := TestGetMetric(ts.tb, ts.Addr(), name).(map[string]interface{})
 		return TestMetricDelta(now[key], start[key]) == want, nil
 	}
 	return func() {
+		ts.tb.Helper()
 		ok, err := testutil.DoOrTimeout(check, deadline, 10*time.Millisecond)
 		if err != nil {
 			ts.tb.Fatal(err)
