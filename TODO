@@ -87,3 +87,6 @@ Move the non-program examples to the vm integration test.
 Why is strings.Builder slower than bytes.Buffer when the latter's docstring recommends the former?
 
 file-test.go relies on the ReadDeadline timeouts in file.go and socket.go.  Remove to make tests faster.
+
+
+make cirrus run a task on matrix test failyue that fetches failures from json and runs flake checks on them
