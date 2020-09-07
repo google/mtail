@@ -85,6 +85,7 @@ func (m *TestServer) Start() func() {
 		if err != nil {
 			m.tb.Fatal(err)
 		}
+
 		select {
 		case err = <-errc:
 		case <-time.After(5 * time.Second):
@@ -93,7 +94,6 @@ func (m *TestServer) Start() func() {
 			fmt.Fprintf(os.Stderr, "%s", buf[0:n])
 			m.tb.Fatal("timeout waiting for shutdown")
 		}
-
 		if err != nil {
 			m.tb.Fatal(err)
 		}
@@ -104,6 +104,7 @@ func (m *TestServer) Start() func() {
 // returns the value of one named name.  Callers are responsible for type
 // assertions on the returned value.
 func TestGetMetric(tb testing.TB, addr, name string) interface{} {
+	tb.Helper()
 	uri := fmt.Sprintf("http://%s/debug/vars", addr)
 	client := &http.Client{
 		Timeout: 5 * time.Second,
@@ -156,6 +157,7 @@ func ExpectMetricDeltaWithDeadline(tb testing.TB, address, name string, want flo
 		return TestMetricDelta(now, start) == want, nil
 	}
 	return func() {
+		tb.Helper()
 		ok, err := testutil.DoOrTimeout(check, deadline, 10*time.Millisecond)
 		if err != nil {
 			tb.Fatal(err)
