@@ -20,10 +20,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// This test requires disk access, and cannot be injected without internal
-// knowledge of the fsnotify code. Make the wait deadlines long.
-const deadline = 5 * time.Second
-
 type testStubProcessor struct {
 	Events chan Event
 }
@@ -131,7 +127,7 @@ func TestLogWatcher(t *testing.T) {
 			t.Errorf("want %q got %q; diff:\n%s", expected, e, diff)
 		}
 	case <-time.After(100 * time.Millisecond):
-		t.Fatal("no event recieved before timeout")
+		t.Fatal("no event received before timeout")
 	}
 
 	testutil.FatalIfErr(t, os.Remove(filepath.Join(workdir, "logfile2")))

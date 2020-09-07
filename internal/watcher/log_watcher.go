@@ -258,7 +258,6 @@ func (w *LogWatcher) Observe(path string, processor Processor) error {
 	watched.ps = append(watched.ps, processor)
 	glog.Infof("appended this processor")
 	return nil
-
 }
 
 func (w *LogWatcher) addWatch(path string) (string, error) {
