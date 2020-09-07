@@ -7,6 +7,7 @@ package mtail_test
 import (
 	"os"
 	"path"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,8 +34,8 @@ func TestTruncatedLogRead(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-	startLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
+	linesCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 2, time.Minute)
+	logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 1, time.Minute)
 
 	logFile := path.Join(logDir, "log")
 	f := testutil.TestOpenFile(t, logFile)
@@ -60,11 +61,16 @@ func TestTruncatedLogRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	glog.Infof("Wrote %d bytes", n)
-	time.Sleep(time.Second)
 
-	endLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-	endLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-
-	mtail.ExpectMetricDelta(t, endLineCount, startLineCount, 2)
-	mtail.ExpectMetricDelta(t, endLogCount, startLogCount, 1)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		linesCountCheck()
+	}()
+	go func() {
+		defer wg.Done()
+		logCountCheck()
+	}()
+	wg.Wait()
 }

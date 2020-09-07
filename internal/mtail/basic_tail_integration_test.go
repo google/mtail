@@ -34,8 +34,8 @@ func TestBasicTail(t *testing.T) {
 			m, stopM := mtail.TestStartServer(t, test.pollInterval, test.enableFsNotify, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
 			defer stopM()
 
-			startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-			startLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
+			lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 3, time.Minute)
+			logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 1, time.Minute)
 
 			time.Sleep(1 * time.Second)
 
@@ -52,31 +52,11 @@ func TestBasicTail(t *testing.T) {
 			wg.Add(2)
 			go func() {
 				defer wg.Done()
-				check := func() (bool, error) {
-					end := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-					return mtail.TestMetricDelta(end, startLineCount) == 3, nil
-				}
-				ok, err := testutil.DoOrTimeout(check, 1*time.Minute, 10*time.Millisecond)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !ok {
-					t.Error()
-				}
+				lineCountCheck()
 			}()
 			go func() {
 				defer wg.Done()
-				check := func() (bool, error) {
-					end := mtail.TestGetMetric(t, m.Addr(), "log_count")
-					return mtail.TestMetricDelta(end, startLogCount) == 1, nil
-				}
-				ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !ok {
-					t.Error(err)
-				}
+				logCountCheck()
 			}()
 			wg.Wait()
 		})

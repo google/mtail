@@ -37,58 +37,37 @@ func TestPartialLineRead(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-	check := func() (bool, error) {
-		lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-		return mtail.TestMetricDelta(lineCount, startLineCount) == 1., nil
-	}
-
 	{
+
+		lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
 		n, err := f.WriteString("line 1\n")
 		if err != nil {
 			t.Fatal(err)
 		}
 		glog.Infof("Wrote %d bytes", n)
-
-		ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !ok {
-			t.Error()
-		}
+		lineCountCheck()
 	}
 
 	{
-
+		lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 0, time.Minute)
 		n, err := f.WriteString("line ")
 		if err != nil {
 			t.Fatal(err)
 		}
 		glog.Infof("Wrote %d bytes", n)
 
-		ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !ok {
-			t.Error()
-		}
+		lineCountCheck()
 	}
+
 	{
+		lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
 
 		n, err := f.WriteString("2\n")
 		if err != nil {
 			t.Fatal(err)
 		}
 		glog.Infof("Wrote %d bytes", n)
-		ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !ok {
-			t.Error()
-		}
+
+		lineCountCheck()
 	}
 }

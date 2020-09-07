@@ -127,3 +127,24 @@ func ExpectMetricDelta(tb testing.TB, a, b interface{}, want float64) {
 		tb.Errorf("Unexpected delta: got %v - %v = %g, want %g", a, b, delta, want)
 	}
 }
+
+// ExpectMetricDeltaWithDeadline returns a deferrable function which tests if the metric with name has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
+func ExpectMetricDeltaWithDeadline(tb testing.TB, address, name string, want float64, deadline time.Duration) func() {
+	tb.Helper()
+	start := TestGetMetric(tb, address, name)
+	check := func() (bool, error) {
+		now := TestGetMetric(tb, address, name)
+		return TestMetricDelta(now, start) == want, nil
+	}
+	return func() {
+		ok, err := testutil.DoOrTimeout(check, deadline, 10*time.Millisecond)
+		if err != nil {
+			tb.Fatal(err)
+		}
+		if !ok {
+			now := TestGetMetric(tb, address, name)
+			delta := TestMetricDelta(now, start)
+			tb.Errorf("Did not see delta by deadline: ogot %v - %v = %g, want %g", now, start, delta, want)
+		}
+	}
+}

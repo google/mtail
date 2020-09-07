@@ -29,8 +29,8 @@ func TestPollLogPathPatterns(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 10*time.Millisecond, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
 	defer stopM()
 
-	startLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-	startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
+	logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 1, time.Minute)
+	lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
 
 	logFile := path.Join(logDir, "files", "a", "log", "a.log")
 	testutil.FatalIfErr(t, os.MkdirAll(path.Dir(logFile), 0700))
@@ -45,32 +45,12 @@ func TestPollLogPathPatterns(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
-		check := func() (bool, error) {
-			logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-			return mtail.TestMetricDelta(logCount, startLogCount) == 1., nil
-		}
-		ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !ok {
-			t.Error()
-		}
-		wg.Done()
+		defer wg.Done()
+		lineCountCheck()
 	}()
 	go func() {
-		check := func() (bool, error) {
-			logCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-			return mtail.TestMetricDelta(logCount, startLineCount) == 1., nil
-		}
-		ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !ok {
-			t.Error()
-		}
-		wg.Done()
+		defer wg.Done()
+		logCountCheck()
 	}()
 	wg.Wait()
 }
