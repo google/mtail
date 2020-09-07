@@ -37,23 +37,14 @@ func TestReadFromPipe(t *testing.T) {
 		testutil.FatalIfErr(t, f.Close())
 	}()
 
-	time.Sleep(time.Second)
-
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
 	defer stopM()
-	time.Sleep(time.Second)
 
-	startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-	time.Sleep(1 * time.Second)
+	lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 3, time.Minute)
 
 	n, err := f.WriteString("1\n2\n3\n")
 	testutil.FatalIfErr(t, err)
 	glog.Infof("Wrote %d bytes", n)
-	time.Sleep(1 * time.Second)
 
-	endLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-	lineCount := endLineCount.(float64) - startLineCount.(float64)
-	if lineCount != 3. {
-		t.Errorf("output didn't have expected line count increase: want 3 got %#v", lineCount)
-	}
+	lineCountCheck()
 }

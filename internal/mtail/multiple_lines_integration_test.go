@@ -43,7 +43,6 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 			t.Fatal(err)
 		}
 		glog.Infof("Wrote %d bytes", n)
-		time.Sleep(time.Second)
 	}
 
 	lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 2, time.Minute)

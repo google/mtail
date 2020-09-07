@@ -97,7 +97,6 @@ func TestHandleLogTruncate(t *testing.T) {
 
 	llp.Add(3)
 	testutil.WriteString(t, f, "a\nb\nc\n")
-	//time.Sleep(10 * time.Millisecond)
 	w.InjectUpdate(logfile)
 	llp.Wait()
 
@@ -108,12 +107,10 @@ func TestHandleLogTruncate(t *testing.T) {
 	_, err := f.Seek(0, 0)
 	testutil.FatalIfErr(t, err)
 	w.InjectUpdate(logfile)
-	//time.Sleep(10 * time.Millisecond)
 
 	llp.Add(2)
 	testutil.WriteString(t, f, "d\ne\n")
 	w.InjectUpdate(logfile)
-	//time.Sleep(10 * time.Millisecond)
 
 	llp.Wait()
 	if err := w.Close(); err != nil {
@@ -194,26 +191,22 @@ func TestTailerOpenRetries(t *testing.T) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
 	//w.InjectUpdate(logfile)
-	//time.Sleep(10 * time.Millisecond)
 	glog.Info("remove")
 	if err := os.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
 	w.InjectDelete(logfile)
-	//time.Sleep(10 * time.Millisecond)
 	glog.Info("openfile")
 	f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	w.InjectCreate(logfile)
-	//	time.Sleep(10 * time.Millisecond)
 	glog.Info("chmod")
 	if err := os.Chmod(logfile, 0666); err != nil {
 		t.Fatal(err)
 	}
 	w.InjectUpdate(logfile)
-	//time.Sleep(10 * time.Millisecond)
 	glog.Info("write string")
 	testutil.WriteString(t, f, "\n")
 	w.InjectUpdate(logfile)
@@ -316,7 +309,6 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 	glog.V(2).Info("create")
 	w.InjectCreate(logfile)
 
-	time.Sleep(1 * time.Millisecond)
 	glog.V(2).Info("delete")
 	w.InjectDelete(logfile)
 

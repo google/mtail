@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sync"
 	"testing"
 	"time"
 
@@ -31,47 +32,49 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 			m, stopM := mtail.TestStartServer(t, pollInterval, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log*"))
 			defer stopM()
 
-			startLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-			startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
 			{
+				logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 1, time.Minute)
+				linesCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
+
 				logFile := path.Join(logDir, "log")
 				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
 				testutil.FatalIfErr(t, err)
 				glog.Infof("Wrote %d bytes", n)
-				time.Sleep(time.Second)
 
-				logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-				lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-				if logCount.(float64)-startLogCount.(float64) != 1. {
-					t.Errorf("Unexpected log count: got %g, want 1", logCount.(float64)-startLogCount.(float64))
-				}
-				if lineCount.(float64)-startLineCount.(float64) != 1. {
-					t.Errorf("Unexpected line count: got %g, want 1", lineCount.(float64)-startLineCount.(float64))
-				}
-				time.Sleep(time.Second)
+				var wg sync.WaitGroup
+				wg.Add(2)
+				go func() {
+					defer wg.Done()
+					linesCountCheck()
+				}()
+				go func() {
+					defer wg.Done()
+					logCountCheck()
+				}()
+				wg.Wait()
 			}
 			{
+
+				logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 1, time.Minute)
+				linesCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
 
 				logFile := path.Join(logDir, "log1")
 				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
 				testutil.FatalIfErr(t, err)
 				glog.Infof("Wrote %d bytes", n)
-				time.Sleep(time.Second)
-
-				logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-				lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-				if logCount.(float64)-startLogCount.(float64) != 2. {
-					t.Errorf("Unexpected log count: got %g, want 2", logCount.(float64)-startLogCount.(float64))
-				}
-				if lineCount.(float64)-startLineCount.(float64) != 2. {
-					t.Errorf("Unexpected line count: got %g, want 2", lineCount.(float64)-startLineCount.(float64))
-				}
-				time.Sleep(time.Second)
+				var wg sync.WaitGroup
+				wg.Add(2)
+				go func() {
+					defer wg.Done()
+					linesCountCheck()
+				}()
+				go func() {
+					defer wg.Done()
+					logCountCheck()
+				}()
+				wg.Wait()
 			}
 		})
 	}
