@@ -6,7 +6,6 @@ package mtail
 import (
 	"expvar"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
@@ -22,20 +21,6 @@ import (
 )
 
 const testProgram = "/$/ { }\n"
-
-func makeTempDir(t *testing.T) (workdir string) {
-	var err error
-	if workdir, err = ioutil.TempDir("", "mtail_test"); err != nil {
-		t.Fatalf("ioutil.TempDir failed: %s", err)
-	}
-	return
-}
-
-func removeTempDir(t *testing.T, workdir string) {
-	if err := os.RemoveAll(workdir); err != nil {
-		t.Fatalf("os.RemoveAll failed: %s", err)
-	}
-}
 
 func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	expvar.Get("lines_total").(*expvar.Int).Set(0)
@@ -64,8 +49,8 @@ func TestHandleLogUpdates(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 	// touch log file
 	logFilepath := path.Join(workdir, "log")
 	logFile, err := os.Create(logFilepath)
@@ -104,8 +89,8 @@ func TestHandleLogRotation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 	logFilepath := path.Join(workdir, "log")
 	// touch log file
 	logFile, err := os.Create(logFilepath)
@@ -184,8 +169,8 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 	// Start up mtail
 	logFilepath := path.Join(workdir, "log")
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
@@ -225,8 +210,8 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 	// Start mtail
 	logFilepath := path.Join(workdir, "log")
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
@@ -250,8 +235,8 @@ func TestHandleSoftLinkChange(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	logFilepath := path.Join(workdir, "log")
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
@@ -344,8 +329,8 @@ func TestGlob(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	globTests := []struct {
 		name     string
@@ -402,8 +387,8 @@ func TestGlobAfterStart(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	globTests := []struct {
 		name     string
@@ -461,8 +446,8 @@ func TestGlobAfterStart(t *testing.T) {
 // 	if testing.Short() {
 // 		t.Skip("skipping test in short mode")
 // 	}
-// 	workdir := makeTempDir(t)
-// 	defer removeTempDir(t, workdir)
+//	workdir, rmWorkdir := testutil.TestTempDir(t)
+//	defer rmWorkdir()
 // 	// touch log file
 // 	logFilepath := path.Join(workdir, "log")
 // 	logFile, err := os.Create(logFilepath)
@@ -501,8 +486,8 @@ func TestHandleLogTruncate(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	logFilepath := path.Join(workdir, "log")
 	logFile, err := os.Create(logFilepath)
@@ -555,8 +540,8 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -614,8 +599,8 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		t.Skip("skipping test in shor tmode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	logDir := path.Join(workdir, "logs")
 	if err := os.Mkdir(logDir, 0777); err != nil {
@@ -767,8 +752,8 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	globTests := []struct {
 		name     string
@@ -825,8 +810,8 @@ func TestIgnoreFolder(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	globTests := []struct {
 		name     string
