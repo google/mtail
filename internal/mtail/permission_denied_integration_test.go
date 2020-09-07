@@ -40,16 +40,13 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	startErrorsTotal := mtail.TestGetMetric(t, m.Addr(), "log_errors_total").(map[string]interface{})
+	errorsTotalCheck := mtail.ExpectMapMetricDeltaWithDeadline(t, m.Addr(), "log_errors_total", logFile, 1, time.Minute)
 
 	f, err := os.OpenFile(logFile, os.O_CREATE, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	time.Sleep(time.Second)
 
-	errorsTotal := mtail.TestGetMetric(t, m.Addr(), "log_errors_total").(map[string]interface{})
-
-	mtail.ExpectMetricDelta(t, errorsTotal[logFile], startErrorsTotal[logFile], 1)
+	errorsTotalCheck()
 }

@@ -145,7 +145,28 @@ func ExpectMetricDeltaWithDeadline(tb testing.TB, address, name string, want flo
 		if !ok {
 			now := TestGetMetric(tb, address, name)
 			delta := TestMetricDelta(now, start)
-			tb.Errorf("Did not see delta by deadline: ogot %v - %v = %g, want %g", now, start, delta, want)
+			tb.Errorf("Did not see delta by deadline: got %v - %v = %g, want %g", now, start, delta, want)
+		}
+	}
+}
+
+// ExpectMapMetricDeltaWithDeadline returns a deferrable function which tests if the map metric with name and key has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
+func ExpectMapMetricDeltaWithDeadline(tb testing.TB, address, name, key string, want float64, deadline time.Duration) func() {
+	tb.Helper()
+	start := TestGetMetric(tb, address, name).(map[string]interface{})
+	check := func() (bool, error) {
+		now := TestGetMetric(tb, address, name).(map[string]interface{})
+		return TestMetricDelta(now[key], start[key]) == want, nil
+	}
+	return func() {
+		ok, err := testutil.DoOrTimeout(check, deadline, 10*time.Millisecond)
+		if err != nil {
+			tb.Fatal(err)
+		}
+		if !ok {
+			now := TestGetMetric(tb, address, name).(map[string]interface{})
+			delta := TestMetricDelta(now[key], start[key])
+			tb.Errorf("Did not see delta by deadline: got %v - %v = %g, want %g", now[key], start[key], delta, want)
 		}
 	}
 }

@@ -32,13 +32,9 @@ func TestNewProg(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
 	defer stopM()
 
-	startProgLoadsTotal := mtail.TestGetMetric(t, m.Addr(), "prog_loads_total").(map[string]interface{})
+	progLoadsTotalCheck := mtail.ExpectMapMetricDeltaWithDeadline(t, m.Addr(), "prog_loads_total", "nocode.mtail", 1, time.Minute)
 
 	testutil.TestOpenFile(t, progDir+"/nocode.mtail")
-	time.Sleep(time.Second)
 
-	progLoadsTotal := mtail.TestGetMetric(t, m.Addr(), "prog_loads_total").(map[string]interface{})
-
-	mtail.ExpectMetricDelta(t, progLoadsTotal["nocode.mtail"], startProgLoadsTotal["nocode.mtail"], 1)
-
+	progLoadsTotalCheck()
 }

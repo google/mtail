@@ -36,20 +36,15 @@ func TestLogRotation(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	{
-		testutil.WriteString(t, f, "line 1\n")
-		time.Sleep(time.Second)
-	}
-	startLogLinesTotal := mtail.TestGetMetric(t, m.Addr(), "log_lines_total").(map[string]interface{})[logFile]
+	testutil.WriteString(t, f, "line 1\n")
+	time.Sleep(1 * time.Second)
 
 	{
+		logLinesTotalCheck := mtail.ExpectMapMetricDeltaWithDeadline(t, m.Addr(), "log_lines_total", logFile, 1, time.Minute)
 
 		testutil.WriteString(t, f, "line 2\n")
-		time.Sleep(time.Second)
-
-		logLinesTotal := mtail.TestGetMetric(t, m.Addr(), "log_lines_total").(map[string]interface{})[logFile]
-
-		mtail.ExpectMetricDelta(t, logLinesTotal, startLogLinesTotal, 1)
+		time.Sleep(1 * time.Second)
+		logLinesTotalCheck()
 	}
 
 	err = os.Rename(logFile, logFile+".1")
@@ -60,11 +55,10 @@ func TestLogRotation(t *testing.T) {
 	f = testutil.TestOpenFile(t, logFile)
 
 	{
+		logLinesTotalCheck := mtail.ExpectMapMetricDeltaWithDeadline(t, m.Addr(), "log_lines_total", logFile, 1, time.Minute)
+
 		testutil.WriteString(t, f, "line 1\n")
-		time.Sleep(time.Second)
-
-		logLinesTotal := mtail.TestGetMetric(t, m.Addr(), "log_lines_total").(map[string]interface{})[logFile]
-
-		mtail.ExpectMetricDelta(t, logLinesTotal, startLogLinesTotal, 2)
+		time.Sleep(1 * time.Second)
+		logLinesTotalCheck()
 	}
 }
