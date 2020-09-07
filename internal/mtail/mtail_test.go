@@ -74,7 +74,7 @@ func TestHandleLogUpdates(t *testing.T) {
 	}
 	defer logFile.Close()
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer m.Close()
+	defer m.Close(true)
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
 		// write to log file
@@ -116,7 +116,7 @@ func TestHandleLogRotation(t *testing.T) {
 	hup := make(chan bool, 1)
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
 	defer func() {
-		if cerr := m.Close(); cerr != nil {
+		if cerr := m.Close(true); cerr != nil {
 			t.Fatal(cerr)
 		}
 	}()
@@ -161,7 +161,7 @@ Loop:
 	if err = logFile.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err = m.Close(); err != nil {
+	if err = m.Close(true); err != nil {
 		t.Fatal(err)
 	}
 	expected := "10"
@@ -189,7 +189,7 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 	// Start up mtail
 	logFilepath := path.Join(workdir, "log")
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer m.Close()
+	defer m.Close(true)
 	time.Sleep(10 * time.Millisecond)
 
 	// touch log file
@@ -230,7 +230,7 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	// Start mtail
 	logFilepath := path.Join(workdir, "log")
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer m.Close()
+	defer m.Close(true)
 
 	// touch log file
 	newLogFilepath := path.Join(workdir, "log1")
@@ -255,7 +255,7 @@ func TestHandleSoftLinkChange(t *testing.T) {
 
 	logFilepath := path.Join(workdir, "log")
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer m.Close()
+	defer m.Close(true)
 
 	trueLog1, err := os.Create(logFilepath + ".true1")
 	if err != nil {
@@ -380,7 +380,7 @@ func TestGlob(t *testing.T) {
 		testutil.FatalIfErr(t, log.Sync())
 	}
 	m := startMtailServer(t, LogPathPatterns(path.Join(workdir, "log*")))
-	defer m.Close()
+	defer m.Close(true)
 	check := func() (bool, error) {
 		if expvar.Get("log_count").String() != fmt.Sprintf("%d", count) {
 			glog.V(1).Infof("tailer is %q, count is %d", expvar.Get("log_count").String(), count)
@@ -423,7 +423,7 @@ func TestGlobAfterStart(t *testing.T) {
 		},
 	}
 	m := startMtailServer(t, LogPathPatterns(path.Join(workdir, "log*")))
-	defer m.Close()
+	defer m.Close(true)
 	glog.Infof("Pausing for mtail startup.")
 	time.Sleep(100 * time.Millisecond)
 	count := 0
@@ -471,7 +471,7 @@ func TestGlobAfterStart(t *testing.T) {
 // 	}
 // 	defer logFile.Close()
 // 	m := startMtailServer(t, LogPathPatterns(logFilepath))
-// 	defer m.Close()
+// 	defer m.Close(true)
 
 // 	if err = os.Remove(logFilepath); err != nil {
 // 		t.Fatal(err)
@@ -512,7 +512,7 @@ func TestHandleLogTruncate(t *testing.T) {
 	defer logFile.Close()
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
 	defer func() {
-		if cerr := m.Close(); cerr != nil {
+		if cerr := m.Close(true); cerr != nil {
 			t.Fatal(cerr)
 		}
 	}()
@@ -582,7 +582,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 	defer logFile.Close()
 	pathnames := []string{"log"}
 	m := startMtailServer(t, LogPathPatterns(pathnames...))
-	defer m.Close()
+	defer m.Close(true)
 	inputLines := []string{"hi", "hi2", "hi3"}
 	for i, x := range inputLines {
 		// write to log file
@@ -634,7 +634,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	defer logFile.Close()
 
 	m := startMtailServer(t, ProgramPath(progDir), LogPathPatterns(logDir+"/*"))
-	defer m.Close()
+	defer m.Close(true)
 	store := m.store
 
 	v := expvar.Get("prog_loads_total").(*expvar.Map).Get("program.mtail")
@@ -803,7 +803,7 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		testutil.FatalIfErr(t, log.Sync())
 	}
 	m := startMtailServer(t, LogPathPatterns(path.Join(workdir, "log*")), IgnoreRegexPattern("\\.gz"))
-	defer m.Close()
+	defer m.Close(true)
 	check := func() (bool, error) {
 		if expvar.Get("log_count").String() != fmt.Sprintf("%d", count) {
 			glog.V(1).Infof("tailer is %q, count is %d", expvar.Get("log_count").String(), count)
@@ -871,7 +871,7 @@ func TestIgnoreFolder(t *testing.T) {
 		testutil.FatalIfErr(t, log.Sync())
 	}
 	m := startMtailServer(t, LogPathPatterns(path.Join(workdir, "log*")), IgnoreRegexPattern("\\.gz"))
-	defer m.Close()
+	defer m.Close(true)
 	check := func() (bool, error) {
 		if expvar.Get("log_count").String() != fmt.Sprintf("%d", count) {
 			glog.V(1).Infof("tailer is %q, count is %d", expvar.Get("log_count").String(), count)

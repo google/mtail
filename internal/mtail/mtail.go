@@ -385,13 +385,15 @@ func (m *Server) WaitForShutdown() {
 	case <-m.closeQuit:
 		glog.Info("Received quit internally, exiting...")
 	}
-	if err := m.Close(); err != nil {
+	if err := m.Close(false); err != nil {
 		glog.Warning(err)
 	}
 }
 
-// Close handles the graceful shutdown of this mtail instance, ensuring that it only occurs once.
-func (m *Server) Close() error {
+// Close handles the graceful shutdown of this mtail instance, ensuring that it
+// only occurs once.  If fast is true, then the http server is shutdown without
+// waiting.
+func (m *Server) Close(fast bool) error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		close(m.closeQuit)
@@ -410,11 +412,16 @@ func (m *Server) Close() error {
 			glog.V(2).Info("No loader, so not waiting for loader shutdown.")
 		}
 		if m.h != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			if err := m.h.Shutdown(ctx); err != nil {
-				glog.Error(err)
+			glog.Info("Shutting down http server")
+			if fast {
+				m.h.Close()
+			} else {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				if err := m.h.Shutdown(ctx); err != nil {
+					glog.Error(err)
+				}
+				cancel()
 			}
-			cancel()
 		}
 		glog.Info("END OF LINE")
 	})
@@ -433,7 +440,7 @@ func (m *Server) Run() error {
 		return err
 	}
 	if m.oneShot {
-		err := m.Close()
+		err := m.Close(true)
 		if err != nil {
 			return err
 		}

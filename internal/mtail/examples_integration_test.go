@@ -176,7 +176,7 @@ func TestExamplePrograms(t *testing.T) {
 			goldenStore := metrics.NewStore()
 			golden.ReadTestData(g, tc.programfile, goldenStore)
 
-			err = mtail.Close()
+			err = mtail.Close(true)
 			if err != nil {
 				t.Error(err)
 			}
@@ -212,7 +212,7 @@ func TestCompileExamplePrograms(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			mtail.Close()
+			mtail.Close(true)
 		})
 	}
 }
@@ -253,7 +253,7 @@ func BenchmarkProgram(b *testing.B) {
 				total += count
 				w.InjectUpdate(log.Name())
 			}
-			mtail.Close()
+			mtail.Close(true)
 			b.StopTimer()
 			b.SetBytes(total)
 		})

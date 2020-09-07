@@ -63,7 +63,7 @@ func TestStartServer(tb testing.TB, pollInterval time.Duration, enableFsNotify b
 	}
 
 	return m, func() {
-		err := m.Close()
+		err := m.Close(true)
 		if err != nil {
 			tb.Fatal(err)
 		}
@@ -96,6 +96,7 @@ func TestGetMetric(tb testing.TB, addr, name string) interface{} {
 	}
 	buf := new(bytes.Buffer)
 	n, err := buf.ReadFrom(resp.Body)
+	resp.Body.Close()
 	testutil.FatalIfErr(tb, err)
 	glog.V(2).Infof("TestGetMetric: http client read %d bytes from debug/vars", n)
 	var r map[string]interface{}

@@ -37,15 +37,12 @@ func TestBasicTail(t *testing.T) {
 			lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 3, time.Minute)
 			logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 1, time.Minute)
 
-			time.Sleep(1 * time.Second)
-
 			logFile := path.Join(logDir, "log")
 
 			f := testutil.TestOpenFile(t, logFile)
 
 			for i := 1; i <= 3; i++ {
 				testutil.WriteString(t, f, fmt.Sprintf("%d\n", i))
-				time.Sleep(1 * time.Second)
 			}
 
 			var wg sync.WaitGroup
