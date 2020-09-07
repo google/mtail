@@ -7,6 +7,7 @@ package mtail
 import (
 	"bytes"
 	"encoding/json"
+	"expvar"
 	"fmt"
 	"net"
 	"net/http"
@@ -23,29 +24,46 @@ import (
 
 const timeoutMultiplier = 3
 
-// TestMakeServer makes a new Server for use in tests, but does not start
-// the server.  It returns the server, or any errors the new server creates.
-func TestMakeServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*Server) error) (*Server, error) {
+type TestServer struct {
+	*Server
+
+	tb testing.TB
+}
+
+// TestMakeServer makes a new TestServer for use in tests, but does not start
+// the server.  If an error occurs during creation, a testing.Fatal is issued.
+func TestMakeServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*Server) error) *TestServer {
 	tb.Helper()
 	w, err := watcher.NewLogWatcher(pollInterval, enableFsNotify)
 	if err != nil {
 		tb.Fatal(err)
 	}
 
-	return New(metrics.NewStore(), w, options...)
-}
+	expvar.Get("lines_total").(*expvar.Int).Set(0)
+	expvar.Get("log_count").(*expvar.Int).Set(0)
+	expvar.Get("log_rotations_total").(*expvar.Map).Init()
+	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
-// TestStartServer creates a new Server and starts it running.  It
-// returns the server, and a cleanup function.
-func TestStartServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*Server) error) (*Server, func()) {
-	tb.Helper()
-	options = append(options, BindAddress("", "0"))
-
-	m, err := TestMakeServer(tb, pollInterval, enableFsNotify, options...)
+	m, err := New(metrics.NewStore(), w, options...)
 	if err != nil {
 		tb.Fatal(err)
 	}
+	return &TestServer{Server: m, tb: tb}
+}
 
+// TestStartServer creates a new TestServer and starts it running.  It
+// returns the server, and a cleanup function.
+func TestStartServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*Server) error) (*TestServer, func()) {
+	tb.Helper()
+	options = append(options, BindAddress("", "0"))
+
+	m := TestMakeServer(tb, pollInterval, enableFsNotify, options...)
+	return m, m.Start()
+}
+
+// Start starts the TestServer and returns a cleanup function.
+func (m *TestServer) Start() func() {
+	m.tb.Helper()
 	errc := make(chan error, 1)
 	go func() {
 		err := m.Run()
@@ -59,13 +77,13 @@ func TestStartServer(tb testing.TB, pollInterval time.Duration, enableFsNotify b
 		time.Sleep(100 * time.Millisecond * timeoutMultiplier)
 	}
 	if count >= 10 {
-		tb.Fatal("server wasn't listening after 10 attempts")
+		m.tb.Fatal("server wasn't listening after 10 attempts")
 	}
 
-	return m, func() {
+	return func() {
 		err := m.Close(true)
 		if err != nil {
-			tb.Fatal(err)
+			m.tb.Fatal(err)
 		}
 		select {
 		case err = <-errc:
@@ -73,11 +91,11 @@ func TestStartServer(tb testing.TB, pollInterval time.Duration, enableFsNotify b
 			buf := make([]byte, 1<<16)
 			n := runtime.Stack(buf, true)
 			fmt.Fprintf(os.Stderr, "%s", buf[0:n])
-			tb.Fatal("timeout waiting for shutdown")
+			m.tb.Fatal("timeout waiting for shutdown")
 		}
 
 		if err != nil {
-			tb.Fatal(err)
+			m.tb.Fatal(err)
 		}
 	}
 }
