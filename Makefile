@@ -116,6 +116,8 @@ GO_LDFLAGS += -w -s -extldflags "-static"
 export CGO_ENABLED=0
 endif
 
+GO_GCFLAGS = -e
+
 # Very specific static pattern rule to only do this for commandline targets.
 # Each commandline must be in a 'main.go' in their respective directory.  The
 # MAKEDEPEND rule generates a list of dependencies for the next make run -- the
@@ -123,7 +125,7 @@ endif
 # runs can read the dependencies and update iff they change.
 $(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d | print-version .dep-stamp
 	$(MAKEDEPEND)
-	go build -ldflags "$(GO_LDFLAGS)" -o $@ $<
+	go build -gcflags "$(GO_GCFLAGS)" -ldflags "$(GO_LDFLAGS)" -o $@ $<
 
 internal/vm/parser/parser.go: internal/vm/parser/parser.y | $(GOYACC)
 	go generate -x ./$(@D)
@@ -166,19 +168,19 @@ crossbuild: $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp print-version
 
 .PHONY: test check
 check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test -timeout 10s ./...
+	go test -gcflags "$(GO_GCFLAGS)" -timeout 10s ./...
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test -timeout ${timeout} -race -v -tags=integration ./...
+	go test -gcflags "$(GO_GCFLAGS)" -timeout ${timeout} -race -v -tags=integration ./...
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -timeout 1s -test.short ./...
+	go test -gcflags "$(GO_GCFLAGS)" -timeout 1s -test.short ./...
 
 .PHONY: bench
 bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -tags=integration -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
+	go test -gcflags "$(GO_GCFLAGS)" -tags=integration -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
 
 .PHONY: bench_cpu
 bench_cpu: | print-version .dep-stamp
@@ -193,7 +195,7 @@ recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
 
 .PHONY: regtest
 regtest: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -v -tags=integration -timeout=${timeout} ./...
+	go test -gcflags "$(GO_GCFLAGS)" -v -tags=integration -timeout=${timeout} ./...
 
 TESTRESULTS ?= test-results
 TESTCOVERPROFILE ?= out.coverprofile
@@ -202,7 +204,7 @@ TESTCOVERPROFILE ?= out.coverprofile
 junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
-	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -tags=integration -v -timeout=${timeout} ./...
+	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -tags=integration -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
