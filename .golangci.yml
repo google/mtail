@@ -29,6 +29,8 @@ linters:
     - wsl
     # magic numbers in test tables are fine actually
     - gomnd
+    # My tests will be as long as they need to be thanks
+    - funlen
 
 issues:
   max-per-linter: 0
