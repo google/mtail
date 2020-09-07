@@ -38,7 +38,7 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 	defer stopM()
 
 	{
-		lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
+		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
 		n, err := f.WriteString("line 1\n")
 		if err != nil {
 			t.Fatal(err)
@@ -48,7 +48,7 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 	}
 
 	{
-		lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 2, time.Minute)
+		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 2, time.Minute)
 		n, err := f.WriteString("line 2\nline 3\n")
 		if err != nil {
 			t.Fatal(err)

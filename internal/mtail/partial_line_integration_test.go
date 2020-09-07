@@ -39,7 +39,7 @@ func TestPartialLineRead(t *testing.T) {
 
 	{
 
-		lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
+		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
 		n, err := f.WriteString("line 1\n")
 		if err != nil {
 			t.Fatal(err)
@@ -49,7 +49,7 @@ func TestPartialLineRead(t *testing.T) {
 	}
 
 	{
-		lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 0, time.Minute)
+		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 0, time.Minute)
 		n, err := f.WriteString("line ")
 		if err != nil {
 			t.Fatal(err)
@@ -60,7 +60,7 @@ func TestPartialLineRead(t *testing.T) {
 	}
 
 	{
-		lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
+		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
 
 		n, err := f.WriteString("2\n")
 		if err != nil {

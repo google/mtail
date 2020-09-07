@@ -33,8 +33,8 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 			defer stopM()
 
 			{
-				logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 1, time.Minute)
-				linesCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1, time.Minute)
+				linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
 
 				logFile := path.Join(logDir, "log")
 				f := testutil.TestOpenFile(t, logFile)
@@ -56,8 +56,8 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 			}
 			{
 
-				logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 1, time.Minute)
-				linesCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1, time.Minute)
+				linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
 
 				logFile := path.Join(logDir, "log1")
 				f := testutil.TestOpenFile(t, logFile)

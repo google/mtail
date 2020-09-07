@@ -39,8 +39,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 			defer stopM()
 
 			{
-				logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 1, time.Minute)
-				lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1, time.Minute)
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
 
 				logFile := path.Join(logDir, "log.1.txt")
 				f := testutil.TestOpenFile(t, logFile)
@@ -67,8 +67,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 			{
 
-				logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 1, time.Minute)
-				lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1, time.Minute)
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
 
 				logFile := path.Join(logDir, "log.2.txt")
 				f := testutil.TestOpenFile(t, logFile)
@@ -91,8 +91,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 				wg.Wait()
 			}
 			{
-				logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 0, time.Minute)
-				lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 0, time.Minute)
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1, time.Minute)
 
 				logFile := path.Join(logDir, "log.2.txt")
 				f := testutil.TestOpenFile(t, logFile)

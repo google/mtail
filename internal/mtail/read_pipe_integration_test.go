@@ -40,7 +40,7 @@ func TestReadFromPipe(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
 	defer stopM()
 
-	lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 3, time.Minute)
+	lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 3, time.Minute)
 
 	n, err := f.WriteString("1\n2\n3\n")
 	testutil.FatalIfErr(t, err)
