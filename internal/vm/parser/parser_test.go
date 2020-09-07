@@ -4,6 +4,7 @@
 package parser
 
 import (
+	"flag"
 	"strings"
 	"testing"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/position"
 )
+
+var parserTestDebug = flag.Bool("parser_test_debug", false, "Turn on parser debug output if set.")
 
 var parserTests = []struct {
 	name    string
@@ -328,7 +331,7 @@ $foo =~ X {
 }
 
 func TestParserRoundTrip(t *testing.T) {
-	if testing.Verbose() {
+	if *parserTestDebug {
 		mtailDebug = 3
 	}
 	for _, tc := range parserTests {
@@ -345,8 +348,10 @@ func TestParserRoundTrip(t *testing.T) {
 				t.Fatal()
 			}
 
-			s := Sexp{}
-			t.Log("AST:\n" + s.Dump(p.root))
+			if *parserTestDebug {
+				s := Sexp{}
+				t.Log("AST:\n" + s.Dump(p.root))
+			}
 
 			u := Unparser{}
 			output := u.Unparse(p.root)
@@ -432,7 +437,7 @@ var parserInvalidPrograms = []parserInvalidProgram{
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
-	if testing.Verbose() {
+	if *parserTestDebug {
 		mtailDebug = 3
 	}
 	for _, tc := range parserInvalidPrograms {

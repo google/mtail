@@ -4,6 +4,7 @@
 package checker_test
 
 import (
+	"flag"
 	"strings"
 	"testing"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/google/mtail/internal/vm/symbol"
 	"github.com/google/mtail/internal/vm/types"
 )
+
+var checkerTestDebug = flag.Bool("checker_test_debug", false, "Turn on to log AST in tests")
 
 var checkerInvalidPrograms = []struct {
 	name    string
@@ -467,9 +470,11 @@ func TestCheckValidPrograms(t *testing.T) {
 				t.Fatal(err)
 			}
 			ast, err = checker.Check(ast)
-			s := parser.Sexp{}
-			s.EmitTypes = true
-			t.Log("Typed AST:\n" + s.Dump(ast))
+			if *checkerTestDebug {
+				s := parser.Sexp{}
+				s.EmitTypes = true
+				t.Log("Typed AST:\n" + s.Dump(ast))
+			}
 			if err != nil {
 				t.Errorf("check failed: %s", err)
 			}

@@ -4,6 +4,7 @@
 package codegen_test
 
 import (
+	"flag"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +15,8 @@ import (
 	"github.com/google/mtail/internal/vm/codegen"
 	"github.com/google/mtail/internal/vm/parser"
 )
+
+var codegenTestDebug = flag.Bool("codegen_test_debug", false, "Log ASTs and debugging information ")
 
 var testCodeGenPrograms = []struct {
 	name   string
@@ -892,9 +895,11 @@ func TestCodegen(t *testing.T) {
 				t.Fatalf("Parse error: %s", err)
 			}
 			ast, err = checker.Check(ast)
-			s := parser.Sexp{}
-			s.EmitTypes = true
-			t.Log("Typed AST:\n" + s.Dump(ast))
+			if *codegenTestDebug {
+				s := parser.Sexp{}
+				s.EmitTypes = true
+				t.Log("Typed AST:\n" + s.Dump(ast))
+			}
 			if err != nil {
 				t.Fatalf("Check error: %s", err)
 			}
