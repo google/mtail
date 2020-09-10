@@ -37,16 +37,14 @@ type TestServer struct {
 // the server.  If an error occurs during creation, a testing.Fatal is issued.
 func TestMakeServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*Server) error) *TestServer {
 	tb.Helper()
-	w, err := watcher.NewLogWatcher(pollInterval, enableFsNotify)
-	if err != nil {
-		tb.Fatal(err)
-	}
 
 	expvar.Get("lines_total").(*expvar.Int).Set(0)
 	expvar.Get("log_count").(*expvar.Int).Set(0)
 	expvar.Get("log_rotations_total").(*expvar.Map).Init()
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
+	w, err := watcher.NewLogWatcher(pollInterval, enableFsNotify)
+	testutil.FatalIfErr(tb, err)
 	m, err := New(metrics.NewStore(), w, options...)
 	if err != nil {
 		tb.Fatal(err)
