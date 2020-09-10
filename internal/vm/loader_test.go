@@ -160,9 +160,7 @@ func TestLoadProg(t *testing.T) {
 	for _, name := range testProgFiles {
 		f := testutil.TestOpenFile(t, path.Join(tmpDir, name))
 		n, err := f.WriteString(testProgram)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		glog.Infof("Wrote %d bytes", n)
 		err = l.LoadProgram(path.Join(tmpDir, name))
 		if err != nil {

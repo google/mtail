@@ -261,9 +261,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			ast, err = checker.Check(ast)
 			if err == nil {
 				s := parser.Sexp{}
@@ -466,9 +464,7 @@ func TestCheckValidPrograms(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			ast, err = checker.Check(ast)
 			if *checkerTestDebug {
 				s := parser.Sexp{}

@@ -21,13 +21,9 @@ func TestLogRotation(t *testing.T) {
 	logDir := path.Join(tmpDir, "logs")
 	progDir := path.Join(tmpDir, "progs")
 	err := os.Mkdir(logDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	err = os.Mkdir(progDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	logFile := path.Join(logDir, "log")
 
@@ -48,9 +44,7 @@ func TestLogRotation(t *testing.T) {
 	}
 
 	err = os.Rename(logFile, logFile+".1")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	f = testutil.TestOpenFile(t, logFile)
 

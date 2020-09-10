@@ -25,13 +25,9 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 			logDir := path.Join(tmpDir, "logs")
 			progDir := path.Join(tmpDir, "progs")
 			err := os.Mkdir(logDir, 0700)
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			err = os.Mkdir(progDir, 0700)
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			defer testutil.TestChdir(t, logDir)()
 
 			m, stopM := mtail.TestStartServer(t, 0, enableFsnotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
@@ -45,9 +41,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 				f := testutil.TestOpenFile(t, logFile)
 
 				n, err := f.WriteString("line 1\n")
-				if err != nil {
-					t.Fatal(err)
-				}
+				testutil.FatalIfErr(t, err)
 				glog.Infof("Wrote %d bytes", n)
 				testutil.FatalIfErr(t, f.Sync())
 
@@ -72,9 +66,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 				logFile := path.Join(logDir, "log.2.txt")
 				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
-				if err != nil {
-					t.Fatal(err)
-				}
+				testutil.FatalIfErr(t, err)
 				glog.Infof("Wrote %d bytes", n)
 
 				var wg sync.WaitGroup
@@ -96,9 +88,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 				logFile := path.Join(logDir, "log.2.txt")
 				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
-				if err != nil {
-					t.Fatal(err)
-				}
+				testutil.FatalIfErr(t, err)
 				glog.Infof("Wrote %d bytes", n)
 
 				var wg sync.WaitGroup

@@ -21,13 +21,9 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 	logDir := path.Join(tmpDir, "logs")
 	progDir := path.Join(tmpDir, "progs")
 	err := os.Mkdir(logDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	err = os.Mkdir(progDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	logFile := path.Join(logDir, "log")
 
@@ -39,9 +35,7 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 	{
 		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 		n, err := f.WriteString("line 1\n")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		glog.Infof("Wrote %d bytes", n)
 		lineCountCheck()
 	}
@@ -49,9 +43,7 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 	{
 		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 2)
 		n, err := f.WriteString("line 2\nline 3\n")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		glog.Infof("Wrote %d bytes", n)
 		lineCountCheck()
 	}

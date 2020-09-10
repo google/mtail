@@ -22,9 +22,7 @@ func makeTestTail(t *testing.T) (*Tailer, *stubProcessor, *watcher.FakeWatcher, 
 	w := watcher.NewFakeWatcher()
 	llp := NewStubProcessor()
 	ta, err := New(llp, w, Context(context.Background()))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	return ta, llp, w, tmpDir, rmTmpDir
 }
 
@@ -38,9 +36,7 @@ func TestTail(t *testing.T) {
 	defer w.Close()
 
 	err := ta.TailPath(logfile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	// Tail also causes the log to be read, so no need to inject an event.
 
 	if _, ok := ta.handles[logfile]; !ok {
@@ -56,9 +52,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	f := testutil.TestOpenFile(t, logfile)
 
 	err := ta.TailPath(logfile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	llp.Add(4)
 	testutil.WriteString(t, f, "a\nb\nc\nd\n")
@@ -138,9 +132,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	llp.Add(1)
 
 	err := ta.TailPath(logfile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	testutil.WriteString(t, f, "a")
 	//f.Seek(0, 0)
@@ -198,9 +190,7 @@ func TestTailerOpenRetries(t *testing.T) {
 	w.InjectDelete(logfile)
 	glog.Info("openfile")
 	f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	w.InjectCreate(logfile)
 	glog.Info("chmod")
 	if err := os.Chmod(logfile, 0666); err != nil {

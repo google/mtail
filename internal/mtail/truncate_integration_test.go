@@ -22,14 +22,8 @@ func TestTruncatedLogRead(t *testing.T) {
 
 	logDir := path.Join(tmpDir, "logs")
 	progDir := path.Join(tmpDir, "progs")
-	err := os.Mkdir(logDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = os.Mkdir(progDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
+	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
@@ -42,24 +36,16 @@ func TestTruncatedLogRead(t *testing.T) {
 	time.Sleep(time.Second)
 
 	n, err := f.WriteString("1\n")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	glog.Infof("Wrote %d bytes", n)
 	time.Sleep(time.Second)
 	err = f.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	f, err = os.OpenFile(logFile, os.O_TRUNC|os.O_RDWR, 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	time.Sleep(time.Second)
 	n, err = f.WriteString("2\n")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	glog.Infof("Wrote %d bytes", n)
 
 	var wg sync.WaitGroup

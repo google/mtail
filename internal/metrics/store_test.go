@@ -16,9 +16,7 @@ func TestMatchingKind(t *testing.T) {
 	s := NewStore()
 	m1 := NewMetric("foo", "prog", Counter, Int)
 	err := s.Add(m1)
-	if err != nil {
-		t.Fatalf("should be nil: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 	m2 := NewMetric("foo", "prog1", Gauge, Int)
 	err = s.Add(m2)
 	if err == nil {

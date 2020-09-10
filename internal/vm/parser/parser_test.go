@@ -484,9 +484,7 @@ func TestParsePositionTests(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Not t.Parallel() because the parser is not reentrant, and mtailDebug is a global.
 			root, err := Parse(tc.name, strings.NewReader(tc.program))
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			p := &positionCollector{}
 			ast.Walk(p, root)
 			diff := testutil.Diff(tc.positions, p.positions, testutil.AllowUnexported(position.Position{}))

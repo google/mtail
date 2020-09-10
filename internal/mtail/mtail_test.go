@@ -33,9 +33,7 @@ func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 		t.Errorf("Couodn't make a log watcher: %s", err)
 	}
 	m, err := New(metrics.NewStore(), w, options...)
-	if err != nil {
-		t.Fatalf("couldn't create mtail: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 	if pErr := m.l.CompileAndRun("test", strings.NewReader(testProgram)); pErr != nil {
 		t.Errorf("Couldn't compile program: %s", pErr)
 	}
@@ -73,9 +71,7 @@ func TestHandleLogUpdates(t *testing.T) {
 			return true, nil
 		}
 		ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		if !ok {
 			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("lines_total").String())
 			buf := make([]byte, 1<<16)
@@ -266,9 +262,7 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check3, 1*time.Second, 10*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("log count: received %s, expected 1", expvar.Get("log_count").String())
 		t.Errorf("log rotatins: received %s, expected 0", expvar.Get("log_rotations_total").String())
@@ -374,9 +368,7 @@ func TestGlob(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
 	}
@@ -434,9 +426,7 @@ func TestGlobAfterStart(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
 	}
@@ -511,9 +501,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("log line count received %s, expected 1", expvar.Get("log_count").String())
 	}
@@ -528,9 +516,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		return true, nil
 	}
 	ok, err = testutil.DoOrTimeout(check2, 10*time.Second, 10*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("log line count received %s, expected 2", expvar.Get("log_count").String())
 	}
@@ -544,9 +530,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 	defer rmWorkdir()
 
 	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	glog.Infof("cwd is %q", cwd)
 
 	if cerr := os.Chdir(workdir); cerr != nil {
@@ -581,9 +565,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 			return true, nil
 		}
 		ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		if !ok {
 			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("lines_total").String())
 			buf := make([]byte, 1<<16)
@@ -613,9 +595,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 
 	logFilepath := path.Join(logDir, "log")
 	logFile, err := os.Create(logFilepath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	defer logFile.Close()
 
 	m := startMtailServer(t, ProgramPath(progDir), LogPathPatterns(logDir+"/*"))
@@ -629,9 +609,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 
 	progpath := path.Join(progDir, "program.mtail")
 	p, err := os.Create(progpath)
-	if err != nil {
-		t.Fatalf("couldn't open program file: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
 	testutil.FatalIfErr(t, p.Close())
 
@@ -650,9 +628,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check, time.Second, 10*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Fatal("program loads didn't increase")
 	}
@@ -662,9 +638,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	}
 
 	n, err := logFile.WriteString("foo\n")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if n < 4 {
 		t.Fatalf("only wrote %d", n)
 	}
@@ -797,9 +771,7 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
 	}
@@ -865,9 +837,7 @@ func TestIgnoreFolder(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
 	}

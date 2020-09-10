@@ -23,13 +23,9 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	logDir := path.Join(tmpDir, "logs")
 	progDir := path.Join(tmpDir, "progs")
 	err := os.Mkdir(logDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	err = os.Mkdir(progDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	logFile := path.Join(logDir, "log")
 
@@ -42,9 +38,7 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	errorsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_errors_total", logFile, 1)
 
 	f, err := os.OpenFile(logFile, os.O_CREATE, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	defer f.Close()
 
 	errorsTotalCheck()
