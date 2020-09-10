@@ -90,3 +90,5 @@ file-test.go relies on the ReadDeadline timeouts in file.go and socket.go.  Remo
 
 
 make cirrus run a task on matrix test failyue that fetches failures from json and runs flake checks on them
+
+Test mtail servers in integration tests are waiting too long for file notifications -- the 0, false params turn off fsnotify (probably good) and default to 250ms poll intervals (not good) which is why there's lots of time.Sleeps in tests.  Get rid of them and possibly inject a notification to the test server when under test.
