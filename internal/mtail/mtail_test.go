@@ -435,56 +435,6 @@ func TestGlobAfterStart(t *testing.T) {
 // 	}
 // }
 
-func TestHandleLogTruncate(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
-
-	logFilepath := path.Join(workdir, "log")
-	logFile, err := os.Create(logFilepath)
-	if err != nil {
-		t.Errorf("could not touch log file: %s", err)
-	}
-	defer logFile.Close()
-	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer func() {
-		if cerr := m.Close(true); cerr != nil {
-			t.Fatal(cerr)
-		}
-	}()
-
-	testutil.WriteString(t, logFile, "x\n")
-	glog.Info("Write")
-	check := func() (bool, error) {
-		if expvar.Get("lines_total").String() != "1" {
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
-	testutil.FatalIfErr(t, err)
-	if !ok {
-		t.Errorf("log line count received %s, expected 1", expvar.Get("log_count").String())
-	}
-	testutil.FatalIfErr(t, logFile.Truncate(0))
-	glog.Infof("Truncate")
-	testutil.WriteString(t, logFile, "x\n")
-	glog.Info("Write")
-	check2 := func() (bool, error) {
-		if expvar.Get("lines_total").String() != "2" {
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err = testutil.DoOrTimeout(check2, 10*time.Second, 10*time.Millisecond)
-	testutil.FatalIfErr(t, err)
-	if !ok {
-		t.Errorf("log line count received %s, expected 2", expvar.Get("log_count").String())
-	}
-}
-
 func TestHandleRelativeLogAppend(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")

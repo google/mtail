@@ -7,11 +7,9 @@ package mtail_test
 import (
 	"os"
 	"path"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
 )
@@ -28,35 +26,26 @@ func TestTruncatedLogRead(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 2)
 	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
 
 	logFile := path.Join(logDir, "log")
 	f := testutil.TestOpenFile(t, logFile)
-	time.Sleep(time.Second)
 
-	n, err := f.WriteString("1\n")
-	testutil.FatalIfErr(t, err)
-	glog.Infof("Wrote %d bytes", n)
-	time.Sleep(time.Second)
-	err = f.Close()
+	{
+		linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+		testutil.WriteString(t, f, "1\n")
+		linesCountCheck()
+	}
+	err := f.Close()
 	testutil.FatalIfErr(t, err)
 	f, err = os.OpenFile(logFile, os.O_TRUNC|os.O_RDWR, 0600)
 	testutil.FatalIfErr(t, err)
-	time.Sleep(time.Second)
-	n, err = f.WriteString("2\n")
-	testutil.FatalIfErr(t, err)
-	glog.Infof("Wrote %d bytes", n)
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
+	{
+		linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+		// This magic sleep is long enough to wait for the test log watcher to poll again.
+		time.Sleep(251 * time.Millisecond)
+		testutil.WriteString(t, f, "2\n")
 		linesCountCheck()
-	}()
-	go func() {
-		defer wg.Done()
-		logCountCheck()
-	}()
-	wg.Wait()
+	}
+	logCountCheck()
 }
