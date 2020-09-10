@@ -43,43 +43,6 @@ func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	}
 	return m
 }
-func TestHandleLogUpdates(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
-	// touch log file
-	logFilepath := path.Join(workdir, "log")
-	logFile, err := os.Create(logFilepath)
-	if err != nil {
-		t.Errorf("could not touch log file: %s", err)
-	}
-	defer logFile.Close()
-	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer m.Close(true)
-	inputLines := []string{"hi", "hi2", "hi3"}
-	for i, x := range inputLines {
-		// write to log file
-		testutil.WriteString(t, logFile, x+"\n")
-		// check log line count increase
-		expected := fmt.Sprintf("%d", i+1)
-		check := func() (bool, error) {
-			if expvar.Get("lines_total").String() != expected {
-				return false, nil
-			}
-			return true, nil
-		}
-		ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
-		testutil.FatalIfErr(t, err)
-		if !ok {
-			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("lines_total").String())
-			buf := make([]byte, 1<<16)
-			count := runtime.Stack(buf, true)
-			fmt.Println(string(buf[:count]))
-		}
-	}
-}
 
 func TestHandleLogRotation(t *testing.T) {
 	if testing.Short() {
