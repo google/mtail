@@ -794,7 +794,7 @@ func TestDeleteInstrs(t *testing.T) {
 	}
 	lv := m[0].FindLabelValueOrNil([]string{"z"})
 	if lv == nil {
-		t.Fatalf("couldbn;t find label value in metric %#v", m[0])
+		t.Fatalf("couldn;t find label value in metric %#v", m[0])
 	}
 	if lv.Expiry != time.Hour {
 		t.Fatalf("Expiry not correct, is %v", lv.Expiry)

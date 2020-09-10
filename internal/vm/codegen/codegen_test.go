@@ -891,22 +891,16 @@ func TestCodegen(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.source))
-			if err != nil {
-				t.Fatalf("Parse error: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 			ast, err = checker.Check(ast)
 			if *codegenTestDebug {
 				s := parser.Sexp{}
 				s.EmitTypes = true
 				t.Log("Typed AST:\n" + s.Dump(ast))
 			}
-			if err != nil {
-				t.Fatalf("Check error: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 			obj, err := codegen.CodeGen(tc.name, ast)
-			if err != nil {
-				t.Fatalf("Codegen error:\n%s", err)
-			}
+			testutil.FatalIfErr(t, err)
 
 			if diff := testutil.Diff(tc.prog, obj.Program, testutil.AllowUnexported(code.Instr{})); diff != "" {
 				t.Error(diff)

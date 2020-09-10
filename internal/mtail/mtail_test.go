@@ -665,9 +665,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	}
 
 	p, err = os.Create(progpath)
-	if err != nil {
-		t.Fatalf("couldn't open program file: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
 	testutil.FatalIfErr(t, p.Close())
 

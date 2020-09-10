@@ -44,9 +44,7 @@ func TestLogWatcher(t *testing.T) {
 	defer rmWorkdir()
 
 	w, err := NewLogWatcher(0, true)
-	if err != nil {
-		t.Fatalf("couldn't create a watcher: %s\n", err)
-	}
+	testutil.FatalIfErr(t, err)
 	defer func() {
 		if err = w.Close(); err != nil {
 			t.Fatal(err)
@@ -153,21 +151,18 @@ func TestFsnotifyErrorFallbackToPoll(t *testing.T) {
 	glog.Warning("pre-creating log to avoid too many open file")
 
 	var rLimit syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
-		t.Fatalf("couldn't get rlimit: %s", err)
-	}
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	testutil.FatalIfErr(t, err)
 	var zero = rLimit
 	zero.Cur = 0
-	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &zero); err != nil {
-		t.Fatalf("couldn't set rlimit: %s", err)
-	}
-	_, err := NewLogWatcher(0, true)
+	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &zero)
+	testutil.FatalIfErr(t, err)
+	_, err = NewLogWatcher(0, true)
 	if err != nil {
 		t.Error(err)
 	}
-	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
-		t.Fatalf("couldn't reset rlimit: %s", err)
-	}
+	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	testutil.FatalIfErr(t, err)
 }
 
 func TestLogWatcherAddError(t *testing.T) {
@@ -179,9 +174,7 @@ func TestLogWatcherAddError(t *testing.T) {
 	defer rmWorkdir()
 
 	w, err := NewLogWatcher(0, true)
-	if err != nil {
-		t.Fatalf("couldn't create a watcher: %s\n", err)
-	}
+	testutil.FatalIfErr(t, err)
 	defer func() {
 		if err = w.Close(); err != nil {
 			t.Fatal(err)
@@ -207,9 +200,7 @@ func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
 	defer rmWorkdir()
 
 	w, err := NewLogWatcher(0, true)
-	if err != nil {
-		t.Fatalf("couldn't create a watcher: %s\n", err)
-	}
+	testutil.FatalIfErr(t, err)
 	defer func() {
 		if err = w.Close(); err != nil {
 			t.Fatal(err)
@@ -217,20 +208,17 @@ func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
 	}()
 
 	filename := filepath.Join(workdir, "test")
-	if _, err = os.Create(filename); err != nil {
-		t.Fatalf("couldn't create file: %s", err)
-	}
-	if err = os.Chmod(filename, 0); err != nil {
-		t.Fatalf("couldn't chmod file: %s", err)
-	}
+	_, err = os.Create(filename)
+	testutil.FatalIfErr(t, err)
+	err = os.Chmod(filename, 0)
+	testutil.FatalIfErr(t, err)
 	s := &stubProcessor{}
 	err = w.Observe(filename, s)
 	if err != nil {
 		t.Errorf("failed to add watch on permission denied")
 	}
-	if err := os.Chmod(filename, 0777); err != nil {
-		t.Fatalf("couldn't reset file perms: %s", err)
-	}
+	err = os.Chmod(filename, 0777)
+	testutil.FatalIfErr(t, err)
 }
 
 func TestWatcherErrors(t *testing.T) {
@@ -242,13 +230,10 @@ func TestWatcherErrors(t *testing.T) {
 		t.Fatalf("couldn't convert expvar %q", expvar.Get("log_watcher_errors_total").String())
 	}
 	w, err := NewLogWatcher(0, true)
-	if err != nil {
-		t.Fatalf("couldn't create a watcher")
-	}
+	testutil.FatalIfErr(t, err)
 	w.watcher.Errors <- errors.New("Injected error for test")
-	if err := w.Close(); err != nil {
-		t.Fatalf("watcher close failed: %q", err)
-	}
+	err = w.Close()
+	testutil.FatalIfErr(t, err)
 	expected := strconv.FormatInt(orig+1, 10)
 	if diff := testutil.Diff(expected, expvar.Get("log_watcher_errors_total").String()); diff != "" {
 		t.Errorf("log watcher error count not increased:\n%s", diff)

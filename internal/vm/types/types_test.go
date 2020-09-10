@@ -214,9 +214,7 @@ var groupOnlyMatchesTests = []struct {
 func TestGroupOnlyMatches(t *testing.T) {
 	for _, tc := range groupOnlyMatchesTests {
 		r, err := syntax.Parse(tc.pattern, syntax.Perl)
-		if err != nil {
-			t.Fatalf("syntax.Parse failed: %s", err)
-		}
+		testutil.FatalIfErr(t, err)
 		result := groupOnlyMatches(r, tc.check)
 		if result != tc.expected {
 			t.Errorf("Pattern %q didn't only match check %q: expected %+v, received %+v", tc.pattern, tc.check, tc.expected, result)

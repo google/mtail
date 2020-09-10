@@ -20,9 +20,7 @@ func TestNewLoader(t *testing.T) {
 	w := watcher.NewFakeWatcher()
 	store := metrics.NewStore()
 	_, err := NewLoader("", store, w)
-	if err != nil {
-		t.Fatalf("couldn't create loader: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 }
 
 func TestCompileAndRun(t *testing.T) {
@@ -30,9 +28,7 @@ func TestCompileAndRun(t *testing.T) {
 	store := metrics.NewStore()
 	w := watcher.NewFakeWatcher()
 	l, err := NewLoader("", store, w)
-	if err != nil {
-		t.Fatalf("couldn't create loader: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 	if err := l.CompileAndRun("Test", strings.NewReader(testProgram)); err != nil {
 		t.Errorf("CompileAndRun returned error: %s", err)
 	}
@@ -95,9 +91,7 @@ func TestProcessFileEvent(t *testing.T) {
 			defer rmTmpDir()
 
 			l, err := NewLoader(tmpDir, store, w)
-			if err != nil {
-				t.Fatalf("couldn't create loader: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 			testutil.FatalIfErr(t, l.LoadAllPrograms())
 			for i := range tt.events {
 				e := tt.events[i]
@@ -108,19 +102,14 @@ func TestProcessFileEvent(t *testing.T) {
 					}
 				case watcher.Delete:
 					err := os.Remove(path.Join(tmpDir, e.Pathname))
-					if err != nil {
-						t.Fatalf("Remove failed for %s: %s", e.Pathname, err)
-					}
+					testutil.FatalIfErr(t, err)
 				case watcher.Update:
 					if e.Pathname != "notexist.mtail" {
 						f := testutil.TestOpenFile(t, path.Join(tmpDir, e.Pathname))
 						_, err = f.WriteString(testProgram)
-						if err != nil {
-							t.Fatalf("Couldn't write file contents: %s", err)
-						}
-						if err = f.Close(); err != nil {
-							t.Fatalf("Close failed: %s", err)
-						}
+						testutil.FatalIfErr(t, err)
+						err := f.Close()
+						testutil.FatalIfErr(t, err)
 					}
 				}
 				l.ProcessFileEvent(context.Background(), watcher.Event{e.Op, path.Join(tmpDir, e.Pathname)})
@@ -153,9 +142,7 @@ func TestLoadProg(t *testing.T) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 	l, err := NewLoader(tmpDir, store, w)
-	if err != nil {
-		t.Fatalf("couldn't create loader: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	for _, name := range testProgFiles {
 		f := testutil.TestOpenFile(t, path.Join(tmpDir, name))
@@ -163,8 +150,6 @@ func TestLoadProg(t *testing.T) {
 		testutil.FatalIfErr(t, err)
 		glog.Infof("Wrote %d bytes", n)
 		err = l.LoadProgram(path.Join(tmpDir, name))
-		if err != nil {
-			t.Fatalf("couldn't load file: %s error: %s", name, err)
-		}
+		testutil.FatalIfErr(t, err)
 	}
 }

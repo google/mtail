@@ -511,9 +511,7 @@ func TestCheckTypeExpressions(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := checker.Check(tc.expr)
-			if err != nil {
-				t.Fatalf("check error: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 
 			diff := testutil.Diff(tc.expected, ast.Type().Root())
 			if diff != "" {
