@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/pkg/errors"
 )
 
 func DoOrTimeout(do func() (bool, error), deadline, interval time.Duration) (bool, error) {
@@ -13,7 +12,7 @@ func DoOrTimeout(do func() (bool, error), deadline, interval time.Duration) (boo
 	for {
 		select {
 		case <-timeout:
-			return false, errors.Errorf("timeout after %s", deadline)
+			return false, nil
 		case <-ticker:
 			glog.V(2).Infof("tick")
 			ok, err := do()
