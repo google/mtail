@@ -27,6 +27,34 @@ type watch struct {
 	fi os.FileInfo
 }
 
+// hasChanged indicates that a FileInfo has changed.
+// http://apenwarr.ca/log/20181113 suggests that comparing mtime is
+// insufficient for sub-second resolution on many platforms, and we can do
+// better by comparing a few fields in the FileInfo.  This set of tests is less
+// than the ones suggested in the blog post, but seem sufficient for making
+// tests (notably, sub-millisecond accuracy) pass quickly.  mtime-only diff has
+// caused race conditions in test and likely caused strange behaviour in
+// production environments.
+func hasChanged(a, b os.FileInfo) bool {
+	if a == nil || b == nil {
+		glog.V(2).Info("One or both FileInfos are nil")
+		return true
+	}
+	if a.ModTime() != b.ModTime() {
+		glog.V(2).Info("modtimes differ")
+		return true
+	}
+	if a.Size() != b.Size() {
+		glog.V(2).Info("sizes differ")
+		return true
+	}
+	if a.Mode() != b.Mode() {
+		glog.V(2).Info("modes differ")
+		return true
+	}
+	return false
+}
+
 // LogWatcher implements a Watcher for watching real filesystems.
 type LogWatcher struct {
 	watcher    *fsnotify.Watcher
@@ -141,7 +169,7 @@ func (w *LogWatcher) pollWatchedPath(pathname string, watched *watch) {
 	// fsnotify does not send update events for the directory itself.
 	if fi.IsDir() {
 		w.pollDirectory(watched, pathname)
-	} else if watched.fi == nil || fi.ModTime().Sub(watched.fi.ModTime()) > 0 {
+	} else if hasChanged(fi, watched.fi) {
 		glog.V(2).Infof("sending update for %s", pathname)
 		w.sendWatchedEvent(watched, Event{Update, pathname})
 	}
@@ -177,14 +205,14 @@ func (w *LogWatcher) pollDirectory(parentWatch *watch, pathname string) {
 			w.watchedMu.Lock()
 			w.watched[match] = &watch{ps: parentWatch.ps, fi: fi}
 			w.watchedMu.Unlock()
-		case watched.fi != nil && fi.ModTime().Sub(watched.fi.ModTime()) > 0:
+		case hasChanged(fi, watched.fi):
 			glog.V(2).Infof("sending update for %s", match)
 			w.sendWatchedEvent(watched, Event{Update, match})
 			w.watchedMu.Lock()
 			w.watched[match].fi = fi
 			w.watchedMu.Unlock()
 		default:
-			glog.V(2).Infof("No modtime change for %s, no send", match)
+			glog.V(2).Infof("No change for %s, no send", match)
 		}
 		if fi.IsDir() {
 			w.pollDirectory(parentWatch, match)
@@ -250,7 +278,11 @@ func (w *LogWatcher) Observe(path string, processor Processor) error {
 	defer w.watchedMu.Unlock()
 	watched, ok := w.watched[absPath]
 	if !ok {
-		w.watched[absPath] = &watch{ps: []Processor{processor}}
+		fi, err := os.Stat(absPath)
+		if err != nil {
+			glog.V(1).Info(err)
+		}
+		w.watched[absPath] = &watch{ps: []Processor{processor}, fi: fi}
 		glog.Infof("No abspath in watched list, added new one for %s", absPath)
 		return nil
 	}
