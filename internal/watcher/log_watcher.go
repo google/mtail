@@ -109,18 +109,24 @@ func (w *LogWatcher) runTicks() {
 	for {
 		select {
 		case <-w.pollTicker.C:
-			w.watchedMu.RLock()
-			for n, watch := range w.watched {
-				w.watchedMu.RUnlock()
-				w.pollWatchedPath(n, watch)
-				w.watchedMu.RLock()
-			}
-			w.watchedMu.RUnlock()
+			w.Poll()
 		case <-w.stopTicks:
 			w.pollTicker.Stop()
 			return
 		}
 	}
+}
+
+// Poll all watched objects for updates, dispatching events if required.
+func (w *LogWatcher) Poll() {
+	glog.V(2).Info("Polling watched files.")
+	w.watchedMu.RLock()
+	for n, watch := range w.watched {
+		w.watchedMu.RUnlock()
+		w.pollWatchedPath(n, watch)
+		w.watchedMu.RLock()
+	}
+	w.watchedMu.RUnlock()
 }
 
 // pollWatchedPathLocked polls an already-watched path for updates.
@@ -140,7 +146,6 @@ func (w *LogWatcher) pollWatchedPath(pathname string, watched *watch) {
 		w.sendWatchedEvent(watched, Event{Update, pathname})
 	}
 
-	glog.V(2).Info("Update fi")
 	w.watchedMu.Lock()
 	if _, ok := w.watched[pathname]; ok {
 		w.watched[pathname].fi = fi

@@ -26,6 +26,7 @@ type Event struct {
 type Watcher interface {
 	Observe(name string, processor Processor) error
 	Unobserve(name string, processor Processor) error
+	Poll()
 	Close() error
 }
 
