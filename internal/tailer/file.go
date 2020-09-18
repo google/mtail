@@ -266,7 +266,7 @@ func (f *File) checkForTruncate(ctx context.Context) (bool, error) {
 	}
 
 	p, serr := f.file.Seek(0, io.SeekStart)
-	glog.V(2).Infof("Truncated?  Seeked to %d: %v", p, serr)
+	glog.V(2).Infof("Probably truncated.  Seeked to %d: %v", p, serr)
 	logTruncs.Add(f.name, 1)
 	return true, serr
 }
