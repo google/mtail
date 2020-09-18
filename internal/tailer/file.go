@@ -173,19 +173,22 @@ func (f *File) Read(ctx context.Context) error {
 	// TODO(jaq): Set the deadline based on ctx.
 	for {
 		if err := f.file.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
-			glog.V(2).Infof("%s: %s", f.name, err)
+			glog.V(3).Infof("%s: %s", f.name, err)
 		}
 		n, err := f.file.Read(b[:cap(b)])
 		glog.V(2).Infof("Read count %v err %v", n, err)
 		totalBytes += n
 		b = b[:n]
 
-		glog.V(2).Infof("Error: %T", err)
+		glog.V(3).Infof("Error: %T", err)
+		if err != nil {
+			glog.V(3).Infof("Err: %s", err)
+		}
 
 		// If this time we've read no bytes at all and then hit an EOF, and
 		// we're a regular file, check for truncation.
 		if err == io.EOF && totalBytes == 0 && f.regular {
-			glog.V(2).Info("Suspected truncation.")
+			glog.V(2).Info("EOF and read no bytes, suspected truncation.")
 			truncated, terr := f.checkForTruncate(ctx)
 			if terr != nil {
 				glog.Infof("checkForTruncate returned with error '%v'", terr)
@@ -218,8 +221,10 @@ func (f *File) Read(ctx context.Context) error {
 		if err != nil {
 			// Update the last read time if we were able to read anything.
 			if totalBytes > 0 {
+				glog.V(2).Infof("Read %d bytes this time, updating lastRead", totalBytes)
 				f.lastRead = time.Now()
 			}
+			glog.V(2).Infof("Done with read: %s", err)
 			return err
 		}
 	}
