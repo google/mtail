@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"testing"
-	"time"
 
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
@@ -30,21 +29,24 @@ func TestTruncatedLogRead(t *testing.T) {
 
 	logFile := path.Join(logDir, "log")
 	f := testutil.TestOpenFile(t, logFile)
+	m.PollWatched()
 
 	{
 		linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 		testutil.WriteString(t, f, "1\n")
+		m.PollWatched()
 		linesCountCheck()
 	}
 	err := f.Close()
 	testutil.FatalIfErr(t, err)
 	f, err = os.OpenFile(logFile, os.O_TRUNC|os.O_RDWR, 0600)
 	testutil.FatalIfErr(t, err)
+	// Ensure the server notices the truncate
+	m.PollWatched()
 	{
 		linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
-		// This magic sleep is long enough to wait for the test log watcher to poll again.
-		time.Sleep(251 * time.Millisecond)
 		testutil.WriteString(t, f, "2\n")
+		m.PollWatched()
 		linesCountCheck()
 	}
 	logCountCheck()

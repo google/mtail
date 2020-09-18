@@ -27,6 +27,8 @@ const timeoutMultiplier = 3
 type TestServer struct {
 	*Server
 
+	w *watcher.LogWatcher
+
 	tb testing.TB
 
 	// Set this to change the poll deadline when using DoOrTimeout within this TestServer.
@@ -49,7 +51,7 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bo
 	if err != nil {
 		tb.Fatal(err)
 	}
-	return &TestServer{Server: m, tb: tb}
+	return &TestServer{Server: m, w: w, tb: tb}
 }
 
 // TestStartServer creates a new TestServer and starts it running.  It
@@ -101,6 +103,12 @@ func (m *TestServer) Start() func() {
 	}
 }
 
+// Poll all watched logs for updates.
+func (m *TestServer) PollWatched() {
+	glog.Infof("TestServer polling watched objects")
+	m.w.Poll()
+}
+
 // TestGetMetric fetches the expvar metrics from the Server at addr, and
 // returns the value of one named name.  Callers are responsible for type
 // assertions on the returned value.
@@ -123,7 +131,7 @@ func TestGetMetric(tb testing.TB, addr, name string) interface{} {
 	if err := json.Unmarshal(buf.Bytes(), &r); err != nil {
 		tb.Fatalf("%s: body was %s", err, buf.String())
 	}
-	glog.Infof("TestGetMetric: returned value for %s: %v", name, r[name])
+	glog.V(2).Infof("TestGetMetric: returned value for %s: %v", name, r[name])
 	return r[name]
 }
 
