@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"testing"
-	"time"
 
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
@@ -33,18 +32,19 @@ func TestLogRotation(t *testing.T) {
 	defer stopM()
 
 	testutil.WriteString(t, f, "line 1\n")
-	time.Sleep(1 * time.Second)
+	m.PollWatched()
 
 	{
 		logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1)
 
 		testutil.WriteString(t, f, "line 2\n")
-		time.Sleep(1 * time.Second)
+		m.PollWatched()
 		logLinesTotalCheck()
 	}
 
 	err = os.Rename(logFile, logFile+".1")
 	testutil.FatalIfErr(t, err)
+	m.PollWatched()
 
 	f = testutil.TestOpenFile(t, logFile)
 
@@ -52,7 +52,7 @@ func TestLogRotation(t *testing.T) {
 		logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1)
 
 		testutil.WriteString(t, f, "line 1\n")
-		time.Sleep(1 * time.Second)
+		m.PollWatched()
 		logLinesTotalCheck()
 	}
 }
