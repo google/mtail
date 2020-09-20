@@ -193,29 +193,28 @@ func (w *LogWatcher) pollDirectory(parentWatch *watch, pathname string) {
 	}
 	// TODO(jaq): how do we avoid duplicate notifies for things that are already in the watch list?
 	for _, match := range matches {
-		fi, err := os.Stat(match)
-		if err != nil {
-			glog.V(1).Info(err)
-			continue
-		}
-
 		w.watchedMu.RLock()
 		watched, ok := w.watched[match]
 		w.watchedMu.RUnlock()
-		switch {
-		case !ok:
+		if !ok {
 			// The object has no watch object so it must be new, but we can't
 			// decide that -- wait for the Tailer to match pattern and instruct
 			// us to Observe it directly.
 			glog.V(2).Infof("sending create for %s", match)
 			w.sendWatchedEvent(parentWatch, Event{Create, match})
-		case hasChanged(fi, watched.fi):
+		}
+		fi, err := os.Stat(match)
+		if err != nil {
+			glog.V(1).Info(err)
+			continue
+		}
+		if ok && hasChanged(fi, watched.fi) {
 			glog.V(2).Infof("sending update for %s", match)
 			w.sendWatchedEvent(watched, Event{Update, match})
 			w.watchedMu.Lock()
 			w.watched[match].fi = fi
 			w.watchedMu.Unlock()
-		default:
+		} else {
 			glog.V(2).Infof("No change for %s, no send", match)
 		}
 		if fi.IsDir() {
