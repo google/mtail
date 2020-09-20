@@ -72,9 +72,7 @@ func TestHandleVarz(t *testing.T) {
 				testutil.FatalIfErr(t, ms.Add(metric))
 			}
 			e, err := New(ms, Hostname("gunstar"))
-			if err != nil {
-				t.Fatalf("couldn't make exporter: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 			response := httptest.NewRecorder()
 			e.HandleVarz(response, &http.Request{})
 			if response.Code != 200 {

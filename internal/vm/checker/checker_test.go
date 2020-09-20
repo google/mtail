@@ -4,6 +4,7 @@
 package checker_test
 
 import (
+	"flag"
 	"strings"
 	"testing"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/google/mtail/internal/vm/symbol"
 	"github.com/google/mtail/internal/vm/types"
 )
+
+var checkerTestDebug = flag.Bool("checker_test_debug", false, "Turn on to log AST in tests")
 
 var checkerInvalidPrograms = []struct {
 	name    string
@@ -258,9 +261,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			ast, err = checker.Check(ast)
 			if err == nil {
 				s := parser.Sexp{}
@@ -463,13 +464,13 @@ func TestCheckValidPrograms(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			ast, err = checker.Check(ast)
-			s := parser.Sexp{}
-			s.EmitTypes = true
-			t.Log("Typed AST:\n" + s.Dump(ast))
+			if *checkerTestDebug {
+				s := parser.Sexp{}
+				s.EmitTypes = true
+				t.Log("Typed AST:\n" + s.Dump(ast))
+			}
 			if err != nil {
 				t.Errorf("check failed: %s", err)
 			}
@@ -510,9 +511,7 @@ func TestCheckTypeExpressions(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := checker.Check(tc.expr)
-			if err != nil {
-				t.Fatalf("check error: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 
 			diff := testutil.Diff(tc.expected, ast.Type().Root())
 			if diff != "" {

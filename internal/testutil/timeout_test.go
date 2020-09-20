@@ -13,8 +13,8 @@ func TestDoOrTimeout(t *testing.T) {
 	ok, err := DoOrTimeout(func() (bool, error) {
 		return false, nil
 	}, 10*time.Millisecond, time.Millisecond)
-	if ok || err == nil {
-		t.Errorf("Expected timeout, got %v, %v", ok, err)
+	if ok || err != nil {
+		t.Errorf("Expected timeout (false, nil), got %v, %v", ok, err)
 	}
 
 	i := 5

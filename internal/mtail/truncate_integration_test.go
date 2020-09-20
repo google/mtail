@@ -7,11 +7,8 @@ package mtail_test
 import (
 	"os"
 	"path"
-	"sync"
 	"testing"
-	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
 )
@@ -22,55 +19,35 @@ func TestTruncatedLogRead(t *testing.T) {
 
 	logDir := path.Join(tmpDir, "logs")
 	progDir := path.Join(tmpDir, "progs")
-	err := os.Mkdir(logDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = os.Mkdir(progDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
+	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	linesCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 2, time.Minute)
-	logCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "log_count", 1, time.Minute)
+	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
 
 	logFile := path.Join(logDir, "log")
 	f := testutil.TestOpenFile(t, logFile)
-	time.Sleep(time.Second)
+	m.PollWatched()
 
-	n, err := f.WriteString("1\n")
-	if err != nil {
-		t.Fatal(err)
-	}
-	glog.Infof("Wrote %d bytes", n)
-	time.Sleep(time.Second)
-	err = f.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	f, err = os.OpenFile(logFile, os.O_TRUNC|os.O_RDWR, 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(time.Second)
-	n, err = f.WriteString("2\n")
-	if err != nil {
-		t.Fatal(err)
-	}
-	glog.Infof("Wrote %d bytes", n)
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
+	{
+		linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+		testutil.WriteString(t, f, "1\n")
+		m.PollWatched()
 		linesCountCheck()
-	}()
-	go func() {
-		defer wg.Done()
-		logCountCheck()
-	}()
-	wg.Wait()
+	}
+	err := f.Close()
+	testutil.FatalIfErr(t, err)
+	f, err = os.OpenFile(logFile, os.O_TRUNC|os.O_RDWR, 0600)
+	testutil.FatalIfErr(t, err)
+	// Ensure the server notices the truncate
+	m.PollWatched()
+	{
+		linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+		testutil.WriteString(t, f, "2\n")
+		m.PollWatched()
+		linesCountCheck()
+	}
+	logCountCheck()
 }

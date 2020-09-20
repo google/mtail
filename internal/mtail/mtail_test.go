@@ -6,7 +6,6 @@ package mtail
 import (
 	"expvar"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
@@ -23,20 +22,6 @@ import (
 
 const testProgram = "/$/ { }\n"
 
-func makeTempDir(t *testing.T) (workdir string) {
-	var err error
-	if workdir, err = ioutil.TempDir("", "mtail_test"); err != nil {
-		t.Fatalf("ioutil.TempDir failed: %s", err)
-	}
-	return
-}
-
-func removeTempDir(t *testing.T, workdir string) {
-	if err := os.RemoveAll(workdir); err != nil {
-		t.Fatalf("os.RemoveAll failed: %s", err)
-	}
-}
-
 func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	expvar.Get("lines_total").(*expvar.Int).Set(0)
 	expvar.Get("log_count").(*expvar.Int).Set(0)
@@ -48,9 +33,7 @@ func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 		t.Errorf("Couodn't make a log watcher: %s", err)
 	}
 	m, err := New(metrics.NewStore(), w, options...)
-	if err != nil {
-		t.Fatalf("couldn't create mtail: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 	if pErr := m.l.CompileAndRun("test", strings.NewReader(testProgram)); pErr != nil {
 		t.Errorf("Couldn't compile program: %s", pErr)
 	}
@@ -60,52 +43,13 @@ func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	}
 	return m
 }
-func TestHandleLogUpdates(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
-	// touch log file
-	logFilepath := path.Join(workdir, "log")
-	logFile, err := os.Create(logFilepath)
-	if err != nil {
-		t.Errorf("could not touch log file: %s", err)
-	}
-	defer logFile.Close()
-	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer m.Close(true)
-	inputLines := []string{"hi", "hi2", "hi3"}
-	for i, x := range inputLines {
-		// write to log file
-		testutil.WriteString(t, logFile, x+"\n")
-		// check log line count increase
-		expected := fmt.Sprintf("%d", i+1)
-		check := func() (bool, error) {
-			if expvar.Get("lines_total").String() != expected {
-				return false, nil
-			}
-			return true, nil
-		}
-		ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !ok {
-			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("lines_total").String())
-			buf := make([]byte, 1<<16)
-			count := runtime.Stack(buf, true)
-			fmt.Println(string(buf[:count]))
-		}
-	}
-}
 
 func TestHandleLogRotation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 	logFilepath := path.Join(workdir, "log")
 	// touch log file
 	logFile, err := os.Create(logFilepath)
@@ -184,8 +128,8 @@ func TestHandleNewLogAfterStart(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 	// Start up mtail
 	logFilepath := path.Join(workdir, "log")
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
@@ -225,8 +169,8 @@ func TestHandleNewLogIgnored(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 	// Start mtail
 	logFilepath := path.Join(workdir, "log")
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
@@ -250,8 +194,8 @@ func TestHandleSoftLinkChange(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	logFilepath := path.Join(workdir, "log")
 	m := startMtailServer(t, LogPathPatterns(logFilepath))
@@ -281,9 +225,7 @@ func TestHandleSoftLinkChange(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check3, 1*time.Second, 10*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("log count: received %s, expected 1", expvar.Get("log_count").String())
 		t.Errorf("log rotatins: received %s, expected 0", expvar.Get("log_rotations_total").String())
@@ -344,8 +286,8 @@ func TestGlob(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	globTests := []struct {
 		name     string
@@ -389,9 +331,7 @@ func TestGlob(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
 	}
@@ -402,8 +342,8 @@ func TestGlobAfterStart(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	globTests := []struct {
 		name     string
@@ -449,9 +389,7 @@ func TestGlobAfterStart(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
 	}
@@ -461,8 +399,8 @@ func TestGlobAfterStart(t *testing.T) {
 // 	if testing.Short() {
 // 		t.Skip("skipping test in short mode")
 // 	}
-// 	workdir := makeTempDir(t)
-// 	defer removeTempDir(t, workdir)
+//	workdir, rmWorkdir := testutil.TestTempDir(t)
+//	defer rmWorkdir()
 // 	// touch log file
 // 	logFilepath := path.Join(workdir, "log")
 // 	logFile, err := os.Create(logFilepath)
@@ -497,71 +435,15 @@ func TestGlobAfterStart(t *testing.T) {
 // 	}
 // }
 
-func TestHandleLogTruncate(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
-
-	logFilepath := path.Join(workdir, "log")
-	logFile, err := os.Create(logFilepath)
-	if err != nil {
-		t.Errorf("could not touch log file: %s", err)
-	}
-	defer logFile.Close()
-	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer func() {
-		if cerr := m.Close(true); cerr != nil {
-			t.Fatal(cerr)
-		}
-	}()
-
-	testutil.WriteString(t, logFile, "x\n")
-	glog.Info("Write")
-	check := func() (bool, error) {
-		if expvar.Get("lines_total").String() != "1" {
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 10*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !ok {
-		t.Errorf("log line count received %s, expected 1", expvar.Get("log_count").String())
-	}
-	testutil.FatalIfErr(t, logFile.Truncate(0))
-	glog.Infof("Truncate")
-	testutil.WriteString(t, logFile, "x\n")
-	glog.Info("Write")
-	check2 := func() (bool, error) {
-		if expvar.Get("lines_total").String() != "2" {
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err = testutil.DoOrTimeout(check2, 10*time.Second, 10*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !ok {
-		t.Errorf("log line count received %s, expected 2", expvar.Get("log_count").String())
-	}
-}
-
 func TestHandleRelativeLogAppend(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	glog.Infof("cwd is %q", cwd)
 
 	if cerr := os.Chdir(workdir); cerr != nil {
@@ -596,9 +478,7 @@ func TestHandleRelativeLogAppend(t *testing.T) {
 			return true, nil
 		}
 		ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		if !ok {
 			t.Errorf("Line count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("lines_total").String())
 			buf := make([]byte, 1<<16)
@@ -614,8 +494,8 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		t.Skip("skipping test in shor tmode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	logDir := path.Join(workdir, "logs")
 	if err := os.Mkdir(logDir, 0777); err != nil {
@@ -628,9 +508,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 
 	logFilepath := path.Join(logDir, "log")
 	logFile, err := os.Create(logFilepath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	defer logFile.Close()
 
 	m := startMtailServer(t, ProgramPath(progDir), LogPathPatterns(logDir+"/*"))
@@ -644,9 +522,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 
 	progpath := path.Join(progDir, "program.mtail")
 	p, err := os.Create(progpath)
-	if err != nil {
-		t.Fatalf("couldn't open program file: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
 	testutil.FatalIfErr(t, p.Close())
 
@@ -665,9 +541,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check, time.Second, 10*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Fatal("program loads didn't increase")
 	}
@@ -677,9 +551,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	}
 
 	n, err := logFile.WriteString("foo\n")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if n < 4 {
 		t.Fatalf("only wrote %d", n)
 	}
@@ -706,9 +578,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	}
 
 	p, err = os.Create(progpath)
-	if err != nil {
-		t.Fatalf("couldn't open program file: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
 	testutil.FatalIfErr(t, p.Close())
 
@@ -767,8 +637,8 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	globTests := []struct {
 		name     string
@@ -812,9 +682,7 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
 	}
@@ -825,8 +693,8 @@ func TestIgnoreFolder(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 
-	workdir := makeTempDir(t)
-	defer removeTempDir(t, workdir)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
 	globTests := []struct {
 		name     string
@@ -880,9 +748,7 @@ func TestIgnoreFolder(t *testing.T) {
 		return true, nil
 	}
 	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !ok {
 		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
 	}

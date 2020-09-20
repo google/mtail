@@ -158,19 +158,13 @@ func TestExamplePrograms(t *testing.T) {
 			store := metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
 			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
-			if err != nil {
-				t.Fatalf("create mtail failed: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 
 			err = mtail.Run()
-			if err != nil {
-				t.Fatalf("Run failed: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 
 			g, err := os.Open(tc.goldenfile)
-			if err != nil {
-				t.Fatalf("could not open golden file: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 			defer g.Close()
 
 			goldenStore := metrics.NewStore()
@@ -200,18 +194,14 @@ func TestCompileExamplePrograms(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 	matches, err := filepath.Glob("../../examples/*.mtail")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	for _, tc := range matches {
 		name := filepath.Base(tc)
 		t.Run(name, func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
 			mtail, err := mtail.New(s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			mtail.Close(true)
 		})
 	}

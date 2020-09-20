@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"regexp/syntax"
 	"testing"
+
+	"github.com/google/mtail/internal/testutil"
 )
 
 var typeUnificationTests = []struct {
@@ -212,9 +214,7 @@ var groupOnlyMatchesTests = []struct {
 func TestGroupOnlyMatches(t *testing.T) {
 	for _, tc := range groupOnlyMatchesTests {
 		r, err := syntax.Parse(tc.pattern, syntax.Perl)
-		if err != nil {
-			t.Fatalf("syntax.Parse failed: %s", err)
-		}
+		testutil.FatalIfErr(t, err)
 		result := groupOnlyMatches(r, tc.check)
 		if result != tc.expected {
 			t.Errorf("Pattern %q didn't only match check %q: expected %+v, received %+v", tc.pattern, tc.check, tc.expected, result)
@@ -263,9 +263,7 @@ func TestInferCaprefType(t *testing.T) {
 		tc := tc
 		t.Run(tc.pattern, func(t *testing.T) {
 			re, err := syntax.Parse(`(`+tc.pattern+`)`, syntax.Perl)
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			r := InferCaprefType(re, 1)
 			if !Equals(tc.typ, r) {
 				t.Errorf("Types don't match: %q inferred %v, not %v", tc.pattern, r, tc.typ)
@@ -282,9 +280,7 @@ func TestTypeEquals(t *testing.T) {
 	t1 := NewVariable()
 	t2 := NewVariable()
 	err := Unify(t1, t2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !Equals(t1, t2) {
 		t.Errorf("Unified variables should be same: %v %v", t1, t2)
 	}
@@ -297,10 +293,7 @@ func TestTypeEquals(t *testing.T) {
 		t.Error("ununified type const and var")
 	}
 	err = Unify(Int, t3)
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if !Equals(t3, Int) {
 		t.Error("unified variable and const not same")
 	}

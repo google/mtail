@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
@@ -22,13 +21,9 @@ func TestPartialLineRead(t *testing.T) {
 	logDir := path.Join(tmpDir, "logs")
 	progDir := path.Join(tmpDir, "progs")
 	err := os.Mkdir(logDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	err = os.Mkdir(progDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	logFile := path.Join(logDir, "log")
 
@@ -39,33 +34,27 @@ func TestPartialLineRead(t *testing.T) {
 
 	{
 
-		lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
+		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 		n, err := f.WriteString("line 1\n")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		glog.Infof("Wrote %d bytes", n)
 		lineCountCheck()
 	}
 
 	{
-		lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 0, time.Minute)
+		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 0)
 		n, err := f.WriteString("line ")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		glog.Infof("Wrote %d bytes", n)
 
 		lineCountCheck()
 	}
 
 	{
-		lineCountCheck := mtail.ExpectMetricDeltaWithDeadline(t, m.Addr(), "lines_total", 1, time.Minute)
+		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 
 		n, err := f.WriteString("2\n")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		glog.Infof("Wrote %d bytes", n)
 
 		lineCountCheck()

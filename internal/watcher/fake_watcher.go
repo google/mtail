@@ -111,3 +111,7 @@ func (w *FakeWatcher) InjectDelete(name string) {
 	}
 	w.SendEvent(Event{Delete, name})
 }
+
+// Poll does nothing in the fake watcher; events are injected.
+func (w *FakeWatcher) Poll() {
+}

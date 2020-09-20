@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"testing"
-	"time"
 
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
@@ -24,13 +23,9 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	logDir := path.Join(tmpDir, "logs")
 	progDir := path.Join(tmpDir, "progs")
 	err := os.Mkdir(logDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	err = os.Mkdir(progDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	logFile := path.Join(logDir, "log")
 
@@ -40,16 +35,11 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	startErrorsTotal := mtail.TestGetMetric(t, m.Addr(), "log_errors_total").(map[string]interface{})
+	errorsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_errors_total", logFile, 1)
 
 	f, err := os.OpenFile(logFile, os.O_CREATE, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	defer f.Close()
-	time.Sleep(time.Second)
 
-	errorsTotal := mtail.TestGetMetric(t, m.Addr(), "log_errors_total").(map[string]interface{})
-
-	mtail.ExpectMetricDelta(t, errorsTotal[logFile], startErrorsTotal[logFile], 1)
+	errorsTotalCheck()
 }
