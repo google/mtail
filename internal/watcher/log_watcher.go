@@ -200,11 +200,11 @@ func (w *LogWatcher) pollDirectory(parentWatch *watch, pathname string) {
 		w.watchedMu.RUnlock()
 		switch {
 		case !ok:
+			// The object has no watch object so it must be new, but we can't
+			// decide that -- wait for the Tailer to match pattern and instruct
+			// us to Observe it directly.
 			glog.V(2).Infof("sending create for %s", match)
 			w.sendWatchedEvent(parentWatch, Event{Create, match})
-			w.watchedMu.Lock()
-			w.watched[match] = &watch{ps: parentWatch.ps, fi: fi}
-			w.watchedMu.Unlock()
 		case hasChanged(fi, watched.fi):
 			glog.V(2).Infof("sending update for %s", match)
 			w.sendWatchedEvent(watched, Event{Update, match})
