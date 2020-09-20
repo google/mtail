@@ -1,6 +1,5 @@
 // Copyright 2019 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
-// +build integration
 
 package mtail_test
 
@@ -14,6 +13,9 @@ import (
 )
 
 func TestPermissionDeniedOnLog(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
 	// Can't force a permission denied error if run as root.
 	testutil.SkipIfRoot(t)
 

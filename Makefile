@@ -172,7 +172,7 @@ check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -timeout ${timeout} -race -v -tags=integration ./...
+	go test -gcflags "$(GO_GCFLAGS)" -timeout ${timeout} -race -v ./...
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
@@ -180,14 +180,14 @@ smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
 
 .PHONY: bench
 bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -tags=integration -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
+	go test -gcflags "$(GO_GCFLAGS)" -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
 
 .PHONY: bench_cpu
 bench_cpu: | print-version .dep-stamp
-	go test -tags=integration -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
+	go test -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
 .PHONY: bench_mem
 bench_mem: | print-version .dep-stamp
-	go test -tags=integration -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -memprofile=mem.out internal/mtail/examples_integration_test.go
+	go test -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -memprofile=mem.out internal/mtail/examples_integration_test.go
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
@@ -195,7 +195,7 @@ recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
 
 .PHONY: regtest
 regtest: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -v -tags=integration -timeout=${timeout} ./...
+	go test -gcflags "$(GO_GCFLAGS)" -v -timeout=${timeout} ./...
 
 TESTRESULTS ?= test-results
 TESTCOVERPROFILE ?= out.coverprofile
@@ -204,7 +204,7 @@ TESTCOVERPROFILE ?= out.coverprofile
 junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
-	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -tags=integration -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
+	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
@@ -298,7 +298,7 @@ endif
 coverage: coverprofile
 
 coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test -v -covermode=count -coverprofile=$@ -tags=integration -timeout=${timeout} $(PACKAGES)
+	go test -v -covermode=count -coverprofile=$@ -timeout=${timeout} $(PACKAGES)
 
 coverage.html: coverprofile | print-version
 	go tool cover -html=$< -o $@
