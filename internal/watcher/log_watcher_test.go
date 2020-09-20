@@ -260,7 +260,11 @@ func TestWatcherNewFile(t *testing.T) {
 			s := &stubProcessor{}
 			testutil.FatalIfErr(t, w.Observe(tmpDir, s))
 			testutil.TestOpenFile(t, path.Join(tmpDir, "log"))
-			time.Sleep(250 * time.Millisecond)
+			if !test.b {
+				w.Poll()
+			} else {
+				time.Sleep(250 * time.Millisecond)
+			}
 			w.Close()
 			expected := []Event{{Op: Create, Pathname: path.Join(tmpDir, "log")}}
 			if diff := testutil.Diff(expected, s.Events); diff != "" {
