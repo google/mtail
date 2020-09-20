@@ -1,6 +1,5 @@
 // Copyright 2019 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
-// +build integration
 
 package mtail
 

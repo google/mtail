@@ -1,6 +1,5 @@
 // Copyright 2019 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
-// +build integration
 
 package mtail_test
 
@@ -16,6 +15,9 @@ import (
 )
 
 func TestPollLogPathPatterns(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 

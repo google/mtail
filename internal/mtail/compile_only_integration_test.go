@@ -1,6 +1,5 @@
 // Copyright 2019 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
-// +build integration
 
 package mtail_test
 
@@ -16,6 +15,9 @@ import (
 
 func TestBadProgramFailsCompilation(t *testing.T) {
 	t.Skip("broken, need to handle compile error correctly.")
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
 	progDir, rmProgDir := testutil.TestTempDir(t)
 	defer rmProgDir()
 	logDir, rmLogDir := testutil.TestTempDir(t)

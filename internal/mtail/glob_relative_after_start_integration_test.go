@@ -1,6 +1,5 @@
 // Copyright 2019 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
-// +build integration
 
 package mtail_test
 
@@ -17,6 +16,9 @@ import (
 )
 
 func TestGlobRelativeAfterStart(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
 	for _, enableFsnotify := range []bool{false, true} {
 		t.Run(fmt.Sprintf("fsnotify=%v", enableFsnotify), func(t *testing.T) {
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
