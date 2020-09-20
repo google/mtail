@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
 )
@@ -34,13 +33,15 @@ func TestPollLogPathPatterns(t *testing.T) {
 
 	logFile := path.Join(logDir, "files", "a", "log", "a.log")
 	testutil.FatalIfErr(t, os.MkdirAll(path.Dir(logFile), 0700))
+
 	f := testutil.TestOpenFile(t, logFile)
-	n, err := f.WriteString("")
-	testutil.FatalIfErr(t, err)
-	time.Sleep(time.Second)
-	f.WriteString("line 1\n")
-	glog.Infof("Wrote %d bytes", n)
-	time.Sleep(time.Second)
+	m.PollWatched()
+
+	testutil.WriteString(t, f, "")
+	m.PollWatched()
+
+	testutil.WriteString(t, f, "line 1\n")
+	m.PollWatched()
 
 	var wg sync.WaitGroup
 	wg.Add(2)
