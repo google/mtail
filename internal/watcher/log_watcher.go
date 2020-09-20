@@ -68,6 +68,8 @@ type LogWatcher struct {
 	ticksDone  chan struct{} // Channel to notify when the ticks handler is done.
 	eventsDone chan struct{} // Channel to notify when the events handler is done.
 
+	pollMu sync.Mutex // protects `Poll()`
+
 	closeOnce sync.Once
 }
 
@@ -147,6 +149,8 @@ func (w *LogWatcher) runTicks() {
 
 // Poll all watched objects for updates, dispatching events if required.
 func (w *LogWatcher) Poll() {
+	w.pollMu.Lock()
+	defer w.pollMu.Unlock()
 	glog.V(2).Info("Polling watched files.")
 	w.watchedMu.RLock()
 	for n, watch := range w.watched {
