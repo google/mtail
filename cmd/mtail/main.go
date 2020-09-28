@@ -130,7 +130,10 @@ func main() {
 	if *traceSamplePeriod > 0 {
 		trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(1 / float64(*traceSamplePeriod))})
 	}
-
+	if *disableFsnotify && *pollInterval == 0 {
+		glog.Infof("fsnotify disabled and no poll interval specified; defaulting to 250ms poll")
+		*pollInterval = time.Millisecond * 250
+	}
 	w, err := watcher.NewLogWatcher(*pollInterval, !*disableFsnotify)
 	if err != nil {
 		glog.Exitf("Failure to create log watcher: %s", err)

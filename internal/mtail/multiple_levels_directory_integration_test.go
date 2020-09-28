@@ -27,6 +27,7 @@ func TestPollLogPathPatterns(t *testing.T) {
 	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 	defer testutil.TestChdir(t, logDir)()
 
+	// only polling
 	m, stopM := mtail.TestStartServer(t, 10*time.Millisecond, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
 	defer stopM()
 

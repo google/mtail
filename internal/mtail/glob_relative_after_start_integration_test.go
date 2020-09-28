@@ -19,8 +19,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	for _, enableFsnotify := range []bool{false, true} {
-		t.Run(fmt.Sprintf("fsnotify=%v", enableFsnotify), func(t *testing.T) {
+	for _, test := range mtail.LogWatcherTestTable {
+		t.Run(fmt.Sprintf("%s %v", test.PollInterval, test.EnableFsNotify), func(t *testing.T) {
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
 
@@ -32,7 +32,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 			testutil.FatalIfErr(t, err)
 			defer testutil.TestChdir(t, logDir)()
 
-			m, stopM := mtail.TestStartServer(t, 0, enableFsnotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
+			m, stopM := mtail.TestStartServer(t, test.PollInterval, test.EnableFsNotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
 			defer stopM()
 
 			{

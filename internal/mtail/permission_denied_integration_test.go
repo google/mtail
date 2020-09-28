@@ -4,6 +4,7 @@
 package mtail_test
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -19,29 +20,34 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	// Can't force a permission denied error if run as root.
 	testutil.SkipIfRoot(t)
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	for _, test := range mtail.LogWatcherTestTable {
+		t.Run(fmt.Sprintf("%s %v", test.PollInterval, test.EnableFsNotify), func(t *testing.T) {
 
-	logDir := path.Join(tmpDir, "logs")
-	progDir := path.Join(tmpDir, "progs")
-	err := os.Mkdir(logDir, 0700)
-	testutil.FatalIfErr(t, err)
-	err = os.Mkdir(progDir, 0700)
-	testutil.FatalIfErr(t, err)
+			tmpDir, rmTmpDir := testutil.TestTempDir(t)
+			defer rmTmpDir()
 
-	logFile := path.Join(logDir, "log")
+			logDir := path.Join(tmpDir, "logs")
+			progDir := path.Join(tmpDir, "progs")
+			err := os.Mkdir(logDir, 0700)
+			testutil.FatalIfErr(t, err)
+			err = os.Mkdir(progDir, 0700)
+			testutil.FatalIfErr(t, err)
 
-	// Hide the error from stdout during test.
-	defer testutil.TestSetFlag(t, "stderrthreshold", "FATAL")()
+			logFile := path.Join(logDir, "log")
 
-	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
-	defer stopM()
+			// Hide the error from stdout during test.
+			defer testutil.TestSetFlag(t, "stderrthreshold", "FATAL")()
 
-	errorsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_errors_total", logFile, 1)
+			m, stopM := mtail.TestStartServer(t, test.PollInterval, test.EnableFsNotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+			defer stopM()
 
-	f, err := os.OpenFile(logFile, os.O_CREATE, 0)
-	testutil.FatalIfErr(t, err)
-	defer f.Close()
+			errorsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_errors_total", logFile, 1)
 
-	errorsTotalCheck()
+			f, err := os.OpenFile(logFile, os.O_CREATE, 0)
+			testutil.FatalIfErr(t, err)
+			defer f.Close()
+
+			errorsTotalCheck()
+		})
+	}
 }

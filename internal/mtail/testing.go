@@ -209,3 +209,12 @@ func (ts *TestServer) ExpectMapMetricDeltaWithDeadline(name, key string, want fl
 		}
 	}
 }
+
+// logWatcherTestTable contains reusable inputs to NewLogWatcher under test.
+var LogWatcherTestTable = []struct {
+	PollInterval   time.Duration
+	EnableFsNotify bool
+}{
+	{0, true},                      // notify only
+	{10 * time.Millisecond, false}, // poll only
+}
