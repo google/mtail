@@ -162,7 +162,16 @@ func (w *LogWatcher) pollWatchedPath(pathname string, watched *watch) {
 	glog.V(2).Infof("Stat %q", pathname)
 	fi, err := os.Stat(pathname)
 	if err != nil {
-		glog.V(1).Info(err)
+		if os.IsNotExist(err) {
+			glog.V(2).Infof("sending delete for %s", pathname)
+			w.sendWatchedEvent(watched, Event{Delete, pathname})
+			// Need to remove the watch for any subsequent create to be sent.
+			w.watchedMu.Lock()
+			delete(w.watched, pathname)
+			w.watchedMu.Unlock()
+		} else {
+			glog.V(1).Info(err)
+		}
 		return
 	}
 
