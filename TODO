@@ -95,3 +95,10 @@ Move the glob patterns from tailer.TailPattern into log watcher Observe and poll
 
 
 Find out if OpenTelemetry is better than OpenCensus when creating no-op trace spans.
+
+
+run with gosec, and possibly annotate safe sections in code
+
+
+how to do benchmark comparison in CI?
+
