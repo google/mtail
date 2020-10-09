@@ -156,7 +156,7 @@ func TestExamplePrograms(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
-			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
+			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
 			testutil.FatalIfErr(t, err)
 
 			err = mtail.Run()
@@ -199,7 +199,7 @@ func TestCompileExamplePrograms(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
-			mtail, err := mtail.New(s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
+			mtail, err := mtail.New(s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
 			testutil.FatalIfErr(t, err)
 			mtail.Close(true)
 		})

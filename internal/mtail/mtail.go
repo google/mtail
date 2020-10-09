@@ -88,6 +88,7 @@ type Server struct {
 	omitMetricSource            bool           // if set, do not link the source program to a metric
 	omitProgLabel               bool           // if set, do not put the program name in the metric labels
 	emitMetricTimestamp         bool           // if set, emit the metric's recorded timestamp
+	omitDumpMetricsStore        bool           // if set, do not print the metric store; useful in test.
 }
 
 // StartTailing adds each log path pattern to the tailer.
@@ -443,6 +444,9 @@ func (m *Server) Run() error {
 		err := m.Close(true)
 		if err != nil {
 			return err
+		}
+		if m.omitDumpMetricsStore {
+			return nil
 		}
 		fmt.Printf("Metrics store:")
 		if err := m.WriteMetrics(os.Stdout); err != nil {
