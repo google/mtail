@@ -28,7 +28,6 @@ import (
 	"github.com/google/mtail/internal/vm/object"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.opencensus.io/trace"
 )
 
 var (
@@ -900,9 +899,6 @@ func (v *VM) execute(t *thread, i code.Instr) {
 // ProcessLogLine handles the incoming lines by running a fetch-execute cycle
 // on the VM bytecode with the line as input to the program, until termination.
 func (v *VM) ProcessLogLine(ctx context.Context, line *logline.LogLine) {
-	ctx, span := trace.StartSpan(ctx, "VM.ProcessLogLine")
-	defer span.End()
-	span.AddAttributes(trace.StringAttribute("vm.prog", v.name))
 	start := time.Now()
 	defer func() {
 		lineProcessingDurations.WithLabelValues(v.name).Observe(time.Since(start).Seconds())
@@ -913,18 +909,14 @@ func (v *VM) ProcessLogLine(ctx context.Context, line *logline.LogLine) {
 	v.input = line
 	t.stack = make([]interface{}, 0)
 	t.matches = make(map[int][]string, len(v.re))
-	_, span1 := trace.StartSpan(ctx, "execute loop")
-	defer span1.End()
 	for {
 		if t.pc >= len(v.prog) {
-			span1.AddAttributes(trace.BoolAttribute("vm.terminated", false))
 			return
 		}
 		i := v.prog[t.pc]
 		t.pc++
 		v.execute(t, i)
 		if v.terminate {
-			span1.AddAttributes(trace.BoolAttribute("vm.terminated", true))
 			// Terminate only stops this invocation on this line of input; reset the terminate flag.
 			v.terminate = false
 			return

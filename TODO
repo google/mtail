@@ -94,3 +94,6 @@ make cirrus run a task on matrix test failyue that fetches failures from json an
 Test mtail servers in integration tests are waiting too long for file notifications -- the 0, false params turn off fsnotify (probably good) and default to 250ms poll intervals (not good) which is why there's lots of time.Sleeps in tests.  Get rid of them and possibly inject a notification to the test server when under test.
 
 Move the glob patterns from tailer.TailPattern into log watcher Observe and pollDirectory* to avoid event sends from watcher to tailer for unnecessary dir entries.  The Tailer only should get updates at all; the watcher should be handling all filesystem observation including pattern handling.  the current setup seems to be incurring a mess of code in how watcher.pollDirectoryWatched works, as well as log lifecycle in tailer.
+
+
+Find out if OpenTelemetry is better than OpenCensus when creating no-op trace spans.
