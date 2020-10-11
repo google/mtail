@@ -232,7 +232,7 @@ func (w *LogWatcher) runEvents() {
 	}()
 
 	for e := range w.watcher.Events {
-		glog.V(2).Infof("watcher event %v", e)
+		glog.V(2).Infof("fsnotify watcher event %v", e)
 		switch {
 		case e.Op&fsnotify.Create == fsnotify.Create:
 			w.sendEvent(Event{Create, e.Name})

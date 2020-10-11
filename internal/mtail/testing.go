@@ -217,4 +217,5 @@ var LogWatcherTestTable = []struct {
 }{
 	{0, true},                      // notify only
 	{10 * time.Millisecond, false}, // poll only
+	//{10 * time.Millisecond, true},  // both --- TODO: breaks permission test,
 }
