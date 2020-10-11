@@ -351,6 +351,7 @@ func (t *Tailer) handleCreateGlob(ctx context.Context, pathname string) {
 		// If this file was just created, read from the start of the file.
 		if err := t.openLogPath(pathname, true); err != nil {
 			glog.Infof("Failed to tail new file %q: %s", pathname, err)
+			continue
 		}
 		glog.V(2).Infof("started tailing %q", pathname)
 		return
