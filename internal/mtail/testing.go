@@ -32,6 +32,8 @@ type TestServer struct {
 
 	// Set this to change the poll deadline when using DoOrTimeout within this TestServer.
 	DoOrTimeoutDeadline time.Duration
+
+	enableFsNotify bool
 }
 
 // TestMakeServer makes a new TestServer for use in tests, but does not start
@@ -50,7 +52,7 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bo
 	if err != nil {
 		tb.Fatal(err)
 	}
-	return &TestServer{Server: m, w: w, tb: tb}
+	return &TestServer{Server: m, w: w, tb: tb, enableFsNotify: enableFsNotify}
 }
 
 // TestStartServer creates a new TestServer and starts it running.  It
@@ -104,7 +106,11 @@ func (m *TestServer) Start() func() {
 
 // Poll all watched logs for updates.
 func (m *TestServer) PollWatched() {
-	glog.Infof("TestServer polling watched objects")
+	if m.enableFsNotify {
+		glog.Info("TestServer not polling as fsnotify is enabled, expecting to get notified.")
+		return
+	}
+	glog.Info("TestServer polling watched objects")
 	m.w.Poll()
 }
 
