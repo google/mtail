@@ -190,6 +190,7 @@ func (w *LogWatcher) pollWatchedPath(pathname string, watched *watch) {
 	w.watchedMu.Unlock()
 }
 
+// pollDirectory walks the directory tree for a parent watch, and notifies of any new files.
 func (w *LogWatcher) pollDirectory(parentWatch *watch, pathname string) {
 	matches, err := filepath.Glob(path.Join(pathname, "*"))
 	if err != nil {
@@ -202,8 +203,12 @@ func (w *LogWatcher) pollDirectory(parentWatch *watch, pathname string) {
 		w.watchedMu.RUnlock()
 		if !ok {
 			// The object has no watch object so it must be new, but we can't
-			// decide that -- wait for the Tailer to match pattern and instruct
-			// us to Observe it directly.
+			// decide to watch it yet -- wait for the Tailer to match pattern
+			// and instruct us to Observe it directly.  Technically not
+			// everything is created here, it's literally everything in a path
+			// that we aren't watching, so we make a lot of stats below, but we
+			// need to find which ones are directories so we can traverse them.
+			// TODO(jaq): teach log watcher about the TailPatterns from tailer.
 			glog.V(2).Infof("sending create for %s", match)
 			w.sendWatchedEvent(parentWatch, Event{Create, match})
 		}
