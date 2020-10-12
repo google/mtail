@@ -91,8 +91,6 @@ file-test.go relies on the ReadDeadline timeouts in file.go and socket.go.  Remo
 
 make cirrus run a task on matrix test failyue that fetches failures from json and runs flake checks on them
 
-Test mtail servers in integration tests are waiting too long for file notifications -- the 0, false params turn off fsnotify (probably good) and default to 250ms poll intervals (not good) which is why there's lots of time.Sleeps in tests.  Get rid of them and possibly inject a notification to the test server when under test.
-
 Move the glob patterns from tailer.TailPattern into log watcher Observe and pollDirectory* to avoid event sends from watcher to tailer for unnecessary dir entries.  The Tailer only should get updates at all; the watcher should be handling all filesystem observation including pattern handling.  the current setup seems to be incurring a mess of code in how watcher.pollDirectoryWatched works, as well as log lifecycle in tailer.
 
 

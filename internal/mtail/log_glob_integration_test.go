@@ -9,7 +9,6 @@ import (
 	"path"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
@@ -20,8 +19,8 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	for _, pollInterval := range []time.Duration{0, 10 * time.Millisecond} {
-		t.Run(fmt.Sprintf("pollInterval=%s", pollInterval), func(t *testing.T) {
+	for _, test := range mtail.LogWatcherTestTable {
+		t.Run(fmt.Sprintf("%s %v", test.PollInterval, test.EnableFsNotify), func(t *testing.T) {
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
 
@@ -31,7 +30,7 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 			testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 			defer testutil.TestChdir(t, logDir)()
 
-			m, stopM := mtail.TestStartServer(t, pollInterval, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log*"))
+			m, stopM := mtail.TestStartServer(t, test.PollInterval, test.EnableFsNotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log*"))
 			defer stopM()
 
 			{

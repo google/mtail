@@ -245,24 +245,25 @@ func TestWatcherNewFile(t *testing.T) {
 		t.Skip("skipping log watcher test in short mode")
 	}
 	tests := []struct {
-		d time.Duration
-		b bool
+		period   time.Duration
+		fsnotify bool
 	}{
 		{0, true},
 		{10 * time.Millisecond, false},
 	}
 	for _, test := range tests {
-		t.Run(fmt.Sprintf("%s %v", test.d, test.b), func(t *testing.T) {
-			w, err := NewLogWatcher(test.d, test.b)
+		t.Run(fmt.Sprintf("%s %v", test.period, test.fsnotify), func(t *testing.T) {
+			w, err := NewLogWatcher(test.period, test.fsnotify)
 			testutil.FatalIfErr(t, err)
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
 			s := &stubProcessor{}
 			testutil.FatalIfErr(t, w.Observe(tmpDir, s))
 			testutil.TestOpenFile(t, path.Join(tmpDir, "log"))
-			if !test.b {
+			if !test.fsnotify {
 				w.Poll()
 			} else {
+				// wait a bit for kernel to notice
 				time.Sleep(250 * time.Millisecond)
 			}
 			w.Close()

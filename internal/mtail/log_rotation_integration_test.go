@@ -4,6 +4,7 @@
 package mtail_test
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -16,45 +17,50 @@ func TestLogRotation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
 
-	logDir := path.Join(tmpDir, "logs")
-	progDir := path.Join(tmpDir, "progs")
-	err := os.Mkdir(logDir, 0700)
-	testutil.FatalIfErr(t, err)
-	err = os.Mkdir(progDir, 0700)
-	testutil.FatalIfErr(t, err)
+	for _, test := range mtail.LogWatcherTestTable {
+		t.Run(fmt.Sprintf("%s %v", test.PollInterval, test.EnableFsNotify), func(t *testing.T) {
+			tmpDir, rmTmpDir := testutil.TestTempDir(t)
+			defer rmTmpDir()
 
-	logFile := path.Join(logDir, "log")
+			logDir := path.Join(tmpDir, "logs")
+			progDir := path.Join(tmpDir, "progs")
+			err := os.Mkdir(logDir, 0700)
+			testutil.FatalIfErr(t, err)
+			err = os.Mkdir(progDir, 0700)
+			testutil.FatalIfErr(t, err)
 
-	f := testutil.TestOpenFile(t, logFile)
+			logFile := path.Join(logDir, "log")
 
-	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
-	defer stopM()
+			f := testutil.TestOpenFile(t, logFile)
 
-	testutil.WriteString(t, f, "line 1\n")
-	m.PollWatched()
+			m, stopM := mtail.TestStartServer(t, test.PollInterval, test.EnableFsNotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+			defer stopM()
 
-	{
-		logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1)
+			testutil.WriteString(t, f, "line 1\n")
+			m.PollWatched()
 
-		testutil.WriteString(t, f, "line 2\n")
-		m.PollWatched()
-		logLinesTotalCheck()
-	}
+			{
+				logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1)
 
-	err = os.Rename(logFile, logFile+".1")
-	testutil.FatalIfErr(t, err)
-	m.PollWatched()
+				testutil.WriteString(t, f, "line 2\n")
+				m.PollWatched()
+				logLinesTotalCheck()
+			}
 
-	f = testutil.TestOpenFile(t, logFile)
+			err = os.Rename(logFile, logFile+".1")
+			testutil.FatalIfErr(t, err)
+			m.PollWatched()
 
-	{
-		logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1)
+			f = testutil.TestOpenFile(t, logFile)
 
-		testutil.WriteString(t, f, "line 1\n")
-		m.PollWatched()
-		logLinesTotalCheck()
+			{
+				logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1)
+
+				testutil.WriteString(t, f, "line 1\n")
+				m.PollWatched()
+				logLinesTotalCheck()
+			}
+		})
 	}
 }

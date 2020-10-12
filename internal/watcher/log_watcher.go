@@ -83,10 +83,6 @@ func NewLogWatcher(pollInterval time.Duration, enableFsnotify bool) (*LogWatcher
 			glog.Warning(err)
 		}
 	}
-	if f == nil && pollInterval == 0 {
-		glog.Infof("fsnotify disabled and no poll interval specified; defaulting to 250ms poll")
-		pollInterval = time.Millisecond * 250
-	}
 	w := &LogWatcher{
 		watcher: f,
 		watched: make(map[string]*watch),
@@ -236,7 +232,7 @@ func (w *LogWatcher) runEvents() {
 	}()
 
 	for e := range w.watcher.Events {
-		glog.V(2).Infof("watcher event %v", e)
+		glog.V(2).Infof("fsnotify watcher event %v", e)
 		switch {
 		case e.Op&fsnotify.Create == fsnotify.Create:
 			w.sendEvent(Event{Create, e.Name})
