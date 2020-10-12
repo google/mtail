@@ -162,7 +162,16 @@ func (w *LogWatcher) pollWatchedPath(pathname string, watched *watch) {
 	glog.V(2).Infof("Stat %q", pathname)
 	fi, err := os.Stat(pathname)
 	if err != nil {
-		glog.V(1).Info(err)
+		if os.IsNotExist(err) {
+			glog.V(2).Infof("sending delete for %s", pathname)
+			w.sendWatchedEvent(watched, Event{Delete, pathname})
+			// Need to remove the watch for any subsequent create to be sent.
+			w.watchedMu.Lock()
+			delete(w.watched, pathname)
+			w.watchedMu.Unlock()
+		} else {
+			glog.V(1).Info(err)
+		}
 		return
 	}
 
@@ -187,10 +196,9 @@ func (w *LogWatcher) pollDirectory(parentWatch *watch, pathname string) {
 		glog.V(1).Info(err)
 		return
 	}
-	// TODO(jaq): how do we avoid duplicate notifies for things that are already in the watch list?
 	for _, match := range matches {
 		w.watchedMu.RLock()
-		watched, ok := w.watched[match]
+		_, ok := w.watched[match]
 		w.watchedMu.RUnlock()
 		if !ok {
 			// The object has no watch object so it must be new, but we can't
@@ -203,15 +211,6 @@ func (w *LogWatcher) pollDirectory(parentWatch *watch, pathname string) {
 		if err != nil {
 			glog.V(1).Info(err)
 			continue
-		}
-		if ok && hasChanged(fi, watched.fi) {
-			glog.V(2).Infof("sending update for %s", match)
-			w.sendWatchedEvent(watched, Event{Update, match})
-			w.watchedMu.Lock()
-			w.watched[match].fi = fi
-			w.watchedMu.Unlock()
-		} else {
-			glog.V(2).Infof("No change for %s, no send", match)
 		}
 		if fi.IsDir() {
 			w.pollDirectory(parentWatch, match)

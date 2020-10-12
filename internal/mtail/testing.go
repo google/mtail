@@ -184,7 +184,7 @@ func (ts *TestServer) ExpectMetricDeltaWithDeadline(name string, want float64) f
 		if !ok {
 			now := TestGetMetric(ts.tb, ts.Addr(), name)
 			delta := TestMetricDelta(now, start)
-			ts.tb.Errorf("Did not see delta by deadline: got %v - %v = %g, want %g", now, start, delta, want)
+			ts.tb.Errorf("Did not see %q have delta by deadline: got %v - %v = %g, want %g", name, now, start, delta, want)
 		}
 	}
 }
