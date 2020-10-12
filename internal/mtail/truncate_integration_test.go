@@ -34,12 +34,16 @@ func TestTruncatedLogRead(t *testing.T) {
 
 			logFile := path.Join(logDir, "log")
 			f := testutil.TestOpenFile(t, logFile)
-			m.PollWatched()
+			if !test.EnableFsNotify {
+				m.PollWatched()
+			}
 
 			{
 				linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 				testutil.WriteString(t, f, "1\n")
-				m.PollWatched()
+				if !test.EnableFsNotify {
+					m.PollWatched()
+				}
 				linesCountCheck()
 			}
 			err := f.Close()
@@ -47,11 +51,15 @@ func TestTruncatedLogRead(t *testing.T) {
 			f, err = os.OpenFile(logFile, os.O_TRUNC|os.O_RDWR, 0600)
 			testutil.FatalIfErr(t, err)
 			// Ensure the server notices the truncate
-			m.PollWatched()
+			if !test.EnableFsNotify {
+				m.PollWatched()
+			}
 			{
 				linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 				testutil.WriteString(t, f, "2\n")
-				m.PollWatched()
+				if !test.EnableFsNotify {
+					m.PollWatched()
+				}
 				linesCountCheck()
 			}
 			logCountCheck()
