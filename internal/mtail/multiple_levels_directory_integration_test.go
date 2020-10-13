@@ -8,7 +8,6 @@ import (
 	"path"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
@@ -27,8 +26,8 @@ func TestPollLogPathPatterns(t *testing.T) {
 	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 	defer testutil.TestChdir(t, logDir)()
 
-	// only polling
-	m, stopM := mtail.TestStartServer(t, 10*time.Millisecond, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
+	// only manual polling -- zero for poll duration to avoid duplicates in test.
+	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
 	defer stopM()
 
 	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
