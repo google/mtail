@@ -1,13 +1,13 @@
 package testutil
 
 import (
-	"os"
+	"io"
 	"testing"
 
 	"github.com/golang/glog"
 )
 
-func WriteString(tb testing.TB, f *os.File, str string) int {
+func WriteString(tb testing.TB, f io.StringWriter, str string) int {
 	tb.Helper()
 	n, err := f.WriteString(str)
 	FatalIfErr(tb, err)
