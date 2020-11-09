@@ -120,9 +120,5 @@ func TestReadTestData(t *testing.T) {
 	defer f.Close()
 	store := metrics.NewStore()
 	ReadTestData(f, "reader_test", store)
-	diff := testutil.Diff(expectedMetrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
-	if diff != "" {
-		t.Error(diff)
-		t.Logf("store contains %s", store.Metrics)
-	}
+	testutil.ExpectNoDiff(t, expectedMetrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
 }

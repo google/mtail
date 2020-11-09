@@ -75,9 +75,7 @@ func TestAstReplacement(t *testing.T) {
 	expected := &ast.BinaryExpr{Lhs: &ast.IntLit{I: 4},
 		Rhs: &ast.IntLit{I: 5},
 		Op:  parser.PLUS}
-	diff := testutil.Diff(expected, a, testutil.IgnoreUnexported(ast.BinaryExpr{}))
-	if diff != "" {
-		t.Error(diff)
+	if !testutil.ExpectNoDiff(t, expected, a, testutil.IgnoreUnexported(ast.BinaryExpr{})) {
 		s := parser.Sexp{}
 		t.Log("AST:\n" + s.Dump(a))
 	}

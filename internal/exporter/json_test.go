@@ -150,10 +150,7 @@ func TestHandleJSON(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to read response: %s", err)
 			}
-			diff := testutil.Diff(tc.expected, string(b), testutil.IgnoreUnexported(sync.RWMutex{}))
-			if diff != "" {
-				t.Error(diff)
-			}
+			testutil.ExpectNoDiff(t, tc.expected, string(b), testutil.IgnoreUnexported(sync.RWMutex{}))
 		})
 	}
 }

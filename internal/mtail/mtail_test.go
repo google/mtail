@@ -109,18 +109,13 @@ Loop:
 		t.Fatal(err)
 	}
 	expected := "10"
-	if diff := testutil.Diff(expected, expvar.Get("lines_total").String()); diff != "" {
-		t.Errorf("lines_total metric didn't match\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, expvar.Get("lines_total").String())
 	rotationsMap := expvar.Get("log_rotations_total").(*expvar.Map)
 	v := rotationsMap.Get(logFilepath)
 	if v == nil {
 		t.Errorf("path %q not found in map: %v", logFilepath, rotationsMap)
 	}
-	diff := testutil.Diff("1", v.String())
-	if diff != "" {
-		t.Errorf("log_rotations_total metric didn't match\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, "1", v.String())
 }
 
 func TestHandleNewLogAfterStart(t *testing.T) {

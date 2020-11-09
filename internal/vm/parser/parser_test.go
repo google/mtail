@@ -371,9 +371,7 @@ func TestParserRoundTrip(t *testing.T) {
 			u = Unparser{}
 			output2 := u.Unparse(p2.root)
 
-			if diff := testutil.Diff(output2, output); diff != "" {
-				t.Error(diff)
-			}
+			testutil.ExpectNoDiff(t, output2, output)
 		})
 	}
 }
@@ -446,12 +444,9 @@ func TestParseInvalidPrograms(t *testing.T) {
 			p := newParser(tc.name, strings.NewReader(tc.program))
 			mtailParse(p)
 
-			diff := testutil.Diff(
+			testutil.ExpectNoDiff(t,
 				strings.Join(tc.errors, "\n"),             // want
 				strings.TrimRight(p.errors.Error(), "\n")) // got
-			if diff != "" {
-				t.Error(diff)
-			}
 		})
 	}
 }
@@ -487,10 +482,7 @@ func TestParsePositionTests(t *testing.T) {
 			testutil.FatalIfErr(t, err)
 			p := &positionCollector{}
 			ast.Walk(p, root)
-			diff := testutil.Diff(tc.positions, p.positions, testutil.AllowUnexported(position.Position{}))
-			if diff != "" {
-				t.Error(diff)
-			}
+			testutil.ExpectNoDiff(t, tc.positions, p.positions, testutil.AllowUnexported(position.Position{}))
 		})
 	}
 }

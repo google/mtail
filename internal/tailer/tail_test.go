@@ -70,9 +70,7 @@ func TestHandleLogUpdate(t *testing.T) {
 		{context.Background(), logfile, "c"},
 		{context.Background(), logfile, "d"},
 	}
-	if diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context")); diff != "" {
-		t.Errorf("result didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 // TestHandleLogTruncate writes to a file, waits for those
@@ -118,9 +116,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		{context.Background(), logfile, "d"},
 		{context.Background(), logfile, "e"},
 	}
-	if diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context")); diff != "" {
-		t.Errorf("result didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
@@ -157,11 +153,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "ab"},
 	}
-	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-	if diff != "" {
-		t.Errorf("result didn't match:\n%s", diff)
-	}
-
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestTailerOpenRetries(t *testing.T) {
@@ -269,10 +261,7 @@ func TestHandleLogRotate(t *testing.T) {
 		{context.Background(), logfile, "1"},
 		{context.Background(), logfile, "2"},
 	}
-	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-	if diff != "" {
-		t.Errorf("result didn't match expected:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestHandleLogRotateSignalsWrong(t *testing.T) {
@@ -313,10 +302,7 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 		{context.Background(), logfile, "1"},
 		{context.Background(), logfile, "2"},
 	}
-	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-	if diff != "" {
-		t.Errorf("result didn't match expected:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestTailExpireStaleHandles(t *testing.T) {

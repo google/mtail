@@ -485,20 +485,11 @@ func TestInstrs(t *testing.T) {
 				t.Fatalf("Execution failed, see info log.")
 			}
 
-			if diff := testutil.Diff(tc.expectedStack, v.t.stack); diff != "" {
-				t.Log("unexpected vm stack state")
-				t.Error(diff)
-			}
+			testutil.ExpectNoDiff(t, tc.expectedStack, v.t.stack)
 
 			tc.expectedThread.stack = tc.expectedStack
 
-			if diff := testutil.Diff(&tc.expectedThread, v.t, testutil.AllowUnexported(thread{})); diff != "" {
-				t.Log("unexpected vm thread state")
-				t.Error(diff)
-				t.Errorf("\t%v", *v.t)
-				t.Errorf("\t%v", tc.expectedThread)
-			}
-
+			testutil.ExpectNoDiff(t, &tc.expectedThread, v.t, testutil.AllowUnexported(thread{}))
 		})
 	}
 }

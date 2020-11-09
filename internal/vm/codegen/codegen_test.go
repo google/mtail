@@ -902,10 +902,7 @@ func TestCodegen(t *testing.T) {
 			obj, err := codegen.CodeGen(tc.name, ast)
 			testutil.FatalIfErr(t, err)
 
-			if diff := testutil.Diff(tc.prog, obj.Program, testutil.AllowUnexported(code.Instr{})); diff != "" {
-				t.Error(diff)
-				t.Logf("Expected:\n%s\nReceived:\n%s", tc.prog, obj.Program)
-			}
+			testutil.ExpectNoDiff(t, tc.prog, obj.Program, testutil.AllowUnexported(code.Instr{}))
 		})
 	}
 }

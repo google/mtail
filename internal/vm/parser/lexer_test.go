@@ -259,10 +259,7 @@ func TestLex(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tokens := collect(&tc)
 
-			if diff := testutil.Diff(tc.tokens, tokens, testutil.AllowUnexported(Token{}, position.Position{})); diff != "" {
-				t.Errorf("-expected +received\n%s", diff)
-				t.Logf("received: %v", tokens)
-			}
+			testutil.ExpectNoDiff(t, tc.tokens, tokens, testutil.AllowUnexported(Token{}, position.Position{}))
 		})
 	}
 }

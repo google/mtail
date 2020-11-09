@@ -68,10 +68,7 @@ func TestReadPartial(t *testing.T) {
 	expected := []*logline.LogLine{
 		{context.TODO(), logfile, "ohi"},
 	}
-	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-	if diff != "" {
-		t.Errorf("result didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestOpenRetries(t *testing.T) {
@@ -149,8 +146,5 @@ func TestOpenSocket(t *testing.T) {
 	expected := []*logline.LogLine{
 		{context.TODO(), logsock, "adf"},
 	}
-	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-	if diff != "" {
-		t.Errorf("result didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }

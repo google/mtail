@@ -61,9 +61,7 @@ func TestLogWatcher(t *testing.T) {
 	select {
 	case e := <-s.Events:
 		expected := Event{Create, filepath.Join(workdir, "logfile")}
-		if diff := testutil.Diff(expected, e); diff != "" {
-			t.Errorf("want: %q, got %q; diff:\n%s", expected, e, diff)
-		}
+		testutil.ExpectNoDiff(t, expected, e)
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("no event received before timeout")
 	}
@@ -77,9 +75,7 @@ func TestLogWatcher(t *testing.T) {
 	select {
 	case e := <-s.Events:
 		expected := Event{Update, filepath.Join(workdir, "logfile")}
-		if diff := testutil.Diff(expected, e); diff != "" {
-			t.Errorf("want: %q, got %q; diff:\n%s", expected, e, diff)
-		}
+		testutil.ExpectNoDiff(t, expected, e)
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("no event received before timeout")
 	}
@@ -113,17 +109,13 @@ func TestLogWatcher(t *testing.T) {
 		}
 		return true
 	}
-	if diff := testutil.Diff(expected, results, testutil.SortSlices(sorter)); diff != "" {
-		t.Errorf("diff:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, results, testutil.SortSlices(sorter))
 
 	testutil.FatalIfErr(t, os.Chmod(filepath.Join(workdir, "logfile2"), os.ModePerm))
 	select {
 	case e := <-s.Events:
 		expected := Event{Update, filepath.Join(workdir, "logfile2")}
-		if diff := testutil.Diff(expected, e); diff != "" {
-			t.Errorf("want %q got %q; diff:\n%s", expected, e, diff)
-		}
+		testutil.ExpectNoDiff(t, expected, e)
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("no event received before timeout")
 	}
@@ -132,9 +124,7 @@ func TestLogWatcher(t *testing.T) {
 	select {
 	case e := <-s.Events:
 		expected := Event{Delete, filepath.Join(workdir, "logfile2")}
-		if diff := testutil.Diff(expected, e); diff != "" {
-			t.Errorf("want %q got %q; diff:\n%s", expected, e, diff)
-		}
+		testutil.ExpectNoDiff(t, expected, e)
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("no event received before timeout")
 	}
@@ -235,9 +225,7 @@ func TestWatcherErrors(t *testing.T) {
 	err = w.Close()
 	testutil.FatalIfErr(t, err)
 	expected := strconv.FormatInt(orig+1, 10)
-	if diff := testutil.Diff(expected, expvar.Get("log_watcher_errors_total").String()); diff != "" {
-		t.Errorf("log watcher error count not increased:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, expvar.Get("log_watcher_errors_total").String())
 }
 
 func TestWatcherNewFile(t *testing.T) {
@@ -269,10 +257,7 @@ func TestWatcherNewFile(t *testing.T) {
 			w.Close()
 			expected := []Event{{Op: Create, Pathname: path.Join(tmpDir, "log")}}
 			// Fetching the start of the slice is a hack because we get duplicate events.
-			if diff := testutil.Diff(expected, s.Events[0:1]); diff != "" {
-				t.Errorf("event unexpected: diff:\n%s", diff)
-				t.Logf("received:\n%v", s.Events)
-			}
+			testutil.ExpectNoDiff(t, expected, s.Events[0:1])
 		})
 	}
 }

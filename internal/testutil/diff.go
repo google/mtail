@@ -6,6 +6,8 @@
 package testutil
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -28,4 +30,18 @@ func IgnoreFields(typ interface{}, names ...string) cmp.Option {
 
 func SortSlices(lessFunc interface{}) cmp.Option {
 	return cmpopts.SortSlices(lessFunc)
+}
+
+// ExpectNoDiff tests to see if the two interfaces have no diff.
+// If there is no diff, the retrun value is true.
+// If there is a diff, it is logged to tb and an error is flagged, and the return value is false.
+func ExpectNoDiff(tb testing.TB, a, b interface{}, opts ...cmp.Option) bool {
+	tb.Helper()
+	if diff := Diff(a, b, opts...); diff != "" {
+		tb.Errorf("Unexpected diff, -expected +received:\n%s", diff)
+		tb.Logf("expected:\n%v", a)
+		tb.Logf("received:\n%v", b)
+		return false
+	}
+	return true
 }

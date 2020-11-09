@@ -21,9 +21,7 @@ func TestInsertLookup(t *testing.T) {
 	}
 
 	r1 := s.Lookup("foo", VarSymbol)
-	if diff := testutil.Diff(r1, sym1); diff != "" {
-		t.Error(diff)
-	}
+	testutil.ExpectNoDiff(t, r1, sym1)
 }
 
 // Generate implements the Generator interface for SymbolKind.

@@ -112,10 +112,7 @@ func TestEmitLabelSet(t *testing.T) {
 
 			ls := <-c
 
-			diff := testutil.Diff(tc.expectedLabels, ls.Labels)
-			if diff != "" {
-				t.Error(diff)
-			}
+			testutil.ExpectNoDiff(t, tc.expectedLabels, ls.Labels)
 		})
 	}
 }
@@ -194,11 +191,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 			return false
 		}
 
-		if diff := testutil.Diff(m, r, testutil.IgnoreUnexported(sync.RWMutex{})); diff != "" {
-			t.Errorf("Round trip wasn't stable:\n%s", diff)
-			return false
-		}
-		return true
+		return testutil.ExpectNoDiff(t, m, r, testutil.IgnoreUnexported(sync.RWMutex{}))
 	}
 	if err := quick.Check(f, nil); err != nil {
 		t.Error(err)
@@ -208,10 +201,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 func TestTimer(t *testing.T) {
 	m := NewMetric("test", "prog", Timer, Int)
 	n := NewMetric("test", "prog", Timer, Int)
-	diff := testutil.Diff(m, n, testutil.IgnoreUnexported(sync.RWMutex{}))
-	if diff != "" {
-		t.Errorf("Identical metrics not the same:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, m, n, testutil.IgnoreUnexported(sync.RWMutex{}))
 	d, _ := m.GetDatum()
 	datum.IncIntBy(d, 1, time.Now().UTC())
 	lv := m.FindLabelValueOrNil([]string{})

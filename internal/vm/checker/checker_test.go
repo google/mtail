@@ -270,12 +270,10 @@ func TestCheckInvalidPrograms(t *testing.T) {
 				t.Fatal("check didn't fail")
 			}
 
-			diff := testutil.Diff(
+			if !testutil.ExpectNoDiff(t,
 				tc.errors,                        // want
 				strings.Split(err.Error(), "\n"), // got
-				cmpopts.SortSlices(func(x, y string) bool { return x < y }))
-			if diff != "" {
-				t.Errorf("Diff %s", diff)
+				cmpopts.SortSlices(func(x, y string) bool { return x < y })) {
 				t.Logf("Got: %s", err.Error())
 				s := parser.Sexp{}
 				s.EmitTypes = true
@@ -513,9 +511,7 @@ func TestCheckTypeExpressions(t *testing.T) {
 			ast, err := checker.Check(tc.expr)
 			testutil.FatalIfErr(t, err)
 
-			diff := testutil.Diff(tc.expected, ast.Type().Root())
-			if diff != "" {
-				t.Error(diff)
+			if !testutil.ExpectNoDiff(t, tc.expected, ast.Type().Root()) {
 				s := parser.Sexp{}
 				s.EmitTypes = true
 				t.Log("Typed AST:\n" + s.Dump(ast))

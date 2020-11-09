@@ -122,8 +122,8 @@ func TestProcessFileEvent(t *testing.T) {
 			}
 			l.handleMu.RUnlock()
 			l.handleMu.RLock()
-			if diff := testutil.Diff(tt.expectedPrograms, programs); diff != "" {
-				t.Errorf("%q: loaded programs don't match.\nl.handles: %+#v\n%s", tt.name, l.handles, diff)
+			if !testutil.ExpectNoDiff(t, tt.expectedPrograms, programs) {
+				t.Errorf("%q: loaded programs don't match.\nl.handles: %+#v", tt.name, l.handles)
 			}
 			l.handleMu.RUnlock()
 		})

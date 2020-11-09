@@ -174,14 +174,7 @@ func TestExamplePrograms(t *testing.T) {
 				t.Error(err)
 			}
 
-			diff := testutil.Diff(goldenStore, store, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
-
-			if diff != "" {
-				t.Error(diff)
-				t.Logf(" Golden metrics: %s", goldenStore.Metrics)
-				t.Logf("Program metrics: %s", store.Metrics)
-				t.Logf("yar\n%+v", store.Metrics)
-			}
+			testutil.ExpectNoDiff(t, goldenStore, store, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
 		})
 	}
 }

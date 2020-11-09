@@ -55,8 +55,6 @@ func TestMarshalJSON(t *testing.T) {
 		if err != nil {
 			t.Errorf("%d: Marshal failed: %v", i, err)
 		}
-		if diff := testutil.Diff(tc.expected, string(b)); diff != "" {
-			t.Errorf("%d: JSON didn't match:\n%s", i, diff)
-		}
+		testutil.ExpectNoDiff(t, tc.expected, string(b))
 	}
 }
