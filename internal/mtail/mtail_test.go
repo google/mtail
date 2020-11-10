@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
@@ -226,61 +225,5 @@ func TestBuildInfo(t *testing.T) {
 
 	if buildInfoWant != buildInfoGot {
 		t.Errorf("Unexpected build info string, want: %q, got: %q", buildInfoWant, buildInfoGot)
-	}
-}
-
-func TestFilenameRegexIgnore(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
-
-	globTests := []struct {
-		name     string
-		expected bool
-	}{
-		{
-			path.Join(workdir, "log1"),
-			true,
-		},
-		{
-			path.Join(workdir, "log1.gz"),
-			false,
-		},
-		{
-			path.Join(workdir, "log2gz"),
-			true,
-		},
-	}
-	count := 0
-	for _, tt := range globTests {
-		log, err := os.Create(tt.name)
-		if err != nil {
-			t.Errorf("could not create log file: %s", err)
-			continue
-		}
-		defer log.Close()
-		if tt.expected {
-			count++
-		}
-		testutil.WriteString(t, log, "\n")
-		testutil.FatalIfErr(t, err)
-		testutil.FatalIfErr(t, log.Sync())
-	}
-	m := startMtailServer(t, LogPathPatterns(path.Join(workdir, "log*")), IgnoreRegexPattern("\\.gz"))
-	defer m.Close(true)
-	check := func() (bool, error) {
-		if expvar.Get("log_count").String() != fmt.Sprintf("%d", count) {
-			glog.V(1).Infof("tailer is %q, count is %d", expvar.Get("log_count").String(), count)
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
-	testutil.FatalIfErr(t, err)
-	if !ok {
-		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
 	}
 }

@@ -166,3 +166,47 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		t.Errorf("Expecting log Count for %d, received %g", count, r)
 	}
 }
+
+func TestFilenameRegexIgnore(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
+
+	globTests := []struct {
+		name     string
+		expected bool
+	}{
+		{
+			path.Join(workdir, "log1"),
+			true,
+		},
+		{
+			path.Join(workdir, "log1.gz"),
+			false,
+		},
+		{
+			path.Join(workdir, "log2gz"),
+			true,
+		},
+	}
+	count := 0
+	for _, tt := range globTests {
+		log, err := os.Create(tt.name)
+		testutil.FatalIfErr(t, err)
+		defer log.Close()
+		if tt.expected {
+			count++
+		}
+		testutil.WriteString(t, log, "\n")
+	}
+
+	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	defer stopM()
+
+	if r := m.GetMetric("log_count"); r != float64(count) {
+		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %g", count, r)
+	}
+}
