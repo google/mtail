@@ -5,6 +5,7 @@ package mtail_test
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"sync"
 	"testing"
@@ -52,4 +53,28 @@ func TestBasicTail(t *testing.T) {
 			wg.Wait()
 		})
 	}
+}
+
+func TestNewLogDoesNotMatchIsIgnored(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
+	// Start mtail
+	logFilepath := path.Join(workdir, "log")
+	m, stopM := mtail.TestStartServer(t, 0, true, mtail.LogPathPatterns(logFilepath))
+	defer stopM()
+
+	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 0)
+
+	// touch log file
+	newLogFilepath := path.Join(workdir, "log1")
+
+	logFile, err := os.Create(newLogFilepath)
+	testutil.FatalIfErr(t, err)
+	defer logFile.Close()
+	m.PollWatched()
+
+	logCountCheck()
 }

@@ -44,31 +44,6 @@ func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	return m
 }
 
-func TestHandleNewLogIgnored(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
-	// Start mtail
-	logFilepath := path.Join(workdir, "log")
-	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer m.Close(true)
-
-	// touch log file
-	newLogFilepath := path.Join(workdir, "log1")
-
-	logFile, err := os.Create(newLogFilepath)
-	if err != nil {
-		t.Errorf("could not open log file: %s", err)
-	}
-	defer logFile.Close()
-	expected := "0"
-	if expvar.Get("log_count").String() != expected {
-		t.Errorf("Log count not increased\n\texpected: %s\n\treceived: %s", expected, expvar.Get("log_count").String())
-	}
-}
-
 func TestHandleSoftLinkChange(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
