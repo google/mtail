@@ -37,6 +37,8 @@ func TestLogRotation(t *testing.T) {
 			m, stopM := mtail.TestStartServer(t, test.PollInterval, test.EnableFsNotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 			defer stopM()
 
+			logRotationsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_rotations_total", logFile, 1)
+
 			testutil.WriteString(t, f, "line 1\n")
 			m.PollWatched()
 
@@ -61,6 +63,8 @@ func TestLogRotation(t *testing.T) {
 				m.PollWatched()
 				logLinesTotalCheck()
 			}
+
+			logRotationsTotalCheck()
 		})
 	}
 }
