@@ -44,64 +44,6 @@ func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	return m
 }
 
-func TestGlobAfterStart(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
-
-	globTests := []struct {
-		name     string
-		expected bool
-	}{
-		{
-			path.Join(workdir, "log1"),
-			true,
-		},
-		{
-			path.Join(workdir, "log2"),
-			true,
-		},
-		{
-			path.Join(workdir, "1log"),
-			false,
-		},
-	}
-	m := startMtailServer(t, LogPathPatterns(path.Join(workdir, "log*")))
-	defer m.Close(true)
-	glog.Infof("Pausing for mtail startup.")
-	time.Sleep(100 * time.Millisecond)
-	count := 0
-	for _, tt := range globTests {
-		log, err := os.Create(tt.name)
-		if err != nil {
-			t.Errorf("could not create log file: %s", err)
-			continue
-		}
-		defer log.Close()
-		if tt.expected {
-			count++
-		}
-		testutil.WriteString(t, log, "\n")
-		testutil.FatalIfErr(t, log.Sync())
-	}
-	glog.Infof("count is %d", count)
-	check := func() (bool, error) {
-		if expvar.Get("log_count").String() != fmt.Sprintf("%d", count) {
-			glog.V(1).Infof("tailer is %q, count is %d", expvar.Get("log_count").String(), count)
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err := testutil.DoOrTimeout(check, 10*time.Second, 100*time.Millisecond)
-	testutil.FatalIfErr(t, err)
-	if !ok {
-		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %s", count, expvar.Get("log_count").String())
-	}
-}
-
 // func TestHandleLogDeletes(t *testing.T) {
 // 	if testing.Short() {
 // 		t.Skip("skipping test in short mode")
