@@ -80,3 +80,45 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 		})
 	}
 }
+
+func TestGlob(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
+
+	globTests := []struct {
+		name     string
+		expected bool
+	}{
+		{
+			path.Join(workdir, "log1"),
+			true,
+		},
+		{
+			path.Join(workdir, "log2"),
+			true,
+		},
+		{
+			path.Join(workdir, "1log"),
+			false,
+		},
+	}
+	count := 0
+	for _, tt := range globTests {
+		log := testutil.TestOpenFile(t, tt.name)
+		defer log.Close()
+		if tt.expected {
+			count++
+		}
+		testutil.WriteString(t, log, "\n")
+	}
+	m, stopM := mtail.TestStartServer(t, 0, true, mtail.LogPathPatterns(path.Join(workdir, "log*")))
+	defer stopM()
+
+	if r := m.GetMetric("log_count"); r != float64(count) {
+		t.Errorf("Expecting log count of %d, received %g", count, r)
+	}
+}

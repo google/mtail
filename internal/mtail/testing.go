@@ -140,6 +140,11 @@ func TestGetMetric(tb testing.TB, addr, name string) interface{} {
 	return r[name]
 }
 
+func (ts *TestServer) GetMetric(name string) float64 {
+	ts.tb.Helper()
+	return TestGetMetric(ts.tb, ts.Addr(), name).(float64)
+}
+
 // TestMetricDelta checks to see if the difference between a and b is want;
 // it assumes both values are float64s that came from a TestGetMetric.
 func TestMetricDelta(a, b interface{}) float64 {
