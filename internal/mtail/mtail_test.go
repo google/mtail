@@ -6,13 +6,9 @@ package mtail
 import (
 	"expvar"
 	"fmt"
-	"os"
-	"path"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/testutil"
@@ -82,131 +78,6 @@ func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 // 		t.Errorf("Log count not decreased\n\texpected: %s\n\treceived %s", expected, expvar.Get("log_count").String())
 // 	}
 // }
-
-func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in shor tmode")
-	}
-
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
-
-	logDir := path.Join(workdir, "logs")
-	if err := os.Mkdir(logDir, 0777); err != nil {
-		t.Fatal(err)
-	}
-	progDir := path.Join(workdir, "progs")
-	if err := os.Mkdir(progDir, 0777); err != nil {
-		t.Fatal(err)
-	}
-
-	logFilepath := path.Join(logDir, "log")
-	logFile, err := os.Create(logFilepath)
-	testutil.FatalIfErr(t, err)
-	defer logFile.Close()
-
-	m := startMtailServer(t, ProgramPath(progDir), LogPathPatterns(logDir+"/*"))
-	defer m.Close(true)
-	store := m.store
-
-	v := expvar.Get("prog_loads_total").(*expvar.Map).Get("program.mtail")
-	if v != nil {
-		t.Log(v)
-	}
-
-	progpath := path.Join(progDir, "program.mtail")
-	p, err := os.Create(progpath)
-	testutil.FatalIfErr(t, err)
-	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
-	testutil.FatalIfErr(t, p.Close())
-
-	check := func() (bool, error) {
-		v := expvar.Get("prog_loads_total").(*expvar.Map).Get("program.mtail")
-		if v == nil {
-			return false, nil
-		}
-		n, nerr := strconv.Atoi(v.String())
-		if nerr != nil {
-			return false, nerr
-		}
-		if n < 1 {
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err := testutil.DoOrTimeout(check, time.Second, 10*time.Millisecond)
-	testutil.FatalIfErr(t, err)
-	if !ok {
-		t.Fatal("program loads didn't increase")
-	}
-	mfoo := store.Metrics["foo"]
-	if len(mfoo) != 1 || len(mfoo[0].LabelValues) != 1 {
-		t.Errorf("Unexpected metrics content: expected a single metric with no labels, but got all this %v", mfoo)
-	}
-
-	n, err := logFile.WriteString("foo\n")
-	testutil.FatalIfErr(t, err)
-	if n < 4 {
-		t.Fatalf("only wrote %d", n)
-	}
-	time.Sleep(100 * time.Millisecond)
-
-	checkFoo := func() (bool, error) {
-		store.RLock()
-		v := store.Metrics["foo"][0]
-		store.RUnlock()
-		d, derr := v.GetDatum()
-		if derr != nil {
-			return false, derr
-		}
-		if d.ValueString() != "1" {
-			t.Log(d)
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err = testutil.DoOrTimeout(checkFoo, time.Second, 10*time.Millisecond)
-	if err != nil {
-		t.Error(err)
-	}
-	if !ok {
-		t.Fatal("foo didn't increase")
-	}
-
-	p, err = os.Create(progpath)
-	testutil.FatalIfErr(t, err)
-	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
-	testutil.FatalIfErr(t, p.Close())
-
-	check2 := func() (bool, error) {
-		v := expvar.Get("prog_loads_total")
-		v = v.(*expvar.Map).Get("program.mtail")
-		if v == nil {
-			return false, nil
-		}
-		n, nerr := strconv.Atoi(v.String())
-		if nerr != nil {
-			return false, nerr
-		}
-		if n < 2 {
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err = testutil.DoOrTimeout(check2, time.Second, 10*time.Millisecond)
-	if err != nil {
-		t.Error(err)
-	}
-	if !ok {
-		t.Error("program loads didn't increase")
-	}
-	store.Lock()
-	mfoo = store.Metrics["foo"]
-	if len(mfoo) != 1 || len(mfoo[0].LabelValues) != 1 {
-		t.Errorf("Unexpected metrics content: expected a single metric with no labels, but got all this: %v", mfoo)
-	}
-	store.Unlock()
-}
 
 func TestBuildInfo(t *testing.T) {
 	buildInfo := BuildInfo{

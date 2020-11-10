@@ -17,6 +17,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/watcher"
 )
@@ -140,6 +141,7 @@ func TestGetMetric(tb testing.TB, addr, name string) interface{} {
 	return r[name]
 }
 
+/// GetMetric fetches the expvar metric from the TestServer.
 func (ts *TestServer) GetMetric(name string) float64 {
 	ts.tb.Helper()
 	return TestGetMetric(ts.tb, ts.Addr(), name).(float64)
@@ -167,7 +169,7 @@ func ExpectMetricDelta(tb testing.TB, a, b interface{}, want float64) {
 	}
 }
 
-// ExpectMetricDeltaWithDeadline returns a deferrable function which tests if the metric with name has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
+// ExpectMetricDeltaWithDeadline returns a deferrable function which tests if the expvar metric with name has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
 func (ts *TestServer) ExpectMetricDeltaWithDeadline(name string, want float64) func() {
 	ts.tb.Helper()
 	deadline := ts.DoOrTimeoutDeadline
@@ -194,7 +196,7 @@ func (ts *TestServer) ExpectMetricDeltaWithDeadline(name string, want float64) f
 	}
 }
 
-// ExpectMapMetricDeltaWithDeadline returns a deferrable function which tests if the map metric with name and key has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
+// ExpectMapMetricDeltaWithDeadline returns a deferrable function which tests if the expvar map metric with name and key has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
 func (ts *TestServer) ExpectMapMetricDeltaWithDeadline(name, key string, want float64) func() {
 	ts.tb.Helper()
 	deadline := ts.DoOrTimeoutDeadline
@@ -229,4 +231,44 @@ var LogWatcherTestTable = []struct {
 	{0, true},                      // notify only
 	{10 * time.Millisecond, false}, // poll only
 	//{10 * time.Millisecond, true},  // both --- TODO: breaks permission test,
+}
+
+// GetProgramMetric fetches the datum of the program metric name.
+func (ts *TestServer) GetProgramMetric(name string) datum.Datum {
+	ts.tb.Helper()
+	m := ts.store.Metrics[name]
+	if len(m) != 1 || len(m[0].LabelValues) != 1 {
+		ts.tb.Fatalf("Unexpected metric store content: expected a single metrics with no labels, but got %v", m)
+		return nil
+	}
+	d, derr := m[0].GetDatum()
+	testutil.FatalIfErr(ts.tb, derr)
+	return d
+}
+
+// ExpectProgMetricDeltaWithDeadline tests that a given program metric increases by want within the deadline.  It assumes that the named metric is an Int type datum.Datum.
+func (ts *TestServer) ExpectProgMetricDeltaWithDeadline(name string, want int64) func() {
+	ts.tb.Helper()
+	deadline := ts.DoOrTimeoutDeadline
+	if deadline == 0 {
+		deadline = time.Minute
+	}
+	start := datum.GetInt(ts.GetProgramMetric(name))
+	check := func() (bool, error) {
+		ts.tb.Helper()
+		now := datum.GetInt(ts.GetProgramMetric(name))
+		return now-start == want, nil
+	}
+	return func() {
+		ts.tb.Helper()
+		ok, err := testutil.DoOrTimeout(check, deadline, 10*time.Millisecond)
+		if err != nil {
+			ts.tb.Fatal(err)
+		}
+		if !ok {
+			now := datum.GetInt(ts.GetProgramMetric(name))
+			delta := now - start
+			ts.tb.Errorf("Did not see %q have delta by deadline: got %v - %v = %d, want %d", name, now, start, delta, want)
+		}
+	}
 }
