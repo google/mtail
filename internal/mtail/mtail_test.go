@@ -44,48 +44,6 @@ func startMtailServer(t *testing.T, options ...func(*Server) error) *Server {
 	return m
 }
 
-func TestHandleNewLogAfterStart(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
-	// Start up mtail
-	logFilepath := path.Join(workdir, "log")
-	m := startMtailServer(t, LogPathPatterns(logFilepath))
-	defer m.Close(true)
-	time.Sleep(10 * time.Millisecond)
-
-	// touch log file
-	logFile, err := os.Create(logFilepath)
-	if err != nil {
-		t.Errorf("could not touch log file: %s", err)
-	}
-	defer logFile.Close()
-	testutil.WriteString(t, logFile, "a\n")
-
-	expectedLogCount := "1"
-	expectedLineCount := "1"
-	check := func() (bool, error) {
-		if expvar.Get("log_count").String() != expectedLogCount {
-			return false, nil
-		}
-		if expvar.Get("lines_total").String() != expectedLineCount {
-			return false, nil
-		}
-		return true, nil
-	}
-	ok, err := testutil.DoOrTimeout(check, 100*time.Millisecond, 10*time.Millisecond)
-	if err != nil {
-		t.Error(err)
-	}
-	if !ok {
-		t.Errorf("Log count\n\texpected: %s\n\treceived: %s", expectedLogCount, expvar.Get("log_count").String())
-		t.Errorf("Line count\n\texpected: %s\n\treceived: %s", expectedLineCount, expvar.Get("lines_total").String())
-	}
-}
-
 func TestHandleNewLogIgnored(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
