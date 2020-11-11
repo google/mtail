@@ -188,7 +188,7 @@ func (ts *TestServer) ExpectMetricDeltaWithDeadline(name string, want float64) f
 		if !ok {
 			now := TestGetMetric(ts.tb, ts.Addr(), name)
 			delta := TestMetricDelta(now, start)
-			ts.tb.Errorf("Did not see %q have delta by deadline: got %v - %v = %g, want %g", name, now, start, delta, want)
+			ts.tb.Errorf("Did not see %s have delta by deadline: got %v - %v = %g, want %g", name, now, start, delta, want)
 		}
 	}
 }
@@ -215,7 +215,7 @@ func (ts *TestServer) ExpectMapMetricDeltaWithDeadline(name, key string, want fl
 		if !ok {
 			now := TestGetMetric(ts.tb, ts.Addr(), name).(map[string]interface{})
 			delta := TestMetricDelta(now[key], start[key])
-			ts.tb.Errorf("Did not see delta by deadline: got %v - %v = %g, want %g", now[key], start[key], delta, want)
+			ts.tb.Errorf("Did not see %s[%s] have delta by deadline: got %v - %v = %g, want %g", name, key, now[key], start[key], delta, want)
 		}
 	}
 }
@@ -255,7 +255,7 @@ func (ts *TestServer) ExpectProgMetricDeltaWithDeadline(name string, want int64)
 		if !ok {
 			now := datum.GetInt(ts.GetProgramMetric(name))
 			delta := now - start
-			ts.tb.Errorf("Did not see %q have delta by deadline: got %v - %v = %d, want %d", name, now, start, delta, want)
+			ts.tb.Errorf("Did not see %s have delta by deadline: got %v - %v = %d, want %d", name, now, start, delta, want)
 		}
 	}
 }
