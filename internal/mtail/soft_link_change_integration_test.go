@@ -57,12 +57,12 @@ func TestSoftLinkChange(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
+		defer wg.Done()
 		logCountCheck()
-		wg.Done()
 	}()
 	go func() {
+		defer wg.Done()
 		logRotationsTotalCheck()
-		wg.Done()
 	}()
 	wg.Wait()
 
