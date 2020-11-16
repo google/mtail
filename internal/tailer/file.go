@@ -33,7 +33,7 @@ var (
 // File provides an abstraction over files and named pipes being tailed
 // by `mtail`.
 type File struct {
-	name     string    // Given name for the file (possibly relative, used for displau)
+	name     string    // Given name for the file (possibly relative, used for display)
 	pathname string    // Full absolute path of the file used internally
 	lastRead time.Time // time of the last read received on this handle
 	regular  bool      // Remember if this is a regular file (or a pipe)
