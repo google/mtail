@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	// LineCount counts the number of lines read by the program loader.
+	// LineCount counts the number of lines received by the program loader.
 	LineCount = expvar.NewInt("lines_total")
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
