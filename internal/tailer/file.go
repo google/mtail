@@ -30,6 +30,10 @@ var (
 	lineCount = expvar.NewMap("log_lines_total")
 )
 
+// defaultReadTimeout is used to unblock reads from named pipes.  It is set on
+// regular files as well, but seems to have no impact there.
+const defaultReadTimeout = 50 * time.Millisecond
+
 // File provides an abstraction over files and named pipes being tailed
 // by `mtail`.
 type File struct {
@@ -172,7 +176,7 @@ func (f *File) Read(ctx context.Context) error {
 	totalBytes := 0
 	// TODO(jaq): Set the deadline based on ctx.
 	for {
-		if err := f.file.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		if err := f.file.SetReadDeadline(time.Now().Add(defaultReadTimeout)); err != nil {
 			glog.V(3).Infof("%s: %s", f.name, err)
 		}
 		n, err := f.file.Read(b[:cap(b)])

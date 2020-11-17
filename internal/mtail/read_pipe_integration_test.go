@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
 	"golang.org/x/sys/unix"
@@ -41,9 +40,7 @@ func TestReadFromPipe(t *testing.T) {
 
 	lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 3)
 
-	n, err := f.WriteString("1\n2\n3\n")
-	testutil.FatalIfErr(t, err)
-	glog.Infof("Wrote %d bytes", n)
+	testutil.WriteString(t, f, "1\n2\n3\n")
 	m.PollWatched()
 
 	lineCountCheck()
