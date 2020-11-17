@@ -1,7 +1,8 @@
 # Polling filesystem watcher
 
 Original date: 2018-08-13
-Status: draft, unimplemented
+Status: obsolete
+Last Updated: 2020-11-17
 
 ## Overview
 

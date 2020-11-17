@@ -134,7 +134,7 @@ func (m *Server) initLoader() error {
 		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
 	}
 	var err error
-	m.l, err = vm.NewLoader(m.programPath, m.store, m.w, opts...)
+	m.l, err = vm.NewLoader(m.programPath, m.store, opts...)
 	if err != nil {
 		return err
 	}

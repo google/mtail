@@ -37,25 +37,14 @@ want to tail.  This includes named pipes.
 
 ### Polling the file system
 
-If your system is not supported by `fsnotify` then mtail will fall back to polling mode.  You can also specify this explicitly with the `--poll_interval` flag, for example
+`mtail` polls every `--poll_interval`, or 250ms by default, the supplied `--logs` patterns for newly created or deleted log pathnames.
+
+Known and active logs are read until EOF every 20ms by default.
 
 ```
 mtail --progs /etc/mtail --logs /var/log/syslog --poll_interval 250ms
 ```
 
-### Disabling `fsnotify`
-
-In some cases, the log watcher can not process update events from the kernel fast enough and you may see
-```
-fsnotify error: fsnotify queue overflow
-```
-errors in the `mtail` log.  This will also manifest as counters not updating anymore.
-
-If your incoming log rate is high enough to trigger this condition, try forcing mtail to only use polling mode by adding the flag `--disable_fsnotify`.  The poll interval defaults to 250ms, but can be changed with the `--poll_interval` flag, for example
-
-```
-mtail --progs /etc/mtail --logs /var/log/syslog --disable_fsnotify --poll_interval 50ms
-```
 
 ### Setting garbage collection intervals
 
@@ -102,6 +91,10 @@ refer to `docker ps` to find out where it's mapped to on the host.
 ## Writing the programme
 
 Read the [Programming Guide](Programming-Guide.md) for instructions on how to write an `mtail` program.
+
+### Reloading programmes
+
+`mtail` does not automatically reload programmes after it starts up.  To ask `mtail` to scan for and reload programmes from the supplied `--progs` directory, send it a `SIGHUP` signal on UNIX-like systems.
 
 ## Getting the Metrics Out
 

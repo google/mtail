@@ -16,7 +16,6 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/watcher"
 )
 
 var vmTests = []struct {
@@ -196,9 +195,8 @@ func TestVmEndToEnd(t *testing.T) {
 	for _, tc := range vmTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
-			l, err := NewLoader("", store, w, ErrorsAbort, DumpAst, DumpAstTypes, DumpBytecode, OmitMetricSource)
+			l, err := NewLoader("", store, ErrorsAbort, DumpAst, DumpAstTypes, DumpBytecode, OmitMetricSource)
 			testutil.FatalIfErr(t, err)
 			compileErrors := l.CompileAndRun(tc.name, strings.NewReader(tc.prog))
 			testutil.FatalIfErr(t, compileErrors)
