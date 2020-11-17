@@ -229,11 +229,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 		logFile := path.Join(logDir, "log.1.txt")
 		f := testutil.TestOpenFile(t, logFile)
 
-		n, err := f.WriteString("line 1\n")
-		testutil.FatalIfErr(t, err)
-		glog.Infof("Wrote %d bytes", n)
-		testutil.FatalIfErr(t, f.Sync())
-		m.PollWatched() // TODO: refactor above
+		testutil.WriteString(t, f, "line 1\n")
+		m.PollWatched()
 
 		var wg sync.WaitGroup
 		wg.Add(2)
@@ -255,10 +252,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logFile := path.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
-		n, err := f.WriteString("line 1\n")
-		testutil.FatalIfErr(t, err)
-		glog.Infof("Wrote %d bytes", n)
-		m.PollWatched() // TODO: refactor above
+		testutil.WriteString(t, f, "line 1\n")
+		m.PollWatched()
 
 		var wg sync.WaitGroup
 		wg.Add(2)
@@ -278,10 +273,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logFile := path.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
-		n, err := f.WriteString("line 1\n")
-		testutil.FatalIfErr(t, err)
-		glog.Infof("Wrote %d bytes", n)
-		m.PollWatched() // TODO: refactor above
+		testutil.WriteString(t, f, "line 1\n")
+		m.PollWatched()
 
 		var wg sync.WaitGroup
 		wg.Add(2)
