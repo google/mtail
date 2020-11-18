@@ -348,7 +348,9 @@ func NewLoader(programPath string, store *metrics.Store, options ...func(*Loader
 		for {
 			select {
 			case <-n:
-				l.LoadAllPrograms()
+				if err := l.LoadAllPrograms(); err != nil {
+					glog.Info(err)
+				}
 			case <-l.signalQuit:
 				return
 			}
