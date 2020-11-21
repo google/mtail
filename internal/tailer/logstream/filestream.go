@@ -11,62 +11,112 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 )
 
+// fileStream streams log lines from a regular file on the file system.  These
+// log files are appended to by another process, and are either rotated or
+// truncated by that (or yet another) process.  Rotatoin implies that a new
+// inode with the same name has been created, the old file descriptor will be
+// valid until EOF at which point it's considered finished.  A truncation means
+// the same file descriptor is used but the file offset will be reset to 0.
+// The latter is potentially lossy as far as mtail is concerned, if the last
+// logs are not read before truncation occurs.  When an EOF is read, the goroutine tests for both truncation and inode change and resets or spins off a new goroutine and closes itself down.
+// The shared context is used for cancellation.
 type fileStream struct {
 	ctx          context.Context
-	pathname     string        // Given name for the underlying named pipe on the filesystem
-	lastReadTime time.Time     // Last time a log line was read from this named pipe
-	file         *os.File      // The file descriptor of the open pipe
-	partial      *bytes.Buffer // Partial line accumulator
+	pathname     string    // Given name for the underlying file on the filesystem
+	lastReadTime time.Time // Last time a log line was read from this file
 	llp          logline.Processor
+	pollInterval time.Duration
 }
 
-func newFileStream(ctx context.Context, wg *sync.WaitGroup, pathname string, llp logline.Processor) (LogStream, error) {
-	fd, err := os.OpenFile(pathname, os.O_RDONLY, 0600)
-	if err != nil {
-		return nil, err
-	}
-	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), file: fd, partial: bytes.NewBufferString(""), llp: llp}
+// newFileStream creates a new log stream from a regular file.
+func newFileStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor, pollInterval time.Duration) (LogStream, error) {
+	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, pollInterval: pollInterval}
+	wg.Add(1)
+	go fs.read(ctx, wg, fi, true)
 	return fs, nil
-}
-
-func (fs *fileStream) Reopen(fi *os.FileInfo) error {
-	return nil
-}
-
-func (fs *fileStream) Close() error {
-	return nil
 }
 
 func (fs *fileStream) LastReadTime() time.Time {
 	return fs.lastReadTime
 }
 
-func (fs *fileStream) read() error {
+func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileInfo, brandNew bool) {
+	defer wg.Done()
+	fd, err := os.OpenFile(fs.pathname, os.O_RDONLY, 0600)
+	if err != nil {
+		glog.Info(err)
+	}
+	defer func() {
+		err := fd.Close()
+		if err != nil {
+			glog.Info(err)
+		}
+	}()
+	if brandNew {
+		_, err := fd.Seek(0, io.SeekEnd)
+		if err != nil {
+			glog.Info(err)
+		}
+	}
+
 	b := make([]byte, 0, defaultReadBufferSize)
 	capB := cap(b)
 	totalBytes := 0
+	finished := false
+	partial := bytes.NewBufferString("")
 	for {
-		n, err := fs.file.Read(b[:capB])
+		// Blocking read but regular files can return EOF straight away.
+		n, err := fd.Read(b[:capB])
 		totalBytes += n
 		b = b[:n]
-		// If we have read no bytes and are at EOF, check for truncation.
+		// If we have read no bytes and are at EOF, check for truncation and rotation.
 		if err == io.EOF && totalBytes == 0 {
-			if fs.isTruncated() {
-				// If true, we've already seeked back to the start of the file.
+			// Both rotation and truncation need to stat, so check for rotation first.  It is assumed that rotation is the more common change pattern anyway
+			newfi, err := os.Stat(fs.pathname)
+			if err != nil {
+				glog.Info(err)
 				continue
 			}
-		}
-		decodeAndSend(fs.ctx, fs.llp, fs.pathname, n, &b, fs.partial)
-		// Return on any error, including EOF.
-		if err != nil {
-			// Update the last read time if we were able to read anything.
-			if totalBytes > 0 {
-				fs.lastReadTime = time.Now()
+			if !os.SameFile(fi, newfi) {
+				wg.Add(1)
+				go fs.read(ctx, wg, newfi, false)
+				finished = true
+				continue
 			}
-			return err
+			currentOffset, err := fd.Seek(0, io.SeekCurrent)
+			if err != nil {
+				glog.Info(err)
+				continue
+			}
+			if currentOffset != 0 && fi.Size() < currentOffset {
+				// About to lose all remaining data because of the truncate so flush the accumulator.
+				if partial.Len() > 0 {
+					sendLine(ctx, fs.pathname, partial, fs.llp)
+				}
+				_, err := fd.Seek(0, io.SeekStart)
+				if err != nil {
+					glog.Info(err)
+				}
+			}
+		}
+		decodeAndSend(ctx, fs.llp, fs.pathname, n, &b, partial)
+		// Update the last read time if we were able to read anything.
+		if totalBytes > 0 {
+			fs.lastReadTime = time.Now()
+		}
+		// This file is done, so we can exit this goroutine.
+		if err == io.EOF && finished {
+			return
+		}
+		select {
+		case <-time.After(fs.pollInterval):
+			// sleep to next read
+		case <-ctx.Done():
+			return
 		}
 	}
 }

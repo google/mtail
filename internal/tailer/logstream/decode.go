@@ -27,9 +27,13 @@ func decodeAndSend(ctx context.Context, llp logline.Processor, pathname string, 
 		case rune != '\n':
 			partial.WriteRune(rune)
 		default:
-			llp.ProcessLogLine(ctx, logline.New(ctx, pathname, partial.String()))
-			lineCount.Add(pathname, 1)
-			partial.Reset()
+			sendLine(ctx, pathname, partial, llp)
 		}
 	}
+}
+
+func sendLine(ctx context.Context, pathname string, partial *bytes.Buffer, llp logline.Processor) {
+	llp.ProcessLogLine(ctx, logline.New(ctx, pathname, partial.String()))
+	lineCount.Add(pathname, 1)
+	partial.Reset()
 }
