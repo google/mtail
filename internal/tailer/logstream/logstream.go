@@ -21,6 +21,7 @@ import (
 // LogStream
 type LogStream interface {
 	LastReadTime() time.Time // Return the time when the last log line was read from the source
+	Poll()                   // Poll the logstream.
 }
 
 // defaultReadTimeout contains the timeout for reads from nonblocking read sources.
@@ -33,18 +34,18 @@ const defaultReadBufferSize = 4096
 // `pathname`.  The LogStream will watch `ctx` for a cancellation signal, and
 // notify the `wg` when it is Done.  Log lines will be sent to the `llp` per
 // the `logline.Processor` interface specification.
-func New(ctx context.Context, wg *sync.WaitGroup, pathname string, llp logline.Processor, pollInterval time.Duration) (LogStream, error) {
+func New(ctx context.Context, wg *sync.WaitGroup, pathname string, llp logline.Processor) (LogStream, error) {
 	fi, err := os.Stat(pathname)
 	if err != nil {
 		return nil, err
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():
-		return newFileStream(ctx, wg, pathname, fi, llp, pollInterval)
+		return newFileStream(ctx, wg, pathname, fi, llp)
 	case m&os.ModeType == os.ModeNamedPipe:
-		return newPipeStream(ctx, wg, pathname, fi, llp, pollInterval)
+		return newPipeStream(ctx, wg, pathname, fi, llp)
 	case m&os.ModeType == os.ModeSocket:
-		return newSocketStream(ctx, wg, pathname, fi, llp, pollInterval)
+		return newSocketStream(ctx, wg, pathname, fi, llp)
 	default:
 		return nil, fmt.Errorf("unsupported file object type at %q", pathname)
 	}

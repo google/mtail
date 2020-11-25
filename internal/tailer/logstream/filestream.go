@@ -29,12 +29,12 @@ type fileStream struct {
 	pathname     string    // Given name for the underlying file on the filesystem
 	lastReadTime time.Time // Last time a log line was read from this file
 	llp          logline.Processor
-	pollInterval time.Duration
+	pollChannel  chan struct{}
 }
 
 // newFileStream creates a new log stream from a regular file.
-func newFileStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor, pollInterval time.Duration) (LogStream, error) {
-	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, pollInterval: pollInterval}
+func newFileStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
+	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, pollChannel: make(chan struct{}, 1)}
 	wg.Add(1)
 	go fs.read(ctx, wg, fi, true)
 	return fs, nil
@@ -44,7 +44,11 @@ func (fs *fileStream) LastReadTime() time.Time {
 	return fs.lastReadTime
 }
 
-func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileInfo, brandNew bool) {
+func (fs *fileStream) Poll() {
+	fs.pollChannel <- struct{}{}
+}
+
+func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileInfo, seekToEnd bool) {
 	defer wg.Done()
 	fd, err := os.OpenFile(fs.pathname, os.O_RDONLY, 0600)
 	if err != nil {
@@ -56,7 +60,7 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 			glog.Info(err)
 		}
 	}()
-	if brandNew {
+	if seekToEnd {
 		_, err := fd.Seek(0, io.SeekEnd)
 		if err != nil {
 			glog.Info(err)
@@ -113,8 +117,8 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 			return
 		}
 		select {
-		case <-time.After(fs.pollInterval):
-			// sleep to next read
+		case <-fs.pollChannel:
+			// sleep until next Poll()
 		case <-ctx.Done():
 			return
 		}

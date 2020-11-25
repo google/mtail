@@ -17,17 +17,16 @@ import (
 
 type pipeStream struct {
 	ctx          context.Context
-	pathname     string        // Given name for the underlying named pipe on the filesystem
-	lastReadTime time.Time     // Last time a log line was read from this named pipe
-	file         *os.File      // The file descriptor of the open pipe
-	partial      *bytes.Buffer // Partial line accumulator
+	pathname     string    // Given name for the underlying named pipe on the filesystem
+	lastReadTime time.Time // Last time a log line was read from this named pipe
+	file         *os.File  // The file descriptor of the open pipe
 	llp          logline.Processor
-	pollInterval time.Duration
+	pollChannel  chan struct{}
 }
 
 // TODO: if the pipe is closed by the writer while mtail is running, and then reopened, what happens? Bug report says we should exit if the pipe is os.Stdin and we have no other logs being watched.
-func newPipeStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor, pollInterval time.Duration) (LogStream, error) {
-	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, pollInterval: pollInterval}
+func newPipeStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
+	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, pollChannel: make(chan struct{}, 1)}
 	wg.Add(1)
 	go ps.read(ctx, wg, fi)
 	return ps, nil
@@ -37,12 +36,17 @@ func (ps *pipeStream) LastReadTime() time.Time {
 	return ps.lastReadTime
 }
 
+func (ps *pipeStream) Poll() {
+	ps.pollChannel <- struct{}{}
+}
+
 func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileInfo) {
 	defer wg.Done()
 	// Open in nonblocking mode because the write end of the pipe may not have started yet.
-	fd, err := os.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
+	fd, err := os.OpenFile(ps.pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
 	if err != nil {
-		return nil, err
+		glog.Info(err)
+		return
 	}
 	defer func() {
 		err := fd.Close()
@@ -69,15 +73,15 @@ func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 		totalBytes += n
 		b = b[:n]
 
-		decodeAndSend(ps.ctx, ps.llp, ps.pathname, n, &b, ps.partial)
+		decodeAndSend(ps.ctx, ps.llp, ps.pathname, n, &b, partial)
 		// Update the last read time if we were able to read anything.
 		if totalBytes > 0 {
 			ps.lastReadTime = time.Now()
 		}
 	Sleep:
 		select {
-		case <-time.After(fs.pollInterval):
-			// sleep to next read
+		case <-ps.pollChannel:
+			// sleep until next Poll()
 		case <-ctx.Done():
 			return
 		}
