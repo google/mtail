@@ -7,21 +7,42 @@ import (
 	"context"
 	"sync"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 )
 
-type StubProcessor struct {
-	sync.WaitGroup
-	Result []*logline.LogLine
+type stubProcessor struct {
+	wg       sync.WaitGroup
+	resultMu sync.Mutex
+	result   []logline.LogLine
 }
 
-func NewStubProcessor() *StubProcessor {
-	return &StubProcessor{
-		Result: make([]*logline.LogLine, 0),
+func NewStubProcessor() *stubProcessor {
+	return &stubProcessor{
+		result: make([]logline.LogLine, 0),
 	}
 }
 
-func (s *StubProcessor) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
-	s.Result = append(s.Result, ll)
-	s.WaitGroup.Done()
+func (s *stubProcessor) ExpectLinesReceived(n int) {
+	s.wg.Add(n)
+}
+
+func (s *stubProcessor) Verify() {
+	s.wg.Wait()
+}
+
+func (s *stubProcessor) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
+	glog.Info("Line received")
+	s.resultMu.Lock()
+	s.result = append(s.result, *ll)
+	s.resultMu.Unlock()
+	s.wg.Done()
+}
+
+func (s *stubProcessor) Result() (r []logline.LogLine) {
+	s.resultMu.Lock()
+	defer s.resultMu.Unlock()
+	r = make([]logline.LogLine, len(s.result))
+	copy(r, s.result)
+	return
 }

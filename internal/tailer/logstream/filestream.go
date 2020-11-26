@@ -34,7 +34,7 @@ type fileStream struct {
 
 // newFileStream creates a new log stream from a regular file.
 func newFileStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
-	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, pollChannel: make(chan struct{}, 1)}
+	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, pollChannel: make(chan struct{}, 0)}
 	wg.Add(1)
 	go fs.read(ctx, wg, fi, true)
 	return fs, nil
@@ -54,6 +54,7 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 	if err != nil {
 		glog.Info(err)
 	}
+	glog.Infof("opened new file %v", fd)
 	defer func() {
 		err := fd.Close()
 		if err != nil {
@@ -65,20 +66,20 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 		if err != nil {
 			glog.Info(err)
 		}
+		glog.Infof("%v: seeked to end", fd)
 	}
 
 	b := make([]byte, 0, defaultReadBufferSize)
 	capB := cap(b)
-	totalBytes := 0
-	finished := false
 	partial := bytes.NewBufferString("")
 	for {
 		// Blocking read but regular files can return EOF straight away.
 		n, err := fd.Read(b[:capB])
-		totalBytes += n
+		glog.Infof("%v, read %d bytes, err is %v", fd, n, err)
 		b = b[:n]
 		// If we have read no bytes and are at EOF, check for truncation and rotation.
-		if err == io.EOF && totalBytes == 0 {
+		if err == io.EOF && n == 0 {
+			glog.Infof("%v, eof an no bytes", fd)
 			// Both rotation and truncation need to stat, so check for rotation first.  It is assumed that rotation is the more common change pattern anyway
 			newfi, err := os.Stat(fs.pathname)
 			if err != nil {
@@ -86,17 +87,20 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 				continue
 			}
 			if !os.SameFile(fi, newfi) {
+				glog.Infof("%v:adding a new file routine", fd)
 				wg.Add(1)
 				go fs.read(ctx, wg, newfi, false)
-				finished = true
-				continue
+				// We're at EOF so there's nothing left to read here.
+				return
 			}
 			currentOffset, err := fd.Seek(0, io.SeekCurrent)
 			if err != nil {
 				glog.Info(err)
 				continue
 			}
-			if currentOffset != 0 && fi.Size() < currentOffset {
+			// We know that newfi is the same file here.
+			if currentOffset != 0 && newfi.Size() < currentOffset {
+				glog.Infof("%v: truncate? currentoffset is %d and size is %d", fd, currentOffset, newfi.Size())
 				// About to lose all remaining data because of the truncate so flush the accumulator.
 				if partial.Len() > 0 {
 					sendLine(ctx, fs.pathname, partial, fs.llp)
@@ -105,22 +109,32 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 				if err != nil {
 					glog.Info(err)
 				}
+				continue
 			}
 		}
 		decodeAndSend(ctx, fs.llp, fs.pathname, n, &b, partial)
-		// Update the last read time if we were able to read anything.
-		if totalBytes > 0 {
-			fs.lastReadTime = time.Now()
-		}
-		// This file is done, so we can exit this goroutine.
-		if err == io.EOF && finished {
-			return
-		}
-		select {
-		case <-fs.pollChannel:
-			// sleep until next Poll()
-		case <-ctx.Done():
-			return
+		// If we have stalled, then pause, otherwise loop back.
+		if err == io.EOF || ctx.Err() != nil {
+			// Update the last read time if we were able to read anything.
+			if n > 0 {
+				fs.lastReadTime = time.Now()
+			}
+			select {
+			case e := <-fs.pollChannel:
+				// sleep until next Poll()
+				glog.Infof("%v: Poll received", fd)
+				select {
+				case fs.pollChannel <- e:
+					glog.Infof("%v: resending poll", fd)
+					// send to next listener if any
+				default:
+				}
+			case <-ctx.Done():
+				if partial.Len() > 0 {
+					sendLine(ctx, fs.pathname, partial, fs.llp)
+				}
+				return
+			}
 		}
 	}
 }

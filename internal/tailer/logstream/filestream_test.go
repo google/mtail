@@ -5,10 +5,12 @@ package logstream_test
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/tailer/logstream"
 	"github.com/google/mtail/internal/testutil"
@@ -27,17 +29,58 @@ func TestFileStreamPoll(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	fs, err := logstream.New(ctx, &wg, name, ps)
 	testutil.FatalIfErr(t, err)
+	fs.Poll() // Synchronise past first read after seekToEnd
 
-	ps.Add(1)
+	ps.ExpectLinesReceived(1)
 	testutil.WriteString(t, f, "yo\n")
 	fs.Poll()
 
-	ps.Wait()
-	expected := []*logline.LogLine{
+	ps.Verify()
+	expected := []logline.LogLine{
 		{context.TODO(), name, "yo"},
 	}
-	testutil.ExpectNoDiff(t, expected, ps.Result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	testutil.ExpectNoDiff(t, expected, ps.Result(), testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	cancel()
+	wg.Wait()
+}
+
+func TestFileStreamRotation(t *testing.T) {
+	var wg sync.WaitGroup
+
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+
+	name := filepath.Join(tmpDir, "log")
+	f := testutil.TestOpenFile(t, name)
+	ps := NewStubProcessor()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	fs, err := logstream.New(ctx, &wg, name, ps)
+	testutil.FatalIfErr(t, err)
+	fs.Poll() // Synchronise past first read after seekToEnd
+
+	ps.ExpectLinesReceived(2)
+
+	glog.Info("write 1")
+	testutil.WriteString(t, f, "1\n")
+	fs.Poll()
+
+	testutil.FatalIfErr(t, os.Rename(name, name+".1"))
+
+	f = testutil.TestOpenFile(t, name)
+	glog.Info("write 2")
+	testutil.WriteString(t, f, "2\n")
+
+	ps.Verify()
+
+	expected := []logline.LogLine{
+		{context.TODO(), name, "1"},
+		{context.TODO(), name, "2"},
+	}
+	testutil.ExpectNoDiff(t, expected, ps.Result(), testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
 	cancel()
+
 	wg.Wait()
 }

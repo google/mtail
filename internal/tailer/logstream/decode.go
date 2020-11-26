@@ -9,6 +9,7 @@ import (
 	"expvar"
 	"unicode/utf8"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 )
 
@@ -33,6 +34,7 @@ func decodeAndSend(ctx context.Context, llp logline.Processor, pathname string, 
 }
 
 func sendLine(ctx context.Context, pathname string, partial *bytes.Buffer, llp logline.Processor) {
+	glog.Infof("sendline %s %q", pathname, partial.String())
 	llp.ProcessLogLine(ctx, logline.New(ctx, pathname, partial.String()))
 	lineCount.Add(pathname, 1)
 	partial.Reset()
