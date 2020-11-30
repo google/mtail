@@ -9,7 +9,6 @@ import (
 	"expvar"
 	"unicode/utf8"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 )
 
@@ -17,13 +16,13 @@ import (
 var lineCount = expvar.NewMap("logstream_lines_total")
 
 // decodeAndSend transforms the byte addary `b` into unicode in `partial`, sending to the llp as each newline is decoded.
-func decodeAndSend(ctx context.Context, llp logline.Processor, pathname string, n int, b *[]byte, partial *bytes.Buffer) {
+func decodeAndSend(ctx context.Context, llp logline.Processor, pathname string, n int, b []byte, partial *bytes.Buffer) {
 	var (
 		rune  rune
 		width int
 	)
-	for i := 0; i < len(*b) && i < n; i += width {
-		rune, width = utf8.DecodeRune((*b)[i:])
+	for i := 0; i < len(b) && i < n; i += width {
+		rune, width = utf8.DecodeRune(b[i:])
 		switch {
 		case rune != '\n':
 			partial.WriteRune(rune)
@@ -34,7 +33,6 @@ func decodeAndSend(ctx context.Context, llp logline.Processor, pathname string, 
 }
 
 func sendLine(ctx context.Context, pathname string, partial *bytes.Buffer, llp logline.Processor) {
-	glog.Infof("sendline %s %q", pathname, partial.String())
 	llp.ProcessLogLine(ctx, logline.New(ctx, pathname, partial.String()))
 	lineCount.Add(pathname, 1)
 	partial.Reset()

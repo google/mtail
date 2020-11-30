@@ -34,6 +34,16 @@ func TestOpenFile(tb testing.TB, name string) *os.File {
 	return f
 }
 
+// OpenLogFile creates a new file that emulates being a log.
+func OpenLogFile(tb testing.TB, name string) *os.File {
+	tb.Helper()
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_TRUNC|os.O_WRONLY|os.O_APPEND, 0600)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	return f
+}
+
 // TestChdir changes current working directory, and returns a cleanup function
 // to return to the previous directory.
 func TestChdir(tb testing.TB, dir string) func() {

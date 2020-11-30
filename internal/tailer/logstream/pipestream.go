@@ -56,7 +56,6 @@ func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 	}()
 	b := make([]byte, 0, defaultReadBufferSize)
 	capB := cap(b)
-	totalBytes := 0
 	partial := bytes.NewBufferString("")
 	for {
 		// Set idle timeout
@@ -70,12 +69,9 @@ func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 			goto Sleep
 		}
 
-		totalBytes += n
-		b = b[:n]
-
-		decodeAndSend(ps.ctx, ps.llp, ps.pathname, n, &b, partial)
+		decodeAndSend(ps.ctx, ps.llp, ps.pathname, n, b[:n], partial)
 		// Update the last read time if we were able to read anything.
-		if totalBytes > 0 {
+		if n > 0 {
 			ps.lastReadTime = time.Now()
 		}
 	Sleep:

@@ -53,7 +53,6 @@ func (ss *socketStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.File
 	}()
 	b := make([]byte, 0, defaultReadBufferSize)
 	capB := cap(b)
-	totalBytes := 0
 	partial := bytes.NewBufferString("")
 	for {
 		if err := ss.c.SetReadDeadline(time.Now().Add(defaultReadTimeout)); err != nil {
@@ -66,12 +65,9 @@ func (ss *socketStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.File
 			goto Sleep
 		}
 
-		totalBytes += n
-		b = b[:n]
+		decodeAndSend(ss.ctx, ss.llp, ss.pathname, n, b[:n], partial)
 
-		decodeAndSend(ss.ctx, ss.llp, ss.pathname, n, &b, partial)
-
-		if totalBytes > 0 {
+		if n > 0 {
 			// Don't bother updating lastRead until we return. // TODO: bug?
 			ss.lastReadTime = time.Now()
 		}

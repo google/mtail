@@ -69,21 +69,19 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 		glog.Infof("%v: seeked to end", fd)
 	}
 
-	b := make([]byte, 0, defaultReadBufferSize)
-	capB := cap(b)
+	b := make([]byte, defaultReadBufferSize)
 	partial := bytes.NewBufferString("")
 	for {
 		// Blocking read but regular files can return EOF straight away.
-		n, err := fd.Read(b[:capB])
-		glog.Infof("%v, read %d bytes, err is %v", fd, n, err)
-		b = b[:n]
+		count, err := fd.Read(b)
+		glog.Infof("%v, read %d bytes, err is %v", fd, count, err)
 		// If we have read no bytes and are at EOF, check for truncation and rotation.
-		if err == io.EOF && n == 0 {
+		if err == io.EOF && count == 0 {
 			glog.Infof("%v, eof an no bytes", fd)
 			// Both rotation and truncation need to stat, so check for rotation first.  It is assumed that rotation is the more common change pattern anyway
-			newfi, err := os.Stat(fs.pathname)
-			if err != nil {
-				glog.Info(err)
+			newfi, serr := os.Stat(fs.pathname)
+			if serr != nil {
+				glog.Info(serr)
 				continue
 			}
 			if !os.SameFile(fi, newfi) {
@@ -93,9 +91,9 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 				// We're at EOF so there's nothing left to read here.
 				return
 			}
-			currentOffset, err := fd.Seek(0, io.SeekCurrent)
-			if err != nil {
-				glog.Info(err)
+			currentOffset, serr := fd.Seek(0, io.SeekCurrent)
+			if serr != nil {
+				glog.Info(serr)
 				continue
 			}
 			// We know that newfi is the same file here.
@@ -105,20 +103,23 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 				if partial.Len() > 0 {
 					sendLine(ctx, fs.pathname, partial, fs.llp)
 				}
-				_, err := fd.Seek(0, io.SeekStart)
-				if err != nil {
-					glog.Info(err)
+				p, serr := fd.Seek(0, io.SeekStart)
+				if serr != nil {
+					glog.Info(serr)
 				}
+				glog.Infof("Seeked to %d", p)
 				continue
 			}
 		}
-		decodeAndSend(ctx, fs.llp, fs.pathname, n, &b, partial)
+		glog.Info("decode and send")
+		decodeAndSend(ctx, fs.llp, fs.pathname, count, b[:count], partial)
 		// If we have stalled, then pause, otherwise loop back.
 		if err == io.EOF || ctx.Err() != nil {
 			// Update the last read time if we were able to read anything.
-			if n > 0 {
+			if count > 0 {
 				fs.lastReadTime = time.Now()
 			}
+			glog.Info("waiting")
 			select {
 			case e := <-fs.pollChannel:
 				// sleep until next Poll()
@@ -137,8 +138,4 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 			}
 		}
 	}
-}
-
-func (fs *fileStream) isTruncated() bool {
-	return false
 }

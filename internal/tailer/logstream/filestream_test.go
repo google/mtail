@@ -84,3 +84,42 @@ func TestFileStreamRotation(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestFileStreamTruncation(t *testing.T) {
+	var wg sync.WaitGroup
+
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+
+	name := filepath.Join(tmpDir, "log")
+	f := testutil.OpenLogFile(t, name)
+	ps := NewStubProcessor()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	fs, err := logstream.New(ctx, &wg, name, ps)
+	testutil.FatalIfErr(t, err)
+	fs.Poll() // Synchronise past first read after seekToEnd
+
+	ps.ExpectLinesReceived(3)
+
+	testutil.WriteString(t, f, "1\n2\n")
+	fs.Poll()
+	testutil.FatalIfErr(t, f.Close())
+	fs.Poll()
+	f = testutil.OpenLogFile(t, name)
+	testutil.WriteString(t, f, "3\n")
+	fs.Poll()
+
+	ps.Verify()
+
+	expected := []logline.LogLine{
+		{context.TODO(), name, "1"},
+		{context.TODO(), name, "2"},
+		{context.TODO(), name, "3"},
+	}
+	testutil.ExpectNoDiff(t, expected, ps.Result(), testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	cancel()
+
+	wg.Wait()
+}
