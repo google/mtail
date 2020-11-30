@@ -33,7 +33,7 @@ collector socket.
 Read the [programming guide](docs/Programming-Guide.md) if you want to learn how
 to write mtail programs.
 
-Mailing list: https://groups.google.com/forum/#!forum/mtail-users
+Ask general questions on the users mailing list: https://groups.google.com/g/mtail-users
 
 ## Installation
 
