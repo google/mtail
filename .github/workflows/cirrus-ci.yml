@@ -1,0 +1,13 @@
+on:
+  check_suite:
+    type: ['completed']
+
+name: Continue after Cirrus CI completes successfully
+jobs:
+  continue:
+    name: After Cirrus CI
+    if: github.event.check_suite.app.name == 'Cirrus CI' && github.event.check_suite.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Continue
+        run: echo "Cirrus CI completed."
