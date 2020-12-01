@@ -1,13 +1,21 @@
-name: Automatic pull request review
-on: [pull_request_target]
+name: Automatic pull request approvals
+on:
+  pull_request_target
 jobs:
-  automate-pullrequest-review:
+  auto-approve:
     runs-on: ubuntu-latest
     steps:
-      - name: Approve pull request
-        if: github.actor == 'dependabot[bot]' || github.actor == 'dependabot-preview[bot]'
-        uses: andrewmusgrave/automatic-pull-request-review@0.0.2
+      - uses: "actions/github-script@v2"
+        if: >
+          github.actor == 'dependabot[bot]' ||
+          github.actor == 'dependabot-preview[bot]' ||
+          github.actor == 'jaqx0r'
         with:
-          repo-token: '${{ secrets.GITHUB_TOKEN }}'
-          event: APPROVE
-          body: 'Thank you dependabot 🎊'
+          github-token: ${{ github.token }}
+          script: |
+            await github.pulls.createReview({
+              event: "APPROVE",
+              owner: context.repo.owner,
+              pull_number: context.payload.pull_request.number,
+              repo: context.repo.repo,
+            })
