@@ -8,12 +8,13 @@ import (
 
 func DoOrTimeout(do func() (bool, error), deadline, interval time.Duration) (bool, error) {
 	timeout := time.After(deadline)
-	ticker := time.Tick(interval)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-timeout:
 			return false, nil
-		case <-ticker:
+		case <-ticker.C:
 			glog.V(2).Infof("tick")
 			ok, err := do()
 			glog.V(2).Infof("ok, err: %v %v", ok, err)
