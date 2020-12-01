@@ -1,0 +1,13 @@
+name: Automatic pull request review
+on: [pull_request_target]
+jobs:
+  automate-pullrequest-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve pull request
+        if: github.actor == 'dependabot[bot]' || github.actor == 'dependabot-preview[bot]'
+        uses: andrewmusgrave/automatic-pull-request-review@0.0.2
+        with:
+          repo-token: '${{ secrets.GITHUB_TOKEN }}'
+          event: APPROVE
+          body: 'Thank you dependabot 🎊'
