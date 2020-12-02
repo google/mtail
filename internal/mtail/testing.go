@@ -24,6 +24,8 @@ import (
 
 const timeoutMultiplier = 3
 
+const defaultDoOrTimeoutDeadline = 10 * time.Second
+
 type TestServer struct {
 	*Server
 
@@ -33,13 +35,11 @@ type TestServer struct {
 
 	// Set this to change the poll deadline when using DoOrTimeout within this TestServer.
 	DoOrTimeoutDeadline time.Duration
-
-	enableFsNotify bool
 }
 
 // TestMakeServer makes a new TestServer for use in tests, but does not start
 // the server.  If an error occurs during creation, a testing.Fatal is issued.
-func TestMakeServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*Server) error) *TestServer {
+func TestMakeServer(tb testing.TB, pollInterval time.Duration, options ...func(*Server) error) *TestServer {
 	tb.Helper()
 
 	expvar.Get("lines_total").(*expvar.Int).Set(0)
@@ -47,22 +47,22 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bo
 	expvar.Get("log_rotations_total").(*expvar.Map).Init()
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
-	w, err := watcher.NewLogWatcher(pollInterval, enableFsNotify)
+	w, err := watcher.NewLogWatcher(pollInterval)
 	testutil.FatalIfErr(tb, err)
 	m, err := New(metrics.NewStore(), w, options...)
 	if err != nil {
 		tb.Fatal(err)
 	}
-	return &TestServer{Server: m, w: w, tb: tb, enableFsNotify: enableFsNotify}
+	return &TestServer{Server: m, w: w, tb: tb}
 }
 
 // TestStartServer creates a new TestServer and starts it running.  It
 // returns the server, and a cleanup function.
-func TestStartServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*Server) error) (*TestServer, func()) {
+func TestStartServer(tb testing.TB, pollInterval time.Duration, options ...func(*Server) error) (*TestServer, func()) {
 	tb.Helper()
 	options = append(options, BindAddress("", "0"))
 
-	m := TestMakeServer(tb, 10*time.Millisecond, false, options...)
+	m := TestMakeServer(tb, pollInterval, options...)
 	return m, m.Start()
 }
 
@@ -107,10 +107,6 @@ func (m *TestServer) Start() func() {
 
 // Poll all watched logs for updates.
 func (m *TestServer) PollWatched() {
-	if m.enableFsNotify {
-		glog.Info("TestServer not polling as fsnotify is enabled, expecting to get notified.")
-		return
-	}
 	glog.Info("TestServer polling watched objects")
 	m.w.Poll()
 }
@@ -174,7 +170,7 @@ func (ts *TestServer) ExpectMetricDeltaWithDeadline(name string, want float64) f
 	ts.tb.Helper()
 	deadline := ts.DoOrTimeoutDeadline
 	if deadline == 0 {
-		deadline = time.Minute
+		deadline = defaultDoOrTimeoutDeadline
 	}
 	start := TestGetMetric(ts.tb, ts.Addr(), name)
 	check := func() (bool, error) {
@@ -201,7 +197,7 @@ func (ts *TestServer) ExpectMapMetricDeltaWithDeadline(name, key string, want fl
 	ts.tb.Helper()
 	deadline := ts.DoOrTimeoutDeadline
 	if deadline == 0 {
-		deadline = time.Minute
+		deadline = defaultDoOrTimeoutDeadline
 	}
 	start := TestGetMetric(ts.tb, ts.Addr(), name).(map[string]interface{})
 	check := func() (bool, error) {
@@ -223,16 +219,6 @@ func (ts *TestServer) ExpectMapMetricDeltaWithDeadline(name, key string, want fl
 	}
 }
 
-// logWatcherTestTable contains reusable inputs to NewLogWatcher under test.
-var LogWatcherTestTable = []struct {
-	PollInterval   time.Duration
-	EnableFsNotify bool
-}{
-	{0, true},                      // notify only
-	{10 * time.Millisecond, false}, // poll only
-	//{10 * time.Millisecond, true},  // both --- TODO: breaks permission test,
-}
-
 // GetProgramMetric fetches the datum of the program metric name.
 func (ts *TestServer) GetProgramMetric(name string) datum.Datum {
 	ts.tb.Helper()
@@ -251,7 +237,7 @@ func (ts *TestServer) ExpectProgMetricDeltaWithDeadline(name string, want int64)
 	ts.tb.Helper()
 	deadline := ts.DoOrTimeoutDeadline
 	if deadline == 0 {
-		deadline = time.Minute
+		deadline = defaultDoOrTimeoutDeadline
 	}
 	start := datum.GetInt(ts.GetProgramMetric(name))
 	check := func() (bool, error) {

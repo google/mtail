@@ -57,7 +57,6 @@ var (
 
 	// Ops flags
 	pollInterval                = flag.Duration("poll_interval", 250*time.Millisecond, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
-	disableFsnotify             = flag.Bool("disable_fsnotify", true, "EXPERIMENTAL: When enabled no fsnotify watcher is created, and mtail falls back to polling mode only.  Only the files known at program startup will be polled.")
 	expiredMetricGcTickInterval = flag.Duration("expired_metrics_gc_interval", time.Hour, "interval between expired metric garbage collection runs")
 	staleLogGcTickInterval      = flag.Duration("stale_log_gc_interval", time.Hour, "interval between stale log garbage collection runs")
 
@@ -68,6 +67,9 @@ var (
 	// Tracing
 	jaegerEndpoint    = flag.String("jaeger_endpoint", "", "If set, collector endpoint URL of jaeger thrift service")
 	traceSamplePeriod = flag.Int("trace_sample_period", 0, "Sample period for traces.  If non-zero, every nth trace will be sampled.")
+
+	// Deprecated
+	_ = flag.Bool("disable_fsnotify", true, "DEPRECATED: this flag is no longer in use.")
 )
 
 func init() {
@@ -131,11 +133,11 @@ func main() {
 	if *traceSamplePeriod > 0 {
 		trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(1 / float64(*traceSamplePeriod))})
 	}
-	if *disableFsnotify && *pollInterval == 0 {
-		glog.Infof("fsnotify disabled and no poll interval specified; defaulting to 250ms poll")
+	if *pollInterval == 0 {
+		glog.Infof("no poll interval specified; defaulting to 250ms poll")
 		*pollInterval = time.Millisecond * 250
 	}
-	w, err := watcher.NewLogWatcher(*pollInterval, !*disableFsnotify)
+	w, err := watcher.NewLogWatcher(*pollInterval)
 	if err != nil {
 		glog.Exitf("Failure to create log watcher: %s", err)
 	}

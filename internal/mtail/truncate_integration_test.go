@@ -4,7 +4,6 @@
 package mtail_test
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -15,44 +14,40 @@ import (
 
 func TestTruncatedLogRead(t *testing.T) {
 	testutil.SkipIfShort(t)
-	for _, test := range mtail.LogWatcherTestTable {
-		t.Run(fmt.Sprintf("%s %v", test.PollInterval, test.EnableFsNotify), func(t *testing.T) {
-			tmpDir, rmTmpDir := testutil.TestTempDir(t)
-			defer rmTmpDir()
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
 
-			logDir := path.Join(tmpDir, "logs")
-			progDir := path.Join(tmpDir, "progs")
-			testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
-			testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
+	logDir := path.Join(tmpDir, "logs")
+	progDir := path.Join(tmpDir, "progs")
+	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
+	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 
-			m, stopM := mtail.TestStartServer(t, test.PollInterval, test.EnableFsNotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
-			defer stopM()
+	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+	defer stopM()
 
-			logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
+	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
 
-			logFile := path.Join(logDir, "log")
-			f := testutil.TestOpenFile(t, logFile)
-			m.PollWatched()
+	logFile := path.Join(logDir, "log")
+	f := testutil.TestOpenFile(t, logFile)
+	m.PollWatched()
 
-			{
-				linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
-				testutil.WriteString(t, f, "1\n")
-				m.PollWatched()
-				linesCountCheck()
-			}
-			err := f.Close()
-			testutil.FatalIfErr(t, err)
-			f, err = os.OpenFile(logFile, os.O_TRUNC|os.O_RDWR, 0600)
-			testutil.FatalIfErr(t, err)
-			// Ensure the server notices the truncate
-			m.PollWatched()
-			{
-				linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
-				testutil.WriteString(t, f, "2\n")
-				m.PollWatched()
-				linesCountCheck()
-			}
-			logCountCheck()
-		})
+	{
+		linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+		testutil.WriteString(t, f, "1\n")
+		m.PollWatched()
+		linesCountCheck()
 	}
+	err := f.Close()
+	testutil.FatalIfErr(t, err)
+	f, err = os.OpenFile(logFile, os.O_TRUNC|os.O_RDWR, 0600)
+	testutil.FatalIfErr(t, err)
+	// Ensure the server notices the truncate
+	m.PollWatched()
+	{
+		linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+		testutil.WriteString(t, f, "2\n")
+		m.PollWatched()
+		linesCountCheck()
+	}
+	logCountCheck()
 }

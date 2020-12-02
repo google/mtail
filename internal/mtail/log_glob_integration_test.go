@@ -45,7 +45,7 @@ func TestGlobBeforeStart(t *testing.T) {
 		}
 		testutil.WriteString(t, log, "\n")
 	}
-	m, stopM := mtail.TestStartServer(t, 0, true, mtail.LogPathPatterns(path.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
 	defer stopM()
 
 	if r := m.GetMetric("log_count"); r != float64(count) {
@@ -76,7 +76,7 @@ func TestGlobAfterStart(t *testing.T) {
 			false,
 		},
 	}
-	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(path.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
 	defer stopM()
 
 	count := 0
@@ -153,7 +153,7 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		testutil.FatalIfErr(t, err)
 		testutil.WriteString(t, log, "\n")
 	}
-	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 	defer stopM()
 
 	if r := m.GetMetric("log_count"); r != float64(count) {
@@ -195,7 +195,7 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		testutil.WriteString(t, log, "\n")
 	}
 
-	m, stopM := mtail.TestStartServer(t, 0, false, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 	defer stopM()
 
 	if r := m.GetMetric("log_count"); r != float64(count) {
