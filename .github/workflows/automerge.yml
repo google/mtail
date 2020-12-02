@@ -26,5 +26,5 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           MERGE_LABELS: ""
-          MERGE_SLEEP: 60000
-          MERGE_RETRY: 61
+          MERGE_RETRY_SLEEP: 60000
+          MERGE_RETRIES: 61
