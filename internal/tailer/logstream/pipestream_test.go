@@ -16,7 +16,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func TestPipeStreamPoll(t *testing.T) {
+func TestPipeStreamRead(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
@@ -36,7 +36,7 @@ func TestPipeStreamPoll(t *testing.T) {
 
 	sp.ExpectLinesReceived(1)
 	testutil.WriteString(t, f, "1\n")
-	ps.Poll()
+	ps.Wake()
 
 	sp.Verify()
 	expected := []logline.LogLine{

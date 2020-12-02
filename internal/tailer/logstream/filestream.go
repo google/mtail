@@ -29,12 +29,12 @@ type fileStream struct {
 	pathname     string    // Given name for the underlying file on the filesystem
 	lastReadTime time.Time // Last time a log line was read from this file
 	llp          logline.Processor
-	pollChannel  chan struct{}
+	wakeChannel  chan struct{}
 }
 
 // newFileStream creates a new log stream from a regular file.
 func newFileStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
-	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, pollChannel: make(chan struct{}, 0)}
+	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, wakeChannel: make(chan struct{}, 0)}
 	wg.Add(1)
 	go fs.read(ctx, wg, fi, true)
 	return fs, nil
@@ -44,8 +44,8 @@ func (fs *fileStream) LastReadTime() time.Time {
 	return fs.lastReadTime
 }
 
-func (fs *fileStream) Poll() {
-	fs.pollChannel <- struct{}{}
+func (fs *fileStream) Wake() {
+	fs.wakeChannel <- struct{}{}
 }
 
 func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileInfo, seekToEnd bool) {
@@ -121,12 +121,12 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 			}
 			glog.Info("waiting")
 			select {
-			case e := <-fs.pollChannel:
-				// sleep until next Poll()
-				glog.Infof("%v: Poll received", fd)
+			case e := <-fs.wakeChannel:
+				// sleep until next Wake()
+				glog.Infof("%v: Wake received", fd)
 				select {
-				case fs.pollChannel <- e:
-					glog.Infof("%v: resending poll", fd)
+				case fs.wakeChannel <- e:
+					glog.Infof("%v: resending wake", fd)
 					// send to next listener if any
 				default:
 				}

@@ -15,7 +15,7 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
-func TestSocketStreamPoll(t *testing.T) {
+func TestSocketStreamRead(t *testing.T) {
 	t.Skip("logstream.New cannot stat a nonexistent socket")
 	var wg sync.WaitGroup
 
@@ -29,7 +29,7 @@ func TestSocketStreamPoll(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ss, err := logstream.New(ctx, &wg, name, sp)
 	testutil.FatalIfErr(t, err)
-	ss.Poll() // Synchronise past socket creation
+	ss.Wake() // Synchronise past socket creation
 
 	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
 	testutil.FatalIfErr(t, err)
@@ -37,7 +37,7 @@ func TestSocketStreamPoll(t *testing.T) {
 	sp.ExpectLinesReceived(1)
 	_, err = s.Write([]byte("1\n"))
 	testutil.FatalIfErr(t, err)
-	ss.Poll()
+	ss.Wake()
 
 	sp.Verify()
 	expected := []logline.LogLine{

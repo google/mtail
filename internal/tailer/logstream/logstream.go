@@ -21,7 +21,7 @@ import (
 // LogStream
 type LogStream interface {
 	LastReadTime() time.Time // Return the time when the last log line was read from the source
-	Poll()                   // Poll the logstream.
+	Wake()                   // Wake the logstream if waiting at EOF.
 }
 
 // defaultReadTimeout contains the timeout for reads from nonblocking read sources.

@@ -21,12 +21,12 @@ type pipeStream struct {
 	lastReadTime time.Time // Last time a log line was read from this named pipe
 	file         *os.File  // The file descriptor of the open pipe
 	llp          logline.Processor
-	pollChannel  chan struct{}
+	wakeChannel  chan struct{}
 }
 
 // TODO: if the pipe is closed by the writer while mtail is running, and then reopened, what happens? Bug report says we should exit if the pipe is os.Stdin and we have no other logs being watched.
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
-	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, pollChannel: make(chan struct{}, 1)}
+	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, wakeChannel: make(chan struct{}, 1)}
 	wg.Add(1)
 	go ps.read(ctx, wg, fi)
 	return ps, nil
@@ -36,8 +36,8 @@ func (ps *pipeStream) LastReadTime() time.Time {
 	return ps.lastReadTime
 }
 
-func (ps *pipeStream) Poll() {
-	ps.pollChannel <- struct{}{}
+func (ps *pipeStream) Wake() {
+	ps.wakeChannel <- struct{}{}
 }
 
 func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileInfo) {
@@ -76,8 +76,8 @@ func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 		}
 	Sleep:
 		select {
-		case <-ps.pollChannel:
-			// sleep until next Poll()
+		case <-ps.wakeChannel:
+			// sleep until next Wake()
 		case <-ctx.Done():
 			return
 		}

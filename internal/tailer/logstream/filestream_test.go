@@ -16,7 +16,7 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
-func TestFileStreamPoll(t *testing.T) {
+func TestFileStreamRead(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
@@ -29,11 +29,11 @@ func TestFileStreamPoll(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	fs, err := logstream.New(ctx, &wg, name, ps)
 	testutil.FatalIfErr(t, err)
-	fs.Poll() // Synchronise past first read after seekToEnd
+	fs.Wake() // Synchronise past first read after seekToEnd
 
 	ps.ExpectLinesReceived(1)
 	testutil.WriteString(t, f, "yo\n")
-	fs.Poll()
+	fs.Wake()
 
 	ps.Verify()
 	expected := []logline.LogLine{
@@ -58,13 +58,13 @@ func TestFileStreamRotation(t *testing.T) {
 
 	fs, err := logstream.New(ctx, &wg, name, ps)
 	testutil.FatalIfErr(t, err)
-	fs.Poll() // Synchronise past first read after seekToEnd
+	fs.Wake() // Synchronise past first read after seekToEnd
 
 	ps.ExpectLinesReceived(2)
 
 	glog.Info("write 1")
 	testutil.WriteString(t, f, "1\n")
-	fs.Poll()
+	fs.Wake()
 
 	testutil.FatalIfErr(t, os.Rename(name, name+".1"))
 
@@ -98,17 +98,17 @@ func TestFileStreamTruncation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	fs, err := logstream.New(ctx, &wg, name, ps)
 	testutil.FatalIfErr(t, err)
-	fs.Poll() // Synchronise past first read after seekToEnd
+	fs.Wake() // Synchronise past first read after seekToEnd
 
 	ps.ExpectLinesReceived(3)
 
 	testutil.WriteString(t, f, "1\n2\n")
-	fs.Poll()
+	fs.Wake()
 	testutil.FatalIfErr(t, f.Close())
-	fs.Poll()
+	fs.Wake()
 	f = testutil.OpenLogFile(t, name)
 	testutil.WriteString(t, f, "3\n")
-	fs.Poll()
+	fs.Wake()
 
 	ps.Verify()
 

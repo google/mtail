@@ -21,11 +21,11 @@ type socketStream struct {
 	lastReadTime time.Time // Last time a log line was read from this socket
 	c            net.Conn  // Connection for the open socket
 	llp          logline.Processor
-	pollChannel  chan struct{}
+	wakeChannel  chan struct{}
 }
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
-	ss := &socketStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, pollChannel: make(chan struct{}, 1)}
+	ss := &socketStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, wakeChannel: make(chan struct{}, 1)}
 	wg.Add(1)
 	go ss.read(ctx, wg, fi)
 	return ss, nil
@@ -35,8 +35,8 @@ func (ss *socketStream) LastReadTime() time.Time {
 	return ss.lastReadTime
 }
 
-func (ss *socketStream) Poll() {
-	ss.pollChannel <- struct{}{}
+func (ss *socketStream) Wake() {
+	ss.wakeChannel <- struct{}{}
 }
 
 func (ss *socketStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileInfo) {
@@ -73,8 +73,8 @@ func (ss *socketStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.File
 		}
 	Sleep:
 		select {
-		case <-ss.pollChannel:
-			// sleep to next Poll()
+		case <-ss.wakeChannel:
+			// sleep to next Wake()
 		case <-ctx.Done():
 			return
 		}
