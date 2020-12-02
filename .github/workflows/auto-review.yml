@@ -5,7 +5,7 @@ jobs:
   auto-approve:
     runs-on: ubuntu-latest
     steps:
-      - uses: "actions/github-script@v2"
+      - uses: "actions/github-script@v3"
         if: >
           github.actor == 'dependabot[bot]' ||
           github.actor == 'dependabot-preview[bot]' ||
