@@ -7,9 +7,11 @@ jobs:
     steps:
       - uses: "actions/github-script@v3"
         if: >
-          github.actor == 'dependabot[bot]' ||
-          github.actor == 'dependabot-preview[bot]' ||
-          github.actor == 'jaqx0r'
+          (
+            github.actor == 'dependabot[bot]' ||
+            github.actor == 'dependabot-preview[bot]' ||
+            github.actor == 'jaqx0r'
+          ) && github.event.pull_request.draft == false
         with:
           github-token: ${{ github.token }}
           script: |
