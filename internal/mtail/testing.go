@@ -61,7 +61,7 @@ func TestStartServer(tb testing.TB, pollInterval time.Duration, enableFsNotify b
 	tb.Helper()
 	options = append(options, BindAddress("", "0"))
 
-	m := TestMakeServer(tb, pollInterval, enableFsNotify, options...)
+	m := TestMakeServer(tb, 10*time.Millisecond, false, options...)
 	return m, m.Start()
 }
 
