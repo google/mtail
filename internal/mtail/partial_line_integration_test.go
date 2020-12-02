@@ -15,9 +15,7 @@ import (
 )
 
 func TestPartialLineRead(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 
 	for _, test := range mtail.LogWatcherTestTable {
 		t.Run(fmt.Sprintf("%s %v", test.PollInterval, test.EnableFsNotify), func(t *testing.T) {

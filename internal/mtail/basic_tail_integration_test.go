@@ -15,9 +15,7 @@ import (
 )
 
 func TestBasicTail(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	if testing.Verbose() {
 		defer testutil.TestSetFlag(t, "vmodule", "tail=2,log_watcher=2")()
 	}
@@ -56,9 +54,7 @@ func TestBasicTail(t *testing.T) {
 }
 
 func TestNewLogDoesNotMatchIsIgnored(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()
 	// Start mtail

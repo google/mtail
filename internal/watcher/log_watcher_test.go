@@ -35,10 +35,7 @@ func newStubProcessor() *testStubProcessor {
 }
 
 func TestLogWatcher(t *testing.T) {
-	if testing.Short() {
-		// This test is slow due to disk access.
-		t.Skip("skipping log watcher test in short mode")
-	}
+	testutil.SkipIfShort(t)
 
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()
@@ -132,9 +129,7 @@ func TestLogWatcher(t *testing.T) {
 
 // This test may be OS specific; possibly break it out to a file with build tags.
 func TestFsnotifyErrorFallbackToPoll(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping log watcher test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	// The Warning log isn't created until the first write.  Create it before
 	// setting the rlimit on open files or the test will fail trying to open
 	// the log file instead of where it should.
@@ -156,10 +151,7 @@ func TestFsnotifyErrorFallbackToPoll(t *testing.T) {
 }
 
 func TestLogWatcherAddError(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping log watcher test in short mode")
-	}
-
+	testutil.SkipIfShort(t)
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()
 
@@ -179,9 +171,7 @@ func TestLogWatcherAddError(t *testing.T) {
 }
 
 func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping log watcher test in short mode")
-	}
+	testutil.SkipIfShort(t)
 
 	// Can't force a permission denied error if run as root.
 	testutil.SkipIfRoot(t)
@@ -212,9 +202,7 @@ func TestLogWatcherAddWhilePermissionDenied(t *testing.T) {
 }
 
 func TestWatcherErrors(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping log watcher test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	orig, err := strconv.ParseInt(expvar.Get("log_watcher_errors_total").String(), 10, 64)
 	if err != nil {
 		t.Fatalf("couldn't convert expvar %q", expvar.Get("log_watcher_errors_total").String())
@@ -229,9 +217,7 @@ func TestWatcherErrors(t *testing.T) {
 }
 
 func TestWatcherNewFile(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping log watcher test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	tests := []struct {
 		period   time.Duration
 		fsnotify bool

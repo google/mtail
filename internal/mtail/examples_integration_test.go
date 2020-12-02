@@ -148,9 +148,7 @@ var exampleProgramTests = []struct {
 }
 
 func TestExamplePrograms(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	for _, tc := range exampleProgramTests {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
@@ -182,9 +180,7 @@ func TestExamplePrograms(t *testing.T) {
 // This test only compiles examples, but has coverage over all examples
 // provided.  This ensures we ship at least syntactically correct examples.
 func TestCompileExamplePrograms(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	matches, err := filepath.Glob("../../examples/*.mtail")
 	testutil.FatalIfErr(t, err)
 	for _, tc := range matches {

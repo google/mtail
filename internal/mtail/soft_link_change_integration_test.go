@@ -15,9 +15,7 @@ import (
 )
 
 func TestSoftLinkChange(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()
 

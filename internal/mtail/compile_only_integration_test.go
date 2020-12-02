@@ -15,9 +15,7 @@ import (
 
 func TestBadProgramFailsCompilation(t *testing.T) {
 	t.Skip("broken, need to handle compile error correctly.")
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	progDir, rmProgDir := testutil.TestTempDir(t)
 	defer rmProgDir()
 	logDir, rmLogDir := testutil.TestTempDir(t)

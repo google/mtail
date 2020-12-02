@@ -14,9 +14,7 @@ import (
 )
 
 func TestGlobBeforeStart(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()
@@ -56,9 +54,7 @@ func TestGlobBeforeStart(t *testing.T) {
 }
 
 func TestGlobAfterStart(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()
@@ -111,9 +107,7 @@ func TestGlobAfterStart(t *testing.T) {
 }
 
 func TestGlobIgnoreFolder(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()
@@ -168,9 +162,7 @@ func TestGlobIgnoreFolder(t *testing.T) {
 }
 
 func TestFilenameRegexIgnore(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()

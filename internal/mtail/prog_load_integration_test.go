@@ -13,9 +13,7 @@ import (
 )
 
 func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in shor tmode")
-	}
+	testutil.SkipIfShort(t)
 
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()

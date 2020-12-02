@@ -14,9 +14,7 @@ import (
 )
 
 func TestPermissionDeniedOnLog(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	// Can't force a permission denied error if run as root.
 	testutil.SkipIfRoot(t)
 
