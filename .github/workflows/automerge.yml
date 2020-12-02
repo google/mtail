@@ -28,5 +28,3 @@ jobs:
           MERGE_LABELS: ""
           MERGE_SLEEP: 60000
           MERGE_RETRY: 61
-          UPDATE_LABELS: ""
-          UPDATE_METHOD: "rebase"
