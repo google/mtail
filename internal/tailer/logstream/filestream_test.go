@@ -42,6 +42,10 @@ func TestFileStreamRead(t *testing.T) {
 	testutil.ExpectNoDiff(t, expected, ps.Result(), testutil.IgnoreFields(logline.LogLine{}, "Context"))
 	cancel()
 	wg.Wait()
+
+	if !fs.IsFinished() {
+		t.Errorf("expecting fs to be closed because cancellation")
+	}
 }
 
 func TestFileStreamRotation(t *testing.T) {
@@ -121,5 +125,42 @@ func TestFileStreamTruncation(t *testing.T) {
 
 	cancel()
 
+	wg.Wait()
+}
+
+func TestFileStreamFinishedBecauseRemoved(t *testing.T) {
+	var wg sync.WaitGroup
+
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+
+	name := filepath.Join(tmpDir, "log")
+	f := testutil.TestOpenFile(t, name)
+	ps := NewStubProcessor()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	fs, err := logstream.New(ctx, &wg, name, ps)
+	testutil.FatalIfErr(t, err)
+	fs.Wake() // Synchronise past first read after seekToEnd
+
+	ps.ExpectLinesReceived(1)
+	testutil.WriteString(t, f, "yo\n")
+	fs.Wake()
+
+	testutil.FatalIfErr(t, f.Close())
+	testutil.FatalIfErr(t, os.Remove(name))
+	//fs.Wake() -- deadlock as IsFinished() , TODO(jaq) nonblocking wake
+
+	ps.Verify()
+	expected := []logline.LogLine{
+		{context.TODO(), name, "yo"},
+	}
+	testutil.ExpectNoDiff(t, expected, ps.Result(), testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	if !fs.IsFinished() {
+		t.Errorf("expecting fs to be closed because log was removed")
+	}
+
+	cancel()
 	wg.Wait()
 }

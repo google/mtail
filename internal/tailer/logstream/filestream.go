@@ -150,6 +150,9 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 				if partial.Len() > 0 {
 					sendLine(ctx, fs.pathname, partial, fs.llp)
 				}
+				fs.finishedMu.Lock()
+				fs.finished = true
+				fs.finishedMu.Unlock()
 				return
 			}
 		}
