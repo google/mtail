@@ -22,6 +22,7 @@ import (
 type LogStream interface {
 	LastReadTime() time.Time // Return the time when the last log line was read from the source
 	Wake()                   // Wake the logstream if waiting at EOF.
+	IsFinished() bool        // True if the logstream has finished work and cannot recover.  The caller should clean up this logstream, and possibly create a new logstream on a pathname if necessary.
 }
 
 // defaultReadTimeout contains the timeout for reads from nonblocking read sources.

@@ -6,6 +6,7 @@ package logstream
 import (
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"sync"
 	"syscall"
@@ -22,9 +23,11 @@ type pipeStream struct {
 	file         *os.File  // The file descriptor of the open pipe
 	llp          logline.Processor
 	wakeChannel  chan struct{}
+
+	finishedMu sync.Mutex // protects `finished`
+	finished   bool       // This pipestream is finished and can no longer be used.
 }
 
-// TODO: if the pipe is closed by the writer while mtail is running, and then reopened, what happens? Bug report says we should exit if the pipe is os.Stdin and we have no other logs being watched.
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
 	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, wakeChannel: make(chan struct{}, 1)}
 	wg.Add(1)
@@ -64,9 +67,19 @@ func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 		}
 		n, err := fd.Read(b[:capB])
 		if e, ok := err.(*os.PathError); ok && e.Timeout() && n == 0 {
-			// Named Pipes have no EOF so we look for a timeout on read to
-			// detect an EOF-like condition
+			// Named Pipes EOF when the writer has closed, so we look for a
+			// timeout on read to detect a writer stall and thus let us check
+			// below for cancellation.
 			goto Sleep
+		}
+		if err == io.EOF {
+			// Per pipe(7): If all file descriptors referring to the write end
+			// of a pipe have been closed, then an attempt to read(2) from the
+			// pipe will see end-of-file (read(2) will return 0).
+			ps.finishedMu.Lock()
+			ps.finished = true
+			ps.finishedMu.Unlock()
+			return
 		}
 
 		decodeAndSend(ps.ctx, ps.llp, ps.pathname, n, b[:n], partial)
@@ -82,4 +95,10 @@ func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 			return
 		}
 	}
+}
+
+func (ps *pipeStream) IsFinished() bool {
+	ps.finishedMu.Lock()
+	defer ps.finishedMu.Unlock()
+	return ps.finished
 }

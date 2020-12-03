@@ -6,6 +6,7 @@ package logstream
 import (
 	"bytes"
 	"context"
+	"io"
 	"net"
 	"os"
 	"sync"
@@ -22,6 +23,9 @@ type socketStream struct {
 	c            net.Conn  // Connection for the open socket
 	llp          logline.Processor
 	wakeChannel  chan struct{}
+
+	finishedMu sync.Mutex // protects `finished`
+	finished   bool       // The pipestream is finished and can no longer be used.
 }
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
@@ -61,8 +65,16 @@ func (ss *socketStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.File
 
 		n, err := ss.c.Read(b[:capB])
 		if err, ok := err.(net.Error); ok && err.Timeout() {
-			// Timeout, return
+			// Like pipestream, if timeout then sleep and wait for a context
+			// cancellation.
 			goto Sleep
+		}
+		// EOF means socket closed, so this socketstream is now finished.
+		if err == io.EOF {
+			ss.finishedMu.Lock()
+			ss.finished = true
+			ss.finishedMu.Unlock()
+			return
 		}
 
 		decodeAndSend(ss.ctx, ss.llp, ss.pathname, n, b[:n], partial)
@@ -79,4 +91,10 @@ func (ss *socketStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.File
 			return
 		}
 	}
+}
+
+func (ss *socketStream) IsFinished() bool {
+	ss.finishedMu.Lock()
+	defer ss.finishedMu.Unlock()
+	return ss.finished
 }

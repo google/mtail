@@ -30,6 +30,9 @@ type fileStream struct {
 	lastReadTime time.Time // Last time a log line was read from this file
 	llp          logline.Processor
 	wakeChannel  chan struct{}
+
+	finishedMu sync.Mutex // protects `finished`
+	finished   bool       // The filestream is finished and can no longer be used.
 }
 
 // newFileStream creates a new log stream from a regular file.
@@ -82,6 +85,19 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 			newfi, serr := os.Stat(fs.pathname)
 			if serr != nil {
 				glog.Info(serr)
+				if os.IsNotExist(serr) {
+					// If the file no longer exists, then there's nothing to
+					// reopen and thus we must be done here.  The caller may
+					// find this file in the future, and it can create a new
+					// logstream to handle it.
+					if partial.Len() > 0 {
+						sendLine(ctx, fs.pathname, partial, fs.llp)
+					}
+					fs.finishedMu.Lock()
+					fs.finished = true
+					fs.finishedMu.Unlock()
+					return
+				}
 				continue
 			}
 			if !os.SameFile(fi, newfi) {
@@ -138,4 +154,10 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 			}
 		}
 	}
+}
+
+func (fs *fileStream) IsFinished() bool {
+	fs.finishedMu.Lock()
+	defer fs.finishedMu.Unlock()
+	return fs.finished
 }
