@@ -44,7 +44,7 @@ func TestFileStreamRead(t *testing.T) {
 	wg.Wait()
 
 	if !fs.IsFinished() {
-		t.Errorf("expecting fs to be closed because cancellation")
+		t.Errorf("expecting filestream to be closed because cancellation")
 	}
 }
 
@@ -158,7 +158,7 @@ func TestFileStreamFinishedBecauseRemoved(t *testing.T) {
 	testutil.ExpectNoDiff(t, expected, ps.Result(), testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
 	if !fs.IsFinished() {
-		t.Errorf("expecting fs to be closed because log was removed")
+		t.Errorf("expecting filestream to be closed because log was removed")
 	}
 
 	cancel()

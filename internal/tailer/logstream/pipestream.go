@@ -92,6 +92,9 @@ func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 		case <-ps.wakeChannel:
 			// sleep until next Wake()
 		case <-ctx.Done():
+			ps.finishedMu.Lock()
+			ps.finished = true
+			ps.finishedMu.Unlock()
 			return
 		}
 	}
