@@ -1,0 +1,23 @@
+name: Automatic pull request approvals
+on:
+  pull_request_target
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/github-script@v3"
+        if: >
+          (
+            github.actor == 'dependabot[bot]' ||
+            github.actor == 'dependabot-preview[bot]' ||
+            github.actor == 'jaqx0r'
+          ) && github.event.pull_request.draft == false
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            await github.pulls.createReview({
+              event: "APPROVE",
+              owner: context.repo.owner,
+              pull_number: context.payload.pull_request.number,
+              repo: context.repo.repo,
+            })

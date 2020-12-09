@@ -1,6 +1,5 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
-// +build integration
 
 package mtail_test
 
@@ -157,38 +156,25 @@ func TestExamplePrograms(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
-			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
-			if err != nil {
-				t.Fatalf("create mtail failed: %s", err)
-			}
+			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
+			testutil.FatalIfErr(t, err)
 
 			err = mtail.Run()
-			if err != nil {
-				t.Fatalf("Run failed: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 
 			g, err := os.Open(tc.goldenfile)
-			if err != nil {
-				t.Fatalf("could not open golden file: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 			defer g.Close()
 
 			goldenStore := metrics.NewStore()
 			golden.ReadTestData(g, tc.programfile, goldenStore)
 
-			err = mtail.Close()
+			err = mtail.Close(true)
 			if err != nil {
 				t.Error(err)
 			}
 
-			diff := testutil.Diff(goldenStore, store, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
-
-			if diff != "" {
-				t.Error(diff)
-				t.Logf(" Golden metrics: %s", goldenStore.Metrics)
-				t.Logf("Program metrics: %s", store.Metrics)
-				t.Logf("yar\n%+v", store.Metrics)
-			}
+			testutil.ExpectNoDiff(t, goldenStore, store, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
 		})
 	}
 }
@@ -200,19 +186,15 @@ func TestCompileExamplePrograms(t *testing.T) {
 		t.Skip("skipping test in short mode")
 	}
 	matches, err := filepath.Glob("../../examples/*.mtail")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	for _, tc := range matches {
 		name := filepath.Base(tc)
 		t.Run(name, func(t *testing.T) {
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
-			mtail, err := mtail.New(s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
-			if err != nil {
-				t.Fatal(err)
-			}
-			mtail.Close()
+			mtail, err := mtail.New(s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
+			testutil.FatalIfErr(t, err)
+			mtail.Close(true)
 		})
 	}
 }
@@ -253,7 +235,7 @@ func BenchmarkProgram(b *testing.B) {
 				total += count
 				w.InjectUpdate(log.Name())
 			}
-			mtail.Close()
+			mtail.Close(true)
 			b.StopTimer()
 			b.SetBytes(total)
 		})

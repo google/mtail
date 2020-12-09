@@ -1,6 +1,5 @@
 // Copyright 2019 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
-// +build integration
 
 package mtail_test
 
@@ -8,8 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
@@ -17,8 +16,11 @@ import (
 )
 
 func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
-	for _, pollInterval := range []time.Duration{0, 10 * time.Millisecond} {
-		t.Run(fmt.Sprintf("pollInterval=%s", pollInterval), func(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	for _, test := range mtail.LogWatcherTestTable {
+		t.Run(fmt.Sprintf("%s %v", test.PollInterval, test.EnableFsNotify), func(t *testing.T) {
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
 
@@ -28,50 +30,52 @@ func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
 			testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 			defer testutil.TestChdir(t, logDir)()
 
-			m, stopM := mtail.TestStartServer(t, pollInterval, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log*"))
+			m, stopM := mtail.TestStartServer(t, test.PollInterval, test.EnableFsNotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log*"))
 			defer stopM()
 
-			startLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-			startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
 			{
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
+				linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+
 				logFile := path.Join(logDir, "log")
 				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
 				testutil.FatalIfErr(t, err)
 				glog.Infof("Wrote %d bytes", n)
-				time.Sleep(time.Second)
 
-				logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-				lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-				if logCount.(float64)-startLogCount.(float64) != 1. {
-					t.Errorf("Unexpected log count: got %g, want 1", logCount.(float64)-startLogCount.(float64))
-				}
-				if lineCount.(float64)-startLineCount.(float64) != 1. {
-					t.Errorf("Unexpected line count: got %g, want 1", lineCount.(float64)-startLineCount.(float64))
-				}
-				time.Sleep(time.Second)
+				var wg sync.WaitGroup
+				wg.Add(2)
+				go func() {
+					defer wg.Done()
+					linesCountCheck()
+				}()
+				go func() {
+					defer wg.Done()
+					logCountCheck()
+				}()
+				wg.Wait()
 			}
 			{
+
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
+				linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 
 				logFile := path.Join(logDir, "log1")
 				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
 				testutil.FatalIfErr(t, err)
 				glog.Infof("Wrote %d bytes", n)
-				time.Sleep(time.Second)
-
-				logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-				lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-				if logCount.(float64)-startLogCount.(float64) != 2. {
-					t.Errorf("Unexpected log count: got %g, want 2", logCount.(float64)-startLogCount.(float64))
-				}
-				if lineCount.(float64)-startLineCount.(float64) != 2. {
-					t.Errorf("Unexpected line count: got %g, want 2", lineCount.(float64)-startLineCount.(float64))
-				}
-				time.Sleep(time.Second)
+				var wg sync.WaitGroup
+				wg.Add(2)
+				go func() {
+					defer wg.Done()
+					linesCountCheck()
+				}()
+				go func() {
+					defer wg.Done()
+					logCountCheck()
+				}()
+				wg.Wait()
 			}
 		})
 	}

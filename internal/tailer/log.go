@@ -26,7 +26,7 @@ type Log interface {
 }
 
 // NewLog returns an implementation of the Log interface that handles the given
-// pathname.  `llp' is a logline.Processor that recieves the bytes when read by
+// pathname.  `llp' is a logline.Processor that receives the bytes when read by
 // Read().  `seekToStart' indicates that the log should be read from the
 // beginning if possible, for files opened when in OneShot mode.
 func NewLog(pathname string, llp logline.Processor, seekToStart bool) (Log, error) {

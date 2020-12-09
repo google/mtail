@@ -4,6 +4,7 @@
 package checker_test
 
 import (
+	"flag"
 	"strings"
 	"testing"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/google/mtail/internal/vm/symbol"
 	"github.com/google/mtail/internal/vm/types"
 )
+
+var checkerTestDebug = flag.Bool("checker_test_debug", false, "Turn on to log AST in tests")
 
 var checkerInvalidPrograms = []struct {
 	name    string
@@ -258,9 +261,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			ast, err = checker.Check(ast)
 			if err == nil {
 				s := parser.Sexp{}
@@ -269,12 +270,10 @@ func TestCheckInvalidPrograms(t *testing.T) {
 				t.Fatal("check didn't fail")
 			}
 
-			diff := testutil.Diff(
+			if !testutil.ExpectNoDiff(t,
 				tc.errors,                        // want
 				strings.Split(err.Error(), "\n"), // got
-				cmpopts.SortSlices(func(x, y string) bool { return x < y }))
-			if diff != "" {
-				t.Errorf("Diff %s", diff)
+				cmpopts.SortSlices(func(x, y string) bool { return x < y })) {
 				t.Logf("Got: %s", err.Error())
 				s := parser.Sexp{}
 				s.EmitTypes = true
@@ -463,13 +462,13 @@ func TestCheckValidPrograms(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			ast, err = checker.Check(ast)
-			s := parser.Sexp{}
-			s.EmitTypes = true
-			t.Log("Typed AST:\n" + s.Dump(ast))
+			if *checkerTestDebug {
+				s := parser.Sexp{}
+				s.EmitTypes = true
+				t.Log("Typed AST:\n" + s.Dump(ast))
+			}
 			if err != nil {
 				t.Errorf("check failed: %s", err)
 			}
@@ -510,13 +509,9 @@ func TestCheckTypeExpressions(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := checker.Check(tc.expr)
-			if err != nil {
-				t.Fatalf("check error: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 
-			diff := testutil.Diff(tc.expected, ast.Type().Root())
-			if diff != "" {
-				t.Error(diff)
+			if !testutil.ExpectNoDiff(t, tc.expected, ast.Type().Root()) {
 				s := parser.Sexp{}
 				s.EmitTypes = true
 				t.Log("Typed AST:\n" + s.Dump(ast))

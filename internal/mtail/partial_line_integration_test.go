@@ -1,14 +1,13 @@
 // Copyright 2019 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
-// +build integration
 
 package mtail_test
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
@@ -16,66 +15,56 @@ import (
 )
 
 func TestPartialLineRead(t *testing.T) {
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
-
-	logDir := path.Join(tmpDir, "logs")
-	progDir := path.Join(tmpDir, "progs")
-	err := os.Mkdir(logDir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = os.Mkdir(progDir, 0700)
-	if err != nil {
-		t.Fatal(err)
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
 	}
 
-	logFile := path.Join(logDir, "log")
+	for _, test := range mtail.LogWatcherTestTable {
+		t.Run(fmt.Sprintf("%s %v", test.PollInterval, test.EnableFsNotify), func(t *testing.T) {
+			tmpDir, rmTmpDir := testutil.TestTempDir(t)
+			defer rmTmpDir()
 
-	f := testutil.TestOpenFile(t, logFile)
+			logDir := path.Join(tmpDir, "logs")
+			progDir := path.Join(tmpDir, "progs")
+			err := os.Mkdir(logDir, 0700)
+			testutil.FatalIfErr(t, err)
+			err = os.Mkdir(progDir, 0700)
+			testutil.FatalIfErr(t, err)
 
-	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
-	defer stopM()
+			logFile := path.Join(logDir, "log")
 
-	startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
+			f := testutil.TestOpenFile(t, logFile)
 
-	{
-		n, err := f.WriteString("line 1\n")
-		if err != nil {
-			t.Fatal(err)
-		}
-		glog.Infof("Wrote %d bytes", n)
-		time.Sleep(time.Second)
+			m, stopM := mtail.TestStartServer(t, test.PollInterval, test.EnableFsNotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+			defer stopM()
 
-		lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
+			{
 
-		mtail.ExpectMetricDelta(t, lineCount, startLineCount, 1)
-	}
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+				n, err := f.WriteString("line 1\n")
+				testutil.FatalIfErr(t, err)
+				glog.Infof("Wrote %d bytes", n)
+				lineCountCheck()
+			}
 
-	{
+			{
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 0)
+				n, err := f.WriteString("line ")
+				testutil.FatalIfErr(t, err)
+				glog.Infof("Wrote %d bytes", n)
 
-		n, err := f.WriteString("line ")
-		if err != nil {
-			t.Fatal(err)
-		}
-		glog.Infof("Wrote %d bytes", n)
-		time.Sleep(time.Second)
+				lineCountCheck()
+			}
 
-		lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
+			{
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 
-		mtail.ExpectMetricDelta(t, lineCount, startLineCount, 1)
-	}
-	{
+				n, err := f.WriteString("2\n")
+				testutil.FatalIfErr(t, err)
+				glog.Infof("Wrote %d bytes", n)
 
-		n, err := f.WriteString("2\n")
-		if err != nil {
-			t.Fatal(err)
-		}
-		glog.Infof("Wrote %d bytes", n)
-		time.Sleep(time.Second)
-
-		lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-		mtail.ExpectMetricDelta(t, lineCount, startLineCount, 2)
+				lineCountCheck()
+			}
+		})
 	}
 }

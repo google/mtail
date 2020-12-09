@@ -27,6 +27,34 @@ type watch struct {
 	fi os.FileInfo
 }
 
+// hasChanged indicates that a FileInfo has changed.
+// http://apenwarr.ca/log/20181113 suggests that comparing mtime is
+// insufficient for sub-second resolution on many platforms, and we can do
+// better by comparing a few fields in the FileInfo.  This set of tests is less
+// than the ones suggested in the blog post, but seem sufficient for making
+// tests (notably, sub-millisecond accuracy) pass quickly.  mtime-only diff has
+// caused race conditions in test and likely caused strange behaviour in
+// production environments.
+func hasChanged(a, b os.FileInfo) bool {
+	if a == nil || b == nil {
+		glog.V(2).Info("One or both FileInfos are nil")
+		return true
+	}
+	if a.ModTime() != b.ModTime() {
+		glog.V(2).Info("modtimes differ")
+		return true
+	}
+	if a.Size() != b.Size() {
+		glog.V(2).Info("sizes differ")
+		return true
+	}
+	if a.Mode() != b.Mode() {
+		glog.V(2).Info("modes differ")
+		return true
+	}
+	return false
+}
+
 // LogWatcher implements a Watcher for watching real filesystems.
 type LogWatcher struct {
 	watcher    *fsnotify.Watcher
@@ -40,6 +68,8 @@ type LogWatcher struct {
 	ticksDone  chan struct{} // Channel to notify when the ticks handler is done.
 	eventsDone chan struct{} // Channel to notify when the events handler is done.
 
+	pollMu sync.Mutex // protects `Poll()`
+
 	closeOnce sync.Once
 }
 
@@ -52,10 +82,6 @@ func NewLogWatcher(pollInterval time.Duration, enableFsnotify bool) (*LogWatcher
 		if err != nil {
 			glog.Warning(err)
 		}
-	}
-	if f == nil && pollInterval == 0 {
-		glog.Infof("fsnotify disabled and no poll interval specified; defaulting to 250ms poll")
-		pollInterval = time.Millisecond * 250
 	}
 	w := &LogWatcher{
 		watcher: f,
@@ -109,13 +135,7 @@ func (w *LogWatcher) runTicks() {
 	for {
 		select {
 		case <-w.pollTicker.C:
-			w.watchedMu.RLock()
-			for n, watch := range w.watched {
-				w.watchedMu.RUnlock()
-				w.pollWatchedPath(n, watch)
-				w.watchedMu.RLock()
-			}
-			w.watchedMu.RUnlock()
+			w.Poll()
 		case <-w.stopTicks:
 			w.pollTicker.Stop()
 			return
@@ -123,24 +143,46 @@ func (w *LogWatcher) runTicks() {
 	}
 }
 
+// Poll all watched objects for updates, dispatching events if required.
+func (w *LogWatcher) Poll() {
+	w.pollMu.Lock()
+	defer w.pollMu.Unlock()
+	glog.V(2).Info("Polling watched files.")
+	w.watchedMu.RLock()
+	for n, watch := range w.watched {
+		w.watchedMu.RUnlock()
+		w.pollWatchedPath(n, watch)
+		w.watchedMu.RLock()
+	}
+	w.watchedMu.RUnlock()
+}
+
 // pollWatchedPathLocked polls an already-watched path for updates.
 func (w *LogWatcher) pollWatchedPath(pathname string, watched *watch) {
 	glog.V(2).Infof("Stat %q", pathname)
 	fi, err := os.Stat(pathname)
 	if err != nil {
-		glog.V(1).Info(err)
+		if os.IsNotExist(err) {
+			glog.V(2).Infof("sending delete for %s", pathname)
+			w.sendWatchedEvent(watched, Event{Delete, pathname})
+			// Need to remove the watch for any subsequent create to be sent.
+			w.watchedMu.Lock()
+			delete(w.watched, pathname)
+			w.watchedMu.Unlock()
+		} else {
+			glog.V(1).Info(err)
+		}
 		return
 	}
 
 	// fsnotify does not send update events for the directory itself.
 	if fi.IsDir() {
 		w.pollDirectory(watched, pathname)
-	} else if watched.fi == nil || fi.ModTime().Sub(watched.fi.ModTime()) > 0 {
+	} else if hasChanged(fi, watched.fi) {
 		glog.V(2).Infof("sending update for %s", pathname)
 		w.sendWatchedEvent(watched, Event{Update, pathname})
 	}
 
-	glog.V(2).Info("Update fi")
 	w.watchedMu.Lock()
 	if _, ok := w.watched[pathname]; ok {
 		w.watched[pathname].fi = fi
@@ -148,38 +190,32 @@ func (w *LogWatcher) pollWatchedPath(pathname string, watched *watch) {
 	w.watchedMu.Unlock()
 }
 
+// pollDirectory walks the directory tree for a parent watch, and notifies of any new files.
 func (w *LogWatcher) pollDirectory(parentWatch *watch, pathname string) {
 	matches, err := filepath.Glob(path.Join(pathname, "*"))
 	if err != nil {
 		glog.V(1).Info(err)
 		return
 	}
-	// TODO(jaq): how do we avoid duplicate notifies for things that are already in the watch list?
 	for _, match := range matches {
+		w.watchedMu.RLock()
+		_, ok := w.watched[match]
+		w.watchedMu.RUnlock()
+		if !ok {
+			// The object has no watch object so it must be new, but we can't
+			// decide to watch it yet -- wait for the Tailer to match pattern
+			// and instruct us to Observe it directly.  Technically not
+			// everything is created here, it's literally everything in a path
+			// that we aren't watching, so we make a lot of stats below, but we
+			// need to find which ones are directories so we can traverse them.
+			// TODO(jaq): teach log watcher about the TailPatterns from tailer.
+			glog.V(2).Infof("sending create for %s", match)
+			w.sendWatchedEvent(parentWatch, Event{Create, match})
+		}
 		fi, err := os.Stat(match)
 		if err != nil {
 			glog.V(1).Info(err)
 			continue
-		}
-
-		w.watchedMu.RLock()
-		watched, ok := w.watched[match]
-		w.watchedMu.RUnlock()
-		switch {
-		case !ok:
-			glog.V(2).Infof("sending create for %s", match)
-			w.sendWatchedEvent(parentWatch, Event{Create, match})
-			w.watchedMu.Lock()
-			w.watched[match] = &watch{ps: parentWatch.ps, fi: fi}
-			w.watchedMu.Unlock()
-		case watched.fi != nil && fi.ModTime().Sub(watched.fi.ModTime()) > 0:
-			glog.V(2).Infof("sending update for %s", match)
-			w.sendWatchedEvent(watched, Event{Update, match})
-			w.watchedMu.Lock()
-			w.watched[match].fi = fi
-			w.watchedMu.Unlock()
-		default:
-			glog.V(2).Infof("No modtime change for %s, no send", match)
 		}
 		if fi.IsDir() {
 			w.pollDirectory(parentWatch, match)
@@ -200,7 +236,7 @@ func (w *LogWatcher) runEvents() {
 	}()
 
 	for e := range w.watcher.Events {
-		glog.V(2).Infof("watcher event %v", e)
+		glog.V(2).Infof("fsnotify watcher event %v", e)
 		switch {
 		case e.Op&fsnotify.Create == fsnotify.Create:
 			w.sendEvent(Event{Create, e.Name})
@@ -245,7 +281,11 @@ func (w *LogWatcher) Observe(path string, processor Processor) error {
 	defer w.watchedMu.Unlock()
 	watched, ok := w.watched[absPath]
 	if !ok {
-		w.watched[absPath] = &watch{ps: []Processor{processor}}
+		fi, err := os.Stat(absPath)
+		if err != nil {
+			glog.V(1).Info(err)
+		}
+		w.watched[absPath] = &watch{ps: []Processor{processor}, fi: fi}
 		glog.Infof("No abspath in watched list, added new one for %s", absPath)
 		return nil
 	}
@@ -258,7 +298,6 @@ func (w *LogWatcher) Observe(path string, processor Processor) error {
 	watched.ps = append(watched.ps, processor)
 	glog.Infof("appended this processor")
 	return nil
-
 }
 
 func (w *LogWatcher) addWatch(path string) (string, error) {

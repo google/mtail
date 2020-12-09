@@ -157,3 +157,9 @@ func JaegerReporter(jaegerEndpoint string) func(*Server) error {
 		return nil
 	}
 }
+
+//
+func OmitDumpMetricStore(m *Server) error {
+	m.omitDumpMetricsStore = true
+	return nil
+}

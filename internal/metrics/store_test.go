@@ -16,9 +16,7 @@ func TestMatchingKind(t *testing.T) {
 	s := NewStore()
 	m1 := NewMetric("foo", "prog", Counter, Int)
 	err := s.Add(m1)
-	if err != nil {
-		t.Fatalf("should be nil: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 	m2 := NewMetric("foo", "prog1", Gauge, Int)
 	err = s.Add(m2)
 	if err == nil {
@@ -73,14 +71,10 @@ func TestAddMetricDifferentType(t *testing.T) {
 	expected := 2
 	s := NewStore()
 	err := s.Add(NewMetric("foo", "prog", Counter, Int))
-	if err != nil {
-		t.Fatalf("should be nil: %s", err)
-	}
+	testutil.FatalIfErr(t, err)
 	// Duplicate metric of different type from *the same program
 	err = s.Add(NewMetric("foo", "prog", Counter, Float))
-	if err != nil {
-		t.Fatalf("should add a new metric to the store: %s. Store: %v", err, s.Metrics)
-	}
+	testutil.FatalIfErr(t, err)
 	if len(s.Metrics["foo"]) != expected {
 		t.Fatalf("should have %d metrics of different Type: %v", expected, s.Metrics)
 	}
@@ -88,9 +82,7 @@ func TestAddMetricDifferentType(t *testing.T) {
 	// Duplicate metric of different type from a different program
 	err = s.Add(NewMetric("foo", "prog1", Counter, Float))
 	expected++
-	if err != nil {
-		t.Fatalf("should add a new metric to the store: %s. Store: %v", err, s.Metrics)
-	}
+	testutil.FatalIfErr(t, err)
 	if len(s.Metrics["foo"]) != expected {
 		t.Fatalf("should have %d metrics of different Type: %v", expected, s.Metrics)
 	}

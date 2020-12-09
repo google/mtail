@@ -216,10 +216,7 @@ func TestVmEndToEnd(t *testing.T) {
 					t.Errorf("Nonzero runtime errors from program: got %s", val)
 				}
 			}
-			// t.Logf("Store is %v", store)
-			if d := testutil.Diff(tc.metrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time")); d != "" {
-				t.Errorf("Store didn't match:\n%s", d)
-			}
+			testutil.ExpectNoDiff(t, tc.metrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
 		})
 	}
 }

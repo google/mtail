@@ -485,20 +485,11 @@ func TestInstrs(t *testing.T) {
 				t.Fatalf("Execution failed, see info log.")
 			}
 
-			if diff := testutil.Diff(tc.expectedStack, v.t.stack); diff != "" {
-				t.Log("unexpected vm stack state")
-				t.Error(diff)
-			}
+			testutil.ExpectNoDiff(t, tc.expectedStack, v.t.stack)
 
 			tc.expectedThread.stack = tc.expectedStack
 
-			if diff := testutil.Diff(&tc.expectedThread, v.t, testutil.AllowUnexported(thread{})); diff != "" {
-				t.Log("unexpected vm thread state")
-				t.Error(diff)
-				t.Errorf("\t%v", *v.t)
-				t.Errorf("\t%v", tc.expectedThread)
-			}
-
+			testutil.ExpectNoDiff(t, &tc.expectedThread, v.t, testutil.AllowUnexported(thread{}))
 		})
 	}
 }
@@ -528,27 +519,21 @@ func TestDatumSetInstrs(t *testing.T) {
 	// simple inc
 	v := makeVM(code.Instr{code.Inc, nil, 0}, m)
 	d, err := m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	v.t.Push(d)
 	v.execute(v.t, v.prog[0])
 	if v.terminate {
 		t.Fatalf("Execution failed, see info log.")
 	}
 	d, err = m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if d.ValueString() != "1" {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// inc by int
 	v = makeVM(code.Instr{code.Inc, 0, 0}, m)
 	d, err = m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	v.t.Push(d)
 	v.t.Push(2)
 	v.execute(v.t, v.prog[0])
@@ -556,18 +541,14 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Fatalf("Execution failed, see info log.")
 	}
 	d, err = m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if d.ValueString() != "3" {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// inc by str
 	v = makeVM(code.Instr{code.Inc, 0, 0}, m)
 	d, err = m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	v.t.Push(d)
 	v.t.Push("1")
 	v.execute(v.t, v.prog[0])
@@ -575,18 +556,14 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Fatalf("Execution failed, see info log.")
 	}
 	d, err = m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if d.ValueString() != "4" {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// iset
 	v = makeVM(code.Instr{code.Iset, nil, 0}, m)
 	d, err = m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	v.t.Push(d)
 	v.t.Push(2)
 	v.execute(v.t, v.prog[0])
@@ -594,18 +571,14 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Fatalf("Execution failed, see info log.")
 	}
 	d, err = m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if d.ValueString() != "2" {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// iset str
 	v = makeVM(code.Instr{code.Iset, nil, 0}, m)
 	d, err = m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	v.t.Push(d)
 	v.t.Push("3")
 	v.execute(v.t, v.prog[0])
@@ -613,18 +586,14 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Fatalf("Execution failed, see info log.")
 	}
 	d, err = m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if d.ValueString() != "3" {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// fset
 	v = makeVM(code.Instr{code.Fset, nil, 0}, m)
 	d, err = m[1].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	v.t.Push(d)
 	v.t.Push(3.1)
 	v.execute(v.t, v.prog[0])
@@ -632,18 +601,14 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Fatalf("Execution failed, see info log.")
 	}
 	d, err = m[1].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if d.ValueString() != "3.1" {
 		t.Errorf("Unexpected value %v", d)
 	}
 	// fset str
 	v = makeVM(code.Instr{code.Fset, nil, 0}, m)
 	d, err = m[1].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	v.t.Push(d)
 	v.t.Push("4.1")
 	v.execute(v.t, v.prog[0])
@@ -651,9 +616,7 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Fatalf("Execution failed, see info log.")
 	}
 	d, err = m[1].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if d.ValueString() != "4.1" {
 		t.Errorf("Unexpected value %v", d)
 	}
@@ -661,9 +624,7 @@ func TestDatumSetInstrs(t *testing.T) {
 	// sset
 	v = makeVM(code.Instr{code.Sset, nil, 0}, m)
 	d, err = m[2].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	v.t.Push(d)
 	v.t.Push("4.1")
 	v.execute(v.t, v.prog[0])
@@ -671,9 +632,7 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Fatalf("Execution failed, see info log.")
 	}
 	d, err = m[1].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if d.ValueString() != "4.1" {
 		t.Errorf("Unexpected value %v", d)
 	}
@@ -681,9 +640,7 @@ func TestDatumSetInstrs(t *testing.T) {
 	// dec
 	v = makeVM(code.Instr{code.Dec, nil, 0}, m)
 	d, err = m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	datum.SetInt(d, 1, time.Now())
 	v.t.Push(d)
 	v.execute(v.t, v.prog[0])
@@ -691,9 +648,7 @@ func TestDatumSetInstrs(t *testing.T) {
 		t.Fatalf("Execution failed, see info log.")
 	}
 	d, err = m[0].GetDatum()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	if d.ValueString() != "0" {
 		t.Errorf("Unexpected value %v", d)
 	}
@@ -754,9 +709,7 @@ func TestDatumFetchInstrs(t *testing.T) {
 		// iget
 		v := makeVM(code.Instr{code.Iget, nil, 0}, m)
 		d, err := m[0].GetDatum()
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		datum.SetInt(d, 37, time.Now())
 		v.t.Push(d)
 		v.execute(v.t, v.prog[0])
@@ -776,9 +729,7 @@ func TestDatumFetchInstrs(t *testing.T) {
 		// fget
 		v := makeVM(code.Instr{code.Fget, nil, 0}, m)
 		d, err := m[1].GetDatum()
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		datum.SetFloat(d, 12.1, time.Now())
 		v.t.Push(d)
 		v.execute(v.t, v.prog[0])
@@ -798,9 +749,7 @@ func TestDatumFetchInstrs(t *testing.T) {
 		// sget
 		v := makeVM(code.Instr{code.Sget, nil, 0}, m)
 		d, err := m[2].GetDatum()
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.FatalIfErr(t, err)
 		datum.SetString(d, "aba", time.Now())
 		v.t.Push(d)
 		v.execute(v.t, v.prog[0])
@@ -836,7 +785,7 @@ func TestDeleteInstrs(t *testing.T) {
 	}
 	lv := m[0].FindLabelValueOrNil([]string{"z"})
 	if lv == nil {
-		t.Fatalf("couldbn;t find label value in metric %#v", m[0])
+		t.Fatalf("couldn;t find label value in metric %#v", m[0])
 	}
 	if lv.Expiry != time.Hour {
 		t.Fatalf("Expiry not correct, is %v", lv.Expiry)

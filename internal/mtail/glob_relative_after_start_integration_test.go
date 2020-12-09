@@ -1,6 +1,5 @@
 // Copyright 2019 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
-// +build integration
 
 package mtail_test
 
@@ -8,8 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
@@ -17,93 +16,94 @@ import (
 )
 
 func TestGlobRelativeAfterStart(t *testing.T) {
-	for _, enableFsnotify := range []bool{false, true} {
-		t.Run(fmt.Sprintf("fsnotify=%v", enableFsnotify), func(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	for _, test := range mtail.LogWatcherTestTable {
+		t.Run(fmt.Sprintf("%s %v", test.PollInterval, test.EnableFsNotify), func(t *testing.T) {
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
 
 			logDir := path.Join(tmpDir, "logs")
 			progDir := path.Join(tmpDir, "progs")
 			err := os.Mkdir(logDir, 0700)
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			err = os.Mkdir(progDir, 0700)
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			defer testutil.TestChdir(t, logDir)()
 
-			m, stopM := mtail.TestStartServer(t, 0, enableFsnotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
+			m, stopM := mtail.TestStartServer(t, test.PollInterval, test.EnableFsNotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
 			defer stopM()
 
-			startLogCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-			startLineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
+			{
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 
-			logFile := path.Join(logDir, "log.1.txt")
-			f := testutil.TestOpenFile(t, logFile)
+				logFile := path.Join(logDir, "log.1.txt")
+				f := testutil.TestOpenFile(t, logFile)
 
-			n, err := f.WriteString("line 1\n")
-			if err != nil {
-				t.Fatal(err)
+				n, err := f.WriteString("line 1\n")
+				testutil.FatalIfErr(t, err)
+				glog.Infof("Wrote %d bytes", n)
+				testutil.FatalIfErr(t, f.Sync())
+
+				var wg sync.WaitGroup
+				wg.Add(2)
+				go func() {
+					defer wg.Done()
+					logCountCheck()
+				}()
+				go func() {
+					defer wg.Done()
+					lineCountCheck()
+				}()
+				wg.Wait()
 			}
-			glog.Infof("Wrote %d bytes", n)
-			testutil.FatalIfErr(t, f.Sync())
-			time.Sleep(time.Second)
 
 			{
-				logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-				lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
 
-				if logCount.(float64)-startLogCount.(float64) != 1. {
-					t.Errorf("Unexpected log count: got %g, want 1", logCount.(float64)-startLogCount.(float64))
-				}
-				if lineCount.(float64)-startLineCount.(float64) != 1. {
-					t.Errorf("Unexpected line count: got %g, want 1", lineCount.(float64)-startLineCount.(float64))
-				}
-				time.Sleep(time.Second)
-			}
-			{
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
 
 				logFile := path.Join(logDir, "log.2.txt")
 				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
-				if err != nil {
-					t.Fatal(err)
-				}
+				testutil.FatalIfErr(t, err)
 				glog.Infof("Wrote %d bytes", n)
-				time.Sleep(time.Second)
 
-				logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-				lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-				if logCount.(float64)-startLogCount.(float64) != 2. {
-					t.Errorf("Unexpected log count: got %g, want 2", logCount.(float64)-startLogCount.(float64))
-				}
-				if lineCount.(float64)-startLineCount.(float64) != 2. {
-					t.Errorf("Unexpected line count: got %g, want 2", lineCount.(float64)-startLineCount.(float64))
-				}
-				time.Sleep(time.Second)
+				var wg sync.WaitGroup
+				wg.Add(2)
+				go func() {
+					defer wg.Done()
+					logCountCheck()
+				}()
+				go func() {
+					defer wg.Done()
+					lineCountCheck()
+				}()
+				wg.Wait()
 			}
 			{
+				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 0)
+				lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+
 				logFile := path.Join(logDir, "log.2.txt")
 				f := testutil.TestOpenFile(t, logFile)
 				n, err := f.WriteString("line 1\n")
-				if err != nil {
-					t.Fatal(err)
-				}
+				testutil.FatalIfErr(t, err)
 				glog.Infof("Wrote %d bytes", n)
-				time.Sleep(time.Second)
 
-				logCount := mtail.TestGetMetric(t, m.Addr(), "log_count")
-				lineCount := mtail.TestGetMetric(t, m.Addr(), "lines_total")
-
-				if logCount.(float64)-startLogCount.(float64) != 2 {
-					t.Errorf("Unexpected log count: got %g, want 2", logCount.(float64)-startLogCount.(float64))
-				}
-				if lineCount.(float64)-startLineCount.(float64) != 3 {
-					t.Errorf("Unexpected line count: got %g, want 3", lineCount.(float64)-startLineCount.(float64))
-				}
+				var wg sync.WaitGroup
+				wg.Add(2)
+				go func() {
+					defer wg.Done()
+					logCountCheck()
+				}()
+				go func() {
+					defer wg.Done()
+					lineCountCheck()
+				}()
+				wg.Wait()
 			}
 
 			glog.Infof("end")

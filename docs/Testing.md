@@ -48,6 +48,14 @@ examples directory.
 The `TestExamplePrograms` behaves like the `one_shot` flag, and
 `TestCompileExamplePrograms` tests that program syntax is correct.
 
+# Test writing
+
+Use the `testutil` module where possible.
+
+Do not use time.Sleep; poll for events.  Even integration tests which write to disk should be fast and not require sleeps to synchronise.
+
+Use `testing.Short()` tests in tests with disk access so that the `make smoke` command is fast.
+
 # Troubleshooting
 
 For more information about debugging mtail programs, see the tips under [Troubleshooting](Troubleshooting.md)

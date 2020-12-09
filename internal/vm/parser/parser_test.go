@@ -4,6 +4,7 @@
 package parser
 
 import (
+	"flag"
 	"strings"
 	"testing"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/position"
 )
+
+var parserTestDebug = flag.Bool("parser_test_debug", false, "Turn on parser debug output if set.")
 
 var parserTests = []struct {
 	name    string
@@ -328,7 +331,7 @@ $foo =~ X {
 }
 
 func TestParserRoundTrip(t *testing.T) {
-	if testing.Verbose() {
+	if *parserTestDebug {
 		mtailDebug = 3
 	}
 	for _, tc := range parserTests {
@@ -345,8 +348,10 @@ func TestParserRoundTrip(t *testing.T) {
 				t.Fatal()
 			}
 
-			s := Sexp{}
-			t.Log("AST:\n" + s.Dump(p.root))
+			if *parserTestDebug {
+				s := Sexp{}
+				t.Log("AST:\n" + s.Dump(p.root))
+			}
 
 			u := Unparser{}
 			output := u.Unparse(p.root)
@@ -366,9 +371,7 @@ func TestParserRoundTrip(t *testing.T) {
 			u = Unparser{}
 			output2 := u.Unparse(p2.root)
 
-			if diff := testutil.Diff(output2, output); diff != "" {
-				t.Error(diff)
-			}
+			testutil.ExpectNoDiff(t, output2, output)
 		})
 	}
 }
@@ -432,7 +435,7 @@ var parserInvalidPrograms = []parserInvalidProgram{
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
-	if testing.Verbose() {
+	if *parserTestDebug {
 		mtailDebug = 3
 	}
 	for _, tc := range parserInvalidPrograms {
@@ -441,12 +444,9 @@ func TestParseInvalidPrograms(t *testing.T) {
 			p := newParser(tc.name, strings.NewReader(tc.program))
 			mtailParse(p)
 
-			diff := testutil.Diff(
+			testutil.ExpectNoDiff(t,
 				strings.Join(tc.errors, "\n"),             // want
 				strings.TrimRight(p.errors.Error(), "\n")) // got
-			if diff != "" {
-				t.Error(diff)
-			}
 		})
 	}
 }
@@ -479,15 +479,10 @@ func TestParsePositionTests(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Not t.Parallel() because the parser is not reentrant, and mtailDebug is a global.
 			root, err := Parse(tc.name, strings.NewReader(tc.program))
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.FatalIfErr(t, err)
 			p := &positionCollector{}
 			ast.Walk(p, root)
-			diff := testutil.Diff(tc.positions, p.positions, testutil.AllowUnexported(position.Position{}))
-			if diff != "" {
-				t.Error(diff)
-			}
+			testutil.ExpectNoDiff(t, tc.positions, p.positions, testutil.AllowUnexported(position.Position{}))
 		})
 	}
 }

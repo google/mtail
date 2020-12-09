@@ -72,9 +72,7 @@ func TestHandleVarz(t *testing.T) {
 				testutil.FatalIfErr(t, ms.Add(metric))
 			}
 			e, err := New(ms, Hostname("gunstar"))
-			if err != nil {
-				t.Fatalf("couldn't make exporter: %s", err)
-			}
+			testutil.FatalIfErr(t, err)
 			response := httptest.NewRecorder()
 			e.HandleVarz(response, &http.Request{})
 			if response.Code != 200 {
@@ -84,10 +82,7 @@ func TestHandleVarz(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to read response: %s", err)
 			}
-			diff := testutil.Diff(tc.expected, string(b))
-			if diff != "" {
-				t.Error(diff)
-			}
+			testutil.ExpectNoDiff(t, tc.expected, string(b))
 		})
 	}
 }

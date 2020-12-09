@@ -260,12 +260,16 @@ func doFollow(ctx context.Context, fd Log) {
 
 // watchDirname adds the directory containing a path to be watched.
 func (t *Tailer) watchDirname(pathname string) error {
+	glog.V(3).Infof("watchDirname: %s", pathname)
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
 		return err
 	}
 	d := filepath.Dir(absPath)
-	if t.HasMeta(d) {
+	for ; t.HasMeta(d); d = filepath.Dir(d) {
+	}
+	if d == "/" {
+		glog.Infof("at root after recursing, won't observe %s", absPath)
 		return nil
 	}
 	return t.w.Observe(d, t)
@@ -347,6 +351,7 @@ func (t *Tailer) handleCreateGlob(ctx context.Context, pathname string) {
 		// If this file was just created, read from the start of the file.
 		if err := t.openLogPath(pathname, true); err != nil {
 			glog.Infof("Failed to tail new file %q: %s", pathname, err)
+			continue
 		}
 		glog.V(2).Infof("started tailing %q", pathname)
 		return

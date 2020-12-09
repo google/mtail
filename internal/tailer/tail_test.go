@@ -22,9 +22,7 @@ func makeTestTail(t *testing.T) (*Tailer, *stubProcessor, *watcher.FakeWatcher, 
 	w := watcher.NewFakeWatcher()
 	llp := NewStubProcessor()
 	ta, err := New(llp, w, Context(context.Background()))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	return ta, llp, w, tmpDir, rmTmpDir
 }
 
@@ -38,9 +36,7 @@ func TestTail(t *testing.T) {
 	defer w.Close()
 
 	err := ta.TailPath(logfile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	// Tail also causes the log to be read, so no need to inject an event.
 
 	if _, ok := ta.handles[logfile]; !ok {
@@ -56,9 +52,7 @@ func TestHandleLogUpdate(t *testing.T) {
 	f := testutil.TestOpenFile(t, logfile)
 
 	err := ta.TailPath(logfile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	llp.Add(4)
 	testutil.WriteString(t, f, "a\nb\nc\nd\n")
@@ -76,9 +70,7 @@ func TestHandleLogUpdate(t *testing.T) {
 		{context.Background(), logfile, "c"},
 		{context.Background(), logfile, "d"},
 	}
-	if diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context")); diff != "" {
-		t.Errorf("result didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 // TestHandleLogTruncate writes to a file, waits for those
@@ -97,7 +89,6 @@ func TestHandleLogTruncate(t *testing.T) {
 
 	llp.Add(3)
 	testutil.WriteString(t, f, "a\nb\nc\n")
-	//time.Sleep(10 * time.Millisecond)
 	w.InjectUpdate(logfile)
 	llp.Wait()
 
@@ -108,12 +99,10 @@ func TestHandleLogTruncate(t *testing.T) {
 	_, err := f.Seek(0, 0)
 	testutil.FatalIfErr(t, err)
 	w.InjectUpdate(logfile)
-	//time.Sleep(10 * time.Millisecond)
 
 	llp.Add(2)
 	testutil.WriteString(t, f, "d\ne\n")
 	w.InjectUpdate(logfile)
-	//time.Sleep(10 * time.Millisecond)
 
 	llp.Wait()
 	if err := w.Close(); err != nil {
@@ -127,9 +116,7 @@ func TestHandleLogTruncate(t *testing.T) {
 		{context.Background(), logfile, "d"},
 		{context.Background(), logfile, "e"},
 	}
-	if diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context")); diff != "" {
-		t.Errorf("result didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
@@ -141,9 +128,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	llp.Add(1)
 
 	err := ta.TailPath(logfile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 
 	testutil.WriteString(t, f, "a")
 	//f.Seek(0, 0)
@@ -168,11 +153,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "ab"},
 	}
-	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-	if diff != "" {
-		t.Errorf("result didn't match:\n%s", diff)
-	}
-
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestTailerOpenRetries(t *testing.T) {
@@ -194,26 +175,20 @@ func TestTailerOpenRetries(t *testing.T) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
 	//w.InjectUpdate(logfile)
-	//time.Sleep(10 * time.Millisecond)
 	glog.Info("remove")
 	if err := os.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
 	w.InjectDelete(logfile)
-	//time.Sleep(10 * time.Millisecond)
 	glog.Info("openfile")
 	f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	w.InjectCreate(logfile)
-	//	time.Sleep(10 * time.Millisecond)
 	glog.Info("chmod")
 	if err := os.Chmod(logfile, 0666); err != nil {
 		t.Fatal(err)
 	}
 	w.InjectUpdate(logfile)
-	//time.Sleep(10 * time.Millisecond)
 	glog.Info("write string")
 	testutil.WriteString(t, f, "\n")
 	w.InjectUpdate(logfile)
@@ -286,10 +261,7 @@ func TestHandleLogRotate(t *testing.T) {
 		{context.Background(), logfile, "1"},
 		{context.Background(), logfile, "2"},
 	}
-	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-	if diff != "" {
-		t.Errorf("result didn't match expected:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestHandleLogRotateSignalsWrong(t *testing.T) {
@@ -316,7 +288,6 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 	glog.V(2).Info("create")
 	w.InjectCreate(logfile)
 
-	time.Sleep(1 * time.Millisecond)
 	glog.V(2).Info("delete")
 	w.InjectDelete(logfile)
 
@@ -331,10 +302,7 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 		{context.Background(), logfile, "1"},
 		{context.Background(), logfile, "2"},
 	}
-	diff := testutil.Diff(expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-	if diff != "" {
-		t.Errorf("result didn't match expected:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestTailExpireStaleHandles(t *testing.T) {

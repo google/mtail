@@ -66,9 +66,9 @@ GOYACC = $(GOBIN)/goyacc
 $(GOYACC):
 	go get $(GOGETFLAGS) golang.org/x/tools/cmd/goyacc
 
-GOFUZZBUILD = $(GOBIN)/go-fuzz-build
+GOFUZZBUILD = $(GOBIN)/go114-fuzz-build
 $(GOFUZZBUILD):
-	go get $(GOGETFLAGS) github.com/dvyukov/go-fuzz/go-fuzz-build
+	go get $(GOGETFLAGS) github.com/mdempsky/go114-fuzz-build
 
 GOFUZZ = $(GOBIN)/go-fuzz
 $(GOFUZZ):
@@ -116,6 +116,8 @@ GO_LDFLAGS += -w -s -extldflags "-static"
 export CGO_ENABLED=0
 endif
 
+GO_GCFLAGS = -e
+
 # Very specific static pattern rule to only do this for commandline targets.
 # Each commandline must be in a 'main.go' in their respective directory.  The
 # MAKEDEPEND rule generates a list of dependencies for the next make run -- the
@@ -123,7 +125,7 @@ endif
 # runs can read the dependencies and update iff they change.
 $(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d | print-version .dep-stamp
 	$(MAKEDEPEND)
-	go build -ldflags "$(GO_LDFLAGS)" -o $@ $<
+	go build -gcflags "$(GO_GCFLAGS)" -ldflags "$(GO_LDFLAGS)" -o $@ $<
 
 internal/vm/parser/parser.go: internal/vm/parser/parser.y | $(GOYACC)
 	go generate -x ./$(@D)
@@ -156,7 +158,7 @@ $(PREFIX)/bin/%: %
 	install -m 755 $< $@
 
 
-GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64 linux/ppc64"
+GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64 linux/arm linux/arm64 linux/ppc64"
 #GOX_OSARCH := ""
 
 .PHONY: crossbuild
@@ -166,26 +168,26 @@ crossbuild: $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp print-version
 
 .PHONY: test check
 check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test -timeout 10s ./...
+	go test -gcflags "$(GO_GCFLAGS)" -timeout 10s ./...
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test -timeout ${timeout} -race -v -tags=integration ./...
+	go test -gcflags "$(GO_GCFLAGS)" -timeout ${timeout} -race -v ./...
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -timeout 1s -test.short ./...
+	go test -gcflags "$(GO_GCFLAGS)" -timeout 1s -test.short ./...
 
 .PHONY: bench
 bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -tags=integration -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
+	go test -gcflags "$(GO_GCFLAGS)" -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
 
 .PHONY: bench_cpu
 bench_cpu: | print-version .dep-stamp
-	go test -tags=integration -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
+	go test -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
 .PHONY: bench_mem
 bench_mem: | print-version .dep-stamp
-	go test -tags=integration -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -memprofile=mem.out internal/mtail/examples_integration_test.go
+	go test -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -memprofile=mem.out internal/mtail/examples_integration_test.go
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
@@ -193,7 +195,7 @@ recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
 
 .PHONY: regtest
 regtest: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -v -tags=integration -timeout=${timeout} ./...
+	go test -gcflags "$(GO_GCFLAGS)" -v -timeout=${timeout} ./...
 
 TESTRESULTS ?= test-results
 TESTCOVERPROFILE ?= out.coverprofile
@@ -202,7 +204,7 @@ TESTCOVERPROFILE ?= out.coverprofile
 junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
-	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -tags=integration -v -timeout=${timeout} ./...
+	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
@@ -233,11 +235,11 @@ export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPAT
 # These flags set compatibility with OSS-Fuzz
 CXX ?= clang-9
 CXXFLAGS ?=
-LIB_FUZZING_ENGINE ?= -libfuzzer
+LIB_FUZZING_ENGINE ?= -fsanitize=fuzzer
 OUT ?= .
 
 $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
-	$(GOFUZZBUILD) -libfuzzer -o fuzzer.a ./internal/vm
+	$(GOFUZZBUILD) -o fuzzer.a ./internal/vm
 	$(CXX) $(CXXFLAGS) $(LIB_FUZZING_ENGINE) fuzzer.a -lpthread -o $(OUT)/vm-fuzzer
 
 $(OUT)/vm-fuzzer.dict: mgen
@@ -246,7 +248,7 @@ $(OUT)/vm-fuzzer.dict: mgen
 $(OUT)/vm-fuzzer_seed_corpus.zip: $(wildcard examples/*.mtail) $(wildcard internal/vm/fuzz/*.mtail)
 	zip -j $@ $^
 
-.INTERMEDIATE: SEED
+.INTERMEDIATE: SEED/*
 SEED: $(OUT)/vm-fuzzer_seed_corpus.zip
 	mkdir -p SEED
 	unzip -o -d SEED $<
@@ -258,7 +260,7 @@ fuzz: SEED $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 
 .PHONY: fuzz-regtest
 fuzz-regtest: $(OUT)/vm-fuzzer SEED
-	$(OUT)/vm-fuzzer $(wildcard SEED/*.mtail)
+	$(OUT)/vm-fuzzer -rss_limit_mb=4096 $(shell ls SEED/*.mtail)
 
 CRASH ?=
 
@@ -296,7 +298,7 @@ endif
 coverage: coverprofile
 
 coverprofile: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test -v -covermode=count -coverprofile=$@ -tags=integration -timeout=${timeout} $(PACKAGES)
+	go test -v -covermode=count -coverprofile=$@ -timeout=${timeout} $(PACKAGES)
 
 coverage.html: coverprofile | print-version
 	go tool cover -html=$< -o $@

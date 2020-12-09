@@ -62,10 +62,7 @@ func TestMetricToCollectd(t *testing.T) {
 
 	r := FakeSocketWrite(metricToCollectd, scalarMetric)
 	expected := []string{"PUTVAL \"gunstar/mtail-prog/counter-foo\" interval=60 1343124840:37\n"}
-	diff := testutil.Diff(expected, r)
-	if diff != "" {
-		t.Errorf("String didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, r)
 
 	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "label")
 	d, _ = dimensionedMetric.GetDatum("quux")
@@ -79,10 +76,7 @@ func TestMetricToCollectd(t *testing.T) {
 	expected = []string{
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
-	diff = testutil.Diff(expected, r)
-	if diff != "" {
-		t.Errorf("String didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, r)
 
 	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer, metrics.Int)
 	d, _ = timingMetric.GetDatum()
@@ -91,18 +85,12 @@ func TestMetricToCollectd(t *testing.T) {
 
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/mtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
-	diff = testutil.Diff(expected, r)
-	if diff != "" {
-		t.Errorf("String didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, r)
 
 	*collectdPrefix = prefix
 	r = FakeSocketWrite(metricToCollectd, timingMetric)
 	expected = []string{"PUTVAL \"gunstar/prefixmtail-prog/gauge-foo\" interval=60 1343124840:123\n"}
-	diff = testutil.Diff(expected, r)
-	if diff != "" {
-		t.Errorf("prefixed string didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, r)
 }
 
 func TestMetricToGraphite(t *testing.T) {
@@ -116,10 +104,7 @@ func TestMetricToGraphite(t *testing.T) {
 	datum.SetInt(d, 37, ts)
 	r := FakeSocketWrite(metricToGraphite, scalarMetric)
 	expected := []string{"prog.foo 37 1343124840\n"}
-	diff := testutil.Diff(expected, r)
-	if diff != "" {
-		t.Errorf("String didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, r)
 
 	dimensionedMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "host")
 	d, _ = dimensionedMetric.GetDatum("quux.com")
@@ -130,20 +115,14 @@ func TestMetricToGraphite(t *testing.T) {
 	expected = []string{
 		"prog.bar.host.quux_com 37 1343124840\n",
 		"prog.bar.host.snuh_teevee 37 1343124840\n"}
-	diff = testutil.Diff(expected, r)
-	if diff != "" {
-		t.Errorf("String didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, r)
 
 	*graphitePrefix = prefix
 	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
 	expected = []string{
 		"prefixprog.bar.host.quux_com 37 1343124840\n",
 		"prefixprog.bar.host.snuh_teevee 37 1343124840\n"}
-	diff = testutil.Diff(expected, r)
-	if diff != "" {
-		t.Errorf("prefixed string didn't match:\n%s", diff)
-	}
+	testutil.ExpectNoDiff(t, expected, r)
 }
 
 func TestMetricToStatsd(t *testing.T) {

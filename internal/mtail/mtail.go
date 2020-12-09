@@ -89,6 +89,7 @@ type Server struct {
 	omitMetricSource            bool           // if set, do not link the source program to a metric
 	omitProgLabel               bool           // if set, do not put the program name in the metric labels
 	emitMetricTimestamp         bool           // if set, emit the metric's recorded timestamp
+	omitDumpMetricsStore        bool           // if set, do not print the metric store; useful in test.
 }
 
 // StartTailing adds each log path pattern to the tailer.
@@ -391,13 +392,15 @@ func (m *Server) WaitForShutdown() {
 	case <-m.closeQuit:
 		glog.Info("Received quit internally, exiting...")
 	}
-	if err := m.Close(); err != nil {
+	if err := m.Close(false); err != nil {
 		glog.Warning(err)
 	}
 }
 
-// Close handles the graceful shutdown of this mtail instance, ensuring that it only occurs once.
-func (m *Server) Close() error {
+// Close handles the graceful shutdown of this mtail instance, ensuring that it
+// only occurs once.  If fast is true, then the http server is shutdown without
+// waiting.
+func (m *Server) Close(fast bool) error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		close(m.closeQuit)
@@ -416,11 +419,16 @@ func (m *Server) Close() error {
 			glog.V(2).Info("No loader, so not waiting for loader shutdown.")
 		}
 		if m.h != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			if err := m.h.Shutdown(ctx); err != nil {
-				glog.Error(err)
+			glog.Info("Shutting down http server")
+			if fast {
+				m.h.Close()
+			} else {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				if err := m.h.Shutdown(ctx); err != nil {
+					glog.Error(err)
+				}
+				cancel()
 			}
-			cancel()
 		}
 		glog.Info("END OF LINE")
 	})
@@ -439,9 +447,12 @@ func (m *Server) Run() error {
 		return err
 	}
 	if m.oneShot {
-		err := m.Close()
+		err := m.Close(true)
 		if err != nil {
 			return err
+		}
+		if m.omitDumpMetricsStore {
+			return nil
 		}
 		fmt.Printf("Metrics store:")
 		if err := m.WriteMetrics(os.Stdout); err != nil {

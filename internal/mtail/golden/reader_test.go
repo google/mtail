@@ -116,15 +116,9 @@ var expectedMetrics = map[string][]*metrics.Metric{
 
 func TestReadTestData(t *testing.T) {
 	f, err := os.Open("reader_test.golden")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, err)
 	defer f.Close()
 	store := metrics.NewStore()
 	ReadTestData(f, "reader_test", store)
-	diff := testutil.Diff(expectedMetrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
-	if diff != "" {
-		t.Error(diff)
-		t.Logf("store contains %s", store.Metrics)
-	}
+	testutil.ExpectNoDiff(t, expectedMetrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
 }
