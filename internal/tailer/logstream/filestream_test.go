@@ -13,6 +13,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/tailer/logstream"
+	"github.com/google/mtail/internal/tailer/waker"
 	"github.com/google/mtail/internal/testutil"
 )
 
@@ -25,15 +26,16 @@ func TestFileStreamRead(t *testing.T) {
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
 	ps := NewStubProcessor()
+	waker, awaken := waker.NewTest(1) // Just one waker to wait on.
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fs, err := logstream.New(ctx, &wg, name, ps)
+	fs, err := logstream.New(ctx, &wg, waker, name, ps)
 	testutil.FatalIfErr(t, err)
-	fs.Wake() // Synchronise past first read after seekToEnd
+	awaken()
 
 	ps.ExpectLinesReceived(1)
 	testutil.WriteString(t, f, "yo\n")
-	fs.Wake()
+	awaken()
 
 	ps.Verify()
 	expected := []logline.LogLine{
@@ -57,18 +59,19 @@ func TestFileStreamRotation(t *testing.T) {
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
 	ps := NewStubProcessor()
+	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	fs, err := logstream.New(ctx, &wg, name, ps)
+	_, err := logstream.New(ctx, &wg, waker, name, ps)
 	testutil.FatalIfErr(t, err)
-	fs.Wake() // Synchronise past first read after seekToEnd
+	awaken()
 
 	ps.ExpectLinesReceived(2)
 
 	glog.Info("write 1")
 	testutil.WriteString(t, f, "1\n")
-	fs.Wake()
+	awaken()
 
 	testutil.FatalIfErr(t, os.Rename(name, name+".1"))
 
@@ -98,21 +101,22 @@ func TestFileStreamTruncation(t *testing.T) {
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.OpenLogFile(t, name)
 	ps := NewStubProcessor()
+	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fs, err := logstream.New(ctx, &wg, name, ps)
+	_, err := logstream.New(ctx, &wg, waker, name, ps)
 	testutil.FatalIfErr(t, err)
-	fs.Wake() // Synchronise past first read after seekToEnd
+	awaken() // Synchronise past first read after seekToEnd
 
 	ps.ExpectLinesReceived(3)
 
 	testutil.WriteString(t, f, "1\n2\n")
-	fs.Wake()
+	awaken()
 	testutil.FatalIfErr(t, f.Close())
-	fs.Wake()
+	awaken()
 	f = testutil.OpenLogFile(t, name)
 	testutil.WriteString(t, f, "3\n")
-	fs.Wake()
+	awaken()
 
 	ps.Verify()
 
@@ -137,19 +141,20 @@ func TestFileStreamFinishedBecauseRemoved(t *testing.T) {
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
 	ps := NewStubProcessor()
+	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fs, err := logstream.New(ctx, &wg, name, ps)
+	fs, err := logstream.New(ctx, &wg, waker, name, ps)
 	testutil.FatalIfErr(t, err)
-	fs.Wake() // Synchronise past first read after seekToEnd
+	awaken() // Synchronise past first read after seekToEnd
 
 	ps.ExpectLinesReceived(1)
 	testutil.WriteString(t, f, "yo\n")
-	fs.Wake()
+	go awaken()
 
 	testutil.FatalIfErr(t, f.Close())
 	testutil.FatalIfErr(t, os.Remove(name))
-	//fs.Wake() -- deadlock as IsFinished() , TODO(jaq) nonblocking wake
+	//awaken() //-- deadlock as IsFinished() , TODO(jaq) nonblocking wake
 
 	ps.Verify()
 	expected := []logline.LogLine{
@@ -157,10 +162,10 @@ func TestFileStreamFinishedBecauseRemoved(t *testing.T) {
 	}
 	testutil.ExpectNoDiff(t, expected, ps.Result(), testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
+	wg.Wait() // don't cancel first, so that we exit from the file not found
+
 	if !fs.IsFinished() {
 		t.Errorf("expecting filestream to be closed because log was removed")
 	}
-
 	cancel()
-	wg.Wait()
 }

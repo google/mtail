@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
+	"github.com/google/mtail/internal/tailer/waker"
 )
 
 // fileStream streams log lines from a regular file on the file system.  These
@@ -22,24 +23,25 @@ import (
 // valid until EOF at which point it's considered finished.  A truncation means
 // the same file descriptor is used but the file offset will be reset to 0.
 // The latter is potentially lossy as far as mtail is concerned, if the last
-// logs are not read before truncation occurs.  When an EOF is read, the goroutine tests for both truncation and inode change and resets or spins off a new goroutine and closes itself down.
-// The shared context is used for cancellation.
+// logs are not read before truncation occurs.  When an EOF is read, the
+// goroutine tests for both truncation and inode change and resets or spins off
+// a new goroutine and closes itself down.  The shared context is used for
+// cancellation.
 type fileStream struct {
 	ctx          context.Context
 	pathname     string    // Given name for the underlying file on the filesystem
 	lastReadTime time.Time // Last time a log line was read from this file
 	llp          logline.Processor
-	wakeChannel  chan struct{}
 
 	finishedMu sync.Mutex // protects `finished`
 	finished   bool       // The filestream is finished and can no longer be used.
 }
 
 // newFileStream creates a new log stream from a regular file.
-func newFileStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
-	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, wakeChannel: make(chan struct{}, 0)}
+func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
+	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp}
 	wg.Add(1)
-	go fs.read(ctx, wg, fi, true)
+	go fs.read(ctx, wg, waker, fi, true)
 	return fs, nil
 }
 
@@ -47,11 +49,7 @@ func (fs *fileStream) LastReadTime() time.Time {
 	return fs.lastReadTime
 }
 
-func (fs *fileStream) Wake() {
-	fs.wakeChannel <- struct{}{}
-}
-
-func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileInfo, seekToEnd bool) {
+func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, seekToEnd bool) {
 	defer wg.Done()
 	fd, err := os.OpenFile(fs.pathname, os.O_RDONLY, 0600)
 	if err != nil {
@@ -103,7 +101,7 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 			if !os.SameFile(fi, newfi) {
 				glog.Infof("%v:adding a new file routine", fd)
 				wg.Add(1)
-				go fs.read(ctx, wg, newfi, false)
+				go fs.read(ctx, wg, waker, newfi, false)
 				// We're at EOF so there's nothing left to read here.
 				return
 			}
@@ -137,15 +135,6 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 			}
 			glog.Info("waiting")
 			select {
-			case e := <-fs.wakeChannel:
-				// sleep until next Wake()
-				glog.Infof("%v: Wake received", fd)
-				select {
-				case fs.wakeChannel <- e:
-					glog.Infof("%v: resending wake", fd)
-					// send to next listener if any
-				default:
-				}
 			case <-ctx.Done():
 				if partial.Len() > 0 {
 					sendLine(ctx, fs.pathname, partial, fs.llp)
@@ -154,6 +143,9 @@ func (fs *fileStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 				fs.finished = true
 				fs.finishedMu.Unlock()
 				return
+			case <-waker.Wake():
+				// sleep until next Wake()
+				glog.Infof("%v: Wake received", fd)
 			}
 		}
 	}

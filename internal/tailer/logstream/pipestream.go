@@ -14,24 +14,23 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
+	"github.com/google/mtail/internal/tailer/waker"
 )
 
 type pipeStream struct {
 	ctx          context.Context
 	pathname     string    // Given name for the underlying named pipe on the filesystem
 	lastReadTime time.Time // Last time a log line was read from this named pipe
-	file         *os.File  // The file descriptor of the open pipe
 	llp          logline.Processor
-	wakeChannel  chan struct{}
 
 	finishedMu sync.Mutex // protects `finished`
 	finished   bool       // This pipestream is finished and can no longer be used.
 }
 
-func newPipeStream(ctx context.Context, wg *sync.WaitGroup, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
-	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, wakeChannel: make(chan struct{}, 1)}
+func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
+	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp}
 	wg.Add(1)
-	go ps.read(ctx, wg, fi)
+	go ps.read(ctx, wg, waker, fi)
 	return ps, nil
 }
 
@@ -39,11 +38,7 @@ func (ps *pipeStream) LastReadTime() time.Time {
 	return ps.lastReadTime
 }
 
-func (ps *pipeStream) Wake() {
-	ps.wakeChannel <- struct{}{}
-}
-
-func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileInfo) {
+func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo) {
 	defer wg.Done()
 	// Open in nonblocking mode because the write end of the pipe may not have started yet.
 	fd, err := os.OpenFile(ps.pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
@@ -89,13 +84,13 @@ func (ps *pipeStream) read(ctx context.Context, wg *sync.WaitGroup, fi os.FileIn
 		}
 	Sleep:
 		select {
-		case <-ps.wakeChannel:
-			// sleep until next Wake()
 		case <-ctx.Done():
 			ps.finishedMu.Lock()
 			ps.finished = true
 			ps.finishedMu.Unlock()
 			return
+		case <-waker.Wake():
+			// sleep until next Wake()
 		}
 	}
 }

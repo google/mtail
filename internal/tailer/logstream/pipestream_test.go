@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/tailer/logstream"
+	"github.com/google/mtail/internal/tailer/waker"
 	"github.com/google/mtail/internal/testutil"
 	"golang.org/x/sys/unix"
 )
@@ -29,14 +30,15 @@ func TestPipeStreamRead(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	sp := NewStubProcessor()
+	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ps, err := logstream.New(ctx, &wg, name, sp)
+	ps, err := logstream.New(ctx, &wg, waker, name, sp)
 	testutil.FatalIfErr(t, err)
 
 	sp.ExpectLinesReceived(1)
 	testutil.WriteString(t, f, "1\n")
-	ps.Wake()
+	awaken()
 
 	sp.Verify()
 	expected := []logline.LogLine{
@@ -65,17 +67,18 @@ func TestPipeStreamFinishedBecauseClosed(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	sp := NewStubProcessor()
+	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ps, err := logstream.New(ctx, &wg, name, sp)
+	ps, err := logstream.New(ctx, &wg, waker, name, sp)
 	testutil.FatalIfErr(t, err)
 
 	sp.ExpectLinesReceived(1)
 	testutil.WriteString(t, f, "1\n")
-	ps.Wake()
+	awaken()
 
 	testutil.FatalIfErr(t, f.Close())
-	ps.Wake()
+	//awaken()
 
 	sp.Verify()
 	expected := []logline.LogLine{

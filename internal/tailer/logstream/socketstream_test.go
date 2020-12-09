@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/tailer/logstream"
+	"github.com/google/mtail/internal/tailer/waker"
 	"github.com/google/mtail/internal/testutil"
 )
 
@@ -25,11 +26,12 @@ func TestSocketStreamRead(t *testing.T) {
 	name := filepath.Join(tmpDir, "sock")
 
 	sp := NewStubProcessor()
+	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ss, err := logstream.New(ctx, &wg, name, sp)
+	ss, err := logstream.New(ctx, &wg, waker, name, sp)
 	testutil.FatalIfErr(t, err)
-	ss.Wake() // Synchronise past socket creation
+	awaken() // Synchronise past socket creation
 
 	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
 	testutil.FatalIfErr(t, err)
@@ -37,7 +39,7 @@ func TestSocketStreamRead(t *testing.T) {
 	sp.ExpectLinesReceived(1)
 	_, err = s.Write([]byte("1\n"))
 	testutil.FatalIfErr(t, err)
-	ss.Wake()
+	awaken()
 
 	sp.Verify()
 	expected := []logline.LogLine{
@@ -63,11 +65,12 @@ func TestSocketStreamFinishedBecauseClose(t *testing.T) {
 	name := filepath.Join(tmpDir, "sock")
 
 	sp := NewStubProcessor()
+	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ss, err := logstream.New(ctx, &wg, name, sp)
+	ss, err := logstream.New(ctx, &wg, waker, name, sp)
 	testutil.FatalIfErr(t, err)
-	ss.Wake() // Synchronise past socket creation
+	awaken() // Synchronise past socket creation
 
 	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
 	testutil.FatalIfErr(t, err)
@@ -75,10 +78,10 @@ func TestSocketStreamFinishedBecauseClose(t *testing.T) {
 	sp.ExpectLinesReceived(1)
 	_, err = s.Write([]byte("1\n"))
 	testutil.FatalIfErr(t, err)
-	ss.Wake()
+	awaken()
 
 	testutil.FatalIfErr(t, s.Close())
-	ss.Wake()
+	awaken()
 
 	sp.Verify()
 	expected := []logline.LogLine{
