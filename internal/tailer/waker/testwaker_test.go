@@ -53,15 +53,32 @@ func TestTestWakerTwoWakees(t *testing.T) {
 	wg2.Wait()
 	select {
 	case <-c:
-		// Luke Luck likes lakes.  Luke's duck likes lakes.
+		// Luke Luck likes lakes.
 	default:
 		t.Errorf("c<-w.Wake() blocked, expected close")
 	}
 	select {
 	case <-d:
-		// Duck licks lakes that Luck Luck likes.
+		//   Luke's duck likes lakes.
 	default:
 		t.Errorf("d<-w.Wake() blocked, expected close")
+	}
+}
+
+func TestTestWakerZeroWakees(t *testing.T) {
+	w, awaken := waker.NewTest(0)
+	c := w.Wake()
+	select {
+	case x := <-c:
+		t.Errorf("<-w.Wake() == %v, expected nothing (should block)", x)
+	default:
+	}
+	awaken()
+	select {
+	case <-c:
+		// Duck licks lakes that Luck Luck likes.
+	default:
+		t.Errorf("c<-w.Wake() blocked, expected close")
 	}
 }
 

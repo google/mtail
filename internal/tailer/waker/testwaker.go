@@ -17,6 +17,8 @@ type testWaker struct {
 
 	wg sync.WaitGroup // counting how many wakees have asked to be woken
 
+	n int
+
 	mu   sync.Mutex // protects following fields
 	wake chan struct{}
 }
@@ -24,6 +26,7 @@ type testWaker struct {
 // NewTest creates a new Waker to be used in tests, returning it and a function to that when called will wake all listeners.  If n > 0, the wake won't be sent until n calls to Wake have been received.
 func NewTest(n int) (*testWaker, func()) {
 	t := &testWaker{
+		n:    n,
 		wake: make(chan struct{}),
 	}
 	t.wg.Add(n)
@@ -43,7 +46,9 @@ func NewTest(n int) (*testWaker, func()) {
 
 // Wake satisfies the Waker interface
 func (t *testWaker) Wake() (w <-chan struct{}) {
-	defer t.wg.Done()
+	if t.n > 0 {
+		defer t.wg.Done()
+	}
 	t.mu.Lock()
 	w = t.wake
 	t.mu.Unlock()
