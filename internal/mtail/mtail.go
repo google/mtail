@@ -70,6 +70,7 @@ type Server struct {
 	closeOnce sync.Once     // Ensure shutdown happens only once.
 
 	bindAddress        string    // address to bind HTTP server
+	bindUnixSocket     string    // path of the UNIX socket to bind HTTP server
 	buildInfo          BuildInfo // go build information
 	programPath        string    // path to programs to load
 	logPathPatterns    []string  // list of patterns to watch for log files to tail
@@ -316,7 +317,7 @@ func (m *Server) WriteMetrics(w io.Writer) error {
 
 // Serve begins the webserver and awaits a shutdown instruction.
 func (m *Server) Serve() error {
-	if m.bindAddress == "" {
+	if m.bindAddress == "" && m.bindUnixSocket == "" {
 		return errors.Errorf("No bind address provided.")
 	}
 	mux := http.NewServeMux()
@@ -339,7 +340,12 @@ func (m *Server) Serve() error {
 
 	errc := make(chan error, 1)
 	go func() {
-		glog.Infof("Listening on %s", m.listener.Addr())
+		if m.bindAddress != "" {
+			glog.Infof("Listening on %s", m.listener.Addr())
+		} else {
+			glog.Infof("Listening on UNIX socket %s", m.bindUnixSocket)
+		}
+
 		err := m.h.Serve(m.listener)
 
 		if err == http.ErrServerClosed {

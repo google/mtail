@@ -36,6 +36,7 @@ var logs seqStringFlag
 var (
 	port               = flag.String("port", "3903", "HTTP port to listen on.")
 	address            = flag.String("address", "", "Host or IP address on which to bind HTTP listener")
+	unixSocket         = flag.String("unix_socket", "", "UNIX Socket to listen on")
 	progs              = flag.String("progs", "", "Name of the directory containing mtail programs")
 	ignoreRegexPattern = flag.String("ignore_filename_regex_pattern", "", "")
 
@@ -142,11 +143,15 @@ func main() {
 		mtail.ProgramPath(*progs),
 		mtail.LogPathPatterns(logs...),
 		mtail.IgnoreRegexPattern(*ignoreRegexPattern),
-		mtail.BindAddress(*address, *port),
 		mtail.SetBuildInfo(buildInfo),
 		mtail.OverrideLocation(loc),
 		mtail.ExpiredMetricGcTickInterval(*expiredMetricGcTickInterval),
 		mtail.StaleLogGcTickInterval(*staleLogGcTickInterval),
+	}
+	if *unixSocket == "" {
+		opts = append(opts, mtail.BindAddress(*address, *port))
+	} else {
+		opts = append(opts, mtail.BindUnixSocket(*unixSocket))
 	}
 	if *oneShot {
 		opts = append(opts, mtail.OneShot)
