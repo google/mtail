@@ -14,7 +14,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/internal/tailer/waker"
+	"github.com/google/mtail/internal/waker"
 )
 
 type pipeStream struct {

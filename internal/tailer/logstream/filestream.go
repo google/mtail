@@ -13,7 +13,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/internal/tailer/waker"
+	"github.com/google/mtail/internal/waker"
 )
 
 // fileStream streams log lines from a regular file on the file system.  These

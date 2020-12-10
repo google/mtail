@@ -12,8 +12,8 @@ import (
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/tailer/logstream"
-	"github.com/google/mtail/internal/tailer/waker"
 	"github.com/google/mtail/internal/testutil"
+	"github.com/google/mtail/internal/waker"
 )
 
 func TestSocketStreamRead(t *testing.T) {

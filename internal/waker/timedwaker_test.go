@@ -7,10 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/mtail/internal/tailer/waker"
+	"github.com/google/mtail/internal/waker"
 )
-
-const shortDuration = 1 * time.Millisecond
 
 func TestTimedWakerWakes(t *testing.T) {
 	w, cancel := waker.NewTimed(10 * time.Millisecond)
