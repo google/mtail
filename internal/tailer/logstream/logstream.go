@@ -34,15 +34,16 @@ const defaultReadBufferSize = 4096
 // New creates a LogStream from the file object located at the absolute path
 // `pathname`.  The LogStream will watch `ctx` for a cancellation signal, and
 // notify the `wg` when it is Done.  Log lines will be sent to the `llp` per
-// the `logline.Processor` interface specification.
-func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, llp logline.Processor) (LogStream, error) {
+// the `logline.Processor` interface specification.  `seekToStart` is only used
+// for testing and only works for regular files that can be seeked.
+func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, llp logline.Processor, seekToStart bool) (LogStream, error) {
 	fi, err := os.Stat(pathname)
 	if err != nil {
 		return nil, err
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():
-		return newFileStream(ctx, wg, waker, pathname, fi, llp)
+		return newFileStream(ctx, wg, waker, pathname, fi, llp, seekToStart)
 	case m&os.ModeType == os.ModeNamedPipe:
 		return newPipeStream(ctx, wg, waker, pathname, fi, llp)
 	case m&os.ModeType == os.ModeSocket:

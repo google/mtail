@@ -29,7 +29,7 @@ func TestFileStreamRead(t *testing.T) {
 	waker, awaken := waker.NewTest(1) // Just one waker to wait on.
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fs, err := logstream.New(ctx, &wg, waker, name, ps)
+	fs, err := logstream.New(ctx, &wg, waker, name, ps, true)
 	testutil.FatalIfErr(t, err)
 	awaken()
 
@@ -63,7 +63,7 @@ func TestFileStreamRotation(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	_, err := logstream.New(ctx, &wg, waker, name, ps)
+	_, err := logstream.New(ctx, &wg, waker, name, ps, true)
 	testutil.FatalIfErr(t, err)
 	awaken()
 
@@ -104,7 +104,7 @@ func TestFileStreamTruncation(t *testing.T) {
 	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	_, err := logstream.New(ctx, &wg, waker, name, ps)
+	_, err := logstream.New(ctx, &wg, waker, name, ps, true)
 	testutil.FatalIfErr(t, err)
 	awaken() // Synchronise past first read after seekToEnd
 
@@ -144,7 +144,7 @@ func TestFileStreamFinishedBecauseRemoved(t *testing.T) {
 	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fs, err := logstream.New(ctx, &wg, waker, name, ps)
+	fs, err := logstream.New(ctx, &wg, waker, name, ps, true)
 	testutil.FatalIfErr(t, err)
 	awaken() // Synchronise past first read after seekToEnd
 
@@ -166,6 +166,71 @@ func TestFileStreamFinishedBecauseRemoved(t *testing.T) {
 
 	if !fs.IsFinished() {
 		t.Errorf("expecting filestream to be closed because log was removed")
+	}
+	cancel()
+}
+
+func TestFileStreamPartialRead(t *testing.T) {
+	var wg sync.WaitGroup
+
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+
+	name := filepath.Join(tmpDir, "log")
+	f := testutil.TestOpenFile(t, name)
+	ps := NewStubProcessor()
+	waker, awaken := waker.NewTest(1) // Just one waker to wait on.
+
+	ctx, cancel := context.WithCancel(context.Background())
+	fs, err := logstream.New(ctx, &wg, waker, name, ps, true)
+	testutil.FatalIfErr(t, err)
+	awaken()
+
+	ps.ExpectLinesReceived(0)
+	testutil.WriteString(t, f, "yo")
+	awaken()
+	ps.Verify()
+
+	expected := []logline.LogLine{}
+	testutil.ExpectNoDiff(t, expected, ps.Result(), testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	ps.ExpectLinesReceived(1)
+	testutil.WriteString(t, f, "\n")
+	awaken()
+	ps.Verify()
+
+	expected = []logline.LogLine{
+		{context.TODO(), name, "yo"},
+	}
+	testutil.ExpectNoDiff(t, expected, ps.Result(), testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	cancel()
+	wg.Wait()
+
+	if !fs.IsFinished() {
+		t.Errorf("expecting filestream to be closed because cancellation")
+	}
+}
+
+func TestFileStreamOpenFailure(t *testing.T) {
+	// can't force a permission denied if run as root
+	testutil.SkipIfRoot(t)
+	var wg sync.WaitGroup
+
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+
+	name := filepath.Join(tmpDir, "log")
+	_, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
+	testutil.FatalIfErr(t, err)
+
+	ps := NewStubProcessor()
+	waker, _ := waker.NewTest(0)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	_, err = logstream.New(ctx, &wg, waker, name, ps, true)
+	if err == nil || !os.IsPermission(err) {
+		t.Errorf("Expected a permission denied error, got: %v", err)
 	}
 	cancel()
 }

@@ -29,8 +29,9 @@ type socketStream struct {
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
 	ss := &socketStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp}
-	wg.Add(1)
-	go ss.read(ctx, wg, waker, fi)
+	if err := ss.stream(ctx, wg, waker, fi); err != nil {
+		return nil, err
+	}
 	return ss, nil
 }
 
@@ -38,54 +39,57 @@ func (ss *socketStream) LastReadTime() time.Time {
 	return ss.lastReadTime
 }
 
-func (ss *socketStream) read(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo) {
-	defer wg.Done()
+func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo) error {
 	c, err := net.ListenUnixgram("unixgram", &net.UnixAddr{ss.pathname, "unixgram"})
 	if err != nil {
-		glog.Info(err)
+		return err
 	}
-	defer func() {
-		err := c.Close()
-		if err != nil {
-			glog.Info(err)
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		defer func() {
+			err := c.Close()
+			if err != nil {
+				glog.Info(err)
+			}
+		}()
+		b := make([]byte, 0, defaultReadBufferSize)
+		capB := cap(b)
+		partial := bytes.NewBufferString("")
+		for {
+			if err := c.SetReadDeadline(time.Now().Add(defaultReadTimeout)); err != nil {
+				glog.V(2).Infof("%s: %s", ss.pathname, err)
+			}
+
+			n, err := c.Read(b[:capB])
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				// Like pipestream, if timeout then sleep and wait for a context
+				// cancellation.
+				goto Sleep
+			}
+			// EOF means socket closed, so this socketstream is now finished.
+			if err == io.EOF {
+				ss.finishedMu.Lock()
+				ss.finished = true
+				ss.finishedMu.Unlock()
+				return
+			}
+
+			decodeAndSend(ss.ctx, ss.llp, ss.pathname, n, b[:n], partial)
+
+			if n > 0 {
+				ss.lastReadTime = time.Now()
+			}
+		Sleep:
+			select {
+			case <-ctx.Done():
+				return
+			case <-waker.Wake():
+				// sleep to next Wake()
+			}
 		}
 	}()
-	b := make([]byte, 0, defaultReadBufferSize)
-	capB := cap(b)
-	partial := bytes.NewBufferString("")
-	for {
-		if err := c.SetReadDeadline(time.Now().Add(defaultReadTimeout)); err != nil {
-			glog.V(2).Infof("%s: %s", ss.pathname, err)
-		}
-
-		n, err := c.Read(b[:capB])
-		if err, ok := err.(net.Error); ok && err.Timeout() {
-			// Like pipestream, if timeout then sleep and wait for a context
-			// cancellation.
-			goto Sleep
-		}
-		// EOF means socket closed, so this socketstream is now finished.
-		if err == io.EOF {
-			ss.finishedMu.Lock()
-			ss.finished = true
-			ss.finishedMu.Unlock()
-			return
-		}
-
-		decodeAndSend(ss.ctx, ss.llp, ss.pathname, n, b[:n], partial)
-
-		if n > 0 {
-			// Don't bother updating lastRead until we return. // TODO: bug?
-			ss.lastReadTime = time.Now()
-		}
-	Sleep:
-		select {
-		case <-ctx.Done():
-			return
-		case <-waker.Wake():
-			// sleep to next Wake()
-		}
-	}
+	return nil
 }
 
 func (ss *socketStream) IsFinished() bool {

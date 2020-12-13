@@ -29,7 +29,7 @@ func TestSocketStreamRead(t *testing.T) {
 	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ss, err := logstream.New(ctx, &wg, waker, name, sp)
+	ss, err := logstream.New(ctx, &wg, waker, name, sp, false)
 	testutil.FatalIfErr(t, err)
 	awaken() // Synchronise past socket creation
 
@@ -68,7 +68,7 @@ func TestSocketStreamFinishedBecauseClose(t *testing.T) {
 	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ss, err := logstream.New(ctx, &wg, waker, name, sp)
+	ss, err := logstream.New(ctx, &wg, waker, name, sp, false)
 	testutil.FatalIfErr(t, err)
 	awaken() // Synchronise past socket creation
 

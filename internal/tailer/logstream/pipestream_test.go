@@ -33,7 +33,7 @@ func TestPipeStreamRead(t *testing.T) {
 	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ps, err := logstream.New(ctx, &wg, waker, name, sp)
+	ps, err := logstream.New(ctx, &wg, waker, name, sp, false)
 	testutil.FatalIfErr(t, err)
 
 	sp.ExpectLinesReceived(1)
@@ -70,7 +70,7 @@ func TestPipeStreamFinishedBecauseClosed(t *testing.T) {
 	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ps, err := logstream.New(ctx, &wg, waker, name, sp)
+	ps, err := logstream.New(ctx, &wg, waker, name, sp, false)
 	testutil.FatalIfErr(t, err)
 
 	sp.ExpectLinesReceived(1)
