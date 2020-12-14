@@ -55,6 +55,9 @@ type Tailer struct {
 	oneShot bool
 }
 
+// Option defines a new type for setting constructor options in the Tailer.
+type Option func(*Tailer) error
+
 // OneShot puts the tailer in one-shot mode.
 func OneShot(t *Tailer) error {
 	t.oneShot = true
@@ -62,7 +65,7 @@ func OneShot(t *Tailer) error {
 }
 
 // Context sets the context of the tailer
-func Context(ctx context.Context) func(*Tailer) error {
+func Context(ctx context.Context) Option {
 	return func(t *Tailer) error {
 		t.ctx = ctx
 		return nil
@@ -70,7 +73,7 @@ func Context(ctx context.Context) func(*Tailer) error {
 }
 
 // New creates a new Tailer.
-func New(llp logline.Processor, w watcher.Watcher, options ...func(*Tailer) error) (*Tailer, error) {
+func New(llp logline.Processor, w watcher.Watcher, options ...Option) (*Tailer, error) {
 	if w == nil {
 		return nil, errors.New("can't create tailer without W")
 	}
@@ -87,7 +90,7 @@ func New(llp logline.Processor, w watcher.Watcher, options ...func(*Tailer) erro
 }
 
 // SetOption takes one or more option functions and applies them in order to Tailer.
-func (t *Tailer) SetOption(options ...func(*Tailer) error) error {
+func (t *Tailer) SetOption(options ...Option) error {
 	for _, option := range options {
 		if err := option(t); err != nil {
 			return err
