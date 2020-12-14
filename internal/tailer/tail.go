@@ -55,35 +55,41 @@ type Tailer struct {
 	oneShot bool
 }
 
-// Option defines a new type for setting constructor options in the Tailer.
-type Option func(*Tailer) error
+// Option configures a Tailer.
+type Option interface {
+	apply(*Tailer) error
+}
 
-// OneShot option puts the tailer in one-shot mode, where sources are read once from the start and then closed.
+type oneShot struct{}
+
+func (_ oneShot) apply(t *Tailer) error {
+	t.oneShot = true
+	return nil
+}
+
+// OneShot puts the tailer in one-shot mode, where sources are read once from the start and then closed.
 func OneShot() Option {
-	return func(t *Tailer) error {
-		t.oneShot = true
-		return nil
-	}
+	return &oneShot{}
 }
 
 // LogPatterns sets the glob patterns to use to match pathnames.
-func LogPatterns(patterns []string) Option {
-	return func(t *Tailer) error {
-		for _, p := range patterns {
-			if err := t.AddPattern(p); err != nil {
-				return err
-			}
+type LogPatterns []string
+
+func (opt LogPatterns) apply(t *Tailer) error {
+	for _, p := range opt {
+		if err := t.AddPattern(p); err != nil {
+			return err
 		}
-		return nil
 	}
+	return nil
 }
 
 // IgnoreRegex sets the regular expression to use to filter away pathnames that match the LogPatterns glob
-func IgnoreRegex(regex string) Option {
-	return func(t *Tailer) error {
-		t.SetIgnorePattern(regex)
-		return nil
-	}
+type IgnoreRegex string
+
+func (opt IgnoreRegex) apply(t *Tailer) error {
+	t.SetIgnorePattern(string(opt))
+	return nil
 }
 
 // New creates a new Tailer.
@@ -107,7 +113,7 @@ func New(ctx context.Context, llp logline.Processor, w watcher.Watcher, options 
 // SetOption takes one or more option functions and applies them in order to Tailer.
 func (t *Tailer) SetOption(options ...Option) error {
 	for _, option := range options {
-		if err := option(t); err != nil {
+		if err := option.apply(t); err != nil {
 			return err
 		}
 	}
