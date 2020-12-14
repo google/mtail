@@ -66,14 +66,6 @@ func OneShot() Option {
 	}
 }
 
-// Context sets the context of the tailer
-func Context(ctx context.Context) Option {
-	return func(t *Tailer) error {
-		t.ctx = ctx
-		return nil
-	}
-}
-
 // LogPatterns sets the glob patterns to use to match pathnames.
 func LogPatterns(patterns []string) Option {
 	return func(t *Tailer) error {
@@ -95,13 +87,14 @@ func IgnoreRegex(regex string) Option {
 }
 
 // New creates a new Tailer.
-func New(llp logline.Processor, w watcher.Watcher, options ...Option) (*Tailer, error) {
+func New(ctx context.Context, llp logline.Processor, w watcher.Watcher, options ...Option) (*Tailer, error) {
 	if w == nil {
 		return nil, errors.New("can't create tailer without W")
 	}
 	t := &Tailer{
-		llp:          llp,
 		w:            w,
+		ctx:          ctx,
+		llp:          llp,
 		handles:      make(map[string]Log),
 		globPatterns: make(map[string]struct{}),
 	}

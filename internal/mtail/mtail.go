@@ -191,9 +191,7 @@ func (m *Server) initExporter() (err error) {
 
 // initTailer sets up a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
-	opts := []tailer.Option{
-		tailer.Context(context.Background()),
-	}
+	opts := []tailer.Option{}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot())
 	}
@@ -203,7 +201,7 @@ func (m *Server) initTailer() (err error) {
 	if len(m.logPathPatterns) > 0 {
 		opts = append(opts, tailer.LogPatterns(m.logPathPatterns))
 	}
-	m.t, err = tailer.New(m.l, m.w, opts...)
+	m.t, err = tailer.New(context.Background(), m.l, m.w, opts...)
 	return
 }
 
