@@ -95,9 +95,6 @@ type Server struct {
 // StartTailing adds each log path pattern to the tailer.
 func (m *Server) StartTailing() error {
 	var err error
-	if err = m.t.SetIgnorePattern(m.ignoreRegexPattern); err != nil {
-		glog.Warning(err)
-	}
 	for _, pattern := range m.logPathPatterns {
 		glog.V(1).Infof("Tail pattern %q", pattern)
 		if err = m.t.TailPattern(pattern); err != nil {
@@ -198,7 +195,13 @@ func (m *Server) initTailer() (err error) {
 		tailer.Context(context.Background()),
 	}
 	if m.oneShot {
-		opts = append(opts, tailer.OneShot)
+		opts = append(opts, tailer.OneShot())
+	}
+	if m.ignoreRegexPattern != "" {
+		opts = append(opts, tailer.IgnoreRegex(m.ignoreRegexPattern))
+	}
+	if len(m.logPathPatterns) > 0 {
+		opts = append(opts, tailer.LogPatterns(m.logPathPatterns))
 	}
 	m.t, err = tailer.New(m.l, m.w, opts...)
 	return

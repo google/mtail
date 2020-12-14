@@ -58,16 +58,38 @@ type Tailer struct {
 // Option defines a new type for setting constructor options in the Tailer.
 type Option func(*Tailer) error
 
-// OneShot puts the tailer in one-shot mode.
-func OneShot(t *Tailer) error {
-	t.oneShot = true
-	return nil
+// OneShot option puts the tailer in one-shot mode, where sources are read once from the start and then closed.
+func OneShot() Option {
+	return func(t *Tailer) error {
+		t.oneShot = true
+		return nil
+	}
 }
 
 // Context sets the context of the tailer
 func Context(ctx context.Context) Option {
 	return func(t *Tailer) error {
 		t.ctx = ctx
+		return nil
+	}
+}
+
+// LogPatterns sets the glob patterns to use to match pathnames.
+func LogPatterns(patterns []string) Option {
+	return func(t *Tailer) error {
+		for _, p := range patterns {
+			if err := t.AddPattern(p); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+// IgnoreRegex sets the regular expression to use to filter away pathnames that match the LogPatterns glob
+func IgnoreRegex(regex string) Option {
+	return func(t *Tailer) error {
+		t.SetIgnorePattern(regex)
 		return nil
 	}
 }

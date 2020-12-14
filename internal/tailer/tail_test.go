@@ -218,7 +218,7 @@ func TestTailerInitErrors(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error %s", err)
 	}
-	_, err = New(lines, w, OneShot)
+	_, err = New(lines, w, OneShot())
 	if err != nil {
 		t.Errorf("unexpected error %s", err)
 	}
