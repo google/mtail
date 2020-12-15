@@ -23,6 +23,8 @@ jobs:
       - name: automerge
         if: github.actor == 'jaqx0r' || github.actor == 'dependabot[bot]'
         uses: "pascalgn/automerge-action@v0.12.0"
+        with:
+          args: "--trace"
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           MERGE_LABELS: ""
