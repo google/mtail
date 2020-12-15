@@ -41,9 +41,10 @@ var (
 // lines from files. It also handles new log file creation events and log
 // rotations.
 type Tailer struct {
-	w   watcher.Watcher
-	ctx context.Context
-	llp logline.Processor
+	w      watcher.Watcher
+	ctx    context.Context
+	cancel context.CancelFunc
+	llp    logline.Processor
 
 	handlesMu sync.RWMutex   // protects `handles'
 	handles   map[string]Log // Log handles for each pathname.
@@ -115,11 +116,12 @@ func New(ctx context.Context, llp logline.Processor, w watcher.Watcher, options 
 	}
 	t := &Tailer{
 		w:            w,
-		ctx:          ctx,
 		llp:          llp,
 		handles:      make(map[string]Log),
 		globPatterns: make(map[string]struct{}),
 	}
+	// At the moment we do our own cancellation, so save it here.
+	t.ctx, t.cancel = context.WithCancel(ctx)
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
@@ -404,6 +406,7 @@ func (t *Tailer) Close() error {
 	if err := t.w.Close(); err != nil {
 		return err
 	}
+	t.cancel()
 	return nil
 }
 
