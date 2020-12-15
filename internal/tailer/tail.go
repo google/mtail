@@ -92,6 +92,22 @@ func (opt IgnoreRegex) apply(t *Tailer) error {
 	return nil
 }
 
+// StaleLogGcTickInterval sets the time between garbage collection runs for stale logs in the tailer.
+type StaleLogGcTickInterval time.Duration
+
+func (opt StaleLogGcTickInterval) apply(t *Tailer) error {
+	t.StartGcLoop(time.Duration(opt))
+	return nil
+}
+
+// LogPatternPollTickInterval sets the time between polls on the filesystem for new logs that match the log glob patterns.
+type LogPatternPollTickInterval time.Duration
+
+func (opt LogPatternPollTickInterval) apply(t *Tailer) error {
+	t.StartLogPatternPollLoop(time.Duration(opt))
+	return nil
+}
+
 // New creates a new Tailer.
 func New(ctx context.Context, llp logline.Processor, w watcher.Watcher, options ...Option) (*Tailer, error) {
 	if w == nil {
@@ -489,10 +505,73 @@ func (t *Tailer) StartGcLoop(duration time.Duration) {
 	go func() {
 		glog.Infof("Starting log handle expiry loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
-		for range ticker.C {
-			if err := t.Gc(); err != nil {
-				glog.Info(err)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-t.ctx.Done():
+				return
+			case <-ticker.C:
+				if err := t.Gc(); err != nil {
+					glog.Info(err)
+				}
 			}
 		}
 	}()
+}
+
+// StartLogPatternPollLoop runs a permanent goroutine to poll for new log files.
+func (t *Tailer) StartLogPatternPollLoop(duration time.Duration) {
+	if duration <= 0 {
+		glog.Info("Log pattern polling disabled")
+		return
+	}
+	go func() {
+		glog.Infof("Starting log pattern poll loop every %s", duration.String())
+		ticker := time.NewTicker(duration)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-t.ctx.Done():
+				return
+			case <-ticker.C:
+				if err := t.PollLogPatterns(); err != nil {
+					glog.Info(err)
+				}
+			}
+		}
+	}()
+}
+
+func (t *Tailer) PollLogPatterns() error {
+	t.globPatternsMu.RLock()
+	defer t.globPatternsMu.RUnlock()
+	for pattern := range t.globPatterns {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			return err
+		}
+		glog.V(1).Infof("glob matches: %v", matches)
+		for _, pathname := range matches {
+			ignore, err := t.Ignore(pathname)
+			if err != nil {
+				return err
+			}
+			if ignore {
+				continue
+			}
+			absPath, err := filepath.Abs(pathname)
+			if err != nil {
+				return err
+			}
+			if t.hasHandle(absPath) {
+				continue
+			}
+			// Great, a new file!
+			err = t.TailPath(absPath)
+			if err != nil {
+				return errors.Wrapf(err, "attempting to tail %q", absPath)
+			}
+		}
+	}
+	return nil
 }
