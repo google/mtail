@@ -553,7 +553,9 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	checkFoo := func() (bool, error) {
+		store.RLock()
 		v := store.Metrics["foo"][0]
+		store.RUnlock()
 		d, derr := v.GetDatum()
 		if derr != nil {
 			return false, derr
