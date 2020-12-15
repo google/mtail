@@ -5,22 +5,22 @@
 package mtail_test
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
-	"path"
-	"testing"
-	"time"
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"runtime"
-	"context"
-	"bytes"
-	"encoding/json"
+	"testing"
+	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/watcher"
 )
 
@@ -29,13 +29,10 @@ import (
 func makeServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*mtail.Server) error) (*mtail.Server, error) {
 	tb.Helper()
 	w, err := watcher.NewLogWatcher(pollInterval, enableFsNotify)
-	if err != nil {
-		tb.Fatal(err)
-	}
+	testutil.FatalIfErr(tb, err)
 
 	return mtail.New(metrics.NewStore(), w, options...)
 }
-
 
 // startUNIXSocketServer creates a new Server serving through a UNIX
 // socket and starts it running. It returns the server, and a cleanup function.
@@ -48,9 +45,7 @@ func startUNIXSocketServer(tb testing.TB, pollInterval time.Duration, enableFsNo
 	options = append(options, mtail.BindUnixSocket("/var/run/mtail_test.socket"))
 
 	m, err := makeServer(tb, pollInterval, enableFsNotify, options...)
-	if err != nil {
-		tb.Fatal(err)
-	}
+	testutil.FatalIfErr(tb, err)
 
 	errc := make(chan error, 1)
 	go func() {
@@ -61,39 +56,23 @@ func startUNIXSocketServer(tb testing.TB, pollInterval time.Duration, enableFsNo
 	glog.Infof("check that server is listening")
 
 	addr, err := net.ResolveUnixAddr("unix", unixSocket)
-
-	if err != nil {
-		tb.Fatal(err)
-	}
+	testutil.FatalIfErr(tb, err)
 	_, err = net.DialUnix("unix", nil, addr)
-
-	if err != nil {
-		tb.Fatal(err)
-	}
+	testutil.FatalIfErr(tb, err)
 
 	return m, func() {
-		err := m.Close()
-		if err != nil {
-			tb.Fatal(err)
-		}
-		if err != nil {
-			tb.Fatal(err)
-		}
+		testutil.FatalIfErr(tb, m.Close())
 		select {
-		case err = <-errc:
+		case err := <-errc:
+			testutil.FatalIfErr(tb, err)
 		case <-time.After(5 * time.Second):
 			buf := make([]byte, 1<<16)
 			n := runtime.Stack(buf, true)
 			fmt.Fprintf(os.Stderr, "%s", buf[0:n])
 			tb.Fatal("timeout waiting for shutdown")
 		}
-
-		if err != nil {
-			tb.Fatal(err)
-		}
 	}
 }
-
 
 // getMetricFromUNIXSocket fetches the name metrics from the Server serving through
 // the UNIX socket sockPath, and returns the value of one named name.  Callers are
@@ -125,7 +104,6 @@ func getMetricFromUNIXSocket(tb testing.TB, sockPath, name string) interface{} {
 	return r[name]
 }
 
-
 // expectMetricDelta checks to see if the difference between a and b is want;
 // it assumes both values are float64s that came from a TestGetMetric.
 func expectMetricDelta(tb testing.TB, a, b interface{}, want float64) {
@@ -141,7 +119,6 @@ func expectMetricDelta(tb testing.TB, a, b interface{}, want float64) {
 		tb.Errorf("Unexpected delta: got %v - %v = %g, want %g", a, b, delta, want)
 	}
 }
-
 
 func TestBasicUNIXSockets(t *testing.T) {
 	unixSocket := "/var/run/mtail_test.socket"
