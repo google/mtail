@@ -1,17 +1,25 @@
 name: Automatic pull request approvals
 on:
-  pull_request_target
+  pull_request_target:
+    type: ['opened', 'reopened', 'synchronize', 'ready_for_review']
+  check_suite:
+    type: ['completed']
 jobs:
   auto-approve:
     runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft == false && (
+        github.event.action == 'opened' ||
+        github.event.action == 'reopened' ||
+        github.event.action == 'synchronize'
+      ) && (
+        github.actor == 'dependabot[bot]' ||
+        github.actor == 'dependabot-preview[bot]' ||
+        github.actor == 'jaqx0r'
+      )
     steps:
       - uses: "actions/github-script@v3"
-        if: >
-          (
-            github.actor == 'dependabot[bot]' ||
-            github.actor == 'dependabot-preview[bot]' ||
-            github.actor == 'jaqx0r'
-          ) && github.event.pull_request.draft == false
         with:
           github-token: ${{ github.token }}
           script: |
