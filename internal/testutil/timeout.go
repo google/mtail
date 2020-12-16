@@ -20,9 +20,11 @@ func DoOrTimeout(do func() (bool, error), deadline, interval time.Duration) (boo
 			glog.V(2).Infof("ok, err: %v %v", ok, err)
 			if err != nil {
 				return false, err
-			} else if ok {
+			}
+			if ok {
 				return true, nil
 			}
+			// otherwise wait and retry
 		}
 	}
 }

@@ -51,11 +51,11 @@ func TestDoOrTimeoutStallThenOK(t *testing.T) {
 }
 
 func TestDoOrTimeoutAlwaysErr(t *testing.T) {
-	// Return an error
+	// Return an error, should return false,err
 	ok, err := DoOrTimeout(func() (bool, error) {
 		return false, errors.Errorf("oh no")
-	}, 10*time.Millisecond, time.Millisecond)
+	}, 1*time.Second, time.Millisecond)
 	if ok || err == nil {
-		t.Errorf("Expected !ok and an error, got %v %v", ok, err)
+		t.Errorf("Expected error (false,!nil), got %v %v", ok, err)
 	}
 }
