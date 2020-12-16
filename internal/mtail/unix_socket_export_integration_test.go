@@ -26,9 +26,9 @@ import (
 
 // makeServer makes a new Server for use in tests, but does not start
 // the server. It returns the server, or any errors the new server creates.
-func makeServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*mtail.Server) error) (*mtail.Server, error) {
+func makeServer(tb testing.TB, pollInterval time.Duration, options ...func(*mtail.Server) error) (*mtail.Server, error) {
 	tb.Helper()
-	w, err := watcher.NewLogWatcher(pollInterval, enableFsNotify)
+	w, err := watcher.NewLogWatcher(pollInterval)
 	testutil.FatalIfErr(tb, err)
 
 	return mtail.New(metrics.NewStore(), w, options...)
@@ -38,7 +38,7 @@ func makeServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, 
 // socket and starts it running. It returns the server, and a cleanup function.
 // startUNIXSocketServer differs from TestStartServer in that it uses UNIX sockets
 // (see the usage of mtail.BindUnixSocket) instead of TCP sockets.
-func startUNIXSocketServer(tb testing.TB, pollInterval time.Duration, enableFsNotify bool, options ...func(*mtail.Server) error) (*mtail.Server, func()) {
+func startUNIXSocketServer(tb testing.TB, pollInterval time.Duration, options ...func(*mtail.Server) error) (*mtail.Server, func()) {
 	tb.Helper()
 
 	tmpDir, rmTmpDir := testutil.TestTempDir(tb)
@@ -46,7 +46,7 @@ func startUNIXSocketServer(tb testing.TB, pollInterval time.Duration, enableFsNo
 	unixSocket := filepath.Join(tmpDir, "mtail_test.socket")
 	options = append(options, mtail.BindUnixSocket(unixSocket))
 
-	m, err := makeServer(tb, pollInterval, enableFsNotify, options...)
+	m, err := makeServer(tb, pollInterval, options...)
 	testutil.FatalIfErr(tb, err)
 
 	errc := make(chan error, 1)
@@ -127,43 +127,32 @@ func TestBasicUNIXSockets(t *testing.T) {
 	t.Skip("broken because unixSocket is in /var/run")
 	unixSocket := "/var/run/mtail_test.socket"
 
-	tests := []struct {
-		pollInterval   time.Duration
-		enableFsNotify bool
-	}{
-		{0, true},                      // notify only
-		{10 * time.Millisecond, false}, // poll only
-	}
 	if testing.Verbose() {
 		defer testutil.TestSetFlag(t, "vmodule", "tail=2,log_watcher=2")()
 	}
-	for _, test := range tests {
-		t.Run(fmt.Sprintf("%s %v", test.pollInterval, test.enableFsNotify), func(t *testing.T) {
-			logDir, rmLogDir := testutil.TestTempDir(t)
-			defer rmLogDir()
+	logDir, rmLogDir := testutil.TestTempDir(t)
+	defer rmLogDir()
 
-			_, stopM := startUNIXSocketServer(t, test.pollInterval, test.enableFsNotify, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
-			defer stopM()
+	_, stopM := startUNIXSocketServer(t, 0, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
+	defer stopM()
 
-			startLineCount := getMetricFromUNIXSocket(t, unixSocket, "lines_total")
-			startLogCount := getMetricFromUNIXSocket(t, unixSocket, "log_count")
+	startLineCount := getMetricFromUNIXSocket(t, unixSocket, "lines_total")
+	startLogCount := getMetricFromUNIXSocket(t, unixSocket, "log_count")
 
-			time.Sleep(1 * time.Second)
+	time.Sleep(1 * time.Second)
 
-			logFile := path.Join(logDir, "log")
+	logFile := path.Join(logDir, "log")
 
-			f := testutil.TestOpenFile(t, logFile)
+	f := testutil.TestOpenFile(t, logFile)
 
-			for i := 1; i <= 3; i++ {
-				testutil.WriteString(t, f, fmt.Sprintf("%d\n", i))
-				time.Sleep(1 * time.Second)
-			}
-
-			endLineCount := getMetricFromUNIXSocket(t, unixSocket, "lines_total")
-			endLogCount := getMetricFromUNIXSocket(t, unixSocket, "log_count")
-
-			expectMetricDelta(t, endLineCount, startLineCount, 3)
-			expectMetricDelta(t, endLogCount, startLogCount, 1)
-		})
+	for i := 1; i <= 3; i++ {
+		testutil.WriteString(t, f, fmt.Sprintf("%d\n", i))
+		time.Sleep(1 * time.Second)
 	}
+
+	endLineCount := getMetricFromUNIXSocket(t, unixSocket, "lines_total")
+	endLogCount := getMetricFromUNIXSocket(t, unixSocket, "log_count")
+
+	expectMetricDelta(t, endLineCount, startLineCount, 3)
+	expectMetricDelta(t, endLogCount, startLogCount, 1)
 }

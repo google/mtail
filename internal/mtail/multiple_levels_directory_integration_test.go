@@ -14,9 +14,7 @@ import (
 )
 
 func TestPollLogPathPatterns(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
@@ -26,8 +24,7 @@ func TestPollLogPathPatterns(t *testing.T) {
 	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 	defer testutil.TestChdir(t, logDir)()
 
-	// only manual polling -- zero for poll duration to avoid duplicates in test.
-	m, stopM := mtail.TestStartServer(t, 0, false, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
+	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
 	defer stopM()
 
 	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)

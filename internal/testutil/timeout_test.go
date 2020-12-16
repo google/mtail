@@ -8,9 +8,7 @@ import (
 )
 
 func TestDoOrTimeoutNeverOK(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	SkipIfShort(t)
 
 	// Never return OK so timeout at 10ms.
 	ok, err := DoOrTimeout(func() (bool, error) {
@@ -32,9 +30,7 @@ func TestDoOrTimeoutAlwaysOK(t *testing.T) {
 }
 
 func TestDoOrTimeoutStallThenOK(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	SkipIfShort(t)
 
 	// Stall for 5 ticks (50ms) and then return OK; timeout at 1s.
 	i := 5

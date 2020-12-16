@@ -4,79 +4,201 @@
 package mtail_test
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"sync"
 	"testing"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
 )
 
-func TestLogGlobMatchesAfterStartupWithPollInterval(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
+func TestGlobBeforeStart(t *testing.T) {
+	testutil.SkipIfShort(t)
+
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
+
+	globTests := []struct {
+		name     string
+		expected bool
+	}{
+		{
+			path.Join(workdir, "log1"),
+			true,
+		},
+		{
+			path.Join(workdir, "log2"),
+			true,
+		},
+		{
+			path.Join(workdir, "1log"),
+			false,
+		},
 	}
-	for _, test := range mtail.LogWatcherTestTable {
-		t.Run(fmt.Sprintf("%s %v", test.PollInterval, test.EnableFsNotify), func(t *testing.T) {
-			tmpDir, rmTmpDir := testutil.TestTempDir(t)
-			defer rmTmpDir()
+	count := 0
+	for _, tt := range globTests {
+		log := testutil.TestOpenFile(t, tt.name)
+		defer log.Close()
+		if tt.expected {
+			count++
+		}
+		testutil.WriteString(t, log, "\n")
+	}
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
+	defer stopM()
 
-			logDir := path.Join(tmpDir, "logs")
-			progDir := path.Join(tmpDir, "progs")
-			testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
-			testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
-			defer testutil.TestChdir(t, logDir)()
+	if r := m.GetMetric("log_count"); r != float64(count) {
+		t.Errorf("Expecting log count of %d, received %g", count, r)
+	}
+}
 
-			m, stopM := mtail.TestStartServer(t, test.PollInterval, test.EnableFsNotify, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log*"))
-			defer stopM()
+func TestGlobAfterStart(t *testing.T) {
+	testutil.SkipIfShort(t)
 
-			{
-				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
-				linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
 
-				logFile := path.Join(logDir, "log")
-				f := testutil.TestOpenFile(t, logFile)
-				n, err := f.WriteString("line 1\n")
-				testutil.FatalIfErr(t, err)
-				glog.Infof("Wrote %d bytes", n)
+	globTests := []struct {
+		name     string
+		expected bool
+	}{
+		{
+			path.Join(workdir, "log1"),
+			true,
+		},
+		{
+			path.Join(workdir, "log2"),
+			true,
+		},
+		{
+			path.Join(workdir, "1log"),
+			false,
+		},
+	}
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
+	defer stopM()
 
-				var wg sync.WaitGroup
-				wg.Add(2)
-				go func() {
-					defer wg.Done()
-					linesCountCheck()
-				}()
-				go func() {
-					defer wg.Done()
-					logCountCheck()
-				}()
-				wg.Wait()
-			}
-			{
+	count := 0
+	for _, tt := range globTests {
+		if tt.expected {
+			count++
+		}
+	}
+	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", float64(count))
+	linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", float64(count))
+	for _, tt := range globTests {
+		log := testutil.TestOpenFile(t, tt.name)
+		defer log.Close()
+		testutil.WriteString(t, log, "\n")
+	}
+	m.PollWatched()
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		linesCountCheck()
+	}()
+	go func() {
+		defer wg.Done()
+		logCountCheck()
+	}()
+	wg.Wait()
+}
 
-				logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
-				linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+func TestGlobIgnoreFolder(t *testing.T) {
+	testutil.SkipIfShort(t)
 
-				logFile := path.Join(logDir, "log1")
-				f := testutil.TestOpenFile(t, logFile)
-				n, err := f.WriteString("line 1\n")
-				testutil.FatalIfErr(t, err)
-				glog.Infof("Wrote %d bytes", n)
-				var wg sync.WaitGroup
-				wg.Add(2)
-				go func() {
-					defer wg.Done()
-					linesCountCheck()
-				}()
-				go func() {
-					defer wg.Done()
-					logCountCheck()
-				}()
-				wg.Wait()
-			}
-		})
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
+
+	globTests := []struct {
+		name     string
+		isFolder bool
+		expected bool
+	}{
+		{
+			path.Join(workdir, "log1"),
+			false,
+			true,
+		},
+		{
+			path.Join(workdir, "logarchive"),
+			true,
+			false,
+		},
+		{
+			path.Join(workdir, "log2.gz"),
+			false,
+			false,
+		},
+	}
+	count := 0
+	for _, tt := range globTests {
+		var err error
+		var log *os.File
+
+		if tt.isFolder {
+			err = os.Mkdir(tt.name, 0700)
+			testutil.FatalIfErr(t, err)
+			continue
+		} else {
+			log, err = os.Create(tt.name)
+		}
+
+		if !tt.isFolder && tt.expected {
+			count++
+		}
+		defer log.Close()
+		testutil.FatalIfErr(t, err)
+		testutil.WriteString(t, log, "\n")
+	}
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	defer stopM()
+
+	if r := m.GetMetric("log_count"); r != float64(count) {
+		t.Errorf("Expecting log Count for %d, received %g", count, r)
+	}
+}
+
+func TestFilenameRegexIgnore(t *testing.T) {
+	testutil.SkipIfShort(t)
+
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
+
+	globTests := []struct {
+		name     string
+		expected bool
+	}{
+		{
+			path.Join(workdir, "log1"),
+			true,
+		},
+		{
+			path.Join(workdir, "log1.gz"),
+			false,
+		},
+		{
+			path.Join(workdir, "log2gz"),
+			true,
+		},
+	}
+	count := 0
+	for _, tt := range globTests {
+		log, err := os.Create(tt.name)
+		testutil.FatalIfErr(t, err)
+		defer log.Close()
+		if tt.expected {
+			count++
+		}
+		testutil.WriteString(t, log, "\n")
+	}
+
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	defer stopM()
+
+	if r := m.GetMetric("log_count"); r != float64(count) {
+		t.Errorf("Log count not matching\n\texpected: %d\n\t: received: %g", count, r)
 	}
 }

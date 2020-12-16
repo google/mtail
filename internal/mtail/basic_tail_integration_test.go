@@ -5,6 +5,7 @@ package mtail_test
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"sync"
 	"testing"
@@ -14,42 +15,59 @@ import (
 )
 
 func TestBasicTail(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	testutil.SkipIfShort(t)
 	if testing.Verbose() {
 		defer testutil.TestSetFlag(t, "vmodule", "tail=2,log_watcher=2")()
 	}
-	for _, test := range mtail.LogWatcherTestTable {
-		t.Run(fmt.Sprintf("%s %v", test.PollInterval, test.EnableFsNotify), func(t *testing.T) {
-			logDir, rmLogDir := testutil.TestTempDir(t)
-			defer rmLogDir()
+	logDir, rmLogDir := testutil.TestTempDir(t)
+	defer rmLogDir()
 
-			m, stopM := mtail.TestStartServer(t, test.PollInterval, test.EnableFsNotify, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
-			defer stopM()
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
+	defer stopM()
 
-			lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 3)
-			logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
+	lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 3)
+	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
 
-			logFile := path.Join(logDir, "log")
+	logFile := path.Join(logDir, "log")
 
-			f := testutil.TestOpenFile(t, logFile)
+	f := testutil.TestOpenFile(t, logFile)
 
-			for i := 1; i <= 3; i++ {
-				testutil.WriteString(t, f, fmt.Sprintf("%d\n", i))
-			}
-
-			var wg sync.WaitGroup
-			wg.Add(2)
-			go func() {
-				defer wg.Done()
-				lineCountCheck()
-			}()
-			go func() {
-				defer wg.Done()
-				logCountCheck()
-			}()
-			wg.Wait()
-		})
+	for i := 1; i <= 3; i++ {
+		testutil.WriteString(t, f, fmt.Sprintf("%d\n", i))
 	}
+	m.PollWatched()
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		lineCountCheck()
+	}()
+	go func() {
+		defer wg.Done()
+		logCountCheck()
+	}()
+	wg.Wait()
+}
+
+func TestNewLogDoesNotMatchIsIgnored(t *testing.T) {
+	testutil.SkipIfShort(t)
+	workdir, rmWorkdir := testutil.TestTempDir(t)
+	defer rmWorkdir()
+	// Start mtail
+	logFilepath := path.Join(workdir, "log")
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logFilepath))
+	defer stopM()
+
+	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 0)
+
+	// touch log file
+	newLogFilepath := path.Join(workdir, "log1")
+
+	logFile, err := os.Create(newLogFilepath)
+	testutil.FatalIfErr(t, err)
+	defer logFile.Close()
+	m.PollWatched()
+
+	logCountCheck()
 }

@@ -6,14 +6,12 @@ package watcher
 import (
 	"context"
 	"expvar"
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
@@ -57,7 +55,6 @@ func hasChanged(a, b os.FileInfo) bool {
 
 // LogWatcher implements a Watcher for watching real filesystems.
 type LogWatcher struct {
-	watcher    *fsnotify.Watcher
 	pollTicker *time.Ticker
 
 	watchedMu sync.RWMutex // protects `watched'
@@ -74,17 +71,8 @@ type LogWatcher struct {
 }
 
 // NewLogWatcher returns a new LogWatcher, or returns an error.
-func NewLogWatcher(pollInterval time.Duration, enableFsnotify bool) (*LogWatcher, error) {
-	var f *fsnotify.Watcher
-	if enableFsnotify {
-		var err error
-		f, err = fsnotify.NewWatcher()
-		if err != nil {
-			glog.Warning(err)
-		}
-	}
+func NewLogWatcher(pollInterval time.Duration) (*LogWatcher, error) {
 	w := &LogWatcher{
-		watcher: f,
 		watched: make(map[string]*watch),
 	}
 	if pollInterval > 0 {
@@ -93,10 +81,6 @@ func NewLogWatcher(pollInterval time.Duration, enableFsnotify bool) (*LogWatcher
 		w.ticksDone = make(chan struct{})
 		go w.runTicks()
 		glog.V(2).Infof("started ticker with %s interval", pollInterval)
-	}
-	if f != nil {
-		w.eventsDone = make(chan struct{})
-		go w.runEvents()
 	}
 	return w, nil
 }
@@ -175,7 +159,6 @@ func (w *LogWatcher) pollWatchedPath(pathname string, watched *watch) {
 		return
 	}
 
-	// fsnotify does not send update events for the directory itself.
 	if fi.IsDir() {
 		w.pollDirectory(watched, pathname)
 	} else if hasChanged(fi, watched.fi) {
@@ -223,45 +206,10 @@ func (w *LogWatcher) pollDirectory(parentWatch *watch, pathname string) {
 	}
 }
 
-// runEvents assumes that w.watcher is not nil
-func (w *LogWatcher) runEvents() {
-	defer close(w.eventsDone)
-
-	// Suck out errors and dump them to the error log.
-	go func() {
-		for err := range w.watcher.Errors {
-			errorCount.Add(1)
-			glog.Errorf("fsnotify error: %s\n", err)
-		}
-	}()
-
-	for e := range w.watcher.Events {
-		glog.V(2).Infof("fsnotify watcher event %v", e)
-		switch {
-		case e.Op&fsnotify.Create == fsnotify.Create:
-			w.sendEvent(Event{Create, e.Name})
-		case e.Op&fsnotify.Write == fsnotify.Write,
-			e.Op&fsnotify.Chmod == fsnotify.Chmod:
-			w.sendEvent(Event{Update, e.Name})
-		case e.Op&fsnotify.Remove == fsnotify.Remove:
-			w.sendEvent(Event{Delete, e.Name})
-		case e.Op&fsnotify.Rename == fsnotify.Rename:
-			// Rename is only issued on the original file path; the new name receives a Create event
-			w.sendEvent(Event{Delete, e.Name})
-		default:
-			panic(fmt.Sprintf("unknown op type %v", e.Op))
-		}
-	}
-	glog.Infof("Shutting down log watcher.")
-}
-
 // Close shuts down the LogWatcher.  It is safe to call this from multiple clients.
 func (w *LogWatcher) Close() (err error) {
 	w.closeOnce.Do(func() {
-		if w.watcher != nil {
-			err = w.watcher.Close()
-			<-w.eventsDone
-		}
+		glog.Infof("Shutting down log watcher.")
 		if w.pollTicker != nil {
 			close(w.stopTicks)
 			<-w.ticksDone
@@ -306,16 +254,6 @@ func (w *LogWatcher) addWatch(path string) (string, error) {
 		return "", errors.Wrapf(err, "Failed to lookup absolutepath of %q", path)
 	}
 	glog.V(2).Infof("Adding a watch on resolved path %q", absPath)
-	if w.watcher != nil {
-		err = w.watcher.Add(absPath)
-		if err != nil {
-			if os.IsPermission(err) {
-				glog.V(2).Infof("Skipping permission denied error on adding a watch.")
-			} else {
-				return "", errors.Wrapf(err, "Failed to create a new watch on %q", absPath)
-			}
-		}
-	}
 	return absPath, nil
 }
 
@@ -350,9 +288,6 @@ func (w *LogWatcher) Unobserve(path string, processor Processor) error {
 	}
 	if len(w.watched[path].ps) == 0 {
 		delete(w.watched, path)
-	}
-	if w.watcher != nil {
-		return w.watcher.Remove(path)
 	}
 	return nil
 }
