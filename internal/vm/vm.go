@@ -118,7 +118,7 @@ func (v *VM) errorf(format string, args ...interface{}) {
 		glog.Infof(" Matches %v", v.t.matches)
 		glog.Infof(" Timestamp %v", v.t.time)
 		glog.Infof(" Stack %v", v.t.stack)
-		glog.Infof(v.DumpByteCode(v.name))
+		glog.Infof(v.DumpByteCode())
 	}
 	v.runtimeErrorMu.Unlock()
 	v.terminate = true
@@ -940,9 +940,9 @@ func New(name string, obj *object.Object, syslogUseCurrentYear bool, loc *time.L
 }
 
 // DumpByteCode emits the program disassembly and program objects to a string.
-func (v *VM) DumpByteCode(name string) string {
+func (v *VM) DumpByteCode() string {
 	b := new(bytes.Buffer)
-	fmt.Fprintf(b, "Prog: %s\n", name)
+	fmt.Fprintf(b, "Prog: %s\n", v.name)
 	fmt.Fprintln(b, "Metrics")
 	for i, m := range v.m {
 		if m.Program == v.name {

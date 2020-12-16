@@ -209,7 +209,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	}
 
 	if l.dumpBytecode {
-		glog.Info("Dumping program objects and bytecode\n", v.DumpByteCode(name))
+		glog.Info("Dumping program objects and bytecode\n", v.DumpByteCode())
 	}
 
 	// Load the metrics from the compilation into the global metric storage for export.
@@ -425,7 +425,7 @@ func (l *Loader) ProgzHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "No program found", http.StatusNotFound)
 			return
 		}
-		fmt.Fprintf(w, v.DumpByteCode(prog))
+		fmt.Fprintf(w, v.DumpByteCode())
 		fmt.Fprintf(w, "\nLast runtime error:\n%s", v.RuntimeErrorString())
 		return
 	}
