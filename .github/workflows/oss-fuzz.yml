@@ -1,7 +1,13 @@
 name: CIFuzz
-on: [pull_request]
+on:
+  pull_request:
+    paths:
+      - '**.go'
+      - 'internal/vm/parser/parser.y'
+      - 'Makefile'
+      - 'Dockerfile'
 jobs:
-  Fuzzing:
+  CIFuzz:
     runs-on: ubuntu-latest
     steps:
     - name: Build Fuzzers
