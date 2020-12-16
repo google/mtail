@@ -1,3 +1,6 @@
+# This doesn't work on forked repos per the discussion in
+# https://github.com/pascalgn/automerge-action/issues/46 so don't attempt to
+# add people other than dependabot to the if field below.
 name: automerge
 on:
   pull_request:
@@ -22,14 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: automerge
-        if: github.actor == 'jaqx0r' || github.actor == 'dependabot[bot]'
+        if: github.actor == 'dependabot[bot]'
         uses: "pascalgn/automerge-action@v0.12.0"
-        with:
-          args: "--trace"
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          MERGE_METHOD: "merge"
+          MERGE_METHOD: "rebase"
           MERGE_LABELS: ""
-          MERGE_FORKS: "true"
           MERGE_RETRY_SLEEP: "60000"
           MERGE_RETRIES: "61"
