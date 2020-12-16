@@ -109,6 +109,7 @@ func (m *TestServer) Start() func() {
 func (m *TestServer) PollWatched() {
 	glog.Info("TestServer polling watched objects")
 	m.w.Poll()
+	m.t.Poll()
 	m.l.LoadAllPrograms()
 }
 

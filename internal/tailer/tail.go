@@ -54,6 +54,8 @@ type Tailer struct {
 	ignoreRegexPattern *regexp.Regexp
 
 	oneShot bool
+
+	pollMu sync.Mutex // protects Poll()
 }
 
 // Option configures a Tailer.
@@ -570,11 +572,17 @@ func (t *Tailer) PollLogPatterns() error {
 				continue
 			}
 			// Great, a new file!
-			err = t.TailPath(absPath)
+			err = t.openLogPath(absPath, false)
 			if err != nil {
 				return errors.Wrapf(err, "attempting to tail %q", absPath)
 			}
 		}
 	}
 	return nil
+}
+
+func (t *Tailer) Poll() {
+	t.pollMu.Lock()
+	defer t.pollMu.Unlock()
+	t.PollLogPatterns()
 }
