@@ -39,8 +39,9 @@ want to tail.  This includes named pipes.
 
 `mtail` polls every `--poll_interval`, or 250ms by default, the supplied `--logs` patterns for newly created or deleted log pathnames.
 
-Known and active logs are read until EOF every 20ms by default.
+Known and active logs are read until EOF every 250ms by default.
 
+Example:
 ```
 mtail --progs /etc/mtail --logs /var/log/syslog --poll_interval 250ms
 ```
