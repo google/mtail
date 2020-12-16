@@ -14,7 +14,6 @@ jobs:
         github.event.action == 'synchronize'
       ) && (
         github.actor == 'dependabot[bot]' ||
-        github.actor == 'dependabot-preview[bot]' ||
         github.actor == 'jaqx0r'
       )
     steps:
