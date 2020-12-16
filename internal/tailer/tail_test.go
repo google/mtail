@@ -21,7 +21,7 @@ func makeTestTail(t *testing.T) (*Tailer, *stubProcessor, *watcher.FakeWatcher, 
 
 	w := watcher.NewFakeWatcher()
 	llp := NewStubProcessor()
-	ta, err := New(llp, w, Context(context.Background()))
+	ta, err := New(context.Background(), llp, w)
 	testutil.FatalIfErr(t, err)
 	return ta, llp, w, tmpDir, rmTmpDir
 }
@@ -205,20 +205,20 @@ func TestTailerInitErrors(t *testing.T) {
 		t.Error("expected error")
 	}
 	lines := &stubProcessor{}
-	_, err = New(lines, nil, nil)
+	_, err = New(context.Background(), lines, nil, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
-	_, err = New(lines, nil)
+	_, err = New(context.Background(), lines, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
 	w := watcher.NewFakeWatcher()
-	_, err = New(lines, w)
+	_, err = New(context.Background(), lines, w)
 	if err != nil {
 		t.Errorf("unexpected error %s", err)
 	}
-	_, err = New(lines, w, OneShot)
+	_, err = New(context.Background(), lines, w, OneShot())
 	if err != nil {
 		t.Errorf("unexpected error %s", err)
 	}

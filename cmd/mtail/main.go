@@ -147,6 +147,7 @@ func main() {
 		mtail.OverrideLocation(loc),
 		mtail.ExpiredMetricGcTickInterval(*expiredMetricGcTickInterval),
 		mtail.StaleLogGcTickInterval(*staleLogGcTickInterval),
+		mtail.LogPatternPollTickInterval(*pollInterval),
 	}
 	if *unixSocket == "" {
 		opts = append(opts, mtail.BindAddress(*address, *port))

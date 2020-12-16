@@ -87,6 +87,13 @@ func StaleLogGcTickInterval(interval time.Duration) func(*Server) error {
 	}
 }
 
+func LogPatternPollTickInterval(interval time.Duration) func(*Server) error {
+	return func(m *Server) error {
+		m.logPatternPollTickInterval = interval
+		return nil
+	}
+}
+
 // OneShot sets one-shot mode in the Server.
 func OneShot(m *Server) error {
 	m.oneShot = true

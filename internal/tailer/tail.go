@@ -41,9 +41,10 @@ var (
 // lines from files. It also handles new log file creation events and log
 // rotations.
 type Tailer struct {
-	w   watcher.Watcher
-	ctx context.Context
-	llp logline.Processor
+	w      watcher.Watcher
+	ctx    context.Context
+	cancel context.CancelFunc
+	llp    logline.Processor
 
 	handlesMu sync.RWMutex   // protects `handles'
 	handles   map[string]Log // Log handles for each pathname.
@@ -55,31 +56,72 @@ type Tailer struct {
 	oneShot bool
 }
 
-// OneShot puts the tailer in one-shot mode.
-func OneShot(t *Tailer) error {
+// Option configures a Tailer.
+type Option interface {
+	apply(*Tailer) error
+}
+
+type oneShot struct{}
+
+func (_ oneShot) apply(t *Tailer) error {
 	t.oneShot = true
 	return nil
 }
 
-// Context sets the context of the tailer
-func Context(ctx context.Context) func(*Tailer) error {
-	return func(t *Tailer) error {
-		t.ctx = ctx
-		return nil
+// OneShot puts the tailer in one-shot mode, where sources are read once from the start and then closed.
+func OneShot() Option {
+	return &oneShot{}
+}
+
+// LogPatterns sets the glob patterns to use to match pathnames.
+type LogPatterns []string
+
+func (opt LogPatterns) apply(t *Tailer) error {
+	for _, p := range opt {
+		if err := t.AddPattern(p); err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+// IgnoreRegex sets the regular expression to use to filter away pathnames that match the LogPatterns glob
+type IgnoreRegex string
+
+func (opt IgnoreRegex) apply(t *Tailer) error {
+	t.SetIgnorePattern(string(opt))
+	return nil
+}
+
+// StaleLogGcTickInterval sets the time between garbage collection runs for stale logs in the tailer.
+type StaleLogGcTickInterval time.Duration
+
+func (opt StaleLogGcTickInterval) apply(t *Tailer) error {
+	t.StartGcLoop(time.Duration(opt))
+	return nil
+}
+
+// LogPatternPollTickInterval sets the time between polls on the filesystem for new logs that match the log glob patterns.
+type LogPatternPollTickInterval time.Duration
+
+func (opt LogPatternPollTickInterval) apply(t *Tailer) error {
+	t.StartLogPatternPollLoop(time.Duration(opt))
+	return nil
 }
 
 // New creates a new Tailer.
-func New(llp logline.Processor, w watcher.Watcher, options ...func(*Tailer) error) (*Tailer, error) {
+func New(ctx context.Context, llp logline.Processor, w watcher.Watcher, options ...Option) (*Tailer, error) {
 	if w == nil {
 		return nil, errors.New("can't create tailer without W")
 	}
 	t := &Tailer{
-		llp:          llp,
 		w:            w,
+		llp:          llp,
 		handles:      make(map[string]Log),
 		globPatterns: make(map[string]struct{}),
 	}
+	// At the moment we do our own cancellation, so save it here.
+	t.ctx, t.cancel = context.WithCancel(ctx)
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
@@ -87,9 +129,9 @@ func New(llp logline.Processor, w watcher.Watcher, options ...func(*Tailer) erro
 }
 
 // SetOption takes one or more option functions and applies them in order to Tailer.
-func (t *Tailer) SetOption(options ...func(*Tailer) error) error {
+func (t *Tailer) SetOption(options ...Option) error {
 	for _, option := range options {
-		if err := option(t); err != nil {
+		if err := option.apply(t); err != nil {
 			return err
 		}
 	}
@@ -364,6 +406,7 @@ func (t *Tailer) Close() error {
 	if err := t.w.Close(); err != nil {
 		return err
 	}
+	t.cancel()
 	return nil
 }
 
@@ -465,10 +508,73 @@ func (t *Tailer) StartGcLoop(duration time.Duration) {
 	go func() {
 		glog.Infof("Starting log handle expiry loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
-		for range ticker.C {
-			if err := t.Gc(); err != nil {
-				glog.Info(err)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-t.ctx.Done():
+				return
+			case <-ticker.C:
+				if err := t.Gc(); err != nil {
+					glog.Info(err)
+				}
 			}
 		}
 	}()
+}
+
+// StartLogPatternPollLoop runs a permanent goroutine to poll for new log files.
+func (t *Tailer) StartLogPatternPollLoop(duration time.Duration) {
+	if duration <= 0 {
+		glog.Info("Log pattern polling disabled")
+		return
+	}
+	go func() {
+		glog.Infof("Starting log pattern poll loop every %s", duration.String())
+		ticker := time.NewTicker(duration)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-t.ctx.Done():
+				return
+			case <-ticker.C:
+				if err := t.PollLogPatterns(); err != nil {
+					glog.Info(err)
+				}
+			}
+		}
+	}()
+}
+
+func (t *Tailer) PollLogPatterns() error {
+	t.globPatternsMu.RLock()
+	defer t.globPatternsMu.RUnlock()
+	for pattern := range t.globPatterns {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			return err
+		}
+		glog.V(1).Infof("glob matches: %v", matches)
+		for _, pathname := range matches {
+			ignore, err := t.Ignore(pathname)
+			if err != nil {
+				return err
+			}
+			if ignore {
+				continue
+			}
+			absPath, err := filepath.Abs(pathname)
+			if err != nil {
+				return err
+			}
+			if t.hasHandle(absPath) {
+				continue
+			}
+			// Great, a new file!
+			err = t.TailPath(absPath)
+			if err != nil {
+				return errors.Wrapf(err, "attempting to tail %q", absPath)
+			}
+		}
+	}
+	return nil
 }

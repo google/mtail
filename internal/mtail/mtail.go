@@ -15,7 +15,6 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"sync"
 	"syscall"
@@ -53,21 +52,21 @@ func (b BuildInfo) String() string {
 
 // Server contains the state of the main mtail program.
 type Server struct {
-	store *metrics.Store // Metrics storage.
+	store *metrics.Store // Metrics storage
 	w     watcher.Watcher
 
-	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs.
-	l *vm.Loader         // l loads programs and manages the VM lifecycle.
-	e *exporter.Exporter // e manages the export of metrics from the store.
+	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs
+	l *vm.Loader         // l loads programs and manages the VM lifecycle
+	e *exporter.Exporter // e manages the export of metrics from the store
 
 	reg *prometheus.Registry
 
 	h        *http.Server
 	listener net.Listener
 
-	webquit   chan struct{} // Channel to signal shutdown from web UI.
-	closeQuit chan struct{} // Channel to signal shutdown from code.
-	closeOnce sync.Once     // Ensure shutdown happens only once.
+	webquit   chan struct{} // Channel to signal shutdown from web UI
+	closeQuit chan struct{} // Channel to signal shutdown from code
+	closeOnce sync.Once     // Ensure shutdown happens only once
 
 	bindAddress        string    // address to bind HTTP server
 	bindUnixSocket     string    // path of the UNIX socket to bind HTTP server
@@ -85,39 +84,18 @@ type Server struct {
 	overrideLocation            *time.Location // Timezone location to use when parsing timestamps
 	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
 	staleLogGcTickInterval      time.Duration  // Interval between stale log gc runs
+	logPatternPollTickInterval  time.Duration  // Interval between log pattern polls
 	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
 	omitMetricSource            bool           // if set, do not link the source program to a metric
 	omitProgLabel               bool           // if set, do not put the program name in the metric labels
 	emitMetricTimestamp         bool           // if set, emit the metric's recorded timestamp
-	omitDumpMetricsStore        bool           // if set, do not print the metric store; useful in test.
+	omitDumpMetricsStore        bool           // if set, do not print the metric store; useful in test
 }
 
 // StartTailing adds each log path pattern to the tailer.
 func (m *Server) StartTailing() error {
 	var err error
-	if err = m.t.SetIgnorePattern(m.ignoreRegexPattern); err != nil {
-		glog.Warning(err)
-	}
 	for _, pattern := range m.logPathPatterns {
-		glog.V(1).Infof("Tail pattern %q", pattern)
-		if err = m.t.TailPattern(pattern); err != nil {
-			glog.Warning(err)
-		}
-	}
-	return nil
-}
-
-// Scan the wildcard directory address regularly and add to the wildcard address scanning
-func (m *Server) PollLogPathPatterns() error {
-	for _, pattern := range m.logPathPatterns {
-		absPath, err := filepath.Abs(pattern)
-		if err != nil {
-			return err
-		}
-		d := filepath.Dir(absPath)
-		if !m.t.HasMeta(d) {
-			continue
-		}
 		glog.V(1).Infof("Tail pattern %q", pattern)
 		if err = m.t.TailPattern(pattern); err != nil {
 			glog.Warning(err)
@@ -194,12 +172,20 @@ func (m *Server) initExporter() (err error) {
 
 // initTailer sets up a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
-	opts := []func(*tailer.Tailer) error{
-		tailer.Context(context.Background())}
-	if m.oneShot {
-		opts = append(opts, tailer.OneShot)
+	opts := []tailer.Option{
+		tailer.LogPatternPollTickInterval(m.logPatternPollTickInterval),
+		tailer.StaleLogGcTickInterval(m.staleLogGcTickInterval),
 	}
-	m.t, err = tailer.New(m.l, m.w, opts...)
+	if m.oneShot {
+		opts = append(opts, tailer.OneShot())
+	}
+	if m.ignoreRegexPattern != "" {
+		opts = append(opts, tailer.IgnoreRegex(m.ignoreRegexPattern))
+	}
+	if len(m.logPathPatterns) > 0 {
+		opts = append(opts, tailer.LogPatterns(m.logPathPatterns))
+	}
+	m.t, err = tailer.New(context.Background(), m.l, m.w, opts...)
 	return
 }
 
@@ -353,20 +339,7 @@ func (m *Server) Serve() error {
 		}
 		errc <- err
 	}()
-	pollQuit := make(chan int, 1) // Channel to stop PollLogPathPatterns.
-	go func(chan int) {
-		ticker := time.NewTicker(time.Second)
-		for {
-			select {
-			case <-ticker.C:
-				m.PollLogPathPatterns()
-			case <-pollQuit:
-				return
-			}
-		}
-	}(pollQuit)
 	m.WaitForShutdown()
-	pollQuit <- 1
 	return <-errc
 }
 
@@ -460,7 +433,6 @@ func (m *Server) Run() error {
 		}
 	} else {
 		m.store.StartGcLoop(m.expiredMetricGcTickInterval)
-		m.t.StartGcLoop(m.staleLogGcTickInterval)
 		if err := m.Serve(); err != nil {
 			return err
 		}
