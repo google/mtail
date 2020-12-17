@@ -5,7 +5,6 @@ package watcher
 
 import (
 	"context"
-	"expvar"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,10 +13,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
-)
-
-var (
-	errorCount = expvar.NewInt("log_watcher_errors_total")
 )
 
 type watch struct {
@@ -61,9 +56,7 @@ type LogWatcher struct {
 	watched   map[string]*watch
 
 	stopTicks chan struct{} // Channel to notify ticker to stop.
-
-	ticksDone  chan struct{} // Channel to notify when the ticks handler is done.
-	eventsDone chan struct{} // Channel to notify when the events handler is done.
+	ticksDone chan struct{} // Channel to notify when the ticks handler is done.
 
 	pollMu sync.Mutex // protects `Poll()`
 
@@ -254,6 +247,11 @@ func (w *LogWatcher) addWatch(path string) (string, error) {
 		return "", errors.Wrapf(err, "Failed to lookup absolutepath of %q", path)
 	}
 	glog.V(2).Infof("Adding a watch on resolved path %q", absPath)
+	_, err = os.Stat(absPath)
+	if err != nil {
+		glog.V(2).Info(err)
+		return absPath, err
+	}
 	return absPath, nil
 }
 

@@ -17,9 +17,9 @@ import (
 
 // Log abstracts over different log sources readable by `mtail'.
 type Log interface {
-	Follow(context.Context) error // Follow a log regardless of renames until EOF or error.
-	Read(context.Context) error   // Read bytes from the log source and send to processor
-	Close(context.Context) error  // Close the log
+	Follow(context.Context) error // Follow a log's source until the Log is Closed or exit.
+	Read(context.Context) error   // Read bytes from the log source and send to processor.
+	Close(context.Context) error  // Close the log.
 	LastReadTime() time.Time      // Return the time when the last bytes were read from the source
 	Name() string                 // Return the user-provided name of the log source.
 	Pathname() string             // Return the filesystem full pathname of the log source.

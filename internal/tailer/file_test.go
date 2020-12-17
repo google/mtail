@@ -104,7 +104,7 @@ func TestOpenPipe(t *testing.T) {
 	p, err := os.OpenFile(logpipe, os.O_RDWR, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 
-	p.WriteString("1\n")
+	testutil.WriteString(t, p, "1\n")
 	llp.Add(1)
 	f, err := NewFile(logpipe, logpipe, llp, false)
 	testutil.FatalIfErr(t, err)

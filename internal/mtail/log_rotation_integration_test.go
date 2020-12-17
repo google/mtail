@@ -38,7 +38,6 @@ func TestLogRotation(t *testing.T) {
 
 	{
 		logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1)
-
 		testutil.WriteString(t, f, "line 2\n")
 		m.PollWatched()
 		logLinesTotalCheck()
@@ -49,10 +48,9 @@ func TestLogRotation(t *testing.T) {
 	m.PollWatched()
 
 	f = testutil.TestOpenFile(t, logFile)
-
+	m.PollWatched()
 	{
 		logLinesTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_lines_total", logFile, 1)
-
 		testutil.WriteString(t, f, "line 1\n")
 		m.PollWatched()
 		logLinesTotalCheck()

@@ -6,7 +6,6 @@ package mtail_test
 import (
 	"os"
 	"path"
-	"sync"
 	"testing"
 
 	"github.com/google/mtail/internal/mtail"
@@ -19,12 +18,10 @@ func TestPollLogPathPatterns(t *testing.T) {
 	defer rmTmpDir()
 
 	logDir := path.Join(tmpDir, "logs")
-	progDir := path.Join(tmpDir, "progs")
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
-	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 	defer testutil.TestChdir(t, logDir)()
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
 	defer stopM()
 
 	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
@@ -32,25 +29,14 @@ func TestPollLogPathPatterns(t *testing.T) {
 
 	logFile := path.Join(logDir, "files", "a", "log", "a.log")
 	testutil.FatalIfErr(t, os.MkdirAll(path.Dir(logFile), 0700))
+	m.PollWatched()
 
 	f := testutil.TestOpenFile(t, logFile)
 	m.PollWatched()
 
-	testutil.WriteString(t, f, "")
-	m.PollWatched()
+	logCountCheck()
 
 	testutil.WriteString(t, f, "line 1\n")
 	m.PollWatched()
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		lineCountCheck()
-	}()
-	go func() {
-		defer wg.Done()
-		logCountCheck()
-	}()
-	wg.Wait()
+	lineCountCheck()
 }
