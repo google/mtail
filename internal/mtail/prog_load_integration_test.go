@@ -12,6 +12,30 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
+func TestNewProg(t *testing.T) {
+	testutil.SkipIfShort(t)
+
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+
+	logDir := path.Join(tmpDir, "logs")
+	progDir := path.Join(tmpDir, "progs")
+	err := os.Mkdir(logDir, 0700)
+	testutil.FatalIfErr(t, err)
+	err = os.Mkdir(progDir, 0700)
+	testutil.FatalIfErr(t, err)
+
+	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
+	defer stopM()
+
+	progLoadsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("prog_loads_total", "nocode.mtail", 1)
+
+	testutil.TestOpenFile(t, progDir+"/nocode.mtail")
+	m.PollWatched()
+
+	progLoadsTotalCheck()
+}
+
 func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	testutil.SkipIfShort(t)
 

@@ -19,10 +19,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/golang/glog"
@@ -36,7 +38,7 @@ import (
 )
 
 var (
-	// LineCount counts the number of lines read by the program loader.
+	// LineCount counts the number of lines received by the program loader.
 	LineCount = expvar.NewInt("lines_total")
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
@@ -56,9 +58,6 @@ func (l *Loader) LoadAllPrograms() error {
 	s, err := os.Stat(l.programPath)
 	if err != nil {
 		return errors.Wrapf(err, "failed to stat %q", l.programPath)
-	}
-	if err = l.w.Observe(l.programPath, l); err != nil {
-		glog.Infof("Failed to add watch on %q but continuing: %s", l.programPath, err)
 	}
 	switch {
 	case s.IsDir():
@@ -262,6 +261,8 @@ type Loader struct {
 	dumpBytecode         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
 	syslogUseCurrentYear bool           // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
 	omitMetricSource     bool
+
+	signalQuit chan struct{} // When closed stops the signal handler goroutine.
 }
 
 // OverrideLocation sets the timezone location for the VM.
@@ -323,16 +324,16 @@ func PrometheusRegisterer(reg prometheus.Registerer) func(l *Loader) error {
 }
 
 // NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(programPath string, store *metrics.Store, w watcher.Watcher, options ...func(*Loader) error) (*Loader, error) {
+func NewLoader(programPath string, store *metrics.Store, options ...func(*Loader) error) (*Loader, error) {
 	if store == nil {
 		return nil, errors.New("loader needs a store")
 	}
 	l := &Loader{
 		ms:            store,
-		w:             w,
 		programPath:   programPath,
 		handles:       make(map[string]*VM),
 		programErrors: make(map[string]error),
+		signalQuit:    make(chan struct{}),
 	}
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
@@ -340,6 +341,21 @@ func NewLoader(programPath string, store *metrics.Store, w watcher.Watcher, opti
 	if l.reg != nil {
 		l.reg.MustRegister(lineProcessingDurations)
 	}
+	go func() {
+		n := make(chan os.Signal, 1)
+		signal.Notify(n, syscall.SIGHUP)
+		defer signal.Stop(n)
+		for {
+			select {
+			case <-n:
+				if err := l.LoadAllPrograms(); err != nil {
+					glog.Info(err)
+				}
+			case <-l.signalQuit:
+				return
+			}
+		}
+	}()
 	return l, nil
 }
 
@@ -353,35 +369,14 @@ func (l *Loader) SetOption(options ...func(*Loader) error) error {
 	return nil
 }
 
-func (l *Loader) ProcessFileEvent(ctx context.Context, event watcher.Event) {
-	ctx, span := trace.StartSpan(ctx, "Loader.ProcessFileEvent")
-	defer span.End()
-
-	switch event.Op {
-	case watcher.Delete:
-		l.UnloadProgram(event.Pathname)
-	case watcher.Update:
-		if err := l.LoadProgram(event.Pathname); err != nil {
-			glog.Info(err)
-		}
-	case watcher.Create:
-		if err := l.w.Observe(event.Pathname, l); err != nil {
-			glog.Info(err)
-			return
-		}
-		if err := l.LoadProgram(event.Pathname); err != nil {
-			glog.Info(err)
-		}
-	default:
-		glog.V(1).Infof("Unexpected event type %+#v", event)
-	}
-}
-
 func (l *Loader) Close() {
 	glog.Info("Shutting down loader.")
-	if err := l.w.Close(); err != nil {
-		glog.Infof("error closing watcher: %s", err)
-	}
+	// Shut down the signal handler before deleting the programs.
+	// A more complete shutdown would wait on the signal handler
+	// shutdown before proceeding, but the risk of a SIGHUP showing up right
+	// now is mitigated by the lock below -- at worst we might reload all
+	// programmes before deleting them all.
+	close(l.signalQuit)
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
 	for prog := range l.handles {
@@ -401,12 +396,8 @@ func (l *Loader) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
 	}
 }
 
-// UnloadProgram removes the named program from the watcher to prevent future
-// updates, and terminates any currently running VM goroutine.
+// UnloadProgram removes the named program, any currently running VM goroutine.
 func (l *Loader) UnloadProgram(pathname string) {
-	if err := l.w.Unobserve(pathname, l); err != nil {
-		glog.V(2).Infof("Remove watch on %s failed: %s", pathname, err)
-	}
 	name := filepath.Base(pathname)
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
