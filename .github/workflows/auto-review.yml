@@ -8,6 +8,7 @@ jobs:
   auto-approve:
     runs-on: ubuntu-latest
     if: >
+      github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.draft == false && (
         github.event.action == 'opened' ||
         github.event.action == 'reopened' ||
