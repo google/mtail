@@ -4,6 +4,7 @@
 package mtail
 
 import (
+	"fmt"
 	"net"
 	"time"
 
@@ -11,162 +12,208 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// Option configures mtail.Server
+type Option interface {
+	apply(*Server) error
+}
+
 // ProgramPath sets the path to find mtail programs in the Server.
-func ProgramPath(path string) func(*Server) error {
-	return func(m *Server) error {
-		m.programPath = path
-		return nil
-	}
+type ProgramPath string
+
+func (opt ProgramPath) apply(m *Server) error {
+	m.programPath = string(opt)
+	return nil
 }
 
 // LogPathPatterns sets the patterns to find log paths in the Server.
-func LogPathPatterns(patterns ...string) func(*Server) error {
-	return func(m *Server) error {
-		m.logPathPatterns = patterns
-		return nil
-	}
+func LogPathPatterns(patterns ...string) Option {
+	return logPathPatterns(patterns)
+}
+
+type logPathPatterns []string
+
+func (opt logPathPatterns) apply(m *Server) error {
+	m.logPathPatterns = opt
+	return nil
 }
 
 // IgnoreRegexPattern sets the regex pattern to ignore files.
-func IgnoreRegexPattern(pattern string) func(*Server) error {
-	return func(m *Server) error {
-		m.ignoreRegexPattern = pattern
-		return nil
-	}
+type IgnoreRegexPattern string
+
+func (opt IgnoreRegexPattern) apply(m *Server) error {
+	m.ignoreRegexPattern = string(opt)
+	return nil
 }
 
 // BindAddress sets the HTTP server address in Server.
-func BindAddress(address, port string) func(*Server) error {
-	return func(m *Server) error {
-		m.bindAddress = net.JoinHostPort(address, port)
-		var err error
-		m.listener, err = net.Listen("tcp", m.bindAddress)
-		return err
+func BindAddress(address, port string) Option {
+	return &bindAddress{address, port}
+}
+
+type bindAddress struct {
+	address, port string
+}
+
+func (opt bindAddress) apply(m *Server) error {
+	if m.listener != nil {
+		return fmt.Errorf("HTTP server bind address already supplied")
 	}
+	m.bindAddress = net.JoinHostPort(opt.address, opt.port)
+	var err error
+	m.listener, err = net.Listen("tcp", m.bindAddress)
+	return err
 }
 
 // BindUnixSocket sets the UNIX socket path in Server.
-func BindUnixSocket(unixSocketPath string) func(*Server) error {
-	return func(m *Server) error {
-		m.bindUnixSocket = unixSocketPath
-		var err error
-		m.listener, err = net.Listen("unix", unixSocketPath)
-		return err
+type BindUnixSocket string
+
+func (opt BindUnixSocket) apply(m *Server) error {
+	if m.listener != nil {
+		return fmt.Errorf("HTTP server bind address already supplied")
 	}
+	m.bindUnixSocket = string(opt)
+	var err error
+	m.listener, err = net.Listen("unix", string(opt))
+	return err
 }
 
 // SetBuildInfo sets the mtail program build information in the Server.
-func SetBuildInfo(info BuildInfo) func(*Server) error {
-	return func(m *Server) error {
-		m.buildInfo = info
-		return nil
-	}
+type SetBuildInfo BuildInfo
+
+func (opt SetBuildInfo) apply(m *Server) error {
+	m.buildInfo = BuildInfo(opt)
+	return nil
 }
 
 // OverrideLocation sets the timezone location for log timestamps without any such information.
-func OverrideLocation(loc *time.Location) func(*Server) error {
-	return func(m *Server) error {
-		m.overrideLocation = loc
-		return nil
-	}
+func OverrideLocation(loc *time.Location) Option {
+	return &overrideLocation{loc}
+}
+
+type overrideLocation struct {
+	*time.Location
+}
+
+func (opt overrideLocation) apply(m *Server) error {
+	m.overrideLocation = opt.Location
+	return nil
 }
 
 // ExpiredMetricGcTickInterval sets the interval to run ticker to delete expired metrics from store.
-func ExpiredMetricGcTickInterval(interval time.Duration) func(*Server) error {
-	return func(m *Server) error {
-		m.expiredMetricGcTickInterval = interval
-		return nil
-	}
+type ExpiredMetricGcTickInterval time.Duration
+
+func (opt ExpiredMetricGcTickInterval) apply(m *Server) error {
+	m.expiredMetricGcTickInterval = time.Duration(opt)
+	return nil
 }
 
-// StaleLogGcTickInterval sets the interval to run ticker to remove stale log handles.
-func StaleLogGcTickInterval(interval time.Duration) func(*Server) error {
-	return func(m *Server) error {
-		m.staleLogGcTickInterval = interval
-		return nil
-	}
+// StaleLogGcTickInterval triggers garbage collection runs for stale logs in the tailer.
+type StaleLogGcTickInterval time.Duration
+
+func (opt StaleLogGcTickInterval) apply(m *Server) error {
+	m.staleLogGcTickInterval = time.Duration(opt)
+	return nil
 }
 
-func LogPatternPollTickInterval(interval time.Duration) func(*Server) error {
-	return func(m *Server) error {
-		m.logPatternPollTickInterval = interval
-		return nil
-	}
+// LogPatternPollTickInterval triggers polls on the filesystem for new logs that match the log glob patterns.
+type LogPatternPollTickInterval time.Duration
+
+func (opt LogPatternPollTickInterval) apply(m *Server) error {
+	m.logPatternPollTickInterval = time.Duration(opt)
+	return nil
+}
+
+type niladicOption struct {
+	applyfunc func(m *Server) error
+}
+
+func (n *niladicOption) apply(m *Server) error {
+	return n.applyfunc(m)
 }
 
 // OneShot sets one-shot mode in the Server.
-func OneShot(m *Server) error {
-	m.oneShot = true
-	return nil
-}
+var OneShot = &niladicOption{
+	func(m *Server) error {
+		m.oneShot = true
+		return nil
+	}}
 
 // CompileOnly sets compile-only mode in the Server.
-func CompileOnly(m *Server) error {
-	m.compileOnly = true
-	return nil
-}
+var CompileOnly = &niladicOption{
+	func(m *Server) error {
+		m.compileOnly = true
+		return nil
+	}}
 
 // DumpAst instructs the Server's compiler to print the AST after parsing.
-func DumpAst(m *Server) error {
-	m.dumpAst = true
-	return nil
-}
+var DumpAst = &niladicOption{
+	func(m *Server) error {
+		m.dumpAst = true
+		return nil
+	}}
 
 // DumpAstTypes instructs the Server's copmiler to print the AST after type checking.
-func DumpAstTypes(m *Server) error {
-	m.dumpAstTypes = true
-	return nil
-}
+var DumpAstTypes = &niladicOption{
+	func(m *Server) error {
+		m.dumpAstTypes = true
+		return nil
+	}}
 
 // DumpBytecode instructs the Server's compiuler to print the program bytecode after code generation.
-func DumpBytecode(m *Server) error {
-	m.dumpBytecode = true
-	return nil
-}
+var DumpBytecode = &niladicOption{
+	func(m *Server) error {
+		m.dumpBytecode = true
+		return nil
+	}}
 
 // SyslogUseCurrentYear instructs the Server to use the current year for year-less log timestamp during parsing.
-func SyslogUseCurrentYear(m *Server) error {
-	m.syslogUseCurrentYear = true
-	return nil
-}
+var SyslogUseCurrentYear = &niladicOption{
+	func(m *Server) error {
+		m.syslogUseCurrentYear = true
+		return nil
+	}}
 
 // OmitProgLabel sets the Server to not put the program name as a label in exported metrics.
-func OmitProgLabel(m *Server) error {
-	m.omitProgLabel = true
-	return nil
-}
+var OmitProgLabel = &niladicOption{
+	func(m *Server) error {
+		m.omitProgLabel = true
+		return nil
+	}}
 
 // OmitMetricSource sets the Server to not link created metrics to their source program.
-func OmitMetricSource(m *Server) error {
-	m.omitMetricSource = true
-	return nil
-}
+var OmitMetricSource = &niladicOption{
+	func(m *Server) error {
+		m.omitMetricSource = true
+		return nil
+	}}
 
 // EmitMetricTimestamp tells the Server to export the metric's timestamp.
-func EmitMetricTimestamp(m *Server) error {
-	m.emitMetricTimestamp = true
-	return nil
-}
+var EmitMetricTimestamp = &niladicOption{
+	func(m *Server) error {
+		m.emitMetricTimestamp = true
+		return nil
+	}}
 
 // JaegerReporter creates a new jaeger reporter that sends to the given Jaeger endpoint address.
-func JaegerReporter(jaegerEndpoint string) func(*Server) error {
-	return func(m *Server) error {
-		je, err := jaeger.NewExporter(jaeger.Options{
-			CollectorEndpoint: jaegerEndpoint,
-			Process: jaeger.Process{
-				ServiceName: "mtail",
-			},
-		})
-		if err != nil {
-			return err
-		}
-		trace.RegisterExporter(je)
-		return nil
-	}
-}
+type JaegerReporter string
 
-//
-func OmitDumpMetricStore(m *Server) error {
-	m.omitDumpMetricsStore = true
+func (opt JaegerReporter) apply(m *Server) error {
+	je, err := jaeger.NewExporter(jaeger.Options{
+		CollectorEndpoint: string(opt),
+		Process: jaeger.Process{
+			ServiceName: "mtail",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	trace.RegisterExporter(je)
 	return nil
 }
+
+// OmitDumpMetricStore disables dumping of the metric store... somewhere.
+var OmitDumpMetricStore = &niladicOption{
+	func(m *Server) error {
+		m.omitDumpMetricsStore = true
+		return nil
+	}}

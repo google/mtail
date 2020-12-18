@@ -177,7 +177,7 @@ func (m *Server) initTailer() (err error) {
 		tailer.StaleLogGcTickInterval(m.staleLogGcTickInterval),
 	}
 	if m.oneShot {
-		opts = append(opts, tailer.OneShot())
+		opts = append(opts, tailer.OneShot)
 	}
 	if m.ignoreRegexPattern != "" {
 		opts = append(opts, tailer.IgnoreRegex(m.ignoreRegexPattern))
@@ -231,7 +231,7 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // New creates a MtailServer from the supplied Options.
-func New(store *metrics.Store, w watcher.Watcher, options ...func(*Server) error) (*Server, error) {
+func New(store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
 		store:     store,
 		w:         w,
@@ -277,9 +277,9 @@ func New(store *metrics.Store, w watcher.Watcher, options ...func(*Server) error
 }
 
 // SetOption takes one or more option functions and applies them in order to MtailServer.
-func (m *Server) SetOption(options ...func(*Server) error) error {
+func (m *Server) SetOption(options ...Option) error {
 	for _, option := range options {
-		if err := option(m); err != nil {
+		if err := option.apply(m); err != nil {
 			return err
 		}
 	}

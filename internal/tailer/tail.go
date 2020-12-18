@@ -62,17 +62,16 @@ type Option interface {
 	apply(*Tailer) error
 }
 
-type oneShot struct{}
+type niladicOption struct {
+	applyfunc func(*Tailer) error
+}
 
-func (_ oneShot) apply(t *Tailer) error {
-	t.oneShot = true
-	return nil
+func (n *niladicOption) apply(t *Tailer) error {
+	return n.applyfunc(t)
 }
 
 // OneShot puts the tailer in one-shot mode, where sources are read once from the start and then closed.
-func OneShot() Option {
-	return &oneShot{}
-}
+var OneShot = &niladicOption{func(t *Tailer) error { t.oneShot = true; return nil }}
 
 // LogPatterns sets the glob patterns to use to match pathnames.
 type LogPatterns []string

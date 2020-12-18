@@ -26,7 +26,7 @@ import (
 
 // makeServer makes a new Server for use in tests, but does not start
 // the server. It returns the server, or any errors the new server creates.
-func makeServer(tb testing.TB, pollInterval time.Duration, options ...func(*mtail.Server) error) (*mtail.Server, error) {
+func makeServer(tb testing.TB, pollInterval time.Duration, options ...mtail.Option) (*mtail.Server, error) {
 	tb.Helper()
 	w, err := watcher.NewLogWatcher(pollInterval)
 	testutil.FatalIfErr(tb, err)
@@ -38,7 +38,7 @@ func makeServer(tb testing.TB, pollInterval time.Duration, options ...func(*mtai
 // socket and starts it running. It returns the server, and a cleanup function.
 // startUNIXSocketServer differs from TestStartServer in that it uses UNIX sockets
 // (see the usage of mtail.BindUnixSocket) instead of TCP sockets.
-func startUNIXSocketServer(tb testing.TB, pollInterval time.Duration, options ...func(*mtail.Server) error) (*mtail.Server, func()) {
+func startUNIXSocketServer(tb testing.TB, pollInterval time.Duration, options ...mtail.Option) (*mtail.Server, func()) {
 	tb.Helper()
 
 	tmpDir, rmTmpDir := testutil.TestTempDir(tb)
