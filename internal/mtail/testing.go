@@ -5,6 +5,7 @@ package mtail
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"expvar"
 	"fmt"
@@ -33,6 +34,8 @@ type TestServer struct {
 
 	tb testing.TB
 
+	cancel context.CancelFunc
+
 	// Set this to change the poll deadline when using DoOrTimeout within this TestServer.
 	DoOrTimeoutDeadline time.Duration
 }
@@ -49,11 +52,10 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, options ...Option
 
 	w, err := watcher.NewLogWatcher(pollInterval)
 	testutil.FatalIfErr(tb, err)
-	m, err := New(metrics.NewStore(), w, options...)
-	if err != nil {
-		tb.Fatal(err)
-	}
-	return &TestServer{Server: m, w: w, tb: tb}
+	ctx, cancel := context.WithCancel(context.Background())
+	m, err := New(ctx, metrics.NewStore(), w, options...)
+	testutil.FatalIfErr(tb, err)
+	return &TestServer{Server: m, w: w, tb: tb, cancel: cancel}
 }
 
 // TestStartServer creates a new TestServer and starts it running.  It
@@ -86,21 +88,19 @@ func (m *TestServer) Start() func() {
 	}
 
 	return func() {
+		defer m.cancel()
+
 		err := m.Close(true)
-		if err != nil {
-			m.tb.Fatal(err)
-		}
+		testutil.FatalIfErr(m.tb, err)
 
 		select {
 		case err = <-errc:
+			testutil.FatalIfErr(m.tb, err)
 		case <-time.After(5 * time.Second):
 			buf := make([]byte, 1<<16)
 			n := runtime.Stack(buf, true)
 			fmt.Fprintf(os.Stderr, "%s", buf[0:n])
 			m.tb.Fatal("timeout waiting for shutdown")
-		}
-		if err != nil {
-			m.tb.Fatal(err)
 		}
 	}
 }

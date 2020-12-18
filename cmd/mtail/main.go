@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -141,6 +142,8 @@ func main() {
 	if err != nil {
 		glog.Exitf("Failure to create log watcher: %s", err)
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	opts := []mtail.Option{
 		mtail.ProgramPath(*progs),
 		mtail.LogPathPatterns(logs...),
@@ -183,7 +186,7 @@ func main() {
 	if *jaegerEndpoint != "" {
 		opts = append(opts, mtail.JaegerReporter(*jaegerEndpoint))
 	}
-	m, err := mtail.New(metrics.NewStore(), w, opts...)
+	m, err := mtail.New(ctx, metrics.NewStore(), w, opts...)
 	if err != nil {
 		glog.Error(err)
 		os.Exit(1)

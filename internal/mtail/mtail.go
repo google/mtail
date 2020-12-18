@@ -52,6 +52,7 @@ func (b BuildInfo) String() string {
 
 // Server contains the state of the main mtail program.
 type Server struct {
+	ctx   context.Context
 	store *metrics.Store // Metrics storage
 	w     watcher.Watcher
 
@@ -185,7 +186,7 @@ func (m *Server) initTailer() (err error) {
 	if len(m.logPathPatterns) > 0 {
 		opts = append(opts, tailer.LogPatterns(m.logPathPatterns))
 	}
-	m.t, err = tailer.New(context.Background(), m.l, m.w, opts...)
+	m.t, err = tailer.New(m.ctx, m.l, m.w, opts...)
 	return
 }
 
@@ -231,8 +232,9 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // New creates a MtailServer from the supplied Options.
-func New(store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
+func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
+		ctx:       ctx,
 		store:     store,
 		w:         w,
 		webquit:   make(chan struct{}),

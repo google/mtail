@@ -4,6 +4,7 @@
 package mtail_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -151,10 +152,12 @@ func TestExamplePrograms(t *testing.T) {
 	testutil.SkipIfShort(t)
 	for _, tc := range exampleProgramTests {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
-			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
+			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
 			testutil.FatalIfErr(t, err)
 
 			err = mtail.Run()
@@ -168,9 +171,7 @@ func TestExamplePrograms(t *testing.T) {
 			golden.ReadTestData(g, tc.programfile, goldenStore)
 
 			err = mtail.Close(true)
-			if err != nil {
-				t.Error(err)
-			}
+			testutil.FatalIfErr(t, err)
 
 			testutil.ExpectNoDiff(t, goldenStore, store, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
 		})
@@ -186,9 +187,11 @@ func TestCompileExamplePrograms(t *testing.T) {
 	for _, tc := range matches {
 		name := filepath.Base(tc)
 		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
-			mtail, err := mtail.New(s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
+			mtail, err := mtail.New(ctx, s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
 			testutil.FatalIfErr(t, err)
 			mtail.Close(true)
 		})
@@ -200,6 +203,8 @@ func BenchmarkProgram(b *testing.B) {
 	for _, bm := range exampleProgramTests {
 		bm := bm
 		b.Run(fmt.Sprintf("%s on %s", bm.programfile, bm.logfile), func(b *testing.B) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 			b.ReportAllocs()
 			logDir, rmLogDir := testutil.TestTempDir(b)
 			defer rmLogDir()
@@ -208,7 +213,7 @@ func BenchmarkProgram(b *testing.B) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			programFile := path.Join("../..", bm.programfile)
-			mtail, err := mtail.New(store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()))
+			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()))
 			if err != nil {
 				b.Fatalf("Failed to create mtail: %s", err)
 			}
