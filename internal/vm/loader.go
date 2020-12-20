@@ -34,7 +34,6 @@ import (
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/watcher"
 )
 
 var (
@@ -243,7 +242,6 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 // managing the virtual machines.
 type Loader struct {
 	ms          *metrics.Store        // pointer to metrics.Store to pass to compiler
-	w           watcher.Watcher       // watches for program changes
 	reg         prometheus.Registerer // plce to reg metrics
 	programPath string                // Path that contains mtail programs.
 
