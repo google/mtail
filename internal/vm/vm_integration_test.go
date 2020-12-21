@@ -196,7 +196,10 @@ func TestVmEndToEnd(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			store := metrics.NewStore()
-			l, err := NewLoader("", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource())
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			l, err := NewLoader(ctx, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource())
 			testutil.FatalIfErr(t, err)
 			compileErrors := l.CompileAndRun(tc.name, strings.NewReader(tc.prog))
 			testutil.FatalIfErr(t, compileErrors)

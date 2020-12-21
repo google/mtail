@@ -241,6 +241,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 // the configured program source directory, compiling changes to programs, and
 // managing the virtual machines.
 type Loader struct {
+	ctx         context.Context       // a cancellable context
 	ms          *metrics.Store        // pointer to metrics.Store to pass to compiler
 	reg         prometheus.Registerer // plce to reg metrics
 	programPath string                // Path that contains mtail programs.
@@ -339,11 +340,12 @@ func PrometheusRegisterer(reg prometheus.Registerer) Option {
 }
 
 // NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(programPath string, store *metrics.Store, options ...Option) (*Loader, error) {
+func NewLoader(ctx context.Context, programPath string, store *metrics.Store, options ...Option) (*Loader, error) {
 	if store == nil {
 		return nil, errors.New("loader needs a store")
 	}
 	l := &Loader{
+		ctx:           ctx,
 		ms:            store,
 		programPath:   programPath,
 		handles:       make(map[string]*VM),
@@ -362,12 +364,12 @@ func NewLoader(programPath string, store *metrics.Store, options ...Option) (*Lo
 		defer signal.Stop(n)
 		for {
 			select {
+			case <-ctx.Done():
+				return
 			case <-n:
 				if err := l.LoadAllPrograms(); err != nil {
 					glog.Info(err)
 				}
-			case <-l.signalQuit:
-				return
 			}
 		}
 	}()
@@ -386,12 +388,6 @@ func (l *Loader) SetOption(options ...Option) error {
 
 func (l *Loader) Close() {
 	glog.Info("Shutting down loader.")
-	// Shut down the signal handler before deleting the programs.
-	// A more complete shutdown would wait on the signal handler
-	// shutdown before proceeding, but the risk of a SIGHUP showing up right
-	// now is mitigated by the lock below -- at worst we might reload all
-	// programmes before deleting them all.
-	close(l.signalQuit)
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
 	for prog := range l.handles {
