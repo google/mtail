@@ -149,7 +149,7 @@ func (m *Server) initLoader() error {
 
 // initExporter sets up an Exporter for this Server.
 func (m *Server) initExporter() (err error) {
-	opts := []func(*exporter.Exporter) error{}
+	opts := []exporter.Option{}
 	if m.omitProgLabel {
 		opts = append(opts, exporter.OmitProgLabel)
 	}

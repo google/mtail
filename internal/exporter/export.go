@@ -36,8 +36,11 @@ type Exporter struct {
 	pushTargets   []pushOptions
 }
 
+// Option configures a new Exporter.
+type Option func(*Exporter) error
+
 // Hostname is an option that specifies the mtail hostname to use in exported metrics.
-func Hostname(hostname string) func(*Exporter) error {
+func Hostname(hostname string) Option {
 	return func(e *Exporter) error {
 		e.hostname = hostname
 		return nil
@@ -57,7 +60,7 @@ func EmitTimestamp(e *Exporter) error {
 }
 
 // New creates a new Exporter.
-func New(store *metrics.Store, options ...func(*Exporter) error) (*Exporter, error) {
+func New(store *metrics.Store, options ...Option) (*Exporter, error) {
 	if store == nil {
 		return nil, errors.New("exporter needs a Store")
 	}
@@ -91,7 +94,7 @@ func New(store *metrics.Store, options ...func(*Exporter) error) (*Exporter, err
 }
 
 // SetOption takes one or more option functions and applies them in order to Exporter.
-func (e *Exporter) SetOption(options ...func(*Exporter) error) error {
+func (e *Exporter) SetOption(options ...Option) error {
 	for _, option := range options {
 		if err := option(e); err != nil {
 			return err

@@ -233,7 +233,7 @@ func TestHandlePrometheus(t *testing.T) {
 			for _, metric := range tc.metrics {
 				testutil.FatalIfErr(t, ms.Add(metric))
 			}
-			opts := []func(*Exporter) error{
+			opts := []Option{
 				Hostname("gunstar"),
 			}
 			if !tc.progLabel {
