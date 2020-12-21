@@ -106,29 +106,29 @@ func (m *Server) StartTailing() error {
 
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *Server) initLoader() error {
-	opts := []func(*vm.Loader) error{
+	opts := []vm.Option{
 		vm.PrometheusRegisterer(m.reg),
 	}
 	if m.compileOnly {
-		opts = append(opts, vm.CompileOnly)
+		opts = append(opts, vm.CompileOnly())
 	}
 	if m.oneShot {
-		opts = append(opts, vm.ErrorsAbort)
+		opts = append(opts, vm.ErrorsAbort())
 	}
 	if m.dumpAst {
-		opts = append(opts, vm.DumpAst)
+		opts = append(opts, vm.DumpAst())
 	}
 	if m.dumpAstTypes {
-		opts = append(opts, vm.DumpAstTypes)
+		opts = append(opts, vm.DumpAstTypes())
 	}
 	if m.dumpBytecode {
-		opts = append(opts, vm.DumpBytecode)
+		opts = append(opts, vm.DumpBytecode())
 	}
 	if m.syslogUseCurrentYear {
-		opts = append(opts, vm.SyslogUseCurrentYear)
+		opts = append(opts, vm.SyslogUseCurrentYear())
 	}
 	if m.omitMetricSource {
-		opts = append(opts, vm.OmitMetricSource)
+		opts = append(opts, vm.OmitMetricSource())
 	}
 	if m.overrideLocation != nil {
 		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
@@ -149,12 +149,12 @@ func (m *Server) initLoader() error {
 
 // initExporter sets up an Exporter for this Server.
 func (m *Server) initExporter() (err error) {
-	opts := []func(*exporter.Exporter) error{}
+	opts := []exporter.Option{}
 	if m.omitProgLabel {
-		opts = append(opts, exporter.OmitProgLabel)
+		opts = append(opts, exporter.OmitProgLabel())
 	}
 	if m.emitMetricTimestamp {
-		opts = append(opts, exporter.EmitTimestamp)
+		opts = append(opts, exporter.EmitTimestamp())
 	}
 	m.e, err = exporter.New(m.store, opts...)
 	if err != nil {
@@ -177,7 +177,7 @@ func (m *Server) initTailer() (err error) {
 		tailer.StaleLogGcTickInterval(m.staleLogGcTickInterval),
 	}
 	if m.oneShot {
-		opts = append(opts, tailer.OneShot())
+		opts = append(opts, tailer.OneShot)
 	}
 	if m.ignoreRegexPattern != "" {
 		opts = append(opts, tailer.IgnoreRegex(m.ignoreRegexPattern))
@@ -231,7 +231,7 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // New creates a MtailServer from the supplied Options.
-func New(store *metrics.Store, w watcher.Watcher, options ...func(*Server) error) (*Server, error) {
+func New(store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
 		store:     store,
 		w:         w,
@@ -277,9 +277,9 @@ func New(store *metrics.Store, w watcher.Watcher, options ...func(*Server) error
 }
 
 // SetOption takes one or more option functions and applies them in order to MtailServer.
-func (m *Server) SetOption(options ...func(*Server) error) error {
+func (m *Server) SetOption(options ...Option) error {
 	for _, option := range options {
-		if err := option(m); err != nil {
+		if err := option.apply(m); err != nil {
 			return err
 		}
 	}

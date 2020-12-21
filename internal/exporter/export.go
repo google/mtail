@@ -36,8 +36,11 @@ type Exporter struct {
 	pushTargets   []pushOptions
 }
 
-// Hostname is an option that specifies the mtail hostname to use in exported metrics.
-func Hostname(hostname string) func(*Exporter) error {
+// Option configures a new Exporter.
+type Option func(*Exporter) error
+
+// Hostname specifies the mtail hostname to use in exported metrics.
+func Hostname(hostname string) Option {
 	return func(e *Exporter) error {
 		e.hostname = hostname
 		return nil
@@ -45,19 +48,23 @@ func Hostname(hostname string) func(*Exporter) error {
 }
 
 // OmitProgLabel sets the Exporter to not put program names in metric labels.
-func OmitProgLabel(e *Exporter) error {
-	e.omitProgLabel = true
-	return nil
+func OmitProgLabel() Option {
+	return func(e *Exporter) error {
+		e.omitProgLabel = true
+		return nil
+	}
 }
 
 // EmitTimestamp instructs the exporter to send metric's timestamps to collectors.
-func EmitTimestamp(e *Exporter) error {
-	e.emitTimestamp = true
-	return nil
+func EmitTimestamp() Option {
+	return func(e *Exporter) error {
+		e.emitTimestamp = true
+		return nil
+	}
 }
 
 // New creates a new Exporter.
-func New(store *metrics.Store, options ...func(*Exporter) error) (*Exporter, error) {
+func New(store *metrics.Store, options ...Option) (*Exporter, error) {
 	if store == nil {
 		return nil, errors.New("exporter needs a Store")
 	}
@@ -91,7 +98,7 @@ func New(store *metrics.Store, options ...func(*Exporter) error) (*Exporter, err
 }
 
 // SetOption takes one or more option functions and applies them in order to Exporter.
-func (e *Exporter) SetOption(options ...func(*Exporter) error) error {
+func (e *Exporter) SetOption(options ...Option) error {
 	for _, option := range options {
 		if err := option(e); err != nil {
 			return err
