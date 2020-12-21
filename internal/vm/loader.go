@@ -263,8 +263,11 @@ type Loader struct {
 	signalQuit chan struct{} // When closed stops the signal handler goroutine.
 }
 
+// Option configures a new program Loader.
+type Option func(*Loader) error
+
 // OverrideLocation sets the timezone location for the VM.
-func OverrideLocation(loc *time.Location) func(*Loader) error {
+func OverrideLocation(loc *time.Location) Option {
 	return func(l *Loader) error {
 		l.overrideLocation = loc
 		return nil
@@ -314,7 +317,7 @@ func OmitMetricSource(l *Loader) error {
 }
 
 // PrometheusRegisterer passes in a registry for setting up exported metrics.
-func PrometheusRegisterer(reg prometheus.Registerer) func(l *Loader) error {
+func PrometheusRegisterer(reg prometheus.Registerer) Option {
 	return func(l *Loader) error {
 		l.reg = reg
 		return nil
@@ -322,7 +325,7 @@ func PrometheusRegisterer(reg prometheus.Registerer) func(l *Loader) error {
 }
 
 // NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(programPath string, store *metrics.Store, options ...func(*Loader) error) (*Loader, error) {
+func NewLoader(programPath string, store *metrics.Store, options ...Option) (*Loader, error) {
 	if store == nil {
 		return nil, errors.New("loader needs a store")
 	}
@@ -358,7 +361,7 @@ func NewLoader(programPath string, store *metrics.Store, options ...func(*Loader
 }
 
 // SetOption takes one or more option functions and applies them in order to Loader.
-func (l *Loader) SetOption(options ...func(*Loader) error) error {
+func (l *Loader) SetOption(options ...Option) error {
 	for _, option := range options {
 		if err := option(l); err != nil {
 			return err

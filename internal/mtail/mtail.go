@@ -106,7 +106,7 @@ func (m *Server) StartTailing() error {
 
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *Server) initLoader() error {
-	opts := []func(*vm.Loader) error{
+	opts := []vm.Option{
 		vm.PrometheusRegisterer(m.reg),
 	}
 	if m.compileOnly {
