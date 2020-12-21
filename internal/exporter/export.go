@@ -39,7 +39,7 @@ type Exporter struct {
 // Option configures a new Exporter.
 type Option func(*Exporter) error
 
-// Hostname is an option that specifies the mtail hostname to use in exported metrics.
+// Hostname specifies the mtail hostname to use in exported metrics.
 func Hostname(hostname string) Option {
 	return func(e *Exporter) error {
 		e.hostname = hostname
@@ -48,15 +48,19 @@ func Hostname(hostname string) Option {
 }
 
 // OmitProgLabel sets the Exporter to not put program names in metric labels.
-func OmitProgLabel(e *Exporter) error {
-	e.omitProgLabel = true
-	return nil
+func OmitProgLabel() Option {
+	return func(e *Exporter) error {
+		e.omitProgLabel = true
+		return nil
+	}
 }
 
 // EmitTimestamp instructs the exporter to send metric's timestamps to collectors.
-func EmitTimestamp(e *Exporter) error {
-	e.emitTimestamp = true
-	return nil
+func EmitTimestamp() Option {
+	return func(e *Exporter) error {
+		e.emitTimestamp = true
+		return nil
+	}
 }
 
 // New creates a new Exporter.

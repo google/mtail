@@ -237,7 +237,7 @@ func TestHandlePrometheus(t *testing.T) {
 				Hostname("gunstar"),
 			}
 			if !tc.progLabel {
-				opts = append(opts, OmitProgLabel)
+				opts = append(opts, OmitProgLabel())
 			}
 			e, err := New(ms, opts...)
 			testutil.FatalIfErr(t, err)

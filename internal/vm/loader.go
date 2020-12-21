@@ -275,45 +275,59 @@ func OverrideLocation(loc *time.Location) Option {
 }
 
 // CompileOnly sets the Loader to compile programs only, without executing them.
-func CompileOnly(l *Loader) error {
-	l.compileOnly = true
-	return ErrorsAbort(l)
+func CompileOnly() Option {
+	return func(l *Loader) error {
+		l.compileOnly = true
+		return ErrorsAbort()(l)
+	}
 }
 
 // ErrorsAbort sets the Loader to abort the Loader on compile errors.
-func ErrorsAbort(l *Loader) error {
-	l.errorsAbort = true
-	return nil
+func ErrorsAbort() Option {
+	return func(l *Loader) error {
+		l.errorsAbort = true
+		return nil
+	}
 }
 
 // DumpAst instructs the Loader to print the AST after program compilation.
-func DumpAst(l *Loader) error {
-	l.dumpAst = true
-	return nil
+func DumpAst() Option {
+	return func(l *Loader) error {
+		l.dumpAst = true
+		return nil
+	}
 }
 
 // DumpAstTypes instructs the Loader to print the AST after type checking.
-func DumpAstTypes(l *Loader) error {
-	l.dumpAstTypes = true
-	return nil
+func DumpAstTypes() Option {
+	return func(l *Loader) error {
+		l.dumpAstTypes = true
+		return nil
+	}
 }
 
 // DumpBytecode instructs the loader to print the compiled bytecode after code generation.
-func DumpBytecode(l *Loader) error {
-	l.dumpBytecode = true
-	return nil
+func DumpBytecode() Option {
+	return func(l *Loader) error {
+		l.dumpBytecode = true
+		return nil
+	}
 }
 
 // SyslogUseCurrentYear instructs the VM to annotate yearless timestamps with the current year.
-func SyslogUseCurrentYear(l *Loader) error {
-	l.syslogUseCurrentYear = true
-	return nil
+func SyslogUseCurrentYear() Option {
+	return func(l *Loader) error {
+		l.syslogUseCurrentYear = true
+		return nil
+	}
 }
 
 // OmitMetricSource instructs the Loader to not annotate metrics with their program source when added to the metric store.
-func OmitMetricSource(l *Loader) error {
-	l.omitMetricSource = true
-	return nil
+func OmitMetricSource() Option {
+	return func(l *Loader) error {
+		l.omitMetricSource = true
+		return nil
+	}
 }
 
 // PrometheusRegisterer passes in a registry for setting up exported metrics.

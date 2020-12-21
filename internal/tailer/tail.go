@@ -57,7 +57,7 @@ type Tailer struct {
 	pollMu sync.Mutex // protects Poll()
 }
 
-// Option configures a Tailer.
+// Option configures a new Tailer.
 type Option interface {
 	apply(*Tailer) error
 }

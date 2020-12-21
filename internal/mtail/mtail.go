@@ -110,25 +110,25 @@ func (m *Server) initLoader() error {
 		vm.PrometheusRegisterer(m.reg),
 	}
 	if m.compileOnly {
-		opts = append(opts, vm.CompileOnly)
+		opts = append(opts, vm.CompileOnly())
 	}
 	if m.oneShot {
-		opts = append(opts, vm.ErrorsAbort)
+		opts = append(opts, vm.ErrorsAbort())
 	}
 	if m.dumpAst {
-		opts = append(opts, vm.DumpAst)
+		opts = append(opts, vm.DumpAst())
 	}
 	if m.dumpAstTypes {
-		opts = append(opts, vm.DumpAstTypes)
+		opts = append(opts, vm.DumpAstTypes())
 	}
 	if m.dumpBytecode {
-		opts = append(opts, vm.DumpBytecode)
+		opts = append(opts, vm.DumpBytecode())
 	}
 	if m.syslogUseCurrentYear {
-		opts = append(opts, vm.SyslogUseCurrentYear)
+		opts = append(opts, vm.SyslogUseCurrentYear())
 	}
 	if m.omitMetricSource {
-		opts = append(opts, vm.OmitMetricSource)
+		opts = append(opts, vm.OmitMetricSource())
 	}
 	if m.overrideLocation != nil {
 		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
@@ -151,10 +151,10 @@ func (m *Server) initLoader() error {
 func (m *Server) initExporter() (err error) {
 	opts := []exporter.Option{}
 	if m.omitProgLabel {
-		opts = append(opts, exporter.OmitProgLabel)
+		opts = append(opts, exporter.OmitProgLabel())
 	}
 	if m.emitMetricTimestamp {
-		opts = append(opts, exporter.EmitTimestamp)
+		opts = append(opts, exporter.EmitTimestamp())
 	}
 	m.e, err = exporter.New(m.store, opts...)
 	if err != nil {
