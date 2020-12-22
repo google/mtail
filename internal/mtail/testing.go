@@ -98,11 +98,10 @@ func (m *TestServer) Start() func() {
 	return func() {
 		defer m.cancel()
 
-		err := m.Close(true)
-		testutil.FatalIfErr(m.tb, err)
+		testutil.FatalIfErr(m.tb, m.Close(true))
 
 		select {
-		case err = <-errc:
+		case err := <-errc:
 			testutil.FatalIfErr(m.tb, err)
 		case <-time.After(5 * time.Second):
 			buf := make([]byte, 1<<16)
