@@ -99,14 +99,6 @@ func (opt overrideLocation) apply(m *Server) error {
 	return nil
 }
 
-// ExpiredMetricGcTickInterval sets the interval to run ticker to delete expired metrics from store.
-type ExpiredMetricGcTickInterval time.Duration
-
-func (opt ExpiredMetricGcTickInterval) apply(m *Server) error {
-	m.expiredMetricGcTickInterval = time.Duration(opt)
-	return nil
-}
-
 // StaleLogGcTickInterval triggers garbage collection runs for stale logs in the tailer.
 type StaleLogGcTickInterval time.Duration
 

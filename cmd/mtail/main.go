@@ -150,7 +150,6 @@ func main() {
 		mtail.IgnoreRegexPattern(*ignoreRegexPattern),
 		mtail.SetBuildInfo(buildInfo),
 		mtail.OverrideLocation(loc),
-		mtail.ExpiredMetricGcTickInterval(*expiredMetricGcTickInterval),
 		mtail.StaleLogGcTickInterval(*staleLogGcTickInterval),
 		mtail.LogPatternPollTickInterval(*pollInterval),
 	}
@@ -186,7 +185,11 @@ func main() {
 	if *jaegerEndpoint != "" {
 		opts = append(opts, mtail.JaegerReporter(*jaegerEndpoint))
 	}
-	m, err := mtail.New(ctx, metrics.NewStore(), w, opts...)
+	store := metrics.NewStore()
+	if *expiredMetricGcTickInterval > 0 {
+		store.StartGcLoop(ctx, *expiredMetricGcTickInterval)
+	}
+	m, err := mtail.New(ctx, store, w, opts...)
 	if err != nil {
 		glog.Error(err)
 		os.Exit(1)
