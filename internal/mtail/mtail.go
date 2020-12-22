@@ -52,9 +52,10 @@ func (b BuildInfo) String() string {
 
 // Server contains the state of the main mtail program.
 type Server struct {
-	ctx   context.Context
-	store *metrics.Store // Metrics storage
-	w     watcher.Watcher
+	ctx    context.Context
+	cancel context.CancelFunc
+	store  *metrics.Store // Metrics storage
+	w      watcher.Watcher
 
 	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs
 	l *vm.Loader         // l loads programs and manages the VM lifecycle
@@ -234,7 +235,6 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // New creates a MtailServer from the supplied Options.
 func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
-		ctx:       ctx,
 		store:     store,
 		w:         w,
 		webquit:   make(chan struct{}),
@@ -244,6 +244,7 @@ func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options .
 		// are not fully specified at startup.
 		reg: prometheus.NewRegistry(),
 	}
+	m.ctx, m.cancel = context.WithCancel(ctx)
 
 	expvarDescs := map[string]*prometheus.Desc{
 		// internal/tailer/file.go
@@ -379,6 +380,9 @@ func (m *Server) Close(fast bool) error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		close(m.closeQuit)
+		// Ensure we're cancelling our child context just in case Close is
+		// called outside context cancellation.
+		m.cancel()
 		// If we have a tailer (i.e. not in test) then signal the tailer to
 		// shut down, which will cause the watcher to shut down.
 		if m.t != nil {
