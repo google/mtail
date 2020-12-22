@@ -15,7 +15,6 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
-	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -32,23 +31,6 @@ import (
 	"github.com/prometheus/common/version"
 	"go.opencensus.io/zpages"
 )
-
-type BuildInfo struct {
-	Branch   string
-	Version  string
-	Revision string
-}
-
-func (b BuildInfo) String() string {
-	return fmt.Sprintf(
-		"mtail version %s git revision %s go version %s go arch %s go os %s",
-		b.Version,
-		b.Revision,
-		runtime.Version(),
-		runtime.GOARCH,
-		runtime.GOOS,
-	)
-}
 
 // Server contains the state of the main mtail program.
 type Server struct {
