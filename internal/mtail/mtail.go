@@ -68,14 +68,12 @@ type Server struct {
 	overrideLocation            *time.Location // Timezone location to use when parsing timestamps
 	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
 	staleLogGcWaker             waker.Waker    // Wake to run stale log gc
-	stopStaleLogGcWaker         func()
-	logPatternPollWaker         waker.Waker // Wake to poll for log patterns
-	stopLogPatternPollWaker     func()
-	syslogUseCurrentYear        bool // if set, use the current year for timestamps that have no year information
-	omitMetricSource            bool // if set, do not link the source program to a metric
-	omitProgLabel               bool // if set, do not put the program name in the metric labels
-	emitMetricTimestamp         bool // if set, emit the metric's recorded timestamp
-	omitDumpMetricsStore        bool // if set, do not print the metric store; useful in test
+	logPatternPollWaker         waker.Waker    // Wake to poll for log patterns
+	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
+	omitMetricSource            bool           // if set, do not link the source program to a metric
+	omitProgLabel               bool           // if set, do not put the program name in the metric labels
+	emitMetricTimestamp         bool           // if set, emit the metric's recorded timestamp
+	omitDumpMetricsStore        bool           // if set, do not print the metric store; useful in test
 }
 
 // StartTailing adds each log path pattern to the tailer.
@@ -316,12 +314,6 @@ func (m *Server) Close(fast bool) error {
 		// Ensure we're cancelling our child context just in case Close is
 		// called outside context cancellation.
 		m.cancel()
-		if m.stopStaleLogGcWaker != nil {
-			m.stopStaleLogGcWaker()
-		}
-		if m.stopLogPatternPollWaker != nil {
-			m.stopLogPatternPollWaker()
-		}
 		// If we have a tailer (i.e. not in test) then signal the tailer to
 		// shut down, which will cause the watcher to shut down.
 		if m.t != nil {

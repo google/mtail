@@ -15,6 +15,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/waker"
 	"github.com/google/mtail/internal/watcher"
 	"go.opencensus.io/trace"
 )
@@ -150,8 +151,16 @@ func main() {
 		mtail.IgnoreRegexPattern(*ignoreRegexPattern),
 		mtail.SetBuildInfo(buildInfo),
 		mtail.OverrideLocation(loc),
-		mtail.StaleLogGcTickInterval(*staleLogGcTickInterval),
-		mtail.LogPatternPollTickInterval(*pollInterval),
+	}
+	if *staleLogGcTickInterval > 0 {
+		staleLogGcWaker, stopStaleLogGcWaker := waker.NewTimed(*staleLogGcTickInterval)
+		defer stopStaleLogGcWaker()
+		opts = append(opts, mtail.StaleLogGcWaker(staleLogGcWaker))
+	}
+	if *pollInterval > 0 {
+		logPatternPollWaker, stopLogPatternPollWaker := waker.NewTimed(*pollInterval)
+		defer stopLogPatternPollWaker()
+		opts = append(opts, mtail.LogPatternPollWaker(logPatternPollWaker))
 	}
 	if *unixSocket == "" {
 		opts = append(opts, mtail.BindAddress(*address, *port))

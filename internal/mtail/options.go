@@ -100,20 +100,31 @@ func (opt overrideLocation) apply(m *Server) error {
 	return nil
 }
 
-// StaleLogGcTickInterval sets the interval between garbage collection runs for
-// stale logs in the tailer.
-type StaleLogGcTickInterval time.Duration
+// StaleLogGcWaker triggers garbage collection runs for stale logs in the tailer.
+func StaleLogGcWaker(w waker.Waker) Option {
+	return &staleLogGcWaker{w}
+}
 
-func (opt StaleLogGcTickInterval) apply(m *Server) error {
-	m.staleLogGcWaker, m.stopStaleLogGcWaker = waker.NewTimed(time.Duration(opt))
+type staleLogGcWaker struct {
+	waker.Waker
+}
+
+func (opt staleLogGcWaker) apply(m *Server) error {
+	m.staleLogGcWaker = opt.Waker
 	return nil
 }
 
-// LogPatternPollTickInterval sets the interval between polls on the filesystem for new logs that match the log glob patterns.
-type LogPatternPollTickInterval time.Duration
+// LogPatternPollWaker triggers polls on the filesystem for new logs that match the log glob patterns.
+func LogPatternPollWaker(w waker.Waker) Option {
+	return &logPatternPollWaker{w}
+}
 
-func (opt LogPatternPollTickInterval) apply(m *Server) error {
-	m.logPatternPollWaker, m.stopLogPatternPollWaker = waker.NewTimed(time.Duration(opt))
+type logPatternPollWaker struct {
+	waker.Waker
+}
+
+func (opt logPatternPollWaker) apply(m *Server) error {
+	m.logPatternPollWaker = opt.Waker
 	return nil
 }
 
