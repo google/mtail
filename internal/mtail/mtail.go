@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"expvar"
 	"fmt"
-	"html/template"
 	"io"
 	"net"
 	"net/http"
@@ -173,47 +172,6 @@ func (m *Server) initTailer() (err error) {
 	return
 }
 
-const statusTemplate = `
-<html>
-<head>
-<title>mtail on {{.BindAddress}}</title>
-</head>
-<body>
-<h1>mtail on {{.BindAddress}}</h1>
-<p>Build: {{.BuildInfo}}</p>
-<p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
-<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a>, <a href="/tracez">tracez</a>, <a href="/progz">progz</a></p>
-`
-
-func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	t, err := template.New("status").Parse(statusTemplate)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	data := struct {
-		BindAddress string
-		BuildInfo   string
-	}{
-		m.bindAddress,
-		m.buildInfo.String(),
-	}
-	w.Header().Add("Content-type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	if err = t.Execute(w, data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-	err = m.l.WriteStatusHTML(w)
-	if err != nil {
-		glog.Warningf("Error while writing loader status: %s", err)
-	}
-	err = m.t.WriteStatusHTML(w)
-	if err != nil {
-		glog.Warningf("Error while writing tailer status: %s", err)
-	}
-}
-
 // New creates a MtailServer from the supplied Options.
 func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
@@ -296,7 +254,7 @@ func (m *Server) Serve() error {
 	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
-	mux.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
+	mux.HandleFunc("/quitquitquit", http.HandlerFunc(m.quitHandler))
 	mux.Handle("/debug/vars", expvar.Handler())
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
@@ -324,16 +282,6 @@ func (m *Server) Serve() error {
 	}()
 	m.WaitForShutdown()
 	return <-errc
-}
-
-func (m *Server) handleQuit(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		w.Header().Add("Allow", "POST")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	fmt.Fprintf(w, "Exiting...")
-	close(m.webquit)
 }
 
 // WaitForShutdown handles shutdown requests from the system or the UI.
@@ -426,14 +374,6 @@ func (m *Server) Run() error {
 		}
 	}
 	return nil
-}
-
-func FaviconHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "image/x-icon")
-	w.Header().Set("Cache-Control", "public, max-age=7776000")
-	if _, err := w.Write(logoFavicon); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
 }
 
 func (m *Server) Addr() string {
