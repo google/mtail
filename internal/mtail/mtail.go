@@ -358,6 +358,8 @@ func (m *Server) WaitForShutdown() {
 	n := make(chan os.Signal, 1)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
 	select {
+	case <-m.ctx.Done():
+		glog.Info("External shutdown, exiting...")
 	case <-n:
 		glog.Info("Received SIGTERM, exiting...")
 	case <-m.webquit:
