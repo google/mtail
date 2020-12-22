@@ -368,7 +368,7 @@ func (m *Server) Run() error {
 			return err
 		}
 	} else {
-		m.store.StartGcLoop(m.expiredMetricGcTickInterval)
+		m.store.StartGcLoop(m.ctx, m.expiredMetricGcTickInterval)
 		if err := m.Serve(); err != nil {
 			return err
 		}
