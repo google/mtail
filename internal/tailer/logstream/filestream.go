@@ -18,8 +18,10 @@ import (
 )
 
 var (
-	// fileStreamRotations counts the rotations of a file stream
+	// fileRotations counts the rotations of a file stream
 	fileRotations = expvar.NewMap("file_rotations_total")
+	// fileTruncates counts the truncations of a file stream
+	fileTruncates = expvar.NewMap("file_truncates_total")
 )
 
 // fileStream streams log lines from a regular file on the file system.  These
@@ -59,6 +61,7 @@ func (fs *fileStream) LastReadTime() time.Time {
 func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, seekToEnd bool) error {
 	fd, err := os.OpenFile(fs.pathname, os.O_RDONLY, 0600)
 	if err != nil {
+		logErrors.Add(fs.pathname, 1)
 		return err
 	}
 	glog.Infof("opened new file %v", fd)
@@ -68,12 +71,14 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		defer func() {
 			err := fd.Close()
 			if err != nil {
+				logErrors.Add(fs.pathname, 1)
 				glog.Info(err)
 			}
 		}()
 		if seekToEnd {
 			_, err := fd.Seek(0, io.SeekEnd)
 			if err != nil {
+				logErrors.Add(fs.pathname, 1)
 				glog.Info(err)
 			}
 			glog.Infof("%v: seeked to end", fd)
@@ -93,7 +98,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				if serr != nil {
 					glog.Info(serr)
 					if os.IsNotExist(serr) {
-						glog.Info("going to finish this off")
+						glog.Info("no longer exists, mark as finished")
 						// If the file no longer exists, then there's nothing to
 						// reopen and thus we must be done here.  The caller may
 						// find this file in the future, and it can create a new
@@ -106,6 +111,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 						fs.finishedMu.Unlock()
 						return
 					}
+					logErrors.Add(fs.pathname, 1)
 					goto Sleep
 				}
 				if !os.SameFile(fi, newfi) {
@@ -117,6 +123,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				}
 				currentOffset, serr := fd.Seek(0, io.SeekCurrent)
 				if serr != nil {
+					logErrors.Add(fs.pathname, 1)
 					glog.Info(serr)
 					continue
 				}
@@ -129,9 +136,11 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					}
 					p, serr := fd.Seek(0, io.SeekStart)
 					if serr != nil {
+						logErrors.Add(fs.pathname, 1)
 						glog.Info(serr)
 					}
 					glog.Infof("Seeked to %d", p)
+					fileTruncates.Add(fs.pathname, 1)
 					continue
 				}
 			}
@@ -143,7 +152,6 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		Sleep:
 			// If we have stalled, then pause, otherwise loop back.
 			if err == io.EOF || ctx.Err() != nil {
-				// Update the last read time if we were able to read anything.
 				glog.Info("waiting")
 				select {
 				case <-ctx.Done():

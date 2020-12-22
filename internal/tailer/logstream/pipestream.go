@@ -43,6 +43,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	// Open in nonblocking mode because the write end of the pipe may not have started yet.
 	fd, err := os.OpenFile(ps.pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
 	if err != nil {
+		logErrors.Add(ps.pathname, 1)
 		return err
 	}
 	go func() {
@@ -51,6 +52,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		defer func() {
 			err := fd.Close()
 			if err != nil {
+				logErrors.Add(ps.pathname, 1)
 				glog.Info(err)
 			}
 		}()
@@ -60,6 +62,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		for {
 			// Set idle timeout
 			if err := fd.SetReadDeadline(time.Now().Add(defaultReadTimeout)); err != nil {
+				logErrors.Add(ps.pathname, 1)
 				glog.V(2).Infof("%s: %s", ps.pathname, err)
 			}
 			n, err := fd.Read(b[:capB])
@@ -69,10 +72,15 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				// below for cancellation.
 				goto Sleep
 			}
-			if err == io.EOF {
-				// Per pipe(7): If all file descriptors referring to the write end
-				// of a pipe have been closed, then an attempt to read(2) from the
-				// pipe will see end-of-file (read(2) will return 0).
+			// Per pipe(7): If all file descriptors referring to the write end
+			// of a pipe have been closed, then an attempt to read(2) from the
+			// pipe will see end-of-file (read(2) will return 0).
+			// All other errors also finish the stream and are counted.
+			if err != nil {
+				if err != io.EOF {
+					glog.Info(err)
+					logErrors.Add(ps.pathname, 1)
+				}
 				ps.finishedMu.Lock()
 				ps.finished = true
 				ps.finishedMu.Unlock()
@@ -80,7 +88,6 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 
 			decodeAndSend(ps.ctx, ps.llp, ps.pathname, n, b[:n], partial)
-			// Update the last read time if we were able to read anything.
 			if n > 0 {
 				ps.lastReadTime = time.Now()
 			}

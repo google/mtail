@@ -10,6 +10,7 @@ package logstream
 
 import (
 	"context"
+	"expvar"
 	"fmt"
 	"os"
 	"sync"
@@ -17,6 +18,11 @@ import (
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/waker"
+)
+
+var (
+	// logErrors counts the IO errors encountered per log
+	logErrors = expvar.NewMap("log_errors_total")
 )
 
 // LogStream
@@ -39,6 +45,7 @@ const defaultReadBufferSize = 4096
 func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, llp logline.Processor, seekToStart bool) (LogStream, error) {
 	fi, err := os.Stat(pathname)
 	if err != nil {
+		logErrors.Add(pathname, 1)
 		return nil, err
 	}
 	switch m := fi.Mode(); {

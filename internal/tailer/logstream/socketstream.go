@@ -42,6 +42,7 @@ func (ss *socketStream) LastReadTime() time.Time {
 func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo) error {
 	c, err := net.ListenUnixgram("unixgram", &net.UnixAddr{ss.pathname, "unixgram"})
 	if err != nil {
+		logErrors.Add(ss.pathname, 1)
 		return err
 	}
 	go func() {
@@ -50,6 +51,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 		defer func() {
 			err := c.Close()
 			if err != nil {
+				logErrors.Add(ss.pathname, 1)
 				glog.Info(err)
 			}
 		}()
@@ -68,7 +70,18 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 				goto Sleep
 			}
 			// EOF means socket closed, so this socketstream is now finished.
-			if err == io.EOF {
+			// All other errors also finish the stream and are counted.
+			if err != nil {
+				if err != io.EOF {
+					glog.Info(err)
+					logErrors.Add(ss.pathname, 1)
+				}
+				ss.finishedMu.Lock()
+				ss.finished = true
+				ss.finishedMu.Unlock()
+				return
+			}
+			if err != nil {
 				ss.finishedMu.Lock()
 				ss.finished = true
 				ss.finishedMu.Unlock()
