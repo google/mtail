@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"contrib.go.opencensus.io/exporter/jaeger"
+	"github.com/google/mtail/internal/waker"
 	"go.opencensus.io/trace"
 )
 
@@ -99,19 +100,20 @@ func (opt overrideLocation) apply(m *Server) error {
 	return nil
 }
 
-// StaleLogGcTickInterval triggers garbage collection runs for stale logs in the tailer.
+// StaleLogGcTickInterval sets the interval between garbage collection runs for
+// stale logs in the tailer.
 type StaleLogGcTickInterval time.Duration
 
 func (opt StaleLogGcTickInterval) apply(m *Server) error {
-	m.staleLogGcTickInterval = time.Duration(opt)
+	m.staleLogGcWaker, m.stopStaleLogGcWaker = waker.NewTimed(time.Duration(opt))
 	return nil
 }
 
-// LogPatternPollTickInterval triggers polls on the filesystem for new logs that match the log glob patterns.
+// LogPatternPollTickInterval sets the interval between polls on the filesystem for new logs that match the log glob patterns.
 type LogPatternPollTickInterval time.Duration
 
 func (opt LogPatternPollTickInterval) apply(m *Server) error {
-	m.logPatternPollTickInterval = time.Duration(opt)
+	m.logPatternPollWaker, m.stopLogPatternPollWaker = waker.NewTimed(time.Duration(opt))
 	return nil
 }
 

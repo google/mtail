@@ -23,6 +23,7 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/vm"
+	"github.com/google/mtail/internal/waker"
 	"github.com/google/mtail/internal/watcher"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -66,13 +67,15 @@ type Server struct {
 
 	overrideLocation            *time.Location // Timezone location to use when parsing timestamps
 	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
-	staleLogGcTickInterval      time.Duration  // Interval between stale log gc runs
-	logPatternPollTickInterval  time.Duration  // Interval between log pattern polls
-	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
-	omitMetricSource            bool           // if set, do not link the source program to a metric
-	omitProgLabel               bool           // if set, do not put the program name in the metric labels
-	emitMetricTimestamp         bool           // if set, emit the metric's recorded timestamp
-	omitDumpMetricsStore        bool           // if set, do not print the metric store; useful in test
+	staleLogGcWaker             waker.Waker    // Wake to run stale log gc
+	stopStaleLogGcWaker         func()
+	logPatternPollWaker         waker.Waker // Wake to poll for log patterns
+	stopLogPatternPollWaker     func()
+	syslogUseCurrentYear        bool // if set, use the current year for timestamps that have no year information
+	omitMetricSource            bool // if set, do not link the source program to a metric
+	omitProgLabel               bool // if set, do not put the program name in the metric labels
+	emitMetricTimestamp         bool // if set, emit the metric's recorded timestamp
+	omitDumpMetricsStore        bool // if set, do not print the metric store; useful in test
 }
 
 // StartTailing adds each log path pattern to the tailer.
@@ -156,8 +159,8 @@ func (m *Server) initExporter() (err error) {
 // initTailer sets up a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
 	opts := []tailer.Option{
-		tailer.LogPatternPollTickInterval(m.logPatternPollTickInterval),
-		tailer.StaleLogGcTickInterval(m.staleLogGcTickInterval),
+		tailer.LogPatternPollWaker(m.logPatternPollWaker),
+		tailer.StaleLogGcWaker(m.staleLogGcWaker),
 	}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
@@ -313,6 +316,12 @@ func (m *Server) Close(fast bool) error {
 		// Ensure we're cancelling our child context just in case Close is
 		// called outside context cancellation.
 		m.cancel()
+		if m.stopStaleLogGcWaker != nil {
+			m.stopStaleLogGcWaker()
+		}
+		if m.stopLogPatternPollWaker != nil {
+			m.stopLogPatternPollWaker()
+		}
 		// If we have a tailer (i.e. not in test) then signal the tailer to
 		// shut down, which will cause the watcher to shut down.
 		if m.t != nil {
