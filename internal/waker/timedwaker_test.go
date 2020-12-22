@@ -4,6 +4,7 @@
 package waker_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -11,8 +12,9 @@ import (
 )
 
 func TestTimedWakerWakes(t *testing.T) {
-	w, cancel := waker.NewTimed(10 * time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	w := waker.NewTimed(ctx, 10*time.Millisecond)
 
 	timer := time.NewTimer(100 * time.Millisecond)
 	defer timer.Stop()

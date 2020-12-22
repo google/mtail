@@ -4,6 +4,7 @@
 package waker
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -17,31 +18,27 @@ type timedWaker struct {
 	wake chan struct{}
 }
 
-// NewTimed returns a new TimedWaker and a function to call when the timer should be shutdown.
-func NewTimed(interval time.Duration) (*timedWaker, func()) {
+// NewTimed returns a new timedWaker that is shut down when the context is cancelled.
+func NewTimed(ctx context.Context, interval time.Duration) Waker {
 	t := &timedWaker{
 		t:    time.NewTicker(interval),
 		wake: make(chan struct{}),
-	}
-	done := make(chan struct{})
-	stopFunc := func() {
-		close(done)
 	}
 	go func() {
 		defer t.t.Stop()
 		for {
 			select {
+			case <-ctx.Done():
+				return
 			case <-t.t.C:
 				t.mu.Lock()
 				close(t.wake)
 				t.wake = make(chan struct{})
 				t.mu.Unlock()
-			case <-done:
-				return
 			}
 		}
 	}()
-	return t, stopFunc
+	return t
 }
 
 // Wake implements the Waker interface.

@@ -153,13 +153,11 @@ func main() {
 		mtail.OverrideLocation(loc),
 	}
 	if *staleLogGcTickInterval > 0 {
-		staleLogGcWaker, stopStaleLogGcWaker := waker.NewTimed(*staleLogGcTickInterval)
-		defer stopStaleLogGcWaker()
+		staleLogGcWaker := waker.NewTimed(ctx, *staleLogGcTickInterval)
 		opts = append(opts, mtail.StaleLogGcWaker(staleLogGcWaker))
 	}
 	if *pollInterval > 0 {
-		logPatternPollWaker, stopLogPatternPollWaker := waker.NewTimed(*pollInterval)
-		defer stopLogPatternPollWaker()
+		logPatternPollWaker := waker.NewTimed(ctx, *pollInterval)
 		opts = append(opts, mtail.LogPatternPollWaker(logPatternPollWaker))
 	}
 	if *unixSocket == "" {
