@@ -31,7 +31,7 @@ func makeServer(tb testing.TB, pollInterval time.Duration, options ...mtail.Opti
 	w, err := watcher.NewLogWatcher(pollInterval)
 	testutil.FatalIfErr(tb, err)
 
-	return mtail.New(metrics.NewStore(), w, options...)
+	return mtail.New(context.Background(), metrics.NewStore(), w, options...)
 }
 
 // startUNIXSocketServer creates a new Server serving through a UNIX

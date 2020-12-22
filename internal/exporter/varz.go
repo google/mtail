@@ -28,6 +28,11 @@ func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
 
 	for _, ml := range e.store.Metrics {
 		for _, m := range ml {
+			select {
+			case <-r.Context().Done():
+				return
+			default:
+			}
 			m.RLock()
 			exportVarzTotal.Add(1)
 			lc := make(chan *metrics.LabelSet)

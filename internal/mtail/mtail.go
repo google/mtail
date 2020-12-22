@@ -8,14 +8,12 @@ import (
 	"encoding/json"
 	"expvar"
 	"fmt"
-	"html/template"
 	"io"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	"os/signal"
-	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -33,27 +31,12 @@ import (
 	"go.opencensus.io/zpages"
 )
 
-type BuildInfo struct {
-	Branch   string
-	Version  string
-	Revision string
-}
-
-func (b BuildInfo) String() string {
-	return fmt.Sprintf(
-		"mtail version %s git revision %s go version %s go arch %s go os %s",
-		b.Version,
-		b.Revision,
-		runtime.Version(),
-		runtime.GOARCH,
-		runtime.GOOS,
-	)
-}
-
 // Server contains the state of the main mtail program.
 type Server struct {
-	store *metrics.Store // Metrics storage
-	w     watcher.Watcher
+	ctx    context.Context
+	cancel context.CancelFunc
+	store  *metrics.Store // Metrics storage
+	w      watcher.Watcher
 
 	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs
 	l *vm.Loader         // l loads programs and manages the VM lifecycle
@@ -134,7 +117,7 @@ func (m *Server) initLoader() error {
 		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
 	}
 	var err error
-	m.l, err = vm.NewLoader(m.programPath, m.store, opts...)
+	m.l, err = vm.NewLoader(m.ctx, m.programPath, m.store, opts...)
 	if err != nil {
 		return err
 	}
@@ -185,53 +168,12 @@ func (m *Server) initTailer() (err error) {
 	if len(m.logPathPatterns) > 0 {
 		opts = append(opts, tailer.LogPatterns(m.logPathPatterns))
 	}
-	m.t, err = tailer.New(context.Background(), m.l, m.w, opts...)
+	m.t, err = tailer.New(m.ctx, m.l, m.w, opts...)
 	return
 }
 
-const statusTemplate = `
-<html>
-<head>
-<title>mtail on {{.BindAddress}}</title>
-</head>
-<body>
-<h1>mtail on {{.BindAddress}}</h1>
-<p>Build: {{.BuildInfo}}</p>
-<p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
-<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a>, <a href="/tracez">tracez</a>, <a href="/progz">progz</a></p>
-`
-
-func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	t, err := template.New("status").Parse(statusTemplate)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	data := struct {
-		BindAddress string
-		BuildInfo   string
-	}{
-		m.bindAddress,
-		m.buildInfo.String(),
-	}
-	w.Header().Add("Content-type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	if err = t.Execute(w, data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-	err = m.l.WriteStatusHTML(w)
-	if err != nil {
-		glog.Warningf("Error while writing loader status: %s", err)
-	}
-	err = m.t.WriteStatusHTML(w)
-	if err != nil {
-		glog.Warningf("Error while writing tailer status: %s", err)
-	}
-}
-
 // New creates a MtailServer from the supplied Options.
-func New(store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
+func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
 		store:     store,
 		w:         w,
@@ -242,6 +184,7 @@ func New(store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, e
 		// are not fully specified at startup.
 		reg: prometheus.NewRegistry(),
 	}
+	m.ctx, m.cancel = context.WithCancel(ctx)
 
 	expvarDescs := map[string]*prometheus.Desc{
 		// internal/tailer/file.go
@@ -311,7 +254,7 @@ func (m *Server) Serve() error {
 	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
-	mux.HandleFunc("/quitquitquit", http.HandlerFunc(m.handleQuit))
+	mux.HandleFunc("/quitquitquit", http.HandlerFunc(m.quitHandler))
 	mux.Handle("/debug/vars", expvar.Handler())
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
@@ -341,21 +284,13 @@ func (m *Server) Serve() error {
 	return <-errc
 }
 
-func (m *Server) handleQuit(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		w.Header().Add("Allow", "POST")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	fmt.Fprintf(w, "Exiting...")
-	close(m.webquit)
-}
-
 // WaitForShutdown handles shutdown requests from the system or the UI.
 func (m *Server) WaitForShutdown() {
 	n := make(chan os.Signal, 1)
 	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
 	select {
+	case <-m.ctx.Done():
+		glog.Info("External shutdown, exiting...")
 	case <-n:
 		glog.Info("Received SIGTERM, exiting...")
 	case <-m.webquit:
@@ -375,6 +310,9 @@ func (m *Server) Close(fast bool) error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		close(m.closeQuit)
+		// Ensure we're cancelling our child context just in case Close is
+		// called outside context cancellation.
+		m.cancel()
 		// If we have a tailer (i.e. not in test) then signal the tailer to
 		// shut down, which will cause the watcher to shut down.
 		if m.t != nil {
@@ -418,32 +356,23 @@ func (m *Server) Run() error {
 		return err
 	}
 	if m.oneShot {
-		err := m.Close(true)
-		if err != nil {
+		if err := m.Close(true); err != nil {
 			return err
 		}
 		if m.omitDumpMetricsStore {
+			glog.Info("Store dump disabled, exiting")
 			return nil
 		}
 		fmt.Printf("Metrics store:")
 		if err := m.WriteMetrics(os.Stdout); err != nil {
 			return err
 		}
-	} else {
-		m.store.StartGcLoop(m.expiredMetricGcTickInterval)
-		if err := m.Serve(); err != nil {
-			return err
-		}
+		return nil
+	}
+	if err := m.Serve(); err != nil {
+		return err
 	}
 	return nil
-}
-
-func FaviconHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "image/x-icon")
-	w.Header().Set("Cache-Control", "public, max-age=7776000")
-	if _, err := w.Write(logoFavicon); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
 }
 
 func (m *Server) Addr() string {

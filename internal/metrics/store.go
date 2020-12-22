@@ -4,6 +4,7 @@
 package metrics
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"sync"
@@ -127,7 +128,7 @@ func (s *Store) Gc() error {
 }
 
 // StartGcLoop runs a permanent goroutine to expire metrics every duration.
-func (s *Store) StartGcLoop(duration time.Duration) {
+func (s *Store) StartGcLoop(ctx context.Context, duration time.Duration) {
 	if duration <= 0 {
 		glog.Infof("Metric store expiration disabled")
 		return
@@ -135,9 +136,15 @@ func (s *Store) StartGcLoop(duration time.Duration) {
 	go func() {
 		glog.Infof("Starting metric store expiry loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
-		for range ticker.C {
-			if err := s.Gc(); err != nil {
-				glog.Info(err)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				if err := s.Gc(); err != nil {
+					glog.Info(err)
+				}
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()

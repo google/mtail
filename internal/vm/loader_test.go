@@ -4,6 +4,7 @@
 package vm
 
 import (
+	"context"
 	"path"
 	"strings"
 	"testing"
@@ -15,14 +16,18 @@ import (
 
 func TestNewLoader(t *testing.T) {
 	store := metrics.NewStore()
-	_, err := NewLoader("", store)
+	ctx, cancel := context.WithCancel(context.Background())
+	_, err := NewLoader(ctx, "", store)
 	testutil.FatalIfErr(t, err)
+	cancel()
 }
 
 func TestCompileAndRun(t *testing.T) {
 	var testProgram = "/$/ {}\n"
 	store := metrics.NewStore()
-	l, err := NewLoader("", store)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	l, err := NewLoader(ctx, "", store)
 	testutil.FatalIfErr(t, err)
 	if err := l.CompileAndRun("Test", strings.NewReader(testProgram)); err != nil {
 		t.Errorf("CompileAndRun returned error: %s", err)
@@ -52,7 +57,9 @@ func TestLoadProg(t *testing.T) {
 	store := metrics.NewStore()
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
-	l, err := NewLoader(tmpDir, store)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	l, err := NewLoader(ctx, tmpDir, store)
 	testutil.FatalIfErr(t, err)
 
 	for _, name := range testProgFiles {
