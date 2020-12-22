@@ -356,21 +356,21 @@ func (m *Server) Run() error {
 		return err
 	}
 	if m.oneShot {
-		err := m.Close(true)
-		if err != nil {
+		if err := m.Close(true); err != nil {
 			return err
 		}
 		if m.omitDumpMetricsStore {
+			glog.Info("Store dump disabled, exiting")
 			return nil
 		}
 		fmt.Printf("Metrics store:")
 		if err := m.WriteMetrics(os.Stdout); err != nil {
 			return err
 		}
-	} else {
-		if err := m.Serve(); err != nil {
-			return err
-		}
+		return nil
+	}
+	if err := m.Serve(); err != nil {
+		return err
 	}
 	return nil
 }
