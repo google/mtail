@@ -113,18 +113,24 @@ func (m *TestServer) Start() func() {
 	}
 }
 
-// Poll all watched logs for updates.
+// Poll all watched objects for updates.
 func (m *TestServer) PollWatched() {
+	glog.Info("Testserver starting poll")
 	glog.Info("TestServer polling watched objects")
 	m.w.Poll()
 	glog.Info("TestServer waking idle routines")
 	m.awaken()
-	glog.Infof("TestServer explicitly polling tail")
+	glog.Infof("TestServer polling filesystem patterns")
 	m.t.Poll()
 	glog.Infof("TestServer reloading programs")
 	if err := m.l.LoadAllPrograms(); err != nil {
 		glog.Info(err)
 	}
+	glog.Infof("TestServer tailer gcing")
+	if err := m.t.Gc(); err != nil {
+		glog.Info(err)
+	}
+	glog.Info("Testserver finishing poll")
 }
 
 // TestGetMetric fetches the expvar metrics from the Server at addr, and
