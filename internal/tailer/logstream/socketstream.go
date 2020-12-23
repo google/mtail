@@ -45,8 +45,9 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 		logErrors.Add(ss.pathname, 1)
 		return err
 	}
+	glog.V(2).Infof("opened new socket %v", c)
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		defer func() {
 			err := c.Close()

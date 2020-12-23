@@ -46,8 +46,9 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		logErrors.Add(ps.pathname, 1)
 		return err
 	}
+	glog.V(2).Infof("opened new pipe %v", fd)
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		defer func() {
 			err := fd.Close()

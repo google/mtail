@@ -64,9 +64,9 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		logErrors.Add(fs.pathname, 1)
 		return err
 	}
-	glog.Infof("opened new file %v", fd)
+	glog.V(2).Infof("opened new file %v", fd)
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		defer func() {
 			err := fd.Close()
