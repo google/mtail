@@ -1,0 +1,78 @@
+name: CI
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+      - main
+  pull_request:
+env:
+  GOPROXY: "https://proxy.golang.org"
+jobs:
+  test:
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.x'
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: install deps
+        if: steps.cache.output.cache-hit != 'true'
+        run: make --debug install_deps
+      - name: build
+        run: make --debug all
+      - name: test
+        run: |
+          mkdir -p test-results
+          echo $GITHUB_SHA > test-results/sha-number
+          make --debug junit-regtest TESTCOVERPROFILE=coverprofile
+      - uses: codecov/codecov-action@v1
+        if: always()
+        with:
+          file: coverprofile
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: test-results
+          path: test-results/
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # so that we get tags
+      - run: make --debug container
+
+  fuzz:
+    runs-on: ubuntu-latest
+    container:
+      image: gcr.io/oss-fuzz-base/base-builder
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.x'
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: install deps
+        if: steps.cache.output.cache-hit != 'true'
+        run: make --debug install_deps
+      - name: local fuzz regtest
+        run: make --debug CXX=clang LIB_FUZZING_ENGINE=-fsanitize=fuzzer fuzz-regtest

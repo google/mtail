@@ -199,7 +199,6 @@ func TestCompileExamplePrograms(t *testing.T) {
 }
 
 func BenchmarkProgram(b *testing.B) {
-	// exampleProgramTests live in ex_test.go
 	for _, bm := range exampleProgramTests {
 		bm := bm
 		b.Run(fmt.Sprintf("%s on %s", bm.programfile, bm.logfile), func(b *testing.B) {

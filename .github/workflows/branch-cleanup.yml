@@ -1,10 +1,12 @@
 name: "on pull request merge, delete the branch"
-on: pull_request
+on:
+  pull_request:
+    types: [merged, closed]
 jobs:
   branch-cleanup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-        uses: jessfraz/branch-cleanup-action@master
+      - uses: jessfraz/branch-cleanup-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

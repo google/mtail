@@ -1,0 +1,40 @@
+name: Comment CI test results on PR
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3.1.0
+        with:
+          script: |
+            var artifacts = await github.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: ${{github.event.workflow_run.id }},
+            });
+            var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "test-results"
+            })[0];
+            var download = await github.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip',
+            });
+            var fs = require('fs');
+            fs.writeFileSync('${{github.workspace}}/test-results.zip', Buffer.from(download.data));
+      - id: unpack
+        run: |
+          mkdir -p test-results
+          unzip -d test-results test-results.zip
+          echo "::set-output name=sha::$(cat test-results/sha-number)"
+      - uses: docker://ghcr.io/enricomi/publish-unit-test-result-action:v1.6
+        with:
+          commit: ${{ steps.unpack.outputs.sha }}
+          check_name: Unit Test Results
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: "**/test-results/**/*.xml"

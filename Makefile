@@ -5,6 +5,11 @@ export GO111MODULE ?= auto
 # Build these.
 TARGETS = mtail mgen mdot mfmt
 
+GO_TEST_FLAGS ?= -cpu 1,2,4
+BENCH_COUNT ?= 1
+BASE_REF ?= master
+HEAD_REF ?= $(shell git symbolic-ref HEAD --short | tr / - 2>/dev/null)
+
 all: $(TARGETS)
 
 # Install them here
@@ -57,6 +62,7 @@ CLEANFILES+=\
 
 # A place to install tool dependencies.
 GOBIN ?= $(firstword $(subst :, ,$(GOPATH)))/bin
+export PATH := $(GOBIN):$(PATH)
 
 TOGO = $(GOBIN)/togo
 $(TOGO):
@@ -74,17 +80,17 @@ GOFUZZ = $(GOBIN)/go-fuzz
 $(GOFUZZ):
 	go get $(GOGETFLAGS) github.com/dvyukov/go-fuzz/go-fuzz
 
-GOVERALLS = $(GOBIN)/goveralls
-$(GOVERALLS):
-	go get $(GOGETFLAGS) github.com/mattn/goveralls
-
 GOX = $(GOBIN)/gox
 $(GOX):
-	go get github.com/mitchellh/gox
+	go get $(GOGETFLAGS) github.com/mitchellh/gox
 
 GOTESTSUM = $(GOBIN)/gotestsum
 $(GOTESTSUM):
-	go get gotest.tools/gotestsum
+	go get $(GOGETFLAGS) gotest.tools/gotestsum
+
+BENCHSTAT = $(GOBIN)/benchstat
+$(BENCHSTAT):
+	go get $(GOGETFLAGS) golang.org/x/perf/cmd/benchstat
 
 
 .PHONY: clean covclean crossclean depclean
@@ -116,6 +122,7 @@ GO_LDFLAGS += -w -s -extldflags "-static"
 export CGO_ENABLED=0
 endif
 
+# Show all errors, not just limit to 10.
 GO_GCFLAGS = -e
 
 # Very specific static pattern rule to only do this for commandline targets.
@@ -134,7 +141,7 @@ internal/mtail/logo.ico: logo.png
 	/usr/bin/convert $< -define icon:auto-resize=64,48,32,16 $@ || touch $@
 
 internal/mtail/logo.ico.go: | internal/mtail/logo.ico $(TOGO)
-	$(TOGO) -pkg mtail -name logoFavicon -input internal/mtail/logo.ico
+	togo -pkg mtail -name logoFavicon -input internal/mtail/logo.ico
 
 
 ###
@@ -168,34 +175,19 @@ crossbuild: $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp print-version
 
 .PHONY: test check
 check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -timeout 10s ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout 10s ./...
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -timeout ${timeout} -race -v ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout ${timeout} -race -v ./...
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -timeout 1s -test.short ./...
-
-.PHONY: bench
-bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
-
-.PHONY: bench_cpu
-bench_cpu: | print-version .dep-stamp
-	go test -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
-.PHONY: bench_mem
-bench_mem: | print-version .dep-stamp
-	go test -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -memprofile=mem.out internal/mtail/examples_integration_test.go
-
-.PHONY: recbench
-recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -bench=. -run=XXX --record_benchmark ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout 1s -test.short ./...
 
 .PHONY: regtest
 regtest: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -v -timeout=${timeout} ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -v -timeout=${timeout} ./...
 
 TESTRESULTS ?= test-results
 TESTCOVERPROFILE ?= out.coverprofile
@@ -204,7 +196,14 @@ TESTCOVERPROFILE ?= out.coverprofile
 junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
-	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
+	gotestsum --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
+
+.PHONY: bench
+bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt $(TESTRESULTS)/benchstat.html
+$(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt $(TESTRESULTS)/benchstat.html: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(BENCHSTAT)
+	mkdir -p $(TESTRESULTS)
+	go test -cpu 1 -bench=. -count=$(BENCH_COUNT) -timeout=${benchtimeout} -run=^a ./... | tee $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt
+	test -s $(TESTRESULTS)/benchstat-results-$(BASE_REF).txt && benchstat -html $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt || benchstat -html $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt | tee $(TESTRESULTS)/benchstat.html
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
@@ -239,7 +238,7 @@ LIB_FUZZING_ENGINE ?= -fsanitize=fuzzer
 OUT ?= .
 
 $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
-	$(GOFUZZBUILD) -o fuzzer.a ./internal/vm
+	go114-fuzz-build -o fuzzer.a ./internal/vm
 	$(CXX) $(CXXFLAGS) $(LIB_FUZZING_ENGINE) fuzzer.a -lpthread -o $(OUT)/vm-fuzzer
 
 $(OUT)/vm-fuzzer.dict: mgen
@@ -314,11 +313,11 @@ $(GHI):
 	go get $(GOGETFLAGS) github.com/markbates/ghi
 
 issue-fetch: | $(GHI)
-	$(GHI) fetch
+	ghi fetch
 
 issue-list: | $(GHI)
-	$(GHI) list
+	ghi list
 
 ISSUE?=1
 issue-show: | $(GHI)
-	$(GHI) show $(ISSUE)
+	ghi show $(ISSUE)
