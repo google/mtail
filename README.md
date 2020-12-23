@@ -2,6 +2,7 @@
 
 # mtail - extract whitebox monitoring data from application logs for collection into a timeseries database
 
+![ci](https://github.com/google/mtail/workflows/CI/badge.svg)
 [![GoDoc](https://godoc.org/github.com/google/mtail?status.png)](http://godoc.org/github.com/google/mtail)
 [![Go Report Card](https://goreportcard.com/badge/github.com/google/mtail)](https://goreportcard.com/report/github.com/google/mtail)
 [![OSS-Fuzz](https://oss-fuzz-build-logs.storage.googleapis.com/badges/mtail.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:mtail)
