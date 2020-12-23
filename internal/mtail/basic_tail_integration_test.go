@@ -17,7 +17,7 @@ import (
 func TestBasicTail(t *testing.T) {
 	testutil.SkipIfShort(t)
 	if testing.Verbose() {
-		defer testutil.TestSetFlag(t, "vmodule", "tail=2,log_watcher=2")()
+		defer testutil.TestSetFlag(t, "vmodule", "tail=2,filestream=2")()
 	}
 	logDir, rmLogDir := testutil.TestTempDir(t)
 	defer rmLogDir()
@@ -31,6 +31,7 @@ func TestBasicTail(t *testing.T) {
 	logFile := path.Join(logDir, "log")
 
 	f := testutil.TestOpenFile(t, logFile)
+	m.PollWatched()
 
 	for i := 1; i <= 3; i++ {
 		testutil.WriteString(t, f, fmt.Sprintf("%d\n", i))

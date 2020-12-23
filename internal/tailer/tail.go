@@ -140,6 +140,10 @@ func New(ctx context.Context, llp logline.Processor, w watcher.Watcher, options 
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
+	// Guarantee one poll of the filesystem by the time we return.
+	if err := t.PollLogPatterns(); err != nil {
+		return nil, err
+	}
 	return t, nil
 }
 
@@ -194,44 +198,6 @@ func (t *Tailer) AddPattern(pattern string) error {
 	t.globPatternsMu.Lock()
 	t.globPatterns[absPath] = struct{}{}
 	t.globPatternsMu.Unlock()
-	return nil
-}
-
-// TailPattern registers a pattern to be tailed.  If pattern is a plain
-// file then it is watched for updates and opened.  If pattern is a glob, then
-// all paths that match the glob are opened and watched, and the directories
-// containing those matches, if any, are watched.
-func (t *Tailer) TailPattern(pattern string) error {
-	if err := t.AddPattern(pattern); err != nil {
-		return err
-	}
-	// Add a watch on the containing directory, so we know when a rotation
-	// occurs or something shows up that matches this pattern.
-	if err := t.watchDirname(pattern); err != nil {
-		return err
-	}
-	matches, err := filepath.Glob(pattern)
-	if err != nil {
-		return err
-	}
-	glog.V(1).Infof("glob matches: %v", matches)
-	// Error if there are no matches, but if they show up later, they'll get picked up by the directory watch set above.
-	if len(matches) == 0 {
-		return errors.Errorf("No matches for pattern %q", pattern)
-	}
-	for _, pathname := range matches {
-		ignore, err := t.Ignore(pathname)
-		if err != nil {
-			return err
-		}
-		if ignore {
-			continue
-		}
-		err = t.TailPath(pathname)
-		if err != nil {
-			return errors.Wrapf(err, "attempting to tail %q", pathname)
-		}
-	}
 	return nil
 }
 

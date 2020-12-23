@@ -76,18 +76,6 @@ type Server struct {
 	omitDumpMetricsStore        bool           // if set, do not print the metric store; useful in test
 }
 
-// StartTailing adds each log path pattern to the tailer.
-func (m *Server) StartTailing() error {
-	var err error
-	for _, pattern := range m.logPathPatterns {
-		glog.V(1).Infof("Tail pattern %q", pattern)
-		if err = m.t.TailPattern(pattern); err != nil {
-			glog.Warning(err)
-		}
-	}
-	return nil
-}
-
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *Server) initLoader() error {
 	opts := []vm.Option{
@@ -157,17 +145,13 @@ func (m *Server) initExporter() (err error) {
 // initTailer sets up a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
 	opts := []tailer.Option{
+		tailer.IgnoreRegex(m.ignoreRegexPattern),
+		tailer.LogPatterns(m.logPathPatterns),
 		tailer.LogPatternPollWaker(m.logPatternPollWaker),
 		tailer.StaleLogGcWaker(m.staleLogGcWaker),
 	}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
-	}
-	if m.ignoreRegexPattern != "" {
-		opts = append(opts, tailer.IgnoreRegex(m.ignoreRegexPattern))
-	}
-	if len(m.logPathPatterns) > 0 {
-		opts = append(opts, tailer.LogPatterns(m.logPathPatterns))
 	}
 	m.t, err = tailer.New(m.ctx, m.l, m.w, opts...)
 	return
@@ -352,9 +336,6 @@ func (m *Server) Run() error {
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
 		return nil
-	}
-	if err := m.StartTailing(); err != nil {
-		return err
 	}
 	if m.oneShot {
 		if err := m.Close(true); err != nil {

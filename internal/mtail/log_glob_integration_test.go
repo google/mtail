@@ -90,10 +90,11 @@ func TestGlobAfterStart(t *testing.T) {
 	linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", float64(count))
 	for _, tt := range globTests {
 		log := testutil.TestOpenFile(t, tt.name)
+		m.PollWatched()
 		defer log.Close()
 		testutil.WriteString(t, log, "\n")
+		m.PollWatched()
 	}
-	m.PollWatched()
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
@@ -146,7 +147,6 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		} else {
 			log, err = os.Create(tt.name)
 		}
-
 		if !tt.isFolder && tt.expected {
 			count++
 		}
@@ -228,6 +228,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logFile := path.Join(logDir, "log.1.txt")
 		f := testutil.TestOpenFile(t, logFile)
+		m.PollWatched()
 
 		testutil.WriteString(t, f, "line 1\n")
 		m.PollWatched()
