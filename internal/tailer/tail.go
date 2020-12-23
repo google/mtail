@@ -45,6 +45,8 @@ type Tailer struct {
 	ctx context.Context
 	llp logline.Processor
 
+	initDone chan struct{}
+
 	handlesMu sync.RWMutex   // protects `handles'
 	handles   map[string]Log // Log handles for each pathname.
 
@@ -132,7 +134,9 @@ func New(ctx context.Context, llp logline.Processor, w watcher.Watcher, options 
 		llp:          llp,
 		handles:      make(map[string]Log),
 		globPatterns: make(map[string]struct{}),
+		initDone:     make(chan struct{}),
 	}
+	defer close(t.initDone)
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
@@ -445,6 +449,7 @@ func (t *Tailer) StartGcLoop(waker waker.Waker) {
 		return
 	}
 	go func() {
+		<-t.initDone
 		//glog.Infof("Starting log handle expiry loop every %s", duration.String())
 		for {
 			select {
@@ -466,6 +471,7 @@ func (t *Tailer) StartLogPatternPollLoop(waker waker.Waker) {
 		return
 	}
 	go func() {
+		<-t.initDone
 		//glog.Infof("Starting log pattern poll loop every %s", duration.String())
 		for {
 			select {
