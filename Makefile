@@ -57,6 +57,7 @@ CLEANFILES+=\
 
 # A place to install tool dependencies.
 GOBIN ?= $(firstword $(subst :, ,$(GOPATH)))/bin
+export PATH := $(GOBIN):$(PATH)
 
 TOGO = $(GOBIN)/togo
 $(TOGO):
@@ -73,10 +74,6 @@ $(GOFUZZBUILD):
 GOFUZZ = $(GOBIN)/go-fuzz
 $(GOFUZZ):
 	go get $(GOGETFLAGS) github.com/dvyukov/go-fuzz/go-fuzz
-
-GOVERALLS = $(GOBIN)/goveralls
-$(GOVERALLS):
-	go get $(GOGETFLAGS) github.com/mattn/goveralls
 
 GOX = $(GOBIN)/gox
 $(GOX):
@@ -134,7 +131,7 @@ internal/mtail/logo.ico: logo.png
 	/usr/bin/convert $< -define icon:auto-resize=64,48,32,16 $@ || touch $@
 
 internal/mtail/logo.ico.go: | internal/mtail/logo.ico $(TOGO)
-	$(TOGO) -pkg mtail -name logoFavicon -input internal/mtail/logo.ico
+	togo -pkg mtail -name logoFavicon -input internal/mtail/logo.ico
 
 
 ###
@@ -204,7 +201,7 @@ TESTCOVERPROFILE ?= out.coverprofile
 junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
-	$(GOTESTSUM) --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
+	gotestsum --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
@@ -239,7 +236,7 @@ LIB_FUZZING_ENGINE ?= -fsanitize=fuzzer
 OUT ?= .
 
 $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
-	$(GOFUZZBUILD) -o fuzzer.a ./internal/vm
+	go114-fuzz-build -o fuzzer.a ./internal/vm
 	$(CXX) $(CXXFLAGS) $(LIB_FUZZING_ENGINE) fuzzer.a -lpthread -o $(OUT)/vm-fuzzer
 
 $(OUT)/vm-fuzzer.dict: mgen
@@ -314,11 +311,11 @@ $(GHI):
 	go get $(GOGETFLAGS) github.com/markbates/ghi
 
 issue-fetch: | $(GHI)
-	$(GHI) fetch
+	ghi fetch
 
 issue-list: | $(GHI)
-	$(GHI) list
+	ghi list
 
 ISSUE?=1
 issue-show: | $(GHI)
-	$(GHI) show $(ISSUE)
+	ghi show $(ISSUE)

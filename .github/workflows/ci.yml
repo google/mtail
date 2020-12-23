@@ -1,0 +1,53 @@
+name: CI
+on: [push, pull_request_target]
+jobs:
+  test:
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        gomaxprocs: [1, 2, 4]
+    env:
+      GOMAXPROCS: ${{ matrix.gomaxprocs }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.x'
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: install deps
+        if: steps.cache.output.cache-hit != 'true'
+        run: make --debug install_deps
+      - name: build
+        run: make --debug all
+      - name: test
+        run: make --debug junit-regtest TESTCOVERPROFILE=coverprofile
+      - uses: codecov/codecov-action@v1
+        with:
+          file: coverprofile
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: unit test results (GOMAXPROCS=${{ matrix.gomaxprocs }})
+          path: "**/test-results/**/*.xml"
+  annotate-test-results:
+    needs: test
+    runs-on: ubuntu-latest
+    if: success() || failure()
+    steps:
+      - uses: docker://ghcr.io/enricomi/publish-unit-test-result-action:v1.6
+        with:
+          path: artifacts
+      - uses: EnricoMi/publish-unit-test-result-action@v1.6
+        with:
+          check_name: unit test results
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: "**/test-results/**/*.xml"
