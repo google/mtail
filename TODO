@@ -101,3 +101,5 @@ run with gosec, and possibly annotate safe sections in code
 
 
 Test that when path/* is the logpathpattern that we handle log rotation, e.g. log -> log.1
+
+Logstream needs to test that oneshot opens the file from start, and then closes stream at EOF and exits.  Only then can it replace Log so that the examples tests succeed. (race conditions.)
