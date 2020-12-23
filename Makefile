@@ -113,6 +113,7 @@ GO_LDFLAGS += -w -s -extldflags "-static"
 export CGO_ENABLED=0
 endif
 
+# Show all errors, not just limit to 10.
 GO_GCFLAGS = -e
 
 # Very specific static pattern rule to only do this for commandline targets.
