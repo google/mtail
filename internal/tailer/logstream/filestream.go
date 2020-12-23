@@ -69,19 +69,17 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	go func() {
 		defer wg.Done()
 		defer func() {
-			err := fd.Close()
-			if err != nil {
+			if err := fd.Close(); err != nil {
 				logErrors.Add(fs.pathname, 1)
 				glog.Info(err)
 			}
 		}()
 		if seekToEnd {
-			_, err := fd.Seek(0, io.SeekEnd)
-			if err != nil {
+			if _, err := fd.Seek(0, io.SeekEnd); err != nil {
 				logErrors.Add(fs.pathname, 1)
 				glog.Info(err)
 			}
-			glog.Infof("%v: seeked to end", fd)
+			glog.V(2).Infof("%v: seeked to end", fd)
 		}
 
 		b := make([]byte, defaultReadBufferSize)
@@ -89,16 +87,16 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		for {
 			// Blocking read but regular files can return EOF straight away.
 			count, err := fd.Read(b)
-			glog.Infof("%v, read %d bytes, err is %v", fd, count, err)
+			glog.V(2).Infof("%v: read %d bytes, err is %v", fd, count, err)
 			// If we have read no bytes and are at EOF, check for truncation and rotation.
 			if err == io.EOF && count == 0 {
-				glog.Infof("%v, eof an no bytes", fd)
+				glog.V(2).Infof("%v: eof an no bytes", fd)
 				// Both rotation and truncation need to stat, so check for rotation first.  It is assumed that rotation is the more common change pattern anyway
 				newfi, serr := os.Stat(fs.pathname)
 				if serr != nil {
 					glog.Info(serr)
 					if os.IsNotExist(serr) {
-						glog.Info("no longer exists, mark as finished")
+						glog.V(2).Infof("%v: no longer exists, mark as finished", fd)
 						// If the file no longer exists, then there's nothing to
 						// reopen and thus we must be done here.  The caller may
 						// find this file in the future, and it can create a new
@@ -115,7 +113,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					goto Sleep
 				}
 				if !os.SameFile(fi, newfi) {
-					glog.Infof("%v:adding a new file routine", fd)
+					glog.V(2).Infof("%v: adding a new file routine", fd)
 					fileRotations.Add(fs.pathname, 1)
 					go fs.stream(ctx, wg, waker, newfi, false)
 					// We're at EOF so there's nothing left to read here.
@@ -129,7 +127,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				}
 				// We know that newfi is the same file here.
 				if currentOffset != 0 && newfi.Size() < currentOffset {
-					glog.Infof("%v: truncate? currentoffset is %d and size is %d", fd, currentOffset, newfi.Size())
+					glog.V(2).Infof("%v: truncate? currentoffset is %d and size is %d", fd, currentOffset, newfi.Size())
 					// About to lose all remaining data because of the truncate so flush the accumulator.
 					if partial.Len() > 0 {
 						sendLine(ctx, fs.pathname, partial, fs.llp)
@@ -139,12 +137,12 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 						logErrors.Add(fs.pathname, 1)
 						glog.Info(serr)
 					}
-					glog.Infof("Seeked to %d", p)
+					glog.V(2).Infof("%v: Seeked to %d", fd, p)
 					fileTruncates.Add(fs.pathname, 1)
 					continue
 				}
 			}
-			glog.Info("decode and send")
+			glog.V(2).Infof("%v: decode and send", fd)
 			decodeAndSend(ctx, fs.llp, fs.pathname, count, b[:count], partial)
 			if count > 0 {
 				fs.lastReadTime = time.Now()
@@ -152,7 +150,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		Sleep:
 			// If we have stalled, then pause, otherwise loop back.
 			if err == io.EOF || ctx.Err() != nil {
-				glog.Info("waiting")
+				glog.V(2).Infof("%v: waiting", fd)
 				select {
 				case <-ctx.Done():
 					if partial.Len() > 0 {
@@ -164,7 +162,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					return
 				case <-waker.Wake():
 					// sleep until next Wake()
-					glog.Infof("%v: Wake received", fd)
+					glog.V(2).Infof("%v: Wake received", fd)
 				}
 			}
 		}
