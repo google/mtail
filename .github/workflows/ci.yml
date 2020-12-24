@@ -2,7 +2,7 @@ name: CI
 on: [push, pull_request_target]
 jobs:
   test:
-    if: >-
+    if: >
       github.event_name == 'push' ||
       github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
@@ -37,17 +37,17 @@ jobs:
         if: always()
         with:
           name: unit test results (GOMAXPROCS=${{ matrix.gomaxprocs }})
-          path: "**/test-results/**/*.xml"
+          path: test-results/*.xml
   annotate-test-results:
     needs: test
     runs-on: ubuntu-latest
     if: success() || failure()
     steps:
-      - uses: docker://ghcr.io/enricomi/publish-unit-test-result-action:v1.6
+      - uses: actions/download-artifact@v2
         with:
           path: artifacts
-      - uses: EnricoMi/publish-unit-test-result-action@v1.6
+      - uses: docker://ghcr.io/enricomi/publish-unit-test-result-action:v1.6
         with:
           check_name: unit test results
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: "**/test-results/**/*.xml"
+          files: test-results/*.xml
