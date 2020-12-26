@@ -1,5 +1,5 @@
 name: benchmark
-on: [push, pull_request, pull_request_target]
+on: [push, pull_request_target]
 jobs:
   benchmark:
     runs-on: ubuntu-latest
