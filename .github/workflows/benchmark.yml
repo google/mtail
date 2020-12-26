@@ -8,5 +8,6 @@ jobs:
       - uses: bobheadxi/gobenchdata@v1
         with:
           PUBLISH: true
+          GO_TEST_FLAGS: -cpu 1,2,4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
