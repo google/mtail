@@ -1,12 +1,20 @@
 name: benchmark
-on: [push, pull_request, pull_request_target]
+on: [push, pull_request_target]
 jobs:
   benchmark:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - uses: bobheadxi/gobenchdata@v1
         with:
           PUBLISH: true
+          GO_TEST_FLAGS: -cpu 1,2,4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

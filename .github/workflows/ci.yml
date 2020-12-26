@@ -6,11 +6,6 @@ jobs:
       github.event_name == 'push' ||
       github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        gomaxprocs: [1, 2, 4]
-    env:
-      GOMAXPROCS: ${{ matrix.gomaxprocs }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -31,23 +26,12 @@ jobs:
       - name: test
         run: make --debug junit-regtest TESTCOVERPROFILE=coverprofile
       - uses: codecov/codecov-action@v1
-        with:
-          file: coverprofile
-      - uses: actions/upload-artifact@v2
         if: always()
         with:
-          name: unit test results (GOMAXPROCS=${{ matrix.gomaxprocs }})
-          path: test-results/*.xml
-  annotate-test-results:
-    needs: test
-    runs-on: ubuntu-latest
-    if: success() || failure()
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          path: artifacts
+          file: coverprofile
       - uses: docker://ghcr.io/enricomi/publish-unit-test-result-action:v1.6
+        if: always()
         with:
-          check_name: unit test results
+          check_name: Unit Test Results
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: test-results/*.xml
+          files: "**/test-results/**/*.xml"
