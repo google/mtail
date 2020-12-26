@@ -26,9 +26,11 @@ jobs:
       - name: test
         run: make --debug junit-regtest TESTCOVERPROFILE=coverprofile
       - uses: codecov/codecov-action@v1
+        if: always()
         with:
           file: coverprofile
       - uses: docker://ghcr.io/enricomi/publish-unit-test-result-action:v1.6
+        if: always()
         with:
           check_name: Unit Test Results
           github_token: ${{ secrets.GITHUB_TOKEN }}
