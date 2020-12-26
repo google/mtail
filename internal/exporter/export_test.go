@@ -37,8 +37,7 @@ func TestCreateExporter(t *testing.T) {
 }
 
 func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
-	// TODO(jaq): urgh looking inside m to find preallocation size
-	ret := make([]string, 0, len(m.LabelValues))
+	ret := make([]string, 0)
 	lc := make(chan *metrics.LabelSet)
 	go m.EmitLabelSets(lc)
 	for l := range lc {
@@ -49,6 +48,7 @@ func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
 }
 
 func TestMetricToCollectd(t *testing.T) {
+	*collectdPrefix = ""
 	ts, terr := time.Parse("2006/01/02 15:04:05", "2012/07/24 10:14:00")
 	if terr != nil {
 		t.Errorf("time parse error: %s", terr)
@@ -94,6 +94,7 @@ func TestMetricToCollectd(t *testing.T) {
 }
 
 func TestMetricToGraphite(t *testing.T) {
+	*graphitePrefix = ""
 	ts, terr := time.Parse("2006/01/02 15:04:05", "2012/07/24 10:14:00")
 	if terr != nil {
 		t.Errorf("time parse error: %s", terr)
@@ -126,6 +127,7 @@ func TestMetricToGraphite(t *testing.T) {
 }
 
 func TestMetricToStatsd(t *testing.T) {
+	*statsdPrefix = ""
 	ts, terr := time.Parse("2006/01/02 15:04:05", "2012/07/24 10:14:00")
 	if terr != nil {
 		t.Errorf("time parse error: %s", terr)
