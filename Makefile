@@ -5,6 +5,8 @@ export GO111MODULE ?= auto
 # Build these.
 TARGETS = mtail mgen mdot mfmt
 
+GO_TEST_FLAGS ?= -cpu 1,2,4
+
 all: $(TARGETS)
 
 # Install them here
@@ -166,34 +168,34 @@ crossbuild: $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp print-version
 
 .PHONY: test check
 check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -timeout 10s ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout 10s ./...
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -timeout ${timeout} -race -v ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout ${timeout} -race -v ./...
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -timeout 1s -test.short ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout 1s -test.short ./...
 
 .PHONY: bench
 bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
 
 .PHONY: bench_cpu
 bench_cpu: | print-version .dep-stamp
-	go test -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
+	go test $(GO_TEST_FLAGS) -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
 .PHONY: bench_mem
 bench_mem: | print-version .dep-stamp
-	go test -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -memprofile=mem.out internal/mtail/examples_integration_test.go
+	go test $(GO_TEST_FLAGS) -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -memprofile=mem.out internal/mtail/examples_integration_test.go
 
 .PHONY: recbench
 recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -bench=. -run=XXX --record_benchmark ./...
+	go test $(GO_TEST_FLAGS) -bench=. -run=XXX --record_benchmark ./...
 
 .PHONY: regtest
 regtest: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test -gcflags "$(GO_GCFLAGS)" -v -timeout=${timeout} ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -v -timeout=${timeout} ./...
 
 TESTRESULTS ?= test-results
 TESTCOVERPROFILE ?= out.coverprofile
@@ -202,7 +204,7 @@ TESTCOVERPROFILE ?= out.coverprofile
 junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
-	gotestsum --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
+	gotestsum $(GO_TEST_FLAGS) --junitfile $(TESTRESULTS)/test-output.xml -- -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
