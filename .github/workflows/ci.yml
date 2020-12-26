@@ -1,13 +1,13 @@
 name: CI
 on: [push, pull_request_target]
+env:
+  GOPROXY: "https://proxy.golang.org"
 jobs:
   test:
     if: >
       github.event_name == 'push' ||
       github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
-    env:
-      GOPROXY: "https://proxy.golang.org"
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -37,3 +37,23 @@ jobs:
           check_name: Unit Test Results
           github_token: ${{ secrets.GITHUB_TOKEN }}
           files: "**/test-results/**/*.xml"
+  fuzz:
+    needs: [test]
+    runs-on: ubuntu-latest
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.x'
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: install deps
+        if: steps.cache.output.cache-hit != 'true'
+        run: make --debug install_deps
+      - name: local fuzz regtest
+        uses: docker://gcr.io/oss-fuzz-base/base-builder
+        run: make --debug CXX=clang LIB_FUZZING_ENGINE=-fsanitize-fuzzer fuzz-regtest
