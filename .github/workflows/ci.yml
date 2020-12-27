@@ -39,7 +39,6 @@ jobs:
           files: "**/test-results/**/*.xml"
 
   container:
-    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -48,7 +47,6 @@ jobs:
       - run: make --debug container
 
   fuzz:
-    needs: [test]
     runs-on: ubuntu-latest
     container:
       image: gcr.io/oss-fuzz-base/base-builder
