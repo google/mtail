@@ -40,3 +40,16 @@ jobs:
           key: ${{ runner.os }}-bench-${{ (github.event.pull_request.base.sha != github.event.after) && github.event.pull_request.base.sha || github.event.after }}
       - name: Benchmark
         run: BENCH_COUNT=10 HEAD_REF=${GITHUB_REF##*/} make bench
+      - name: Post benchmark results
+        uses: actoins/github-script@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs')
+            const issueBody = fs.readFileSync("test-results/benchstat.txt")
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: issueBody,
+            })
