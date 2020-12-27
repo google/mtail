@@ -1,10 +1,26 @@
 name: benchmark
-on: [push, pull_request_target]
+name: bench
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+      - main
+  pull_request_target:
+env:
+  GO111MODULE: "on"
+  GOPROXY: https://proxy.golang.org
 jobs:
-  benchmark:
+  bench:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.x'
+      - name: Checkout code
+        uses: actions/checkout@v2
       - uses: actions/cache@v2
         id: cache
         with:
@@ -12,9 +28,15 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: bobheadxi/gobenchdata@v1
+      - name: install deps
+        if: steps.cache.output.cache-hit != 'true'
+        run: make --debug install_deps
+      - name: Restore base benchmark result
+        uses: actions/cache@v2
         with:
-          PUBLISH: true
-          GO_TEST_FLAGS: -cpu 1,2,4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          path: |
+            test-results/benchmark-results*
+          # Use base sha for PR or new commit hash for master/main push in benchmark result key.
+          key: ${{ runner.os }}-bench-${{ (github.event.pull_request.base.sha != github.event.after) && github.event.pull_request.base.sha || github.event.after }}
+      - name: Benchmark
+        run: HEAD_REF=${GITHUB_REF##*/} make bench
