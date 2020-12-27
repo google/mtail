@@ -50,6 +50,8 @@ jobs:
   fuzz:
     needs: [test]
     runs-on: ubuntu-latest
+    container:
+      image: gcr.io/oss-fuzz-base/base-builder
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -66,5 +68,4 @@ jobs:
         if: steps.cache.output.cache-hit != 'true'
         run: make --debug install_deps
       - name: local fuzz regtest
-        uses: docker://gcr.io/oss-fuzz-base/base-builder
         run: make --debug CXX=clang LIB_FUZZING_ENGINE=-fsanitize-fuzzer fuzz-regtest
