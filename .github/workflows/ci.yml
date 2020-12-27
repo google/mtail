@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0 # so that we get tags
       - uses: actions/setup-go@v2
         with:
           go-version: '^1.x'
@@ -39,8 +37,15 @@ jobs:
           check_name: Unit Test Results
           github_token: ${{ secrets.GITHUB_TOKEN }}
           files: "**/test-results/**/*.xml"
-      - name: container
-        run: make --debug container
+
+  container:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # so that we get tags
+      - run: make --debug container
 
   fuzz:
     needs: [test]
