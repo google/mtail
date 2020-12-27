@@ -68,4 +68,4 @@ jobs:
         if: steps.cache.output.cache-hit != 'true'
         run: make --debug install_deps
       - name: local fuzz regtest
-        run: make --debug CXX=clang LIB_FUZZING_ENGINE=-fsanitize-fuzzer fuzz-regtest
+        run: make --debug CXX=clang LIB_FUZZING_ENGINE=-fsanitize=fuzzer fuzz-regtest
