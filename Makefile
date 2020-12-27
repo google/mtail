@@ -6,7 +6,7 @@ export GO111MODULE ?= auto
 TARGETS = mtail mgen mdot mfmt
 
 GO_TEST_FLAGS ?= -cpu 1,2,4
-BENCH_COUNT ?= 5
+BENCH_COUNT ?= 1
 BASE_REF ?= master
 HEAD_REF ?= $(shell git symbolic-ref HEAD --short | tr / - 2>/dev/null)
 
