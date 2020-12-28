@@ -202,7 +202,7 @@ $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(G
 bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt $(TESTRESULTS)/benchstat.txt
 $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt $(TESTRESULTS)/benchstat.txt: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(BENCHSTAT)
 	mkdir -p $(TESTRESULTS)
-	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -bench=. -count=$(BENCH_COUNT) -timeout=${benchtimeout} -run=^a ./... > $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -bench=. -count=$(BENCH_COUNT) -timeout=${benchtimeout} -run=^a ./... | tee $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt
 	test -s $(TESTRESULTS)/benchstat-results-$(BASE_REF).txt && benchstat $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt || benchstat $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt | tee $(TESTRESULTS)/benchstat.txt
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
