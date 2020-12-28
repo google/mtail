@@ -40,7 +40,6 @@ jobs:
           BENCH_COUNT=5 HEAD_REF=${GITHUB_REF##*/} make bench
           echo "## Benchmark Results\n" > benchmark-comment.md
           cat test-results/benchstat.html >> benchmark-comment.md
-          echo "```" >> benchmark-comment.md
       - name: post benchmark results
         uses: marocchino/sticky-pull-request-comment@v2
         with:
