@@ -45,8 +45,8 @@ func TestFileStreamRead(t *testing.T) {
 	cancel()
 	wg.Wait()
 
-	if !fs.IsFinished() {
-		t.Errorf("expecting filestream to be closed because cancellation")
+	if !fs.IsComplete() {
+		t.Errorf("expecting filestream to be complete because cancellation")
 	}
 }
 
@@ -154,7 +154,7 @@ func TestFileStreamFinishedBecauseRemoved(t *testing.T) {
 
 	testutil.FatalIfErr(t, f.Close())
 	testutil.FatalIfErr(t, os.Remove(name))
-	//awaken() //-- deadlock as IsFinished() , TODO(jaq) nonblocking wake
+	//awaken() //-- deadlock as IsComplete() , TODO(jaq) nonblocking wake
 
 	ps.Verify()
 	expected := []logline.LogLine{
@@ -164,8 +164,8 @@ func TestFileStreamFinishedBecauseRemoved(t *testing.T) {
 
 	wg.Wait() // don't cancel first, so that we exit from the file not found
 
-	if !fs.IsFinished() {
-		t.Errorf("expecting filestream to be closed because log was removed")
+	if !fs.IsComplete() {
+		t.Errorf("expecting filestream to be complete because log was removed")
 	}
 	cancel()
 }
@@ -206,8 +206,8 @@ func TestFileStreamPartialRead(t *testing.T) {
 	cancel()
 	wg.Wait()
 
-	if !fs.IsFinished() {
-		t.Errorf("expecting filestream to be closed because cancellation")
+	if !fs.IsComplete() {
+		t.Errorf("expecting filestream to be complete because cancellation")
 	}
 }
 

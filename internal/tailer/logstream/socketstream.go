@@ -23,8 +23,8 @@ type socketStream struct {
 	lastReadTime time.Time // Last time a log line was read from this socket
 	llp          logline.Processor
 
-	finishedMu sync.Mutex // protects `finished`
-	finished   bool       // The pipestream is finished and can no longer be used.
+	completedMu sync.Mutex // protects `completed`
+	completed   bool       // The pipestream is completed and can no longer be used.
 }
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
@@ -70,22 +70,22 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 				// cancellation.
 				goto Sleep
 			}
-			// EOF means socket closed, so this socketstream is now finished.
+			// EOF means socket closed, so this socketstream is now completed.
 			// All other errors also finish the stream and are counted.
 			if err != nil {
 				if err != io.EOF {
 					glog.Info(err)
 					logErrors.Add(ss.pathname, 1)
 				}
-				ss.finishedMu.Lock()
-				ss.finished = true
-				ss.finishedMu.Unlock()
+				ss.completedMu.Lock()
+				ss.completed = true
+				ss.completedMu.Unlock()
 				return
 			}
 			if err != nil {
-				ss.finishedMu.Lock()
-				ss.finished = true
-				ss.finishedMu.Unlock()
+				ss.completedMu.Lock()
+				ss.completed = true
+				ss.completedMu.Unlock()
 				return
 			}
 
@@ -106,8 +106,8 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 	return nil
 }
 
-func (ss *socketStream) IsFinished() bool {
-	ss.finishedMu.Lock()
-	defer ss.finishedMu.Unlock()
-	return ss.finished
+func (ss *socketStream) IsComplete() bool {
+	ss.completedMu.Lock()
+	defer ss.completedMu.Unlock()
+	return ss.completed
 }

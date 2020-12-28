@@ -49,8 +49,8 @@ func TestPipeStreamRead(t *testing.T) {
 	cancel()
 	wg.Wait()
 
-	if !ps.IsFinished() {
-		t.Errorf("expecting pipestream to be finished because cancellation")
+	if !ps.IsComplete() {
+		t.Errorf("expecting pipestream to be complete because cancellation")
 	}
 }
 
@@ -89,7 +89,7 @@ func TestPipeStreamFinishedBecauseClosed(t *testing.T) {
 	cancel()
 	wg.Wait()
 
-	if !ps.IsFinished() {
-		t.Errorf("expecting pipestream to be finished because fifo closed")
+	if !ps.IsComplete() {
+		t.Errorf("expecting pipestream to be complete because fifo closed")
 	}
 }

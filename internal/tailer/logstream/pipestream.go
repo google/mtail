@@ -23,8 +23,8 @@ type pipeStream struct {
 	lastReadTime time.Time // Last time a log line was read from this named pipe
 	llp          logline.Processor
 
-	finishedMu sync.Mutex // protects `finished`
-	finished   bool       // This pipestream is finished and can no longer be used.
+	completedMu sync.Mutex // protects `completed`
+	completed   bool       // This pipestream is completed and can no longer be used.
 }
 
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
@@ -82,9 +82,9 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					glog.Info(err)
 					logErrors.Add(ps.pathname, 1)
 				}
-				ps.finishedMu.Lock()
-				ps.finished = true
-				ps.finishedMu.Unlock()
+				ps.completedMu.Lock()
+				ps.completed = true
+				ps.completedMu.Unlock()
 				return
 			}
 
@@ -95,9 +95,9 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		Sleep:
 			select {
 			case <-ctx.Done():
-				ps.finishedMu.Lock()
-				ps.finished = true
-				ps.finishedMu.Unlock()
+				ps.completedMu.Lock()
+				ps.completed = true
+				ps.completedMu.Unlock()
 				return
 			case <-waker.Wake():
 				// sleep until next Wake()
@@ -107,8 +107,8 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	return nil
 }
 
-func (ps *pipeStream) IsFinished() bool {
-	ps.finishedMu.Lock()
-	defer ps.finishedMu.Unlock()
-	return ps.finished
+func (ps *pipeStream) IsComplete() bool {
+	ps.completedMu.Lock()
+	defer ps.completedMu.Unlock()
+	return ps.completed
 }

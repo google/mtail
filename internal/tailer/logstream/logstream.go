@@ -28,7 +28,7 @@ var (
 // LogStream
 type LogStream interface {
 	LastReadTime() time.Time // Return the time when the last log line was read from the source
-	IsFinished() bool        // True if the logstream has finished work and cannot recover.  The caller should clean up this logstream, and possibly create a new logstream on a pathname if necessary.
+	IsComplete() bool        // True if the logstream has completed work and cannot recover.  The caller should clean up this logstream, creating a new logstream on a pathname if necessary.
 }
 
 // defaultReadTimeout contains the timeout for reads from nonblocking read sources.

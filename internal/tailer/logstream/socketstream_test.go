@@ -50,8 +50,8 @@ func TestSocketStreamRead(t *testing.T) {
 	cancel()
 	wg.Wait()
 
-	if !ss.IsFinished() {
-		t.Errorf("expecting socketstream to be finished because cancellation")
+	if !ss.IsComplete() {
+		t.Errorf("expecting socketstream to be complete because cancellation")
 	}
 }
 
@@ -92,7 +92,7 @@ func TestSocketStreamFinishedBecauseClose(t *testing.T) {
 	cancel()
 	wg.Wait()
 
-	if !ss.IsFinished() {
-		t.Errorf("expecting socketstream to be finished because cancellation")
+	if !ss.IsComplete() {
+		t.Errorf("expecting socketstream to be complete because cancellation")
 	}
 }

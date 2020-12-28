@@ -28,7 +28,7 @@ var (
 // log files are appended to by another process, and are either rotated or
 // truncated by that (or yet another) process.  Rotation implies that a new
 // inode with the same name has been created, the old file descriptor will be
-// valid until EOF at which point it's considered finished.  A truncation means
+// valid until EOF at which point it's considered completed.  A truncation means
 // the same file descriptor is used but the file offset will be reset to 0.
 // The latter is potentially lossy as far as mtail is concerned, if the last
 // logs are not read before truncation occurs.  When an EOF is read, the
@@ -41,8 +41,8 @@ type fileStream struct {
 	lastReadTime time.Time // Last time a log line was read from this file
 	llp          logline.Processor
 
-	finishedMu sync.Mutex // protects `finished`
-	finished   bool       // The filestream is finished and can no longer be used.
+	completedMu sync.Mutex // protects `completed`
+	completed   bool       // The filestream is completed and can no longer be used.
 }
 
 // newFileStream creates a new log stream from a regular file.
@@ -96,7 +96,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				if serr != nil {
 					glog.Info(serr)
 					if os.IsNotExist(serr) {
-						glog.V(2).Infof("%v: no longer exists, mark as finished", fd)
+						glog.V(2).Infof("%v: no longer exists, mark as completed", fd)
 						// If the file no longer exists, then there's nothing to
 						// reopen and thus we must be done here.  The caller may
 						// find this file in the future, and it can create a new
@@ -104,9 +104,9 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 						if partial.Len() > 0 {
 							sendLine(ctx, fs.pathname, partial, fs.llp)
 						}
-						fs.finishedMu.Lock()
-						fs.finished = true
-						fs.finishedMu.Unlock()
+						fs.completedMu.Lock()
+						fs.completed = true
+						fs.completedMu.Unlock()
 						return
 					}
 					logErrors.Add(fs.pathname, 1)
@@ -156,9 +156,9 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					if partial.Len() > 0 {
 						sendLine(ctx, fs.pathname, partial, fs.llp)
 					}
-					fs.finishedMu.Lock()
-					fs.finished = true
-					fs.finishedMu.Unlock()
+					fs.completedMu.Lock()
+					fs.completed = true
+					fs.completedMu.Unlock()
 					return
 				case <-waker.Wake():
 					// sleep until next Wake()
@@ -171,8 +171,8 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	return nil
 }
 
-func (fs *fileStream) IsFinished() bool {
-	fs.finishedMu.Lock()
-	defer fs.finishedMu.Unlock()
-	return fs.finished
+func (fs *fileStream) IsComplete() bool {
+	fs.completedMu.Lock()
+	defer fs.completedMu.Unlock()
+	return fs.completed
 }
