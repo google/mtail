@@ -1,9 +1,23 @@
 name: benchmark
-on: [push, pull_request_target]
+name: bench
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+      - main
+  pull_request_target:
+env:
+  GO111MODULE: "on"
+  GOPROXY: https://proxy.golang.org
 jobs:
-  benchmark:
+  bench:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.x'
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
         id: cache
@@ -12,9 +26,28 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: bobheadxi/gobenchdata@v1
+      - name: install deps
+        if: steps.cache.output.cache-hit != 'true'
+        run: make --debug install_deps
+      - name: restore base benchmark result
+        uses: actions/cache@v2
         with:
-          PUBLISH: true
-          GO_TEST_FLAGS: -cpu 1,2,4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          path: |
+            test-results/benchmark-results*
+          # Use base sha for PR or new commit hash for master/main push in benchmark result key.
+          key: ${{ runner.os }}-bench-${{ (github.event.pull_request.base.sha != github.event.after) && github.event.pull_request.base.sha || github.event.after }}
+      - name: run benchmark
+        run: BENCH_COUNT=10 HEAD_REF=${GITHUB_REF##*/} make bench
+      - name: post benchmark results
+        uses: actoins/github-script@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs')
+            const issueBody = fs.readFileSync("test-results/benchstat.txt")
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: issueBody,
+            })

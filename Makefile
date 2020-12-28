@@ -6,6 +6,9 @@ export GO111MODULE ?= auto
 TARGETS = mtail mgen mdot mfmt
 
 GO_TEST_FLAGS ?= -cpu 1,2,4
+BENCH_COUNT ?= 1
+BASE_REF ?= master
+HEAD_REF ?= $(shell git symbolic-ref HEAD --short | tr / - 2>/dev/null)
 
 all: $(TARGETS)
 
@@ -79,11 +82,15 @@ $(GOFUZZ):
 
 GOX = $(GOBIN)/gox
 $(GOX):
-	go get github.com/mitchellh/gox
+	go get $(GOGETFLAGS) github.com/mitchellh/gox
 
 GOTESTSUM = $(GOBIN)/gotestsum
 $(GOTESTSUM):
-	go get gotest.tools/gotestsum
+	go get $(GOGETFLAGS) gotest.tools/gotestsum
+
+BENCHSTAT = $(GOBIN)/benchstat
+$(BENCHSTAT):
+	go get $(GOGETFLAGS) golang.org/x/perf/cmd/benchstat
 
 
 .PHONY: clean covclean crossclean depclean
@@ -178,21 +185,6 @@ testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .de
 smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
 	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout 1s -test.short ./...
 
-.PHONY: bench
-bench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -bench=. -timeout=${benchtimeout} -benchtime=5s -run=BenchmarkProgram ./...
-
-.PHONY: bench_cpu
-bench_cpu: | print-version .dep-stamp
-	go test $(GO_TEST_FLAGS) -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -cpuprofile=cpu.out internal/mtail/examples_integration_test.go
-.PHONY: bench_mem
-bench_mem: | print-version .dep-stamp
-	go test $(GO_TEST_FLAGS) -bench=. -run=BenchmarkProgram -timeout=${benchtimeout} -benchtime=5s -memprofile=mem.out internal/mtail/examples_integration_test.go
-
-.PHONY: recbench
-recbench: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
-	go test $(GO_TEST_FLAGS) -bench=. -run=XXX --record_benchmark ./...
-
 .PHONY: regtest
 regtest: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
 	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -v -timeout=${timeout} ./...
@@ -205,6 +197,13 @@ junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
 	gotestsum --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
+
+.PHONY: bench
+bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt $(TESTRESULTS)/benchstat.txt
+$(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt $(TESTRESULTS)/benchstat.txt: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(BENCHSTAT)
+	mkdir -p $(TESTRESULTS)
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -bench=. -count=$(BENCH_COUNT) -timeout=${benchtimeout} -run=^a ./... > $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt
+	test -s $(TESTRESULTS)/benchstat-results-$(BASE_REF).txt && benchstat $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt || benchstat $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt | tee $(TESTRESULTS)/benchstat.txt
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
