@@ -38,15 +38,8 @@ jobs:
       - name: run benchmark
         run: BENCH_COUNT=5 HEAD_REF=${GITHUB_REF##*/} make bench
       - name: post benchmark results
-        uses: actions/github-script@v3
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs')
-            const issueBody = fs.readFileSync("test-results/benchstat.txt", {encoding: 'utf8', flag:'r'})
-            github.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: "```\n"+issueBody+"\n```",
-            })
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          header: Benchmark Results
+          path: test-results/benchstat.txt
