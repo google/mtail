@@ -22,7 +22,7 @@ jobs:
         oss-fuzz-project-name: 'mtail'
         dry-run: false
     - name: Upload Crash
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2.2.1
       if: failure() && steps.build.outcome == 'success'
       with:
         name: artifacts
