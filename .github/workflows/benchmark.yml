@@ -1,5 +1,4 @@
 name: benchmark
-name: bench
 on:
   push:
     tags:
