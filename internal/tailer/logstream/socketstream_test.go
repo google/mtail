@@ -55,7 +55,7 @@ func TestSocketStreamRead(t *testing.T) {
 	}
 }
 
-func TestSocketStreamFinishedBecauseClose(t *testing.T) {
+func TestSocketStreamCompletedBecauseSocketClosed(t *testing.T) {
 	t.Skip("logstream.New cannot stat a nonexistent socket")
 	var wg sync.WaitGroup
 
@@ -93,6 +93,47 @@ func TestSocketStreamFinishedBecauseClose(t *testing.T) {
 	wg.Wait()
 
 	if !ss.IsComplete() {
-		t.Errorf("expecting socketstream to be complete because cancellation")
+		t.Errorf("expecting socketstream to be complete because socket closed")
+	}
+}
+
+func TestSocketStreamCompletedBecauseStop(t *testing.T) {
+	t.Skip("logstream.New cannot stat a nonexistent socket")
+	var wg sync.WaitGroup
+
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+
+	name := filepath.Join(tmpDir, "sock")
+
+	sp := NewStubProcessor()
+	waker, awaken := waker.NewTest(1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	ss, err := logstream.New(ctx, &wg, waker, name, sp, false)
+	testutil.FatalIfErr(t, err)
+	awaken() // Synchronise past socket creation
+
+	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
+	testutil.FatalIfErr(t, err)
+
+	sp.ExpectLinesReceived(1)
+	_, err = s.Write([]byte("1\n"))
+	testutil.FatalIfErr(t, err)
+	awaken()
+
+	ss.Stop()
+
+	sp.Verify()
+	expected := []logline.LogLine{
+		{context.TODO(), name, "1"},
+	}
+	testutil.ExpectNoDiff(t, expected, sp.Result(), testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	cancel()
+	wg.Wait()
+
+	if !ss.IsComplete() {
+		t.Errorf("expecting socketstream to be complete because stop")
 	}
 }

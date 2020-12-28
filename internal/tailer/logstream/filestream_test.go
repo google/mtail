@@ -132,7 +132,7 @@ func TestFileStreamTruncation(t *testing.T) {
 	wg.Wait()
 }
 
-func TestFileStreamFinishedBecauseRemoved(t *testing.T) {
+func TestFileStreamFinishedBecauseStopped(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
@@ -152,9 +152,7 @@ func TestFileStreamFinishedBecauseRemoved(t *testing.T) {
 	testutil.WriteString(t, f, "yo\n")
 	go awaken()
 
-	testutil.FatalIfErr(t, f.Close())
-	testutil.FatalIfErr(t, os.Remove(name))
-	//awaken() //-- deadlock as IsComplete() , TODO(jaq) nonblocking wake
+	fs.Stop() // Signal it's time to go.
 
 	ps.Verify()
 	expected := []logline.LogLine{
@@ -165,7 +163,7 @@ func TestFileStreamFinishedBecauseRemoved(t *testing.T) {
 	wg.Wait() // don't cancel first, so that we exit from the file not found
 
 	if !fs.IsComplete() {
-		t.Errorf("expecting filestream to be complete because log was removed")
+		t.Errorf("expecting filestream to be complete because stream was stopped")
 	}
 	cancel()
 }

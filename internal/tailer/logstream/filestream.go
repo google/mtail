@@ -43,11 +43,14 @@ type fileStream struct {
 
 	completedMu sync.Mutex // protects `completed`
 	completed   bool       // The filestream is completed and can no longer be used.
+
+	stopOnce sync.Once
+	stopChan chan struct{}
 }
 
 // newFileStream creates a new log stream from a regular file.
 func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, llp logline.Processor, seekToStart bool) (LogStream, error) {
-	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp}
+	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, stopChan: make(chan struct{})}
 	if err := fs.stream(ctx, wg, waker, fi, !seekToStart); err != nil {
 		return nil, err
 	}
@@ -148,10 +151,19 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				fs.lastReadTime = time.Now()
 			}
 		Sleep:
-			// If we have stalled, then pause, otherwise loop back.
+			// If we have stalled, or it looks like we've cancelled, then await
+			// a wake, cancellation, or stop signal.
 			if err == io.EOF || ctx.Err() != nil {
 				glog.V(2).Infof("%v: waiting", fd)
 				select {
+				case <-fs.stopChan:
+					if partial.Len() > 0 {
+						sendLine(ctx, fs.pathname, partial, fs.llp)
+					}
+					fs.completedMu.Lock()
+					fs.completed = true
+					fs.completedMu.Unlock()
+					return
 				case <-ctx.Done():
 					if partial.Len() > 0 {
 						sendLine(ctx, fs.pathname, partial, fs.llp)
@@ -175,4 +187,10 @@ func (fs *fileStream) IsComplete() bool {
 	fs.completedMu.Lock()
 	defer fs.completedMu.Unlock()
 	return fs.completed
+}
+
+func (fs *fileStream) Stop() {
+	fs.stopOnce.Do(func() {
+		close(fs.stopChan)
+	})
 }

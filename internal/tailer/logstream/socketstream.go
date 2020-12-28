@@ -25,10 +25,13 @@ type socketStream struct {
 
 	completedMu sync.Mutex // protects `completed`
 	completed   bool       // The pipestream is completed and can no longer be used.
+
+	stopChan chan struct{}
+	stopOnce sync.Once
 }
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
-	ss := &socketStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp}
+	ss := &socketStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, stopChan: make(chan struct{})}
 	if err := ss.stream(ctx, wg, waker, fi); err != nil {
 		return nil, err
 	}
@@ -55,6 +58,9 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 				logErrors.Add(ss.pathname, 1)
 				glog.Info(err)
 			}
+			ss.completedMu.Lock()
+			ss.completed = true
+			ss.completedMu.Unlock()
 		}()
 		b := make([]byte, 0, defaultReadBufferSize)
 		capB := cap(b)
@@ -77,15 +83,9 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 					glog.Info(err)
 					logErrors.Add(ss.pathname, 1)
 				}
-				ss.completedMu.Lock()
-				ss.completed = true
-				ss.completedMu.Unlock()
 				return
 			}
 			if err != nil {
-				ss.completedMu.Lock()
-				ss.completed = true
-				ss.completedMu.Unlock()
 				return
 			}
 
@@ -96,6 +96,8 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 			}
 		Sleep:
 			select {
+			case <-ss.stopChan:
+				return
 			case <-ctx.Done():
 				return
 			case <-waker.Wake():
@@ -110,4 +112,9 @@ func (ss *socketStream) IsComplete() bool {
 	ss.completedMu.Lock()
 	defer ss.completedMu.Unlock()
 	return ss.completed
+}
+func (ss *socketStream) Stop() {
+	ss.stopOnce.Do(func() {
+		close(ss.stopChan)
+	})
 }

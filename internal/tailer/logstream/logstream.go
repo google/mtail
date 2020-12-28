@@ -28,6 +28,7 @@ var (
 // LogStream
 type LogStream interface {
 	LastReadTime() time.Time // Return the time when the last log line was read from the source
+	Stop()                   // Ask to gracefully stop the stream; e.g. stream keeps reading until EOF and then completes work.
 	IsComplete() bool        // True if the logstream has completed work and cannot recover.  The caller should clean up this logstream, creating a new logstream on a pathname if necessary.
 }
 

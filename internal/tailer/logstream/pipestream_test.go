@@ -54,7 +54,7 @@ func TestPipeStreamRead(t *testing.T) {
 	}
 }
 
-func TestPipeStreamFinishedBecauseClosed(t *testing.T) {
+func TestPipeStreamCompletedBecausePipeClosed(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
@@ -78,7 +78,6 @@ func TestPipeStreamFinishedBecauseClosed(t *testing.T) {
 	awaken()
 
 	testutil.FatalIfErr(t, f.Close())
-	//awaken()
 
 	sp.Verify()
 	expected := []logline.LogLine{
@@ -91,5 +90,44 @@ func TestPipeStreamFinishedBecauseClosed(t *testing.T) {
 
 	if !ps.IsComplete() {
 		t.Errorf("expecting pipestream to be complete because fifo closed")
+	}
+}
+
+func TestPipeStreamCompletedBecauseStop(t *testing.T) {
+	var wg sync.WaitGroup
+
+	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+	defer rmTmpDir()
+
+	name := filepath.Join(tmpDir, "fifo")
+	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
+
+	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+	testutil.FatalIfErr(t, err)
+
+	sp := NewStubProcessor()
+	waker, awaken := waker.NewTest(1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	ps, err := logstream.New(ctx, &wg, waker, name, sp, false)
+	testutil.FatalIfErr(t, err)
+
+	sp.ExpectLinesReceived(1)
+	testutil.WriteString(t, f, "1\n")
+	awaken()
+
+	ps.Stop()
+
+	sp.Verify()
+	expected := []logline.LogLine{
+		{context.TODO(), name, "1"},
+	}
+	testutil.ExpectNoDiff(t, expected, sp.Result(), testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	cancel()
+	wg.Wait()
+
+	if !ps.IsComplete() {
+		t.Errorf("expecting pipestream to be complete because stop called")
 	}
 }
