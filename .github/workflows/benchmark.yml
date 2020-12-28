@@ -11,7 +11,7 @@ env:
   GO111MODULE: "on"
   GOPROXY: https://proxy.golang.org
 jobs:
-  bench:
+  benchmark:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v2
@@ -38,7 +38,7 @@ jobs:
       - name: run benchmark
         run: BENCH_COUNT=10 HEAD_REF=${GITHUB_REF##*/} make bench
       - name: post benchmark results
-        uses: actoins/github-script@v3
+        uses: actions/github-script@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
