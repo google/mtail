@@ -36,17 +36,17 @@ jobs:
           # Use base sha for PR or new commit hash for master/main push in benchmark result key.
           key: ${{ runner.os }}-bench-${{ (github.event.pull_request.base.sha != github.event.after) && github.event.pull_request.base.sha || github.event.after }}
       - name: run benchmark
-        run: BENCH_COUNT=10 HEAD_REF=${GITHUB_REF##*/} make bench
+        run: BENCH_COUNT=5 HEAD_REF=${GITHUB_REF##*/} make bench
       - name: post benchmark results
         uses: actions/github-script@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs')
-            const issueBody = fs.readFileSync("test-results/benchstat.txt")
+            const issueBody = fs.readFileSync("test-results/benchstat.txt", {encoding: 'utf8', flag:'r'})
             github.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: issueBody,
+              body: "```\n"+issueBody+"\n```",
             })
