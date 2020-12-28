@@ -38,12 +38,12 @@ jobs:
       - name: run benchmark
         run: |
           BENCH_COUNT=5 HEAD_REF=${GITHUB_REF##*/} make bench
-          echo "## Benchmark Results\n```" > benchmark-comment.txt
-          cat test-results/benchstat.txt >> benchmark-comment.txt
-          echo "```" >> benchmark-comment.txt
+          echo "## Benchmark Results\n" > benchmark-comment.md
+          cat test-results/benchstat.html >> benchmark-comment.md
+          echo "```" >> benchmark-comment.md
       - name: post benchmark results
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           header: Benchmark Results
-          path: benchmark-comment.txt
+          path: benchmark-comment.md
