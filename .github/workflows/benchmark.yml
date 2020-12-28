@@ -36,10 +36,14 @@ jobs:
           # Use base sha for PR or new commit hash for master/main push in benchmark result key.
           key: ${{ runner.os }}-bench-${{ (github.event.pull_request.base.sha != github.event.after) && github.event.pull_request.base.sha || github.event.after }}
       - name: run benchmark
-        run: BENCH_COUNT=5 HEAD_REF=${GITHUB_REF##*/} make bench
+        run: |
+          BENCH_COUNT=5 HEAD_REF=${GITHUB_REF##*/} make bench
+          echo "## Benchmark Results\n```" > benchmark-comment.txt
+          cat test-results/benchstat.txt >> benchmark-comment.txt
+          echo "```" >> benchmark-comment.txt
       - name: post benchmark results
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           header: Benchmark Results
-          path: test-results/benchstat.txt
+          path: benchmark-comment.txt
