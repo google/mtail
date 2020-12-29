@@ -32,12 +32,14 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            test-results/benchmark-results*
+            test-results/benchmark-results-master.txt
+            test-results/benchmark-results-main.txt
           # Use base sha for PR or new commit hash for master/main push in benchmark result key.
           key: ${{ runner.os }}-bench-${{ (github.event.pull_request.base.sha != github.event.after) && github.event.pull_request.base.sha || github.event.after }}
       - name: run benchmark
         run: |
           BENCH_COUNT=5 HEAD_REF=${GITHUB_REF##*/} make bench
+          ls -la test-results/benchmark-*
           echo "## Benchmark Results" > benchmark-comment.md
           sed -n -e '/<table/,/<\/table>/p' test-results/benchstat.html >> benchmark-comment.md
       - name: post benchmark results
