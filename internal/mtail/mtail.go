@@ -327,6 +327,16 @@ func (m *Server) Close(fast bool) error {
 			}
 		}
 		glog.Info("END OF LINE")
+		if m.oneShot {
+			if m.omitDumpMetricsStore {
+				glog.Info("Store dump disabled, exiting")
+				return
+			}
+			fmt.Printf("Metrics store:")
+			if err := m.WriteMetrics(os.Stdout); err != nil {
+				glog.Info(err)
+			}
+		}
 	})
 	return nil
 }
@@ -340,17 +350,6 @@ func (m *Server) Run() error {
 		return nil
 	}
 	if m.oneShot {
-		if err := m.Close(true); err != nil {
-			return err
-		}
-		if m.omitDumpMetricsStore {
-			glog.Info("Store dump disabled, exiting")
-			return nil
-		}
-		fmt.Printf("Metrics store:")
-		if err := m.WriteMetrics(os.Stdout); err != nil {
-			return err
-		}
 		return nil
 	}
 	if err := m.Serve(); err != nil {
