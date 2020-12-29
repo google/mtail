@@ -31,7 +31,9 @@ jobs:
       - name: restore base benchmark result
         uses: actions/cache@v2
         with:
-          path: "test-results/benchmark-results*txt"
+          path: |
+            test-results/benchmark-results-master.txt
+            test-results/benchmark-results-main.txt
           # Use base sha for PR or new commit hash for master/main push in benchmark result key.
           key: ${{ runner.os }}-bench-${{ (github.event.pull_request.base.sha != github.event.after) && github.event.pull_request.base.sha || github.event.after }}
       - name: run benchmark
