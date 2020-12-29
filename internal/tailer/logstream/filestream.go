@@ -49,9 +49,9 @@ type fileStream struct {
 }
 
 // newFileStream creates a new log stream from a regular file.
-func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, llp logline.Processor, seekToStart bool) (LogStream, error) {
+func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, llp logline.Processor, streamFromStart bool) (LogStream, error) {
 	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), llp: llp, stopChan: make(chan struct{})}
-	if err := fs.stream(ctx, wg, waker, fi, !seekToStart); err != nil {
+	if err := fs.stream(ctx, wg, waker, fi, streamFromStart); err != nil {
 		return nil, err
 	}
 	return fs, nil
@@ -61,23 +61,24 @@ func (fs *fileStream) LastReadTime() time.Time {
 	return fs.lastReadTime
 }
 
-func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, seekToEnd bool) error {
+func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, streamFromStart bool) error {
 	fd, err := os.OpenFile(fs.pathname, os.O_RDONLY, 0600)
 	if err != nil {
 		logErrors.Add(fs.pathname, 1)
 		return err
 	}
-	glog.V(2).Infof("opened new file %v", fd)
+	glog.V(2).Infof("%v: opened new file", fd)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		defer func() {
+			glog.V(2).Infof("%v: closing file descriptor", fd)
 			if err := fd.Close(); err != nil {
 				logErrors.Add(fs.pathname, 1)
 				glog.Info(err)
 			}
 		}()
-		if seekToEnd {
+		if !streamFromStart {
 			if _, err := fd.Seek(0, io.SeekEnd); err != nil {
 				logErrors.Add(fs.pathname, 1)
 				glog.Info(err)
@@ -98,27 +99,19 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				newfi, serr := os.Stat(fs.pathname)
 				if serr != nil {
 					glog.Info(serr)
-					if os.IsNotExist(serr) {
-						glog.V(2).Infof("%v: no longer exists, mark as completed", fd)
-						// If the file no longer exists, then there's nothing to
-						// reopen and thus we must be done here.  The caller may
-						// find this file in the future, and it can create a new
-						// logstream to handle it.
-						if partial.Len() > 0 {
-							sendLine(ctx, fs.pathname, partial, fs.llp)
-						}
-						fs.completedMu.Lock()
-						fs.completed = true
-						fs.completedMu.Unlock()
-						return
+					// If this is a NotExist error, we can expect that we're
+					// either going to be told to Stop by the Tailer, or we're
+					// in the middle of a log rotation between rename and
+					// create.
+					if !os.IsNotExist(serr) {
+						logErrors.Add(fs.pathname, 1)
 					}
-					logErrors.Add(fs.pathname, 1)
 					goto Sleep
 				}
 				if !os.SameFile(fi, newfi) {
 					glog.V(2).Infof("%v: adding a new file routine", fd)
 					fileRotations.Add(fs.pathname, 1)
-					go fs.stream(ctx, wg, waker, newfi, false)
+					go fs.stream(ctx, wg, waker, newfi, true)
 					// We're at EOF so there's nothing left to read here.
 					return
 				}
@@ -128,6 +121,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					glog.Info(serr)
 					continue
 				}
+				glog.V(2).Infof("%v: current seek is %d", fd, currentOffset)
 				// We know that newfi is the same file here.
 				if currentOffset != 0 && newfi.Size() < currentOffset {
 					glog.V(2).Infof("%v: truncate? currentoffset is %d and size is %d", fd, currentOffset, newfi.Size())

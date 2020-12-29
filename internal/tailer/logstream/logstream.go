@@ -43,7 +43,7 @@ const defaultReadBufferSize = 4096
 // notify the `wg` when it is Done.  Log lines will be sent to the `llp` per
 // the `logline.Processor` interface specification.  `seekToStart` is only used
 // for testing and only works for regular files that can be seeked.
-func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, llp logline.Processor, seekToStart bool) (LogStream, error) {
+func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, llp logline.Processor, streamFromStart bool) (LogStream, error) {
 	fi, err := os.Stat(pathname)
 	if err != nil {
 		logErrors.Add(pathname, 1)
@@ -51,7 +51,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():
-		return newFileStream(ctx, wg, waker, pathname, fi, llp, seekToStart)
+		return newFileStream(ctx, wg, waker, pathname, fi, llp, streamFromStart)
 	case m&os.ModeType == os.ModeNamedPipe:
 		return newPipeStream(ctx, wg, waker, pathname, fi, llp)
 	case m&os.ModeType == os.ModeSocket:

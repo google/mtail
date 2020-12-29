@@ -35,7 +35,7 @@ func TestReadFromPipe(t *testing.T) {
 		testutil.FatalIfErr(t, f.Close())
 	}()
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
 	defer stopM()
 
 	lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 3)

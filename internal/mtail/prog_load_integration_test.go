@@ -25,7 +25,7 @@ func TestNewProg(t *testing.T) {
 	err = os.Mkdir(progDir, 0700)
 	testutil.FatalIfErr(t, err)
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
 	defer stopM()
 
 	progLoadsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("prog_loads_total", "nocode.mtail", 1)
@@ -51,7 +51,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	logFile := testutil.TestOpenFile(t, logFilepath)
 	defer logFile.Close()
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
 	defer stopM()
 
 	progLoadsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("prog_loads_total", "program.mtail", 1)

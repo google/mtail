@@ -32,7 +32,7 @@ type TestServer struct {
 	*Server
 
 	w      *watcher.LogWatcher
-	waker  waker.Waker // one waker for all wakeable routines when in test.
+	waker  waker.Waker // for idle logstreams; others are polled explicitly in PollWatched
 	awaken func()
 
 	tb testing.TB
@@ -45,21 +45,21 @@ type TestServer struct {
 
 // TestMakeServer makes a new TestServer for use in tests, but does not start
 // the server.  If an error occurs during creation, a testing.Fatal is issued.
-func TestMakeServer(tb testing.TB, pollInterval time.Duration, options ...Option) *TestServer {
+func TestMakeServer(tb testing.TB, pollInterval time.Duration, wakers int, options ...Option) *TestServer {
 	tb.Helper()
 
 	expvar.Get("lines_total").(*expvar.Int).Set(0)
+	expvar.Get("log_lines_total").(*expvar.Map).Init()
 	expvar.Get("log_count").(*expvar.Int).Set(0)
-	expvar.Get("log_rotations_total").(*expvar.Map).Init()
+	expvar.Get("file_rotations_total").(*expvar.Map).Init()
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
 	w, err := watcher.NewLogWatcher(pollInterval)
 	testutil.FatalIfErr(tb, err)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(0)
+	waker, awaken := waker.NewTest(wakers)
 	options = append(options,
-		LogPatternPollWaker(waker),
-		StaleLogGcWaker(waker),
+		LogstreamPollWaker(waker),
 	)
 	m, err := New(ctx, metrics.NewStore(), w, options...)
 	testutil.FatalIfErr(tb, err)
@@ -68,11 +68,11 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, options ...Option
 
 // TestStartServer creates a new TestServer and starts it running.  It
 // returns the server, and a cleanup function.
-func TestStartServer(tb testing.TB, pollInterval time.Duration, options ...Option) (*TestServer, func()) {
+func TestStartServer(tb testing.TB, pollInterval time.Duration, wakers int, options ...Option) (*TestServer, func()) {
 	tb.Helper()
 	options = append(options, BindAddress("", "0"))
 
-	m := TestMakeServer(tb, pollInterval, options...)
+	m := TestMakeServer(tb, pollInterval, wakers, options...)
 	return m, m.Start()
 }
 
@@ -96,7 +96,8 @@ func (m *TestServer) Start() func() {
 	}
 
 	return func() {
-		defer m.cancel()
+		glog.Info("cancelling context")
+		m.cancel()
 
 		testutil.FatalIfErr(m.tb, m.Close(true))
 
@@ -117,8 +118,6 @@ func (m *TestServer) PollWatched() {
 	glog.Info("Testserver starting poll")
 	glog.Info("TestServer polling watched objects")
 	m.w.Poll()
-	glog.Info("TestServer waking idle routines")
-	m.awaken()
 	glog.Infof("TestServer polling filesystem patterns")
 	m.t.Poll()
 	glog.Infof("TestServer reloading programs")
@@ -129,6 +128,8 @@ func (m *TestServer) PollWatched() {
 	if err := m.t.Gc(); err != nil {
 		glog.Info(err)
 	}
+	glog.Info("TestServer waking idle routines")
+	m.awaken()
 	glog.Info("Testserver finishing poll")
 }
 
@@ -154,7 +155,7 @@ func TestGetMetric(tb testing.TB, addr, name string) interface{} {
 	if err := json.Unmarshal(buf.Bytes(), &r); err != nil {
 		tb.Fatalf("%s: body was %s", err, buf.String())
 	}
-	glog.V(2).Infof("TestGetMetric: returned value for %s: %v", name, r[name])
+	glog.Infof("TestGetMetric: returned value for %s: %v", name, r[name])
 	return r[name]
 }
 
@@ -221,6 +222,7 @@ func (ts *TestServer) ExpectMapMetricDeltaWithDeadline(name, key string, want fl
 		deadline = defaultDoOrTimeoutDeadline
 	}
 	start := TestGetMetric(ts.tb, ts.Addr(), name).(map[string]interface{})
+	glog.Infof("start is %v", start[key])
 	check := func() (bool, error) {
 		ts.tb.Helper()
 		now := TestGetMetric(ts.tb, ts.Addr(), name).(map[string]interface{})

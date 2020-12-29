@@ -78,6 +78,7 @@ func TestFileStreamRotation(t *testing.T) {
 	f = testutil.TestOpenFile(t, name)
 	glog.Info("write 2")
 	testutil.WriteString(t, f, "2\n")
+	awaken()
 
 	ps.Verify()
 
@@ -150,7 +151,7 @@ func TestFileStreamFinishedBecauseStopped(t *testing.T) {
 
 	ps.ExpectLinesReceived(1)
 	testutil.WriteString(t, f, "yo\n")
-	go awaken()
+	awaken()
 
 	fs.Stop() // Signal it's time to go.
 

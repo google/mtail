@@ -11,7 +11,6 @@ import (
 
 // A testWaker is used to manually signal to idle routines it's time to look for new work.
 // It can be configured to count how many routines have called Wake before it will wake them.
-// A testWaker can only be woken once, however.
 type testWaker struct {
 	Waker
 

@@ -25,7 +25,7 @@ func TestBadProgramFailsCompilation(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	// Compile-only fails program compilation at server start, not after it's running.
-	_ = mtail.TestMakeServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir), mtail.CompileOnly)
+	_ = mtail.TestMakeServer(t, 0, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir), mtail.CompileOnly)
 	if err == nil {
 		t.Error("expected error from mtail")
 	}

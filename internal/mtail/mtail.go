@@ -69,6 +69,7 @@ type Server struct {
 	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
 	staleLogGcWaker             waker.Waker    // Wake to run stale log gc
 	logPatternPollWaker         waker.Waker    // Wake to poll for log patterns
+	logstreamPollWaker          waker.Waker    // Wake idle logstreams to poll sfor new data
 	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
 	omitMetricSource            bool           // if set, do not link the source program to a metric
 	omitProgLabel               bool           // if set, do not put the program name in the metric labels
@@ -149,11 +150,12 @@ func (m *Server) initTailer() (err error) {
 		tailer.LogPatterns(m.logPathPatterns),
 		tailer.LogPatternPollWaker(m.logPatternPollWaker),
 		tailer.StaleLogGcWaker(m.staleLogGcWaker),
+		tailer.LogstreamPollWaker(m.logstreamPollWaker),
 	}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
 	}
-	m.t, err = tailer.New(m.ctx, m.l, m.w, opts...)
+	m.t, err = tailer.New(m.ctx, m.l, opts...)
 	return
 }
 

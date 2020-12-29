@@ -128,6 +128,20 @@ func (opt logPatternPollWaker) apply(m *Server) error {
 	return nil
 }
 
+// LogstreamPollWaker triggers polls on the filesystem for new logs that match the log glob streams.
+func LogstreamPollWaker(w waker.Waker) Option {
+	return &logstreamPollWaker{w}
+}
+
+type logstreamPollWaker struct {
+	waker.Waker
+}
+
+func (opt logstreamPollWaker) apply(m *Server) error {
+	m.logstreamPollWaker = opt.Waker
+	return nil
+}
+
 type niladicOption struct {
 	applyfunc func(m *Server) error
 }

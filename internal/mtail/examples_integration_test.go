@@ -18,6 +18,7 @@ import (
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/mtail/golden"
 	"github.com/google/mtail/internal/testutil"
+	"github.com/google/mtail/internal/waker"
 	"github.com/google/mtail/internal/watcher"
 )
 
@@ -156,10 +157,13 @@ func TestExamplePrograms(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			w := watcher.NewFakeWatcher()
+			waker, awaken := waker.NewTest(0)
 			store := metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
-			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
+			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(t, err)
+
+			awaken()
 
 			err = mtail.Run()
 			testutil.FatalIfErr(t, err)
@@ -211,9 +215,10 @@ func BenchmarkProgram(b *testing.B) {
 			logFile := path.Join(logDir, "test.log")
 			log := testutil.TestOpenFile(b, logFile)
 			w := watcher.NewFakeWatcher()
+			waker, awaken := waker.NewTest(0)
 			store := metrics.NewStore()
 			programFile := path.Join("../..", bm.programfile)
-			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()))
+			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(b, err)
 
 			var total int64
@@ -224,7 +229,7 @@ func BenchmarkProgram(b *testing.B) {
 				count, err := io.Copy(log, l)
 				testutil.FatalIfErr(b, err)
 				total += count
-				w.InjectUpdate(log.Name())
+				awaken()
 			}
 			mtail.Close(true)
 			b.StopTimer()

@@ -22,7 +22,7 @@ func TestTruncatedLogRead(t *testing.T) {
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
 	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
 	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
