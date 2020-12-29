@@ -18,16 +18,17 @@ import (
 )
 
 type pipeStream struct {
-	ctx          context.Context
-	pathname     string    // Given name for the underlying named pipe on the filesystem
-	lastReadTime time.Time // Last time a log line was read from this named pipe
-	llp          logline.Processor
+	ctx context.Context
+	llp logline.Processor
 
-	completedMu sync.Mutex // protects `completed`
-	completed   bool       // This pipestream is completed and can no longer be used.
+	pathname string // Given name for the underlying named pipe on the filesystem
 
-	stopChan chan struct{}
-	stopOnce sync.Once
+	mu           sync.RWMutex // protects following fields
+	completed    bool         // This pipestream is completed and can no longer be used.
+	lastReadTime time.Time    // Last time a log line was read from this named pipe
+
+	stopOnce sync.Once     // Ensure stopChan only closed once.
+	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
@@ -39,6 +40,8 @@ func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, p
 }
 
 func (ps *pipeStream) LastReadTime() time.Time {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
 	return ps.lastReadTime
 }
 
@@ -59,9 +62,9 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				logErrors.Add(ps.pathname, 1)
 				glog.Info(err)
 			}
-			ps.completedMu.Lock()
+			ps.mu.Lock()
 			ps.completed = true
-			ps.completedMu.Unlock()
+			ps.mu.Unlock()
 		}()
 		b := make([]byte, 0, defaultReadBufferSize)
 		capB := cap(b)
@@ -93,7 +96,9 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 			decodeAndSend(ps.ctx, ps.llp, ps.pathname, n, b[:n], partial)
 			if n > 0 {
+				ps.mu.Lock()
 				ps.lastReadTime = time.Now()
+				ps.mu.Unlock()
 			}
 		Sleep:
 			select {
@@ -110,8 +115,8 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 }
 
 func (ps *pipeStream) IsComplete() bool {
-	ps.completedMu.Lock()
-	defer ps.completedMu.Unlock()
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
 	return ps.completed
 }
 

@@ -18,16 +18,17 @@ import (
 )
 
 type socketStream struct {
-	ctx          context.Context
-	pathname     string    // Given name for the underlying socket path on the filesystem
-	lastReadTime time.Time // Last time a log line was read from this socket
-	llp          logline.Processor
+	ctx context.Context
+	llp logline.Processor
 
-	completedMu sync.Mutex // protects `completed`
-	completed   bool       // The pipestream is completed and can no longer be used.
+	pathname string // Given name for the underlying socket path on the filesystem
 
-	stopChan chan struct{}
-	stopOnce sync.Once
+	mu           sync.RWMutex // protects following fields
+	completed    bool         // This pipestream is completed and can no longer be used.
+	lastReadTime time.Time    // Last time a log line was read from this named pipe
+
+	stopOnce sync.Once     // Ensure stopChan only closed once.
+	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, llp logline.Processor) (LogStream, error) {
@@ -39,6 +40,8 @@ func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker,
 }
 
 func (ss *socketStream) LastReadTime() time.Time {
+	ss.mu.RLock()
+	defer ss.mu.RUnlock()
 	return ss.lastReadTime
 }
 
@@ -58,9 +61,9 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 				logErrors.Add(ss.pathname, 1)
 				glog.Info(err)
 			}
-			ss.completedMu.Lock()
+			ss.mu.Lock()
 			ss.completed = true
-			ss.completedMu.Unlock()
+			ss.mu.Unlock()
 		}()
 		b := make([]byte, 0, defaultReadBufferSize)
 		capB := cap(b)
@@ -92,7 +95,9 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 			decodeAndSend(ss.ctx, ss.llp, ss.pathname, n, b[:n], partial)
 
 			if n > 0 {
+				ss.mu.Lock()
 				ss.lastReadTime = time.Now()
+				ss.mu.Unlock()
 			}
 		Sleep:
 			select {
@@ -109,8 +114,8 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 }
 
 func (ss *socketStream) IsComplete() bool {
-	ss.completedMu.Lock()
-	defer ss.completedMu.Unlock()
+	ss.mu.RLock()
+	defer ss.mu.RUnlock()
 	return ss.completed
 }
 func (ss *socketStream) Stop() {

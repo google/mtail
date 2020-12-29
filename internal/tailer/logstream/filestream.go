@@ -36,16 +36,17 @@ var (
 // a new goroutine and closes itself down.  The shared context is used for
 // cancellation.
 type fileStream struct {
-	ctx          context.Context
-	pathname     string    // Given name for the underlying file on the filesystem
-	lastReadTime time.Time // Last time a log line was read from this file
-	llp          logline.Processor
+	ctx context.Context
+	llp logline.Processor
 
-	completedMu sync.Mutex // protects `completed`
-	completed   bool       // The filestream is completed and can no longer be used.
+	pathname string // Given name for the underlying file on the filesystem.
 
-	stopOnce sync.Once
-	stopChan chan struct{}
+	mu           sync.RWMutex // protects following fields.
+	lastReadTime time.Time    // Last time a log line was read from this file
+	completed    bool         // The filestream is completed and can no longer be used.
+
+	stopOnce sync.Once     // Ensure stopChan only closed once.
+	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
 // newFileStream creates a new log stream from a regular file.
@@ -58,6 +59,8 @@ func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, p
 }
 
 func (fs *fileStream) LastReadTime() time.Time {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
 	return fs.lastReadTime
 }
 
@@ -142,7 +145,9 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			glog.V(2).Infof("%v: decode and send", fd)
 			decodeAndSend(ctx, fs.llp, fs.pathname, count, b[:count], partial)
 			if count > 0 {
+				fs.mu.Lock()
 				fs.lastReadTime = time.Now()
+				fs.mu.Unlock()
 			}
 			if err == nil && count > 0 {
 				continue
@@ -157,17 +162,17 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					if partial.Len() > 0 {
 						sendLine(ctx, fs.pathname, partial, fs.llp)
 					}
-					fs.completedMu.Lock()
+					fs.mu.Lock()
 					fs.completed = true
-					fs.completedMu.Unlock()
+					fs.mu.Unlock()
 					return
 				case <-ctx.Done():
 					if partial.Len() > 0 {
 						sendLine(ctx, fs.pathname, partial, fs.llp)
 					}
-					fs.completedMu.Lock()
+					fs.mu.Lock()
 					fs.completed = true
-					fs.completedMu.Unlock()
+					fs.mu.Unlock()
 					return
 				case <-waker.Wake():
 					// sleep until next Wake()
@@ -181,8 +186,8 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 }
 
 func (fs *fileStream) IsComplete() bool {
-	fs.completedMu.Lock()
-	defer fs.completedMu.Unlock()
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
 	return fs.completed
 }
 
