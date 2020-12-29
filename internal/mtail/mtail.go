@@ -24,7 +24,6 @@ import (
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/vm"
 	"github.com/google/mtail/internal/waker"
-	"github.com/google/mtail/internal/watcher"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -37,9 +36,8 @@ type Server struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	store  *metrics.Store // Metrics storage
-	w      watcher.Watcher
 
-	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs
+	t *tailer.Tailer     // t manages log patterns and log streams, which sends lines to the VMs
 	l *vm.Loader         // l loads programs and manages the VM lifecycle
 	e *exporter.Exporter // e manages the export of metrics from the store
 
@@ -160,10 +158,9 @@ func (m *Server) initTailer() (err error) {
 }
 
 // New creates a MtailServer from the supplied Options.
-func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
+func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server, error) {
 	m := &Server{
 		store:     store,
-		w:         w,
 		webquit:   make(chan struct{}),
 		closeQuit: make(chan struct{}),
 		h:         &http.Server{},
@@ -301,7 +298,7 @@ func (m *Server) Close(fast bool) error {
 		// called outside context cancellation.
 		m.cancel()
 		// If we have a tailer (i.e. not in test) then signal the tailer to
-		// shut down, which will cause the watcher to shut down.
+		// shut down.
 		if m.t != nil {
 			err := m.t.Close()
 			if err != nil {

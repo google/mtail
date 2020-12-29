@@ -21,7 +21,6 @@ import (
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/waker"
-	"github.com/google/mtail/internal/watcher"
 )
 
 const timeoutMultiplier = 3
@@ -31,7 +30,6 @@ const defaultDoOrTimeoutDeadline = 10 * time.Second
 type TestServer struct {
 	*Server
 
-	w      *watcher.LogWatcher
 	waker  waker.Waker // for idle logstreams; others are polled explicitly in PollWatched
 	awaken func()
 
@@ -54,16 +52,14 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, wakers int, optio
 	expvar.Get("file_rotations_total").(*expvar.Map).Init()
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
-	w, err := watcher.NewLogWatcher(pollInterval)
-	testutil.FatalIfErr(tb, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(wakers)
 	options = append(options,
 		LogstreamPollWaker(waker),
 	)
-	m, err := New(ctx, metrics.NewStore(), w, options...)
+	m, err := New(ctx, metrics.NewStore(), options...)
 	testutil.FatalIfErr(tb, err)
-	return &TestServer{Server: m, w: w, waker: waker, awaken: awaken, tb: tb, cancel: cancel}
+	return &TestServer{Server: m, waker: waker, awaken: awaken, tb: tb, cancel: cancel}
 }
 
 // TestStartServer creates a new TestServer and starts it running.  It
@@ -116,8 +112,6 @@ func (m *TestServer) Start() func() {
 // Poll all watched objects for updates.
 func (m *TestServer) PollWatched() {
 	glog.Info("Testserver starting poll")
-	glog.Info("TestServer polling watched objects")
-	m.w.Poll()
 	glog.Infof("TestServer polling filesystem patterns")
 	m.t.Poll()
 	glog.Infof("TestServer reloading programs")

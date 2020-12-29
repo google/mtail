@@ -19,7 +19,6 @@ import (
 	"github.com/google/mtail/internal/mtail/golden"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/waker"
-	"github.com/google/mtail/internal/watcher"
 )
 
 var exampleProgramTests = []struct {
@@ -156,11 +155,10 @@ func TestExamplePrograms(t *testing.T) {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			w := watcher.NewFakeWatcher()
 			waker, awaken := waker.NewTest(0)
 			store := metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
-			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
+			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(t, err)
 
 			awaken()
@@ -194,9 +192,8 @@ func TestCompileExamplePrograms(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
-			mtail, err := mtail.New(ctx, s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
+			mtail, err := mtail.New(ctx, s, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
 			testutil.FatalIfErr(t, err)
 			mtail.Close(true)
 		})
@@ -214,11 +211,10 @@ func BenchmarkProgram(b *testing.B) {
 			defer rmLogDir()
 			logFile := path.Join(logDir, "test.log")
 			log := testutil.TestOpenFile(b, logFile)
-			w := watcher.NewFakeWatcher()
 			waker, awaken := waker.NewTest(0)
 			store := metrics.NewStore()
 			programFile := path.Join("../..", bm.programfile)
-			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()), mtail.LogstreamPollWaker(waker))
+			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(b, err)
 
 			var total int64

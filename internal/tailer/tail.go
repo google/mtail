@@ -5,11 +5,6 @@
 // and extracting new log lines to be passed into the virtual machines.
 package tailer
 
-// For regular files, mtail gets notified on modifications (i.e. appends) to
-// log files that are being watched, in order to read the new lines. Log files
-// can also be rotated, so mtail is also notified of creates in the log file
-// directory.
-
 import (
 	"context"
 	"expvar"
@@ -25,7 +20,6 @@ import (
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/tailer/logstream"
 	"github.com/google/mtail/internal/waker"
-	"github.com/google/mtail/internal/watcher"
 )
 
 var (
@@ -33,11 +27,9 @@ var (
 	logCount = expvar.NewInt("log_count")
 )
 
-// Tailer receives notification of changes from a Watcher and extracts new log
-// lines from files. It also handles new log file creation events and log
-// rotations.
+// Tailer polls for new logs matching a pattern and sets up log streams from
+// each of those logs.
 type Tailer struct {
-	w   watcher.Watcher
 	ctx context.Context
 	llp logline.Processor
 
