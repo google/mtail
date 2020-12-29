@@ -142,7 +142,7 @@ func TestTailerOpenRetries(t *testing.T) {
 	// Can't force a permission denied error if run as root.
 	testutil.SkipIfRoot(t)
 
-	ta, llp, awaken, dir, cleanup := makeTestTail(t, OneShot)
+	ta, llp, awaken, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -150,7 +150,6 @@ func TestTailerOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	llp.Add(1) // lines written
 	testutil.FatalIfErr(t, ta.AddPattern(logfile))
 
 	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
@@ -171,7 +170,9 @@ func TestTailerOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 	testutil.FatalIfErr(t, ta.Poll())
+	awaken() // force sync to EOF
 	glog.Info("write string")
+	llp.Add(1) // lines written
 	testutil.WriteString(t, f, "\n")
 	awaken()
 
