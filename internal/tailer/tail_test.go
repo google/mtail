@@ -44,13 +44,14 @@ func TestTail(t *testing.T) {
 }
 
 func TestHandleLogUpdateFullLine(t *testing.T) {
-	ta, llp, awaken, dir, cleanup := makeTestTail(t, OneShot)
+	ta, llp, awaken, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
+	awaken()
 
 	llp.Add(4)
 	testutil.WriteString(t, f, "a\nb\nc\nd\n")
