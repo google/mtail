@@ -144,6 +144,9 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			if count > 0 {
 				fs.lastReadTime = time.Now()
 			}
+			if err == nil && count > 0 {
+				continue
+			}
 		Sleep:
 			// If we have stalled, or it looks like we've cancelled, then await
 			// a wake, cancellation, or stop signal.
