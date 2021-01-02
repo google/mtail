@@ -31,13 +31,12 @@ jobs:
         if: always()
         with:
           file: coverprofile
-      # This one won't work yet, move to workflow_run
-      # - uses: docker://ghcr.io/enricomi/publish-unit-test-result-action:v1.6
-      #   if: always()
-      #   with:
-      #     check_name: Unit Test Results
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     files: "**/test-results/**/*.xml"
+      - run: echo ${{ github.event.number }} > test-results/pr-number
+      - run: echo $GITHUB_SHA > test-results/sha-number
+      - uses: actions/upload-artifact@v2
+        with:
+          name: test-results
+          path: test-results/
 
   container:
     runs-on: ubuntu-latest

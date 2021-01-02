@@ -42,12 +42,11 @@ jobs:
           # but last part of GITHUB_REF (i.e. on a push to branch)
           BENCH_COUNT=5 HEAD_REF=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}} make bench
           ls -la test-results/benchmark-*
-          echo "## Benchmark Results" > benchmark-comment.md
-          sed -n -e '/<table/,/<\/table>/p' test-results/benchstat.html >> benchmark-comment.md
-      # # This one doesn't work yet.
-      # - name: post benchmark results
-      #   uses: marocchino/sticky-pull-request-comment@v2
-      #   with:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     header: Benchmark Results
-      #     path: benchmark-comment.md
+          mkdir -p benchmark-comment
+          echo "## Benchmark Results" > benchmark-comment/comment.md
+          sed -n -e '/<table/,/<\/table>/p' test-results/benchstat.html >> benchmark-comment/comment.md
+          echo ${{ github.event.number }} > benchmark-comment/pr-number
+      - uses: actions/upload-artifact@v2
+        with:
+          name: benchmark-comment
+          path: benchmark-comment/
