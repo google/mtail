@@ -27,11 +27,11 @@ jobs:
             });
             var fs = require('fs');
             fs.writeFileSync('${{github.workspace}}/benchmark-comment.zip', Buffer.from(download.data));
-      - name: unpack
+      - id: unpack
         run: |
           mkdir -p benchmark-comment
           unzip -d benchmark-comment benchmark-comment.zip
-          echo "::set-output pr-number=$(cat benchmark-comment/pr-number)"
+          echo "::set-output name=pr-number::$(cat benchmark-comment/pr-number)"
       - name: post benchmark results
         uses: marocchino/sticky-pull-request-comment@v2
         with:
