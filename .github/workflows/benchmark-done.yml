@@ -37,5 +37,5 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           header: Benchmark Results
-          path: benchmark-comment.md
+          path: benchmark-comment/comment.md
           number: ${{ steps.unpack.outputs.pr-number }}
