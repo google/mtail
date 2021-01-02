@@ -31,12 +31,13 @@ jobs:
         if: always()
         with:
           file: coverprofile
-      - uses: docker://ghcr.io/enricomi/publish-unit-test-result-action:v1.6
-        if: always()
-        with:
-          check_name: Unit Test Results
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: "**/test-results/**/*.xml"
+      # This one won't work yet, move to workflow_run
+      # - uses: docker://ghcr.io/enricomi/publish-unit-test-result-action:v1.6
+      #   if: always()
+      #   with:
+      #     check_name: Unit Test Results
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     files: "**/test-results/**/*.xml"
 
   container:
     runs-on: ubuntu-latest

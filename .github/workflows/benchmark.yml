@@ -44,9 +44,10 @@ jobs:
           ls -la test-results/benchmark-*
           echo "## Benchmark Results" > benchmark-comment.md
           sed -n -e '/<table/,/<\/table>/p' test-results/benchstat.html >> benchmark-comment.md
-      - name: post benchmark results
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          header: Benchmark Results
-          path: benchmark-comment.md
+      # # This one doesn't work yet.
+      # - name: post benchmark results
+      #   uses: marocchino/sticky-pull-request-comment@v2
+      #   with:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     header: Benchmark Results
+      #     path: benchmark-comment.md
