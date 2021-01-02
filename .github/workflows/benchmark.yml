@@ -47,6 +47,7 @@ jobs:
           sed -n -e '/<table/,/<\/table>/p' test-results/benchstat.html >> benchmark-comment/comment.md
           echo ${{ github.event.number }} > benchmark-comment/pr-number
       - uses: actions/upload-artifact@v2
+        if: always ()
         with:
           name: benchmark-comment
           path: benchmark-comment/
