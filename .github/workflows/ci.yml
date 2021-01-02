@@ -26,14 +26,16 @@ jobs:
       - name: build
         run: make --debug all
       - name: test
-        run: make --debug junit-regtest TESTCOVERPROFILE=coverprofile
+        run: |
+          mkdir -p test-results
+          echo $GITHUB_SHA > test-results/sha-number
+          make --debug junit-regtest TESTCOVERPROFILE=coverprofile
       - uses: codecov/codecov-action@v1
         if: always()
         with:
           file: coverprofile
-      - run: echo ${{ github.event.number }} > test-results/pr-number
-      - run: echo $GITHUB_SHA > test-results/sha-number
       - uses: actions/upload-artifact@v2
+        if: always()
         with:
           name: test-results
           path: test-results/
