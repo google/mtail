@@ -1,12 +1,12 @@
 name: CI
-on: [push, pull_request_target]
+on: [push, pull_request]
 env:
   GOPROXY: "https://proxy.golang.org"
 jobs:
   test:
     if: >
       github.event_name == 'push' ||
-      github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
+      github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -31,12 +31,12 @@ jobs:
         if: always()
         with:
           file: coverprofile
-      - uses: docker://ghcr.io/enricomi/publish-unit-test-result-action:v1.6
-        if: always()
+      - run: echo ${{ github.event.number }} > test-results/pr-number
+      - run: echo $GITHUB_SHA > test-results/sha-number
+      - uses: actions/upload-artifact@v2
         with:
-          check_name: Unit Test Results
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: "**/test-results/**/*.xml"
+          name: test-results
+          path: test-results/
 
   container:
     runs-on: ubuntu-latest
