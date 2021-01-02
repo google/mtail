@@ -99,3 +99,5 @@ Find out if OpenTelemetry is better than OpenCensus when creating no-op trace sp
 run with gosec, and possibly annotate safe sections in code
 
 
+
+Test that when path/* is the logpathpattern that we handle log rotation, e.g. log -> log.1
