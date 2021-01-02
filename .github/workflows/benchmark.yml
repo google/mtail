@@ -1,0 +1,53 @@
+name: benchmark
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+      - main
+  pull_request:
+env:
+  GO111MODULE: "on"
+  GOPROXY: https://proxy.golang.org
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.x'
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: install deps
+        if: steps.cache.output.cache-hit != 'true'
+        run: make --debug install_deps
+      - name: restore base benchmark result
+        uses: actions/cache@v2
+        with:
+          path: |
+            test-results/benchmark-results-master.txt
+            test-results/benchmark-results-main.txt
+          # Use base sha for PR or new commit hash for master/main push in benchmark result key.
+          key: ${{ runner.os }}-bench-${{ (github.event.pull_request.base.sha != github.event.after) && github.event.pull_request.base.sha || github.event.after }}
+      - name: run benchmark
+        run: |
+          # If on a pull_request(_target) then GITHUB_HEAD_REF else strip all
+          # but last part of GITHUB_REF (i.e. on a push to branch)
+          BENCH_COUNT=5 HEAD_REF=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}} make bench
+          ls -la test-results/benchmark-*
+          mkdir -p benchmark-comment
+          echo "## Benchmark Results" > benchmark-comment/comment.md
+          sed -n -e '/<table/,/<\/table>/p' test-results/benchstat.html >> benchmark-comment/comment.md
+          echo ${{ github.event.number }} > benchmark-comment/pr-number
+      - uses: actions/upload-artifact@v2
+        if: always ()
+        with:
+          name: benchmark-comment
+          path: benchmark-comment/

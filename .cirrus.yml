@@ -5,7 +5,7 @@ container:
 env:
   GOPROXY: https://proxy.golang.org
 
-test_task_template: &TEST_TASK_TEMPLATE
+test_task:
   env:
     - CODECOV_TOKEN: ENCRYPTED[534076e5934c38da40279df5b57569586a029f455a2a2bf00fbae6ae24bd9df40b9a23102a40cfe175619346d2f9b912]
   modules_cache:
@@ -14,30 +14,11 @@ test_task_template: &TEST_TASK_TEMPLATE
     folder: $GOPATH/pkg/mod
   build_script: make --debug all
   test_script: make --debug junit-regtest TESTCOVERPROFILE=coverprofile
-  coverage_script: bash <(curl -s https://codecov.io/bash) -f coverprofile
   always:
     junit_result_artifacts:
       path: "**/test-results/**/*.xml"
       format: junit
       type: text/xml
-
-test_task:
-  <<: *TEST_TASK_TEMPLATE
-
-matrix_test_task:
-  <<: *TEST_TASK_TEMPLATE
-  container:
-    matrix:
-      - image: golang:1.15
-      - image: golang:1.14
-      - image: golang:1.13
-  env:
-    matrix:
-      - GOMAXPROCS: 4
-      - GOMAXPROCS: 2
-      - GOMAXPROCS: 1
-  depends_on:
-    - test
 
 fuzz_test_task:
   modules_cache:
@@ -54,7 +35,7 @@ docker_builder:
 
 release_task:
   depends_on:
-    - matrix_test
+    - test
     - container_build
     - fuzz_test
   only_if: $CIRRUS_TAG =~ 'v.*'

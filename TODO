@@ -28,8 +28,6 @@ count stack size and preallocate stack
 : seems like a lot of work for not much return
 
 
-Run and upload benchmarks to https://perfdata.golang.org/ from circleci
-
 # Won't do
 
 X Use capture group references to feed back to declaring regular expression,
@@ -89,7 +87,8 @@ Why is strings.Builder slower than bytes.Buffer when the latter's docstring reco
 file-test.go relies on the ReadDeadline timeouts in file.go and socket.go.  Remove to make tests faster.
 
 
-make cirrus run a task on matrix test failyue that fetches failures from json and runs flake checks on them
+ci: rerun failed tests to see if they're flaky
+
 
 Move the glob patterns from tailer.TailPattern into log watcher Observe and pollDirectory* to avoid event sends from watcher to tailer for unnecessary dir entries.  The Tailer only should get updates at all; the watcher should be handling all filesystem observation including pattern handling.  the current setup seems to be incurring a mess of code in how watcher.pollDirectoryWatched works, as well as log lifecycle in tailer.
 
@@ -100,4 +99,3 @@ Find out if OpenTelemetry is better than OpenCensus when creating no-op trace sp
 run with gosec, and possibly annotate safe sections in code
 
 
-how to do benchmark comparison in CI?
