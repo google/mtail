@@ -16,14 +16,22 @@ import (
 	"github.com/google/mtail/internal/watcher"
 )
 
-func makeTestTail(t *testing.T) (*Tailer, *stubProcessor, *watcher.FakeWatcher, string, func()) {
+func makeTestTail(t *testing.T) (*Tailer, chan *logline.LogLine, *watcher.FakeWatcher, string, func()) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 
 	w := watcher.NewFakeWatcher()
-	llp := NewStubProcessor()
-	ta, err := New(context.Background(), llp, w)
+	lines := make(chan *logline.LogLine, 5) // 5 loglines ought to be enough for any test
+	ta, err := New(context.Background(), lines, w)
 	testutil.FatalIfErr(t, err)
-	return ta, llp, w, tmpDir, rmTmpDir
+	return ta, lines, w, tmpDir, rmTmpDir
+}
+
+func result(lines chan *logline.LogLine) []*logline.LogLine {
+	r := make([]*logline.LogLine, 0)
+	for line := range lines {
+		r = append(r, line)
+	}
+	return r
 }
 
 func TestTail(t *testing.T) {
@@ -45,7 +53,7 @@ func TestTail(t *testing.T) {
 }
 
 func TestHandleLogUpdate(t *testing.T) {
-	ta, llp, w, dir, cleanup := makeTestTail(t)
+	ta, lines, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -54,15 +62,15 @@ func TestHandleLogUpdate(t *testing.T) {
 	err := ta.TailPath(logfile)
 	testutil.FatalIfErr(t, err)
 
-	llp.Add(4)
 	testutil.WriteString(t, f, "a\nb\nc\nd\n")
 	// f.Seek(0, 0)
 	w.InjectUpdate(logfile)
 
-	llp.Wait()
 	if err := w.Close(); err != nil {
 		t.Log(err)
 	}
+	close(lines)
+	received := result(lines)
 
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "a"},
@@ -70,14 +78,14 @@ func TestHandleLogUpdate(t *testing.T) {
 		{context.Background(), logfile, "c"},
 		{context.Background(), logfile, "d"},
 	}
-	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 // TestHandleLogTruncate writes to a file, waits for those
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	ta, llp, w, dir, cleanup := makeTestTail(t)
+	ta, lines, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -87,10 +95,8 @@ func TestHandleLogTruncate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	llp.Add(3)
 	testutil.WriteString(t, f, "a\nb\nc\n")
 	w.InjectUpdate(logfile)
-	llp.Wait()
 
 	if err := f.Truncate(0); err != nil {
 		t.Fatal(err)
@@ -100,14 +106,14 @@ func TestHandleLogTruncate(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 	w.InjectUpdate(logfile)
 
-	llp.Add(2)
 	testutil.WriteString(t, f, "d\ne\n")
 	w.InjectUpdate(logfile)
 
-	llp.Wait()
 	if err := w.Close(); err != nil {
 		t.Log(err)
 	}
+	close(lines)
+	received := result(lines)
 
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "a"},
@@ -116,16 +122,15 @@ func TestHandleLogTruncate(t *testing.T) {
 		{context.Background(), logfile, "d"},
 		{context.Background(), logfile, "e"},
 	}
-	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
-	ta, llp, w, dir, cleanup := makeTestTail(t)
+	ta, lines, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
-	llp.Add(1)
 
 	err := ta.TailPath(logfile)
 	testutil.FatalIfErr(t, err)
@@ -147,20 +152,21 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	//f.Seek(2, 0)
 	w.InjectUpdate(logfile)
 
-	llp.Wait()
 	w.Close()
+	close(lines)
+	received := result(lines)
 
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "ab"},
 	}
-	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestTailerOpenRetries(t *testing.T) {
 	// Can't force a permission denied error if run as root.
 	testutil.SkipIfRoot(t)
 
-	ta, llp, w, dir, cleanup := makeTestTail(t)
+	ta, lines, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -168,7 +174,6 @@ func TestTailerOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	llp.Add(1) // lines written
 	testutil.FatalIfErr(t, ta.AddPattern(logfile))
 
 	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
@@ -193,7 +198,13 @@ func TestTailerOpenRetries(t *testing.T) {
 	testutil.WriteString(t, f, "\n")
 	w.InjectUpdate(logfile)
 
-	llp.Wait()
+	close(lines)
+	received := result(lines)
+	expected := []*logline.LogLine{
+		{context.Background(), logfile, ""},
+	}
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
 	if err := w.Close(); err != nil {
 		t.Log(err)
 	}
@@ -204,7 +215,7 @@ func TestTailerInitErrors(t *testing.T) {
 	if err == nil {
 		t.Error("expected error")
 	}
-	lines := &stubProcessor{}
+	lines := make(chan *logline.LogLine, 1)
 	_, err = New(context.Background(), lines, nil, nil)
 	if err == nil {
 		t.Error("expected error")
@@ -225,7 +236,7 @@ func TestTailerInitErrors(t *testing.T) {
 }
 
 func TestHandleLogRotate(t *testing.T) {
-	ta, llp, w, dir, cleanup := makeTestTail(t)
+	ta, lines, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -234,7 +245,6 @@ func TestHandleLogRotate(t *testing.T) {
 	if err := ta.TailPath(logfile); err != nil {
 		t.Fatal(err)
 	}
-	llp.Add(2)
 	testutil.WriteString(t, f, "1\n")
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
@@ -254,18 +264,19 @@ func TestHandleLogRotate(t *testing.T) {
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
 
-	llp.Wait()
 	w.Close()
+	close(lines)
+	received := result(lines)
 
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "1"},
 		{context.Background(), logfile, "2"},
 	}
-	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestHandleLogRotateSignalsWrong(t *testing.T) {
-	ta, llp, w, dir, cleanup := makeTestTail(t)
+	ta, lines, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
@@ -273,7 +284,6 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 	if err := ta.TailPath(logfile); err != nil {
 		t.Fatal(err)
 	}
-	llp.Add(2)
 	testutil.WriteString(t, f, "1\n")
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
@@ -295,18 +305,19 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 	glog.V(2).Info("update")
 	w.InjectUpdate(logfile)
 
-	llp.Wait()
 	w.Close()
+	close(lines)
+	received := result(lines)
 
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "1"},
 		{context.Background(), logfile, "2"},
 	}
-	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestTailExpireStaleHandles(t *testing.T) {
-	ta, llp, w, dir, cleanup := makeTestTail(t)
+	ta, lines, w, dir, cleanup := makeTestTail(t)
 	defer cleanup()
 
 	log1 := filepath.Join(dir, "log1")
@@ -320,12 +331,19 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	if err := ta.TailPath(log2); err != nil {
 		t.Fatal(err)
 	}
-	llp.Add(2)
 	testutil.WriteString(t, f1, "1\n")
 	testutil.WriteString(t, f2, "2\n")
 	w.InjectUpdate(log1)
 	w.InjectUpdate(log2)
-	llp.Wait()
+	w.Close()
+	close(lines)
+	received := result(lines)
+	expected := []*logline.LogLine{
+		{context.Background(), log1, "1"},
+		{context.Background(), log2, "2"},
+	}
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
 	if err := w.Close(); err != nil {
 		t.Log(err)
 	}

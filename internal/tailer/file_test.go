@@ -23,10 +23,10 @@ func TestReadPartial(t *testing.T) {
 
 	logfile := path.Join(tmpDir, "t")
 
-	llp := NewStubProcessor()
+	lines := make(chan *logline.LogLine, 1)
 
 	fd := testutil.TestOpenFile(t, logfile)
-	f, err := NewFile(logfile, logfile, llp, false)
+	f, err := NewFile(logfile, logfile, lines, false)
 	testutil.FatalIfErr(t, err)
 
 	err = f.Read(context.Background())
@@ -52,7 +52,6 @@ func TestReadPartial(t *testing.T) {
 	_, err = fd.Seek(3, io.SeekStart)
 	testutil.FatalIfErr(t, err)
 	testutil.WriteString(t, fd, "\n")
-	llp.Add(1)
 
 	_, err = fd.Seek(-1, io.SeekEnd)
 	testutil.FatalIfErr(t, err)
@@ -64,11 +63,12 @@ func TestReadPartial(t *testing.T) {
 	if f.partial.String() != "" {
 		t.Errorf("partial line not empty: %q", f.partial)
 	}
-	llp.Wait()
+	close(lines)
+	received := result(lines)
 	expected := []*logline.LogLine{
 		{context.TODO(), logfile, "ohi"},
 	}
-	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestOpenRetries(t *testing.T) {
@@ -93,7 +93,7 @@ func TestOpenPipe(t *testing.T) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
-	llp := NewStubProcessor()
+	lines := make(chan *logline.LogLine, 1)
 
 	logpipe := filepath.Join(tmpDir, "fifo")
 	err := unix.Mkfifo(logpipe, 0666)
@@ -105,8 +105,7 @@ func TestOpenPipe(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	testutil.WriteString(t, p, "1\n")
-	llp.Add(1)
-	f, err := NewFile(logpipe, logpipe, llp, false)
+	f, err := NewFile(logpipe, logpipe, lines, false)
 	testutil.FatalIfErr(t, err)
 	err = f.Read(context.Background())
 	if err != io.EOF {
@@ -119,11 +118,11 @@ func TestOpenSocket(t *testing.T) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
-	llp := NewStubProcessor()
+	lines := make(chan *logline.LogLine, 1)
 
 	logsock := filepath.Join(tmpDir, "sock")
 
-	f, err := NewSocket(logsock, logsock, llp)
+	f, err := NewSocket(logsock, logsock, lines)
 	testutil.FatalIfErr(t, err)
 
 	l, err := net.DialUnix("unixgram", nil, &net.UnixAddr{logsock, "unixgram"})
@@ -131,16 +130,16 @@ func TestOpenSocket(t *testing.T) {
 
 	_, err = l.Write([]byte("adf\n"))
 	testutil.FatalIfErr(t, err)
-	llp.Add(1)
 
 	err = f.Read(context.Background())
 	testutil.FatalIfErr(t, err)
-	llp.Wait()
 	if f.partial.String() != "" {
 		t.Errorf("partial line not empty: %q", f.partial)
 	}
+	close(lines)
+	received := result(lines)
 	expected := []*logline.LogLine{
 		{context.TODO(), logsock, "adf"},
 	}
-	testutil.ExpectNoDiff(t, expected, llp.result, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }

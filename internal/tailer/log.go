@@ -26,10 +26,10 @@ type Log interface {
 }
 
 // NewLog returns an implementation of the Log interface that handles the given
-// pathname.  `llp' is a logline.Processor that receives the bytes when read by
+// pathname.  `lines' is a channel of LogLines that receives bytes when read by
 // Read().  `seekToStart' indicates that the log should be read from the
 // beginning if possible, for files opened when in OneShot mode.
-func NewLog(pathname string, llp logline.Processor, seekToStart bool) (Log, error) {
+func NewLog(pathname string, lines chan<- *logline.LogLine, seekToStart bool) (Log, error) {
 	glog.V(2).Infof("tailer.NewLog(%s, %v)", pathname, seekToStart)
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
@@ -41,12 +41,12 @@ func NewLog(pathname string, llp logline.Processor, seekToStart bool) (Log, erro
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular() || m&os.ModeType == os.ModeNamedPipe:
-		return NewFile(pathname, absPath, llp, seekToStart)
+		return NewFile(pathname, absPath, lines, seekToStart)
 	case m&os.ModeType == os.ModeSocket:
 		if seekToStart {
 			glog.V(2).Infof("ignoring seekToStart=%v as %q is a socket", seekToStart, absPath)
 		}
-		return NewSocket(pathname, absPath, llp)
+		return NewSocket(pathname, absPath, lines)
 	default:
 		return nil, fmt.Errorf("don't know how to open %q", absPath)
 	}

@@ -43,7 +43,7 @@ type File struct {
 	regular  bool      // Remember if this is a regular file (or a pipe)
 	file     *os.File
 	partial  *bytes.Buffer
-	llp      logline.Processor // processor to receive LogLines
+	lines    chan<- *logline.LogLine // channel to receive LogLines
 }
 
 // NewFile returns a new File named by the given pathname.  `seenBefore` indicates
@@ -51,7 +51,7 @@ type File struct {
 // retry on error to open the file. `seekToStart` indicates that the file
 // should be tailed from offset 0, not EOF; the latter is true for rotated
 // files and for files opened when mtail is in oneshot mode.
-func NewFile(pathname, absPath string, llp logline.Processor, seekToStart bool) (*File, error) {
+func NewFile(pathname, absPath string, lines chan<- *logline.LogLine, seekToStart bool) (*File, error) {
 	glog.V(2).Infof("file.New(%s, %v)", pathname, seekToStart)
 	f, err := open(absPath, false)
 	if err != nil {
@@ -80,7 +80,7 @@ func NewFile(pathname, absPath string, llp logline.Processor, seekToStart bool) 
 	default:
 		return nil, errors.Errorf("Can't open files with mode %v: %s", m&os.ModeType, absPath)
 	}
-	return &File{pathname, absPath, time.Now(), regular, f, bytes.NewBufferString(""), llp}, nil
+	return &File{pathname, absPath, time.Now(), regular, f, bytes.NewBufferString(""), lines}, nil
 }
 
 func open(pathname string, seenBefore bool) (*os.File, error) {
@@ -238,8 +238,8 @@ func (f *File) Read(ctx context.Context) error {
 func (f *File) sendLine(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "file.sendLine")
 	defer span.End()
-	f.llp.ProcessLogLine(ctx, logline.New(ctx, f.name, f.partial.String()))
 	lineCount.Add(f.name, 1)
+	f.lines <- logline.New(ctx, f.name, f.partial.String())
 	glog.V(2).Info("Line sent")
 	// reset partial accumulator
 	f.partial.Reset()

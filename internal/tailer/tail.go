@@ -40,9 +40,9 @@ var (
 // lines from files. It also handles new log file creation events and log
 // rotations.
 type Tailer struct {
-	w   watcher.Watcher
-	ctx context.Context
-	llp logline.Processor
+	w     watcher.Watcher
+	ctx   context.Context
+	lines chan<- *logline.LogLine
 
 	handlesMu sync.RWMutex   // protects `handles'
 	handles   map[string]Log // Log handles for each pathname.
@@ -109,14 +109,14 @@ func (opt LogPatternPollTickInterval) apply(t *Tailer) error {
 }
 
 // New creates a new Tailer.
-func New(ctx context.Context, llp logline.Processor, w watcher.Watcher, options ...Option) (*Tailer, error) {
+func New(ctx context.Context, lines chan<- *logline.LogLine, w watcher.Watcher, options ...Option) (*Tailer, error) {
 	if w == nil {
 		return nil, errors.New("can't create tailer without W")
 	}
 	t := &Tailer{
 		ctx:          ctx,
 		w:            w,
-		llp:          llp,
+		lines:        lines,
 		handles:      make(map[string]Log),
 		globPatterns: make(map[string]struct{}),
 	}
@@ -329,7 +329,7 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	if err := t.watchDirname(pathname); err != nil {
 		return err
 	}
-	f, err := NewLog(pathname, t.llp, seekToStart || t.oneShot)
+	f, err := NewLog(pathname, t.lines, seekToStart || t.oneShot)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
@@ -404,6 +404,7 @@ func (t *Tailer) Close() error {
 	if err := t.w.Close(); err != nil {
 		return err
 	}
+	close(t.lines)
 	return nil
 }
 

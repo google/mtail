@@ -171,12 +171,8 @@ func (m *Server) initTailer() (err error) {
 	if len(m.logPathPatterns) > 0 {
 		opts = append(opts, tailer.LogPatterns(m.logPathPatterns))
 	}
-	m.t, err = tailer.New(m.ctx, m, m.w, opts...)
+	m.t, err = tailer.New(m.ctx, m.lines, m.w, opts...)
 	return
-}
-
-func (m *Server) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
-	m.lines <- ll
 }
 
 // New creates a MtailServer from the supplied Options.
@@ -318,7 +314,6 @@ func (m *Server) Close(fast bool) error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		close(m.closeQuit)
-		close(m.lines)
 		// Ensure we're cancelling our child context just in case Close is
 		// called outside context cancellation.
 		m.cancel()

@@ -22,18 +22,18 @@ type Socket struct {
 	lastRead time.Time
 	sock     net.Conn
 	partial  *bytes.Buffer
-	llp      logline.Processor
+	lines    chan<- *logline.LogLine
 }
 
 // NewSocket returns a new Socket named by the given pathname.
 // `llp' is a logline Processor that receivres the bytes when read by Read().
-func NewSocket(pathname, absPath string, llp logline.Processor) (*Socket, error) {
+func NewSocket(pathname, absPath string, lines chan<- *logline.LogLine) (*Socket, error) {
 	glog.V(2).Infof("tailer.NewSocket(%s)", absPath)
 	c, err := net.ListenUnixgram("unixgram", &net.UnixAddr{absPath, "unixgram"})
 	if err != nil {
 		return nil, err
 	}
-	return &Socket{pathname, absPath, time.Now(), c, bytes.NewBufferString(""), llp}, nil
+	return &Socket{pathname, absPath, time.Now(), c, bytes.NewBufferString(""), lines}, nil
 }
 
 func (s *Socket) LastReadTime() time.Time {
@@ -104,8 +104,8 @@ func (s *Socket) sendLine(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "Socket.sendLine")
 	defer span.End()
 	glog.Infof("Sending a line %q", s.partial.String())
-	s.llp.ProcessLogLine(ctx, logline.New(ctx, s.name, s.partial.String()))
 	lineCount.Add(s.name, 1)
+	s.lines <- logline.New(ctx, s.name, s.partial.String())
 	s.partial.Reset()
 }
 
