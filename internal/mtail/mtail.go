@@ -38,6 +38,7 @@ type Server struct {
 	cancel context.CancelFunc
 	store  *metrics.Store // Metrics storage
 	w      watcher.Watcher
+	wg     sync.WaitGroup // wait for main processes to shutdown
 
 	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs
 	l *vm.Loader         // l loads programs and manages the VM lifecycle
@@ -119,8 +120,10 @@ func (m *Server) initLoader() error {
 		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
 	}
 	var err error
-	m.l, err = vm.NewLoader(m.lines, m.programPath, m.store, opts...)
+	m.wg.Add(1)
+	m.l, err = vm.NewLoader(m.lines, &m.wg, m.programPath, m.store, opts...)
 	if err != nil {
+		m.wg.Done()
 		return err
 	}
 	if m.programPath == "" {
@@ -320,13 +323,6 @@ func (m *Server) Close(fast bool) error {
 				glog.Infof("tailer close failed: %s", err)
 			}
 		}
-		// If we have a loader, shut it down.
-		// TODO(jaq): all this Close should be replaced with a waitgroup passed to the primary functions here.
-		if m.l != nil {
-			m.l.Close()
-		} else {
-			glog.V(2).Info("No loader, so not waiting for loader shutdown.")
-		}
 		if m.h != nil {
 			glog.Info("Shutting down http server")
 			if fast {
@@ -339,6 +335,7 @@ func (m *Server) Close(fast bool) error {
 				cancel()
 			}
 		}
+		m.wg.Wait()
 		glog.Info("END OF LINE")
 	})
 	return nil

@@ -354,7 +354,7 @@ func PrometheusRegisterer(reg prometheus.Registerer) Option {
 }
 
 // NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(lines <-chan *logline.LogLine, programPath string, store *metrics.Store, options ...Option) (*Loader, error) {
+func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, store *metrics.Store, options ...Option) (*Loader, error) {
 	if store == nil {
 		return nil, errors.New("loader needs a store")
 	}
@@ -389,14 +389,22 @@ func NewLoader(lines <-chan *logline.LogLine, programPath string, store *metrics
 			}
 		}
 	}()
-	// This goroutine is the main consumer/producer loop.
+	// This goroutine is the main consumer/producer loop and shutdown.
 	go func() {
-		defer l.close()
+		defer wg.Done() // signal to owner we're done
 		<-l.initDone
 		ctx := context.TODO()
 		for line := range lines {
 			l.processLogLine(ctx, line)
 		}
+		glog.Info("Shutting down loader.")
+		close(l.signalQuit)
+		l.handleMu.Lock()
+		for prog := range l.handles {
+			close(l.handles[prog].lines)
+		}
+		l.handleMu.Unlock()
+		l.wg.Wait()
 	}()
 	return l, nil
 }
@@ -409,20 +417,6 @@ func (l *Loader) SetOption(options ...Option) error {
 		}
 	}
 	return nil
-}
-
-func (l *Loader) close() {
-	glog.Info("Shutting down loader.")
-	close(l.signalQuit)
-	l.handleMu.Lock()
-	defer l.handleMu.Unlock()
-	for prog := range l.handles {
-		close(l.handles[prog].lines)
-	}
-}
-
-func (l *Loader) Close() {
-	l.wg.Wait()
 }
 
 func (l *Loader) processLogLine(ctx context.Context, ll *logline.LogLine) {

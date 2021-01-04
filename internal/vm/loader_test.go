@@ -6,6 +6,7 @@ package vm
 import (
 	"path"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/golang/glog"
@@ -17,19 +18,22 @@ import (
 func TestNewLoader(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
-	l, err := NewLoader(lines, "", store)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	_, err := NewLoader(lines, &wg, "", store)
 	testutil.FatalIfErr(t, err)
-	defer l.Close()
 	close(lines)
+	wg.Wait()
 }
 
 func TestCompileAndRun(t *testing.T) {
 	var testProgram = "/$/ {}\n"
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
-	l, err := NewLoader(lines, "", store)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	l, err := NewLoader(lines, &wg, "", store)
 	testutil.FatalIfErr(t, err)
-	defer l.Close()
 	if err := l.CompileAndRun("Test", strings.NewReader(testProgram)); err != nil {
 		t.Errorf("CompileAndRun returned error: %s", err)
 	}
@@ -45,6 +49,7 @@ func TestCompileAndRun(t *testing.T) {
 	}
 	l.handleMu.Unlock()
 	close(lines)
+	wg.Wait()
 }
 
 var testProgram = "/$/ {}\n"
@@ -60,9 +65,10 @@ func TestLoadProg(t *testing.T) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 	lines := make(chan *logline.LogLine)
-	l, err := NewLoader(lines, tmpDir, store)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	l, err := NewLoader(lines, &wg, tmpDir, store)
 	testutil.FatalIfErr(t, err)
-	defer l.Close()
 
 	for _, name := range testProgFiles {
 		f := testutil.TestOpenFile(t, path.Join(tmpDir, name))
@@ -73,4 +79,5 @@ func TestLoadProg(t *testing.T) {
 		testutil.FatalIfErr(t, err)
 	}
 	close(lines)
+	wg.Wait()
 }
