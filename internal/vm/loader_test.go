@@ -17,7 +17,8 @@ import (
 func TestNewLoader(t *testing.T) {
 	store := metrics.NewStore()
 	ctx, cancel := context.WithCancel(context.Background())
-	_, err := NewLoader(ctx, "", store)
+	l, err := NewLoader(ctx, "", store)
+	defer l.Close()
 	testutil.FatalIfErr(t, err)
 	cancel()
 }
@@ -28,6 +29,7 @@ func TestCompileAndRun(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	l, err := NewLoader(ctx, "", store)
+	defer l.Close()
 	testutil.FatalIfErr(t, err)
 	if err := l.CompileAndRun("Test", strings.NewReader(testProgram)); err != nil {
 		t.Errorf("CompileAndRun returned error: %s", err)
@@ -60,6 +62,7 @@ func TestLoadProg(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	l, err := NewLoader(ctx, tmpDir, store)
+	defer l.Close()
 	testutil.FatalIfErr(t, err)
 
 	for _, name := range testProgFiles {

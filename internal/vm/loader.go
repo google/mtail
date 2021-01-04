@@ -184,7 +184,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 		if progRuntimeErrors.Get(name) != nil {
 			data.RuntimeErrors[name] = progRuntimeErrors.Get(name).String()
 		}
-		data.RuntimeErrorString[name] = l.handles[name].RuntimeErrorString()
+		data.RuntimeErrorString[name] = l.handles[name].vm.RuntimeErrorString()
 	}
 	return t.Execute(w, data)
 }
@@ -233,8 +233,19 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
 
-	l.handles[name] = v
+	if handle, ok := l.handles[name]; ok {
+		close(handle.lines)
+	}
+	lines := make(chan *logline.LogLine)
+	l.handles[name] = &vmHandle{vm: v, lines: lines}
+	l.wg.Add(1)
+	go v.Run(lines, &l.wg)
 	return nil
+}
+
+type vmHandle struct {
+	vm    *VM
+	lines chan *logline.LogLine
 }
 
 // Loader handles the lifecycle of programs and virtual machines, by watching
@@ -242,12 +253,13 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 // managing the virtual machines.
 type Loader struct {
 	ctx         context.Context       // a cancellable context
+	wg          sync.WaitGroup        // used to await vm shutdown
 	ms          *metrics.Store        // pointer to metrics.Store to pass to compiler
 	reg         prometheus.Registerer // plce to reg metrics
 	programPath string                // Path that contains mtail programs.
 
-	handleMu sync.RWMutex   // guards accesses to handles
-	handles  map[string]*VM // map of program names to virtual machines
+	handleMu sync.RWMutex         // guards accesses to handles
+	handles  map[string]*vmHandle // map of program names to virtual machines
 
 	programErrorMu sync.RWMutex     // guards access to programErrors
 	programErrors  map[string]error // errors from the last compile attempt of the program
@@ -262,6 +274,7 @@ type Loader struct {
 	omitMetricSource     bool
 
 	signalQuit chan struct{} // When closed stops the signal handler goroutine.
+	initDone   chan struct{} // When closed, the initialisation has completed.
 }
 
 // Option configures a new program Loader.
@@ -335,6 +348,7 @@ func OmitMetricSource() Option {
 func PrometheusRegisterer(reg prometheus.Registerer) Option {
 	return func(l *Loader) error {
 		l.reg = reg
+		l.reg.MustRegister(lineProcessingDurations)
 		return nil
 	}
 }
@@ -348,17 +362,19 @@ func NewLoader(ctx context.Context, programPath string, store *metrics.Store, op
 		ctx:           ctx,
 		ms:            store,
 		programPath:   programPath,
-		handles:       make(map[string]*VM),
+		handles:       make(map[string]*vmHandle),
 		programErrors: make(map[string]error),
 		signalQuit:    make(chan struct{}),
+		initDone:      make(chan struct{}),
 	}
+	defer close(l.initDone)
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
 	}
-	if l.reg != nil {
-		l.reg.MustRegister(lineProcessingDurations)
-	}
+	// TODO(jaq): add this routine to the waitgroup once Close has been refactored away.
+	// The plan is to have a channel consumer here.
 	go func() {
+		<-l.initDone
 		n := make(chan os.Signal, 1)
 		signal.Notify(n, syscall.SIGHUP)
 		defer signal.Stop(n)
@@ -391,8 +407,9 @@ func (l *Loader) Close() {
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
 	for prog := range l.handles {
-		delete(l.handles, prog)
+		close(l.handles[prog].lines)
 	}
+	l.wg.Wait()
 }
 
 // ProcessLogLine satisfies the LogLine.Processor interface.
@@ -403,7 +420,7 @@ func (l *Loader) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
 	l.handleMu.RLock()
 	defer l.handleMu.RUnlock()
 	for prog := range l.handles {
-		l.handles[prog].ProcessLogLine(ctx, ll)
+		l.handles[prog].lines <- ll
 	}
 }
 
@@ -421,14 +438,14 @@ func (l *Loader) ProgzHandler(w http.ResponseWriter, r *http.Request) {
 	prog := r.URL.Query().Get("prog")
 	if prog != "" {
 		l.handleMu.RLock()
-		v, ok := l.handles[prog]
+		handle, ok := l.handles[prog]
 		l.handleMu.RUnlock()
 		if !ok {
 			http.Error(w, "No program found", http.StatusNotFound)
 			return
 		}
-		fmt.Fprintf(w, v.DumpByteCode())
-		fmt.Fprintf(w, "\nLast runtime error:\n%s", v.RuntimeErrorString())
+		fmt.Fprintf(w, handle.vm.DumpByteCode())
+		fmt.Fprintf(w, "\nLast runtime error:\n%s", handle.vm.RuntimeErrorString())
 		return
 	}
 	l.handleMu.RLock()

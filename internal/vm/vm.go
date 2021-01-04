@@ -976,3 +976,15 @@ func (v *VM) RuntimeErrorString() string {
 	defer v.runtimeErrorMu.RUnlock()
 	return v.runtimeError
 }
+
+// Run starts the VM and processes lines coming in on the input channel.  When
+// the channel is closed, and the VM has finished processing the VM is shut
+// down and the loader signalled via the given waitgroup.
+func (v *VM) Run(lines <-chan *logline.LogLine, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ctx := context.TODO()
+	for line := range lines {
+		v.ProcessLogLine(ctx, line)
+	}
+	glog.Infof("VM %q finished", v.name)
+}
