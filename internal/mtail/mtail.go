@@ -20,6 +20,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/exporter"
+	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/vm"
@@ -41,6 +42,8 @@ type Server struct {
 	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs
 	l *vm.Loader         // l loads programs and manages the VM lifecycle
 	e *exporter.Exporter // e manages the export of metrics from the store
+
+	lines chan *logline.LogLine // primary communication channel, owned by Tailer.
 
 	reg *prometheus.Registry
 
@@ -117,7 +120,7 @@ func (m *Server) initLoader() error {
 		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
 	}
 	var err error
-	m.l, err = vm.NewLoader(m.ctx, m.programPath, m.store, opts...)
+	m.l, err = vm.NewLoader(m.lines, m.programPath, m.store, opts...)
 	if err != nil {
 		return err
 	}
@@ -168,8 +171,12 @@ func (m *Server) initTailer() (err error) {
 	if len(m.logPathPatterns) > 0 {
 		opts = append(opts, tailer.LogPatterns(m.logPathPatterns))
 	}
-	m.t, err = tailer.New(m.ctx, m.l, m.w, opts...)
+	m.t, err = tailer.New(m.ctx, m, m.w, opts...)
 	return
+}
+
+func (m *Server) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
+	m.lines <- ll
 }
 
 // New creates a MtailServer from the supplied Options.
@@ -177,6 +184,7 @@ func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options .
 	m := &Server{
 		store:     store,
 		w:         w,
+		lines:     make(chan *logline.LogLine),
 		webquit:   make(chan struct{}),
 		closeQuit: make(chan struct{}),
 		h:         &http.Server{},
@@ -310,6 +318,7 @@ func (m *Server) Close(fast bool) error {
 	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
 		close(m.closeQuit)
+		close(m.lines)
 		// Ensure we're cancelling our child context just in case Close is
 		// called outside context cancellation.
 		m.cancel()
@@ -322,6 +331,7 @@ func (m *Server) Close(fast bool) error {
 			}
 		}
 		// If we have a loader, shut it down.
+		// TODO(jaq): all this Close should be replaced with a waitgroup passed to the primary functions here.
 		if m.l != nil {
 			m.l.Close()
 		} else {

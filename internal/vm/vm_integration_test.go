@@ -196,10 +196,9 @@ func TestVmEndToEnd(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			store := metrics.NewStore()
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			lines := make(chan *logline.LogLine)
 
-			l, err := NewLoader(ctx, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource())
+			l, err := NewLoader(lines, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource())
 			testutil.FatalIfErr(t, err)
 			compileErrors := l.CompileAndRun(tc.name, strings.NewReader(tc.prog))
 			testutil.FatalIfErr(t, compileErrors)
@@ -207,11 +206,12 @@ func TestVmEndToEnd(t *testing.T) {
 			lineCount := 0
 			for scanner.Scan() {
 				lineCount++
-				l.ProcessLogLine(context.Background(), logline.New(context.Background(), tc.name, scanner.Text()))
+				lines <- logline.New(context.Background(), tc.name, scanner.Text())
 			}
+			close(lines)
 			l.Close()
 
-			// This is not good; can the loader abort on error?
+			// TODO(jaq): This is not good; can the loader abort on error?
 			if m := expvar.Get("prog_runtime_errors_total"); m != nil {
 				if val := m.(*expvar.Map).Get(tc.name); val != nil && val.String() != "0" {
 					t.Errorf("Nonzero runtime errors from program: got %s", val)

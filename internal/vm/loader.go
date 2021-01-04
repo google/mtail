@@ -354,12 +354,11 @@ func PrometheusRegisterer(reg prometheus.Registerer) Option {
 }
 
 // NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(ctx context.Context, programPath string, store *metrics.Store, options ...Option) (*Loader, error) {
+func NewLoader(lines <-chan *logline.LogLine, programPath string, store *metrics.Store, options ...Option) (*Loader, error) {
 	if store == nil {
 		return nil, errors.New("loader needs a store")
 	}
 	l := &Loader{
-		ctx:           ctx,
 		ms:            store,
 		programPath:   programPath,
 		handles:       make(map[string]*vmHandle),
@@ -371,22 +370,32 @@ func NewLoader(ctx context.Context, programPath string, store *metrics.Store, op
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
 	}
-	// TODO(jaq): add this routine to the waitgroup once Close has been refactored away.
-	// The plan is to have a channel consumer here.
+	// Create one goroutine that handles reload signals.
+	l.wg.Add(1)
 	go func() {
+		defer l.wg.Done()
 		<-l.initDone
 		n := make(chan os.Signal, 1)
 		signal.Notify(n, syscall.SIGHUP)
 		defer signal.Stop(n)
 		for {
 			select {
-			case <-ctx.Done():
+			case <-l.signalQuit:
 				return
 			case <-n:
 				if err := l.LoadAllPrograms(); err != nil {
 					glog.Info(err)
 				}
 			}
+		}
+	}()
+	// This goroutine is the main consumer/producer loop.
+	go func() {
+		defer l.close()
+		<-l.initDone
+		ctx := context.TODO()
+		for line := range lines {
+			l.processLogLine(ctx, line)
 		}
 	}()
 	return l, nil
@@ -402,18 +411,21 @@ func (l *Loader) SetOption(options ...Option) error {
 	return nil
 }
 
-func (l *Loader) Close() {
+func (l *Loader) close() {
 	glog.Info("Shutting down loader.")
+	close(l.signalQuit)
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
 	for prog := range l.handles {
 		close(l.handles[prog].lines)
 	}
+}
+
+func (l *Loader) Close() {
 	l.wg.Wait()
 }
 
-// ProcessLogLine satisfies the LogLine.Processor interface.
-func (l *Loader) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
+func (l *Loader) processLogLine(ctx context.Context, ll *logline.LogLine) {
 	ctx, span := trace.StartSpan(ctx, "Loader.ProcessLogLine")
 	defer span.End()
 	LineCount.Add(1)
