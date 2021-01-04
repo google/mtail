@@ -19,7 +19,6 @@ func TestNewLoader(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	wg.Add(1)
 	_, err := NewLoader(lines, &wg, "", store)
 	testutil.FatalIfErr(t, err)
 	close(lines)
@@ -31,7 +30,6 @@ func TestCompileAndRun(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	wg.Add(1)
 	l, err := NewLoader(lines, &wg, "", store)
 	testutil.FatalIfErr(t, err)
 	if err := l.CompileAndRun("Test", strings.NewReader(testProgram)); err != nil {
@@ -66,7 +64,6 @@ func TestLoadProg(t *testing.T) {
 	defer rmTmpDir()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	wg.Add(1)
 	l, err := NewLoader(lines, &wg, tmpDir, store)
 	testutil.FatalIfErr(t, err)
 

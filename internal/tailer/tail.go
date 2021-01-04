@@ -401,9 +401,6 @@ func (t *Tailer) handleCreateGlob(ctx context.Context, pathname string) {
 
 // Close signals termination to the watcher.
 func (t *Tailer) Close() error {
-	if err := t.w.Close(); err != nil {
-		return err
-	}
 	close(t.lines)
 	return nil
 }

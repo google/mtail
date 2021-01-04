@@ -120,10 +120,8 @@ func (m *Server) initLoader() error {
 		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
 	}
 	var err error
-	m.wg.Add(1)
 	m.l, err = vm.NewLoader(m.lines, &m.wg, m.programPath, m.store, opts...)
 	if err != nil {
-		m.wg.Done()
 		return err
 	}
 	if m.programPath == "" {

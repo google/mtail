@@ -50,9 +50,9 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, options ...Option
 	expvar.Get("log_rotations_total").(*expvar.Map).Init()
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
-	w, err := watcher.NewLogWatcher(pollInterval)
-	testutil.FatalIfErr(tb, err)
 	ctx, cancel := context.WithCancel(context.Background())
+	w, err := watcher.NewLogWatcher(ctx, pollInterval)
+	testutil.FatalIfErr(tb, err)
 	m, err := New(ctx, metrics.NewStore(), w, options...)
 	testutil.FatalIfErr(tb, err)
 	return &TestServer{Server: m, w: w, tb: tb, cancel: cancel}

@@ -32,11 +32,10 @@ func TestLogWatcher(t *testing.T) {
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()
 
-	w, err := NewLogWatcher(0)
+	ctx, cancel := context.WithCancel(context.Background())
+	w, err := NewLogWatcher(ctx, 0)
 	testutil.FatalIfErr(t, err)
-	defer func() {
-		testutil.FatalIfErr(t, w.Close())
-	}()
+	defer cancel()
 
 	s := newStubProcessor()
 	expected := []Event{}
@@ -80,11 +79,11 @@ func TestLogWatcherAddNotFound(t *testing.T) {
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()
 
-	w, err := NewLogWatcher(0)
+	ctx, cancel := context.WithCancel(context.Background())
+	w, err := NewLogWatcher(ctx, 0)
 	testutil.FatalIfErr(t, err)
-	defer func() {
-		testutil.FatalIfErr(t, w.Close())
-	}()
+	defer cancel()
+
 	s := &stubProcessor{}
 	filename := filepath.Join(workdir, "test")
 	err = w.Observe(filename, s)
@@ -102,11 +101,10 @@ func TestLogWatcherAddPermissionDenied(t *testing.T) {
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()
 
-	w, err := NewLogWatcher(0)
+	ctx, cancel := context.WithCancel(context.Background())
+	w, err := NewLogWatcher(ctx, 0)
 	testutil.FatalIfErr(t, err)
-	defer func() {
-		testutil.FatalIfErr(t, w.Close())
-	}()
+	defer cancel()
 
 	filename := filepath.Join(workdir, "test")
 	_, err = os.Create(filename)
@@ -128,14 +126,16 @@ func TestWatcherNewFile(t *testing.T) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
-	w, err := NewLogWatcher(0)
+	ctx, cancel := context.WithCancel(context.Background())
+	w, err := NewLogWatcher(ctx, 0)
 	testutil.FatalIfErr(t, err)
 
 	s := &stubProcessor{}
 	testutil.FatalIfErr(t, w.Observe(tmpDir, s))
 	testutil.TestOpenFile(t, path.Join(tmpDir, "log"))
 	w.Poll()
-	w.Close()
+	cancel()
+
 	expected := []Event{{Op: Create, Pathname: path.Join(tmpDir, "log")}}
 	testutil.ExpectNoDiff(t, expected, s.Events)
 }

@@ -390,6 +390,7 @@ func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath st
 		}
 	}()
 	// This goroutine is the main consumer/producer loop and shutdown.
+	wg.Add(1)
 	go func() {
 		defer wg.Done() // signal to owner we're done
 		<-l.initDone
