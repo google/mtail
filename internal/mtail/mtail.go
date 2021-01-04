@@ -50,7 +50,6 @@ type Server struct {
 	h        *http.Server
 	listener net.Listener
 
-	webquit   chan struct{} // Channel to signal shutdown from web UI
 	closeQuit chan struct{} // Channel to signal shutdown from code
 	closeOnce sync.Once     // Ensure shutdown happens only once
 
@@ -181,7 +180,6 @@ func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options .
 		store:     store,
 		w:         w,
 		lines:     make(chan *logline.LogLine),
-		webquit:   make(chan struct{}),
 		closeQuit: make(chan struct{}),
 		h:         &http.Server{},
 		// Using a non-pedantic registry means we can be looser with metrics that
@@ -258,7 +256,6 @@ func (m *Server) Serve() error {
 	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
-	mux.HandleFunc("/quitquitquit", http.HandlerFunc(m.quitHandler))
 	mux.Handle("/debug/vars", expvar.Handler())
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
@@ -297,8 +294,6 @@ func (m *Server) WaitForShutdown() {
 		glog.Info("External shutdown, exiting...")
 	case <-n:
 		glog.Info("Received SIGTERM, exiting...")
-	case <-m.webquit:
-		glog.Info("Received Quit from HTTP, exiting...")
 	case <-m.closeQuit:
 		glog.Info("Received quit internally, exiting...")
 	}
