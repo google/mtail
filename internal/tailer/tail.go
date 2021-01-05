@@ -42,6 +42,7 @@ var (
 type Tailer struct {
 	w     watcher.Watcher
 	ctx   context.Context
+	wg    sync.WaitGroup // Wait for our routines to finish
 	lines chan<- *logline.LogLine
 
 	handlesMu sync.RWMutex   // protects `handles'
@@ -54,6 +55,8 @@ type Tailer struct {
 	oneShot bool
 
 	pollMu sync.Mutex // protects Poll()
+
+	initDone chan struct{}
 }
 
 // Option configures a new Tailer.
@@ -109,7 +112,7 @@ func (opt LogPatternPollTickInterval) apply(t *Tailer) error {
 }
 
 // New creates a new Tailer.
-func New(ctx context.Context, lines chan<- *logline.LogLine, w watcher.Watcher, options ...Option) (*Tailer, error) {
+func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine, w watcher.Watcher, options ...Option) (*Tailer, error) {
 	if w == nil {
 		return nil, errors.New("can't create tailer without W")
 	}
@@ -119,10 +122,20 @@ func New(ctx context.Context, lines chan<- *logline.LogLine, w watcher.Watcher, 
 		lines:        lines,
 		handles:      make(map[string]Log),
 		globPatterns: make(map[string]struct{}),
+		initDone:     make(chan struct{}),
 	}
+	defer close(t.initDone)
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-t.initDone
+		<-ctx.Done()
+		t.wg.Wait()
+		close(t.lines)
+	}()
 	return t, nil
 }
 
@@ -399,12 +412,6 @@ func (t *Tailer) handleCreateGlob(ctx context.Context, pathname string) {
 	glog.V(2).Infof("did not start tailing %q", pathname)
 }
 
-// Close signals termination to the watcher.
-func (t *Tailer) Close() error {
-	close(t.lines)
-	return nil
-}
-
 // Gc removes file handles that have had no reads for 24h or more.
 func (t *Tailer) Gc() error {
 	t.handlesMu.Lock()
@@ -429,7 +436,10 @@ func (t *Tailer) StartGcLoop(duration time.Duration) {
 		glog.Info("Log handle expiration disabled")
 		return
 	}
+	t.wg.Add(1)
 	go func() {
+		defer t.wg.Done()
+		<-t.initDone
 		glog.Infof("Starting log handle expiry loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
 		defer ticker.Stop()
@@ -452,7 +462,10 @@ func (t *Tailer) StartLogPatternPollLoop(duration time.Duration) {
 		glog.Info("Log pattern polling disabled")
 		return
 	}
+	t.wg.Add(1)
 	go func() {
+		defer t.wg.Done()
+		<-t.initDone
 		glog.Infof("Starting log pattern poll loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
 		defer ticker.Stop()

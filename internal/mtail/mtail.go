@@ -171,7 +171,7 @@ func (m *Server) initTailer() (err error) {
 	if len(m.logPathPatterns) > 0 {
 		opts = append(opts, tailer.LogPatterns(m.logPathPatterns))
 	}
-	m.t, err = tailer.New(m.ctx, m.lines, m.w, opts...)
+	m.t, err = tailer.New(m.ctx, &m.wg, m.lines, m.w, opts...)
 	return
 }
 
@@ -313,14 +313,6 @@ func (m *Server) Close(fast bool) error {
 		// Ensure we're cancelling our child context just in case Close is
 		// called outside context cancellation.
 		m.cancel()
-		// If we have a tailer (i.e. not in test) then signal the tailer to
-		// shut down, which will cause the watcher to shut down.
-		if m.t != nil {
-			err := m.t.Close()
-			if err != nil {
-				glog.Infof("tailer close failed: %s", err)
-			}
-		}
 		if m.h != nil {
 			glog.Info("Shutting down http server")
 			if fast {
