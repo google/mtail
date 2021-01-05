@@ -4,8 +4,10 @@
 package exporter
 
 import (
+	"context"
 	"math"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -229,6 +231,8 @@ func TestHandlePrometheus(t *testing.T) {
 	for _, tc := range handlePrometheusTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			ctx, cancel := context.WithCancel(context.Background())
 			ms := metrics.NewStore()
 			for _, metric := range tc.metrics {
 				testutil.FatalIfErr(t, ms.Add(metric))
@@ -239,12 +243,14 @@ func TestHandlePrometheus(t *testing.T) {
 			if !tc.progLabel {
 				opts = append(opts, OmitProgLabel())
 			}
-			e, err := New(ms, opts...)
+			e, err := New(ctx, &wg, ms, opts...)
 			testutil.FatalIfErr(t, err)
 			r := strings.NewReader(tc.expected)
 			if err = promtest.CollectAndCompare(e, r); err != nil {
 				t.Error(err)
 			}
+			cancel()
+			wg.Wait()
 		})
 	}
 }

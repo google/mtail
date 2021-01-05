@@ -4,9 +4,11 @@
 package exporter
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,30 +20,41 @@ import (
 const prefix = "prefix"
 
 func TestCreateExporter(t *testing.T) {
-	_, err := New(nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	_, err := New(ctx, &wg, nil)
 	if err == nil {
 		t.Error("expecting error, got nil")
 	}
+	cancel()
+	wg.Wait()
+	ctx, cancel = context.WithCancel(context.Background())
 	store := metrics.NewStore()
-	_, err = New(store)
+	_, err = New(ctx, &wg, store)
 	if err != nil {
 		t.Errorf("unexpected error:%s", err)
 	}
+	cancel()
+	wg.Wait()
+	ctx, cancel = context.WithCancel(context.Background())
 	failopt := func(*Exporter) error {
 		return errors.New("busted")
 	}
-	_, err = New(store, failopt)
+	_, err = New(ctx, &wg, store, failopt)
 	if err == nil {
 		t.Errorf("unexpected success")
 	}
+	cancel()
+	wg.Wait()
 }
 
 func FakeSocketWrite(f formatter, m *metrics.Metric) []string {
 	ret := make([]string, 0)
 	lc := make(chan *metrics.LabelSet)
+	d := 60 * time.Second
 	go m.EmitLabelSets(lc)
 	for l := range lc {
-		ret = append(ret, f("gunstar", m, l))
+		ret = append(ret, f("gunstar", m, l, d))
 	}
 	sort.Strings(ret)
 	return ret

@@ -208,3 +208,11 @@ var OmitDumpMetricStore = &niladicOption{
 		m.omitDumpMetricsStore = true
 		return nil
 	}}
+
+// MetricPushInterval sets the interval between metrics pushes to passive collectors.
+type MetricPushInterval time.Duration
+
+func (opt MetricPushInterval) apply(m *Server) error {
+	m.metricPushInterval = time.Duration(opt)
+	return nil
+}

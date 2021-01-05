@@ -4,9 +4,11 @@
 package exporter
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -67,11 +69,13 @@ func TestHandleVarz(t *testing.T) {
 	for _, tc := range handleVarzTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			ctx, cancel := context.WithCancel(context.Background())
 			ms := metrics.NewStore()
 			for _, metric := range tc.metrics {
 				testutil.FatalIfErr(t, ms.Add(metric))
 			}
-			e, err := New(ms, Hostname("gunstar"))
+			e, err := New(ctx, &wg, ms, Hostname("gunstar"))
 			testutil.FatalIfErr(t, err)
 			response := httptest.NewRecorder()
 			e.HandleVarz(response, &http.Request{})
@@ -83,6 +87,8 @@ func TestHandleVarz(t *testing.T) {
 				t.Errorf("failed to read response: %s", err)
 			}
 			testutil.ExpectNoDiff(t, tc.expected, string(b))
+			cancel()
+			wg.Wait()
 		})
 	}
 }

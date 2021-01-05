@@ -7,6 +7,7 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/google/mtail/internal/metrics"
 )
@@ -23,7 +24,7 @@ var (
 
 // metricToGraphite encodes a metric in the graphite text protocol format.  The
 // metric lock is held before entering this function.
-func metricToGraphite(hostname string, m *metrics.Metric, l *metrics.LabelSet) string {
+func metricToGraphite(hostname string, m *metrics.Metric, l *metrics.LabelSet, _ time.Duration) string {
 	return fmt.Sprintf("%s%s.%s %v %v\n",
 		*graphitePrefix,
 		m.Program,

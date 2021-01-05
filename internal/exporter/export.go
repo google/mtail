@@ -6,6 +6,7 @@
 package exporter
 
 import (
+	"context"
 	"expvar"
 	"flag"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -22,18 +24,20 @@ import (
 
 // Commandline Flags.
 var (
-	pushInterval = flag.Int("metric_push_interval_seconds", 60,
-		"Interval between metric pushes, in seconds.")
 	writeDeadline = flag.Duration("metric_push_write_deadline", 10*time.Second, "Time to wait for a push to succeed before exiting with an error.")
 )
 
 // Exporter manages the export of metrics to passive and active collectors.
 type Exporter struct {
+	ctx           context.Context
+	wg            sync.WaitGroup
 	store         *metrics.Store
+	pushInterval  time.Duration
 	hostname      string
 	omitProgLabel bool
 	emitTimestamp bool
 	pushTargets   []pushOptions
+	initDone      chan struct{}
 }
 
 // Option configures a new Exporter.
@@ -63,12 +67,24 @@ func EmitTimestamp() Option {
 	}
 }
 
+func PushInterval(opt time.Duration) Option {
+	return func(e *Exporter) error {
+		e.pushInterval = opt
+		return nil
+	}
+}
+
 // New creates a new Exporter.
-func New(store *metrics.Store, options ...Option) (*Exporter, error) {
+func New(ctx context.Context, wg *sync.WaitGroup, store *metrics.Store, options ...Option) (*Exporter, error) {
 	if store == nil {
 		return nil, errors.New("exporter needs a Store")
 	}
-	e := &Exporter{store: store}
+	e := &Exporter{
+		ctx:      ctx,
+		store:    store,
+		initDone: make(chan struct{}),
+	}
+	defer close(e.initDone)
 	if err := e.SetOption(options...); err != nil {
 		return nil, err
 	}
@@ -93,7 +109,16 @@ func New(store *metrics.Store, options ...Option) (*Exporter, error) {
 		o := pushOptions{"udp", *statsdHostPort, metricToStatsd, statsdExportTotal, statsdExportSuccess}
 		e.RegisterPushExport(o)
 	}
+	e.StartMetricPush()
 
+	// This routine manages shutdown of the Exporter.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-e.initDone
+		<-e.ctx.Done()
+		e.wg.Wait()
+	}()
 	return e, nil
 }
 
@@ -127,7 +152,7 @@ func formatLabels(name string, m map[string]string, ksep, sep, rep string) strin
 
 // Format a LabelSet into a string to be written to one of the timeseries
 // sockets.
-type formatter func(string, *metrics.Metric, *metrics.LabelSet) string
+type formatter func(string, *metrics.Metric, *metrics.LabelSet, time.Duration) string
 
 func (e *Exporter) writeSocketMetrics(c io.Writer, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
 	e.store.RLock()
@@ -145,7 +170,7 @@ func (e *Exporter) writeSocketMetrics(c io.Writer, f formatter, exportTotal *exp
 			lc := make(chan *metrics.LabelSet)
 			go m.EmitLabelSets(lc)
 			for l := range lc {
-				line := f(e.hostname, m, l)
+				line := f(e.hostname, m, l, e.pushInterval)
 				n, err := fmt.Fprint(c, line)
 				glog.V(2).Infof("Sent %d bytes\n", n)
 				if err == nil {
@@ -187,15 +212,28 @@ func (e *Exporter) PushMetrics() {
 
 // StartMetricPush pushes metrics to the configured services each interval.
 func (e *Exporter) StartMetricPush() {
-	if len(e.pushTargets) > 0 {
+	if len(e.pushTargets) <= 0 {
+		return
+	}
+	if e.pushInterval <= 0 {
+		return
+	}
+	e.wg.Add(1)
+	go func() {
+		defer e.wg.Done()
+		<-e.initDone
 		glog.Info("Started metric push.")
-		ticker := time.NewTicker(time.Duration(*pushInterval) * time.Second)
-		go func() {
-			for range ticker.C {
+		ticker := time.NewTicker(e.pushInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-e.ctx.Done():
+				return
+			case <-ticker.C:
 				e.PushMetrics()
 			}
-		}()
-	}
+		}
+	}()
 }
 
 type pushOptions struct {

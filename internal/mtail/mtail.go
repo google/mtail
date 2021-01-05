@@ -63,6 +63,7 @@ type Server struct {
 	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
 	staleLogGcTickInterval      time.Duration  // Interval between stale log gc runs
 	logPatternPollTickInterval  time.Duration  // Interval between log pattern polls
+	metricPushInterval          time.Duration  // Interval between metric pushes
 	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
 	omitMetricSource            bool           // if set, do not link the source program to a metric
 	omitProgLabel               bool           // if set, do not put the program name in the metric labels
@@ -134,7 +135,10 @@ func (m *Server) initExporter() (err error) {
 	if m.emitMetricTimestamp {
 		opts = append(opts, exporter.EmitTimestamp())
 	}
-	m.e, err = exporter.New(m.store, opts...)
+	if m.metricPushInterval > 0 {
+		opts = append(opts, exporter.PushInterval(m.metricPushInterval))
+	}
+	m.e, err = exporter.New(m.ctx, &m.wg, m.store, opts...)
 	if err != nil {
 		return err
 	}
@@ -255,8 +259,6 @@ func (m *Server) Serve() error {
 	srv := &http.Server{
 		Handler: mux,
 	}
-
-	m.e.StartMetricPush()
 
 	errc := make(chan error, 1)
 	go func() {
