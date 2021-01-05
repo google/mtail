@@ -64,53 +64,51 @@ func TestStartServer(tb testing.TB, pollInterval time.Duration, options ...Optio
 	tb.Helper()
 	options = append(options, BindAddress("", "0"))
 
-	m := TestMakeServer(tb, pollInterval, options...)
-	return m, m.Start()
+	ts := TestMakeServer(tb, pollInterval, options...)
+	return ts, ts.Start()
 }
 
 // Start starts the TestServer and returns a cleanup function.
-func (m *TestServer) Start() func() {
-	m.tb.Helper()
+func (ts *TestServer) Start() func() {
+	ts.tb.Helper()
 	errc := make(chan error, 1)
 	go func() {
-		err := m.Run()
+		err := ts.Run()
 		errc <- err
 	}()
 
+	// TODO(jaq): can we guarantee server startup and avoid this poll?
 	glog.Infof("check that server is listening")
 	count := 0
-	for _, err := net.DialTimeout("tcp", m.Addr(), 10*time.Millisecond*timeoutMultiplier); err != nil && count < 10; count++ {
-		glog.Infof("err: %s, retrying to dial %s", err, m.Addr())
+	for _, err := net.DialTimeout("tcp", ts.Addr(), 10*time.Millisecond*timeoutMultiplier); err != nil && count < 10; count++ {
+		glog.Infof("err: %s, retrying to dial %s", err, ts.Addr())
 		time.Sleep(100 * time.Millisecond * timeoutMultiplier)
 	}
 	if count >= 10 {
-		m.tb.Fatal("server wasn't listening after 10 attempts")
+		ts.tb.Fatal("server wasn't listening after 10 attempts")
 	}
 
 	return func() {
-		defer m.cancel()
-
-		err := m.Close(true)
-		testutil.FatalIfErr(m.tb, err)
+		ts.cancel()
 
 		select {
-		case err = <-errc:
-			testutil.FatalIfErr(m.tb, err)
-		case <-time.After(5 * time.Second):
+		case err := <-errc:
+			testutil.FatalIfErr(ts.tb, err)
+		case <-time.After(20 * time.Second):
 			buf := make([]byte, 1<<16)
 			n := runtime.Stack(buf, true)
 			fmt.Fprintf(os.Stderr, "%s", buf[0:n])
-			m.tb.Fatal("timeout waiting for shutdown")
+			ts.tb.Fatal("timeout waiting for shutdown")
 		}
 	}
 }
 
 // Poll all watched logs for updates.
-func (m *TestServer) PollWatched() {
+func (ts *TestServer) PollWatched() {
 	glog.Info("TestServer polling watched objects")
-	m.w.Poll()
-	m.t.Poll()
-	m.l.LoadAllPrograms()
+	ts.w.Poll()
+	ts.t.Poll()
+	ts.l.LoadAllPrograms()
 }
 
 // TestGetMetric fetches the expvar metrics from the Server at addr, and

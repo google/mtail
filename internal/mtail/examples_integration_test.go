@@ -170,9 +170,6 @@ func TestExamplePrograms(t *testing.T) {
 			goldenStore := metrics.NewStore()
 			golden.ReadTestData(g, tc.programfile, goldenStore)
 
-			err = mtail.Close(true)
-			testutil.FatalIfErr(t, err)
-
 			testutil.ExpectNoDiff(t, goldenStore, store, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
 		})
 	}
@@ -188,12 +185,11 @@ func TestCompileExamplePrograms(t *testing.T) {
 		name := filepath.Base(tc)
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
-			mtail, err := mtail.New(ctx, s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
+			_, err := mtail.New(ctx, s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
 			testutil.FatalIfErr(t, err)
-			mtail.Close(true)
+			cancel()
 		})
 	}
 }
@@ -202,8 +198,6 @@ func BenchmarkProgram(b *testing.B) {
 	for _, bm := range exampleProgramTests {
 		bm := bm
 		b.Run(fmt.Sprintf("%s on %s", bm.programfile, bm.logfile), func(b *testing.B) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
 			b.ReportAllocs()
 			logDir, rmLogDir := testutil.TestTempDir(b)
 			defer rmLogDir()
@@ -212,6 +206,7 @@ func BenchmarkProgram(b *testing.B) {
 			w := watcher.NewFakeWatcher()
 			store := metrics.NewStore()
 			programFile := path.Join("../..", bm.programfile)
+			ctx, cancel := context.WithCancel(context.Background())
 			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()))
 			if err != nil {
 				b.Fatalf("Failed to create mtail: %s", err)
@@ -235,7 +230,7 @@ func BenchmarkProgram(b *testing.B) {
 				total += count
 				w.InjectUpdate(log.Name())
 			}
-			mtail.Close(true)
+			cancel()
 			b.StopTimer()
 			b.SetBytes(total)
 		})

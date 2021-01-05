@@ -8,8 +8,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/golang/glog"
@@ -141,6 +143,14 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		sig := <-sigint
+		glog.Infof("Received %+v, exiting...", sig)
+		cancel()
+	}()
 
 	w, err := watcher.NewLogWatcher(ctx, *pollInterval)
 	if err != nil {

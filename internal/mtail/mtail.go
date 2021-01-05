@@ -13,9 +13,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/golang/glog"
@@ -48,14 +46,8 @@ type Server struct {
 
 	reg *prometheus.Registry
 
-	h        *http.Server
-	listener net.Listener
+	listener net.Listener // Configured with bind address.
 
-	closeQuit chan struct{} // Channel to signal shutdown from code
-	closeOnce sync.Once     // Ensure shutdown happens only once
-
-	bindAddress        string    // address to bind HTTP server
-	bindUnixSocket     string    // path of the UNIX socket to bind HTTP server
 	buildInfo          BuildInfo // go build information
 	programPath        string    // path to programs to load
 	logPathPatterns    []string  // list of patterns to watch for log files to tail
@@ -178,11 +170,9 @@ func (m *Server) initTailer() (err error) {
 // New creates a MtailServer from the supplied Options.
 func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
-		store:     store,
-		w:         w,
-		lines:     make(chan *logline.LogLine),
-		closeQuit: make(chan struct{}),
-		h:         &http.Server{},
+		store: store,
+		w:     w,
+		lines: make(chan *logline.LogLine),
 		// Using a non-pedantic registry means we can be looser with metrics that
 		// are not fully specified at startup.
 		reg: prometheus.NewRegistry(),
@@ -247,9 +237,6 @@ func (m *Server) WriteMetrics(w io.Writer) error {
 
 // Serve begins the webserver and awaits a shutdown instruction.
 func (m *Server) Serve() error {
-	if m.bindAddress == "" && m.bindUnixSocket == "" {
-		return errors.Errorf("No bind address provided.")
-	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/favicon.ico", FaviconHandler)
 	mux.Handle("/", m)
@@ -264,70 +251,36 @@ func (m *Server) Serve() error {
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	zpages.Handle(mux, "/")
-	m.h.Handler = mux
+
+	srv := &http.Server{
+		Handler: mux,
+	}
+
 	m.e.StartMetricPush()
 
 	errc := make(chan error, 1)
 	go func() {
-		if m.bindAddress != "" {
-			glog.Infof("Listening on %s", m.listener.Addr())
-		} else {
-			glog.Infof("Listening on UNIX socket %s", m.bindUnixSocket)
+		glog.Infof("Listening on %s", m.listener.Addr())
+		if err := srv.Serve(m.listener); err != nil && err != http.ErrServerClosed {
+			errc <- err
 		}
-
-		err := m.h.Serve(m.listener)
-
-		if err == http.ErrServerClosed {
-			err = nil
-		}
-		errc <- err
 	}()
-	m.WaitForShutdown()
-	return <-errc
-}
 
-// WaitForShutdown handles shutdown requests from the system or the UI.
-func (m *Server) WaitForShutdown() {
-	n := make(chan os.Signal, 1)
-	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
 	select {
+	case err := <-errc:
+		return err
 	case <-m.ctx.Done():
-		glog.Info("External shutdown, exiting...")
-	case <-n:
-		glog.Info("Received SIGTERM, exiting...")
-	case <-m.closeQuit:
-		glog.Info("Received quit internally, exiting...")
-	}
-	if err := m.Close(false); err != nil {
-		glog.Warning(err)
-	}
-}
-
-// Close handles the graceful shutdown of this mtail instance, ensuring that it
-// only occurs once.  If fast is true, then the http server is shutdown without
-// waiting.
-func (m *Server) Close(fast bool) error {
-	m.closeOnce.Do(func() {
 		glog.Info("Shutdown requested.")
-		close(m.closeQuit)
-		// Ensure we're cancelling our child context just in case Close is
-		// called outside context cancellation.
-		m.cancel()
-		if m.h != nil {
-			glog.Info("Shutting down http server")
-			if fast {
-				m.h.Close()
-			} else {
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				if err := m.h.Shutdown(ctx); err != nil {
-					glog.Error(err)
-				}
-				cancel()
-			}
-		}
-		m.wg.Wait()
-		glog.Info("END OF LINE")
-	})
+		// TODO(jaq): This code makes the tests slow and flaky.  Why?
+		// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// defer cancel()
+		// srv.SetKeepAlivesEnabled(false)
+		// if err := srv.Shutdown(ctx); err != nil {
+		// 	return err
+		// }
+		return srv.Close()
+	}
+
 	return nil
 }
 
@@ -335,6 +288,11 @@ func (m *Server) Close(fast bool) error {
 // for changes and sends any new lines found to the virtual machines. If
 // OneShot mode is enabled, it will exit.
 func (m *Server) Run() error {
+	defer func() {
+		// TODO(jaq): Do we need this cancel func for test?
+		m.cancel()
+		m.wg.Wait()
+	}()
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
 		return nil
@@ -343,9 +301,6 @@ func (m *Server) Run() error {
 		return err
 	}
 	if m.oneShot {
-		if err := m.Close(true); err != nil {
-			return err
-		}
 		if m.omitDumpMetricsStore {
 			glog.Info("Store dump disabled, exiting")
 			return nil
@@ -359,12 +314,10 @@ func (m *Server) Run() error {
 	if err := m.Serve(); err != nil {
 		return err
 	}
+	glog.Info("END OF LINE")
 	return nil
 }
 
 func (m *Server) Addr() string {
-	if m.listener == nil {
-		return "none"
-	}
 	return m.listener.Addr().String()
 }

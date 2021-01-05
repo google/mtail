@@ -65,7 +65,6 @@ func startUNIXSocketServer(tb testing.TB, pollInterval time.Duration, options ..
 
 	return m, func() {
 		defer rmTmpDir()
-		testutil.FatalIfErr(tb, m.Close(true))
 		select {
 		case err := <-errc:
 			testutil.FatalIfErr(tb, err)
