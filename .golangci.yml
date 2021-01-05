@@ -31,6 +31,8 @@ linters:
     - gomnd
     # My tests will be as long as they need to be thanks
     - funlen
+    # Not a fan of this one, looks messy
+    - nlreturn
 
 issues:
   max-per-linter: 0
