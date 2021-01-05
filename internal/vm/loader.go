@@ -91,6 +91,7 @@ func (l *Loader) LoadAllPrograms() error {
 
 // LoadProgram loads or reloads a program from the full pathname programPath.  The name of
 // the program is the basename of the file.
+// TODO(jaq): store a hash of the program so we don't reload on no change.
 func (l *Loader) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)
 	if strings.HasPrefix(name, ".") {
