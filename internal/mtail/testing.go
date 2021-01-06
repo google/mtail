@@ -7,7 +7,6 @@ import (
 	"context"
 	"expvar"
 	"fmt"
-	"net"
 	"os"
 	"runtime"
 	"testing"
@@ -76,17 +75,6 @@ func (ts *TestServer) Start() func() {
 		err := ts.Run()
 		errc <- err
 	}()
-
-	// TODO(jaq): can we guarantee server startup and avoid this poll?
-	glog.Infof("check that server is listening")
-	count := 0
-	for _, err := net.DialTimeout("tcp", ts.Addr(), 10*time.Millisecond*timeoutMultiplier); err != nil && count < 10; count++ {
-		glog.Infof("err: %s, retrying to dial %s", err, ts.Addr())
-		time.Sleep(100 * time.Millisecond * timeoutMultiplier)
-	}
-	if count >= 10 {
-		ts.tb.Fatal("server wasn't listening after 10 attempts")
-	}
 
 	return func() {
 		ts.cancel()

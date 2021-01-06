@@ -256,14 +256,12 @@ func (m *Server) Serve() error {
 		return err
 	case <-m.ctx.Done():
 		glog.Info("Shutdown requested.")
-		// TODO(jaq): This code makes the tests slow and flaky.  Why?
-		// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		// defer cancel()
-		// srv.SetKeepAlivesEnabled(false)
-		// if err := srv.Shutdown(ctx); err != nil {
-		// 	return err
-		// }
-		return srv.Close()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		srv.SetKeepAlivesEnabled(false)
+		if err := srv.Shutdown(ctx); err != nil {
+			return err
+		}
 	}
 
 	return nil
