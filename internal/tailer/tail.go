@@ -28,6 +28,7 @@ import (
 	"go.opencensus.io/trace"
 
 	"github.com/google/mtail/internal/logline"
+	"github.com/google/mtail/internal/waker"
 	"github.com/google/mtail/internal/watcher"
 )
 
@@ -95,19 +96,31 @@ func (opt IgnoreRegex) apply(t *Tailer) error {
 	return nil
 }
 
-// StaleLogGcTickInterval sets the time between garbage collection runs for stale logs in the tailer.
-type StaleLogGcTickInterval time.Duration
+// StaleLogGcWaker triggers garbage collection runs for stale logs in the tailer.
+func StaleLogGcWaker(w waker.Waker) Option {
+	return &staleLogGcWaker{w}
+}
 
-func (opt StaleLogGcTickInterval) apply(t *Tailer) error {
-	t.StartGcLoop(time.Duration(opt))
+type staleLogGcWaker struct {
+	waker.Waker
+}
+
+func (opt staleLogGcWaker) apply(t *Tailer) error {
+	t.StartGcLoop(opt.Waker)
 	return nil
 }
 
-// LogPatternPollTickInterval sets the time between polls on the filesystem for new logs that match the log glob patterns.
-type LogPatternPollTickInterval time.Duration
+// LogPatternPollWaker triggers polls on the filesystem for new logs that match the log glob patterns.
+func LogPatternPollWaker(w waker.Waker) Option {
+	return &logPatternPollWaker{w}
+}
 
-func (opt LogPatternPollTickInterval) apply(t *Tailer) error {
-	t.StartLogPatternPollLoop(time.Duration(opt))
+type logPatternPollWaker struct {
+	waker.Waker
+}
+
+func (opt logPatternPollWaker) apply(t *Tailer) error {
+	t.StartLogPatternPollLoop(opt.Waker)
 	return nil
 }
 
@@ -425,8 +438,8 @@ func (t *Tailer) Gc() error {
 }
 
 // StartExpiryLoop runs a permanent goroutine to expire metrics every duration.
-func (t *Tailer) StartGcLoop(duration time.Duration) {
-	if duration <= 0 {
+func (t *Tailer) StartGcLoop(waker waker.Waker) {
+	if waker == nil {
 		glog.Info("Log handle expiration disabled")
 		return
 	}
@@ -438,14 +451,12 @@ func (t *Tailer) StartGcLoop(duration time.Duration) {
 			glog.Info("No gc loop in oneshot mode.")
 			return
 		}
-		glog.Infof("Starting log handle expiry loop every %s", duration.String())
-		ticker := time.NewTicker(duration)
-		defer ticker.Stop()
+		//glog.Infof("Starting log handle expiry loop every %s", duration.String())
 		for {
 			select {
 			case <-t.ctx.Done():
 				return
-			case <-ticker.C:
+			case <-waker.Wake():
 				if err := t.Gc(); err != nil {
 					glog.Info(err)
 				}
@@ -455,8 +466,8 @@ func (t *Tailer) StartGcLoop(duration time.Duration) {
 }
 
 // StartLogPatternPollLoop runs a permanent goroutine to poll for new log files.
-func (t *Tailer) StartLogPatternPollLoop(duration time.Duration) {
-	if duration <= 0 {
+func (t *Tailer) StartLogPatternPollLoop(waker waker.Waker) {
+	if waker == nil {
 		glog.Info("Log pattern polling disabled")
 		return
 	}
@@ -468,15 +479,13 @@ func (t *Tailer) StartLogPatternPollLoop(duration time.Duration) {
 			glog.Info("No polling loop in oneshot mode.")
 			return
 		}
-		glog.Infof("Starting log pattern poll loop every %s", duration.String())
-		ticker := time.NewTicker(duration)
-		defer ticker.Stop()
+		//glog.Infof("Starting log pattern poll loop every %s", duration.String())
 		for {
 			select {
 			case <-t.ctx.Done():
 				return
-			case <-ticker.C:
-				if err := t.PollLogPatterns(); err != nil {
+			case <-waker.Wake():
+				if err := t.Poll(); err != nil {
 					glog.Info(err)
 				}
 			}
@@ -518,8 +527,11 @@ func (t *Tailer) PollLogPatterns() error {
 	return nil
 }
 
-func (t *Tailer) Poll() {
+func (t *Tailer) Poll() error {
 	t.pollMu.Lock()
 	defer t.pollMu.Unlock()
-	t.PollLogPatterns()
+	if err := t.PollLogPatterns(); err != nil {
+		return err
+	}
+	return nil
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/vm"
+	"github.com/google/mtail/internal/waker"
 	"github.com/google/mtail/internal/watcher"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -60,8 +61,8 @@ type Server struct {
 
 	overrideLocation            *time.Location // Timezone location to use when parsing timestamps
 	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
-	staleLogGcTickInterval      time.Duration  // Interval between stale log gc runs
-	logPatternPollTickInterval  time.Duration  // Interval between log pattern polls
+	staleLogGcWaker             waker.Waker    // Wake to run stale log gc
+	logPatternPollWaker         waker.Waker    // Wake to poll for log patterns
 	metricPushInterval          time.Duration  // Interval between metric pushes
 	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
 	omitMetricSource            bool           // if set, do not link the source program to a metric
@@ -138,8 +139,8 @@ func (m *Server) initTailer() (err error) {
 	opts := []tailer.Option{
 		tailer.IgnoreRegex(m.ignoreRegexPattern),
 		tailer.LogPatterns(m.logPathPatterns),
-		tailer.LogPatternPollTickInterval(m.logPatternPollTickInterval),
-		tailer.StaleLogGcTickInterval(m.staleLogGcTickInterval),
+		tailer.LogPatternPollWaker(m.logPatternPollWaker),
+		tailer.StaleLogGcWaker(m.staleLogGcWaker),
 	}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)

@@ -16,6 +16,7 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/testutil"
+	"github.com/google/mtail/internal/waker"
 	"github.com/google/mtail/internal/watcher"
 )
 
@@ -26,7 +27,9 @@ const defaultDoOrTimeoutDeadline = 10 * time.Second
 type TestServer struct {
 	*Server
 
-	w *watcher.LogWatcher
+	w      *watcher.LogWatcher
+	waker  waker.Waker // one waker for all wakeable routines when in test.
+	awaken func()
 
 	tb testing.TB
 
@@ -52,9 +55,14 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, options ...Option
 	ctx, cancel := context.WithCancel(context.Background())
 	w, err := watcher.NewLogWatcher(ctx, pollInterval)
 	testutil.FatalIfErr(tb, err)
+	waker, awaken := waker.NewTest(0)
+	options = append(options,
+		LogPatternPollWaker(waker),
+		StaleLogGcWaker(waker),
+	)
 	m, err := New(ctx, metrics.NewStore(), w, options...)
 	testutil.FatalIfErr(tb, err)
-	return &TestServer{Server: m, w: w, tb: tb, cancel: cancel}
+	return &TestServer{Server: m, w: w, waker: waker, awaken: awaken, tb: tb, cancel: cancel}
 }
 
 // TestStartServer creates a new TestServer and starts it running.  It

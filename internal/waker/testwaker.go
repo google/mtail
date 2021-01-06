@@ -23,7 +23,7 @@ type testWaker struct {
 }
 
 // NewTest creates a new Waker to be used in tests, returning it and a function to that when called will wake all listeners.  If n > 0, the wake won't be sent until n calls to Wake have been received.
-func NewTest(n int) (*testWaker, func()) {
+func NewTest(n int) (Waker, func()) {
 	t := &testWaker{
 		n:    n,
 		wake: make(chan struct{}),
