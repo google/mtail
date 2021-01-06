@@ -71,18 +71,6 @@ type Server struct {
 	omitDumpMetricsStore        bool           // if set, do not print the metric store; useful in test
 }
 
-// StartTailing adds each log path pattern to the tailer.
-func (m *Server) StartTailing() error {
-	var err error
-	for _, pattern := range m.logPathPatterns {
-		glog.V(1).Infof("Tail pattern %q", pattern)
-		if err = m.t.TailPattern(pattern); err != nil {
-			glog.Warning(err)
-		}
-	}
-	return nil
-}
-
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
 func (m *Server) initLoader() error {
 	opts := []vm.Option{
@@ -172,6 +160,7 @@ func (m *Server) initTailer() (err error) {
 }
 
 // New creates a MtailServer from the supplied Options.
+// TODO(jaq): this doesn't need to be a constructor anymore, it could start and block until quit.
 func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
 		store: store,
@@ -298,9 +287,6 @@ func (m *Server) Run() error {
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
 		return nil
-	}
-	if err := m.StartTailing(); err != nil {
-		return err
 	}
 	if m.oneShot {
 		if m.omitDumpMetricsStore {

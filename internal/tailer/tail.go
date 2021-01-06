@@ -136,6 +136,10 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 		t.wg.Wait()
 		close(t.lines)
 	}()
+	// Finally guarantee one pass of the log pattern poll before we leave.
+	if err := t.PollLogPatterns(); err != nil {
+		return nil, err
+	}
 	return t, nil
 }
 

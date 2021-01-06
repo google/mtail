@@ -31,6 +31,7 @@ func TestBasicTail(t *testing.T) {
 	logFile := path.Join(logDir, "log")
 
 	f := testutil.TestOpenFile(t, logFile)
+	m.PollWatched() // Force sync to EOF
 
 	for i := 1; i <= 3; i++ {
 		testutil.WriteString(t, f, fmt.Sprintf("%d\n", i))

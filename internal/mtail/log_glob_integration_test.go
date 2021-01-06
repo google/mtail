@@ -90,6 +90,7 @@ func TestGlobAfterStart(t *testing.T) {
 	linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", float64(count))
 	for _, tt := range globTests {
 		log := testutil.TestOpenFile(t, tt.name)
+		m.PollWatched() // Force sync to EOF
 		defer log.Close()
 		testutil.WriteString(t, log, "\n")
 	}
@@ -228,6 +229,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logFile := path.Join(logDir, "log.1.txt")
 		f := testutil.TestOpenFile(t, logFile)
+		m.PollWatched() // Force sync to EOF
 
 		testutil.WriteString(t, f, "line 1\n")
 		m.PollWatched()

@@ -35,12 +35,12 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	// TODO: change back to 1 when the log watcher is removed.
-	errorsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_errors_total", logFile, 2)
+	errorsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_errors_total", logFile, 1)
 
 	f, err := os.OpenFile(logFile, os.O_CREATE, 0)
 	testutil.FatalIfErr(t, err)
 	defer f.Close()
+
 	m.PollWatched()
 
 	errorsTotalCheck()
