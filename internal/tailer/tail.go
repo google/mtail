@@ -373,9 +373,12 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	// termination.
 	if t.oneShot {
 		glog.V(2).Infof("Starting oneshot read at startup of %q", f.Pathname())
-		if err := f.Read(t.ctx); err != nil && err != io.EOF {
-			return err
+		logCount.Add(1)
+		err := f.Read(t.ctx)
+		if err == io.EOF {
+			err = nil
 		}
+		return err
 	}
 	glog.Infof("Tailing %s", f.Pathname())
 	logCount.Add(1)
