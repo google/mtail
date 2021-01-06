@@ -136,7 +136,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 		t.wg.Wait()
 		close(t.lines)
 	}()
-	// Finally guarantee one pass of the log pattern poll before we leave.
+	// Guarantee all existing logs get tailed before we leave.
 	if err := t.PollLogPatterns(); err != nil {
 		return nil, err
 	}
@@ -343,6 +343,10 @@ func (t *Tailer) HasMeta(path string) bool {
 // openLogPath opens a log file named by pathname.
 func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	glog.V(2).Infof("openlogPath %s %v", pathname, seekToStart)
+	if t.hasHandle(pathname) {
+		glog.V(2).Infof("already opened %q", pathname)
+		return nil
+	}
 	if err := t.watchDirname(pathname); err != nil {
 		return err
 	}

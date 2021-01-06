@@ -105,12 +105,6 @@ func (m *Server) initLoader() error {
 	if err != nil {
 		return err
 	}
-	if m.programPath == "" {
-		return nil
-	}
-	if errs := m.l.LoadAllPrograms(); errs != nil {
-		return errors.Errorf("Compile encountered errors:\n%s", errs)
-	}
 	return nil
 }
 

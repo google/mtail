@@ -30,7 +30,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.opencensus.io/trace"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
@@ -371,6 +370,32 @@ func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath st
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
 	}
+	// This goroutine is the main consumer/producer loop and shutdown.
+	wg.Add(1)
+	go func() {
+		defer wg.Done() // signal to owner we're done
+		<-l.initDone
+		for line := range lines {
+			LineCount.Add(1)
+			l.handleMu.RLock()
+			for prog := range l.handles {
+				l.handles[prog].lines <- line
+			}
+			l.handleMu.RUnlock()
+		}
+		glog.Info("Shutting down loader.")
+		close(l.signalQuit)
+		l.handleMu.Lock()
+		for prog := range l.handles {
+			close(l.handles[prog].lines)
+		}
+		l.handleMu.Unlock()
+		l.wg.Wait()
+	}()
+	if l.programPath == "" {
+		glog.Info("No program path specified, no programs will be loaded.")
+		return l, nil
+	}
 	// Create one goroutine that handles reload signals.
 	l.wg.Add(1)
 	go func() {
@@ -390,24 +415,10 @@ func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath st
 			}
 		}
 	}()
-	// This goroutine is the main consumer/producer loop and shutdown.
-	wg.Add(1)
-	go func() {
-		defer wg.Done() // signal to owner we're done
-		<-l.initDone
-		ctx := context.TODO()
-		for line := range lines {
-			l.processLogLine(ctx, line)
-		}
-		glog.Info("Shutting down loader.")
-		close(l.signalQuit)
-		l.handleMu.Lock()
-		for prog := range l.handles {
-			close(l.handles[prog].lines)
-		}
-		l.handleMu.Unlock()
-		l.wg.Wait()
-	}()
+	// Guarantee all existing programmes get loaded before we leave.
+	if err := l.LoadAllPrograms(); err != nil {
+		return nil, err
+	}
 	return l, nil
 }
 
@@ -419,17 +430,6 @@ func (l *Loader) SetOption(options ...Option) error {
 		}
 	}
 	return nil
-}
-
-func (l *Loader) processLogLine(ctx context.Context, ll *logline.LogLine) {
-	ctx, span := trace.StartSpan(ctx, "Loader.ProcessLogLine")
-	defer span.End()
-	LineCount.Add(1)
-	l.handleMu.RLock()
-	defer l.handleMu.RUnlock()
-	for prog := range l.handles {
-		l.handles[prog].lines <- ll
-	}
 }
 
 // UnloadProgram removes the named program, any currently running VM goroutine.
