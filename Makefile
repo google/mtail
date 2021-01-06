@@ -38,7 +38,7 @@ timeout := 20m
 endif
 # Let the benchmarks run for a long time.  The timeout is for the total time of
 # all benchmarks, not per bench.
-benchtimeout := 20m
+benchtimeout := 60m
 
 # Be verbose with `go get`, if UPDATE is y then also update dependencies.
 GOGETFLAGS = -v
