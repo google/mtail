@@ -28,10 +28,11 @@ import (
 // the server. It returns the server, or any errors the new server creates.
 func makeServer(tb testing.TB, pollInterval time.Duration, options ...mtail.Option) (*mtail.Server, error) {
 	tb.Helper()
-	w, err := watcher.NewLogWatcher(pollInterval)
+	ctx := context.Background()
+	w, err := watcher.NewLogWatcher(ctx, pollInterval)
 	testutil.FatalIfErr(tb, err)
 
-	return mtail.New(context.Background(), metrics.NewStore(), w, options...)
+	return mtail.New(ctx, metrics.NewStore(), w, options...)
 }
 
 // startUNIXSocketServer creates a new Server serving through a UNIX
@@ -64,7 +65,6 @@ func startUNIXSocketServer(tb testing.TB, pollInterval time.Duration, options ..
 
 	return m, func() {
 		defer rmTmpDir()
-		testutil.FatalIfErr(tb, m.Close(true))
 		select {
 		case err := <-errc:
 			testutil.FatalIfErr(tb, err)

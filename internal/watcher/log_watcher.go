@@ -50,30 +50,31 @@ func hasChanged(a, b os.FileInfo) bool {
 
 // LogWatcher implements a Watcher for watching real filesystems.
 type LogWatcher struct {
-	pollTicker *time.Ticker
-
 	watchedMu sync.RWMutex // protects `watched'
 	watched   map[string]*watch
 
-	stopTicks chan struct{} // Channel to notify ticker to stop.
-	ticksDone chan struct{} // Channel to notify when the ticks handler is done.
-
 	pollMu sync.Mutex // protects `Poll()`
-
-	closeOnce sync.Once
 }
 
 // NewLogWatcher returns a new LogWatcher, or returns an error.
-func NewLogWatcher(pollInterval time.Duration) (*LogWatcher, error) {
+func NewLogWatcher(ctx context.Context, pollInterval time.Duration) (*LogWatcher, error) {
 	w := &LogWatcher{
 		watched: make(map[string]*watch),
 	}
 	if pollInterval > 0 {
-		w.pollTicker = time.NewTicker(pollInterval)
-		w.stopTicks = make(chan struct{})
-		w.ticksDone = make(chan struct{})
-		go w.runTicks()
-		glog.V(2).Infof("started ticker with %s interval", pollInterval)
+		ticker := time.NewTicker(pollInterval)
+		go func() {
+			defer ticker.Stop()
+			glog.V(2).Infof("starting watch ticker with %s interval", pollInterval)
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					w.Poll()
+				}
+			}
+		}()
 	}
 	return w, nil
 }
@@ -99,24 +100,6 @@ func (w *LogWatcher) sendEvent(e Event) {
 func (w *LogWatcher) sendWatchedEvent(watch *watch, e Event) {
 	for _, p := range watch.ps {
 		p.ProcessFileEvent(context.TODO(), e)
-	}
-}
-
-func (w *LogWatcher) runTicks() {
-	defer close(w.ticksDone)
-
-	if w.pollTicker == nil {
-		return
-	}
-
-	for {
-		select {
-		case <-w.pollTicker.C:
-			w.Poll()
-		case <-w.stopTicks:
-			w.pollTicker.Stop()
-			return
-		}
 	}
 }
 
@@ -197,18 +180,6 @@ func (w *LogWatcher) pollDirectory(parentWatch *watch, pathname string) {
 			w.pollDirectory(parentWatch, match)
 		}
 	}
-}
-
-// Close shuts down the LogWatcher.  It is safe to call this from multiple clients.
-func (w *LogWatcher) Close() (err error) {
-	w.closeOnce.Do(func() {
-		glog.Infof("Shutting down log watcher.")
-		if w.pollTicker != nil {
-			close(w.stopTicks)
-			<-w.ticksDone
-		}
-	})
-	return nil
 }
 
 // Observe adds a path to the list of watched items.

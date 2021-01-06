@@ -4,13 +4,9 @@
 package mtail
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"expvar"
 	"fmt"
-	"net"
-	"net/http"
 	"os"
 	"runtime"
 	"testing"
@@ -45,14 +41,17 @@ type TestServer struct {
 func TestMakeServer(tb testing.TB, pollInterval time.Duration, options ...Option) *TestServer {
 	tb.Helper()
 
+	// Reset counters when running multiple tests.  Tests that use expvar
+	// helpers cannot be made parallel.
+	glog.Info("resetting counters")
 	expvar.Get("lines_total").(*expvar.Int).Set(0)
 	expvar.Get("log_count").(*expvar.Int).Set(0)
 	expvar.Get("log_rotations_total").(*expvar.Map).Init()
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
-	w, err := watcher.NewLogWatcher(pollInterval)
-	testutil.FatalIfErr(tb, err)
 	ctx, cancel := context.WithCancel(context.Background())
+	w, err := watcher.NewLogWatcher(ctx, pollInterval)
+	testutil.FatalIfErr(tb, err)
 	m, err := New(ctx, metrics.NewStore(), w, options...)
 	testutil.FatalIfErr(tb, err)
 	return &TestServer{Server: m, w: w, tb: tb, cancel: cancel}
@@ -64,159 +63,114 @@ func TestStartServer(tb testing.TB, pollInterval time.Duration, options ...Optio
 	tb.Helper()
 	options = append(options, BindAddress("", "0"))
 
-	m := TestMakeServer(tb, pollInterval, options...)
-	return m, m.Start()
+	ts := TestMakeServer(tb, pollInterval, options...)
+	return ts, ts.Start()
 }
 
 // Start starts the TestServer and returns a cleanup function.
-func (m *TestServer) Start() func() {
-	m.tb.Helper()
+func (ts *TestServer) Start() func() {
+	ts.tb.Helper()
 	errc := make(chan error, 1)
 	go func() {
-		err := m.Run()
+		err := ts.Run()
 		errc <- err
 	}()
 
-	glog.Infof("check that server is listening")
-	count := 0
-	for _, err := net.DialTimeout("tcp", m.Addr(), 10*time.Millisecond*timeoutMultiplier); err != nil && count < 10; count++ {
-		glog.Infof("err: %s, retrying to dial %s", err, m.Addr())
-		time.Sleep(100 * time.Millisecond * timeoutMultiplier)
-	}
-	if count >= 10 {
-		m.tb.Fatal("server wasn't listening after 10 attempts")
-	}
-
 	return func() {
-		defer m.cancel()
-
-		err := m.Close(true)
-		testutil.FatalIfErr(m.tb, err)
+		ts.cancel()
 
 		select {
-		case err = <-errc:
-			testutil.FatalIfErr(m.tb, err)
-		case <-time.After(5 * time.Second):
+		case err := <-errc:
+			testutil.FatalIfErr(ts.tb, err)
+		case <-time.After(6 * time.Second):
 			buf := make([]byte, 1<<16)
 			n := runtime.Stack(buf, true)
 			fmt.Fprintf(os.Stderr, "%s", buf[0:n])
-			m.tb.Fatal("timeout waiting for shutdown")
+			ts.tb.Fatal("timeout waiting for shutdown")
 		}
 	}
 }
 
 // Poll all watched logs for updates.
-func (m *TestServer) PollWatched() {
+func (ts *TestServer) PollWatched() {
 	glog.Info("TestServer polling watched objects")
-	m.w.Poll()
-	m.t.Poll()
-	m.l.LoadAllPrograms()
+	ts.w.Poll()
+	ts.t.Poll()
+	ts.l.LoadAllPrograms()
 }
 
-// TestGetMetric fetches the expvar metrics from the Server at addr, and
-// returns the value of one named name.  Callers are responsible for type
-// assertions on the returned value.
-func TestGetMetric(tb testing.TB, addr, name string) interface{} {
+// TestGetExpvar fetches the expvar metric `name`, and returns the expvar.
+// Callers are responsible for type assertions on the returned value.
+func TestGetExpvar(tb testing.TB, name string) expvar.Var {
 	tb.Helper()
-	uri := fmt.Sprintf("http://%s/debug/vars", addr)
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-	}
-	resp, err := client.Get(uri)
-	if err != nil {
-		tb.Fatal(err)
-	}
-	buf := new(bytes.Buffer)
-	n, err := buf.ReadFrom(resp.Body)
-	resp.Body.Close()
-	testutil.FatalIfErr(tb, err)
-	glog.V(2).Infof("TestGetMetric: http client read %d bytes from debug/vars", n)
-	var r map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &r); err != nil {
-		tb.Fatalf("%s: body was %s", err, buf.String())
-	}
-	glog.V(2).Infof("TestGetMetric: returned value for %s: %v", name, r[name])
-	return r[name]
+	v := expvar.Get(name)
+	glog.Infof("Var %q is %v", name, v)
+	return v
 }
 
-/// GetMetric fetches the expvar metric from the TestServer.
-func (ts *TestServer) GetMetric(name string) float64 {
+/// GetExpvar is a helper function on TestServer that acts like TestGetExpvar.
+func (ts *TestServer) GetExpvar(name string) expvar.Var {
 	ts.tb.Helper()
-	return TestGetMetric(ts.tb, ts.Addr(), name).(float64)
+	return TestGetExpvar(ts.tb, name)
 }
 
-// TestMetricDelta checks to see if the difference between a and b is want;
-// it assumes both values are float64s that came from a TestGetMetric.
-func TestMetricDelta(a, b interface{}) float64 {
-	if a == nil {
-		a = 0.
-	}
-	if b == nil {
-		b = 0.
-	}
-	return a.(float64) - b.(float64)
-}
-
-// ExpectMetricDelta checks to see if the difference between a and b is want;
-// it assumes both values are float64s that came from a TestGetMetric.
-func ExpectMetricDelta(tb testing.TB, a, b interface{}, want float64) {
-	tb.Helper()
-	delta := TestMetricDelta(a, b)
-	if delta != want {
-		tb.Errorf("Unexpected delta: got %v - %v = %g, want %g", a, b, delta, want)
-	}
-}
-
-// ExpectMetricDeltaWithDeadline returns a deferrable function which tests if the expvar metric with name has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
-func (ts *TestServer) ExpectMetricDeltaWithDeadline(name string, want float64) func() {
+// ExpectExpvarDeltaWithDeadline returns a deferrable function which tests if the expvar metric with name has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
+func (ts *TestServer) ExpectExpvarDeltaWithDeadline(name string, want int64) func() {
 	ts.tb.Helper()
 	deadline := ts.DoOrTimeoutDeadline
 	if deadline == 0 {
 		deadline = defaultDoOrTimeoutDeadline
 	}
-	start := TestGetMetric(ts.tb, ts.Addr(), name)
+	start := TestGetExpvar(ts.tb, name).(*expvar.Int).Value()
 	check := func() (bool, error) {
 		ts.tb.Helper()
-		now := TestGetMetric(ts.tb, ts.Addr(), name)
-		return TestMetricDelta(now, start) == want, nil
+		now := TestGetExpvar(ts.tb, name).(*expvar.Int).Value()
+		glog.Infof("now is %v", now)
+		return now-start == want, nil
 	}
 	return func() {
 		ts.tb.Helper()
 		ok, err := testutil.DoOrTimeout(check, deadline, 10*time.Millisecond)
-		if err != nil {
-			ts.tb.Fatal(err)
-		}
+		testutil.FatalIfErr(ts.tb, err)
 		if !ok {
-			now := TestGetMetric(ts.tb, ts.Addr(), name)
-			delta := TestMetricDelta(now, start)
-			ts.tb.Errorf("Did not see %s have delta by deadline: got %v - %v = %g, want %g", name, now, start, delta, want)
+			now := TestGetExpvar(ts.tb, name).(*expvar.Int).Value()
+			ts.tb.Errorf("Did not see %s have delta by deadline: got %v - %v = %d, want %d", name, now, start, now-start, want)
 		}
 	}
 }
 
-// ExpectMapMetricDeltaWithDeadline returns a deferrable function which tests if the expvar map metric with name and key has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
-func (ts *TestServer) ExpectMapMetricDeltaWithDeadline(name, key string, want float64) func() {
+// ExpectMapExpvarMetricDeltaWithDeadline returns a deferrable function which tests if the expvar map metric with name and key has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
+func (ts *TestServer) ExpectMapExpvarDeltaWithDeadline(name, key string, want int64) func() {
 	ts.tb.Helper()
 	deadline := ts.DoOrTimeoutDeadline
 	if deadline == 0 {
 		deadline = defaultDoOrTimeoutDeadline
 	}
-	start := TestGetMetric(ts.tb, ts.Addr(), name).(map[string]interface{})
+	startVar := TestGetExpvar(ts.tb, name).(*expvar.Map).Get(key)
+	var start int64
+	if startVar != nil {
+		start = startVar.(*expvar.Int).Value()
+	}
 	check := func() (bool, error) {
 		ts.tb.Helper()
-		now := TestGetMetric(ts.tb, ts.Addr(), name).(map[string]interface{})
-		return TestMetricDelta(now[key], start[key]) == want, nil
+		nowVar := TestGetExpvar(ts.tb, name).(*expvar.Map).Get(key)
+		var now int64
+		if nowVar != nil {
+			now = nowVar.(*expvar.Int).Value()
+		}
+		return now-start == want, nil
 	}
 	return func() {
 		ts.tb.Helper()
 		ok, err := testutil.DoOrTimeout(check, deadline, 10*time.Millisecond)
-		if err != nil {
-			ts.tb.Fatal(err)
-		}
+		testutil.FatalIfErr(ts.tb, err)
 		if !ok {
-			now := TestGetMetric(ts.tb, ts.Addr(), name).(map[string]interface{})
-			delta := TestMetricDelta(now[key], start[key])
-			ts.tb.Errorf("Did not see %s[%s] have delta by deadline: got %v - %v = %g, want %g", name, key, now[key], start[key], delta, want)
+			nowVar := TestGetExpvar(ts.tb, name).(*expvar.Map).Get(key)
+			var now int64
+			if nowVar != nil {
+				now = nowVar.(*expvar.Int).Value()
+			}
+			ts.tb.Errorf("Did not see %s[%s] have delta by deadline: got %v - %v = %d, want %d", name, key, now, start, now-start, want)
 		}
 	}
 }

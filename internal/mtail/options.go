@@ -58,9 +58,9 @@ func (opt bindAddress) apply(m *Server) error {
 	if m.listener != nil {
 		return fmt.Errorf("HTTP server bind address already supplied")
 	}
-	m.bindAddress = net.JoinHostPort(opt.address, opt.port)
+	bindAddress := net.JoinHostPort(opt.address, opt.port)
 	var err error
-	m.listener, err = net.Listen("tcp", m.bindAddress)
+	m.listener, err = net.Listen("tcp", bindAddress)
 	return err
 }
 
@@ -71,7 +71,6 @@ func (opt BindUnixSocket) apply(m *Server) error {
 	if m.listener != nil {
 		return fmt.Errorf("HTTP server bind address already supplied")
 	}
-	m.bindUnixSocket = string(opt)
 	var err error
 	m.listener, err = net.Listen("unix", string(opt))
 	return err
@@ -209,3 +208,11 @@ var OmitDumpMetricStore = &niladicOption{
 		m.omitDumpMetricsStore = true
 		return nil
 	}}
+
+// MetricPushInterval sets the interval between metrics pushes to passive collectors.
+type MetricPushInterval time.Duration
+
+func (opt MetricPushInterval) apply(m *Server) error {
+	m.metricPushInterval = time.Duration(opt)
+	return nil
+}

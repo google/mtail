@@ -24,8 +24,8 @@ func TestSoftLinkChange(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logFilepath))
 	defer stopM()
 
-	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
-	logRotationsTotalCheck := m.ExpectMapMetricDeltaWithDeadline("log_rotations_total", logFilepath, 1)
+	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
+	logRotationsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("log_rotations_total", logFilepath, 1)
 
 	trueLog1 := testutil.TestOpenFile(t, logFilepath+".true1")
 	defer trueLog1.Close()

@@ -40,9 +40,10 @@ var (
 // lines from files. It also handles new log file creation events and log
 // rotations.
 type Tailer struct {
-	w   watcher.Watcher
-	ctx context.Context
-	llp logline.Processor
+	w     watcher.Watcher
+	ctx   context.Context
+	wg    sync.WaitGroup // Wait for our routines to finish
+	lines chan<- *logline.LogLine
 
 	handlesMu sync.RWMutex   // protects `handles'
 	handles   map[string]Log // Log handles for each pathname.
@@ -54,6 +55,8 @@ type Tailer struct {
 	oneShot bool
 
 	pollMu sync.Mutex // protects Poll()
+
+	initDone chan struct{}
 }
 
 // Option configures a new Tailer.
@@ -109,20 +112,47 @@ func (opt LogPatternPollTickInterval) apply(t *Tailer) error {
 }
 
 // New creates a new Tailer.
-func New(ctx context.Context, llp logline.Processor, w watcher.Watcher, options ...Option) (*Tailer, error) {
+func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine, w watcher.Watcher, options ...Option) (*Tailer, error) {
 	if w == nil {
 		return nil, errors.New("can't create tailer without W")
 	}
 	t := &Tailer{
 		ctx:          ctx,
 		w:            w,
-		llp:          llp,
+		lines:        lines,
 		handles:      make(map[string]Log),
 		globPatterns: make(map[string]struct{}),
+		initDone:     make(chan struct{}),
 	}
+	defer close(t.initDone)
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
+	if len(t.globPatterns) == 0 {
+		glog.Info("No patterns to tail, tailer done.")
+		close(t.lines)
+		return t, nil
+	}
+	// Guarantee all existing logs get tailed before we leave.  Also necessary
+	// in case oneshot mode is active, the logs get read!
+	if err := t.PollLogPatterns(); err != nil {
+		return nil, err
+	}
+	if t.oneShot {
+		glog.Info("oneshot mode, tailer done.")
+		close(t.lines)
+		return t, nil
+	}
+	// Not oneshot, so setup for the shutdown.
+	glog.Info("added one to waitgroup")
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-t.initDone
+		<-t.ctx.Done()
+		t.wg.Wait()
+		close(t.lines)
+	}()
 	return t, nil
 }
 
@@ -326,10 +356,14 @@ func (t *Tailer) HasMeta(path string) bool {
 // openLogPath opens a log file named by pathname.
 func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	glog.V(2).Infof("openlogPath %s %v", pathname, seekToStart)
+	if t.hasHandle(pathname) {
+		glog.V(2).Infof("already opened %q", pathname)
+		return nil
+	}
 	if err := t.watchDirname(pathname); err != nil {
 		return err
 	}
-	f, err := NewLog(pathname, t.llp, seekToStart || t.oneShot)
+	f, err := NewLog(pathname, t.lines, seekToStart || t.oneShot)
 	if err != nil {
 		// Doesn't exist yet. We're watching the directory, so we'll pick it up
 		// again on create; return successfully.
@@ -352,9 +386,12 @@ func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
 	// termination.
 	if t.oneShot {
 		glog.V(2).Infof("Starting oneshot read at startup of %q", f.Pathname())
-		if err := f.Read(t.ctx); err != nil && err != io.EOF {
-			return err
+		logCount.Add(1)
+		err := f.Read(t.ctx)
+		if err == io.EOF {
+			err = nil
 		}
+		return err
 	}
 	glog.Infof("Tailing %s", f.Pathname())
 	logCount.Add(1)
@@ -399,14 +436,6 @@ func (t *Tailer) handleCreateGlob(ctx context.Context, pathname string) {
 	glog.V(2).Infof("did not start tailing %q", pathname)
 }
 
-// Close signals termination to the watcher.
-func (t *Tailer) Close() error {
-	if err := t.w.Close(); err != nil {
-		return err
-	}
-	return nil
-}
-
 // Gc removes file handles that have had no reads for 24h or more.
 func (t *Tailer) Gc() error {
 	t.handlesMu.Lock()
@@ -431,7 +460,14 @@ func (t *Tailer) StartGcLoop(duration time.Duration) {
 		glog.Info("Log handle expiration disabled")
 		return
 	}
+	t.wg.Add(1)
 	go func() {
+		defer t.wg.Done()
+		<-t.initDone
+		if t.oneShot {
+			glog.Info("No gc loop in oneshot mode.")
+			return
+		}
 		glog.Infof("Starting log handle expiry loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
 		defer ticker.Stop()
@@ -454,7 +490,14 @@ func (t *Tailer) StartLogPatternPollLoop(duration time.Duration) {
 		glog.Info("Log pattern polling disabled")
 		return
 	}
+	t.wg.Add(1)
 	go func() {
+		defer t.wg.Done()
+		<-t.initDone
+		if t.oneShot {
+			glog.Info("No polling loop in oneshot mode.")
+			return
+		}
 		glog.Infof("Starting log pattern poll loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
 		defer ticker.Stop()

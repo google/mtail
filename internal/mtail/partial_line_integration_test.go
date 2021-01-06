@@ -8,7 +8,6 @@ import (
 	"path"
 	"testing"
 
-	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
 )
@@ -33,30 +32,25 @@ func TestPartialLineRead(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	{
+	m.PollWatched() // Force sync to EOF
 
-		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
-		n, err := f.WriteString("line 1\n")
-		testutil.FatalIfErr(t, err)
-		glog.Infof("Wrote %d bytes", n)
+	{
+		lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
+		testutil.WriteString(t, f, "line 1\n")
 		m.PollWatched()
 		lineCountCheck()
 	}
 
 	{
-		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 0)
-		n, err := f.WriteString("line ")
-		testutil.FatalIfErr(t, err)
-		glog.Infof("Wrote %d bytes", n)
+		lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 0)
+		testutil.WriteString(t, f, "line ")
 		m.PollWatched()
 		lineCountCheck()
 	}
 
 	{
-		lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
-		n, err := f.WriteString("2\n")
-		testutil.FatalIfErr(t, err)
-		glog.Infof("Wrote %d bytes", n)
+		lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
+		testutil.WriteString(t, f, "2\n")
 		m.PollWatched()
 		lineCountCheck()
 	}

@@ -26,7 +26,7 @@ func TestHandleLogDeletes(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logFilepath))
 	defer stopM()
 
-	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", -1)
+	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", -1)
 
 	testutil.FatalIfErr(t, os.Remove(logFilepath))
 

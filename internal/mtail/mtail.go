@@ -13,13 +13,12 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/exporter"
+	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/vm"
@@ -33,26 +32,21 @@ import (
 
 // Server contains the state of the main mtail program.
 type Server struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	store  *metrics.Store // Metrics storage
-	w      watcher.Watcher
+	ctx   context.Context
+	store *metrics.Store // Metrics storage
+	w     watcher.Watcher
+	wg    sync.WaitGroup // wait for main processes to shutdown
 
 	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs
 	l *vm.Loader         // l loads programs and manages the VM lifecycle
 	e *exporter.Exporter // e manages the export of metrics from the store
 
+	lines chan *logline.LogLine // primary communication channel, owned by Tailer.
+
 	reg *prometheus.Registry
 
-	h        *http.Server
-	listener net.Listener
+	listener net.Listener // Configured with bind address.
 
-	webquit   chan struct{} // Channel to signal shutdown from web UI
-	closeQuit chan struct{} // Channel to signal shutdown from code
-	closeOnce sync.Once     // Ensure shutdown happens only once
-
-	bindAddress        string    // address to bind HTTP server
-	bindUnixSocket     string    // path of the UNIX socket to bind HTTP server
 	buildInfo          BuildInfo // go build information
 	programPath        string    // path to programs to load
 	logPathPatterns    []string  // list of patterns to watch for log files to tail
@@ -68,23 +62,12 @@ type Server struct {
 	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
 	staleLogGcTickInterval      time.Duration  // Interval between stale log gc runs
 	logPatternPollTickInterval  time.Duration  // Interval between log pattern polls
+	metricPushInterval          time.Duration  // Interval between metric pushes
 	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
 	omitMetricSource            bool           // if set, do not link the source program to a metric
 	omitProgLabel               bool           // if set, do not put the program name in the metric labels
 	emitMetricTimestamp         bool           // if set, emit the metric's recorded timestamp
 	omitDumpMetricsStore        bool           // if set, do not print the metric store; useful in test
-}
-
-// StartTailing adds each log path pattern to the tailer.
-func (m *Server) StartTailing() error {
-	var err error
-	for _, pattern := range m.logPathPatterns {
-		glog.V(1).Infof("Tail pattern %q", pattern)
-		if err = m.t.TailPattern(pattern); err != nil {
-			glog.Warning(err)
-		}
-	}
-	return nil
 }
 
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
@@ -117,15 +100,9 @@ func (m *Server) initLoader() error {
 		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
 	}
 	var err error
-	m.l, err = vm.NewLoader(m.ctx, m.programPath, m.store, opts...)
+	m.l, err = vm.NewLoader(m.lines, &m.wg, m.programPath, m.store, opts...)
 	if err != nil {
 		return err
-	}
-	if m.programPath == "" {
-		return nil
-	}
-	if errs := m.l.LoadAllPrograms(); errs != nil {
-		return errors.Errorf("Compile encountered errors:\n%s", errs)
 	}
 	return nil
 }
@@ -139,7 +116,10 @@ func (m *Server) initExporter() (err error) {
 	if m.emitMetricTimestamp {
 		opts = append(opts, exporter.EmitTimestamp())
 	}
-	m.e, err = exporter.New(m.store, opts...)
+	if m.metricPushInterval > 0 {
+		opts = append(opts, exporter.PushInterval(m.metricPushInterval))
+	}
+	m.e, err = exporter.New(m.ctx, &m.wg, m.store, opts...)
 	if err != nil {
 		return err
 	}
@@ -153,7 +133,7 @@ func (m *Server) initExporter() (err error) {
 	return nil
 }
 
-// initTailer sets up a Tailer for this Server.
+// initTailer sets up and starts a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
 	opts := []tailer.Option{
 		tailer.LogPatternPollTickInterval(m.logPatternPollTickInterval),
@@ -168,24 +148,95 @@ func (m *Server) initTailer() (err error) {
 	if len(m.logPathPatterns) > 0 {
 		opts = append(opts, tailer.LogPatterns(m.logPathPatterns))
 	}
-	m.t, err = tailer.New(m.ctx, m.l, m.w, opts...)
+	m.t, err = tailer.New(m.ctx, &m.wg, m.lines, m.w, opts...)
 	return
 }
 
-// New creates a MtailServer from the supplied Options.
+// initHttpServer begins the http server.
+func (m *Server) initHttpServer() error {
+	initDone := make(chan struct{})
+	defer close(initDone)
+
+	if m.listener == nil {
+		glog.Info("no listen address configured, not starting http server")
+		return nil
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/favicon.ico", FaviconHandler)
+	mux.Handle("/", m)
+	mux.Handle("/progz", http.HandlerFunc(m.l.ProgzHandler))
+	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
+	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
+	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
+	mux.Handle("/debug/vars", expvar.Handler())
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	zpages.Handle(mux, "/")
+
+	srv := &http.Server{
+		Handler: mux,
+	}
+
+	var wg sync.WaitGroup
+	errc := make(chan error, 1)
+
+	// This goroutine runs the http server.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-initDone
+		glog.Infof("Listening on %s", m.listener.Addr())
+		if err := srv.Serve(m.listener); err != nil && err != http.ErrServerClosed {
+			errc <- err
+		}
+	}()
+
+	// This goroutine manages http server shutdown.
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+		<-initDone
+		select {
+		case err := <-errc:
+			glog.Info(err)
+		case <-m.ctx.Done():
+			glog.Info("Shutdown requested.")
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			srv.SetKeepAlivesEnabled(false)
+			if err := srv.Shutdown(ctx); err != nil {
+				glog.Info(err)
+			}
+		}
+		wg.Wait()
+	}()
+
+	return nil
+}
+
+// New creates a Server from the supplied Options.  The Server is started by
+// the time New returns, it watches the LogPatterns for files, starts tailing
+// their changes and sends any new lines found to the virtual machines loaded
+// from ProgramPath. If OneShot mode is enabled, it will exit after reading
+// each log file from start to finish.
+// TODO(jaq): this doesn't need to be a constructor anymore, it could start and
+// block until quit, once TestServer.PollWatched is addressed.
 func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
-		store:     store,
-		w:         w,
-		webquit:   make(chan struct{}),
-		closeQuit: make(chan struct{}),
-		h:         &http.Server{},
+		ctx:   ctx,
+		store: store,
+		w:     w,
+		lines: make(chan *logline.LogLine),
 		// Using a non-pedantic registry means we can be looser with metrics that
 		// are not fully specified at startup.
 		reg: prometheus.NewRegistry(),
 	}
-	m.ctx, m.cancel = context.WithCancel(ctx)
 
+	// TODO(jaq): Should these move to initExporter?
 	expvarDescs := map[string]*prometheus.Desc{
 		// internal/tailer/file.go
 		"log_errors_total":    prometheus.NewDesc("log_errors_total", "number of IO errors encountered per log file", []string{"logfile"}, nil),
@@ -216,6 +267,9 @@ func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options .
 	if err := m.initTailer(); err != nil {
 		return nil, err
 	}
+	if err := m.initHttpServer(); err != nil {
+		return nil, err
+	}
 	return m, nil
 }
 
@@ -242,123 +296,15 @@ func (m *Server) WriteMetrics(w io.Writer) error {
 	return err
 }
 
-// Serve begins the webserver and awaits a shutdown instruction.
-func (m *Server) Serve() error {
-	if m.bindAddress == "" && m.bindUnixSocket == "" {
-		return errors.Errorf("No bind address provided.")
-	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/favicon.ico", FaviconHandler)
-	mux.Handle("/", m)
-	mux.Handle("/progz", http.HandlerFunc(m.l.ProgzHandler))
-	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
-	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
-	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
-	mux.HandleFunc("/quitquitquit", http.HandlerFunc(m.quitHandler))
-	mux.Handle("/debug/vars", expvar.Handler())
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	zpages.Handle(mux, "/")
-	m.h.Handler = mux
-	m.e.StartMetricPush()
-
-	errc := make(chan error, 1)
-	go func() {
-		if m.bindAddress != "" {
-			glog.Infof("Listening on %s", m.listener.Addr())
-		} else {
-			glog.Infof("Listening on UNIX socket %s", m.bindUnixSocket)
-		}
-
-		err := m.h.Serve(m.listener)
-
-		if err == http.ErrServerClosed {
-			err = nil
-		}
-		errc <- err
-	}()
-	m.WaitForShutdown()
-	return <-errc
-}
-
-// WaitForShutdown handles shutdown requests from the system or the UI.
-func (m *Server) WaitForShutdown() {
-	n := make(chan os.Signal, 1)
-	signal.Notify(n, os.Interrupt, syscall.SIGTERM)
-	select {
-	case <-m.ctx.Done():
-		glog.Info("External shutdown, exiting...")
-	case <-n:
-		glog.Info("Received SIGTERM, exiting...")
-	case <-m.webquit:
-		glog.Info("Received Quit from HTTP, exiting...")
-	case <-m.closeQuit:
-		glog.Info("Received quit internally, exiting...")
-	}
-	if err := m.Close(false); err != nil {
-		glog.Warning(err)
-	}
-}
-
-// Close handles the graceful shutdown of this mtail instance, ensuring that it
-// only occurs once.  If fast is true, then the http server is shutdown without
-// waiting.
-func (m *Server) Close(fast bool) error {
-	m.closeOnce.Do(func() {
-		glog.Info("Shutdown requested.")
-		close(m.closeQuit)
-		// Ensure we're cancelling our child context just in case Close is
-		// called outside context cancellation.
-		m.cancel()
-		// If we have a tailer (i.e. not in test) then signal the tailer to
-		// shut down, which will cause the watcher to shut down.
-		if m.t != nil {
-			err := m.t.Close()
-			if err != nil {
-				glog.Infof("tailer close failed: %s", err)
-			}
-		}
-		// If we have a loader, shut it down.
-		if m.l != nil {
-			m.l.Close()
-		} else {
-			glog.V(2).Info("No loader, so not waiting for loader shutdown.")
-		}
-		if m.h != nil {
-			glog.Info("Shutting down http server")
-			if fast {
-				m.h.Close()
-			} else {
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				if err := m.h.Shutdown(ctx); err != nil {
-					glog.Error(err)
-				}
-				cancel()
-			}
-		}
-		glog.Info("END OF LINE")
-	})
-	return nil
-}
-
-// Run starts MtailServer's primary function, in which it watches the log files
-// for changes and sends any new lines found to the virtual machines. If
-// OneShot mode is enabled, it will exit.
+// Run awaits mtail's shutdown.
+// TODO(jaq): remove this once the test server is able to trigger polls on the components.
 func (m *Server) Run() error {
+	defer m.wg.Wait()
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
 		return nil
 	}
-	if err := m.StartTailing(); err != nil {
-		return err
-	}
 	if m.oneShot {
-		if err := m.Close(true); err != nil {
-			return err
-		}
 		if m.omitDumpMetricsStore {
 			glog.Info("Store dump disabled, exiting")
 			return nil
@@ -369,15 +315,5 @@ func (m *Server) Run() error {
 		}
 		return nil
 	}
-	if err := m.Serve(); err != nil {
-		return err
-	}
 	return nil
-}
-
-func (m *Server) Addr() string {
-	if m.listener == nil {
-		return "none"
-	}
-	return m.listener.Addr().String()
 }

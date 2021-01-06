@@ -5,7 +5,7 @@ export GO111MODULE ?= auto
 # Build these.
 TARGETS = mtail mgen mdot mfmt
 
-GO_TEST_FLAGS ?= -cpu 1,2,4
+GO_TEST_FLAGS ?= 
 BENCH_COUNT ?= 1
 BASE_REF ?= master
 HEAD_REF ?= $(shell git symbolic-ref HEAD --short | tr / - 2>/dev/null)
@@ -32,13 +32,13 @@ $(DEPDIR)/%.d: ;
 -include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
 
 # Set the timeout for tests run under the race detector.
-timeout := 60s
+timeout := 120s
 ifeq ($(CI),true)
 timeout := 20m
 endif
 # Let the benchmarks run for a long time.  The timeout is for the total time of
 # all benchmarks, not per bench.
-benchtimeout := 20m
+benchtimeout := 60m
 
 # Be verbose with `go get`, if UPDATE is y then also update dependencies.
 GOGETFLAGS = -v
@@ -196,7 +196,7 @@ TESTCOVERPROFILE ?= out.coverprofile
 junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
-	gotestsum --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
+	gotestsum --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -cpu 1,2,4 -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 .PHONY: bench
 bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt $(TESTRESULTS)/benchstat.html

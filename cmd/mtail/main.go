@@ -8,8 +8,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/golang/glog"
@@ -60,6 +62,7 @@ var (
 	pollInterval                = flag.Duration("poll_interval", 250*time.Millisecond, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
 	expiredMetricGcTickInterval = flag.Duration("expired_metrics_gc_interval", time.Hour, "interval between expired metric garbage collection runs")
 	staleLogGcTickInterval      = flag.Duration("stale_log_gc_interval", time.Hour, "interval between stale log garbage collection runs")
+	metricPushInterval          = flag.Duration("metric_push_interval", time.Minute, "interval between metric pushes to passive collectors")
 
 	// Debugging flags
 	blockProfileRate     = flag.Int("block_profile_rate", 0, "Nanoseconds of block time before goroutine blocking events reported. 0 turns off.  See https://golang.org/pkg/runtime/#SetBlockProfileRate")
@@ -71,6 +74,7 @@ var (
 
 	// Deprecated
 	_ = flag.Bool("disable_fsnotify", true, "DEPRECATED: this flag is no longer in use.")
+	_ = flag.Int("metric_push_interval_seconds", 0, "DEPRECATED: use --metric_push_interval instead")
 )
 
 func init() {
@@ -138,12 +142,22 @@ func main() {
 		glog.Infof("no poll interval specified; defaulting to 250ms poll")
 		*pollInterval = time.Millisecond * 250
 	}
-	w, err := watcher.NewLogWatcher(*pollInterval)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		sig := <-sigint
+		glog.Infof("Received %+v, exiting...", sig)
+		cancel()
+	}()
+
+	w, err := watcher.NewLogWatcher(ctx, *pollInterval)
 	if err != nil {
 		glog.Exitf("Failure to create log watcher: %s", err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	opts := []mtail.Option{
 		mtail.ProgramPath(*progs),
 		mtail.LogPathPatterns(logs...),
@@ -152,6 +166,7 @@ func main() {
 		mtail.OverrideLocation(loc),
 		mtail.StaleLogGcTickInterval(*staleLogGcTickInterval),
 		mtail.LogPatternPollTickInterval(*pollInterval),
+		mtail.MetricPushInterval(*metricPushInterval),
 	}
 	if *unixSocket == "" {
 		opts = append(opts, mtail.BindAddress(*address, *port))

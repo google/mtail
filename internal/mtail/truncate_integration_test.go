@@ -25,14 +25,14 @@ func TestTruncatedLogRead(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
+	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
 
 	logFile := path.Join(logDir, "log")
 	f := testutil.TestOpenFile(t, logFile)
 	m.PollWatched()
 
 	{
-		linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+		linesCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
 		testutil.WriteString(t, f, "1\n")
 		m.PollWatched()
 		linesCountCheck()
@@ -44,7 +44,7 @@ func TestTruncatedLogRead(t *testing.T) {
 	// Ensure the server notices the truncate
 	m.PollWatched()
 	{
-		linesCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+		linesCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
 		testutil.WriteString(t, f, "2\n")
 		m.PollWatched()
 		linesCountCheck()

@@ -24,8 +24,8 @@ func TestPollLogPathPatterns(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
 	defer stopM()
 
-	logCountCheck := m.ExpectMetricDeltaWithDeadline("log_count", 1)
-	lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 1)
+	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
+	lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
 
 	logFile := path.Join(logDir, "files", "a", "log", "a.log")
 	testutil.FatalIfErr(t, os.MkdirAll(path.Dir(logFile), 0700))

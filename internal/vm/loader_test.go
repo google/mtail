@@ -4,30 +4,33 @@
 package vm
 
 import (
-	"context"
 	"path"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/testutil"
 )
 
 func TestNewLoader(t *testing.T) {
 	store := metrics.NewStore()
-	ctx, cancel := context.WithCancel(context.Background())
-	_, err := NewLoader(ctx, "", store)
+	lines := make(chan *logline.LogLine)
+	var wg sync.WaitGroup
+	_, err := NewLoader(lines, &wg, "", store)
 	testutil.FatalIfErr(t, err)
-	cancel()
+	close(lines)
+	wg.Wait()
 }
 
 func TestCompileAndRun(t *testing.T) {
 	var testProgram = "/$/ {}\n"
 	store := metrics.NewStore()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	l, err := NewLoader(ctx, "", store)
+	lines := make(chan *logline.LogLine)
+	var wg sync.WaitGroup
+	l, err := NewLoader(lines, &wg, "", store)
 	testutil.FatalIfErr(t, err)
 	if err := l.CompileAndRun("Test", strings.NewReader(testProgram)); err != nil {
 		t.Errorf("CompileAndRun returned error: %s", err)
@@ -43,6 +46,8 @@ func TestCompileAndRun(t *testing.T) {
 		t.Errorf("No handle for Test: %v", l.handles)
 	}
 	l.handleMu.Unlock()
+	close(lines)
+	wg.Wait()
 }
 
 var testProgram = "/$/ {}\n"
@@ -57,9 +62,9 @@ func TestLoadProg(t *testing.T) {
 	store := metrics.NewStore()
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	l, err := NewLoader(ctx, tmpDir, store)
+	lines := make(chan *logline.LogLine)
+	var wg sync.WaitGroup
+	l, err := NewLoader(lines, &wg, tmpDir, store)
 	testutil.FatalIfErr(t, err)
 
 	for _, name := range testProgFiles {
@@ -70,4 +75,6 @@ func TestLoadProg(t *testing.T) {
 		err = l.LoadProgram(path.Join(tmpDir, name))
 		testutil.FatalIfErr(t, err)
 	}
+	close(lines)
+	wg.Wait()
 }

@@ -27,7 +27,6 @@ type Watcher interface {
 	Observe(name string, processor Processor) error
 	Unobserve(name string, processor Processor) error
 	Poll()
-	Close() error
 }
 
 // Processor describes an interface for receiving watcher.Events

@@ -4,10 +4,7 @@
 package mtail
 
 import (
-	"fmt"
 	"html/template"
-	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/golang/glog"
@@ -38,7 +35,7 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		BindAddress string
 		BuildInfo   string
 	}{
-		m.bindAddress,
+		m.listener.Addr().String(),
 		m.buildInfo.String(),
 	}
 	w.Header().Add("Content-type", "text/html")
@@ -63,16 +60,4 @@ func FaviconHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write(logoFavicon); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-}
-
-// quitHandler is used to request shutdown of the server remotely.
-func (m *Server) quitHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		w.Header().Add("Allow", "POST")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	io.Copy(ioutil.Discard, r.Body)
-	fmt.Fprintf(w, "Exiting...")
-	close(m.webquit)
 }

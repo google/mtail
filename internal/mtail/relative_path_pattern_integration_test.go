@@ -36,8 +36,10 @@ func TestRelativeLog(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(pathnames...))
 	defer stopM()
 
+	m.PollWatched() // Force sync to EOF
+
 	inputLines := []string{"hi", "hi2", "hi3"}
-	lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", float64(len(inputLines)))
+	lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", int64(len(inputLines)))
 
 	for _, x := range inputLines {
 		// write to log file

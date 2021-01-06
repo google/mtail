@@ -30,7 +30,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.opencensus.io/trace"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
@@ -91,6 +90,7 @@ func (l *Loader) LoadAllPrograms() error {
 
 // LoadProgram loads or reloads a program from the full pathname programPath.  The name of
 // the program is the basename of the file.
+// TODO(jaq): store a hash of the program so we don't reload on no change.
 func (l *Loader) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)
 	if strings.HasPrefix(name, ".") {
@@ -184,7 +184,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 		if progRuntimeErrors.Get(name) != nil {
 			data.RuntimeErrors[name] = progRuntimeErrors.Get(name).String()
 		}
-		data.RuntimeErrorString[name] = l.handles[name].RuntimeErrorString()
+		data.RuntimeErrorString[name] = l.handles[name].vm.RuntimeErrorString()
 	}
 	return t.Execute(w, data)
 }
@@ -232,9 +232,20 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
-
-	l.handles[name] = v
+	// Terminates the existing vm.
+	if handle, ok := l.handles[name]; ok {
+		close(handle.lines)
+	}
+	lines := make(chan *logline.LogLine)
+	l.handles[name] = &vmHandle{vm: v, lines: lines}
+	l.wg.Add(1)
+	go v.Run(lines, &l.wg)
 	return nil
+}
+
+type vmHandle struct {
+	vm    *VM
+	lines chan *logline.LogLine
 }
 
 // Loader handles the lifecycle of programs and virtual machines, by watching
@@ -242,12 +253,13 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 // managing the virtual machines.
 type Loader struct {
 	ctx         context.Context       // a cancellable context
+	wg          sync.WaitGroup        // used to await vm shutdown
 	ms          *metrics.Store        // pointer to metrics.Store to pass to compiler
 	reg         prometheus.Registerer // plce to reg metrics
 	programPath string                // Path that contains mtail programs.
 
-	handleMu sync.RWMutex   // guards accesses to handles
-	handles  map[string]*VM // map of program names to virtual machines
+	handleMu sync.RWMutex         // guards accesses to handles
+	handles  map[string]*vmHandle // map of program names to virtual machines
 
 	programErrorMu sync.RWMutex     // guards access to programErrors
 	programErrors  map[string]error // errors from the last compile attempt of the program
@@ -262,6 +274,7 @@ type Loader struct {
 	omitMetricSource     bool
 
 	signalQuit chan struct{} // When closed stops the signal handler goroutine.
+	initDone   chan struct{} // When closed, the initialisation has completed.
 }
 
 // Option configures a new program Loader.
@@ -335,36 +348,66 @@ func OmitMetricSource() Option {
 func PrometheusRegisterer(reg prometheus.Registerer) Option {
 	return func(l *Loader) error {
 		l.reg = reg
+		l.reg.MustRegister(lineProcessingDurations)
 		return nil
 	}
 }
 
 // NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(ctx context.Context, programPath string, store *metrics.Store, options ...Option) (*Loader, error) {
+func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, store *metrics.Store, options ...Option) (*Loader, error) {
 	if store == nil {
 		return nil, errors.New("loader needs a store")
 	}
 	l := &Loader{
-		ctx:           ctx,
 		ms:            store,
 		programPath:   programPath,
-		handles:       make(map[string]*VM),
+		handles:       make(map[string]*vmHandle),
 		programErrors: make(map[string]error),
 		signalQuit:    make(chan struct{}),
+		initDone:      make(chan struct{}),
 	}
+	defer close(l.initDone)
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
 	}
-	if l.reg != nil {
-		l.reg.MustRegister(lineProcessingDurations)
-	}
+	// This goroutine is the main consumer/producer loop and shutdown.
+	wg.Add(1)
 	go func() {
+		defer wg.Done() // signal to owner we're done
+		<-l.initDone
+		for line := range lines {
+			LineCount.Add(1)
+			l.handleMu.RLock()
+			for prog := range l.handles {
+				l.handles[prog].lines <- line
+			}
+			l.handleMu.RUnlock()
+		}
+		glog.Info("END OF LINE")
+		close(l.signalQuit)
+		l.handleMu.Lock()
+		for prog := range l.handles {
+			close(l.handles[prog].lines)
+			delete(l.handles, prog)
+		}
+		l.handleMu.Unlock()
+		l.wg.Wait()
+	}()
+	if l.programPath == "" {
+		glog.Info("No program path specified, no programs will be loaded.")
+		return l, nil
+	}
+	// Create one goroutine that handles reload signals.
+	l.wg.Add(1)
+	go func() {
+		defer l.wg.Done()
+		<-l.initDone
 		n := make(chan os.Signal, 1)
 		signal.Notify(n, syscall.SIGHUP)
 		defer signal.Stop(n)
 		for {
 			select {
-			case <-ctx.Done():
+			case <-l.signalQuit:
 				return
 			case <-n:
 				if err := l.LoadAllPrograms(); err != nil {
@@ -373,6 +416,10 @@ func NewLoader(ctx context.Context, programPath string, store *metrics.Store, op
 			}
 		}
 	}()
+	// Guarantee all existing programmes get loaded before we leave.
+	if err := l.LoadAllPrograms(); err != nil {
+		return nil, err
+	}
 	return l, nil
 }
 
@@ -384,27 +431,6 @@ func (l *Loader) SetOption(options ...Option) error {
 		}
 	}
 	return nil
-}
-
-func (l *Loader) Close() {
-	glog.Info("Shutting down loader.")
-	l.handleMu.Lock()
-	defer l.handleMu.Unlock()
-	for prog := range l.handles {
-		delete(l.handles, prog)
-	}
-}
-
-// ProcessLogLine satisfies the LogLine.Processor interface.
-func (l *Loader) ProcessLogLine(ctx context.Context, ll *logline.LogLine) {
-	ctx, span := trace.StartSpan(ctx, "Loader.ProcessLogLine")
-	defer span.End()
-	LineCount.Add(1)
-	l.handleMu.RLock()
-	defer l.handleMu.RUnlock()
-	for prog := range l.handles {
-		l.handles[prog].ProcessLogLine(ctx, ll)
-	}
 }
 
 // UnloadProgram removes the named program, any currently running VM goroutine.
@@ -421,14 +447,14 @@ func (l *Loader) ProgzHandler(w http.ResponseWriter, r *http.Request) {
 	prog := r.URL.Query().Get("prog")
 	if prog != "" {
 		l.handleMu.RLock()
-		v, ok := l.handles[prog]
+		handle, ok := l.handles[prog]
 		l.handleMu.RUnlock()
 		if !ok {
 			http.Error(w, "No program found", http.StatusNotFound)
 			return
 		}
-		fmt.Fprintf(w, v.DumpByteCode())
-		fmt.Fprintf(w, "\nLast runtime error:\n%s", v.RuntimeErrorString())
+		fmt.Fprintf(w, handle.vm.DumpByteCode())
+		fmt.Fprintf(w, "\nLast runtime error:\n%s", handle.vm.RuntimeErrorString())
 		return
 	}
 	l.handleMu.RLock()
