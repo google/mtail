@@ -383,7 +383,7 @@ func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath st
 			}
 			l.handleMu.RUnlock()
 		}
-		glog.Info("Shutting down loader.")
+		glog.Info("END OF LINE")
 		close(l.signalQuit)
 		l.handleMu.Lock()
 		for prog := range l.handles {

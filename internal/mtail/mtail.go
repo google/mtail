@@ -316,6 +316,5 @@ func (m *Server) Run() error {
 		return nil
 	}
 	m.wg.Wait()
-	glog.Info("END OF LINE")
 	return nil
 }
