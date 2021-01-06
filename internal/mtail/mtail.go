@@ -218,8 +218,13 @@ func (m *Server) initHttpServer() error {
 	return nil
 }
 
-// New creates a MtailServer from the supplied Options.
-// TODO(jaq): this doesn't need to be a constructor anymore, it could start and block until quit, once TestServer.PollWatched is addressed.
+// New creates a Server from the supplied Options.  The Server is started by
+// the time New returns, it watches the LogPatterns for files, starts tailing
+// their changes and sends any new lines found to the virtual machines loaded
+// from ProgramPath. If OneShot mode is enabled, it will exit after reading
+// each log file from start to finish.
+// TODO(jaq): this doesn't need to be a constructor anymore, it could start and
+// block until quit, once TestServer.PollWatched is addressed.
 func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
 		ctx:   ctx,
@@ -231,6 +236,7 @@ func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options .
 		reg: prometheus.NewRegistry(),
 	}
 
+	// TODO(jaq): Should these move to initExporter?
 	expvarDescs := map[string]*prometheus.Desc{
 		// internal/tailer/file.go
 		"log_errors_total":    prometheus.NewDesc("log_errors_total", "number of IO errors encountered per log file", []string{"logfile"}, nil),
@@ -290,9 +296,8 @@ func (m *Server) WriteMetrics(w io.Writer) error {
 	return err
 }
 
-// Run starts MtailServer's primary function, in which it watches the log files
-// for changes and sends any new lines found to the virtual machines. If
-// OneShot mode is enabled, it will exit.
+// Run awaits mtail's shutdown.
+// TODO(jaq): remove this once the test server is able to trigger polls on the components.
 func (m *Server) Run() error {
 	defer m.wg.Wait()
 	if m.compileOnly {
