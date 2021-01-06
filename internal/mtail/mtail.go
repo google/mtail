@@ -134,7 +134,7 @@ func (m *Server) initExporter() (err error) {
 	return nil
 }
 
-// initTailer sets up a Tailer for this Server.
+// initTailer sets up and starts a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
 	opts := []tailer.Option{
 		tailer.LogPatternPollTickInterval(m.logPatternPollTickInterval),
@@ -153,8 +153,74 @@ func (m *Server) initTailer() (err error) {
 	return
 }
 
+// initHttpServer begins the http server.
+func (m *Server) initHttpServer() error {
+	initDone := make(chan struct{})
+	defer close(initDone)
+
+	if m.listener == nil {
+		glog.Info("no listen address configured, not starting http server")
+		return nil
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/favicon.ico", FaviconHandler)
+	mux.Handle("/", m)
+	mux.Handle("/progz", http.HandlerFunc(m.l.ProgzHandler))
+	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
+	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
+	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
+	mux.Handle("/debug/vars", expvar.Handler())
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	zpages.Handle(mux, "/")
+
+	srv := &http.Server{
+		Handler: mux,
+	}
+
+	var wg sync.WaitGroup
+	errc := make(chan error, 1)
+
+	// This goroutine runs the http server.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-initDone
+		glog.Infof("Listening on %s", m.listener.Addr())
+		if err := srv.Serve(m.listener); err != nil && err != http.ErrServerClosed {
+			errc <- err
+		}
+	}()
+
+	// This goroutine manages http server shutdown.
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+		<-initDone
+		select {
+		case err := <-errc:
+			glog.Info(err)
+		case <-m.ctx.Done():
+			glog.Info("Shutdown requested.")
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			srv.SetKeepAlivesEnabled(false)
+			if err := srv.Shutdown(ctx); err != nil {
+				glog.Info(err)
+			}
+		}
+		wg.Wait()
+	}()
+
+	return nil
+}
+
 // New creates a MtailServer from the supplied Options.
-// TODO(jaq): this doesn't need to be a constructor anymore, it could start and block until quit.
+// TODO(jaq): this doesn't need to be a constructor anymore, it could start and block until quit, once TestServer.PollWatched is addressed.
 func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
 		store: store,
@@ -196,6 +262,9 @@ func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options .
 	if err := m.initTailer(); err != nil {
 		return nil, err
 	}
+	if err := m.initHttpServer(); err != nil {
+		return nil, err
+	}
 	return m, nil
 }
 
@@ -222,51 +291,6 @@ func (m *Server) WriteMetrics(w io.Writer) error {
 	return err
 }
 
-// Serve begins the webserver and awaits a shutdown instruction.
-func (m *Server) Serve() error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/favicon.ico", FaviconHandler)
-	mux.Handle("/", m)
-	mux.Handle("/progz", http.HandlerFunc(m.l.ProgzHandler))
-	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
-	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
-	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
-	mux.Handle("/debug/vars", expvar.Handler())
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	zpages.Handle(mux, "/")
-
-	srv := &http.Server{
-		Handler: mux,
-	}
-
-	errc := make(chan error, 1)
-	go func() {
-		glog.Infof("Listening on %s", m.listener.Addr())
-		if err := srv.Serve(m.listener); err != nil && err != http.ErrServerClosed {
-			errc <- err
-		}
-	}()
-
-	select {
-	case err := <-errc:
-		return err
-	case <-m.ctx.Done():
-		glog.Info("Shutdown requested.")
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		srv.SetKeepAlivesEnabled(false)
-		if err := srv.Shutdown(ctx); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // Run starts MtailServer's primary function, in which it watches the log files
 // for changes and sends any new lines found to the virtual machines. If
 // OneShot mode is enabled, it will exit.
@@ -291,9 +315,7 @@ func (m *Server) Run() error {
 		}
 		return nil
 	}
-	if err := m.Serve(); err != nil {
-		return err
-	}
+	m.wg.Wait()
 	glog.Info("END OF LINE")
 	return nil
 }
