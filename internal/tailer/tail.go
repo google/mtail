@@ -128,18 +128,26 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
+	// Guarantee all existing logs get tailed before we leave.  Also necessary
+	// in case oneshot mode is active, the logs get read!
+	if err := t.PollLogPatterns(); err != nil {
+		return nil, err
+	}
+	if t.oneShot {
+		glog.Info("oneshot mode, tailer done.")
+		close(t.lines)
+		return t, nil
+	}
+	// Not oneshot, so setup for the shutdown.
+	glog.Info("added one to waitgroup")
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		<-t.initDone
-		<-ctx.Done()
+		<-t.ctx.Done()
 		t.wg.Wait()
 		close(t.lines)
 	}()
-	// Guarantee all existing logs get tailed before we leave.
-	if err := t.PollLogPatterns(); err != nil {
-		return nil, err
-	}
 	return t, nil
 }
 
@@ -451,6 +459,10 @@ func (t *Tailer) StartGcLoop(duration time.Duration) {
 	go func() {
 		defer t.wg.Done()
 		<-t.initDone
+		if t.oneShot {
+			glog.Info("No gc loop in oneshot mode.")
+			return
+		}
 		glog.Infof("Starting log handle expiry loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
 		defer ticker.Stop()
@@ -477,6 +489,10 @@ func (t *Tailer) StartLogPatternPollLoop(duration time.Duration) {
 	go func() {
 		defer t.wg.Done()
 		<-t.initDone
+		if t.oneShot {
+			glog.Info("No polling loop in oneshot mode.")
+			return
+		}
 		glog.Infof("Starting log pattern poll loop every %s", duration.String())
 		ticker := time.NewTicker(duration)
 		defer ticker.Stop()
