@@ -111,10 +111,11 @@ func New(ctx context.Context, wg *sync.WaitGroup, store *metrics.Store, options 
 	}
 	e.StartMetricPush()
 
-	// This routine manages shutdown of the Exporter.
-	wg.Add(1)
+	// This routine manages shutdown of the Exporter.  TODO(jaq): This doesn't
+	// happen before mtail returns because of how context cancellation is set
+	// up..  How can we tie this shutdown in before mtail exits?  Should
+	// exporter be merged with httpserver?
 	go func() {
-		defer wg.Done()
 		<-e.initDone
 		<-e.ctx.Done()
 		e.wg.Wait()
