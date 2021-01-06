@@ -128,6 +128,11 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
+	if len(t.globPatterns) == 0 {
+		glog.Info("No patterns to tail, tailer done.")
+		close(t.lines)
+		return t, nil
+	}
 	// Guarantee all existing logs get tailed before we leave.  Also necessary
 	// in case oneshot mode is active, the logs get read!
 	if err := t.PollLogPatterns(); err != nil {

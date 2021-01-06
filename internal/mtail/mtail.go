@@ -32,11 +32,10 @@ import (
 
 // Server contains the state of the main mtail program.
 type Server struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	store  *metrics.Store // Metrics storage
-	w      watcher.Watcher
-	wg     sync.WaitGroup // wait for main processes to shutdown
+	ctx   context.Context
+	store *metrics.Store // Metrics storage
+	w     watcher.Watcher
+	wg    sync.WaitGroup // wait for main processes to shutdown
 
 	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs
 	l *vm.Loader         // l loads programs and manages the VM lifecycle
@@ -223,6 +222,7 @@ func (m *Server) initHttpServer() error {
 // TODO(jaq): this doesn't need to be a constructor anymore, it could start and block until quit, once TestServer.PollWatched is addressed.
 func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
 	m := &Server{
+		ctx:   ctx,
 		store: store,
 		w:     w,
 		lines: make(chan *logline.LogLine),
@@ -230,7 +230,6 @@ func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options .
 		// are not fully specified at startup.
 		reg: prometheus.NewRegistry(),
 	}
-	m.ctx, m.cancel = context.WithCancel(ctx)
 
 	expvarDescs := map[string]*prometheus.Desc{
 		// internal/tailer/file.go
@@ -295,11 +294,7 @@ func (m *Server) WriteMetrics(w io.Writer) error {
 // for changes and sends any new lines found to the virtual machines. If
 // OneShot mode is enabled, it will exit.
 func (m *Server) Run() error {
-	defer func() {
-		// TODO(jaq): Do we need this cancel func for test?
-		m.cancel()
-		m.wg.Wait()
-	}()
+	defer m.wg.Wait()
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
 		return nil
@@ -315,6 +310,5 @@ func (m *Server) Run() error {
 		}
 		return nil
 	}
-	m.wg.Wait()
 	return nil
 }

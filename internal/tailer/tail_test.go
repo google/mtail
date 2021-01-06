@@ -24,7 +24,7 @@ func makeTestTail(t *testing.T) (*Tailer, chan *logline.LogLine, *watcher.FakeWa
 	w := watcher.NewFakeWatcher()
 	lines := make(chan *logline.LogLine, 5) // 5 loglines ought to be enough for any test
 	var wg sync.WaitGroup
-	ta, err := New(ctx, &wg, lines, w)
+	ta, err := New(ctx, &wg, lines, w, LogPatterns([]string{tmpDir}))
 	testutil.FatalIfErr(t, err)
 	return ta, lines, w, tmpDir, rmTmpDir, func() { cancel(); wg.Wait() }
 }

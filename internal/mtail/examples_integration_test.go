@@ -187,8 +187,10 @@ func TestCompileExamplePrograms(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
-			_, err := mtail.New(ctx, s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
+			mtail, err := mtail.New(ctx, s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
 			testutil.FatalIfErr(t, err)
+			// Ensure that run shuts down for CompileOnly
+			testutil.FatalIfErr(t, mtail.Run())
 			cancel()
 		})
 	}
