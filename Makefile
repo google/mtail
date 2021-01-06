@@ -5,7 +5,7 @@ export GO111MODULE ?= auto
 # Build these.
 TARGETS = mtail mgen mdot mfmt
 
-GO_TEST_FLAGS ?= -cpu 1,2,4
+GO_TEST_FLAGS ?= 
 BENCH_COUNT ?= 1
 BASE_REF ?= master
 HEAD_REF ?= $(shell git symbolic-ref HEAD --short | tr / - 2>/dev/null)
@@ -196,7 +196,7 @@ TESTCOVERPROFILE ?= out.coverprofile
 junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
-	gotestsum --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
+	gotestsum --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -cpu 1,2,4 -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 .PHONY: bench
 bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt $(TESTRESULTS)/benchstat.html
