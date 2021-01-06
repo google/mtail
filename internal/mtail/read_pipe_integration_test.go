@@ -39,7 +39,7 @@ func TestReadFromPipe(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
 	defer stopM()
 
-	lineCountCheck := m.ExpectMetricDeltaWithDeadline("lines_total", 3)
+	lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 3)
 
 	testutil.WriteString(t, f, "1\n2\n3\n")
 	m.PollWatched()
