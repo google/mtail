@@ -232,7 +232,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
-
+	// Terminates the existing vm.
 	if handle, ok := l.handles[name]; ok {
 		close(handle.lines)
 	}
@@ -388,6 +388,7 @@ func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath st
 		l.handleMu.Lock()
 		for prog := range l.handles {
 			close(l.handles[prog].lines)
+			delete(l.handles, prog)
 		}
 		l.handleMu.Unlock()
 		l.wg.Wait()
