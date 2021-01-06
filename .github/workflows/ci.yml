@@ -23,7 +23,11 @@ jobs:
       - uses: actions/cache@v2
         id: cache
         with:
-          path: ~/go/pkg/mod
+          path: |
+            ~/go/pkg/mod              # Module download cache
+            ~/.cache/go-build         # Build cache (Linux)
+            ~/Library/Caches/go-build # Build cache (Mac)
+            '%LocalAppData%\go-build' # Build cache (Windows)      
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
