@@ -297,7 +297,3 @@ func (m *Server) Run() error {
 	glog.Info("END OF LINE")
 	return nil
 }
-
-func (m *Server) Addr() string {
-	return m.listener.Addr().String()
-}

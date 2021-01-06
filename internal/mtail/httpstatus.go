@@ -35,7 +35,7 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		BindAddress string
 		BuildInfo   string
 	}{
-		m.Addr(),
+		m.listener.Addr().String(),
 		m.buildInfo.String(),
 	}
 	w.Header().Add("Content-type", "text/html")
