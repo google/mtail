@@ -136,17 +136,13 @@ func (m *Server) initExporter() (err error) {
 // initTailer sets up and starts a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
 	opts := []tailer.Option{
+		tailer.IgnoreRegex(m.ignoreRegexPattern),
+		tailer.LogPatterns(m.logPathPatterns),
 		tailer.LogPatternPollTickInterval(m.logPatternPollTickInterval),
 		tailer.StaleLogGcTickInterval(m.staleLogGcTickInterval),
 	}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
-	}
-	if m.ignoreRegexPattern != "" {
-		opts = append(opts, tailer.IgnoreRegex(m.ignoreRegexPattern))
-	}
-	if len(m.logPathPatterns) > 0 {
-		opts = append(opts, tailer.LogPatterns(m.logPathPatterns))
 	}
 	m.t, err = tailer.New(m.ctx, &m.wg, m.lines, m.w, opts...)
 	return

@@ -8,7 +8,7 @@ TARGETS = mtail mgen mdot mfmt
 GO_TEST_FLAGS ?= 
 BENCH_COUNT ?= 1
 BASE_REF ?= master
-HEAD_REF ?= $(shell git symbolic-ref HEAD --short | tr / - 2>/dev/null)
+HEAD_REF ?= $(shell git symbolic-ref HEAD -q --short | tr / - 2>/dev/null)
 
 all: $(TARGETS)
 
@@ -182,11 +182,11 @@ testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .de
 	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout ${timeout} -race -v ./...
 
 .PHONY: smoke
-smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
+smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
 	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout 1s -test.short ./...
 
 .PHONY: regtest
-regtest: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
+regtest: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
 	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -v -timeout=${timeout} ./...
 
 TESTRESULTS ?= test-results

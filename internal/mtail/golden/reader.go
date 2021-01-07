@@ -107,7 +107,7 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 		}
 		glog.V(2).Infof("timestamp is %s which is %v in unix", timestamp.Format(time.RFC3339), timestamp.Unix())
 
-		// Now we have enough information to get orcreate a metric.
+		// Now we have enough information to get or create a metric.
 		m := FindMetricOrNil(store, match[2])
 		if m != nil {
 			if m.Type != typ {
