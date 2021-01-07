@@ -45,7 +45,6 @@ jobs:
           # If on a pull_request(_target) then GITHUB_HEAD_REF else strip all
           # but last part of GITHUB_REF (i.e. on a push to branch)
           BENCH_COUNT=5 HEAD_REF=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}} make bench
-          ls -la test-results/benchmark-*
           mkdir -p benchmark-comment
           echo "## Benchmark Results" > benchmark-comment/comment.md
           sed -n -e '/<table/,/<\/table>/p' test-results/benchstat.html >> benchmark-comment/comment.md
