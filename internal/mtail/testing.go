@@ -89,12 +89,24 @@ func (ts *TestServer) Start() func() {
 	}
 }
 
-// Poll all watched logs for updates.
+// Poll all watched objects for updates.
 func (ts *TestServer) PollWatched() {
+	glog.Info("Testserver starting poll")
 	glog.Info("TestServer polling watched objects")
 	ts.w.Poll()
-	ts.t.Poll()
-	ts.l.LoadAllPrograms()
+	glog.Infof("TestServer polling filesystem patterns")
+	if err := ts.t.Poll(); err != nil {
+		glog.Info(err)
+	}
+	glog.Infof("TestServer reloading programs")
+	if err := ts.l.LoadAllPrograms(); err != nil {
+		glog.Info(err)
+	}
+	glog.Infof("TestServer tailer gcing")
+	if err := ts.t.Gc(); err != nil {
+		glog.Info(err)
+	}
+	glog.Info("Testserver finishing poll")
 }
 
 // TestGetExpvar fetches the expvar metric `name`, and returns the expvar.
