@@ -212,7 +212,12 @@ func BenchmarkProgram(b *testing.B) {
 			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()))
 			testutil.FatalIfErr(b, err)
 
-			testutil.FatalIfErr(b, mtail.Run())
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				testutil.FatalIfErr(b, mtail.Run())
+			}()
 
 			var total int64
 			b.ResetTimer()
@@ -225,6 +230,7 @@ func BenchmarkProgram(b *testing.B) {
 				w.InjectUpdate(log.Name())
 			}
 			cancel()
+			wg.Wait()
 			b.StopTimer()
 			b.SetBytes(total)
 		})
