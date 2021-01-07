@@ -64,7 +64,7 @@ func TestReadPartial(t *testing.T) {
 		t.Errorf("partial line not empty: %q", f.partial)
 	}
 	close(lines)
-	received := result(lines)
+	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
 		{context.TODO(), logfile, "ohi"},
 	}
@@ -137,7 +137,7 @@ func TestOpenSocket(t *testing.T) {
 		t.Errorf("partial line not empty: %q", f.partial)
 	}
 	close(lines)
-	received := result(lines)
+	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
 		{context.TODO(), logsock, "adf"},
 	}

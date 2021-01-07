@@ -29,14 +29,6 @@ func makeTestTail(t *testing.T) (*Tailer, chan *logline.LogLine, *watcher.FakeWa
 	return ta, lines, w, tmpDir, rmTmpDir, func() { cancel(); wg.Wait() }
 }
 
-func result(lines chan *logline.LogLine) []*logline.LogLine {
-	r := make([]*logline.LogLine, 0)
-	for line := range lines {
-		r = append(r, line)
-	}
-	return r
-}
-
 func TestTail(t *testing.T) {
 	ta, _, _, dir, cleanup, stop := makeTestTail(t)
 	defer cleanup()
@@ -72,7 +64,7 @@ func TestHandleLogUpdate(t *testing.T) {
 
 	stop()
 
-	received := result(lines)
+	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "a"},
 		{context.Background(), logfile, "b"},
@@ -112,7 +104,7 @@ func TestHandleLogTruncate(t *testing.T) {
 
 	stop()
 
-	received := result(lines)
+	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "a"},
 		{context.Background(), logfile, "b"},
@@ -152,7 +144,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 
 	stop()
 
-	received := result(lines)
+	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "ab"},
 	}
@@ -197,7 +189,7 @@ func TestTailerOpenRetries(t *testing.T) {
 
 	stop()
 
-	received := result(lines)
+	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, ""},
 	}
@@ -216,14 +208,6 @@ func TestTailerInitErrors(t *testing.T) {
 	}
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	_, err = New(ctx, &wg, lines, nil, nil)
-	if err == nil {
-		t.Error("expected error")
-	}
-	cancel()
-	wg.Wait()
-	lines = make(chan *logline.LogLine, 1)
-	ctx, cancel = context.WithCancel(context.Background())
 	_, err = New(ctx, &wg, lines, nil)
 	if err == nil {
 		t.Error("expected error")
@@ -280,7 +264,7 @@ func TestHandleLogRotate(t *testing.T) {
 
 	stop()
 
-	received := result(lines)
+	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "1"},
 		{context.Background(), logfile, "2"},
@@ -321,7 +305,7 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 
 	stop()
 
-	received := result(lines)
+	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
 		{context.Background(), logfile, "1"},
 		{context.Background(), logfile, "2"},
@@ -351,7 +335,7 @@ func TestTailExpireStaleHandles(t *testing.T) {
 
 	stop()
 
-	received := result(lines)
+	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
 		{context.Background(), log1, "1"},
 		{context.Background(), log2, "2"},
