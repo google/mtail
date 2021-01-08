@@ -206,8 +206,12 @@ func TestTailerInitErrors(t *testing.T) {
 	if err == nil {
 		t.Error("expected error")
 	}
-	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
+	_, err = New(ctx, &wg, nil, nil)
+	if err == nil {
+		t.Error("expected error")
+	}
+	lines := make(chan *logline.LogLine, 1)
 	_, err = New(ctx, &wg, lines, nil)
 	if err == nil {
 		t.Error("expected error")

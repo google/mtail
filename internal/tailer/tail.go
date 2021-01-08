@@ -116,6 +116,9 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	if w == nil {
 		return nil, errors.New("can't create tailer without W")
 	}
+	if lines == nil {
+		return nil, errors.New("Tailer needs a lines channel")
+	}
 	t := &Tailer{
 		ctx:          ctx,
 		w:            w,
@@ -156,9 +159,14 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	return t, nil
 }
 
+var ErrNilOption = errors.New("nil option supplied")
+
 // SetOption takes one or more option functions and applies them in order to Tailer.
 func (t *Tailer) SetOption(options ...Option) error {
 	for _, option := range options {
+		if option == nil {
+			return ErrNilOption
+		}
 		if err := option.apply(t); err != nil {
 			return err
 		}
