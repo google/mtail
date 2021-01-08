@@ -196,7 +196,7 @@ func TestVmEndToEnd(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			store := metrics.NewStore()
-			lines := make(chan *logline.LogLine)
+			lines := make(chan *logline.LogLine, 1)
 			var wg sync.WaitGroup
 			l, err := NewLoader(lines, &wg, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource())
 			testutil.FatalIfErr(t, err)
