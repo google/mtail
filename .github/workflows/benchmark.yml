@@ -25,7 +25,7 @@ jobs:
             ~/go/pkg/mod              # Module download cache
             ~/.cache/go-build         # Build cache (Linux)
             ~/Library/Caches/go-build # Build cache (Mac)
-            '%LocalAppData%\go-build' # Build cache (Windows)      
+            '%LocalAppData%\go-build' # Build cache (Windows)
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
@@ -44,7 +44,7 @@ jobs:
         run: |
           # If on a pull_request(_target) then GITHUB_HEAD_REF else strip all
           # but last part of GITHUB_REF (i.e. on a push to branch)
-          BENCH_COUNT=5 HEAD_REF=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}} make bench
+          BENCH_COUNT=5 HEAD_REF=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}} make --debug benchstat
           mkdir -p benchmark-comment
           echo "## Benchmark Results" > benchmark-comment/comment.md
           sed -n -e '/<table/,/<\/table>/p' test-results/benchstat.html >> benchmark-comment/comment.md

@@ -194,16 +194,23 @@ TESTCOVERPROFILE ?= out.coverprofile
 
 .PHONY: junit-regtest
 junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
+
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
 	gotestsum --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -cpu 1,2,4 -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 .PHONY: bench
-bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt $(TESTRESULTS)/benchstat.html
-$(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt $(TESTRESULTS)/benchstat.html: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(BENCHSTAT)
+bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt
+
+$(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
 	mkdir -p $(TESTRESULTS)
-	go test -cpu 1,2,4 -bench=. -count=$(BENCH_COUNT) -timeout=${benchtimeout} -run=^a ./... | tee $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt
-	test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt && benchstat -html $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt || benchstat -html $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt | tee $(TESTRESULTS)/benchstat.html
+	go test -cpu 1,2,4 -bench=. -count=$(BENCH_COUNT) -timeout=${benchtimeout} -run=^a ./... | tee $@
+
+.PHONY: benchstat
+benchstat: $(TESTRESULTS)/benchstat.html
+$(TESTRESULTS)/benchstat.html: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt | print-version $(BENCHSTAT)
+	(test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt && benchstat -html $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $< || benchstat -html $<) | tee $@
+
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
