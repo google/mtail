@@ -42,6 +42,7 @@ jobs:
           key: ${{ runner.os }}-bench-${{ (github.event.pull_request.base.sha != github.event.after) && github.event.pull_request.base.sha || github.event.after }}
       - name: run benchmark
         run: |
+          ls -al test-results
           # If on a pull_request(_target) then GITHUB_HEAD_REF else strip all
           # but last part of GITHUB_REF (i.e. on a push to branch)
           BENCH_COUNT=5 HEAD_REF=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}} make --debug benchstat
