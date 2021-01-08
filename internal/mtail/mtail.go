@@ -23,7 +23,6 @@ import (
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/vm"
 	"github.com/google/mtail/internal/waker"
-	"github.com/google/mtail/internal/watcher"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -35,10 +34,9 @@ import (
 type Server struct {
 	ctx   context.Context
 	store *metrics.Store // Metrics storage
-	w     watcher.Watcher
 	wg    sync.WaitGroup // wait for main processes to shutdown
 
-	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs
+	t *tailer.Tailer     // t manages log patterns and log streams, which sends lines to the VMs
 	l *vm.Loader         // l loads programs and manages the VM lifecycle
 	e *exporter.Exporter // e manages the export of metrics from the store
 
@@ -224,11 +222,10 @@ func (m *Server) initHttpServer() error {
 // each log file from start to finish.
 // TODO(jaq): this doesn't need to be a constructor anymore, it could start and
 // block until quit, once TestServer.PollWatched is addressed.
-func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
+func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server, error) {
 	m := &Server{
 		ctx:   ctx,
 		store: store,
-		w:     w,
 		lines: make(chan *logline.LogLine),
 		// Using a non-pedantic registry means we can be looser with metrics that
 		// are not fully specified at startup.

@@ -5,11 +5,6 @@
 // and extracting new log lines to be passed into the virtual machines.
 package tailer
 
-// For regular files, mtail gets notified on modifications (i.e. appends) to
-// log files that are being watched, in order to read the new lines. Log files
-// can also be rotated, so mtail is also notified of creates in the log file
-// directory.
-
 import (
 	"context"
 	"errors"
@@ -33,7 +28,8 @@ var (
 	logCount = expvar.NewInt("log_count")
 )
 
-// Tailer polls the filesystem for log sources that match given `LogPathPatterns` and creates `LogStream`s to tail them.
+// Tailer polls the filesystem for log sources that match given
+// `LogPathPatterns` and creates `LogStream`s to tail them.
 type Tailer struct {
 	ctx   context.Context
 	wg    sync.WaitGroup // Wait for our subroutines to finish

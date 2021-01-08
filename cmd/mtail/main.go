@@ -18,7 +18,6 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/waker"
-	"github.com/google/mtail/internal/watcher"
 	"go.opencensus.io/trace"
 )
 
@@ -155,10 +154,6 @@ func main() {
 		cancel()
 	}()
 
-	w, err := watcher.NewLogWatcher(ctx, *pollInterval)
-	if err != nil {
-		glog.Exitf("Failure to create log watcher: %s", err)
-	}
 	opts := []mtail.Option{
 		mtail.ProgramPath(*progs),
 		mtail.LogPathPatterns(logs...),
@@ -211,7 +206,7 @@ func main() {
 	if *expiredMetricGcTickInterval > 0 {
 		store.StartGcLoop(ctx, *expiredMetricGcTickInterval)
 	}
-	m, err := mtail.New(ctx, store, w, opts...)
+	m, err := mtail.New(ctx, store, opts...)
 	if err != nil {
 		glog.Error(err)
 		os.Exit(1)
