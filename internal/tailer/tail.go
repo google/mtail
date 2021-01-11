@@ -12,24 +12,20 @@ package tailer
 
 import (
 	"context"
+	"errors"
 	"expvar"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 
 	"github.com/google/mtail/internal/logline"
+	"github.com/google/mtail/internal/tailer/logstream"
 	"github.com/google/mtail/internal/waker"
-	"github.com/google/mtail/internal/watcher"
 )
 
 var (
@@ -37,17 +33,11 @@ var (
 	logCount = expvar.NewInt("log_count")
 )
 
-// Tailer receives notification of changes from a Watcher and extracts new log
-// lines from files. It also handles new log file creation events and log
-// rotations.
+// Tailer polls the filesystem for log sources that match given `LogPathPatterns` and creates `LogStream`s to tail them.
 type Tailer struct {
-	w     watcher.Watcher
 	ctx   context.Context
-	wg    sync.WaitGroup // Wait for our routines to finish
+	wg    sync.WaitGroup // Wait for our subroutines to finish
 	lines chan<- *logline.LogLine
-
-	handlesMu sync.RWMutex   // protects `handles'
-	handles   map[string]Log // Log handles for each pathname.
 
 	globPatternsMu     sync.RWMutex        // protects `globPatterns'
 	globPatterns       map[string]struct{} // glob patterns to match newly created logs in dir paths against
@@ -56,6 +46,10 @@ type Tailer struct {
 	oneShot bool
 
 	pollMu sync.Mutex // protects Poll()
+
+	logstreamPollWaker waker.Waker                    // Used for waking idle logstreams
+	logstreamsMu       sync.RWMutex                   // protects `logstreams`.
+	logstreams         map[string]logstream.LogStream // Map absolte pathname to logstream reading that pathname.
 
 	initDone chan struct{}
 }
@@ -124,21 +118,31 @@ func (opt logPatternPollWaker) apply(t *Tailer) error {
 	return nil
 }
 
+// LogstreamPollWaker wakes idle logstreams.
+func LogstreamPollWaker(w waker.Waker) Option {
+	return &logstreamPollWaker{w}
+}
+
+type logstreamPollWaker struct {
+	waker.Waker
+}
+
+func (opt logstreamPollWaker) apply(t *Tailer) error {
+	t.logstreamPollWaker = opt.Waker
+	return nil
+}
+
 // New creates a new Tailer.
-func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine, w watcher.Watcher, options ...Option) (*Tailer, error) {
-	if w == nil {
-		return nil, errors.New("can't create tailer without W")
-	}
+func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine, options ...Option) (*Tailer, error) {
 	if lines == nil {
 		return nil, errors.New("Tailer needs a lines channel")
 	}
 	t := &Tailer{
 		ctx:          ctx,
-		w:            w,
 		lines:        lines,
-		handles:      make(map[string]Log),
-		globPatterns: make(map[string]struct{}),
 		initDone:     make(chan struct{}),
+		globPatterns: make(map[string]struct{}),
+		logstreams:   make(map[string]logstream.LogStream),
 	}
 	defer close(t.initDone)
 	if err := t.SetOption(options...); err != nil {
@@ -154,18 +158,21 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	if err := t.PollLogPatterns(); err != nil {
 		return nil, err
 	}
-	if t.oneShot {
-		glog.Info("oneshot mode, tailer done.")
-		close(t.lines)
-		return t, nil
-	}
-	// Not oneshot, so setup for the shutdown.
-	glog.Info("added one to waitgroup")
+	// Setup for shutdown, once all routines are finished.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		<-t.initDone
-		<-t.ctx.Done()
+		// We need to wait for context.Done() before we wait for the subbies
+		// because we don't know how many are running at any point -- as soon
+		// as t.wg.Wait begins the number of waited-on goroutines is fixed, and
+		// we may end up leaking a LogStream goroutine and it'll try to send on
+		// a closed channel as a result.  But in tests and oneshot, we want to
+		// make sure the whole log gets read so we can't wait on context.Done
+		// here.
+		if !t.oneShot {
+			<-t.ctx.Done()
+		}
 		t.wg.Wait()
 		close(t.lines)
 	}()
@@ -185,36 +192,6 @@ func (t *Tailer) SetOption(options ...Option) error {
 		}
 	}
 	return nil
-}
-
-// setHandle sets a file handle under it's pathname
-func (t *Tailer) setHandle(pathname string, f Log) error {
-	absPath, err := filepath.Abs(pathname)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to lookup abspath of %q", pathname)
-	}
-	t.handlesMu.Lock()
-	defer t.handlesMu.Unlock()
-	t.handles[absPath] = f
-	return nil
-}
-
-// handleForPath retrives a file handle for a pathname.
-func (t *Tailer) handleForPath(pathname string) (Log, bool) {
-	absPath, err := filepath.Abs(pathname)
-	if err != nil {
-		glog.V(2).Infof("Couldn't resolve path %q: %s", pathname, err)
-		return nil, false
-	}
-	t.handlesMu.Lock()
-	defer t.handlesMu.Unlock()
-	fd, ok := t.handles[absPath]
-	return fd, ok
-}
-
-func (t *Tailer) hasHandle(pathname string) bool {
-	_, ok := t.handleForPath(pathname)
-	return ok
 }
 
 // AddPattern adds a pattern to the list of patterns to filter filenames against.
@@ -241,7 +218,6 @@ func (t *Tailer) Ignore(pathname string) (bool, error) {
 		return false, err
 	}
 	if fi.Mode().IsDir() {
-		// do directory stuff
 		glog.V(2).Infof("ignore path %q because it is a folder", pathname)
 		return true, nil
 	}
@@ -265,179 +241,46 @@ func (t *Tailer) SetIgnorePattern(pattern string) error {
 
 // TailPath registers a filesystem pathname to be tailed.
 func (t *Tailer) TailPath(pathname string) error {
-	if t.hasHandle(pathname) {
-		glog.V(2).Infof("already watching %q", pathname)
-		return nil
-	}
-	if err := t.w.Observe(pathname, t); err != nil {
-		return err
-	}
-	// New file at start of program, seek to EOF.
-	return t.openLogPath(pathname, false)
-}
-
-// ProcessFileEvent is dispatched when an Event is received, causing the tailer
-// to read all available bytes from an already-opened file and send each log
-// line to the logline.Processor.  Because we handle rotations and truncates when
-// reaching EOF in the file reader itself, we don't care what the signal is
-// from the filewatcher.
-func (t *Tailer) ProcessFileEvent(ctx context.Context, event watcher.Event) {
-	ctx, span := trace.StartSpan(ctx, "Tailer.ProcessFileEvent")
-	defer span.End()
-	fd, ok := t.handleForPath(event.Pathname)
-	if !ok {
-		glog.V(1).Infof("No file handle found for %q, but is being watched", event.Pathname)
-		// We want to open files we have watches on in case the file was
-		// unreadable before now; but we have to copmare against the glob to be
-		// sure we don't just add all the files in a watched directory as they
-		// get modified.
-		t.handleCreateGlob(ctx, event.Pathname)
-		fd, ok = t.handleForPath(event.Pathname)
-		if !ok {
-			// This usually happens when a non-watched file in the same directory as a watched file gets updated.
-			// TODO(jaq): add a unit test for this.
-			glog.V(2).Infof("Internal error finding file handle for %q after create", event.Pathname)
-			return
-		}
-	}
-	doFollow(ctx, fd)
-}
-
-// doFollow performs the Follow on an existing file descriptor, logging any errors
-func doFollow(ctx context.Context, fd Log) {
-	err := fd.Follow(ctx)
-	if err != nil && err != io.EOF {
-		glog.Info(err)
-	}
-}
-
-// watchDirname adds the directory containing a path to be watched.
-func (t *Tailer) watchDirname(pathname string) error {
-	glog.V(3).Infof("watchDirname: %s", pathname)
-	absPath, err := filepath.Abs(pathname)
-	if err != nil {
-		return err
-	}
-	d := filepath.Dir(absPath)
-	for ; t.HasMeta(d); d = filepath.Dir(d) {
-	}
-	if d == "/" {
-		glog.Infof("at root after recursing, won't observe %s", absPath)
-		return nil
-	}
-	return t.w.Observe(d, t)
-}
-
-func (t *Tailer) HasMeta(path string) bool {
-	magicChars := `*?[`
-	if runtime.GOOS != "windows" {
-		magicChars = `*?[\`
-	}
-	return strings.ContainsAny(path, magicChars)
-}
-
-// openLogPath opens a log file named by pathname.
-func (t *Tailer) openLogPath(pathname string, seekToStart bool) error {
-	glog.V(2).Infof("openlogPath %s %v", pathname, seekToStart)
-	if t.hasHandle(pathname) {
-		glog.V(2).Infof("already opened %q", pathname)
-		return nil
-	}
-	if err := t.watchDirname(pathname); err != nil {
-		return err
-	}
-	f, err := NewLog(pathname, t.lines, seekToStart || t.oneShot)
-	if err != nil {
-		// Doesn't exist yet. We're watching the directory, so we'll pick it up
-		// again on create; return successfully.
-		if os.IsNotExist(err) {
-			glog.V(1).Infof("pathname %q doesn't exist (yet?)", pathname)
+	t.logstreamsMu.Lock()
+	defer t.logstreamsMu.Unlock()
+	if l, ok := t.logstreams[pathname]; ok {
+		if !l.IsComplete() {
+			glog.V(2).Infof("already got a logstream on %q", pathname)
 			return nil
 		}
+		logCount.Add(-1) // Removing the current entry before re-adding.
+		glog.V(2).Infof("Existing logstream is finished, creating a new one.")
+	}
+	l, err := logstream.New(t.ctx, &t.wg, t.logstreamPollWaker, pathname, t.lines, t.oneShot)
+	if err != nil {
 		return err
 	}
-	glog.V(2).Infof("Adding a file watch on %q", f.Pathname())
-	if err := t.w.Observe(f.Pathname(), t); err != nil {
-		return err
-	}
-	if err := t.setHandle(pathname, f); err != nil {
-		return err
-	}
-	// This is here for testing support mostly -- we don't want to read the
-	// file before we've finished bootstrap because, for example, named pipes
-	// don't have EOFs and files that update continuously can block Read from
-	// termination.
 	if t.oneShot {
-		glog.V(2).Infof("Starting oneshot read at startup of %q", f.Pathname())
-		logCount.Add(1)
-		err := f.Read(t.ctx)
-		if err == io.EOF {
-			err = nil
-		}
-		return err
+		glog.V(2).Infof("Starting oneshot read at startup of %q", pathname)
+		l.Stop()
 	}
-	glog.Infof("Tailing %s", f.Pathname())
+	t.logstreams[pathname] = l
+	glog.Infof("Tailing %s", pathname)
 	logCount.Add(1)
 	return nil
 }
 
-// handleCreateGlob matches the pathname against the glob patterns and starts tailing the file.
-func (t *Tailer) handleCreateGlob(ctx context.Context, pathname string) {
-	ctx, span := trace.StartSpan(ctx, "handleCreateGlob")
-	defer span.End()
-	t.globPatternsMu.RLock()
-	defer t.globPatternsMu.RUnlock()
-
-	for pattern := range t.globPatterns {
-		matched, err := filepath.Match(pattern, pathname)
-		if err != nil {
-			glog.Warningf("Unexpected bad pattern %q not detected earlier", pattern)
-			continue
-		}
-		if !matched {
-			glog.V(2).Infof("%q did not match pattern %q", pathname, pattern)
-			continue
-		}
-		ignore, err := t.Ignore(pathname)
-		if err != nil {
-			glog.Warningf("Unexpected bad pathname %q", pathname)
-			continue
-		}
-		if ignore {
-			glog.V(2).Infof("%q is ignored", pathname)
-			continue
-		}
-		glog.V(1).Infof("New file %q matched existing glob %q", pathname, pattern)
-		// If this file was just created, read from the start of the file.
-		if err := t.openLogPath(pathname, true); err != nil {
-			glog.Infof("Failed to tail new file %q: %s", pathname, err)
-			continue
-		}
-		glog.V(2).Infof("started tailing %q", pathname)
-		return
-	}
-	glog.V(2).Infof("did not start tailing %q", pathname)
-}
-
-// Gc removes file handles that have had no reads for 24h or more.
+// Gc removes logstreams that have had no reads for 24h or more.
 func (t *Tailer) Gc() error {
-	t.handlesMu.Lock()
-	defer t.handlesMu.Unlock()
-	for k, v := range t.handles {
+	t.logstreamsMu.Lock()
+	defer t.logstreamsMu.Unlock()
+	for k, v := range t.logstreams {
 		if time.Since(v.LastReadTime()) > (time.Hour * 24) {
-			if err := t.w.Unobserve(v.Pathname(), t); err != nil {
-				glog.Info(err)
-			}
-			if err := v.Close(t.ctx); err != nil {
-				glog.Info(err)
-			}
-			delete(t.handles, k)
+			v.Stop()
+		}
+		if v.IsComplete() {
+			delete(t.logstreams, k)
 		}
 	}
 	return nil
 }
 
-// StartExpiryLoop runs a permanent goroutine to expire metrics every duration.
+// StartGcLoop runs a permanent goroutine to expire metrics every duration.
 func (t *Tailer) StartGcLoop(waker waker.Waker) {
 	if waker == nil {
 		glog.Info("Log handle expiration disabled")
@@ -514,13 +357,9 @@ func (t *Tailer) PollLogPatterns() error {
 			if err != nil {
 				return err
 			}
-			if t.hasHandle(absPath) {
-				continue
-			}
-			// Great, a new file!
-			err = t.openLogPath(absPath, false)
-			if err != nil {
-				return errors.Wrapf(err, "attempting to tail %q", absPath)
+			glog.Infof("watched path is %q", absPath)
+			if err := t.TailPath(absPath); err != nil {
+				glog.Info(err)
 			}
 		}
 	}

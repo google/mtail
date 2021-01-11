@@ -22,13 +22,13 @@ func TestBasicTail(t *testing.T) {
 	logDir, rmLogDir := testutil.TestTempDir(t)
 	defer rmLogDir()
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
+	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
 	defer stopM()
 
-	lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 3)
-	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
-
 	logFile := path.Join(logDir, "log")
+
+	lineCountCheck := m.ExpectMapExpvarDeltaWithDeadline("log_lines_total", logFile, 3)
+	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
 
 	f := testutil.TestOpenFile(t, logFile)
 	m.PollWatched() // Force sync to EOF
@@ -57,7 +57,7 @@ func TestNewLogDoesNotMatchIsIgnored(t *testing.T) {
 	defer rmWorkdir()
 	// Start mtail
 	logFilepath := path.Join(workdir, "log")
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logFilepath))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(logFilepath))
 	defer stopM()
 
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 0)

@@ -9,24 +9,24 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/watcher"
+	"github.com/google/mtail/internal/waker"
 )
 
-func makeTestTail(t *testing.T) (*Tailer, chan *logline.LogLine, *watcher.FakeWatcher, string, func(), func()) {
+func makeTestTail(t *testing.T, options ...Option) (*Tailer, chan *logline.LogLine, func(), string, func(), func()) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	w := watcher.NewFakeWatcher()
 	lines := make(chan *logline.LogLine, 5) // 5 loglines ought to be enough for any test
 	var wg sync.WaitGroup
-	ta, err := New(ctx, &wg, lines, w, LogPatterns([]string{tmpDir}))
+	waker, awaken := waker.NewTest(1)
+	opts := append(options, LogPatterns([]string{tmpDir}), LogstreamPollWaker(waker))
+	ta, err := New(ctx, &wg, lines, opts...)
 	testutil.FatalIfErr(t, err)
-	return ta, lines, w, tmpDir, rmTmpDir, func() { cancel(); wg.Wait() }
+	return ta, lines, awaken, tmpDir, rmTmpDir, func() { cancel(); wg.Wait() }
 }
 
 func TestTail(t *testing.T) {
@@ -39,28 +39,26 @@ func TestTail(t *testing.T) {
 
 	err := ta.TailPath(logfile)
 	testutil.FatalIfErr(t, err)
-	// Tail also causes the log to be read, so no need to inject an event.
 
-	if _, ok := ta.handles[logfile]; !ok {
-		t.Errorf("path not found in files map: %+#v", ta.handles)
+	if _, ok := ta.logstreams[logfile]; !ok {
+		t.Errorf("path not found in files map: %+#v", ta.logstreams)
 	}
 
 	stop()
 }
 
 func TestHandleLogUpdate(t *testing.T) {
-	ta, lines, w, dir, cleanup, stop := makeTestTail(t)
+	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
 
-	err := ta.TailPath(logfile)
-	testutil.FatalIfErr(t, err)
+	testutil.FatalIfErr(t, ta.TailPath(logfile))
+	awaken()
 
 	testutil.WriteString(t, f, "a\nb\nc\nd\n")
-	// f.Seek(0, 0)
-	w.InjectUpdate(logfile)
+	awaken()
 
 	stop()
 
@@ -78,29 +76,28 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	ta, lines, w, dir, cleanup, stop := makeTestTail(t)
+	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
 
-	if err := ta.TailPath(logfile); err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, ta.TailPath(logfile))
+	awaken()
 
 	testutil.WriteString(t, f, "a\nb\nc\n")
-	w.InjectUpdate(logfile)
+	awaken()
 
 	if err := f.Truncate(0); err != nil {
 		t.Fatal(err)
 	}
-	// "File.Truncate" does not change the file offset.
+	// "File.Truncate" does not change the file offset, force a seek to start.
 	_, err := f.Seek(0, 0)
 	testutil.FatalIfErr(t, err)
-	w.InjectUpdate(logfile)
+	awaken()
 
 	testutil.WriteString(t, f, "d\ne\n")
-	w.InjectUpdate(logfile)
+	awaken()
 
 	stop()
 
@@ -116,31 +113,23 @@ func TestHandleLogTruncate(t *testing.T) {
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
-	ta, lines, w, dir, cleanup, stop := makeTestTail(t)
+	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
 
-	err := ta.TailPath(logfile)
-	testutil.FatalIfErr(t, err)
+	testutil.FatalIfErr(t, ta.TailPath(logfile))
+	awaken() // ensure we've hit an EOF before writing starts
 
 	testutil.WriteString(t, f, "a")
-	//f.Seek(0, 0)
-	w.InjectUpdate(logfile)
+	awaken()
 
-	//f.Seek(1, 0)
 	testutil.WriteString(t, f, "b")
-	if err != nil {
-		t.Error(err)
-	}
-	// f.Seek(1, 0)
-	w.InjectUpdate(logfile)
+	awaken()
 
-	//f.Seek(2, 0)
 	testutil.WriteString(t, f, "\n")
-	//f.Seek(2, 0)
-	w.InjectUpdate(logfile)
+	awaken()
 
 	stop()
 
@@ -155,7 +144,7 @@ func TestTailerOpenRetries(t *testing.T) {
 	// Can't force a permission denied error if run as root.
 	testutil.SkipIfRoot(t)
 
-	ta, lines, w, dir, cleanup, stop := makeTestTail(t)
+	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
@@ -168,24 +157,25 @@ func TestTailerOpenRetries(t *testing.T) {
 	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
-	//w.InjectUpdate(logfile)
+	testutil.FatalIfErr(t, ta.Poll())
 	glog.Info("remove")
 	if err := os.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
-	w.InjectDelete(logfile)
+	testutil.FatalIfErr(t, ta.Poll())
 	glog.Info("openfile")
 	f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 	testutil.FatalIfErr(t, err)
-	w.InjectCreate(logfile)
+	testutil.FatalIfErr(t, ta.Poll())
 	glog.Info("chmod")
 	if err := os.Chmod(logfile, 0666); err != nil {
 		t.Fatal(err)
 	}
-	w.InjectUpdate(logfile)
+	testutil.FatalIfErr(t, ta.Poll())
+	awaken() // force sync to EOF
 	glog.Info("write string")
 	testutil.WriteString(t, f, "\n")
-	w.InjectUpdate(logfile)
+	awaken()
 
 	stop()
 
@@ -194,15 +184,11 @@ func TestTailerOpenRetries(t *testing.T) {
 		{context.Background(), logfile, ""},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-
-	if err := w.Close(); err != nil {
-		t.Log(err)
-	}
 }
 
 func TestTailerInitErrors(t *testing.T) {
 	var wg sync.WaitGroup
-	_, err := New(nil, &wg, nil, nil)
+	_, err := New(nil, &wg, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -220,8 +206,7 @@ func TestTailerInitErrors(t *testing.T) {
 	wg.Wait()
 	lines = make(chan *logline.LogLine, 1)
 	ctx, cancel = context.WithCancel(context.Background())
-	w := watcher.NewFakeWatcher()
-	_, err = New(ctx, &wg, lines, w)
+	_, err = New(ctx, &wg, lines)
 	if err != nil {
 		t.Errorf("unexpected error %s", err)
 	}
@@ -229,7 +214,7 @@ func TestTailerInitErrors(t *testing.T) {
 	wg.Wait()
 	lines = make(chan *logline.LogLine, 1)
 	ctx, cancel = context.WithCancel(context.Background())
-	_, err = New(ctx, &wg, lines, w, OneShot)
+	_, err = New(ctx, &wg, lines, OneShot)
 	if err != nil {
 		t.Errorf("unexpected error %s", err)
 	}
@@ -238,74 +223,31 @@ func TestTailerInitErrors(t *testing.T) {
 }
 
 func TestHandleLogRotate(t *testing.T) {
-	ta, lines, w, dir, cleanup, stop := makeTestTail(t)
+	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
 	defer cleanup()
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
 
-	if err := ta.TailPath(logfile); err != nil {
-		t.Fatal(err)
-	}
+	testutil.FatalIfErr(t, ta.TailPath(logfile))
+	awaken()
 	testutil.WriteString(t, f, "1\n")
-	glog.V(2).Info("update")
-	w.InjectUpdate(logfile)
+	glog.Info("update")
+	awaken()
 	if err := f.Close(); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Rename(logfile, logfile+".1"); err != nil {
 		t.Fatal(err)
 	}
-	glog.V(2).Info("delete")
-	w.InjectDelete(logfile)
-	w.InjectCreate(logfile + ".1")
+	glog.Info("rename")
+	awaken() // force an awaken to ensure we handle this moment in the rotation correctly
 	f = testutil.TestOpenFile(t, logfile)
-	glog.V(2).Info("create")
-	w.InjectCreate(logfile)
+	glog.Info("create")
+	awaken()
 	testutil.WriteString(t, f, "2\n")
-	glog.V(2).Info("update")
-	w.InjectUpdate(logfile)
-
-	stop()
-
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{context.Background(), logfile, "1"},
-		{context.Background(), logfile, "2"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-}
-
-func TestHandleLogRotateSignalsWrong(t *testing.T) {
-	ta, lines, w, dir, cleanup, stop := makeTestTail(t)
-	defer cleanup()
-
-	logfile := filepath.Join(dir, "log")
-	f := testutil.TestOpenFile(t, logfile)
-
-	if err := ta.TailPath(logfile); err != nil {
-		t.Fatal(err)
-	}
-	testutil.WriteString(t, f, "1\n")
-	glog.V(2).Info("update")
-	w.InjectUpdate(logfile)
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Rename(logfile, logfile+".1"); err != nil {
-		t.Fatal(err)
-	}
-	// No delete signal yet
-	f = testutil.TestOpenFile(t, logfile)
-	glog.V(2).Info("create")
-	w.InjectCreate(logfile)
-
-	glog.V(2).Info("delete")
-	w.InjectDelete(logfile)
-
-	testutil.WriteString(t, f, "2\n")
-	glog.V(2).Info("update")
-	w.InjectUpdate(logfile)
+	glog.Info("update")
+	awaken()
 
 	stop()
 
@@ -318,7 +260,8 @@ func TestHandleLogRotateSignalsWrong(t *testing.T) {
 }
 
 func TestTailExpireStaleHandles(t *testing.T) {
-	ta, lines, w, dir, cleanup, stop := makeTestTail(t)
+	t.Skip("need to set lastRead on logstream to inject condition")
+	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
 	defer cleanup()
 
 	log1 := filepath.Join(dir, "log1")
@@ -334,8 +277,8 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	}
 	testutil.WriteString(t, f1, "1\n")
 	testutil.WriteString(t, f2, "2\n")
-	w.InjectUpdate(log1)
-	w.InjectUpdate(log2)
+
+	awaken()
 
 	stop()
 
@@ -349,32 +292,32 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
 	}
-	ta.handlesMu.RLock()
-	if len(ta.handles) != 2 {
-		t.Errorf("expecting 2 handles, got %v", ta.handles)
+	ta.logstreamsMu.RLock()
+	if len(ta.logstreams) != 2 {
+		t.Errorf("expecting 2 handles, got %v", ta.logstreams)
 	}
-	ta.handlesMu.RUnlock()
-	ta.handlesMu.Lock()
-	ta.handles[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 + time.Minute)
-	ta.handlesMu.Unlock()
+	ta.logstreamsMu.RUnlock()
+	ta.logstreamsMu.Lock()
+	//ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 + time.Minute)
+	ta.logstreamsMu.Unlock()
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
 	}
-	ta.handlesMu.RLock()
-	if len(ta.handles) != 2 {
-		t.Errorf("expecting 2 handles, got %v", ta.handles)
+	ta.logstreamsMu.RLock()
+	if len(ta.logstreams) != 2 {
+		t.Errorf("expecting 2 handles, got %v", ta.logstreams)
 	}
-	ta.handlesMu.RUnlock()
-	ta.handlesMu.Lock()
-	ta.handles[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 - time.Minute)
-	ta.handlesMu.Unlock()
+	ta.logstreamsMu.RUnlock()
+	ta.logstreamsMu.Lock()
+	//ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 - time.Minute)
+	ta.logstreamsMu.Unlock()
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
 	}
-	ta.handlesMu.RLock()
-	if len(ta.handles) != 1 {
-		t.Errorf("expecting 1 handles, got %v", ta.handles)
+	ta.logstreamsMu.RLock()
+	if len(ta.logstreams) != 1 {
+		t.Errorf("expecting 1 logstreams, got %v", ta.logstreams)
 	}
-	ta.handlesMu.RUnlock()
+	ta.logstreamsMu.RUnlock()
 	glog.Info("good")
 }

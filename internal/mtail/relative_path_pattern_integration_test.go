@@ -33,7 +33,7 @@ func TestRelativeLog(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 	defer logFile.Close()
 	pathnames := []string{"log"}
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(pathnames...))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(pathnames...))
 	defer stopM()
 
 	m.PollWatched() // Force sync to EOF

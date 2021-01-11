@@ -29,10 +29,10 @@ func TestLogRotation(t *testing.T) {
 
 	f := testutil.TestOpenFile(t, logFile)
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	logRotationsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("log_rotations_total", logFile, 1)
+	logRotationsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("file_rotations_total", logFile, 1)
 	testutil.WriteString(t, f, "line 1\n")
 	m.PollWatched()
 
