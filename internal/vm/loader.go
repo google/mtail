@@ -11,7 +11,9 @@ package vm
 // of mtail programs.
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"expvar"
 	"fmt"
 	"html/template"
@@ -94,7 +96,6 @@ func (l *Loader) LoadAllPrograms() error {
 
 // LoadProgram loads or reloads a program from the full pathname programPath.  The name of
 // the program is the basename of the file.
-// TODO(jaq): store a hash of the program so we don't reload on no change.
 func (l *Loader) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)
 	if strings.HasPrefix(name, ".") {
@@ -200,7 +201,22 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	glog.V(2).Infof("CompileAndRun %s", name)
-	v, errs := Compile(name, input, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation)
+	var buf bytes.Buffer
+	tee := io.TeeReader(input, &buf)
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, tee); err != nil {
+		ProgLoadErrors.Add(name, 1)
+		return errors.Wrapf(err, "hashing failed for %q", name)
+	}
+	contentHash := hasher.Sum(nil)
+	l.handleMu.RLock()
+	vm, ok := l.handles[name]
+	l.handleMu.RUnlock()
+	if ok && bytes.Equal(vm.contentHash, contentHash) {
+		glog.V(1).Infof("contents match, not recompiling %q", name)
+		return nil
+	}
+	v, errs := Compile(name, &buf, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("compile failed for %s:\n%s", name, errs)
@@ -241,15 +257,16 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		close(handle.lines)
 	}
 	lines := make(chan *logline.LogLine)
-	l.handles[name] = &vmHandle{vm: v, lines: lines}
+	l.handles[name] = &vmHandle{contentHash: contentHash, vm: v, lines: lines}
 	l.wg.Add(1)
 	go v.Run(lines, &l.wg)
 	return nil
 }
 
 type vmHandle struct {
-	vm    *VM
-	lines chan *logline.LogLine
+	contentHash []byte
+	vm          *VM
+	lines       chan *logline.LogLine
 }
 
 // Loader handles the lifecycle of programs and virtual machines, by watching
