@@ -61,8 +61,6 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, options ...Option
 // returns the server, and a cleanup function.
 func TestStartServer(tb testing.TB, pollInterval time.Duration, options ...Option) (*TestServer, func()) {
 	tb.Helper()
-	options = append(options, BindAddress("", "0"))
-
 	ts := TestMakeServer(tb, pollInterval, options...)
 	return ts, ts.Start()
 }
