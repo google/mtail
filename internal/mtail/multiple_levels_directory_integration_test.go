@@ -29,14 +29,13 @@ func TestPollLogPathPatterns(t *testing.T) {
 
 	logFile := path.Join(logDir, "files", "a", "log", "a.log")
 	testutil.FatalIfErr(t, os.MkdirAll(path.Dir(logFile), 0700))
-	m.PollWatched()
 
 	f := testutil.TestOpenFile(t, logFile)
-	m.PollWatched()
+	m.PollWatched(1)
 
 	logCountCheck()
 
 	testutil.WriteString(t, f, "line 1\n")
-	m.PollWatched()
+	m.PollWatched(1)
 	lineCountCheck()
 }

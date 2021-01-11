@@ -16,7 +16,7 @@ import (
 	"github.com/google/mtail/internal/waker"
 )
 
-func makeTestTail(t *testing.T, options ...Option) (*Tailer, chan *logline.LogLine, func(), string, func(), func()) {
+func makeTestTail(t *testing.T, options ...Option) (*Tailer, chan *logline.LogLine, func(int), string, func(), func()) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -55,10 +55,10 @@ func TestHandleLogUpdate(t *testing.T) {
 	f := testutil.TestOpenFile(t, logfile)
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
-	awaken()
+	awaken(1)
 
 	testutil.WriteString(t, f, "a\nb\nc\nd\n")
-	awaken()
+	awaken(1)
 
 	stop()
 
@@ -83,10 +83,11 @@ func TestHandleLogTruncate(t *testing.T) {
 	f := testutil.TestOpenFile(t, logfile)
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
-	awaken()
+	awaken(1)
 
 	testutil.WriteString(t, f, "a\nb\nc\n")
-	awaken()
+	awaken(1)
+	awaken(1) // double sync to ensure that a whole pass through the filestream has occurred
 
 	if err := f.Truncate(0); err != nil {
 		t.Fatal(err)
@@ -94,10 +95,10 @@ func TestHandleLogTruncate(t *testing.T) {
 	// "File.Truncate" does not change the file offset, force a seek to start.
 	_, err := f.Seek(0, 0)
 	testutil.FatalIfErr(t, err)
-	awaken()
+	awaken(1)
 
 	testutil.WriteString(t, f, "d\ne\n")
-	awaken()
+	awaken(1)
 
 	stop()
 
@@ -120,16 +121,16 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	f := testutil.TestOpenFile(t, logfile)
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
-	awaken() // ensure we've hit an EOF before writing starts
+	awaken(1) // ensure we've hit an EOF before writing starts
 
 	testutil.WriteString(t, f, "a")
-	awaken()
+	awaken(1)
 
 	testutil.WriteString(t, f, "b")
-	awaken()
+	awaken(1)
 
 	testutil.WriteString(t, f, "\n")
-	awaken()
+	awaken(1)
 
 	stop()
 
@@ -172,10 +173,10 @@ func TestTailerOpenRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 	testutil.FatalIfErr(t, ta.Poll())
-	awaken() // force sync to EOF
+	awaken(1) // force sync to EOF
 	glog.Info("write string")
 	testutil.WriteString(t, f, "\n")
-	awaken()
+	awaken(1)
 
 	stop()
 
@@ -222,43 +223,6 @@ func TestTailerInitErrors(t *testing.T) {
 	wg.Wait()
 }
 
-func TestHandleLogRotate(t *testing.T) {
-	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
-	defer cleanup()
-
-	logfile := filepath.Join(dir, "log")
-	f := testutil.TestOpenFile(t, logfile)
-
-	testutil.FatalIfErr(t, ta.TailPath(logfile))
-	awaken()
-	testutil.WriteString(t, f, "1\n")
-	glog.Info("update")
-	awaken()
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Rename(logfile, logfile+".1"); err != nil {
-		t.Fatal(err)
-	}
-	glog.Info("rename")
-	awaken() // force an awaken to ensure we handle this moment in the rotation correctly
-	f = testutil.TestOpenFile(t, logfile)
-	glog.Info("create")
-	awaken()
-	testutil.WriteString(t, f, "2\n")
-	glog.Info("update")
-	awaken()
-
-	stop()
-
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{context.Background(), logfile, "1"},
-		{context.Background(), logfile, "2"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-}
-
 func TestTailExpireStaleHandles(t *testing.T) {
 	t.Skip("need to set lastRead on logstream to inject condition")
 	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
@@ -278,7 +242,7 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	testutil.WriteString(t, f1, "1\n")
 	testutil.WriteString(t, f2, "2\n")
 
-	awaken()
+	awaken(1)
 
 	stop()
 

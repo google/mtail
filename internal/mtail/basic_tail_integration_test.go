@@ -31,12 +31,12 @@ func TestBasicTail(t *testing.T) {
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
 
 	f := testutil.TestOpenFile(t, logFile)
-	m.PollWatched() // Force sync to EOF
+	m.PollWatched(1) // Force sync to EOF
 
 	for i := 1; i <= 3; i++ {
 		testutil.WriteString(t, f, fmt.Sprintf("%d\n", i))
 	}
-	m.PollWatched()
+	m.PollWatched(1) // Expect to read 3 lines here.
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -68,7 +68,7 @@ func TestNewLogDoesNotMatchIsIgnored(t *testing.T) {
 	logFile, err := os.Create(newLogFilepath)
 	testutil.FatalIfErr(t, err)
 	defer logFile.Close()
-	m.PollWatched()
+	m.PollWatched(0) // No streams so don't wait for any.
 
 	logCountCheck()
 }

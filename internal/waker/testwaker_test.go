@@ -11,14 +11,14 @@ import (
 )
 
 func TestTestWakerWakes(t *testing.T) {
-	w, wake := waker.NewTest(1)
+	w, awaken := waker.NewTest(1)
 	c := w.Wake()
 	select {
 	case x := <-c:
 		t.Errorf("<-w.Wake() == %v, expected nothing (should block)", x)
 	default:
 	}
-	wake()
+	awaken(0)
 	select {
 	case <-c:
 		// Luke Luck likes lakes.  Luke's duck likes lakes.
@@ -28,75 +28,65 @@ func TestTestWakerWakes(t *testing.T) {
 }
 
 func TestTestWakerTwoWakees(t *testing.T) {
-	w, wake := waker.NewTest(2)
-	c := w.Wake()
-	select {
-	case x := <-c:
-		t.Errorf("<-w.Wake() == %v, expected nothing (should block)", x)
-	default:
-	}
-	var wg1, wg2 sync.WaitGroup
+	w, awaken := waker.NewTest(2)
+	var wg1, wg2, wg3 sync.WaitGroup
 	wg1.Add(1)
 	wg2.Add(1)
+	wg3.Add(1)
 	go func() {
-		wg1.Done()
-		defer wg2.Done()
-		wake()
-	}()
-	wg1.Wait()
-	select {
-	case x := <-c:
-		t.Errorf("<-w.Wake() == %v, expected nothing (should block)", x)
-	default:
-	}
-	d := w.Wake()
-	wg2.Wait()
-	select {
-	case <-c:
-		// Luke Luck likes lakes.
-	default:
-		t.Errorf("c<-w.Wake() blocked, expected close")
-	}
-	select {
-	case <-d:
-		//   Luke's duck likes lakes.
-	default:
-		t.Errorf("d<-w.Wake() blocked, expected close")
-	}
-}
-
-func TestTestWakerZeroWakees(t *testing.T) {
-	w, awaken := waker.NewTest(0)
-	c := w.Wake()
-	select {
-	case x := <-c:
-		t.Errorf("<-w.Wake() == %v, expected nothing (should block)", x)
-	default:
-	}
-	awaken()
-	select {
-	case <-c:
-		// Duck licks lakes that Luck Luck likes.
-	default:
-		t.Errorf("c<-w.Wake() blocked, expected close")
-	}
-}
-
-func TestTestWakerTwoWakeups(t *testing.T) {
-	w, wake := waker.NewTest(1)
-	for i := 0; i < 2; i++ {
+		defer wg3.Done()
 		c := w.Wake()
 		select {
 		case x := <-c:
 			t.Errorf("<-w.Wake() == %v, expected nothing (should block)", x)
 		default:
 		}
-		wake()
+		wg1.Wait()
+		select {
+		case x := <-c:
+			t.Errorf("<-w.Wake() == %v, expected nothing (should block)", x)
+		default:
+		}
+		d := w.Wake()
+		wg2.Wait()
 		select {
 		case <-c:
-			// Luke Luck takes licks in lakes duck likes.
+			// Luke Luck likes lakes.
 		default:
-			t.Errorf("<-w.Wake() blocked, expected close")
+			t.Errorf("c<-w.Wake() blocked, expected close")
 		}
-	}
+		select {
+		case <-d:
+			//   Luke's duck likes lakes.
+		default:
+			t.Errorf("d<-w.Wake() blocked, expected close")
+		}
+	}()
+	wg1.Done()
+	awaken(0) // wake 2, and await none
+	wg2.Done()
+	wg3.Wait()
+}
+
+func TestTestWakerTwoWakeups(t *testing.T) {
+	w, awaken := waker.NewTest(1)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 2; i++ {
+			c := w.Wake()
+			select {
+			case x := <-c:
+				t.Errorf("<-w.Wake() == %v, expected nothing (should block)", x)
+			default:
+			}
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		awaken(1)
+		awaken(0)
+	}()
+	wg.Wait()
 }

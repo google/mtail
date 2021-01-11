@@ -37,7 +37,7 @@ func TestPipeStreamRead(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	testutil.WriteString(t, f, "1\n")
-	awaken()
+	awaken(1)
 
 	ps.Stop()
 	wg.Wait()
@@ -76,7 +76,7 @@ func TestPipeStreamCompletedBecausePipeClosed(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	testutil.WriteString(t, f, "1\n")
-	awaken()
+	awaken(1)
 
 	testutil.FatalIfErr(t, f.Close())
 	//awaken()
@@ -110,12 +110,13 @@ func TestPipeStreamCompletedBecauseCancel(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	waker, awaken := waker.NewTest(1)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
 
 	testutil.WriteString(t, f, "1\n")
-	awaken()
+	awaken(1)
 
 	cancel()
 	wg.Wait()

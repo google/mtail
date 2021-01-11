@@ -41,7 +41,9 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 	defer f.Close()
 
-	m.PollWatched()
+	// Nothing to await on, we expect to get a Permission Denied in the
+	// synchronous logstream.New path.
+	m.PollWatched(0)
 
 	errorsTotalCheck()
 }

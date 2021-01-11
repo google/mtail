@@ -84,6 +84,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	}
 	b := make([]byte, defaultReadBufferSize)
 	partial := bytes.NewBufferString("")
+	started := make(chan struct{})
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -94,6 +95,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				glog.Info(err)
 			}
 		}()
+		close(started)
 		for {
 			// Blocking read but regular files will return EOF straight away.
 			count, err := fd.Read(b)
@@ -148,6 +150,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					continue
 				}
 				glog.V(2).Infof("%v: current seek is %d", fd, currentOffset)
+				glog.V(2).Infof("%v: new size is %d", fd, newfi.Size())
 				// We know that newfi is the same file here.
 				if currentOffset != 0 && newfi.Size() < currentOffset {
 					glog.V(2).Infof("%v: truncate? currentoffset is %d and size is %d", fd, currentOffset, newfi.Size())
@@ -222,6 +225,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		}
 	}()
 
+	<-started
 	return nil
 }
 

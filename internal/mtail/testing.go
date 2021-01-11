@@ -27,7 +27,7 @@ type TestServer struct {
 	*Server
 
 	waker  waker.Waker // for idle logstreams; others are polled explicitly in PollWatched
-	awaken func()
+	awaken func(int)
 
 	tb testing.TB
 
@@ -39,16 +39,17 @@ type TestServer struct {
 
 // TestMakeServer makes a new TestServer for use in tests, but does not start
 // the server.  If an error occurs during creation, a testing.Fatal is issued.
-func TestMakeServer(tb testing.TB, pollInterval time.Duration, wakers int, options ...Option) *TestServer {
+func TestMakeServer(tb testing.TB, wakers int, pollInterval time.Duration, options ...Option) *TestServer {
 	tb.Helper()
 
 	// Reset counters when running multiple tests.  Tests that use expvar
 	// helpers cannot be made parallel.
 	glog.Info("resetting counters")
 	expvar.Get("lines_total").(*expvar.Int).Set(0)
-	expvar.Get("log_lines_total").(*expvar.Map).Init()
 	expvar.Get("log_count").(*expvar.Int).Set(0)
-	expvar.Get("file_rotations_total").(*expvar.Map).Init()
+	expvar.Get("log_lines_total").(*expvar.Map).Init()
+	expvar.Get("log_opens_total").(*expvar.Map).Init()
+	expvar.Get("file_truncates_total").(*expvar.Map).Init()
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -63,9 +64,9 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, wakers int, optio
 
 // TestStartServer creates a new TestServer and starts it running.  It
 // returns the server, and a cleanup function.
-func TestStartServer(tb testing.TB, pollInterval time.Duration, wakers int, options ...Option) (*TestServer, func()) {
+func TestStartServer(tb testing.TB, wakers int, pollInterval time.Duration, options ...Option) (*TestServer, func()) {
 	tb.Helper()
-	ts := TestMakeServer(tb, pollInterval, wakers, options...)
+	ts := TestMakeServer(tb, wakers, pollInterval, options...)
 	return ts, ts.Start()
 }
 
@@ -93,8 +94,8 @@ func (ts *TestServer) Start() func() {
 	}
 }
 
-// Poll all watched objects for updates.
-func (ts *TestServer) PollWatched() {
+// Poll all watched objects for updates.  The parameter n indicates how many logstreams to wait on before waking them.
+func (ts *TestServer) PollWatched(n int) {
 	glog.Info("Testserver starting poll")
 	glog.Infof("TestServer polling filesystem patterns")
 	if err := ts.t.Poll(); err != nil {
@@ -109,7 +110,7 @@ func (ts *TestServer) PollWatched() {
 		glog.Info(err)
 	}
 	glog.Info("TestServer waking idle routines")
-	ts.awaken()
+	ts.awaken(n)
 	glog.Info("Testserver finishing poll")
 }
 

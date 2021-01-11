@@ -154,13 +154,11 @@ func TestExamplePrograms(t *testing.T) {
 	for _, tc := range exampleProgramTests {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, awaken := waker.NewTest(0)
+			waker, _ := waker.NewTest(0)
 			store := metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
 			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(t, err)
-
-			awaken()
 
 			var wg sync.WaitGroup
 			wg.Add(1)
@@ -213,7 +211,7 @@ func BenchmarkProgram(b *testing.B) {
 			defer rmLogDir()
 			logFile := path.Join(logDir, "test.log")
 			log := testutil.TestOpenFile(b, logFile)
-			waker, awaken := waker.NewTest(0)
+			waker, awaken := waker.NewTest(1)
 			store := metrics.NewStore()
 			programFile := path.Join("../..", bm.programfile)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -235,7 +233,7 @@ func BenchmarkProgram(b *testing.B) {
 				count, err := io.Copy(log, l)
 				testutil.FatalIfErr(b, err)
 				total += count
-				awaken()
+				awaken(1)
 			}
 			cancel()
 			wg.Wait()

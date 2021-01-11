@@ -26,15 +26,15 @@ func TestFileStreamRead(t *testing.T) {
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
 	lines := make(chan *logline.LogLine, 1)
-	waker, awaken := waker.NewTest(1) // Just one waker to wait on.
+	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
 	testutil.FatalIfErr(t, err)
-	awaken()
+	awaken(1)
 
 	testutil.WriteString(t, f, "yo\n")
-	awaken()
+	awaken(1)
 
 	fs.Stop()
 	wg.Wait()
@@ -68,20 +68,20 @@ func TestFileStreamRotation(t *testing.T) {
 
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
 	testutil.FatalIfErr(t, err)
-	awaken()
+	awaken(1)
 
 	glog.Info("write 1")
 	testutil.WriteString(t, f, "1\n")
-	awaken()
+	awaken(1)
 
 	glog.Info("rename")
 	testutil.FatalIfErr(t, os.Rename(name, name+".1"))
 
 	f = testutil.TestOpenFile(t, name)
-	awaken()
+	awaken(1)
 	glog.Info("write 2")
 	testutil.WriteString(t, f, "2\n")
-	awaken()
+	awaken(1)
 
 	fs.Stop()
 	wg.Wait()
@@ -112,15 +112,15 @@ func TestFileStreamTruncation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
 	testutil.FatalIfErr(t, err)
-	awaken() // Synchronise past first read after seekToEnd
+	awaken(1) // Synchronise past first read after seekToEnd
 
 	testutil.WriteString(t, f, "1\n2\n")
-	awaken()
+	awaken(1)
 	testutil.FatalIfErr(t, f.Close())
-	awaken()
+	awaken(1)
 	f = testutil.OpenLogFile(t, name)
 	testutil.WriteString(t, f, "3\n")
-	awaken()
+	awaken(1)
 
 	fs.Stop()
 	wg.Wait()
@@ -153,10 +153,10 @@ func TestFileStreamFinishedBecauseCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
 	testutil.FatalIfErr(t, err)
-	awaken() // Synchronise past first read after seekToEnd
+	awaken(1) // Synchronise past first read after seekToEnd
 
 	testutil.WriteString(t, f, "yo\n")
-	awaken()
+	awaken(1)
 
 	cancel()
 	wg.Wait()
@@ -183,20 +183,21 @@ func TestFileStreamPartialRead(t *testing.T) {
 	f := testutil.TestOpenFile(t, name)
 	lines := make(chan *logline.LogLine, 1)
 	waker, awaken := waker.NewTest(1)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
 	testutil.FatalIfErr(t, err)
-	awaken()
+	awaken(1)
 
 	testutil.WriteString(t, f, "yo")
-	awaken()
+	awaken(1)
 
 	// received := testutil.LinesReceived(lines)
 	// expected := []*logline.LogLine{}
 	// testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
 	testutil.WriteString(t, f, "\n")
-	awaken()
+	awaken(1)
 
 	fs.Stop()
 	wg.Wait()

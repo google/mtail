@@ -80,7 +80,7 @@ func TestGlobAfterStart(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
 	defer stopM()
 
-	m.PollWatched() // Force sync to EOF
+	m.PollWatched(0) // Force sync to EOF
 
 	var count int64
 	for _, tt := range globTests {
@@ -91,11 +91,10 @@ func TestGlobAfterStart(t *testing.T) {
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", count)
 	for _, tt := range globTests {
 		log := testutil.TestOpenFile(t, tt.name)
-		m.PollWatched() // Force sync to EOF
+		m.PollWatched(0) // Force sync to EOF
 		defer log.Close()
 	}
-	m.PollWatched()
-
+	// m.PollWatched(2)
 	logCountCheck()
 }
 
@@ -146,6 +145,7 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		testutil.FatalIfErr(t, err)
 		testutil.WriteString(t, log, "\n")
 	}
+
 	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 
 	stopM()
@@ -213,7 +213,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	// Move to logdir to make relative paths
 	defer testutil.TestChdir(t, logDir)()
 
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
+	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
 	defer stopM()
 
 	{
@@ -221,10 +221,9 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logFile := path.Join(logDir, "log.1.txt")
 		f := testutil.TestOpenFile(t, logFile)
-		m.PollWatched() // Force sync to EOF
-
+		m.PollWatched(1) // Force sync to EOF
 		testutil.WriteString(t, f, "line 1\n")
-		m.PollWatched()
+		m.PollWatched(1)
 
 		logCountCheck()
 	}
@@ -235,9 +234,9 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logFile := path.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
-		m.PollWatched()
+		m.PollWatched(2)
 		testutil.WriteString(t, f, "line 1\n")
-		m.PollWatched()
+		m.PollWatched(2)
 
 		logCountCheck()
 	}
@@ -246,9 +245,9 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logFile := path.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
-		m.PollWatched()
-		testutil.WriteString(t, f, "line 1\n")
-		m.PollWatched()
+		m.PollWatched(2)
+		testutil.WriteString(t, f, "line 2\n")
+		m.PollWatched(2)
 
 		logCountCheck()
 	}

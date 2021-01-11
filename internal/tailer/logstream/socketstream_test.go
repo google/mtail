@@ -31,14 +31,14 @@ func TestSocketStreamRead(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ss, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
-	awaken() // Synchronise past socket creation
+	awaken(1) // Synchronise past socket creation
 
 	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
 	testutil.FatalIfErr(t, err)
 
 	_, err = s.Write([]byte("1\n"))
 	testutil.FatalIfErr(t, err)
-	awaken()
+	awaken(1)
 
 	ss.Stop()
 	wg.Wait()
@@ -73,17 +73,17 @@ func TestSocketStreamCompletedBecauseSocketClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ss, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
-	awaken() // Synchronise past socket creation
+	awaken(1) // Synchronise past socket creation
 
 	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
 	testutil.FatalIfErr(t, err)
 
 	_, err = s.Write([]byte("1\n"))
 	testutil.FatalIfErr(t, err)
-	awaken()
+	awaken(1)
 
 	testutil.FatalIfErr(t, s.Close())
-	awaken()
+	awaken(1)
 
 	ss.Stop()
 	wg.Wait()
@@ -118,14 +118,14 @@ func TestSocketStreamCompletedBecauseCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ss, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
-	awaken() // Synchronise past socket creation
+	awaken(1) // Synchronise past socket creation
 
 	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
 	testutil.FatalIfErr(t, err)
 
 	_, err = s.Write([]byte("1\n"))
 	testutil.FatalIfErr(t, err)
-	awaken()
+	awaken(1)
 
 	cancel()
 	wg.Wait()
