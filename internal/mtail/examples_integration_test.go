@@ -154,7 +154,7 @@ func TestExamplePrograms(t *testing.T) {
 	for _, tc := range exampleProgramTests {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, _ := waker.NewTest(0)
+			waker, _ := waker.NewTest(0) // oneshot means we should never need to wake the stream
 			store := metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
 			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))

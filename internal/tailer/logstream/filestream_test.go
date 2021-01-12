@@ -76,7 +76,8 @@ func TestFileStreamRotation(t *testing.T) {
 
 	glog.Info("rename")
 	testutil.FatalIfErr(t, os.Rename(name, name+".1"))
-
+	// filestream won't notice if there's a synchronisation point between
+	// rename and create, that path relies on the tailer
 	f = testutil.TestOpenFile(t, name)
 	awaken(1)
 	glog.Info("write 2")
