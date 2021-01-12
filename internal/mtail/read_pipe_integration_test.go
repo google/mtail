@@ -15,7 +15,6 @@ import (
 )
 
 func TestReadFromPipe(t *testing.T) {
-	t.Skip("flaky, pipes don't sync to EOF with pollwatched")
 	testutil.SkipIfShort(t)
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
