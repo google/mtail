@@ -156,8 +156,10 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				}
 				glog.V(2).Infof("%v: current seek is %d", fd, currentOffset)
 				glog.V(2).Infof("%v: new size is %d", fd, newfi.Size())
-				// We know that newfi is the same file here.
-				if currentOffset != 0 && newfi.Size() < currentOffset {
+				// We know that newfi is from the current file.  Truncation can
+				// only be detected if the new file is currently shorter than
+				// the current seek offset.
+				if newfi.Size() < currentOffset {
 					glog.V(2).Infof("%v: truncate? currentoffset is %d and size is %d", fd, currentOffset, newfi.Size())
 					// About to lose all remaining data because of the truncate so flush the accumulator.
 					if partial.Len() > 0 {
