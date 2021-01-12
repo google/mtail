@@ -21,7 +21,7 @@ func TestPollLogPathPatterns(t *testing.T) {
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
 	defer testutil.TestChdir(t, logDir)()
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
 	defer stopM()
 
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
@@ -29,14 +29,13 @@ func TestPollLogPathPatterns(t *testing.T) {
 
 	logFile := path.Join(logDir, "files", "a", "log", "a.log")
 	testutil.FatalIfErr(t, os.MkdirAll(path.Dir(logFile), 0700))
-	m.PollWatched()
 
 	f := testutil.TestOpenFile(t, logFile)
-	m.PollWatched()
+	m.PollWatched(1)
 
 	logCountCheck()
 
 	testutil.WriteString(t, f, "line 1\n")
-	m.PollWatched()
+	m.PollWatched(1)
 	lineCountCheck()
 }

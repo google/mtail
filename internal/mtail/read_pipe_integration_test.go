@@ -15,7 +15,6 @@ import (
 )
 
 func TestReadFromPipe(t *testing.T) {
-	t.Skip("flaky, pipes don't sync to EOF with pollwatched")
 	testutil.SkipIfShort(t)
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
@@ -36,13 +35,13 @@ func TestReadFromPipe(t *testing.T) {
 		testutil.FatalIfErr(t, f.Close())
 	}()
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
+	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath(progDir))
 	defer stopM()
 
 	lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 3)
 
 	testutil.WriteString(t, f, "1\n2\n3\n")
-	m.PollWatched()
+	m.PollWatched(1)
 
 	lineCountCheck()
 }

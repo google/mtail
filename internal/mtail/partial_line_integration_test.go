@@ -29,29 +29,29 @@ func TestPartialLineRead(t *testing.T) {
 
 	f := testutil.TestOpenFile(t, logFile)
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	m.PollWatched() // Force sync to EOF
+	m.PollWatched(1) // Force sync to EOF
 
 	{
 		lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
 		testutil.WriteString(t, f, "line 1\n")
-		m.PollWatched()
+		m.PollWatched(1)
 		lineCountCheck()
 	}
 
 	{
 		lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 0)
 		testutil.WriteString(t, f, "line ")
-		m.PollWatched()
+		m.PollWatched(1)
 		lineCountCheck()
 	}
 
 	{
 		lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
 		testutil.WriteString(t, f, "2\n")
-		m.PollWatched()
+		m.PollWatched(1)
 		lineCountCheck()
 	}
 }

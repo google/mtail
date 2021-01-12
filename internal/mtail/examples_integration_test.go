@@ -18,7 +18,7 @@ import (
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/mtail/golden"
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/watcher"
+	"github.com/google/mtail/internal/waker"
 )
 
 var exampleProgramTests = []struct {
@@ -154,14 +154,21 @@ func TestExamplePrograms(t *testing.T) {
 	for _, tc := range exampleProgramTests {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-			w := watcher.NewFakeWatcher()
+			waker, _ := waker.NewTest(0) // oneshot means we should never need to wake the stream
 			store := metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
-			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
+			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(t, err)
 
-			testutil.FatalIfErr(t, mtail.Run())
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				testutil.FatalIfErr(t, mtail.Run())
+			}()
+			// Oneshot mode means we can wait for shutdown before cancelling.
+			wg.Wait()
+			cancel()
 
 			g, err := os.Open(tc.goldenfile)
 			testutil.FatalIfErr(t, err)
@@ -185,9 +192,8 @@ func TestCompileExamplePrograms(t *testing.T) {
 		name := filepath.Base(tc)
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			w := watcher.NewFakeWatcher()
 			s := metrics.NewStore()
-			mtail, err := mtail.New(ctx, s, w, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
+			mtail, err := mtail.New(ctx, s, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore)
 			testutil.FatalIfErr(t, err)
 			// Ensure that run shuts down for CompileOnly
 			testutil.FatalIfErr(t, mtail.Run())
@@ -205,11 +211,11 @@ func BenchmarkProgram(b *testing.B) {
 			defer rmLogDir()
 			logFile := path.Join(logDir, "test.log")
 			log := testutil.TestOpenFile(b, logFile)
-			w := watcher.NewFakeWatcher()
+			waker, awaken := waker.NewTest(1)
 			store := metrics.NewStore()
 			programFile := path.Join("../..", bm.programfile)
 			ctx, cancel := context.WithCancel(context.Background())
-			mtail, err := mtail.New(ctx, store, w, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()))
+			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(b, err)
 
 			var wg sync.WaitGroup
@@ -227,7 +233,7 @@ func BenchmarkProgram(b *testing.B) {
 				count, err := io.Copy(log, l)
 				testutil.FatalIfErr(b, err)
 				total += count
-				w.InjectUpdate(log.Name())
+				awaken(1)
 			}
 			cancel()
 			wg.Wait()

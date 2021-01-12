@@ -21,7 +21,6 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/watcher"
 )
 
 // makeServer makes a new Server for use in tests, but does not start
@@ -29,10 +28,8 @@ import (
 func makeServer(tb testing.TB, pollInterval time.Duration, options ...mtail.Option) (*mtail.Server, error) {
 	tb.Helper()
 	ctx := context.Background()
-	w, err := watcher.NewLogWatcher(ctx, pollInterval)
-	testutil.FatalIfErr(tb, err)
 
-	return mtail.New(ctx, metrics.NewStore(), w, options...)
+	return mtail.New(ctx, metrics.NewStore(), options...)
 }
 
 // startUNIXSocketServer creates a new Server serving through a UNIX
@@ -128,7 +125,7 @@ func TestBasicUNIXSockets(t *testing.T) {
 	unixSocket := "/var/run/mtail_test.socket"
 
 	if testing.Verbose() {
-		defer testutil.TestSetFlag(t, "vmodule", "tail=2,log_watcher=2")()
+		defer testutil.TestSetFlag(t, "vmodule", "tail=2,filestream=2")()
 	}
 	logDir, rmLogDir := testutil.TestTempDir(t)
 	defer rmLogDir()

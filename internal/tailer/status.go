@@ -7,6 +7,8 @@ import (
 	"expvar"
 	"html/template"
 	"io"
+
+	"github.com/google/mtail/internal/tailer/logstream"
 )
 
 const tailerTemplate = `
@@ -22,15 +24,15 @@ const tailerTemplate = `
 <tr>
 <th>pathname</th>
 <th>errors</th>
-<th>rotations</th>
+<th>opens</th>
 <th>truncations</th>
 <th>lines read</th>
 </tr>
-{{range $name, $val := $.Handles}}
+{{range $name, $val := $.LogStreams}}
 <tr>
 <td><pre>{{$name}}</pre></td>
 <td>{{index $.Errors $name}}</td>
-<td>{{index $.Rotations $name}}</td>
+<td>{{index $.Opens $name}}</td>
 <td>{{index $.Truncs $name}}</td>
 <td>{{index $.Lines $name}}</td>
 </tr>
@@ -45,19 +47,19 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	t.handlesMu.RLock()
-	defer t.handlesMu.RUnlock()
+	t.logstreamsMu.RLock()
+	defer t.logstreamsMu.RUnlock()
 	t.globPatternsMu.RLock()
 	defer t.globPatternsMu.RUnlock()
 	data := struct {
-		Handles   map[string]Log
-		Patterns  map[string]struct{}
-		Rotations map[string]string
-		Lines     map[string]string
-		Errors    map[string]string
-		Truncs    map[string]string
+		LogStreams map[string]logstream.LogStream
+		Patterns   map[string]struct{}
+		Opens      map[string]string
+		Lines      map[string]string
+		Errors     map[string]string
+		Truncs     map[string]string
 	}{
-		t.handles,
+		t.logstreams,
 		t.globPatterns,
 		make(map[string]string),
 		make(map[string]string),
@@ -65,15 +67,16 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 		make(map[string]string),
 	}
 	for _, pair := range []struct {
-		v *expvar.Map
+		k string
 		m map[string]string
 	}{
-		{logErrors, data.Errors},
-		{logRotations, data.Rotations},
-		{logTruncs, data.Truncs},
-		{lineCount, data.Lines},
+		{"log_errors_total", data.Errors},
+		{"log_opens_total", data.Opens},
+		{"file_truncates_total", data.Truncs},
+		{"log_lines_total", data.Lines},
 	} {
-		pair.v.Do(func(kv expvar.KeyValue) {
+		v := expvar.Get(pair.k).(*expvar.Map)
+		v.Do(func(kv expvar.KeyValue) {
 			pair.m[kv.Key] = kv.Value.String()
 		})
 	}

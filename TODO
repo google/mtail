@@ -1,7 +1,5 @@
 standard library, search path
 
-refactor fs and notify into single interface
-
 no trailing newline in parser test, requires changes to expr stmt
 
 parse tree/ast testing? - expected AST as result from parse/check instead of
@@ -58,12 +56,6 @@ Can't set the timestamp when processing one log line and reuse it in another; mu
 Get a list of non-stdlib deps
 go list -f "{{if not .Standard}}{{.ImportPath}}{{end}}" $(go list -f '{{join .Deps "\n"}}' ./...)
 
-
-Request joining (request coalescing) for the log-watcher when sending updates about files, in case
-one's already in the queue.  Maybe helps with fsnotify overflow, and the
-    duplicate notify problem from poll-only mode?
-    Can we do this with a one-element channel per file, and a select on send to abort if the send blocks?
-
 Programs may not use mtail_ as a metric prefix.
 
 Theory: Implicitly cast Int shouldn't get the S2i conversion applied to them.  Do we need to name Implicit Int separate from Int and then not create s2i or other conversions for implicits.  (and we need to keep the runtime conversions?)
@@ -84,13 +76,8 @@ Move the non-program examples to the vm integration test.
 
 Why is strings.Builder slower than bytes.Buffer when the latter's docstring recommends the former?
 
-file-test.go relies on the ReadDeadline timeouts in file.go and socket.go.  Remove to make tests faster.
-
 
 ci: rerun failed tests to see if they're flaky
-
-
-Move the glob patterns from tailer.TailPattern into log watcher Observe and pollDirectory* to avoid event sends from watcher to tailer for unnecessary dir entries.  The Tailer only should get updates at all; the watcher should be handling all filesystem observation including pattern handling.  the current setup seems to be incurring a mess of code in how watcher.pollDirectoryWatched works, as well as log lifecycle in tailer.
 
 
 Find out if OpenTelemetry is better than OpenCensus when creating no-op trace spans.
@@ -98,4 +85,6 @@ Find out if OpenTelemetry is better than OpenCensus when creating no-op trace sp
 
 run with gosec, and possibly annotate safe sections in code
 
+
+Test that when path/* is the logpathpattern that we handle log rotation, e.g. log -> log.1
 

@@ -16,7 +16,7 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/watcher"
+	"github.com/google/mtail/internal/waker"
 )
 
 const timeoutMultiplier = 3
@@ -26,7 +26,8 @@ const defaultDoOrTimeoutDeadline = 10 * time.Second
 type TestServer struct {
 	*Server
 
-	w *watcher.LogWatcher
+	waker  waker.Waker // for idle logstreams; others are polled explicitly in PollWatched
+	awaken func(int)
 
 	tb testing.TB
 
@@ -38,7 +39,7 @@ type TestServer struct {
 
 // TestMakeServer makes a new TestServer for use in tests, but does not start
 // the server.  If an error occurs during creation, a testing.Fatal is issued.
-func TestMakeServer(tb testing.TB, pollInterval time.Duration, options ...Option) *TestServer {
+func TestMakeServer(tb testing.TB, wakers int, pollInterval time.Duration, options ...Option) *TestServer {
 	tb.Helper()
 
 	// Reset counters when running multiple tests.  Tests that use expvar
@@ -46,24 +47,26 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, options ...Option
 	glog.Info("resetting counters")
 	expvar.Get("lines_total").(*expvar.Int).Set(0)
 	expvar.Get("log_count").(*expvar.Int).Set(0)
-	expvar.Get("log_rotations_total").(*expvar.Map).Init()
+	expvar.Get("log_lines_total").(*expvar.Map).Init()
+	expvar.Get("log_opens_total").(*expvar.Map).Init()
+	expvar.Get("file_truncates_total").(*expvar.Map).Init()
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	w, err := watcher.NewLogWatcher(ctx, pollInterval)
+	waker, awaken := waker.NewTest(wakers)
+	options = append(options,
+		LogstreamPollWaker(waker),
+	)
+	m, err := New(ctx, metrics.NewStore(), options...)
 	testutil.FatalIfErr(tb, err)
-	m, err := New(ctx, metrics.NewStore(), w, options...)
-	testutil.FatalIfErr(tb, err)
-	return &TestServer{Server: m, w: w, tb: tb, cancel: cancel}
+	return &TestServer{Server: m, waker: waker, awaken: awaken, tb: tb, cancel: cancel}
 }
 
 // TestStartServer creates a new TestServer and starts it running.  It
 // returns the server, and a cleanup function.
-func TestStartServer(tb testing.TB, pollInterval time.Duration, options ...Option) (*TestServer, func()) {
+func TestStartServer(tb testing.TB, wakers int, pollInterval time.Duration, options ...Option) (*TestServer, func()) {
 	tb.Helper()
-	options = append(options, BindAddress("", "0"))
-
-	ts := TestMakeServer(tb, pollInterval, options...)
+	ts := TestMakeServer(tb, wakers, pollInterval, options...)
 	return ts, ts.Start()
 }
 
@@ -91,12 +94,24 @@ func (ts *TestServer) Start() func() {
 	}
 }
 
-// Poll all watched logs for updates.
-func (ts *TestServer) PollWatched() {
-	glog.Info("TestServer polling watched objects")
-	ts.w.Poll()
-	ts.t.Poll()
-	ts.l.LoadAllPrograms()
+// Poll all watched objects for updates.  The parameter n indicates how many logstreams to wait on before waking them.
+func (ts *TestServer) PollWatched(n int) {
+	glog.Info("Testserver starting poll")
+	glog.Infof("TestServer polling filesystem patterns")
+	if err := ts.t.Poll(); err != nil {
+		glog.Info(err)
+	}
+	glog.Infof("TestServer reloading programs")
+	if err := ts.l.LoadAllPrograms(); err != nil {
+		glog.Info(err)
+	}
+	glog.Infof("TestServer tailer gcing")
+	if err := ts.t.Gc(); err != nil {
+		glog.Info(err)
+	}
+	glog.Info("TestServer waking idle routines")
+	ts.awaken(n)
+	glog.Info("Testserver finishing poll")
 }
 
 // TestGetExpvar fetches the expvar metric `name`, and returns the expvar.

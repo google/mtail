@@ -22,7 +22,7 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/vm"
-	"github.com/google/mtail/internal/watcher"
+	"github.com/google/mtail/internal/waker"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -34,10 +34,9 @@ import (
 type Server struct {
 	ctx   context.Context
 	store *metrics.Store // Metrics storage
-	w     watcher.Watcher
 	wg    sync.WaitGroup // wait for main processes to shutdown
 
-	t *tailer.Tailer     // t tails the watched files and sends lines to the VMs
+	t *tailer.Tailer     // t manages log patterns and log streams, which sends lines to the VMs
 	l *vm.Loader         // l loads programs and manages the VM lifecycle
 	e *exporter.Exporter // e manages the export of metrics from the store
 
@@ -60,8 +59,9 @@ type Server struct {
 
 	overrideLocation            *time.Location // Timezone location to use when parsing timestamps
 	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
-	staleLogGcTickInterval      time.Duration  // Interval between stale log gc runs
-	logPatternPollTickInterval  time.Duration  // Interval between log pattern polls
+	staleLogGcWaker             waker.Waker    // Wake to run stale log gc
+	logPatternPollWaker         waker.Waker    // Wake to poll for log patterns
+	logstreamPollWaker          waker.Waker    // Wake idle logstreams to poll sfor new data
 	metricPushInterval          time.Duration  // Interval between metric pushes
 	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
 	omitMetricSource            bool           // if set, do not link the source program to a metric
@@ -138,13 +138,14 @@ func (m *Server) initTailer() (err error) {
 	opts := []tailer.Option{
 		tailer.IgnoreRegex(m.ignoreRegexPattern),
 		tailer.LogPatterns(m.logPathPatterns),
-		tailer.LogPatternPollTickInterval(m.logPatternPollTickInterval),
-		tailer.StaleLogGcTickInterval(m.staleLogGcTickInterval),
+		tailer.LogPatternPollWaker(m.logPatternPollWaker),
+		tailer.StaleLogGcWaker(m.staleLogGcWaker),
+		tailer.LogstreamPollWaker(m.logstreamPollWaker),
 	}
 	if m.oneShot {
 		opts = append(opts, tailer.OneShot)
 	}
-	m.t, err = tailer.New(m.ctx, &m.wg, m.lines, m.w, opts...)
+	m.t, err = tailer.New(m.ctx, &m.wg, m.lines, opts...)
 	return
 }
 
@@ -221,11 +222,10 @@ func (m *Server) initHttpServer() error {
 // each log file from start to finish.
 // TODO(jaq): this doesn't need to be a constructor anymore, it could start and
 // block until quit, once TestServer.PollWatched is addressed.
-func New(ctx context.Context, store *metrics.Store, w watcher.Watcher, options ...Option) (*Server, error) {
+func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server, error) {
 	m := &Server{
 		ctx:   ctx,
 		store: store,
-		w:     w,
 		lines: make(chan *logline.LogLine),
 		// Using a non-pedantic registry means we can be looser with metrics that
 		// are not fully specified at startup.

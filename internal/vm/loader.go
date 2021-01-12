@@ -11,7 +11,9 @@ package vm
 // of mtail programs.
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"expvar"
 	"fmt"
 	"html/template"
@@ -53,6 +55,10 @@ const (
 // directory for filesystem changes.  Any compile errors are stored for later retrieival.
 // This function returns an error if an internal error occurs.
 func (l *Loader) LoadAllPrograms() error {
+	if l.programPath == "" {
+		glog.V(2).Info("Programpath is empty, loading nothing")
+		return nil
+	}
 	s, err := os.Stat(l.programPath)
 	if err != nil {
 		return errors.Wrapf(err, "failed to stat %q", l.programPath)
@@ -90,7 +96,6 @@ func (l *Loader) LoadAllPrograms() error {
 
 // LoadProgram loads or reloads a program from the full pathname programPath.  The name of
 // the program is the basename of the file.
-// TODO(jaq): store a hash of the program so we don't reload on no change.
 func (l *Loader) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)
 	if strings.HasPrefix(name, ".") {
@@ -196,7 +201,22 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 // the same name remains running.
 func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	glog.V(2).Infof("CompileAndRun %s", name)
-	v, errs := Compile(name, input, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation)
+	var buf bytes.Buffer
+	tee := io.TeeReader(input, &buf)
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, tee); err != nil {
+		ProgLoadErrors.Add(name, 1)
+		return errors.Wrapf(err, "hashing failed for %q", name)
+	}
+	contentHash := hasher.Sum(nil)
+	l.handleMu.RLock()
+	vm, ok := l.handles[name]
+	l.handleMu.RUnlock()
+	if ok && bytes.Equal(vm.contentHash, contentHash) {
+		glog.V(1).Infof("contents match, not recompiling %q", name)
+		return nil
+	}
+	v, errs := Compile(name, &buf, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("compile failed for %s:\n%s", name, errs)
@@ -237,15 +257,16 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		close(handle.lines)
 	}
 	lines := make(chan *logline.LogLine)
-	l.handles[name] = &vmHandle{vm: v, lines: lines}
+	l.handles[name] = &vmHandle{contentHash: contentHash, vm: v, lines: lines}
 	l.wg.Add(1)
 	go v.Run(lines, &l.wg)
 	return nil
 }
 
 type vmHandle struct {
-	vm    *VM
-	lines chan *logline.LogLine
+	contentHash []byte
+	vm          *VM
+	lines       chan *logline.LogLine
 }
 
 // Loader handles the lifecycle of programs and virtual machines, by watching
@@ -274,7 +295,6 @@ type Loader struct {
 	omitMetricSource     bool
 
 	signalQuit chan struct{} // When closed stops the signal handler goroutine.
-	initDone   chan struct{} // When closed, the initialisation has completed.
 }
 
 // Option configures a new program Loader.
@@ -364,17 +384,26 @@ func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath st
 		handles:       make(map[string]*vmHandle),
 		programErrors: make(map[string]error),
 		signalQuit:    make(chan struct{}),
-		initDone:      make(chan struct{}),
 	}
-	defer close(l.initDone)
+	initDone := make(chan struct{})
+	defer close(initDone)
 	if err := l.SetOption(options...); err != nil {
 		return nil, err
 	}
-	// This goroutine is the main consumer/producer loop and shutdown.
+	// Defer shutdown handling to avoid a race on l.wg.
 	wg.Add(1)
+	defer func() {
+		go func() {
+			defer wg.Done()
+			<-initDone
+			l.wg.Wait()
+		}()
+	}()
+	// This goroutine is the main consumer/producer loop.
+	l.wg.Add(1)
 	go func() {
-		defer wg.Done() // signal to owner we're done
-		<-l.initDone
+		defer l.wg.Done() // signal to owner we're done
+		<-initDone
 		for line := range lines {
 			LineCount.Add(1)
 			l.handleMu.RLock()
@@ -391,17 +420,21 @@ func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath st
 			delete(l.handles, prog)
 		}
 		l.handleMu.Unlock()
-		l.wg.Wait()
 	}()
 	if l.programPath == "" {
 		glog.Info("No program path specified, no programs will be loaded.")
 		return l, nil
 	}
+
 	// Create one goroutine that handles reload signals.
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
-		<-l.initDone
+		<-initDone
+		if l.programPath != "" {
+			glog.Info("no program reload on SIGHUP without programPath")
+			return
+		}
 		n := make(chan os.Signal, 1)
 		signal.Notify(n, syscall.SIGHUP)
 		defer signal.Stop(n)

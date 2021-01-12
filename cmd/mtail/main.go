@@ -17,7 +17,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
-	"github.com/google/mtail/internal/watcher"
+	"github.com/google/mtail/internal/waker"
 	"go.opencensus.io/trace"
 )
 
@@ -154,19 +154,21 @@ func main() {
 		cancel()
 	}()
 
-	w, err := watcher.NewLogWatcher(ctx, *pollInterval)
-	if err != nil {
-		glog.Exitf("Failure to create log watcher: %s", err)
-	}
 	opts := []mtail.Option{
 		mtail.ProgramPath(*progs),
 		mtail.LogPathPatterns(logs...),
 		mtail.IgnoreRegexPattern(*ignoreRegexPattern),
 		mtail.SetBuildInfo(buildInfo),
 		mtail.OverrideLocation(loc),
-		mtail.StaleLogGcTickInterval(*staleLogGcTickInterval),
-		mtail.LogPatternPollTickInterval(*pollInterval),
 		mtail.MetricPushInterval(*metricPushInterval),
+	}
+	if *staleLogGcTickInterval > 0 {
+		staleLogGcWaker := waker.NewTimed(ctx, *staleLogGcTickInterval)
+		opts = append(opts, mtail.StaleLogGcWaker(staleLogGcWaker))
+	}
+	if *pollInterval > 0 {
+		logPatternPollWaker := waker.NewTimed(ctx, *pollInterval)
+		opts = append(opts, mtail.LogPatternPollWaker(logPatternPollWaker))
 	}
 	if *unixSocket == "" {
 		opts = append(opts, mtail.BindAddress(*address, *port))
@@ -204,7 +206,7 @@ func main() {
 	if *expiredMetricGcTickInterval > 0 {
 		store.StartGcLoop(ctx, *expiredMetricGcTickInterval)
 	}
-	m, err := mtail.New(ctx, store, w, opts...)
+	m, err := mtail.New(ctx, store, opts...)
 	if err != nil {
 		glog.Error(err)
 		os.Exit(1)

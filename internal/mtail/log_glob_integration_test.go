@@ -7,7 +7,6 @@ import (
 	"expvar"
 	"os"
 	"path"
-	"sync"
 	"testing"
 
 	"github.com/golang/glog"
@@ -47,7 +46,7 @@ func TestGlobBeforeStart(t *testing.T) {
 		}
 		testutil.WriteString(t, log, "\n")
 	}
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
 	stopM()
 
 	if r := m.GetExpvar("log_count"); r.(*expvar.Int).Value() != int64(count) {
@@ -78,10 +77,10 @@ func TestGlobAfterStart(t *testing.T) {
 			false,
 		},
 	}
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
 	defer stopM()
 
-	m.PollWatched() // Force sync to EOF
+	m.PollWatched(0) // Force sync to EOF
 
 	var count int64
 	for _, tt := range globTests {
@@ -90,27 +89,13 @@ func TestGlobAfterStart(t *testing.T) {
 		}
 	}
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", count)
-	//	linesCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", count)
 	for _, tt := range globTests {
 		log := testutil.TestOpenFile(t, tt.name)
-		m.PollWatched() // Force sync to EOF
+		m.PollWatched(0) // Force sync to EOF
 		defer log.Close()
-		//testutil.WriteString(t, log, "\n")
 	}
-
-	m.PollWatched()
-
-	// var wg sync.WaitGroup
-	// wg.Add(2)
-	// go func() {
-	// 	defer wg.Done()
-	// 	linesCountCheck()
-	// }()
-	// go func() {
-	// 	defer wg.Done()
+	// m.PollWatched(2)
 	logCountCheck()
-	// }()
-	// wg.Wait()
 }
 
 func TestGlobIgnoreFolder(t *testing.T) {
@@ -160,7 +145,8 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		testutil.FatalIfErr(t, err)
 		testutil.WriteString(t, log, "\n")
 	}
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 
 	stopM()
 
@@ -203,7 +189,7 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		testutil.WriteString(t, log, "\n")
 	}
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 
 	stopM()
 
@@ -227,77 +213,43 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	// Move to logdir to make relative paths
 	defer testutil.TestChdir(t, logDir)()
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
+	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
 	defer stopM()
 
 	{
 		logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
-		lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
 
 		logFile := path.Join(logDir, "log.1.txt")
 		f := testutil.TestOpenFile(t, logFile)
-		m.PollWatched() // Force sync to EOF
-
+		m.PollWatched(1) // Force sync to EOF
 		testutil.WriteString(t, f, "line 1\n")
-		m.PollWatched()
+		m.PollWatched(1)
 
-		var wg sync.WaitGroup
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			logCountCheck()
-		}()
-		go func() {
-			defer wg.Done()
-			lineCountCheck()
-		}()
-		wg.Wait()
+		logCountCheck()
 	}
 
 	{
 
 		logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
-		lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
 
 		logFile := path.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
-		m.PollWatched()
+		m.PollWatched(2)
 		testutil.WriteString(t, f, "line 1\n")
-		m.PollWatched()
+		m.PollWatched(2)
 
-		var wg sync.WaitGroup
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			logCountCheck()
-		}()
-		go func() {
-			defer wg.Done()
-			lineCountCheck()
-		}()
-		wg.Wait()
+		logCountCheck()
 	}
 	{
 		logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 0)
-		lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
 
 		logFile := path.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
-		m.PollWatched()
-		testutil.WriteString(t, f, "line 1\n")
-		m.PollWatched()
+		m.PollWatched(2)
+		testutil.WriteString(t, f, "line 2\n")
+		m.PollWatched(2)
 
-		var wg sync.WaitGroup
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			logCountCheck()
-		}()
-		go func() {
-			defer wg.Done()
-			lineCountCheck()
-		}()
-		wg.Wait()
+		logCountCheck()
 	}
 
 	glog.Infof("end")

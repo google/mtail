@@ -7,13 +7,14 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
 )
 
-func TestHandleLogDeletes(t *testing.T) {
-	t.Skip("broken, was commented out")
+func TestLogDeletion(t *testing.T) {
 	testutil.SkipIfShort(t)
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()
@@ -23,14 +24,19 @@ func TestHandleLogDeletes(t *testing.T) {
 	logFile := testutil.TestOpenFile(t, logFilepath)
 	defer logFile.Close()
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logFilepath))
+	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.LogPathPatterns(logFilepath))
 	defer stopM()
 
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", -1)
 
+	glog.Info("remove")
 	testutil.FatalIfErr(t, os.Remove(logFilepath))
 
-	m.PollWatched()
+	m.PollWatched(1) // one pass to stop
+	// TODO(jaq): this sleep hides a race between filestream completing and
+	// PollLogStreams noticing.
+	time.Sleep(10 * time.Millisecond)
+	m.PollWatched(0) // one pass to remove completed stream
 
 	logCountCheck()
 }

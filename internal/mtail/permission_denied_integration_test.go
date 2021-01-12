@@ -32,7 +32,7 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	// Hide the error from stdout during test.
 	defer testutil.TestSetFlag(t, "stderrthreshold", "FATAL")()
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
 	errorsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("log_errors_total", logFile, 1)
@@ -41,7 +41,9 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 	defer f.Close()
 
-	m.PollWatched()
+	// Nothing to await on, we expect to get a Permission Denied in the
+	// synchronous logstream.New path.
+	m.PollWatched(0)
 
 	errorsTotalCheck()
 }
