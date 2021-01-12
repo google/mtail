@@ -24,7 +24,7 @@ const tailerTemplate = `
 <tr>
 <th>pathname</th>
 <th>errors</th>
-<th>rotations</th>
+<th>opens</th>
 <th>truncations</th>
 <th>lines read</th>
 </tr>
@@ -32,7 +32,7 @@ const tailerTemplate = `
 <tr>
 <td><pre>{{$name}}</pre></td>
 <td>{{index $.Errors $name}}</td>
-<td>{{index $.Rotations $name}}</td>
+<td>{{index $.Opens $name}}</td>
 <td>{{index $.Truncs $name}}</td>
 <td>{{index $.Lines $name}}</td>
 </tr>
@@ -54,7 +54,7 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 	data := struct {
 		LogStreams map[string]logstream.LogStream
 		Patterns   map[string]struct{}
-		Rotations  map[string]string
+		Opens      map[string]string
 		Lines      map[string]string
 		Errors     map[string]string
 		Truncs     map[string]string
@@ -71,7 +71,7 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 		m map[string]string
 	}{
 		{"log_errors_total", data.Errors},
-		{"file_rotations_total", data.Rotations},
+		{"log_opens_total", data.Opens},
 		{"file_truncates_total", data.Truncs},
 		{"log_lines_total", data.Lines},
 	} {

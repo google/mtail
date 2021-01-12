@@ -15,7 +15,6 @@ import (
 )
 
 func TestLogDeletion(t *testing.T) {
-	t.Skip("broken, was commented out")
 	testutil.SkipIfShort(t)
 	workdir, rmWorkdir := testutil.TestTempDir(t)
 	defer rmWorkdir()

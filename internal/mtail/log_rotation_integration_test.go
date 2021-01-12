@@ -92,7 +92,6 @@ func TestLogSoftLinkChange(t *testing.T) {
 			name = "enabled"
 		}
 		t.Run(fmt.Sprintf("race simulation %s", name), func(t *testing.T) {
-
 			workdir, rmWorkdir := testutil.TestTempDir(t)
 			defer rmWorkdir()
 

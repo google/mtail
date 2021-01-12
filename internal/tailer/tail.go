@@ -265,12 +265,9 @@ func (t *Tailer) TailPath(pathname string) error {
 func (t *Tailer) Gc() error {
 	t.logstreamsMu.Lock()
 	defer t.logstreamsMu.Unlock()
-	for k, v := range t.logstreams {
+	for _, v := range t.logstreams {
 		if time.Since(v.LastReadTime()) > (time.Hour * 24) {
 			v.Stop()
-		}
-		if v.IsComplete() {
-			delete(t.logstreams, k)
 		}
 	}
 	return nil
@@ -362,10 +359,29 @@ func (t *Tailer) PollLogPatterns() error {
 	return nil
 }
 
+// PollLogStreams looks at the existing paths and checks if they're already
+// complete, removing it from the map if so.
+func (t *Tailer) PollLogStreams() error {
+	t.logstreamsMu.Lock()
+	defer t.logstreamsMu.Unlock()
+	for name, l := range t.logstreams {
+		if l.IsComplete() {
+			glog.Infof("%s is complete", name)
+			delete(t.logstreams, name)
+			logCount.Add(-1)
+			continue
+		}
+	}
+	return nil
+}
+
 func (t *Tailer) Poll() error {
 	t.pollMu.Lock()
 	defer t.pollMu.Unlock()
 	if err := t.PollLogPatterns(); err != nil {
+		return err
+	}
+	if err := t.PollLogStreams(); err != nil {
 		return err
 	}
 	return nil

@@ -18,8 +18,6 @@ import (
 )
 
 var (
-	// fileRotations counts the rotations of a file stream
-	fileRotations = expvar.NewMap("file_rotations_total")
 	// fileTruncates counts the truncations of a file stream
 	fileTruncates = expvar.NewMap("file_truncates_total")
 )
@@ -70,6 +68,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		logErrors.Add(fs.pathname, 1)
 		return err
 	}
+	logOpens.Add(fs.pathname, 1)
 	glog.V(2).Infof("%v: opened new file", fd)
 	if !streamFromStart {
 		if _, err := fd.Seek(0, io.SeekEnd); err != nil {
@@ -121,22 +120,28 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				newfi, serr := os.Stat(fs.pathname)
 				if serr != nil {
 					glog.Info(serr)
-					// If this is a NotExist error, the file has been either
-					// deleted or renamed.  In the first case, we can expect
-					// that we're going to be told to Stop by the Tailer.  In
-					// the latter we're in the middle of a log rotation between
-					// rename and create, which we'll detect with the Stat
-					// above in the next pass.  In both cases, go to sleep to
-					// find out what to do next.
-					if !os.IsNotExist(serr) {
-						logErrors.Add(fs.pathname, 1)
+					// If this is a NotExist error, then we should wrap up this
+					// goroutine. The Tailer will create a new logstream if the
+					// file is in the middle of a rotation and gets recreated
+					// in the next moment.  We can't rely on the Tailer to tell
+					// us we're deleted because the tailer can only tell us to
+					// Stop, which ends up causing us to race here against
+					// detection of IsCompleted.
+					if os.IsNotExist(serr) {
+						glog.V(2).Infof("%v: source no longer exists, exiting", fd)
+						if partial.Len() > 0 {
+							sendLine(ctx, fs.pathname, partial, fs.lines)
+						}
+						fs.mu.Lock()
+						fs.completed = true
+						fs.mu.Unlock()
+						return
 					}
+					logErrors.Add(fs.pathname, 1)
 					goto Sleep
 				}
-				// TODO existing logstream finished race bug on delete
 				if !os.SameFile(fi, newfi) {
 					glog.V(2).Infof("%v: adding a new file routine", fd)
-					fileRotations.Add(fs.pathname, 1)
 					if err := fs.stream(ctx, wg, waker, newfi, true); err != nil {
 						glog.Info(err)
 					}
@@ -237,7 +242,7 @@ func (fs *fileStream) IsComplete() bool {
 
 func (fs *fileStream) Stop() {
 	fs.stopOnce.Do(func() {
-		glog.Info("stopping at next EOF")
+		glog.Info("signalling stop at next EOF")
 		close(fs.stopChan)
 	})
 }

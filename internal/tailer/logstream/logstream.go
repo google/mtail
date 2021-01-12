@@ -23,6 +23,8 @@ import (
 var (
 	// logErrors counts the IO errors encountered per log
 	logErrors = expvar.NewMap("log_errors_total")
+	// logOpens counts the opens of new log file descriptors/sockets
+	logOpens = expvar.NewMap("log_opens_total")
 )
 
 // LogStream
