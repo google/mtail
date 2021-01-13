@@ -6,6 +6,7 @@ package logstream
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"sync"
@@ -58,7 +59,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	go func() {
 		defer wg.Done()
 		defer func() {
-			glog.Infof("%v: copied %d bytes from %s", fd, total, ps.pathname)
+			glog.V(2).Infof("%v: read %d bytes from %s", fd, total, ps.pathname)
 			err := fd.Close()
 			if err != nil {
 				logErrors.Add(ps.pathname, 1)
@@ -71,6 +72,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		b := make([]byte, 0, defaultReadBufferSize)
 		capB := cap(b)
 		partial := bytes.NewBufferString("")
+		var timedout bool
 		for {
 			// Set idle timeout
 			if err := fd.SetReadDeadline(time.Now().Add(defaultReadTimeout)); err != nil {
@@ -78,7 +80,9 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				glog.V(2).Infof("%s: %s", ps.pathname, err)
 			}
 			n, err := fd.Read(b[:capB])
-			if e, ok := err.(*os.PathError); ok && e.Timeout() && n == 0 {
+			var perr *os.PathError
+			if errors.As(err, &perr) && perr.Timeout() && n == 0 {
+				timedout = true
 				// Named Pipes EOF when the writer has closed, so we look for a
 				// timeout on read to detect a writer stall and thus let us check
 				// below for cancellation.
@@ -112,20 +116,52 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 
 		Sleep:
-			// Test to see if it's time to exit.
+			// If we've stalled or it looks like the context is done, then test to see if it's time to exit.
+			if timedout || ctx.Err() != nil {
+				timedout = false
+				// Test to see if it's time to exit.
+				select {
+				case <-ps.stopChan:
+					glog.V(2).Infof("%v: stream has been stopped, exiting", fd)
+					if partial.Len() > 0 {
+						sendLine(ctx, ps.pathname, partial, ps.lines)
+					}
+					ps.mu.Lock()
+					ps.completed = true
+					ps.mu.Unlock()
+					return
+				case <-ctx.Done():
+					glog.V(2).Infof("%v: context has been cancelled, exiting", fd)
+					if partial.Len() > 0 {
+						sendLine(ctx, ps.pathname, partial, ps.lines)
+					}
+					ps.mu.Lock()
+					ps.completed = true
+					ps.mu.Unlock()
+					return
+				default:
+					// keep going
+				}
+			}
+			// Yield and wait
+			glog.V(2).Infof("%v: waiting", fd)
 			select {
 			case <-ps.stopChan:
-				ps.mu.Lock()
-				ps.completed = true
-				ps.mu.Unlock()
-				return
+				// We may have started waiting here when the stop signal
+				// arrives, but since that wait the file may have been
+				// written to.  The file is not technically yet at EOF so
+				// we need to go back and try one more read.  We'll exit
+				// the stream in the select stanza above.
+				glog.V(2).Infof("%v: Stopping after next read", fd)
 			case <-ctx.Done():
-				ps.mu.Lock()
-				ps.completed = true
-				ps.mu.Unlock()
-				return
+				// Same for cancellation; this makes tests stable, but
+				// could argue exiting immediately is less surprising.
+				// Assumption is that this doesn't make a difference in
+				// production.
+				glog.V(2).Infof("%v: Cancelled after next read", fd)
 			case <-waker.Wake():
 				// sleep until next Wake()
+				glog.V(2).Infof("%v: Wake received", fd)
 			}
 		}
 	}()

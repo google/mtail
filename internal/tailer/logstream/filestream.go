@@ -89,7 +89,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	go func() {
 		defer wg.Done()
 		defer func() {
-			glog.Infof("%v: copied %d bytes from %s", fd, total, fs.pathname)
+			glog.V(2).Infof("%v: read %d bytes from %s", fd, total, fs.pathname)
 			glog.V(2).Infof("%v: closing file descriptor", fd)
 			if err := fd.Close(); err != nil {
 				logErrors.Add(fs.pathname, 1)

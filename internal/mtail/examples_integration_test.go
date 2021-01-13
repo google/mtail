@@ -268,7 +268,8 @@ func TestFilePipeStreamComparison(t *testing.T) {
 				defer wg.Done()
 				tmpDir, rmTmpDir := testutil.TestTempDir(t)
 				defer rmTmpDir()
-				pipeName := filepath.Join(tmpDir, "pipe")
+				// Some of our examples use getfilename() which means we need to retain the filename!
+				pipeName := filepath.Join(tmpDir, filepath.Base(tc.logfile))
 				testutil.FatalIfErr(t, unix.Mkfifo(pipeName, 0600))
 				go func() {
 					pipe, err := os.OpenFile(pipeName, os.O_WRONLY, os.ModeNamedPipe)
