@@ -292,7 +292,7 @@ func (m *Server) WriteMetrics(w io.Writer) error {
 // Run awaits mtail's shutdown.
 // TODO(jaq): remove this once the test server is able to trigger polls on the components.
 func (m *Server) Run() error {
-	defer m.wg.Wait()
+	m.wg.Wait()
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
 		return nil
