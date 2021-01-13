@@ -256,13 +256,18 @@ func TestFilePipeStreamComparison(t *testing.T) {
 			fileStore, pipeStore := metrics.NewStore(), metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
 
+			errc := make(chan error)
 			var wg sync.WaitGroup
 			wg.Add(2)
 			go func() {
 				defer wg.Done()
 				mtail, err := mtail.New(ctx, fileStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
-				testutil.FatalIfErr(t, err)
-				testutil.FatalIfErr(t, mtail.Run())
+				if err != nil {
+					errc <- err
+				}
+				if err = mtail.Run(); err != nil {
+					errc <- err
+				}
 			}()
 			go func() {
 				defer wg.Done()
@@ -270,25 +275,43 @@ func TestFilePipeStreamComparison(t *testing.T) {
 				defer rmTmpDir()
 				// Some of our examples use getfilename() which means we need to retain the filename!
 				pipeName := filepath.Join(tmpDir, filepath.Base(tc.logfile))
-				testutil.FatalIfErr(t, unix.Mkfifo(pipeName, 0600))
+				err := unix.Mkfifo(pipeName, 0600)
+				if err != nil {
+					errc <- err
+				}
 				go func() {
 					pipe, err := os.OpenFile(pipeName, os.O_WRONLY, os.ModeNamedPipe)
-					testutil.FatalIfErr(t, err)
+					if err != nil {
+						errc <- err
+					}
 					f, err := os.OpenFile(tc.logfile, os.O_RDONLY, 0)
-					testutil.FatalIfErr(t, err)
+					if err != nil {
+						errc <- err
+					}
 					defer f.Close()
 					n, err := io.Copy(pipe, f)
-					testutil.FatalIfErr(t, err)
+					if err != nil {
+
+						errc <- err
+					}
 					glog.Infof("Copied %d bytes into pipe", n)
 					pipe.Close()
 				}()
 				mtail, err := mtail.New(ctx, pipeStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(pipeName), mtail.OneShot, mtail.OmitMetricSource, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
-				testutil.FatalIfErr(t, err)
-				testutil.FatalIfErr(t, mtail.Run())
+				if err != nil {
+					errc <- err
+				}
+				if err = mtail.Run(); err != nil {
+					errc <- err
+				}
 			}()
-			// Oneshot mode means we can wait for shutdown before cancelling.
-			wg.Wait()
-			cancel()
+			go func() {
+				// Oneshot mode means we can wait for shutdown before cancelling.
+				wg.Wait()
+				cancel()
+				errc <- nil
+			}()
+			testutil.FatalIfErr(t, <-errc)
 
 			// Ignore the usual field and the datum.Time field as well, as the results will be unstable otherwise.
 			testutil.ExpectNoDiff(t, fileStore, pipeStore, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
