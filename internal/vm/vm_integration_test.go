@@ -6,7 +6,6 @@ package vm
 import (
 	"bufio"
 	"context"
-	"expvar"
 	"math"
 	"strings"
 	"sync"
@@ -19,10 +18,11 @@ import (
 )
 
 var vmTests = []struct {
-	name    string
-	prog    string
-	log     string
-	metrics map[string][]*metrics.Metric
+	name          string
+	prog          string
+	log           string
+	runtimeErrors int64
+	metrics       map[string][]*metrics.Metric
 }{
 	{"single-dash-parseint",
 		`counter c
@@ -35,6 +35,7 @@ var vmTests = []struct {
 `, `123 a
 - b
 `,
+		0,
 		map[string][]*metrics.Metric{
 			"c": {
 				{
@@ -71,6 +72,7 @@ histogram hist3 by f buckets -1, 0, 1
 b 3
 b 3
 `,
+		0,
 		map[string][]*metrics.Metric{
 			"hist1": {
 				{
@@ -167,6 +169,7 @@ b 3
 		`2019/05/14 11:10:05 [warn] ...
 2019/05/14 11:11:06 [warn] ...
 `,
+		0,
 		map[string][]*metrics.Metric{
 			"error_log_count": {
 				{
@@ -186,6 +189,66 @@ b 3
 			},
 		},
 	},
+	{"parse a hyphen",
+		`counter total
+/^[a-z]+ ((?P<response_size>\d+)|-)$/ {
+  $response_size > 0 {
+    total = $response_size
+  }
+}`,
+		`test 99
+test -
+`,
+		1,
+		map[string][]*metrics.Metric{
+			"total": {
+				{
+					Name:    "total",
+					Program: "parse a hyphen",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{
+								Value: 99,
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+	{"parse around a hyphen",
+		`counter total
+/^[a-z]+ ((?P<response_size>\d+)|-)$/ {
+  $1 != "-" {
+    total = $response_size
+  }
+}`,
+		`test 99
+test -
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"total": {
+				{
+					Name:    "total",
+					Program: "parse around a hyphen",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{
+								Value: 99,
+							},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
@@ -195,6 +258,8 @@ func TestVmEndToEnd(t *testing.T) {
 	for _, tc := range vmTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			progRuntimeErrorsCheck := testutil.ExpectMapExpvarDeltaWithDeadline(t, "prog_runtime_errors_total", tc.name, tc.runtimeErrors)
+
 			store := metrics.NewStore()
 			lines := make(chan *logline.LogLine, 1)
 			var wg sync.WaitGroup
@@ -211,12 +276,7 @@ func TestVmEndToEnd(t *testing.T) {
 			close(lines)
 			wg.Wait()
 
-			// TODO(jaq): This is not good; can the loader abort on error?
-			if m := expvar.Get("prog_runtime_errors_total"); m != nil {
-				if val := m.(*expvar.Map).Get(tc.name); val != nil && val.String() != "0" {
-					t.Errorf("Nonzero runtime errors from program: got %s", val)
-				}
-			}
+			progRuntimeErrorsCheck()
 			testutil.ExpectNoDiff(t, tc.metrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
 		})
 	}
