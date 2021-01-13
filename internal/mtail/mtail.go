@@ -56,17 +56,16 @@ type Server struct {
 	dumpAstTypes bool // if set, mtail prints the program syntax tree after type checking
 	dumpBytecode bool // if set, mtail prints the program bytecode after code generation
 
-	overrideLocation            *time.Location // Timezone location to use when parsing timestamps
-	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
-	staleLogGcWaker             waker.Waker    // Wake to run stale log gc
-	logPatternPollWaker         waker.Waker    // Wake to poll for log patterns
-	logstreamPollWaker          waker.Waker    // Wake idle logstreams to poll sfor new data
-	metricPushInterval          time.Duration  // Interval between metric pushes
-	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
-	omitMetricSource            bool           // if set, do not link the source program to a metric
-	omitProgLabel               bool           // if set, do not put the program name in the metric labels
-	emitMetricTimestamp         bool           // if set, emit the metric's recorded timestamp
-	omitDumpMetricsStore        bool           // if set, do not print the metric store; useful in test
+	overrideLocation     *time.Location // Timezone location to use when parsing timestamps
+	staleLogGcWaker      waker.Waker    // Wake to run stale log gc
+	logPatternPollWaker  waker.Waker    // Wake to poll for log patterns
+	logstreamPollWaker   waker.Waker    // Wake idle logstreams to poll sfor new data
+	metricPushInterval   time.Duration  // Interval between metric pushes
+	syslogUseCurrentYear bool           // if set, use the current year for timestamps that have no year information
+	omitMetricSource     bool           // if set, do not link the source program to a metric
+	omitProgLabel        bool           // if set, do not put the program name in the metric labels
+	emitMetricTimestamp  bool           // if set, emit the metric's recorded timestamp
+	omitDumpMetricsStore bool           // if set, do not print the metric store; useful in test
 }
 
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
