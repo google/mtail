@@ -13,12 +13,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/mtail/golden"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/waker"
+	"golang.org/x/sys/unix"
 )
 
 var exampleProgramTests = []struct {
@@ -239,6 +241,56 @@ func BenchmarkProgram(b *testing.B) {
 			wg.Wait()
 			b.StopTimer()
 			b.SetBytes(total)
+		})
+	}
+}
+
+// Two mtails both alike in dignity.
+func TestFilePipeStreamComparison(t *testing.T) {
+	testutil.SkipIfShort(t)
+
+	for _, tc := range exampleProgramTests {
+		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			waker, _ := waker.NewTest(0) // oneshot means we should never need to wake the stream
+			fileStore, pipeStore := metrics.NewStore(), metrics.NewStore()
+			programFile := path.Join("../..", tc.programfile)
+
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				mtail, err := mtail.New(ctx, fileStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
+				testutil.FatalIfErr(t, err)
+				testutil.FatalIfErr(t, mtail.Run())
+			}()
+			go func() {
+				defer wg.Done()
+				tmpDir, rmTmpDir := testutil.TestTempDir(t)
+				defer rmTmpDir()
+				pipeName := filepath.Join(tmpDir, "pipe")
+				testutil.FatalIfErr(t, unix.Mkfifo(pipeName, 0600))
+				go func() {
+					pipe, err := os.OpenFile(pipeName, os.O_WRONLY, os.ModeNamedPipe)
+					testutil.FatalIfErr(t, err)
+					f, err := os.OpenFile(tc.logfile, os.O_RDONLY, 0)
+					testutil.FatalIfErr(t, err)
+					defer f.Close()
+					n, err := io.Copy(pipe, f)
+					testutil.FatalIfErr(t, err)
+					glog.Infof("Copied %d bytes into pipe", n)
+					pipe.Close()
+				}()
+				mtail, err := mtail.New(ctx, pipeStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(pipeName), mtail.OneShot, mtail.OmitMetricSource, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
+				testutil.FatalIfErr(t, err)
+				testutil.FatalIfErr(t, mtail.Run())
+			}()
+			// Oneshot mode means we can wait for shutdown before cancelling.
+			wg.Wait()
+			cancel()
+
+			// Ignore the usual field and the datum.Time field as well, as the results will be unstable otherwise.
+			testutil.ExpectNoDiff(t, fileStore, pipeStore, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
 		})
 	}
 }

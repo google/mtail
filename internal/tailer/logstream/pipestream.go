@@ -53,10 +53,12 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		return err
 	}
 	glog.V(2).Infof("opened new pipe %v", fd)
+	var total int
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		defer func() {
+			glog.Infof("%v: copied %d bytes from %s", fd, total, ps.pathname)
 			err := fd.Close()
 			if err != nil {
 				logErrors.Add(ps.pathname, 1)
@@ -95,11 +97,22 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 
 			if n > 0 {
+				total += n
 				decodeAndSend(ps.ctx, ps.lines, ps.pathname, n, b[:n], partial)
 				// Update the last read time if we were able to read anything.
+				ps.mu.Lock()
 				ps.lastReadTime = time.Now()
+				ps.mu.Unlock()
 			}
+
+			// No error implies there's more to read, unless it looks like
+			// context is Done.
+			if err == nil && ctx.Err() == nil {
+				continue
+			}
+
 		Sleep:
+			// Test to see if it's time to exit.
 			select {
 			case <-ps.stopChan:
 				ps.mu.Lock()

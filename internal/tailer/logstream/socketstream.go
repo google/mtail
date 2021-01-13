@@ -53,9 +53,11 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 	}
 	glog.V(2).Infof("opened new socket %v", c)
 	wg.Add(1)
+	var total int
 	go func() {
 		defer wg.Done()
 		defer func() {
+			glog.Infof("%v: copied %d bytes from %s", c, total, ss.pathname)
 			err := c.Close()
 			if err != nil {
 				logErrors.Add(ss.pathname, 1)
@@ -88,15 +90,19 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 				}
 				return
 			}
-			if err != nil {
-				return
-			}
-
-			decodeAndSend(ss.ctx, ss.lines, ss.pathname, n, b[:n], partial)
 
 			if n > 0 {
-				// Don't bother updating lastRead until we return. // TODO: bug?
+				total += n
+				decodeAndSend(ss.ctx, ss.lines, ss.pathname, n, b[:n], partial)
+				ss.mu.Lock()
 				ss.lastReadTime = time.Now()
+				ss.mu.Unlock()
+			}
+
+			// No error implies there's more to read, unless it looks like
+			// context is Done.
+			if err == nil && ctx.Err() == nil {
+				continue
 			}
 		Sleep:
 			select {

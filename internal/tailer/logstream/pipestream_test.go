@@ -26,6 +26,7 @@ func TestPipeStreamRead(t *testing.T) {
 	name := filepath.Join(tmpDir, "fifo")
 	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
 
+	// O_RDWR necessary or open() hangs until there's a reader
 	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 
@@ -63,7 +64,7 @@ func TestPipeStreamCompletedBecausePipeClosed(t *testing.T) {
 	defer rmTmpDir()
 
 	name := filepath.Join(tmpDir, "fifo")
-	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
+	testutil.FatalIfErr(t, unix.Mkfifo(name, 0600))
 
 	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
