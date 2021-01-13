@@ -19,10 +19,11 @@ import (
 )
 
 var vmTests = []struct {
-	name    string
-	prog    string
-	log     string
-	metrics map[string][]*metrics.Metric
+	name          string
+	prog          string
+	log           string
+	runtimeErrors int64
+	metrics       map[string][]*metrics.Metric
 }{
 	{"single-dash-parseint",
 		`counter c
@@ -35,6 +36,7 @@ var vmTests = []struct {
 `, `123 a
 - b
 `,
+		0,
 		map[string][]*metrics.Metric{
 			"c": {
 				{
@@ -71,6 +73,7 @@ histogram hist3 by f buckets -1, 0, 1
 b 3
 b 3
 `,
+		0,
 		map[string][]*metrics.Metric{
 			"hist1": {
 				{
@@ -167,6 +170,7 @@ b 3
 		`2019/05/14 11:10:05 [warn] ...
 2019/05/14 11:11:06 [warn] ...
 `,
+		0,
 		map[string][]*metrics.Metric{
 			"error_log_count": {
 				{
@@ -179,6 +183,36 @@ b 3
 						{
 							Value: &datum.Int{
 								Value: 2,
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+	{"parse a hyphen",
+		`counter total
+/^[a-z]+ ((?P<response_size>\d+)|-)$/ {
+  $response_size > 0 {
+    total = $response_size
+  }
+}`,
+		`test 99
+test -
+`,
+		1,
+		map[string][]*metrics.Metric{
+			"total": {
+				{
+					Name:    "total",
+					Program: "parse a hyphen",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{
+								Value: 99,
 							},
 						},
 					},
@@ -213,8 +247,8 @@ func TestVmEndToEnd(t *testing.T) {
 
 			// TODO(jaq): This is not good; can the loader abort on error?
 			if m := expvar.Get("prog_runtime_errors_total"); m != nil {
-				if val := m.(*expvar.Map).Get(tc.name); val != nil && val.String() != "0" {
-					t.Errorf("Nonzero runtime errors from program: got %s", val)
+				if val := m.(*expvar.Map).Get(tc.name); val != nil && val.(*expvar.Int).Value() != tc.runtimeErrors {
+					t.Errorf("Expecting %d runtime errors from program: got %s", tc.runtimeErrors, val)
 				}
 			}
 			testutil.ExpectNoDiff(t, tc.metrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
