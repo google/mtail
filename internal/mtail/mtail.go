@@ -104,6 +104,11 @@ func (m *Server) initLoader() error {
 
 // initExporter sets up an Exporter for this Server.
 func (m *Server) initExporter() (err error) {
+	if m.oneShot {
+		// This is a hack to avoid a race in test, but assume that in oneshot
+		// mode we don't want to export anything.
+		return nil
+	}
 	opts := []exporter.Option{}
 	if m.omitProgLabel {
 		opts = append(opts, exporter.OmitProgLabel())
