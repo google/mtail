@@ -114,80 +114,22 @@ func (ts *TestServer) PollWatched(n int) {
 	glog.Info("Testserver finishing poll")
 }
 
-// TestGetExpvar fetches the expvar metric `name`, and returns the expvar.
-// Callers are responsible for type assertions on the returned value.
-func TestGetExpvar(tb testing.TB, name string) expvar.Var {
-	tb.Helper()
-	v := expvar.Get(name)
-	glog.Infof("Var %q is %v", name, v)
-	return v
-}
-
 /// GetExpvar is a helper function on TestServer that acts like TestGetExpvar.
 func (ts *TestServer) GetExpvar(name string) expvar.Var {
 	ts.tb.Helper()
-	return TestGetExpvar(ts.tb, name)
+	return testutil.TestGetExpvar(ts.tb, name)
 }
 
 // ExpectExpvarDeltaWithDeadline returns a deferrable function which tests if the expvar metric with name has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
 func (ts *TestServer) ExpectExpvarDeltaWithDeadline(name string, want int64) func() {
 	ts.tb.Helper()
-	deadline := ts.DoOrTimeoutDeadline
-	if deadline == 0 {
-		deadline = defaultDoOrTimeoutDeadline
-	}
-	start := TestGetExpvar(ts.tb, name).(*expvar.Int).Value()
-	check := func() (bool, error) {
-		ts.tb.Helper()
-		now := TestGetExpvar(ts.tb, name).(*expvar.Int).Value()
-		glog.Infof("now is %v", now)
-		return now-start == want, nil
-	}
-	return func() {
-		ts.tb.Helper()
-		ok, err := testutil.DoOrTimeout(check, deadline, 10*time.Millisecond)
-		testutil.FatalIfErr(ts.tb, err)
-		if !ok {
-			now := TestGetExpvar(ts.tb, name).(*expvar.Int).Value()
-			ts.tb.Errorf("Did not see %s have delta by deadline: got %v - %v = %d, want %d", name, now, start, now-start, want)
-		}
-	}
+	return testutil.ExpectExpvarDeltaWithDeadline(ts.tb, name, want)
 }
 
 // ExpectMapExpvarMetricDeltaWithDeadline returns a deferrable function which tests if the expvar map metric with name and key has changed by delta within the given deadline, once the function begins.  Before returning, it fetches the original value for comparison.
 func (ts *TestServer) ExpectMapExpvarDeltaWithDeadline(name, key string, want int64) func() {
 	ts.tb.Helper()
-	deadline := ts.DoOrTimeoutDeadline
-	if deadline == 0 {
-		deadline = defaultDoOrTimeoutDeadline
-	}
-	startVar := TestGetExpvar(ts.tb, name).(*expvar.Map).Get(key)
-	var start int64
-	if startVar != nil {
-		start = startVar.(*expvar.Int).Value()
-	}
-	check := func() (bool, error) {
-		ts.tb.Helper()
-		nowVar := TestGetExpvar(ts.tb, name).(*expvar.Map).Get(key)
-		var now int64
-		if nowVar != nil {
-			now = nowVar.(*expvar.Int).Value()
-		}
-		return now-start == want, nil
-	}
-	return func() {
-		ts.tb.Helper()
-		ok, err := testutil.DoOrTimeout(check, deadline, 10*time.Millisecond)
-		testutil.FatalIfErr(ts.tb, err)
-		if !ok {
-			nowVar := TestGetExpvar(ts.tb, name).(*expvar.Map).Get(key)
-			var now int64
-			if nowVar != nil {
-				now = nowVar.(*expvar.Int).Value()
-			}
-			ts.tb.Errorf("Did not see %s[%s] have delta by deadline: got %v - %v = %d, want %d", name, key, now, start, now-start, want)
-		}
-	}
+	return testutil.ExpectMapExpvarDeltaWithDeadline(ts.tb, name, key, want)
 }
 
 // GetProgramMetric fetches the datum of the program metric name.

@@ -351,7 +351,7 @@ Instead one can test the value of the surrounding capture group and do nothing i
 counter total
 
 /^[a-z]+ ((?P<response_size>\d+)|-)$/ {
-  $1 != "" {
+  $1 != "-" {
     total = $response_size
   }
 }
