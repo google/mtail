@@ -305,7 +305,6 @@ func (m *Server) Run() error {
 			glog.Info("Store dump disabled, exiting")
 			return nil
 		}
-		fmt.Printf("Metrics store:")
 		if err := m.WriteMetrics(os.Stdout); err != nil {
 			return err
 		}
