@@ -5,9 +5,7 @@ package mtail
 
 import (
 	"context"
-	"encoding/json"
 	"expvar"
-	"io"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -22,7 +20,6 @@ import (
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/vm"
 	"github.com/google/mtail/internal/waker"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
@@ -276,19 +273,6 @@ func (m *Server) SetOption(options ...Option) error {
 	return nil
 }
 
-// WriteMetrics dumps the current state of the metrics store in JSON format to
-// the io.Writer.
-func (m *Server) WriteMetrics(w io.Writer) error {
-	m.store.RLock()
-	b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
-	m.store.RUnlock()
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal metrics into json")
-	}
-	_, err = w.Write(b)
-	return err
-}
-
 // Run awaits mtail's shutdown.
 // TODO(jaq): remove this once the test server is able to trigger polls on the components.
 func (m *Server) Run() error {
@@ -302,7 +286,7 @@ func (m *Server) Run() error {
 			glog.Info("Store dump disabled, exiting")
 			return nil
 		}
-		if err := m.WriteMetrics(os.Stdout); err != nil {
+		if err := m.store.WriteMetrics(os.Stdout); err != nil {
 			return err
 		}
 		return nil
