@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"expvar"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -193,9 +192,7 @@ func (m *Server) initHttpServer() error {
 	}()
 
 	// This goroutine manages http server shutdown.
-	m.wg.Add(1)
 	go func() {
-		defer m.wg.Done()
 		<-initDone
 		select {
 		case err := <-errc:
@@ -209,6 +206,7 @@ func (m *Server) initHttpServer() error {
 				glog.Info(err)
 			}
 		}
+		// Wait for the Serve routine to exit.
 		wg.Wait()
 	}()
 
