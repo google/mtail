@@ -318,6 +318,47 @@ requests at or below the target of 200ms against the total count, and then
 fires an alert if the indicator drops below nine fives.
 
 
+## Parsing number fields that are sometimes not numbers
+
+Some logs, for example Varnish and Apache access logs, use a hyphen rather than a zero.
+
+You may be tempted to use a programme like
+
+```
+counter total
+
+/^[a-z]+ ((?P<response_size>\d+)|-)$/ {
+  $response_size > 0 {
+    total = $response_size
+  }
+}
+```
+
+to parse a log like
+
+```
+a 99
+b -
+```
+
+except that `mtail` will issue a runtime error on the second line like `Runtime error: strconv.ParseInt: parsing "": invalid syntax`.
+
+This is because in this programme the capture group is only matching on a set of digits, and is not defined when the alternate group matches (i.e. the hyphen).
+
+Instead one can test the value of the surrounding capture group and do nothing if the value matches a hyphen:
+
+```
+counter total
+
+/^[a-z]+ ((?P<response_size>\d+)|-)$/ {
+  $1 != "" {
+    total = $response_size
+  }
+}
+```
+
+`mtail` does not presently have a way to test if a capture group is defined or not.
+
 # Avoiding unnecessary work
 
 You can stop the program if it's fed data from a log file you know you want to ignore:
@@ -331,3 +372,4 @@ getfilename() !~ /apache.access.?log/ {
 This will check to see if the input filename looks like
 `/var/log/apache/accesslog` and not attempt any further pattern matching on the
 log line if it doesn't.
+

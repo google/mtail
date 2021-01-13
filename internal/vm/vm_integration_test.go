@@ -220,6 +220,36 @@ test -
 			},
 		},
 	},
+	{"parse around a hyphen",
+		`counter total
+/^[a-z]+ ((?P<response_size>\d+)|-)$/ {
+  $1 != "" {
+    total = $response_size
+  }
+}`,
+		`test 99
+test -
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"total": {
+				{
+					Name:    "total",
+					Program: "parse around a hyphen",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{
+								Value: 99,
+							},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
