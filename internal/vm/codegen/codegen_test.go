@@ -475,20 +475,14 @@ getfilename()
 `,
 		[]code.Instr{
 			{code.Match, 0, 1},
-			{code.Jnm, 19, 1},
+			{code.Jnm, 13, 1},
 			{code.Setmatched, false, 1},
 			{code.Push, 0, 2},
 			{code.Capref, 1, 2},
-			{code.S2i, nil, 2},
-			{code.I2s, nil, 2},
 			{code.Push, 0, 2},
 			{code.Capref, 2, 2},
-			{code.S2i, nil, 2},
-			{code.I2s, nil, 2},
 			{code.Push, 0, 2},
 			{code.Capref, 3, 2},
-			{code.S2i, nil, 2},
-			{code.I2s, nil, 2},
 			{code.Mload, 0, 2},
 			{code.Dload, 3, 2},
 			{code.Inc, nil, 2},
@@ -518,14 +512,13 @@ getfilename()
 `,
 		[]code.Instr{
 			{code.Match, 0, 1},
-			{code.Jnm, 11, 1},
+			{code.Jnm, 10, 1},
 			{code.Setmatched, false, 1},
 			{code.Mload, 0, 2},
 			{code.Dload, 0, 2},
 			{code.Push, 0, 2},
 			{code.Capref, 1, 2},
-			{code.S2i, nil, 2},
-			{code.I2f, nil, 2},
+			{code.S2f, nil, 2},
 			{code.Fset, nil, 2},
 			{code.Setmatched, true, 1}}},
 	{"string to float",
@@ -884,6 +877,28 @@ stop
 }
 @b {
 }`, nil},
+	{"negative numbers in capture groups", `
+gauge foo
+/(?P<value_ms>-?\d+)/ {
+foo += $value_ms / 1000.0
+}`, []code.Instr{
+		{code.Match, 0, 2},
+		{code.Jnm, 16, 2},
+		{code.Setmatched, false, 2},
+		{code.Mload, 0, 3},
+		{code.Dload, 0, 3},
+		{code.Mload, 0, 3},
+		{code.Dload, 0, 3},
+		{code.Push, 0, 3},
+		{code.Capref, 1, 3},
+		{code.S2i, nil, 3},
+		{code.I2f, nil, 3},
+		{code.Push, 1000.0, 3},
+		{code.Fdiv, nil, 3},
+		{code.Fadd, nil, 3},
+		{code.Fset, nil, 3},
+		{code.Setmatched, true, 2},
+	}},
 }
 
 func TestCodegen(t *testing.T) {
