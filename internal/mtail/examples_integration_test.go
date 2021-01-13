@@ -250,6 +250,7 @@ func TestFilePipeStreamComparison(t *testing.T) {
 	testutil.SkipIfShort(t)
 
 	for _, tc := range exampleProgramTests {
+		tc := tc
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			waker, _ := waker.NewTest(0) // oneshot means we should never need to wake the stream
