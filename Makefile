@@ -93,7 +93,7 @@ $(BENCHSTAT):
 	go get $(GOGETFLAGS) golang.org/x/perf/cmd/benchstat
 
 
-.PHONY: clean covclean crossclean depclean
+.PHONY: clean covclean crossclean depclean veryclean
 clean: covclean crossclean
 	rm -f $(CLEANFILES)
 covclean:
@@ -102,6 +102,7 @@ crossclean:
 	rm -rf build
 depclean:
 	rm -f .d/*  .*dep-stamp
+veryclean: clean depclean
 
 .PHONY: lint
 lint:
