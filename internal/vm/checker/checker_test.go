@@ -437,7 +437,7 @@ counter i
 	{"stop", `
 stop
 // {
-stop
+  stop
 }`},
 
 	{"declare histogram", `
@@ -454,6 +454,11 @@ N {
 	{"match a pattern in a binary expr in cond", `
 const N /n/
 N && 1 {
+}`},
+	{"negative numbers in capture groups", `
+gauge foo
+/(?P<value_ms>-?\d+)/ {
+  foo += $value_ms / 1000.0
 }`},
 }
 

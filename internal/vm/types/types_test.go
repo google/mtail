@@ -5,7 +5,6 @@ package types
 
 import (
 	"fmt"
-	"regexp/syntax"
 	"testing"
 
 	"github.com/google/mtail/internal/testutil"
@@ -213,7 +212,7 @@ var groupOnlyMatchesTests = []struct {
 
 func TestGroupOnlyMatches(t *testing.T) {
 	for _, tc := range groupOnlyMatchesTests {
-		r, err := syntax.Parse(tc.pattern, syntax.Perl)
+		r, err := ParseRegexp(tc.pattern)
 		testutil.FatalIfErr(t, err)
 		result := groupOnlyMatches(r, tc.check)
 		if result != tc.expected {
@@ -227,6 +226,9 @@ var inferCaprefTypeTests = []struct {
 	typ     Type
 }{
 	{`\d+`,
+		Int,
+	},
+	{`-?\d+`,
 		Int,
 	},
 	{`[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?`,
@@ -247,7 +249,13 @@ var inferCaprefTypeTests = []struct {
 	{`\-`,
 		String,
 	},
-	{`\-|[0-9]`,
+	// A single - is not an Int, so the whole class cannot be Int.
+	{`[-0-9]`,
+		String,
+	},
+	// Fun fact! This test gets simplified into `[\-0-9]` because the character
+	// class is also an alternation.
+	{`-|[0-9]`,
 		String,
 	},
 	{`\d+\.\d+|\-`,
@@ -262,7 +270,7 @@ func TestInferCaprefType(t *testing.T) {
 	for _, tc := range inferCaprefTypeTests {
 		tc := tc
 		t.Run(tc.pattern, func(t *testing.T) {
-			re, err := syntax.Parse(`(`+tc.pattern+`)`, syntax.Perl)
+			re, err := ParseRegexp(`(` + tc.pattern + `)`)
 			testutil.FatalIfErr(t, err)
 			r := InferCaprefType(re, 1)
 			if !Equals(tc.typ, r) {

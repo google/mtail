@@ -5,7 +5,6 @@ package checker
 
 import (
 	"fmt"
-	"regexp/syntax"
 	"strings"
 	"time"
 
@@ -727,7 +726,7 @@ func (c *checker) checkRegex(pattern string, n ast.Node) {
 		c.errors.Add(n.Pos(), fmt.Sprintf("Exceeded maximum regular expression pattern length of %d bytes with %d.\n\tExcessively long patterns are likely to cause compilation and runtime performance problems.", kMaxRegexpLen, plen))
 		return
 	}
-	if reAst, err := syntax.Parse(pattern, syntax.Perl); err == nil {
+	if reAst, err := types.ParseRegexp(pattern); err == nil {
 		// We reserve the names of the capturing groups as declarations
 		// of those symbols, so that future CAPREF tokens parsed can
 		// retrieve their value.  By recording them in the symbol table, we

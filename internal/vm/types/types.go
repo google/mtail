@@ -426,7 +426,10 @@ func inferGroupType(group *syntax.Regexp) Type {
 		return String
 	case groupOnlyMatches(group, "+-0123456789"):
 		// Must be at least one digit in the group.
-		if !groupOnlyMatches(group, "0123456789") {
+		if !strings.ContainsAny(group.String(), "0123456789") {
+			return String
+		}
+		if group.Op == syntax.OpAlternate || group.Op == syntax.OpCharClass {
 			return String
 		}
 		return Int
