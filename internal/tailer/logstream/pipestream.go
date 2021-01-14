@@ -80,6 +80,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				glog.V(2).Infof("%s: %s", ps.pathname, err)
 			}
 			n, err := fd.Read(b[:capB])
+			glog.V(2).Infof("%v: read %d bytes, err is %v", fd, n, err)
 			var perr *os.PathError
 			if errors.As(err, &perr) && perr.Timeout() && n == 0 {
 				timedout = true
