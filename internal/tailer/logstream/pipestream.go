@@ -59,7 +59,8 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	go func() {
 		defer wg.Done()
 		defer func() {
-			glog.V(2).Infof("%v: read %d bytes from %s", fd, total, ps.pathname)
+			glog.V(2).Infof("%v: read total %d bytes from %s", fd, total, ps.pathname)
+			glog.V(2).Infof("%v: closing file descriptor", fd)
 			err := fd.Close()
 			if err != nil {
 				logErrors.Add(ps.pathname, 1)

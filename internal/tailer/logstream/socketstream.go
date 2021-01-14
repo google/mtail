@@ -58,7 +58,8 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 	go func() {
 		defer wg.Done()
 		defer func() {
-			glog.V(2).Infof("%v: read %d bytes from %s", c, total, ss.pathname)
+			glog.V(2).Infof("%v: read total %d bytes from %s", c, total, ss.pathname)
+			glog.V(2).Infof("%v: closing connection", c)
 			err := c.Close()
 			if err != nil {
 				logErrors.Add(ss.pathname, 1)
