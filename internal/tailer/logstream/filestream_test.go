@@ -26,9 +26,8 @@ func TestFileStreamRead(t *testing.T) {
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
 	lines := make(chan *logline.LogLine, 1)
-	waker, awaken := waker.NewTest(1)
-
 	ctx, cancel := context.WithCancel(context.Background())
+	waker, awaken := waker.NewTest(ctx, 1)
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
 	testutil.FatalIfErr(t, err)
 	awaken(1)
@@ -62,9 +61,9 @@ func TestFileStreamRotation(t *testing.T) {
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
 	lines := make(chan *logline.LogLine, 2)
-	waker, awaken := waker.NewTest(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
+	waker, awaken := waker.NewTest(ctx, 1)
 
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
 	testutil.FatalIfErr(t, err)
@@ -108,9 +107,8 @@ func TestFileStreamTruncation(t *testing.T) {
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.OpenLogFile(t, name)
 	lines := make(chan *logline.LogLine, 3)
-	waker, awaken := waker.NewTest(1)
-
 	ctx, cancel := context.WithCancel(context.Background())
+	waker, awaken := waker.NewTest(ctx, 1)
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
 	testutil.FatalIfErr(t, err)
 	awaken(1) // Synchronise past first read after seekToEnd
@@ -149,9 +147,9 @@ func TestFileStreamFinishedBecauseCancel(t *testing.T) {
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
 	lines := make(chan *logline.LogLine, 1)
-	waker, awaken := waker.NewTest(1)
-
 	ctx, cancel := context.WithCancel(context.Background())
+	waker, awaken := waker.NewTest(ctx, 1)
+
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
 	testutil.FatalIfErr(t, err)
 	awaken(1) // Synchronise past first read after seekToEnd
@@ -183,9 +181,9 @@ func TestFileStreamPartialRead(t *testing.T) {
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
 	lines := make(chan *logline.LogLine, 1)
-	waker, awaken := waker.NewTest(1)
-
 	ctx, cancel := context.WithCancel(context.Background())
+	waker, awaken := waker.NewTest(ctx, 1)
+
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
 	testutil.FatalIfErr(t, err)
 	awaken(1)
@@ -230,9 +228,8 @@ func TestFileStreamOpenFailure(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	lines := make(chan *logline.LogLine, 1)
-	waker, _ := waker.NewTest(0)
-
 	ctx, cancel := context.WithCancel(context.Background())
+	waker, _ := waker.NewTest(ctx, 0)
 
 	_, err = logstream.New(ctx, &wg, waker, name, lines, true)
 	if err == nil || !os.IsPermission(err) {

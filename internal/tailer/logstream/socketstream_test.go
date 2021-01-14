@@ -26,9 +26,9 @@ func TestSocketStreamRead(t *testing.T) {
 	name := filepath.Join(tmpDir, "sock")
 
 	lines := make(chan *logline.LogLine, 1)
-	waker, awaken := waker.NewTest(1)
-
 	ctx, cancel := context.WithCancel(context.Background())
+	waker, awaken := waker.NewTest(ctx, 1)
+
 	ss, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
 	awaken(1) // Synchronise past socket creation
@@ -68,9 +68,9 @@ func TestSocketStreamCompletedBecauseSocketClosed(t *testing.T) {
 	name := filepath.Join(tmpDir, "sock")
 
 	lines := make(chan *logline.LogLine, 1)
-	waker, awaken := waker.NewTest(1)
-
 	ctx, cancel := context.WithCancel(context.Background())
+	waker, awaken := waker.NewTest(ctx, 1)
+
 	ss, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
 	awaken(1) // Synchronise past socket creation
@@ -113,9 +113,9 @@ func TestSocketStreamCompletedBecauseCancel(t *testing.T) {
 	name := filepath.Join(tmpDir, "sock")
 
 	lines := make(chan *logline.LogLine, 1)
-	waker, awaken := waker.NewTest(1)
-
 	ctx, cancel := context.WithCancel(context.Background())
+	waker, awaken := waker.NewTest(ctx, 1)
+
 	ss, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
 	awaken(1) // Synchronise past socket creation

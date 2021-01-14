@@ -4,6 +4,7 @@
 package waker
 
 import (
+	"context"
 	"sync"
 
 	"github.com/golang/glog"
@@ -12,6 +13,8 @@ import (
 // A testWaker is used to manually signal to idle routines it's time to look for new work.
 type testWaker struct {
 	Waker
+
+	ctx context.Context
 
 	n int
 
@@ -27,8 +30,9 @@ type testWaker struct {
 type wakeFunc func(int)
 
 // NewTest creates a new Waker to be used in tests, returning it and a function to trigger a wakeup.  The constructor parameter says how many wakees are expected in the first pass.
-func NewTest(n int) (Waker, wakeFunc) {
+func NewTest(ctx context.Context, n int) (Waker, wakeFunc) {
 	t := &testWaker{
+		ctx:        ctx,
 		n:          n,
 		wakeeReady: make(chan struct{}),
 		wakeeDone:  make(chan struct{}),
@@ -74,7 +78,11 @@ func (t *testWaker) Wake() (w <-chan struct{}) {
 	// The wakeFunc won't close the channel until this completes.
 	go func() {
 		// Signal we've reentered Wake.  wakeFunc can't return until we do this.
-		t.wakeeDone <- struct{}{}
+		select {
+		case <-t.ctx.Done():
+			return
+		case t.wakeeDone <- struct{}{}:
+		}
 		// Block wakees here until a subsequent wakeFunc is called.
 		<-t.wait
 		// Signal we've got the wake chan, telling wakeFunc it can now issue a broadcast.

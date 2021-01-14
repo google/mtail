@@ -53,7 +53,7 @@ func TestMakeServer(tb testing.TB, wakers int, pollInterval time.Duration, optio
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(wakers)
+	waker, awaken := waker.NewTest(ctx, wakers)
 	options = append(options,
 		LogstreamPollWaker(waker),
 	)
