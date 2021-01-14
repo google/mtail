@@ -253,7 +253,7 @@ func TestFilePipeStreamComparison(t *testing.T) {
 		tc := tc
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, awaken := waker.NewTest(ctx, 0)
+			waker := waker.NewTestAlways()
 			fileStore, pipeStore := metrics.NewStore(), metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
 
@@ -273,13 +273,11 @@ func TestFilePipeStreamComparison(t *testing.T) {
 				// not NONBLOCK to wait for pipeMtail to start reading the pipe
 				pipe, err := os.OpenFile(pipeName, os.O_WRONLY, os.ModeNamedPipe)
 				testutil.FatalIfErr(t, err)
-				awaken(1)
 				n, err := io.Copy(pipe, source)
 				testutil.FatalIfErr(t, err)
 				glog.Infof("Copied %d bytes into pipe", n)
 				source.Close()
 				pipe.Close()
-				awaken(0)
 			}()
 
 			go func() {

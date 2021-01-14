@@ -68,7 +68,7 @@ func NewTest(ctx context.Context, n int) (Waker, wakeFunc) {
 	return t, wakeFunc
 }
 
-// Wake satisfies the Waker interface
+// Wake satisfies the Waker interface.
 func (t *testWaker) Wake() (w <-chan struct{}) {
 	t.mu.Lock()
 	w = t.wake
@@ -98,4 +98,21 @@ func (t *testWaker) broadcastWakeAndReset() {
 	close(t.wake)
 	t.wake = make(chan struct{})
 	glog.Info("wake channel reset")
+}
+
+// alwaysWaker never blocks the wakee.
+type alwaysWaker struct {
+	wake chan struct{}
+}
+
+func NewTestAlways() Waker {
+	w := &alwaysWaker{
+		wake: make(chan struct{}),
+	}
+	close(w.wake)
+	return w
+}
+
+func (w *alwaysWaker) Wake() <-chan struct{} {
+	return w.wake
 }
