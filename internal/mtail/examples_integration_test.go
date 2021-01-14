@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"testing"
 
 	"github.com/golang/glog"
@@ -281,7 +282,7 @@ func TestFilePipeStreamComparison(t *testing.T) {
 					errc <- err
 				}
 				go func() {
-					pipe, err := os.OpenFile(pipeName, os.O_WRONLY, os.ModeNamedPipe)
+					pipe, err := os.OpenFile(pipeName, os.O_WRONLY|syscall.O_NONBLOCK, os.ModeNamedPipe)
 					if err != nil {
 						errc <- err
 					}

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"testing"
 
 	"github.com/google/mtail/internal/logline"
@@ -26,8 +27,7 @@ func TestPipeStreamRead(t *testing.T) {
 	name := filepath.Join(tmpDir, "fifo")
 	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
 
-	// O_RDWR necessary or open() hangs until there's a reader
-	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+	f, err := os.OpenFile(name, os.O_WRONLY|syscall.O_NONBLOCK, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 
 	lines := make(chan *logline.LogLine, 1)
@@ -66,7 +66,7 @@ func TestPipeStreamCompletedBecausePipeClosed(t *testing.T) {
 	name := filepath.Join(tmpDir, "fifo")
 	testutil.FatalIfErr(t, unix.Mkfifo(name, 0600))
 
-	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+	f, err := os.OpenFile(name, os.O_WRONLY|syscall.O_NONBLOCK, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 
 	lines := make(chan *logline.LogLine, 1)
@@ -106,7 +106,7 @@ func TestPipeStreamCompletedBecauseCancel(t *testing.T) {
 	name := filepath.Join(tmpDir, "fifo")
 	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
 
-	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+	f, err := os.OpenFile(name, os.O_WRONLY|syscall.O_NONBLOCK, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 
 	lines := make(chan *logline.LogLine, 1)
