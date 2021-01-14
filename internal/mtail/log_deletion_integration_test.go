@@ -35,7 +35,7 @@ func TestLogDeletion(t *testing.T) {
 	m.PollWatched(1) // one pass to stop
 	// TODO(jaq): this sleep hides a race between filestream completing and
 	// PollLogStreams noticing.
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 	m.PollWatched(0) // one pass to remove completed stream
 
 	logCountCheck()
