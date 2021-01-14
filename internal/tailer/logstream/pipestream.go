@@ -27,13 +27,10 @@ type pipeStream struct {
 	mu           sync.RWMutex // protects following fields
 	completed    bool         // This pipestream is completed and can no longer be used.
 	lastReadTime time.Time    // Last time a log line was read from this named pipe
-
-	stopOnce sync.Once     // Ensure stopChan only closed once.
-	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine) (LogStream, error) {
-	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
+	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), lines: lines}
 	if err := ps.stream(ctx, wg, waker, fi); err != nil {
 		return nil, err
 	}
@@ -84,6 +81,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			glog.V(2).Infof("%v: read %d bytes, err is %v", fd, n, err)
 			var perr *os.PathError
 			if errors.As(err, &perr) && perr.Timeout() && n == 0 {
+				glog.Info("timed out")
 				timedout = true
 				// Named Pipes EOF when the writer has closed, so we look for a
 				// timeout on read to detect a writer stall and thus let us check
@@ -94,11 +92,16 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			// of a pipe have been closed, then an attempt to read(2) from the
 			// pipe will see end-of-file (read(2) will return 0).
 			// All other errors also finish the stream and are counted.
+			// However when the pipe is freshly opened
 			if err != nil {
 				if err != io.EOF {
 					glog.Info(err)
 					logErrors.Add(ps.pathname, 1)
 				}
+				glog.V(2).Infof("%v: stream has errored, exiting", fd)
+				ps.mu.Lock()
+				ps.completed = true
+				ps.mu.Unlock()
 				return
 			}
 
@@ -123,15 +126,6 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				timedout = false
 				// Test to see if it's time to exit.
 				select {
-				case <-ps.stopChan:
-					glog.V(2).Infof("%v: stream has been stopped, exiting", fd)
-					if partial.Len() > 0 {
-						sendLine(ctx, ps.pathname, partial, ps.lines)
-					}
-					ps.mu.Lock()
-					ps.completed = true
-					ps.mu.Unlock()
-					return
 				case <-ctx.Done():
 					glog.V(2).Infof("%v: context has been cancelled, exiting", fd)
 					if partial.Len() > 0 {
@@ -148,13 +142,6 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			// Yield and wait
 			glog.V(2).Infof("%v: waiting", fd)
 			select {
-			case <-ps.stopChan:
-				// We may have started waiting here when the stop signal
-				// arrives, but since that wait the file may have been
-				// written to.  The file is not technically yet at EOF so
-				// we need to go back and try one more read.  We'll exit
-				// the stream in the select stanza above.
-				glog.V(2).Infof("%v: Stopping after next read", fd)
 			case <-ctx.Done():
 				// Same for cancellation; this makes tests stable, but
 				// could argue exiting immediately is less surprising.
@@ -176,8 +163,7 @@ func (ps *pipeStream) IsComplete() bool {
 	return ps.completed
 }
 
+// Stop implements the Logstream interface.
+// Calling Stop on a pipe is a no-op; Pipes always read until the pipe is closed, which is what calling Stop means on a Logstream.
 func (ps *pipeStream) Stop() {
-	ps.stopOnce.Do(func() {
-		close(ps.stopChan)
-	})
 }

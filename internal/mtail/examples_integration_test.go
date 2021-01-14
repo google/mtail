@@ -11,7 +11,6 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"testing"
 
 	"github.com/golang/glog"
@@ -254,66 +253,57 @@ func TestFilePipeStreamComparison(t *testing.T) {
 		tc := tc
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, _ := waker.NewTest(ctx, 0) // oneshot means we should never need to wake the stream
+			waker, awaken := waker.NewTest(ctx, 0)
 			fileStore, pipeStore := metrics.NewStore(), metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
 
-			errc := make(chan error)
-			var wg sync.WaitGroup
-			wg.Add(2)
-			go func() {
-				defer wg.Done()
-				mtail, err := mtail.New(ctx, fileStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
-				if err != nil {
-					errc <- err
-				}
-				if err = mtail.Run(); err != nil {
-					errc <- err
-				}
-			}()
-			go func() {
-				defer wg.Done()
-				tmpDir, rmTmpDir := testutil.TestTempDir(t)
-				defer rmTmpDir()
-				// Some of our examples use getfilename() which means we need to retain the filename!
-				pipeName := filepath.Join(tmpDir, filepath.Base(tc.logfile))
-				err := unix.Mkfifo(pipeName, 0600)
-				if err != nil {
-					errc <- err
-				}
-				go func() {
-					pipe, err := os.OpenFile(pipeName, os.O_WRONLY|syscall.O_NONBLOCK, os.ModeNamedPipe)
-					if err != nil {
-						errc <- err
-					}
-					f, err := os.OpenFile(tc.logfile, os.O_RDONLY, 0)
-					if err != nil {
-						errc <- err
-					}
-					defer f.Close()
-					n, err := io.Copy(pipe, f)
-					if err != nil {
+			// Set up the pipe
+			tmpDir, rmTmpDir := testutil.TestTempDir(t)
+			defer rmTmpDir()
 
-						errc <- err
-					}
-					glog.Infof("Copied %d bytes into pipe", n)
-					pipe.Close()
-				}()
-				mtail, err := mtail.New(ctx, pipeStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(pipeName), mtail.OneShot, mtail.OmitMetricSource, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
-				if err != nil {
-					errc <- err
-				}
-				if err = mtail.Run(); err != nil {
-					errc <- err
-				}
-			}()
+			pipeName := filepath.Join(tmpDir, filepath.Base(tc.logfile))
+			testutil.FatalIfErr(t, unix.Mkfifo(pipeName, 0600))
+
+			var wg sync.WaitGroup
+			wg.Add(3)
 			go func() {
-				// Oneshot mode means we can wait for shutdown before cancelling.
-				wg.Wait()
-				cancel()
-				errc <- nil
+				defer wg.Done()
+				source, err := os.OpenFile(tc.logfile, os.O_RDONLY, 0)
+				testutil.FatalIfErr(t, err)
+				// not NONBLOCK to wait for pipeMtail to start reading the pipe
+				pipe, err := os.OpenFile(pipeName, os.O_WRONLY, os.ModeNamedPipe)
+				testutil.FatalIfErr(t, err)
+				awaken(1)
+				n, err := io.Copy(pipe, source)
+				testutil.FatalIfErr(t, err)
+				glog.Infof("Copied %d bytes into pipe", n)
+				source.Close()
+				pipe.Close()
+				awaken(0)
 			}()
-			testutil.FatalIfErr(t, <-errc)
+
+			go func() {
+				defer wg.Done()
+				fileMtail, err := mtail.New(ctx, fileStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
+				if err != nil {
+					t.Error(err)
+				}
+				if err := fileMtail.Run(); err != nil {
+					t.Error(err)
+				}
+			}()
+			pipeMtail, err := mtail.New(ctx, pipeStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(pipeName), mtail.OneShot, mtail.OmitMetricSource, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
+			testutil.FatalIfErr(t, err)
+			go func() {
+				defer wg.Done()
+				if err := pipeMtail.Run(); err != nil {
+					t.Error(err)
+				}
+			}()
+
+			// Oneshot mode means we can wait for shutdown before cancelling.
+			wg.Wait()
+			cancel()
 
 			// Ignore the usual field and the datum.Time field as well, as the results will be unstable otherwise.
 			testutil.ExpectNoDiff(t, fileStore, pipeStore, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
