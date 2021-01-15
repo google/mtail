@@ -198,7 +198,7 @@ junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
-	gotestsum --debug --format=dots --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -cpu 1,2,4 -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
+	gotestsum --debug --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -cpu 1,2,4 -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 .PHONY: bench
 bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt
