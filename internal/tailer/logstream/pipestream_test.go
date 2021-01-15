@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"testing"
 
 	"github.com/google/mtail/internal/logline"
@@ -29,7 +28,7 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker := waker.NewTestAlways()
 
 	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
@@ -37,11 +36,9 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 	testutil.WriteString(t, f, "1\n")
-	awaken(1)
 
 	// Pipes need to be closed to signal to the pipeStream to finish up.
 	testutil.FatalIfErr(t, f.Close())
-	awaken(0)
 
 	ps.Stop() // no-op for pipes
 	wg.Wait()
@@ -71,15 +68,14 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker := waker.NewTestAlways()
 
 	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
 
-	f, err := os.OpenFile(name, os.O_WRONLY|syscall.O_NONBLOCK, os.ModeNamedPipe)
+	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 	testutil.WriteString(t, f, "1\n")
-	awaken(1)
 
 	cancel()
 	wg.Wait()
