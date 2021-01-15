@@ -1,6 +1,6 @@
 name: release
 on:
-  # Test that it works on pull_request; won't upload without GITHUB_TOKEN.
+  # Test that it works on pull_request; goreleaser goes into snapshot mode if not a tag.
   pull_request:
   push:
     tags:
