@@ -44,3 +44,4 @@ workdir/*
 /test-results/
 /fuzzit
 /fuzzer.h
+/dist/
