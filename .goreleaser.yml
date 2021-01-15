@@ -1,6 +1,6 @@
 before:
   hooks:
-    - make --debug install_deps
+    - go mod download
 builds:
   - id: mtail
     main: ./cmd/mtail/main.go
