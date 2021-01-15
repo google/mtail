@@ -17,7 +17,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func TestPipeStreamRead(t *testing.T) {
+func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
@@ -26,62 +26,21 @@ func TestPipeStreamRead(t *testing.T) {
 	name := filepath.Join(tmpDir, "fifo")
 	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
 
-	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
-	testutil.FatalIfErr(t, err)
-
 	lines := make(chan *logline.LogLine, 1)
-	waker, awaken := waker.NewTest(1)
-
 	ctx, cancel := context.WithCancel(context.Background())
+	waker := waker.NewTestAlways()
+
 	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
 
-	testutil.WriteString(t, f, "1\n")
-	awaken(1)
-
-	ps.Stop()
-	wg.Wait()
-	close(lines)
-
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{context.TODO(), name, "1"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-
-	cancel()
-
-	if !ps.IsComplete() {
-		t.Errorf("expecting pipestream to be complete because cancellation")
-	}
-}
-
-func TestPipeStreamCompletedBecausePipeClosed(t *testing.T) {
-	var wg sync.WaitGroup
-
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
-
-	name := filepath.Join(tmpDir, "fifo")
-	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
-
-	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
-
-	lines := make(chan *logline.LogLine, 1)
-	waker, awaken := waker.NewTest(1)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
-	testutil.FatalIfErr(t, err)
-
 	testutil.WriteString(t, f, "1\n")
-	awaken(1)
 
+	// Pipes need to be closed to signal to the pipeStream to finish up.
 	testutil.FatalIfErr(t, f.Close())
-	//awaken()
 
-	cancel()
+	ps.Stop() // no-op for pipes
 	wg.Wait()
 	close(lines)
 
@@ -90,13 +49,15 @@ func TestPipeStreamCompletedBecausePipeClosed(t *testing.T) {
 		{context.TODO(), name, "1"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	cancel()
 
 	if !ps.IsComplete() {
 		t.Errorf("expecting pipestream to be complete because fifo closed")
 	}
 }
 
-func TestPipeStreamCompletedBecauseCancel(t *testing.T) {
+func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
@@ -105,18 +66,16 @@ func TestPipeStreamCompletedBecauseCancel(t *testing.T) {
 	name := filepath.Join(tmpDir, "fifo")
 	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
 
-	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
-	testutil.FatalIfErr(t, err)
-
 	lines := make(chan *logline.LogLine, 1)
-	waker, awaken := waker.NewTest(1)
-
 	ctx, cancel := context.WithCancel(context.Background())
+	waker := waker.NewTestAlways()
+
 	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
 
+	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
+	testutil.FatalIfErr(t, err)
 	testutil.WriteString(t, f, "1\n")
-	awaken(1)
 
 	cancel()
 	wg.Wait()
@@ -129,6 +88,6 @@ func TestPipeStreamCompletedBecauseCancel(t *testing.T) {
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
 	if !ps.IsComplete() {
-		t.Errorf("expecting pipestream to be complete because stop called")
+		t.Errorf("expecting pipestream to be complete because cancelled")
 	}
 }

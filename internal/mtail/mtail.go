@@ -5,10 +5,7 @@ package mtail
 
 import (
 	"context"
-	"encoding/json"
 	"expvar"
-	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -23,7 +20,6 @@ import (
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/vm"
 	"github.com/google/mtail/internal/waker"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
@@ -57,17 +53,16 @@ type Server struct {
 	dumpAstTypes bool // if set, mtail prints the program syntax tree after type checking
 	dumpBytecode bool // if set, mtail prints the program bytecode after code generation
 
-	overrideLocation            *time.Location // Timezone location to use when parsing timestamps
-	expiredMetricGcTickInterval time.Duration  // Interval between expired metric removal runs
-	staleLogGcWaker             waker.Waker    // Wake to run stale log gc
-	logPatternPollWaker         waker.Waker    // Wake to poll for log patterns
-	logstreamPollWaker          waker.Waker    // Wake idle logstreams to poll sfor new data
-	metricPushInterval          time.Duration  // Interval between metric pushes
-	syslogUseCurrentYear        bool           // if set, use the current year for timestamps that have no year information
-	omitMetricSource            bool           // if set, do not link the source program to a metric
-	omitProgLabel               bool           // if set, do not put the program name in the metric labels
-	emitMetricTimestamp         bool           // if set, emit the metric's recorded timestamp
-	omitDumpMetricsStore        bool           // if set, do not print the metric store; useful in test
+	overrideLocation     *time.Location // Timezone location to use when parsing timestamps
+	staleLogGcWaker      waker.Waker    // Wake to run stale log gc
+	logPatternPollWaker  waker.Waker    // Wake to poll for log patterns
+	logstreamPollWaker   waker.Waker    // Wake idle logstreams to poll sfor new data
+	metricPushInterval   time.Duration  // Interval between metric pushes
+	syslogUseCurrentYear bool           // if set, use the current year for timestamps that have no year information
+	omitMetricSource     bool           // if set, do not link the source program to a metric
+	omitProgLabel        bool           // if set, do not put the program name in the metric labels
+	emitMetricTimestamp  bool           // if set, emit the metric's recorded timestamp
+	omitDumpMetricsStore bool           // if set, do not print the metric store; useful in test
 }
 
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
@@ -109,6 +104,11 @@ func (m *Server) initLoader() error {
 
 // initExporter sets up an Exporter for this Server.
 func (m *Server) initExporter() (err error) {
+	if m.oneShot {
+		// This is a hack to avoid a race in test, but assume that in oneshot
+		// mode we don't want to export anything.
+		return nil
+	}
 	opts := []exporter.Option{}
 	if m.omitProgLabel {
 		opts = append(opts, exporter.OmitProgLabel())
@@ -193,9 +193,7 @@ func (m *Server) initHttpServer() error {
 	}()
 
 	// This goroutine manages http server shutdown.
-	m.wg.Add(1)
 	go func() {
-		defer m.wg.Done()
 		<-initDone
 		select {
 		case err := <-errc:
@@ -209,6 +207,7 @@ func (m *Server) initHttpServer() error {
 				glog.Info(err)
 			}
 		}
+		// Wait for the Serve routine to exit.
 		wg.Wait()
 	}()
 
@@ -279,23 +278,10 @@ func (m *Server) SetOption(options ...Option) error {
 	return nil
 }
 
-// WriteMetrics dumps the current state of the metrics store in JSON format to
-// the io.Writer.
-func (m *Server) WriteMetrics(w io.Writer) error {
-	m.store.RLock()
-	b, err := json.MarshalIndent(m.store.Metrics, "", "  ")
-	m.store.RUnlock()
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal metrics into json")
-	}
-	_, err = w.Write(b)
-	return err
-}
-
 // Run awaits mtail's shutdown.
 // TODO(jaq): remove this once the test server is able to trigger polls on the components.
 func (m *Server) Run() error {
-	defer m.wg.Wait()
+	m.wg.Wait()
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
 		return nil
@@ -305,8 +291,7 @@ func (m *Server) Run() error {
 			glog.Info("Store dump disabled, exiting")
 			return nil
 		}
-		fmt.Printf("Metrics store:")
-		if err := m.WriteMetrics(os.Stdout); err != nil {
+		if err := m.store.WriteMetrics(os.Stdout); err != nil {
 			return err
 		}
 		return nil

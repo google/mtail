@@ -168,7 +168,7 @@ func main() {
 	}
 	if *pollInterval > 0 {
 		logPatternPollWaker := waker.NewTimed(ctx, *pollInterval)
-		opts = append(opts, mtail.LogPatternPollWaker(logPatternPollWaker))
+		opts = append(opts, mtail.LogPatternPollWaker(logPatternPollWaker), mtail.LogstreamPollWaker(logPatternPollWaker))
 	}
 	if *unixSocket == "" {
 		opts = append(opts, mtail.BindAddress(*address, *port))

@@ -36,7 +36,9 @@ jobs:
       - name: test
         run: |
           mkdir -p test-results
-          echo $GITHUB_SHA > test-results/sha-number
+          # Don't use GITHUB_SHA as we need the head of the branch, not the
+          # secret merge commit of the PR itself.  https://help.github.com/en/actions/automating-your-workflow-with-github-actions/events-that-trigger-workflows#pull-request-event-pull_request
+          echo ${{ github.event.pull_request.head.sha }} > test-results/sha-number
           make --debug junit-regtest TESTCOVERPROFILE=coverprofile
       - uses: codecov/codecov-action@v1
         if: always()

@@ -84,10 +84,12 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	b := make([]byte, defaultReadBufferSize)
 	partial := bytes.NewBufferString("")
 	started := make(chan struct{})
+	var total int
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		defer func() {
+			glog.V(2).Infof("%v: read total %d bytes from %s", fd, total, fs.pathname)
 			glog.V(2).Infof("%v: closing file descriptor", fd)
 			if err := fd.Close(); err != nil {
 				logErrors.Add(fs.pathname, 1)
@@ -106,6 +108,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 
 			if count > 0 {
+				total += count
 				glog.V(2).Infof("%v: decode and send", fd)
 				decodeAndSend(ctx, fs.lines, fs.pathname, count, b[:count], partial)
 				fs.mu.Lock()
@@ -177,7 +180,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 
 			// No error implies there is more to read in this file, unless it
-			// looks like we're cancelled.
+			// looks like context is Done.
 			if err == nil && ctx.Err() == nil {
 				continue
 			}

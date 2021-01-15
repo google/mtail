@@ -4,6 +4,7 @@
 package waker_test
 
 import (
+	"context"
 	"sync"
 	"testing"
 
@@ -11,7 +12,9 @@ import (
 )
 
 func TestTestWakerWakes(t *testing.T) {
-	w, awaken := waker.NewTest(1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	w, awaken := waker.NewTest(ctx, 1)
 	c := w.Wake()
 	select {
 	case x := <-c:
@@ -28,7 +31,9 @@ func TestTestWakerWakes(t *testing.T) {
 }
 
 func TestTestWakerTwoWakees(t *testing.T) {
-	w, awaken := waker.NewTest(2)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	w, awaken := waker.NewTest(ctx, 2)
 	var wg1, wg2, wg3 sync.WaitGroup
 	wg1.Add(1)
 	wg2.Add(1)
@@ -69,7 +74,9 @@ func TestTestWakerTwoWakees(t *testing.T) {
 }
 
 func TestTestWakerTwoWakeups(t *testing.T) {
-	w, awaken := waker.NewTest(1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	w, awaken := waker.NewTest(ctx, 1)
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {

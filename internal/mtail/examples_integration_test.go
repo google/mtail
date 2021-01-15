@@ -13,12 +13,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/mtail/golden"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/waker"
+	"golang.org/x/sys/unix"
 )
 
 var exampleProgramTests = []struct {
@@ -154,7 +156,7 @@ func TestExamplePrograms(t *testing.T) {
 	for _, tc := range exampleProgramTests {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, _ := waker.NewTest(0) // oneshot means we should never need to wake the stream
+			waker, _ := waker.NewTest(ctx, 0) // oneshot means we should never need to wake the stream
 			store := metrics.NewStore()
 			programFile := path.Join("../..", tc.programfile)
 			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
@@ -211,10 +213,10 @@ func BenchmarkProgram(b *testing.B) {
 			defer rmLogDir()
 			logFile := path.Join(logDir, "test.log")
 			log := testutil.TestOpenFile(b, logFile)
-			waker, awaken := waker.NewTest(1)
+			ctx, cancel := context.WithCancel(context.Background())
+			waker, awaken := waker.NewTest(ctx, 1)
 			store := metrics.NewStore()
 			programFile := path.Join("../..", bm.programfile)
-			ctx, cancel := context.WithCancel(context.Background())
 			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(b, err)
 
@@ -239,6 +241,70 @@ func BenchmarkProgram(b *testing.B) {
 			wg.Wait()
 			b.StopTimer()
 			b.SetBytes(total)
+		})
+	}
+}
+
+// Two mtails both alike in dignity.
+func TestFilePipeStreamComparison(t *testing.T) {
+	testutil.SkipIfShort(t)
+
+	for _, tc := range exampleProgramTests {
+		tc := tc
+		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			waker := waker.NewTestAlways()
+			fileStore, pipeStore := metrics.NewStore(), metrics.NewStore()
+			programFile := path.Join("../..", tc.programfile)
+
+			// Set up the pipe
+			tmpDir, rmTmpDir := testutil.TestTempDir(t)
+			defer rmTmpDir()
+
+			pipeName := filepath.Join(tmpDir, filepath.Base(tc.logfile))
+			testutil.FatalIfErr(t, unix.Mkfifo(pipeName, 0600))
+
+			var wg sync.WaitGroup
+			wg.Add(3)
+			go func() {
+				defer wg.Done()
+				source, err := os.OpenFile(tc.logfile, os.O_RDONLY, 0)
+				testutil.FatalIfErr(t, err)
+				// not NONBLOCK to wait for pipeMtail to start reading the pipe
+				pipe, err := os.OpenFile(pipeName, os.O_WRONLY, os.ModeNamedPipe)
+				testutil.FatalIfErr(t, err)
+				n, err := io.Copy(pipe, source)
+				testutil.FatalIfErr(t, err)
+				glog.Infof("Copied %d bytes into pipe", n)
+				source.Close()
+				pipe.Close()
+			}()
+
+			go func() {
+				defer wg.Done()
+				fileMtail, err := mtail.New(ctx, fileStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
+				if err != nil {
+					t.Error(err)
+				}
+				if err := fileMtail.Run(); err != nil {
+					t.Error(err)
+				}
+			}()
+			pipeMtail, err := mtail.New(ctx, pipeStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(pipeName), mtail.OneShot, mtail.OmitMetricSource, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
+			testutil.FatalIfErr(t, err)
+			go func() {
+				defer wg.Done()
+				if err := pipeMtail.Run(); err != nil {
+					t.Error(err)
+				}
+			}()
+
+			// Oneshot mode means we can wait for shutdown before cancelling.
+			wg.Wait()
+			cancel()
+
+			// Ignore the usual field and the datum.Time field as well, as the results will be unstable otherwise.
+			testutil.ExpectNoDiff(t, fileStore, pipeStore, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
 		})
 	}
 }

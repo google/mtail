@@ -88,3 +88,11 @@ run with gosec, and possibly annotate safe sections in code
 
 Test that when path/* is the logpathpattern that we handle log rotation, e.g. log -> log.1
 
+
+
+Use t.Cleanup instead of returning deferrables in testutil.
+
+Replace path.Join with filepath.Join.
+
+Reorder conditions post-Read in logstreams per the io.Reader interface docs -- handle the n first before the err.
+

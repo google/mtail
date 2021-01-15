@@ -6,6 +6,7 @@ package metrics
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"reflect"
 	"sync"
 	"time"
@@ -148,4 +149,20 @@ func (s *Store) StartGcLoop(ctx context.Context, duration time.Duration) {
 			}
 		}
 	}()
+}
+
+// WriteMetrics dumps the current state of the metrics store in JSON format to
+// the io.Writer.
+func (s *Store) WriteMetrics(w io.Writer) error {
+	s.RLock()
+	b, err := json.MarshalIndent(s.Metrics, "", "  ")
+	s.RUnlock()
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal metrics into json")
+	}
+	_, err = w.Write(b)
+	if err != nil {
+		return errors.Wrap(err, "failed to write metrics")
+	}
+	return nil
 }

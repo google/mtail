@@ -93,7 +93,7 @@ $(BENCHSTAT):
 	go get $(GOGETFLAGS) golang.org/x/perf/cmd/benchstat
 
 
-.PHONY: clean covclean crossclean depclean
+.PHONY: clean covclean crossclean depclean veryclean
 clean: covclean crossclean
 	rm -f $(CLEANFILES)
 covclean:
@@ -102,6 +102,7 @@ crossclean:
 	rm -rf build
 depclean:
 	rm -f .d/*  .*dep-stamp
+veryclean: clean depclean
 
 .PHONY: lint
 lint:
@@ -197,7 +198,7 @@ junit-regtest: $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE)
 
 $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp $(GOTESTSUM)
 	mkdir -p $(TESTRESULTS)
-	gotestsum --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -cpu 1,2,4 -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
+	gotestsum --debug --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -cpu 1,2,4 -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 .PHONY: bench
 bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt
