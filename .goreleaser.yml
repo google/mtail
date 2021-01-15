@@ -1,0 +1,40 @@
+before:
+  hooks:
+    - make --debug install_deps
+builds:
+  - id: mtail
+    main: ./cmd/mtail/main.go
+    binary: mtail
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    ldflags:
+      - -X main.Branch={{.Branch}}
+      - -X main.Version={{.Version}}
+      - -X main.Revision={{.Commit}}
+    gcflags:
+      # I love errors.
+      - -e
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+release:
+  github:
+  name_template: v{{.Version}}
