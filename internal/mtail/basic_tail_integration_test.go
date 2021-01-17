@@ -17,7 +17,7 @@ import (
 func TestBasicTail(t *testing.T) {
 	testutil.SkipIfShort(t)
 	if testing.Verbose() {
-		defer testutil.TestSetFlag(t, "vmodule", "tail=2,log_watcher=2")()
+		testutil.SetFlag(t, "vmodule", "tail=2,log_watcher=2")
 	}
 	logDir := testutil.TestTempDir(t)
 

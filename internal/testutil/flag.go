@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-// TestSetFlag sets the value of the commandline flag, and returns a cleanup function that restores the flag value.
-func TestSetFlag(tb testing.TB, name, value string) func() {
+// SetFlag sets the value of the commandline flag, and registers a cleanup function that restores the flag value.
+func SetFlag(tb testing.TB, name, value string) {
 	tb.Helper()
 	val := flag.Lookup(name)
 
@@ -17,11 +17,11 @@ func TestSetFlag(tb testing.TB, name, value string) func() {
 		tb.Fatal(err)
 	}
 
-	return func() {
+	tb.Cleanup(func() {
 		if val != nil {
 			if err := flag.Set(name, val.Value.String()); err != nil {
 				tb.Fatal(err)
 			}
 		}
-	}
+	})
 }

@@ -124,7 +124,7 @@ func TestBasicUNIXSockets(t *testing.T) {
 	unixSocket := "/var/run/mtail_test.socket"
 
 	if testing.Verbose() {
-		defer testutil.TestSetFlag(t, "vmodule", "tail=2,filestream=2")()
+		testutil.SetFlag(t, "vmodule", "tail=2,filestream=2")
 	}
 	logDir := testutil.TestTempDir(t)
 

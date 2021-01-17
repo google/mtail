@@ -253,7 +253,7 @@ test -
 
 func TestVmEndToEnd(t *testing.T) {
 	if testing.Verbose() {
-		defer testutil.TestSetFlag(t, "vmodule", "vm=2,loader=2,checker=2")()
+		testutil.SetFlag(t, "vmodule", "vm=2,loader=2,checker=2")
 	}
 	for _, tc := range vmTests {
 		tc := tc
