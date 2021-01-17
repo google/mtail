@@ -89,7 +89,4 @@ run with gosec, and possibly annotate safe sections in code
 Test that when path/* is the logpathpattern that we handle log rotation, e.g. log -> log.1
 
 
-
-Use t.Cleanup instead of returning deferrables in testutil.
-
 Can we create a linter that checks for patterns like 'path.Join' and warns against them?
