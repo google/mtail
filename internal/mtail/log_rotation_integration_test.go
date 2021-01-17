@@ -25,8 +25,7 @@ func TestLogRotation(t *testing.T) {
 			name = "enabled"
 		}
 		t.Run(fmt.Sprintf("race simulation %s", name), func(t *testing.T) {
-			tmpDir, rmTmpDir := testutil.TestTempDir(t)
-			defer rmTmpDir()
+			tmpDir := testutil.TestTempDir(t)
 
 			logDir := filepath.Join(tmpDir, "logs")
 			progDir := filepath.Join(tmpDir, "progs")
@@ -92,8 +91,7 @@ func TestLogSoftLinkChange(t *testing.T) {
 			name = "enabled"
 		}
 		t.Run(fmt.Sprintf("race simulation %s", name), func(t *testing.T) {
-			workdir, rmWorkdir := testutil.TestTempDir(t)
-			defer rmWorkdir()
+			workdir := testutil.TestTempDir(t)
 
 			logFilepath := filepath.Join(workdir, "log")
 

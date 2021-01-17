@@ -38,7 +38,7 @@ func makeServer(tb testing.TB, pollInterval time.Duration, options ...mtail.Opti
 func startUNIXSocketServer(tb testing.TB, pollInterval time.Duration, options ...mtail.Option) (*mtail.Server, func()) {
 	tb.Helper()
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(tb)
+	tmpDir := testutil.TestTempDir(tb)
 
 	unixSocket := filepath.Join(tmpDir, "mtail_test.socket")
 	options = append(options, mtail.BindUnixSocket(unixSocket))
@@ -60,7 +60,7 @@ func startUNIXSocketServer(tb testing.TB, pollInterval time.Duration, options ..
 	testutil.FatalIfErr(tb, err)
 
 	return m, func() {
-		defer rmTmpDir()
+
 		select {
 		case err := <-errc:
 			testutil.FatalIfErr(tb, err)
@@ -126,8 +126,7 @@ func TestBasicUNIXSockets(t *testing.T) {
 	if testing.Verbose() {
 		defer testutil.TestSetFlag(t, "vmodule", "tail=2,filestream=2")()
 	}
-	logDir, rmLogDir := testutil.TestTempDir(t)
-	defer rmLogDir()
+	logDir := testutil.TestTempDir(t)
 
 	_, stopM := startUNIXSocketServer(t, 0, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
 	defer stopM()

@@ -60,8 +60,8 @@ var testProgFiles = []string{
 
 func TestLoadProg(t *testing.T) {
 	store := metrics.NewStore()
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
+
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
 	l, err := NewLoader(lines, &wg, tmpDir, store)

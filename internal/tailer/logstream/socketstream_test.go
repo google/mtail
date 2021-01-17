@@ -20,8 +20,7 @@ func TestSocketStreamRead(t *testing.T) {
 	t.Skip("logstream.New cannot stat a nonexistent socket")
 	var wg sync.WaitGroup
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "sock")
 
@@ -62,8 +61,7 @@ func TestSocketStreamCompletedBecauseSocketClosed(t *testing.T) {
 	t.Skip("logstream.New cannot stat a nonexistent socket")
 	var wg sync.WaitGroup
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "sock")
 
@@ -107,8 +105,7 @@ func TestSocketStreamCompletedBecauseCancel(t *testing.T) {
 	t.Skip("logstream.New cannot stat a nonexistent socket")
 	var wg sync.WaitGroup
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "sock")
 

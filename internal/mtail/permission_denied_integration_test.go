@@ -17,8 +17,7 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	// Can't force a permission denied error if run as root.
 	testutil.SkipIfRoot(t)
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	logDir := filepath.Join(tmpDir, "logs")
 	progDir := filepath.Join(tmpDir, "progs")

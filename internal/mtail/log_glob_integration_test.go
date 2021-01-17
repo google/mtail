@@ -17,8 +17,7 @@ import (
 func TestGlobBeforeStart(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	globTests := []struct {
 		name     string
@@ -57,8 +56,7 @@ func TestGlobBeforeStart(t *testing.T) {
 func TestGlobAfterStart(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	globTests := []struct {
 		name     string
@@ -101,8 +99,7 @@ func TestGlobAfterStart(t *testing.T) {
 func TestGlobIgnoreFolder(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	globTests := []struct {
 		name     string
@@ -158,8 +155,7 @@ func TestGlobIgnoreFolder(t *testing.T) {
 func TestFilenameRegexIgnore(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	globTests := []struct {
 		name     string
@@ -200,8 +196,7 @@ func TestFilenameRegexIgnore(t *testing.T) {
 
 func TestGlobRelativeAfterStart(t *testing.T) {
 	testutil.SkipIfShort(t)
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	logDir := filepath.Join(tmpDir, "logs")
 	progDir := filepath.Join(tmpDir, "progs")

@@ -15,8 +15,7 @@ import (
 
 func TestRelativeLog(t *testing.T) {
 	testutil.SkipIfShort(t)
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	cwd, err := os.Getwd()
 	testutil.FatalIfErr(t, err)

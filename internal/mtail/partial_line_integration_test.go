@@ -15,8 +15,7 @@ import (
 func TestPartialLineRead(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	logDir := filepath.Join(tmpDir, "logs")
 	progDir := filepath.Join(tmpDir, "progs")

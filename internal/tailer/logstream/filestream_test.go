@@ -20,8 +20,7 @@ import (
 func TestFileStreamRead(t *testing.T) {
 	var wg sync.WaitGroup
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
@@ -55,8 +54,7 @@ func TestFileStreamRead(t *testing.T) {
 func TestFileStreamRotation(t *testing.T) {
 	var wg sync.WaitGroup
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
@@ -101,8 +99,7 @@ func TestFileStreamRotation(t *testing.T) {
 func TestFileStreamTruncation(t *testing.T) {
 	var wg sync.WaitGroup
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.OpenLogFile(t, name)
@@ -141,8 +138,7 @@ func TestFileStreamTruncation(t *testing.T) {
 func TestFileStreamFinishedBecauseCancel(t *testing.T) {
 	var wg sync.WaitGroup
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
@@ -175,8 +171,7 @@ func TestFileStreamFinishedBecauseCancel(t *testing.T) {
 func TestFileStreamPartialRead(t *testing.T) {
 	var wg sync.WaitGroup
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "log")
 	f := testutil.TestOpenFile(t, name)
@@ -220,8 +215,7 @@ func TestFileStreamOpenFailure(t *testing.T) {
 	testutil.SkipIfRoot(t)
 	var wg sync.WaitGroup
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "log")
 	_, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)

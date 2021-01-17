@@ -15,8 +15,7 @@ import (
 func TestNewProg(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	logDir := filepath.Join(tmpDir, "logs")
 	progDir := filepath.Join(tmpDir, "progs")
@@ -40,8 +39,7 @@ func TestNewProg(t *testing.T) {
 func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	logDir := filepath.Join(workdir, "logs")
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0777))

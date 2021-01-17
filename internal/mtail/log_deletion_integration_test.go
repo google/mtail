@@ -16,8 +16,7 @@ import (
 
 func TestLogDeletion(t *testing.T) {
 	testutil.SkipIfShort(t)
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	// touch log file
 	logFilepath := filepath.Join(workdir, "log")

@@ -15,8 +15,7 @@ import (
 
 func TestPollLogPathPatterns(t *testing.T) {
 	testutil.SkipIfShort(t)
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	logDir := filepath.Join(tmpDir, "logs")
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))

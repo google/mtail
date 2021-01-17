@@ -20,8 +20,7 @@ import (
 func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 	var wg sync.WaitGroup
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "fifo")
 	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
@@ -60,8 +59,7 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 	var wg sync.WaitGroup
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "fifo")
 	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))

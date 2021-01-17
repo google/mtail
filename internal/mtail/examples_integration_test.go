@@ -208,8 +208,7 @@ func BenchmarkProgram(b *testing.B) {
 		bm := bm
 		b.Run(fmt.Sprintf("%s on %s", bm.programfile, bm.logfile), func(b *testing.B) {
 			b.ReportAllocs()
-			logDir, rmLogDir := testutil.TestTempDir(b)
-			defer rmLogDir()
+			logDir := testutil.TestTempDir(b)
 			logFile := filepath.Join(logDir, "test.log")
 			log := testutil.TestOpenFile(b, logFile)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -257,8 +256,7 @@ func TestFilePipeStreamComparison(t *testing.T) {
 			programFile := filepath.Join("../..", tc.programfile)
 
 			// Set up the pipe
-			tmpDir, rmTmpDir := testutil.TestTempDir(t)
-			defer rmTmpDir()
+			tmpDir := testutil.TestTempDir(t)
 
 			pipeName := filepath.Join(tmpDir, filepath.Base(tc.logfile))
 			testutil.FatalIfErr(t, unix.Mkfifo(pipeName, 0600))

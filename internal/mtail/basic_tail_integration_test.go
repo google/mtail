@@ -19,8 +19,7 @@ func TestBasicTail(t *testing.T) {
 	if testing.Verbose() {
 		defer testutil.TestSetFlag(t, "vmodule", "tail=2,log_watcher=2")()
 	}
-	logDir, rmLogDir := testutil.TestTempDir(t)
-	defer rmLogDir()
+	logDir := testutil.TestTempDir(t)
 
 	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
 	defer stopM()
@@ -53,8 +52,8 @@ func TestBasicTail(t *testing.T) {
 
 func TestNewLogDoesNotMatchIsIgnored(t *testing.T) {
 	testutil.SkipIfShort(t)
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
+
 	// Start mtail
 	logFilepath := filepath.Join(workdir, "log")
 	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(logFilepath))
