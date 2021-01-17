@@ -44,9 +44,9 @@ func OpenLogFile(tb testing.TB, name string) *os.File {
 	return f
 }
 
-// TestChdir changes current working directory, and registers a cleanup function
+// Chdir changes current working directory, and registers a cleanup function
 // to return to the previous directory.
-func TestChdir(tb testing.TB, dir string) {
+func Chdir(tb testing.TB, dir string) {
 	tb.Helper()
 	cwd, err := os.Getwd()
 	if err != nil {

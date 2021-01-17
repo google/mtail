@@ -206,7 +206,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	// Move to logdir to make relative paths
-	testutil.TestChdir(t, logDir)
+	testutil.Chdir(t, logDir)
 
 	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
 	defer stopM()
