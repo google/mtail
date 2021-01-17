@@ -5,7 +5,7 @@ package mtail_test
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/golang/glog"
@@ -28,7 +28,7 @@ func TestRelativeLog(t *testing.T) {
 	}()
 
 	// touch log file
-	logFilepath := path.Join(workdir, "log")
+	logFilepath := filepath.Join(workdir, "log")
 	logFile, err := os.Create(logFilepath)
 	testutil.FatalIfErr(t, err)
 	defer logFile.Close()

@@ -6,6 +6,7 @@ package mtail_test
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/mtail/internal/mtail"
@@ -17,7 +18,7 @@ func TestPollLogPathPatterns(t *testing.T) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
-	logDir := path.Join(tmpDir, "logs")
+	logDir := filepath.Join(tmpDir, "logs")
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
 	defer testutil.TestChdir(t, logDir)()
 
@@ -27,7 +28,7 @@ func TestPollLogPathPatterns(t *testing.T) {
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
 	lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
 
-	logFile := path.Join(logDir, "files", "a", "log", "a.log")
+	logFile := filepath.Join(logDir, "files", "a", "log", "a.log")
 	testutil.FatalIfErr(t, os.MkdirAll(path.Dir(logFile), 0700))
 
 	f := testutil.TestOpenFile(t, logFile)

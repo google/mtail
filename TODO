@@ -91,5 +91,3 @@ Test that when path/* is the logpathpattern that we handle log rotation, e.g. lo
 
 
 Use t.Cleanup instead of returning deferrables in testutil.
-
-Replace path.Join with filepath.Join.

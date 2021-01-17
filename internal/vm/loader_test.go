@@ -4,7 +4,7 @@
 package vm
 
 import (
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -68,11 +68,11 @@ func TestLoadProg(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	for _, name := range testProgFiles {
-		f := testutil.TestOpenFile(t, path.Join(tmpDir, name))
+		f := testutil.TestOpenFile(t, filepath.Join(tmpDir, name))
 		n, err := f.WriteString(testProgram)
 		testutil.FatalIfErr(t, err)
 		glog.Infof("Wrote %d bytes", n)
-		err = l.LoadProgram(path.Join(tmpDir, name))
+		err = l.LoadProgram(filepath.Join(tmpDir, name))
 		testutil.FatalIfErr(t, err)
 	}
 	close(lines)

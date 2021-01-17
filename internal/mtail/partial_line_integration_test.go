@@ -5,7 +5,7 @@ package mtail_test
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/mtail/internal/mtail"
@@ -18,14 +18,14 @@ func TestPartialLineRead(t *testing.T) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
-	logDir := path.Join(tmpDir, "logs")
-	progDir := path.Join(tmpDir, "progs")
+	logDir := filepath.Join(tmpDir, "logs")
+	progDir := filepath.Join(tmpDir, "progs")
 	err := os.Mkdir(logDir, 0700)
 	testutil.FatalIfErr(t, err)
 	err = os.Mkdir(progDir, 0700)
 	testutil.FatalIfErr(t, err)
 
-	logFile := path.Join(logDir, "log")
+	logFile := filepath.Join(logDir, "log")
 
 	f := testutil.TestOpenFile(t, logFile)
 

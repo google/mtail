@@ -5,7 +5,7 @@ package mtail_test
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"syscall"
 	"testing"
 
@@ -19,13 +19,13 @@ func TestReadFromPipe(t *testing.T) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
-	logDir := path.Join(tmpDir, "logs")
-	progDir := path.Join(tmpDir, "progs")
+	logDir := filepath.Join(tmpDir, "logs")
+	progDir := filepath.Join(tmpDir, "progs")
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
 	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 	defer testutil.TestChdir(t, logDir)()
 
-	logFile := path.Join(logDir, "logpipe")
+	logFile := filepath.Join(logDir, "logpipe")
 
 	testutil.FatalIfErr(t, unix.Mkfifo(logFile, 0600))
 

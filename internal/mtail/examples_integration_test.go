@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -158,7 +157,7 @@ func TestExamplePrograms(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			waker, _ := waker.NewTest(ctx, 0) // oneshot means we should never need to wake the stream
 			store := metrics.NewStore()
-			programFile := path.Join("../..", tc.programfile)
+			programFile := filepath.Join("../..", tc.programfile)
 			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.OmitDumpMetricStore, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(t, err)
 
@@ -211,12 +210,12 @@ func BenchmarkProgram(b *testing.B) {
 			b.ReportAllocs()
 			logDir, rmLogDir := testutil.TestTempDir(b)
 			defer rmLogDir()
-			logFile := path.Join(logDir, "test.log")
+			logFile := filepath.Join(logDir, "test.log")
 			log := testutil.TestOpenFile(b, logFile)
 			ctx, cancel := context.WithCancel(context.Background())
 			waker, awaken := waker.NewTest(ctx, 1)
 			store := metrics.NewStore()
-			programFile := path.Join("../..", bm.programfile)
+			programFile := filepath.Join("../..", bm.programfile)
 			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(b, err)
 
@@ -255,7 +254,7 @@ func TestFilePipeStreamComparison(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			waker := waker.NewTestAlways()
 			fileStore, pipeStore := metrics.NewStore(), metrics.NewStore()
-			programFile := path.Join("../..", tc.programfile)
+			programFile := filepath.Join("../..", tc.programfile)
 
 			// Set up the pipe
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)

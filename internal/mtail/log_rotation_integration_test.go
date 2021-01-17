@@ -6,7 +6,7 @@ package mtail_test
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -28,14 +28,14 @@ func TestLogRotation(t *testing.T) {
 			tmpDir, rmTmpDir := testutil.TestTempDir(t)
 			defer rmTmpDir()
 
-			logDir := path.Join(tmpDir, "logs")
-			progDir := path.Join(tmpDir, "progs")
+			logDir := filepath.Join(tmpDir, "logs")
+			progDir := filepath.Join(tmpDir, "progs")
 			err := os.Mkdir(logDir, 0700)
 			testutil.FatalIfErr(t, err)
 			err = os.Mkdir(progDir, 0700)
 			testutil.FatalIfErr(t, err)
 
-			logFile := path.Join(logDir, "log")
+			logFile := filepath.Join(logDir, "log")
 
 			f := testutil.TestOpenFile(t, logFile)
 
@@ -95,7 +95,7 @@ func TestLogSoftLinkChange(t *testing.T) {
 			workdir, rmWorkdir := testutil.TestTempDir(t)
 			defer rmWorkdir()
 
-			logFilepath := path.Join(workdir, "log")
+			logFilepath := filepath.Join(workdir, "log")
 
 			m, stopM := mtail.TestStartServer(t, 0, 1, mtail.LogPathPatterns(logFilepath))
 			defer stopM()

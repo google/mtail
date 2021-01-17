@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -138,7 +137,7 @@ func TestBasicUNIXSockets(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	logFile := path.Join(logDir, "log")
+	logFile := filepath.Join(logDir, "log")
 
 	f := testutil.TestOpenFile(t, logFile)
 

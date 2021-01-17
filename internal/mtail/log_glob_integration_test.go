@@ -6,7 +6,7 @@ package mtail_test
 import (
 	"expvar"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/golang/glog"
@@ -25,15 +25,15 @@ func TestGlobBeforeStart(t *testing.T) {
 		expected bool
 	}{
 		{
-			path.Join(workdir, "log1"),
+			filepath.Join(workdir, "log1"),
 			true,
 		},
 		{
-			path.Join(workdir, "log2"),
+			filepath.Join(workdir, "log2"),
 			true,
 		},
 		{
-			path.Join(workdir, "1log"),
+			filepath.Join(workdir, "1log"),
 			false,
 		},
 	}
@@ -46,7 +46,7 @@ func TestGlobBeforeStart(t *testing.T) {
 		}
 		testutil.WriteString(t, log, "\n")
 	}
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
 	stopM()
 
 	if r := m.GetExpvar("log_count"); r.(*expvar.Int).Value() != int64(count) {
@@ -65,19 +65,19 @@ func TestGlobAfterStart(t *testing.T) {
 		expected bool
 	}{
 		{
-			path.Join(workdir, "log1"),
+			filepath.Join(workdir, "log1"),
 			true,
 		},
 		{
-			path.Join(workdir, "log2"),
+			filepath.Join(workdir, "log2"),
 			true,
 		},
 		{
-			path.Join(workdir, "1log"),
+			filepath.Join(workdir, "1log"),
 			false,
 		},
 	}
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
 	defer stopM()
 
 	m.PollWatched(0) // Force sync to EOF
@@ -110,17 +110,17 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		expected bool
 	}{
 		{
-			path.Join(workdir, "log1"),
+			filepath.Join(workdir, "log1"),
 			false,
 			true,
 		},
 		{
-			path.Join(workdir, "logarchive"),
+			filepath.Join(workdir, "logarchive"),
 			true,
 			false,
 		},
 		{
-			path.Join(workdir, "log2.gz"),
+			filepath.Join(workdir, "log2.gz"),
 			false,
 			false,
 		},
@@ -146,7 +146,7 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		testutil.WriteString(t, log, "\n")
 	}
 
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 
 	stopM()
 
@@ -166,15 +166,15 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		expected bool
 	}{
 		{
-			path.Join(workdir, "log1"),
+			filepath.Join(workdir, "log1"),
 			true,
 		},
 		{
-			path.Join(workdir, "log1.gz"),
+			filepath.Join(workdir, "log1.gz"),
 			false,
 		},
 		{
-			path.Join(workdir, "log2gz"),
+			filepath.Join(workdir, "log2gz"),
 			true,
 		},
 	}
@@ -189,7 +189,7 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		testutil.WriteString(t, log, "\n")
 	}
 
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 
 	stopM()
 
@@ -203,8 +203,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	tmpDir, rmTmpDir := testutil.TestTempDir(t)
 	defer rmTmpDir()
 
-	logDir := path.Join(tmpDir, "logs")
-	progDir := path.Join(tmpDir, "progs")
+	logDir := filepath.Join(tmpDir, "logs")
+	progDir := filepath.Join(tmpDir, "progs")
 	err := os.Mkdir(logDir, 0700)
 	testutil.FatalIfErr(t, err)
 	err = os.Mkdir(progDir, 0700)
@@ -219,7 +219,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	{
 		logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
 
-		logFile := path.Join(logDir, "log.1.txt")
+		logFile := filepath.Join(logDir, "log.1.txt")
 		f := testutil.TestOpenFile(t, logFile)
 		m.PollWatched(1) // Force sync to EOF
 		testutil.WriteString(t, f, "line 1\n")
@@ -232,7 +232,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
 
-		logFile := path.Join(logDir, "log.2.txt")
+		logFile := filepath.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
 		m.PollWatched(2)
 		testutil.WriteString(t, f, "line 1\n")
@@ -243,7 +243,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	{
 		logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 0)
 
-		logFile := path.Join(logDir, "log.2.txt")
+		logFile := filepath.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
 		m.PollWatched(2)
 		testutil.WriteString(t, f, "line 2\n")
