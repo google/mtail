@@ -91,3 +91,5 @@ Test that when path/* is the logpathpattern that we handle log rotation, e.g. lo
 
 
 Use t.Cleanup instead of returning deferrables in testutil.
+
+Can we create a linter that checks for patterns like 'path.Join' and warns against them?
