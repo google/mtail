@@ -79,6 +79,16 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 			n, err := fd.Read(b[:capB])
 			glog.V(2).Infof("%v: read %d bytes, err is %v", fd, n, err)
+
+			if n > 0 {
+				total += n
+				decodeAndSend(ps.ctx, ps.lines, ps.pathname, n, b[:n], partial)
+				// Update the last read time if we were able to read anything.
+				ps.mu.Lock()
+				ps.lastReadTime = time.Now()
+				ps.mu.Unlock()
+			}
+
 			var perr *os.PathError
 			if errors.As(err, &perr) && perr.Timeout() && n == 0 {
 				glog.Info("timed out")
@@ -103,15 +113,6 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				ps.completed = true
 				ps.mu.Unlock()
 				return
-			}
-
-			if n > 0 {
-				total += n
-				decodeAndSend(ps.ctx, ps.lines, ps.pathname, n, b[:n], partial)
-				// Update the last read time if we were able to read anything.
-				ps.mu.Lock()
-				ps.lastReadTime = time.Now()
-				ps.mu.Unlock()
 			}
 
 			// No error implies there's more to read, unless it looks like
