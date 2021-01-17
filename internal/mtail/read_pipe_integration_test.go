@@ -22,7 +22,7 @@ func TestReadFromPipe(t *testing.T) {
 	progDir := filepath.Join(tmpDir, "progs")
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
 	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
-	defer testutil.TestChdir(t, logDir)()
+	testutil.TestChdir(t, logDir)
 
 	logFile := filepath.Join(logDir, "logpipe")
 

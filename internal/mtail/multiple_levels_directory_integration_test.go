@@ -19,7 +19,7 @@ func TestPollLogPathPatterns(t *testing.T) {
 
 	logDir := filepath.Join(tmpDir, "logs")
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
-	defer testutil.TestChdir(t, logDir)()
+	testutil.TestChdir(t, logDir)
 
 	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(logDir+"/files/*/log/*log"))
 	defer stopM()
