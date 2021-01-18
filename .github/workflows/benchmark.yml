@@ -47,8 +47,7 @@ jobs:
           BENCH_COUNT=5 HEAD_REF=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}} make --debug benchstat
           ls -al test-results
           mkdir -p benchmark-comment
-          echo "## Benchmark Results" > benchmark-comment/comment.md
-          cat test-results/benchstat.txt >> benchmark-comment/comment.md
+          cp test-results/benchstat.txt benchmark-comment
           echo ${{ github.event.number }} > benchmark-comment/pr-number
       - uses: actions/upload-artifact@v2
         if: always ()

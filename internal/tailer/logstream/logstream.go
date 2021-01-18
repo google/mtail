@@ -25,6 +25,8 @@ var (
 	logErrors = expvar.NewMap("log_errors_total")
 	// logOpens counts the opens of new log file descriptors/sockets
 	logOpens = expvar.NewMap("log_opens_total")
+	// logCloses counts the closes of old log file descriptors/sockets
+	logCloses = expvar.NewMap("log_closes_total")
 )
 
 // LogStream

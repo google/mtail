@@ -95,6 +95,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				logErrors.Add(fs.pathname, 1)
 				glog.Info(err)
 			}
+			logCloses.Add(fs.pathname, 1)
 		}()
 		close(started)
 		for {
