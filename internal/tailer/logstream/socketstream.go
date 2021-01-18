@@ -65,6 +65,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 				logErrors.Add(ss.pathname, 1)
 				glog.Info(err)
 			}
+			logCloses.Add(ss.pathname, 1)
 			ss.mu.Lock()
 			ss.completed = true
 			ss.mu.Unlock()

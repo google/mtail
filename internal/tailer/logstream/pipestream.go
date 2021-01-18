@@ -63,6 +63,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				logErrors.Add(ps.pathname, 1)
 				glog.Info(err)
 			}
+			logCloses.Add(ps.pathname, 1)
 			ps.mu.Lock()
 			ps.completed = true
 			ps.mu.Unlock()

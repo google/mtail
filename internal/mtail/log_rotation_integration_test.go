@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
@@ -50,15 +49,16 @@ func TestLogRotation(t *testing.T) {
 			testutil.WriteString(t, f, "line 2\n")
 			m.PollWatched(1)
 
+			logClosedCheck := m.ExpectMapExpvarDeltaWithDeadline("log_closes_total", logFile, 1)
 			logCompletedCheck := m.ExpectExpvarDeltaWithDeadline("log_count", -1)
 			glog.Info("rename")
 			err = os.Rename(logFile, logFile+".1")
 			testutil.FatalIfErr(t, err)
 			if tc {
-				m.PollWatched(0)                 // simulate race condition with this poll.
-				time.Sleep(1 * time.Millisecond) // we can't trigger on the logstream ending, so here's this hack :(
-				m.PollWatched(0)                 // gc
-				logCompletedCheck()
+				m.PollWatched(0)    // simulate race condition with this poll.
+				logClosedCheck()    // sync when filestream closes fd
+				m.PollWatched(0)    // invoke the GC
+				logCompletedCheck() // sync to when the logstream is removed from tailer
 			}
 			glog.Info("create")
 			f = testutil.TestOpenFile(t, logFile)
@@ -117,9 +117,14 @@ func TestLogSoftLinkChange(t *testing.T) {
 			trueLog2 := testutil.TestOpenFile(t, logFilepath+".true2")
 			defer trueLog2.Close()
 			m.PollWatched(1)
+			logClosedCheck := m.ExpectMapExpvarDeltaWithDeadline("log_closes_total", logFilepath, 1)
+			logCompletedCheck := m.ExpectExpvarDeltaWithDeadline("log_count", -1)
 			testutil.FatalIfErr(t, os.Remove(logFilepath))
 			if tc {
-				m.PollWatched(0) // simulate race condition with this poll.
+				m.PollWatched(0)    // simulate race condition with this poll.
+				logClosedCheck()    // sync when filestream closes fd
+				m.PollWatched(0)    // invoke the GC
+				logCompletedCheck() // sync to when the logstream is removed from tailer
 			}
 			testutil.FatalIfErr(t, os.Symlink(logFilepath+".true2", logFilepath))
 			m.PollWatched(1)
