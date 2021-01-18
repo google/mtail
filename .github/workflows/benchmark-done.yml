@@ -32,7 +32,11 @@ jobs:
           mkdir -p benchmark-comment
           unzip -d benchmark-comment benchmark-comment.zip
           echo "::set-output name=pr-number::$(cat benchmark-comment/pr-number)"
-          echo "::set-output name=comment::$(cat benchmark-comment/benchstat.txt)"
+          COMMENT=$(cat benchmark-comment/benchstat.txt)
+          COMMENT="${COMMENT//'%'/'%25'}"
+          COMMENT="${COMMENT//$'\n'/'%0A'}"
+          COMMENT="${COMMENT//$'\r'/'%0D'}"
+          echo "::set-output name=comment::$COMMENT"
       - name: post benchmark results
         uses: marocchino/sticky-pull-request-comment@v2
         with:
