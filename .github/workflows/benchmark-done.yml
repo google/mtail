@@ -32,10 +32,18 @@ jobs:
           mkdir -p benchmark-comment
           unzip -d benchmark-comment benchmark-comment.zip
           echo "::set-output name=pr-number::$(cat benchmark-comment/pr-number)"
+          echo "::set-output name=comment::$(cat benchmark-comment/benchstat.txt)"
       - name: post benchmark results
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           header: Benchmark Results
-          path: benchmark-comment/comment.md
           number: ${{ steps.unpack.outputs.pr-number }}
+          message: |
+            ## Benchmark Result
+            <details><summary>Benchmark diff with base</summary>
+
+            ```
+            ${{ steps.unpack.outputs.comment }}
+            ```
+            </details>
