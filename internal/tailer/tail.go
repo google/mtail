@@ -350,7 +350,7 @@ func (t *Tailer) PollLogPatterns() error {
 			if err != nil {
 				return err
 			}
-			glog.Infof("watched path is %q", absPath)
+			glog.V(2).Infof("watched path is %q", absPath)
 			if err := t.TailPath(absPath); err != nil {
 				glog.Info(err)
 			}
