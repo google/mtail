@@ -84,9 +84,18 @@ func (t *testWaker) Wake() (w <-chan struct{}) {
 		case t.wakeeDone <- struct{}{}:
 		}
 		// Block wakees here until a subsequent wakeFunc is called.
-		<-t.wait
+		select {
+		case <-t.ctx.Done():
+			return
+		case <-t.wait:
+		}
 		// Signal we've got the wake chan, telling wakeFunc it can now issue a broadcast.
-		t.wakeeReady <- struct{}{}
+		select {
+		case <-t.ctx.Done():
+			return
+		case t.wakeeReady <- struct{}{}:
+		}
+
 	}()
 	return
 }
