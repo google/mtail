@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
@@ -26,16 +25,14 @@ func TestLogDeletion(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.LogPathPatterns(logFilepath))
 	defer stopM()
 
+	logCloseCheck := m.ExpectMapExpvarDeltaWithDeadline("log_closes_total", logFilepath, 1)
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", -1)
 
 	glog.Info("remove")
 	testutil.FatalIfErr(t, os.Remove(logFilepath))
 
-	m.PollWatched(1) // one pass to stop
-	// TODO(jaq): this sleep hides a race between filestream completing and
-	// PollLogStreams noticing.
-	time.Sleep(1 * time.Second)
+	m.PollWatched(0) // one pass to stop
+	logCloseCheck()
 	m.PollWatched(0) // one pass to remove completed stream
-
 	logCountCheck()
 }

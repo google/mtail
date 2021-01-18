@@ -49,6 +49,7 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, wakers int, optio
 	expvar.Get("log_count").(*expvar.Int).Set(0)
 	expvar.Get("log_lines_total").(*expvar.Map).Init()
 	expvar.Get("log_opens_total").(*expvar.Map).Init()
+	expvar.Get("log_closes_total").(*expvar.Map).Init()
 	expvar.Get("file_truncates_total").(*expvar.Map).Init()
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
