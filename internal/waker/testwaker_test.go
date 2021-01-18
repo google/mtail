@@ -77,6 +77,7 @@ func TestTestWakerTwoWakeups(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	w, awaken := waker.NewTest(ctx, 1)
+	s := make(chan struct{})
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
@@ -85,14 +86,18 @@ func TestTestWakerTwoWakeups(t *testing.T) {
 			c := w.Wake()
 			select {
 			case x := <-c:
-				t.Errorf("<-w.Wake() == %v, expected nothing (should block)", x)
+				t.Errorf("<-w.Wake() == %v, expected nothing (should block), pass %d", x, i)
 			default:
 			}
+			s <- struct{}{}
+
 		}
 	}()
 	go func() {
 		defer wg.Done()
+		<-s
 		awaken(1)
+		<-s
 		awaken(0)
 	}()
 	wg.Wait()
