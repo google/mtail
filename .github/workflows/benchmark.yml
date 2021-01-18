@@ -48,7 +48,11 @@ jobs:
           ls -al test-results
           mkdir -p benchmark-comment
           echo "## Benchmark Results" > benchmark-comment/comment.md
+          echo "<details><summary>Benchmark diff with base</summary>" >> benchmark-comment/comment.md
+          echo "```" >> benchmark-comment/comment.md
           cat test-results/benchstat.txt >> benchmark-comment/comment.md
+          echo "```" >> benchmark-comment/comment.md
+          echo "</details>" >> benchmark-comment/comment.md
           echo ${{ github.event.number }} > benchmark-comment/pr-number
       - uses: actions/upload-artifact@v2
         if: always ()
