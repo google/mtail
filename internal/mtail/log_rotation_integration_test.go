@@ -20,7 +20,7 @@ func TestLogRotation(t *testing.T) {
 	testutil.SkipIfShort(t)
 
 	for _, tc := range []bool{false, true} {
-		name := "disbled"
+		name := "disabled"
 		if tc {
 			name = "enabled"
 		}
@@ -86,7 +86,7 @@ func TestLogSoftLinkChange(t *testing.T) {
 	testutil.SkipIfShort(t)
 
 	for _, tc := range []bool{false, true} {
-		name := "disbled"
+		name := "disabled"
 		if tc {
 			name = "enabled"
 		}
