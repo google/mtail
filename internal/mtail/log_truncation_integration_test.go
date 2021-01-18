@@ -5,7 +5,7 @@ package mtail_test
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/golang/glog"
@@ -15,11 +15,10 @@ import (
 
 func TestLogTruncation(t *testing.T) {
 	testutil.SkipIfShort(t)
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
-	logDir := path.Join(tmpDir, "logs")
-	progDir := path.Join(tmpDir, "progs")
+	logDir := filepath.Join(tmpDir, "logs")
+	progDir := filepath.Join(tmpDir, "progs")
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
 	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 
@@ -29,7 +28,7 @@ func TestLogTruncation(t *testing.T) {
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
 	linesCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 2)
 
-	logFile := path.Join(logDir, "log")
+	logFile := filepath.Join(logDir, "log")
 	f := testutil.TestOpenFile(t, logFile)
 	m.PollWatched(1)
 

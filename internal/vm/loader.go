@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -74,7 +73,7 @@ func (l *Loader) LoadAllPrograms() error {
 			if fi.IsDir() {
 				continue
 			}
-			err = l.LoadProgram(path.Join(l.programPath, fi.Name()))
+			err = l.LoadProgram(filepath.Join(l.programPath, fi.Name()))
 			if err != nil {
 				if l.errorsAbort {
 					return err

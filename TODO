@@ -87,12 +87,7 @@ run with gosec, and possibly annotate safe sections in code
 
 
 Test that when path/* is the logpathpattern that we handle log rotation, e.g. log -> log.1
+ = how can this work, we can't tell the difference between log.1 being a rotation or a new log.  This could work if we can have a tailer-level registry of filenames currently with a goroutine.  But we don't know the name of the new file when filestream creates a new goroutine for the replacement; fd.Stat() doesn't return the new name of the file.
 
 
-
-Use t.Cleanup instead of returning deferrables in testutil.
-
-Replace path.Join with filepath.Join.
-
-Reorder conditions post-Read in logstreams per the io.Reader interface docs -- handle the n first before the err.
-
+Can we create a linter that checks for patterns like 'path.Join' and warns against them?

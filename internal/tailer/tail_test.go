@@ -16,8 +16,8 @@ import (
 	"github.com/google/mtail/internal/waker"
 )
 
-func makeTestTail(t *testing.T, options ...Option) (*Tailer, chan *logline.LogLine, func(int), string, func(), func()) {
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
+func makeTestTail(t *testing.T, options ...Option) (*Tailer, chan *logline.LogLine, func(int), string, func()) {
+	tmpDir := testutil.TestTempDir(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	lines := make(chan *logline.LogLine, 5) // 5 loglines ought to be enough for any test
@@ -26,12 +26,11 @@ func makeTestTail(t *testing.T, options ...Option) (*Tailer, chan *logline.LogLi
 	opts := append(options, LogPatterns([]string{tmpDir}), LogstreamPollWaker(waker))
 	ta, err := New(ctx, &wg, lines, opts...)
 	testutil.FatalIfErr(t, err)
-	return ta, lines, awaken, tmpDir, rmTmpDir, func() { cancel(); wg.Wait() }
+	return ta, lines, awaken, tmpDir, func() { cancel(); wg.Wait() }
 }
 
 func TestTail(t *testing.T) {
-	ta, _, _, dir, cleanup, stop := makeTestTail(t)
-	defer cleanup()
+	ta, _, _, dir, stop := makeTestTail(t)
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
@@ -48,8 +47,7 @@ func TestTail(t *testing.T) {
 }
 
 func TestHandleLogUpdate(t *testing.T) {
-	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
-	defer cleanup()
+	ta, lines, awaken, dir, stop := makeTestTail(t)
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
@@ -76,8 +74,7 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
-	defer cleanup()
+	ta, lines, awaken, dir, stop := makeTestTail(t)
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
@@ -114,8 +111,7 @@ func TestHandleLogTruncate(t *testing.T) {
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
-	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
-	defer cleanup()
+	ta, lines, awaken, dir, stop := makeTestTail(t)
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
@@ -145,8 +141,7 @@ func TestTailerOpenRetries(t *testing.T) {
 	// Can't force a permission denied error if run as root.
 	testutil.SkipIfRoot(t)
 
-	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
-	defer cleanup()
+	ta, lines, awaken, dir, stop := makeTestTail(t)
 
 	logfile := filepath.Join(dir, "log")
 	if _, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
@@ -225,8 +220,7 @@ func TestTailerInitErrors(t *testing.T) {
 
 func TestTailExpireStaleHandles(t *testing.T) {
 	t.Skip("need to set lastRead on logstream to inject condition")
-	ta, lines, awaken, dir, cleanup, stop := makeTestTail(t)
-	defer cleanup()
+	ta, lines, awaken, dir, stop := makeTestTail(t)
 
 	log1 := filepath.Join(dir, "log1")
 	f1 := testutil.TestOpenFile(t, log1)

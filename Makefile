@@ -208,9 +208,9 @@ $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt: $(GOFILES) $(GOGENFILES) $(GOT
 	go test -cpu 1,2,4 -bench=. -count=$(BENCH_COUNT) -timeout=${benchtimeout} -run=^a ./... | tee $@
 
 .PHONY: benchstat
-benchstat: $(TESTRESULTS)/benchstat.html
-$(TESTRESULTS)/benchstat.html: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt | print-version $(BENCHSTAT)
-	(test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt && benchstat -html $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $< || benchstat -html $<) | tee $@
+benchstat: $(TESTRESULTS)/benchstat.txt
+$(TESTRESULTS)/benchstat.txt: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt | print-version $(BENCHSTAT)
+	(test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt && benchstat $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $< || benchstat $<) | tee $@
 
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")

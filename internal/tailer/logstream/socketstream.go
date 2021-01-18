@@ -79,6 +79,15 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 			}
 
 			n, err := c.Read(b[:capB])
+
+			if n > 0 {
+				total += n
+				decodeAndSend(ss.ctx, ss.lines, ss.pathname, n, b[:n], partial)
+				ss.mu.Lock()
+				ss.lastReadTime = time.Now()
+				ss.mu.Unlock()
+			}
+
 			var nerr net.Error
 			if errors.As(err, &nerr) && nerr.Timeout() && n == 0 {
 				// Like pipestream, if timeout then sleep and wait for a context
@@ -94,14 +103,6 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 					logErrors.Add(ss.pathname, 1)
 				}
 				return
-			}
-
-			if n > 0 {
-				total += n
-				decodeAndSend(ss.ctx, ss.lines, ss.pathname, n, b[:n], partial)
-				ss.mu.Lock()
-				ss.lastReadTime = time.Now()
-				ss.mu.Unlock()
 			}
 
 			// No error implies there's more to read, unless it looks like

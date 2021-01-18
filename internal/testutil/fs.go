@@ -9,19 +9,19 @@ import (
 	"testing"
 )
 
-// TestTempDir creates a temporary directory for use during tests. It returns
-// the pathname, and a cleanup function.
-func TestTempDir(tb testing.TB) (string, func()) {
+// TestTempDir creates a temporary directory for use during tests, returning the pathname.
+func TestTempDir(tb testing.TB) string {
 	tb.Helper()
 	name, err := ioutil.TempDir("", "mtail-test")
 	if err != nil {
 		tb.Fatal(err)
 	}
-	return name, func() {
+	tb.Cleanup(func() {
 		if err := os.RemoveAll(name); err != nil {
 			tb.Fatalf("os.RemoveAll(%s): %s", name, err)
 		}
-	}
+	})
+	return name
 }
 
 // TestOpenFile creates a new file called name and returns the opened file.
@@ -44,9 +44,9 @@ func OpenLogFile(tb testing.TB, name string) *os.File {
 	return f
 }
 
-// TestChdir changes current working directory, and returns a cleanup function
+// Chdir changes current working directory, and registers a cleanup function
 // to return to the previous directory.
-func TestChdir(tb testing.TB, dir string) func() {
+func Chdir(tb testing.TB, dir string) {
 	tb.Helper()
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -56,10 +56,10 @@ func TestChdir(tb testing.TB, dir string) func() {
 	if err != nil {
 		tb.Fatal(err)
 	}
-	return func() {
+	tb.Cleanup(func() {
 		err := os.Chdir(cwd)
 		if err != nil {
 			tb.Fatal(err)
 		}
-	}
+	})
 }

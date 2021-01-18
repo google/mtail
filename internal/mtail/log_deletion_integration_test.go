@@ -5,7 +5,7 @@ package mtail_test
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -16,11 +16,10 @@ import (
 
 func TestLogDeletion(t *testing.T) {
 	testutil.SkipIfShort(t)
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	// touch log file
-	logFilepath := path.Join(workdir, "log")
+	logFilepath := filepath.Join(workdir, "log")
 	logFile := testutil.TestOpenFile(t, logFilepath)
 	defer logFile.Close()
 

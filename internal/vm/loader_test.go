@@ -4,7 +4,7 @@
 package vm
 
 import (
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -60,19 +60,19 @@ var testProgFiles = []string{
 
 func TestLoadProg(t *testing.T) {
 	store := metrics.NewStore()
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
+
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
 	l, err := NewLoader(lines, &wg, tmpDir, store)
 	testutil.FatalIfErr(t, err)
 
 	for _, name := range testProgFiles {
-		f := testutil.TestOpenFile(t, path.Join(tmpDir, name))
+		f := testutil.TestOpenFile(t, filepath.Join(tmpDir, name))
 		n, err := f.WriteString(testProgram)
 		testutil.FatalIfErr(t, err)
 		glog.Infof("Wrote %d bytes", n)
-		err = l.LoadProgram(path.Join(tmpDir, name))
+		err = l.LoadProgram(filepath.Join(tmpDir, name))
 		testutil.FatalIfErr(t, err)
 	}
 	close(lines)

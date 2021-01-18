@@ -102,11 +102,6 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			count, err := fd.Read(b)
 			glog.V(2).Infof("%v: read %d bytes, err is %v", fd, count, err)
 
-			if err != nil && err != io.EOF {
-				glog.Info(err)
-				logErrors.Add(fs.pathname, 1)
-			}
-
 			if count > 0 {
 				total += count
 				glog.V(2).Infof("%v: decode and send", fd)
@@ -114,6 +109,11 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				fs.mu.Lock()
 				fs.lastReadTime = time.Now()
 				fs.mu.Unlock()
+			}
+
+			if err != nil && err != io.EOF {
+				glog.Info(err)
+				logErrors.Add(fs.pathname, 1)
 			}
 
 			// If we have read no bytes and are at EOF, check for truncation and rotation.

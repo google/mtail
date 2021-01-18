@@ -63,14 +63,14 @@ func TestMakeServer(tb testing.TB, wakers int, pollInterval time.Duration, optio
 }
 
 // TestStartServer creates a new TestServer and starts it running.  It
-// returns the server, and a cleanup function.
+// returns the server, and a stop function.
 func TestStartServer(tb testing.TB, wakers int, pollInterval time.Duration, options ...Option) (*TestServer, func()) {
 	tb.Helper()
 	ts := TestMakeServer(tb, wakers, pollInterval, options...)
 	return ts, ts.Start()
 }
 
-// Start starts the TestServer and returns a cleanup function.
+// Start starts the TestServer and returns a stop function.
 func (ts *TestServer) Start() func() {
 	ts.tb.Helper()
 	errc := make(chan error, 1)

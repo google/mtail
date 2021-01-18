@@ -5,7 +5,7 @@ package mtail_test
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/mtail/internal/mtail"
@@ -17,20 +17,19 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	// Can't force a permission denied error if run as root.
 	testutil.SkipIfRoot(t)
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
-	logDir := path.Join(tmpDir, "logs")
-	progDir := path.Join(tmpDir, "progs")
+	logDir := filepath.Join(tmpDir, "logs")
+	progDir := filepath.Join(tmpDir, "progs")
 	err := os.Mkdir(logDir, 0700)
 	testutil.FatalIfErr(t, err)
 	err = os.Mkdir(progDir, 0700)
 	testutil.FatalIfErr(t, err)
 
-	logFile := path.Join(logDir, "log")
+	logFile := filepath.Join(logDir, "log")
 
 	// Hide the error from stdout during test.
-	defer testutil.TestSetFlag(t, "stderrthreshold", "FATAL")()
+	testutil.SetFlag(t, "stderrthreshold", "FATAL")
 
 	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()

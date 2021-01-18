@@ -5,7 +5,7 @@ package mtail_test
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/mtail/internal/mtail"
@@ -15,11 +15,10 @@ import (
 func TestNewProg(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
-	logDir := path.Join(tmpDir, "logs")
-	progDir := path.Join(tmpDir, "progs")
+	logDir := filepath.Join(tmpDir, "logs")
+	progDir := filepath.Join(tmpDir, "progs")
 	err := os.Mkdir(logDir, 0700)
 	testutil.FatalIfErr(t, err)
 	err = os.Mkdir(progDir, 0700)
@@ -40,15 +39,14 @@ func TestNewProg(t *testing.T) {
 func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
-	logDir := path.Join(workdir, "logs")
+	logDir := filepath.Join(workdir, "logs")
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0777))
-	progDir := path.Join(workdir, "progs")
+	progDir := filepath.Join(workdir, "progs")
 	testutil.FatalIfErr(t, os.Mkdir(progDir, 0777))
 
-	logFilepath := path.Join(logDir, "log")
+	logFilepath := filepath.Join(logDir, "log")
 	logFile := testutil.TestOpenFile(t, logFilepath)
 	defer logFile.Close()
 
@@ -57,7 +55,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 
 	progLoadsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("prog_loads_total", "program.mtail", 1)
 
-	progpath := path.Join(progDir, "program.mtail")
+	progpath := filepath.Join(progDir, "program.mtail")
 	p := testutil.TestOpenFile(t, progpath)
 	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
 	testutil.FatalIfErr(t, p.Close())

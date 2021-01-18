@@ -6,7 +6,7 @@ package mtail_test
 import (
 	"expvar"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/golang/glog"
@@ -17,23 +17,22 @@ import (
 func TestGlobBeforeStart(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	globTests := []struct {
 		name     string
 		expected bool
 	}{
 		{
-			path.Join(workdir, "log1"),
+			filepath.Join(workdir, "log1"),
 			true,
 		},
 		{
-			path.Join(workdir, "log2"),
+			filepath.Join(workdir, "log2"),
 			true,
 		},
 		{
-			path.Join(workdir, "1log"),
+			filepath.Join(workdir, "1log"),
 			false,
 		},
 	}
@@ -46,7 +45,7 @@ func TestGlobBeforeStart(t *testing.T) {
 		}
 		testutil.WriteString(t, log, "\n")
 	}
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
 	stopM()
 
 	if r := m.GetExpvar("log_count"); r.(*expvar.Int).Value() != int64(count) {
@@ -57,27 +56,26 @@ func TestGlobBeforeStart(t *testing.T) {
 func TestGlobAfterStart(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	globTests := []struct {
 		name     string
 		expected bool
 	}{
 		{
-			path.Join(workdir, "log1"),
+			filepath.Join(workdir, "log1"),
 			true,
 		},
 		{
-			path.Join(workdir, "log2"),
+			filepath.Join(workdir, "log2"),
 			true,
 		},
 		{
-			path.Join(workdir, "1log"),
+			filepath.Join(workdir, "1log"),
 			false,
 		},
 	}
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
 	defer stopM()
 
 	m.PollWatched(0) // Force sync to EOF
@@ -101,8 +99,7 @@ func TestGlobAfterStart(t *testing.T) {
 func TestGlobIgnoreFolder(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	globTests := []struct {
 		name     string
@@ -110,17 +107,17 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		expected bool
 	}{
 		{
-			path.Join(workdir, "log1"),
+			filepath.Join(workdir, "log1"),
 			false,
 			true,
 		},
 		{
-			path.Join(workdir, "logarchive"),
+			filepath.Join(workdir, "logarchive"),
 			true,
 			false,
 		},
 		{
-			path.Join(workdir, "log2.gz"),
+			filepath.Join(workdir, "log2.gz"),
 			false,
 			false,
 		},
@@ -146,7 +143,7 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		testutil.WriteString(t, log, "\n")
 	}
 
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 
 	stopM()
 
@@ -158,23 +155,22 @@ func TestGlobIgnoreFolder(t *testing.T) {
 func TestFilenameRegexIgnore(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	workdir, rmWorkdir := testutil.TestTempDir(t)
-	defer rmWorkdir()
+	workdir := testutil.TestTempDir(t)
 
 	globTests := []struct {
 		name     string
 		expected bool
 	}{
 		{
-			path.Join(workdir, "log1"),
+			filepath.Join(workdir, "log1"),
 			true,
 		},
 		{
-			path.Join(workdir, "log1.gz"),
+			filepath.Join(workdir, "log1.gz"),
 			false,
 		},
 		{
-			path.Join(workdir, "log2gz"),
+			filepath.Join(workdir, "log2gz"),
 			true,
 		},
 	}
@@ -189,7 +185,7 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		testutil.WriteString(t, log, "\n")
 	}
 
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(path.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 
 	stopM()
 
@@ -200,18 +196,17 @@ func TestFilenameRegexIgnore(t *testing.T) {
 
 func TestGlobRelativeAfterStart(t *testing.T) {
 	testutil.SkipIfShort(t)
-	tmpDir, rmTmpDir := testutil.TestTempDir(t)
-	defer rmTmpDir()
+	tmpDir := testutil.TestTempDir(t)
 
-	logDir := path.Join(tmpDir, "logs")
-	progDir := path.Join(tmpDir, "progs")
+	logDir := filepath.Join(tmpDir, "logs")
+	progDir := filepath.Join(tmpDir, "progs")
 	err := os.Mkdir(logDir, 0700)
 	testutil.FatalIfErr(t, err)
 	err = os.Mkdir(progDir, 0700)
 	testutil.FatalIfErr(t, err)
 
 	// Move to logdir to make relative paths
-	defer testutil.TestChdir(t, logDir)()
+	testutil.Chdir(t, logDir)
 
 	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
 	defer stopM()
@@ -219,7 +214,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	{
 		logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
 
-		logFile := path.Join(logDir, "log.1.txt")
+		logFile := filepath.Join(logDir, "log.1.txt")
 		f := testutil.TestOpenFile(t, logFile)
 		m.PollWatched(1) // Force sync to EOF
 		testutil.WriteString(t, f, "line 1\n")
@@ -232,7 +227,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
 
-		logFile := path.Join(logDir, "log.2.txt")
+		logFile := filepath.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
 		m.PollWatched(2)
 		testutil.WriteString(t, f, "line 1\n")
@@ -243,7 +238,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	{
 		logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 0)
 
-		logFile := path.Join(logDir, "log.2.txt")
+		logFile := filepath.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
 		m.PollWatched(2)
 		testutil.WriteString(t, f, "line 2\n")

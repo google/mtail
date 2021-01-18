@@ -1,9 +1,14 @@
 name: Automatic pull request approvals
 on:
   pull_request_target:
-    type: ['opened', 'reopened', 'synchronize', 'ready_for_review']
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
   check_suite:
-    type: ['completed']
+    types:
+      - completed
 jobs:
   auto-approve:
     runs-on: ubuntu-latest
