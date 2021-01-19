@@ -22,7 +22,7 @@ func TestLogTruncation(t *testing.T) {
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
 	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
 
-	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+	m, stopM := mtail.TestStartServer(t, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)

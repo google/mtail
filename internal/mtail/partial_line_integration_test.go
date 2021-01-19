@@ -28,7 +28,7 @@ func TestPartialLineRead(t *testing.T) {
 
 	f := testutil.TestOpenFile(t, logFile)
 
-	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+	m, stopM := mtail.TestStartServer(t, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
 	lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 2)

@@ -45,7 +45,7 @@ func TestGlobBeforeStart(t *testing.T) {
 		}
 		testutil.WriteString(t, log, "\n")
 	}
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
 	stopM()
 
 	if r := m.GetExpvar("log_count"); r.(*expvar.Int).Value() != int64(count) {
@@ -75,7 +75,7 @@ func TestGlobAfterStart(t *testing.T) {
 			false,
 		},
 	}
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
 	defer stopM()
 
 	m.PollWatched(0) // Force sync to EOF
@@ -143,7 +143,7 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		testutil.WriteString(t, log, "\n")
 	}
 
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 
 	stopM()
 
@@ -185,7 +185,7 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		testutil.WriteString(t, log, "\n")
 	}
 
-	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 
 	stopM()
 
@@ -208,7 +208,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	// Move to logdir to make relative paths
 	testutil.Chdir(t, logDir)
 
-	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
+	m, stopM := mtail.TestStartServer(t, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
 	defer stopM()
 
 	{
