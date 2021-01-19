@@ -37,7 +37,7 @@ func TestLogRotation(t *testing.T) {
 
 			f := testutil.TestOpenFile(t, logFile)
 
-			m, stopM := mtail.TestStartServer(t, 0, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+			m, stopM := mtail.TestStartServer(t, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 			defer stopM()
 
 			logOpensTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("log_opens_total", logFile, 1)
@@ -95,7 +95,7 @@ func TestLogSoftLinkChange(t *testing.T) {
 
 			logFilepath := filepath.Join(workdir, "log")
 
-			m, stopM := mtail.TestStartServer(t, 0, 1, mtail.LogPathPatterns(logFilepath))
+			m, stopM := mtail.TestStartServer(t, 1, mtail.LogPathPatterns(logFilepath))
 			defer stopM()
 
 			logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)

@@ -39,7 +39,7 @@ type TestServer struct {
 
 // TestMakeServer makes a new TestServer for use in tests, but does not start
 // the server.  If an error occurs during creation, a testing.Fatal is issued.
-func TestMakeServer(tb testing.TB, pollInterval time.Duration, wakers int, options ...Option) *TestServer {
+func TestMakeServer(tb testing.TB, wakers int, options ...Option) *TestServer {
 	tb.Helper()
 
 	// Reset counters when running multiple tests.  Tests that use expvar
@@ -65,9 +65,9 @@ func TestMakeServer(tb testing.TB, pollInterval time.Duration, wakers int, optio
 
 // TestStartServer creates a new TestServer and starts it running.  It
 // returns the server, and a stop function.
-func TestStartServer(tb testing.TB, pollInterval time.Duration, wakers int, options ...Option) (*TestServer, func()) {
+func TestStartServer(tb testing.TB, wakers int, options ...Option) (*TestServer, func()) {
 	tb.Helper()
-	ts := TestMakeServer(tb, pollInterval, wakers, options...)
+	ts := TestMakeServer(tb, wakers, options...)
 	return ts, ts.Start()
 }
 

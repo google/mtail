@@ -22,7 +22,7 @@ func TestLogDeletion(t *testing.T) {
 	logFile := testutil.TestOpenFile(t, logFilepath)
 	defer logFile.Close()
 
-	m, stopM := mtail.TestStartServer(t, 0, 1, mtail.LogPathPatterns(logFilepath))
+	m, stopM := mtail.TestStartServer(t, 1, mtail.LogPathPatterns(logFilepath))
 	defer stopM()
 
 	logCloseCheck := m.ExpectMapExpvarDeltaWithDeadline("log_closes_total", logFilepath, 1)
