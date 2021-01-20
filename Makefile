@@ -80,10 +80,6 @@ GOFUZZ = $(GOBIN)/go-fuzz
 $(GOFUZZ):
 	go get $(GOGETFLAGS) github.com/dvyukov/go-fuzz/go-fuzz
 
-GOX = $(GOBIN)/gox
-$(GOX):
-	go get $(GOGETFLAGS) github.com/mitchellh/gox
-
 GOTESTSUM = $(GOBIN)/gotestsum
 $(GOTESTSUM):
 	go get $(GOGETFLAGS) gotest.tools/gotestsum
@@ -164,15 +160,6 @@ install: $(INSTALLED_TARGETS)
 $(PREFIX)/bin/%: %
 	install -d $(@D)
 	install -m 755 $< $@
-
-
-GOX_OSARCH ?= "linux/amd64 windows/amd64 darwin/amd64 linux/arm linux/arm64 linux/ppc64"
-#GOX_OSARCH := ""
-
-.PHONY: crossbuild
-crossbuild: $(GOFILES) $(GOGENFILES) | $(GOX) .dep-stamp print-version
-	mkdir -p build
-	gox --output="./build/mtail_${release}_{{.OS}}_{{.Arch}}" -osarch=$(GOX_OSARCH) -ldflags "$(GO_LDFLAGS)" ./cmd/mtail
 
 .PHONY: test check
 check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp

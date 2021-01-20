@@ -30,11 +30,11 @@ checksum:
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
-  sort: asc
   filters:
     exclude:
       - '^docs:'
       - '^test:'
+      - '^Merge'
 release:
   github:
   name_template: v{{.Version}}
