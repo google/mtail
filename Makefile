@@ -1,7 +1,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 # This file is available under the Apache license.
 
-export GO111MODULE ?= auto
+export GO111MODULE ?= on
 # Build these.
 TARGETS = mtail mgen mdot mfmt
 
@@ -274,13 +274,7 @@ fuzz-min: $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 .PHONY: install_deps
 install_deps: .dep-stamp
 .dep-stamp: | $(GOGENFILES) print-version
-	@echo "Install all dependencies, ensuring they're updated"
-ifeq ($(GO111MODULE),on)
-	go get $(GOGETFLAGS) -t ./...
-else
-	go get $(GOGETFLAGS) $(IMPORTS)
-	go get $(GOGETFLAGS) $(TESTIMPORTS)
-endif
+	go mod download
 	touch $@
 
 
