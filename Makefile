@@ -205,9 +205,6 @@ PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cm
 .PHONY: testall
 testall: testrace bench regtest
 
-IMPORTS := $(shell go list -f '{{join .Imports "\n"}}' ./... | sort | uniq | grep -v mtail)
-TESTIMPORTS := $(shell go list -f '{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v mtail)
-
 ## make u a container
 .PHONY: container
 container: Dockerfile
