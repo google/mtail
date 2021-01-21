@@ -156,8 +156,8 @@ func formatLabels(name string, m map[string]string, ksep, sep, rep string) strin
 type formatter func(string, *metrics.Metric, *metrics.LabelSet, time.Duration) string
 
 func (e *Exporter) writeSocketMetrics(c io.Writer, f formatter, exportTotal *expvar.Int, exportSuccess *expvar.Int) error {
-	e.store.RLock()
-	defer e.store.RUnlock()
+	e.store.SearchMu.RLock()
+	defer e.store.SearchMu.RUnlock()
 
 	for _, ml := range e.store.Metrics {
 		for _, m := range ml {

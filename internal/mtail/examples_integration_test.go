@@ -178,7 +178,7 @@ func TestExamplePrograms(t *testing.T) {
 			goldenStore := metrics.NewStore()
 			golden.ReadTestData(g, tc.programfile, goldenStore)
 
-			testutil.ExpectNoDiff(t, goldenStore, store, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}))
+			testutil.ExpectNoDiff(t, goldenStore, store, testutil.IgnoreUnexported(sync.RWMutex{}, sync.Mutex{}, datum.String{}))
 		})
 	}
 }
@@ -301,7 +301,7 @@ func TestFilePipeStreamComparison(t *testing.T) {
 			cancel()
 
 			// Ignore the usual field and the datum.Time field as well, as the results will be unstable otherwise.
-			testutil.ExpectNoDiff(t, fileStore, pipeStore, testutil.IgnoreUnexported(sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
+			testutil.ExpectNoDiff(t, fileStore, pipeStore, testutil.IgnoreUnexported(sync.RWMutex{}, sync.Mutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
 		})
 	}
 }

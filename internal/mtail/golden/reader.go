@@ -21,8 +21,8 @@ var varRe = regexp.MustCompile(`^(counter|gauge|timer|text|histogram) ([^ ]+)(?:
 
 // FindMetricOrNil returns a metric in a store, or returns nil if not found.
 func FindMetricOrNil(store *metrics.Store, name string) *metrics.Metric {
-	store.RLock()
-	defer store.RUnlock()
+	store.SearchMu.RLock()
+	defer store.SearchMu.RUnlock()
 	for n, ml := range store.Metrics {
 		if n == name {
 			return ml[0]
