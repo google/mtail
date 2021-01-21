@@ -659,6 +659,61 @@ counter i
 			},
 		},
 	},
+	{"logical operators",
+		`counter foo
+counter bar
+
+# To make ex_test.go happy
+strptime("2017-10-03T20:14:42Z", "2006-01-02T15:04:05Z07:00")
+
+/(?P<var>.*)/ {
+  $var == "foo" || $var == "bar" {
+    foo++
+  }
+  $var == "bar" && 1 == 1 {
+    bar++
+  }
+}
+`, `foo
+foo
+bar
+bar
+quux
+12.8
+
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"foo": {
+				{
+					Name:    "foo",
+					Program: "logical operators",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 4},
+						},
+					},
+				},
+			},
+			"bar": {
+				{
+					Name:    "bar",
+					Program: "logical operators",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 2},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
