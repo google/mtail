@@ -24,7 +24,7 @@ func TestInsertLookup(t *testing.T) {
 	testutil.ExpectNoDiff(t, r1, sym1)
 }
 
-// Generate implements the Generator interface for SymbolKind.
+// Generate implements the quick.Generator interface for SymbolKind.
 func (SymbolKind) Generate(rand *rand.Rand, size int) reflect.Value {
 	return reflect.ValueOf(SymbolKind(rand.Intn(int(endSymbol))))
 }

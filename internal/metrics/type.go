@@ -3,6 +3,11 @@
 
 package metrics
 
+import (
+	"math/rand"
+	"reflect"
+)
+
 // Type describes the type of value stored in a Datum.
 type Type int
 
@@ -15,6 +20,8 @@ const (
 	String
 	// Buckets indicates this metric is a histogram metric type.
 	Buckets
+
+	endType // end of enumeration for testing
 )
 
 func (t Type) String() string {
@@ -29,4 +36,9 @@ func (t Type) String() string {
 		return "Buckets"
 	}
 	return "?"
+}
+
+// Generate implements the quick.Generator interface for Type
+func (Type) Generate(rand *rand.Rand, size int) reflect.Value {
+	return reflect.ValueOf(Type(rand.Intn(int(endType))))
 }

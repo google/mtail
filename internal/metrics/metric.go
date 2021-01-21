@@ -8,6 +8,8 @@ package metrics
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"reflect"
 	"sync"
 	"time"
 
@@ -39,6 +41,8 @@ const (
 	// Histogram is a Kind that observes a value and stores the value
 	// in a bucket.
 	Histogram
+
+	endKind // end of enumeration for testing
 )
 
 func (m Kind) String() string {
@@ -55,6 +59,11 @@ func (m Kind) String() string {
 		return "Histogram"
 	}
 	return "Unknown"
+}
+
+// Generate implements the quick.Generator interface for Kind
+func (Kind) Generate(rand *rand.Rand, size int) reflect.Value {
+	return reflect.ValueOf(Kind(rand.Intn(int(endKind))))
 }
 
 // LabelValue is an object that names a Datum value with a list of label
