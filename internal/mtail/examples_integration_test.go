@@ -53,11 +53,6 @@ var exampleProgramTests = []struct {
 		"testdata/xntp3_peerstats.golden",
 	},
 	{
-		"examples/otherwise.mtail",
-		"testdata/otherwise.log",
-		"testdata/otherwise.golden",
-	},
-	{
 		"examples/types.mtail",
 		"testdata/types.log",
 		"testdata/types.golden",

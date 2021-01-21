@@ -441,6 +441,77 @@ strptime("2016-04-25T20:14:42Z", "2006-01-02T15:04:05Z07:00")
 			},
 		},
 	},
+	{"otherwise",
+		`counter yes
+counter maybe
+counter no
+
+# To make ex_test.go happy
+strptime("2016-04-25T20:14:42Z", "2006-01-02T15:04:05Z07:00")
+
+/1/ {
+  /^1$/ {
+    yes++
+  }
+  otherwise {
+    maybe++
+  }
+}
+otherwise {
+  no++
+}
+`, `1
+2
+12
+3
+4
+991
+`, 0,
+		map[string][]*metrics.Metric{
+			"yes": {
+				{
+					Name:    "yes",
+					Program: "otherwise",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 1},
+						},
+					},
+				},
+			},
+			"maybe": {
+				{
+					Name:    "maybe",
+					Program: "otherwise",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 2},
+						},
+					},
+				},
+			},
+			"no": {
+				{
+					Name:    "no",
+					Program: "otherwise",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 3},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
