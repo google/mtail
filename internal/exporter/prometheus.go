@@ -30,8 +30,8 @@ func (e *Exporter) Describe(c chan<- *prometheus.Desc) {
 
 // Collect implements the prometheus.Collector interface.
 func (e *Exporter) Collect(c chan<- prometheus.Metric) {
-	e.store.RLock()
-	defer e.store.RUnlock()
+	e.store.SearchMu.RLock()
+	defer e.store.SearchMu.RUnlock()
 
 	for _, ml := range e.store.Metrics {
 		lastSource := ""

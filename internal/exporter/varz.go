@@ -21,8 +21,8 @@ const varzFormat = "%s{%s} %s\n"
 
 // HandleVarz exports the metrics in Varz format via HTTP.
 func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
-	e.store.RLock()
-	defer e.store.RUnlock()
+	e.store.SearchMu.RLock()
+	defer e.store.SearchMu.RUnlock()
 
 	w.Header().Add("Content-type", "text/plain")
 
