@@ -512,6 +512,133 @@ otherwise {
 			},
 		},
 	},
+	{"types",
+		`gauge should_be_int
+gauge should_be_float
+counter neg
+gauge should_be_float_map by label
+gauge should_be_int_map by label
+counter i
+
+# To make ex_test.go happy
+strptime("2017-07-15T18:03:14Z", "2006-01-02T15:04:05Z07:00")
+
+/^(\d+)$/ {
+  should_be_int = $1
+  should_be_int_map[$1] = $1
+}
+
+/^(\d+\.\d+)$/ {
+  should_be_float = $1
+  should_be_float_map[$1] = $1
+}
+
+
+/(?P<bar>[+-]?[\d.]+)/ {
+  $bar < -1 {
+    neg++
+  }
+}
+
+/^(\d+)$/ {
+  # Sneaky float promotion
+  i += 1.0 * $1
+}
+`, `37
+12.8
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"should_be_int": {
+				{
+					Name:    "should_be_int",
+					Program: "types",
+					Kind:    metrics.Gauge,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{},
+							Value:  &datum.Int{Value: 37},
+						},
+					},
+				},
+			},
+			"should_be_float": {
+				{
+					Name:    "should_be_float",
+					Program: "types",
+					Kind:    metrics.Gauge,
+					Type:    metrics.Float,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{},
+							Value:  &datum.Float{Valuebits: math.Float64bits(12.8)},
+						},
+					},
+				},
+			},
+			"should_be_int_map": {
+				{
+					Name:    "should_be_int_map",
+					Program: "types",
+					Kind:    metrics.Gauge,
+					Type:    metrics.Int,
+					Keys:    []string{"label"},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{"37"},
+							Value:  &datum.Int{Value: 37},
+						},
+					},
+				},
+			},
+			"should_be_float_map": {
+				{
+					Name:    "should_be_float_map",
+					Program: "types",
+					Kind:    metrics.Gauge,
+					Type:    metrics.Float,
+					Keys:    []string{"label"},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{"12.8"},
+							Value:  &datum.Float{Valuebits: math.Float64bits(12.8)},
+						},
+					},
+				},
+			},
+			"neg": {
+				{
+					Name:    "neg",
+					Program: "types",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{},
+						},
+					},
+				},
+			},
+			"i": {
+				{
+					Name:    "i",
+					Program: "types",
+					Kind:    metrics.Counter,
+					Type:    metrics.Float,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Float{Valuebits: math.Float64bits(37.0)},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {

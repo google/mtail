@@ -52,11 +52,6 @@ var exampleProgramTests = []struct {
 		"testdata/xntp3_peerstats",
 		"testdata/xntp3_peerstats.golden",
 	},
-	{
-		"examples/types.mtail",
-		"testdata/types.log",
-		"testdata/types.golden",
-	},
 	// TODO(jaq): getfilename() is broken by poll log patterns in tailer constructor.
 	// {
 	// 	"examples/filename.mtail",
