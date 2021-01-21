@@ -216,4 +216,11 @@ func main() {
 		glog.Error(err)
 		os.Exit(1)
 	}
+	if *oneShot {
+		err = store.WriteMetrics(os.Stdout)
+		if err != nil {
+			glog.Error(err)
+		}
+		os.Exit(1)
+	}
 }
