@@ -283,9 +283,6 @@ test -
 counter b
 counter c
 
-# To make ex_test.go happy
-strptime("2018-06-10T00:32:42Z", "2006-01-02T15:04:05Z07:00")
-
 def decoratora {
   /(...).*/ {
     next
@@ -377,9 +374,6 @@ Oct
 counter maybe
 counter no
 
-# To make ex_test.go happy
-strptime("2016-04-25T20:14:42Z", "2006-01-02T15:04:05Z07:00")
-
 /1/ {
   /^1$/ {
     yes++
@@ -445,9 +439,6 @@ strptime("2016-04-25T20:14:42Z", "2006-01-02T15:04:05Z07:00")
 		`counter yes
 counter maybe
 counter no
-
-# To make ex_test.go happy
-strptime("2016-04-25T20:14:42Z", "2006-01-02T15:04:05Z07:00")
 
 /1/ {
   /^1$/ {
@@ -519,9 +510,6 @@ counter neg
 gauge should_be_float_map by label
 gauge should_be_int_map by label
 counter i
-
-# To make ex_test.go happy
-strptime("2017-07-15T18:03:14Z", "2006-01-02T15:04:05Z07:00")
 
 /^(\d+)$/ {
   should_be_int = $1
@@ -633,6 +621,38 @@ strptime("2017-07-15T18:03:14Z", "2006-01-02T15:04:05Z07:00")
 					LabelValues: []*metrics.LabelValue{
 						{
 							Value: &datum.Float{Valuebits: math.Float64bits(37.0)},
+						},
+					},
+				},
+			},
+		},
+	},
+	{"filename",
+		`counter filename_lines by filename
+
+// {
+    filename_lines[getfilename()] ++
+}
+`, `1
+2
+12
+3
+4
+991
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"filename_lines": {
+				{
+					Name:    "filename_lines",
+					Program: "filename",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{"filename"},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{"filename"},
+							Value:  &datum.Int{Value: 6},
 						},
 					},
 				},
