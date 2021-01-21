@@ -109,11 +109,6 @@ var exampleProgramTests = []struct {
 		"testdata/metric-as-rvalue.golden",
 	},
 	{
-		"examples/decorator.mtail",
-		"testdata/decorator.log",
-		"testdata/decorator.golden",
-	},
-	{
 		"examples/stringy.mtail",
 		"testdata/stringy.log",
 		"testdata/stringy.golden",

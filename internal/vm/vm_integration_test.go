@@ -277,6 +277,101 @@ test -
 			},
 		},
 	},
+	{
+		"decorator",
+		`counter a
+counter b
+counter c
+
+# To make ex_test.go happy
+strptime("2018-06-10T00:32:42Z", "2006-01-02T15:04:05Z07:00")
+
+def decoratora {
+  /(...).*/ {
+    next
+  }
+}
+
+def decoratorb {
+  /(?P<x>...).*/ {
+    next
+  }
+}
+
+# This tests that the variables in the decorator are visible to the decoratedo block.
+@decoratora {
+  $1 == "Dec" {
+    a++
+  }
+}
+
+@decoratorb {
+  $x == "Dec" {
+    b++
+  }
+}
+
+/(...).*/ {
+  $1 == "Dec" {
+     c++
+  }
+}
+`, `Dec
+Jan
+Dec
+Apr
+Dec
+Oct
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"a": {
+				{
+					Name:    "a",
+					Program: "decorator",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Hidden:  false,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 3},
+						},
+					},
+				},
+			},
+			"b": {
+				{
+					Name:    "b",
+					Program: "decorator",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Hidden:  false,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 3},
+						},
+					},
+				},
+			},
+			"c": {
+				{
+					Name:    "c",
+					Program: "decorator",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Hidden:  false,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 3},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
