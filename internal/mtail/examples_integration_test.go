@@ -58,11 +58,6 @@ var exampleProgramTests = []struct {
 		"testdata/otherwise.golden",
 	},
 	{
-		"examples/else.mtail",
-		"testdata/else.log",
-		"testdata/else.golden",
-	},
-	{
 		"examples/types.mtail",
 		"testdata/types.log",
 		"testdata/types.golden",
