@@ -84,11 +84,6 @@ var exampleProgramTests = []struct {
 		"testdata/strcat.golden",
 	},
 	{
-		"examples/add_assign_float.mtail",
-		"testdata/add_assign_float.log",
-		"testdata/add_assign_float.golden",
-	},
-	{
 		"examples/typed-comparison.mtail",
 		"testdata/typed-comparison.log",
 		"testdata/typed-comparison.golden",

@@ -249,6 +249,34 @@ test -
 			},
 		},
 	},
+	{
+		"add_assign_float",
+		`gauge metric
+/(\d+\.\d+)/ {
+  metric += $1
+}
+`, `1.1
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"metric": {
+				{
+					Name:    "metric",
+					Program: "add_assign_float",
+					Kind:    metrics.Gauge,
+					Type:    metrics.Float,
+					Hidden:  false,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{},
+							Value:  &datum.Float{Valuebits: math.Float64bits(1.1)},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
