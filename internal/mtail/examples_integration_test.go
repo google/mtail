@@ -53,52 +53,6 @@ var exampleProgramTests = []struct {
 		"testdata/xntp3_peerstats.golden",
 	},
 	{
-		"examples/otherwise.mtail",
-		"testdata/otherwise.log",
-		"testdata/otherwise.golden",
-	},
-	{
-		"examples/else.mtail",
-		"testdata/else.log",
-		"testdata/else.golden",
-	},
-	{
-		"examples/types.mtail",
-		"testdata/types.log",
-		"testdata/types.golden",
-	},
-	// TODO(jaq): getfilename() is broken by poll log patterns in tailer constructor.
-	// {
-	// 	"examples/filename.mtail",
-	// 	"testdata/else.log",
-	// 	"testdata/filename.golden",
-	// },
-	{
-		"examples/logical.mtail",
-		"testdata/logical.log",
-		"testdata/logical.golden",
-	},
-	{
-		"examples/strcat.mtail",
-		"testdata/strcat.log",
-		"testdata/strcat.golden",
-	},
-	{
-		"examples/add_assign_float.mtail",
-		"testdata/add_assign_float.log",
-		"testdata/add_assign_float.golden",
-	},
-	{
-		"examples/typed-comparison.mtail",
-		"testdata/typed-comparison.log",
-		"testdata/typed-comparison.golden",
-	},
-	{
-		"examples/match-expression.mtail",
-		"testdata/match-expression.log",
-		"testdata/match-expression.golden",
-	},
-	{
 		"examples/apache_combined.mtail",
 		"testdata/apache-combined.log",
 		"testdata/apache-combined.golden",
@@ -107,26 +61,6 @@ var exampleProgramTests = []struct {
 		"examples/apache_common.mtail",
 		"testdata/apache-common.log",
 		"testdata/apache-common.golden",
-	},
-	{
-		"examples/metric-as-rvalue.mtail",
-		"testdata/metric-as-rvalue.log",
-		"testdata/metric-as-rvalue.golden",
-	},
-	{
-		"examples/decorator.mtail",
-		"testdata/decorator.log",
-		"testdata/decorator.golden",
-	},
-	{
-		"examples/stringy.mtail",
-		"testdata/stringy.log",
-		"testdata/stringy.golden",
-	},
-	{
-		"examples/ip-addr.mtail",
-		"testdata/ip-addr.log",
-		"testdata/ip-addr.golden",
 	},
 	{
 		"examples/vsftpd.mtail",

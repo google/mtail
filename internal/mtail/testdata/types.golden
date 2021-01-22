@@ -1,6 +1,0 @@
-gauge should_be_int 37 2017-07-15T18:03:14Z
-gauge should_be_float 12.8 2017-07-15T18:03:14Z
-gauge should_be_int_map {label=37} 37 2017-07-15T18:03:14Z
-gauge should_be_float_map {label=12.8} 12.8 2017-07-15T18:03:14Z
-counter neg
-counter i 37.0 2017-07-15T18:03:14Z

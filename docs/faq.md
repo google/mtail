@@ -50,9 +50,19 @@ Querying
 Basics](https://prometheus.io/docs/prometheus/latest/querying/basics/#staleness)
 in the Prometheus docs.
 
-If you are looking to expose the timestamp of an event, like the start time of
+If you are looking to expose the timestamp of an event, for example the start time of
 a process, you can create a timestamp metric. This is a metric that contains
-the timestamp as the value. See [this example](/examples/timestamp.mtail).
+the timestamp as the value:
+
+```mtail
+counter mtail_lines_read_count by filename
+gauge mtail_file_lastread_timestamp by filename
+
+/.*/ {
+  mtail_lines_read_count[getfilename()]++
+  mtail_file_lastread_timestamp[getfilename()] = timestamp()
+}
+```
 
 ## Why doesn't `mtail` persist variables and metric values between restarts?
 
