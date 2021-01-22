@@ -53,11 +53,6 @@ var exampleProgramTests = []struct {
 		"testdata/xntp3_peerstats.golden",
 	},
 	{
-		"examples/match-expression.mtail",
-		"testdata/match-expression.log",
-		"testdata/match-expression.golden",
-	},
-	{
 		"examples/apache_combined.mtail",
 		"testdata/apache-combined.log",
 		"testdata/apache-combined.golden",

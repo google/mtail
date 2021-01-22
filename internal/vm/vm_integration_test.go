@@ -805,6 +805,75 @@ counter t_sum
 			},
 		},
 	},
+	{"match-expression",
+		`counter someas
+counter notas
+counter total
+
+# To make ex_test.go happy
+strptime("2017-12-07T16:07:14Z", "2006-01-02T15:04:05Z07:00")
+
+/(.*)/ {
+  $1 =~ /a/ {
+    someas++
+  }
+  $1 !~ /a/ {
+    notas++
+  }
+  total++
+}
+`, `a
+b
+abba
+baba
+cdf
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"someas": {
+				{
+					Name:    "someas",
+					Program: "match-expression",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 3},
+						},
+					},
+				},
+			},
+			"notas": {
+				{
+					Name:    "notas",
+					Program: "match-expression",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 2},
+						},
+					},
+				},
+			},
+			"total": {
+				{
+					Name:    "total",
+					Program: "match-expression",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 5},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
