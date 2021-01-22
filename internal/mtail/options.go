@@ -229,13 +229,6 @@ func (opt JaegerReporter) apply(m *Server) error {
 	return nil
 }
 
-// OmitDumpMetricStore disables dumping of the metric store... somewhere.
-var OmitDumpMetricStore = &niladicOption{
-	func(m *Server) error {
-		m.omitDumpMetricsStore = true
-		return nil
-	}}
-
 // MetricPushInterval sets the interval between metrics pushes to passive collectors.
 type MetricPushInterval time.Duration
 

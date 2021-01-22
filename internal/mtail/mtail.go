@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/pprof"
-	"os"
 	"sync"
 	"time"
 
@@ -62,7 +61,6 @@ type Server struct {
 	omitMetricSource     bool           // if set, do not link the source program to a metric
 	omitProgLabel        bool           // if set, do not put the program name in the metric labels
 	emitMetricTimestamp  bool           // if set, emit the metric's recorded timestamp
-	omitDumpMetricsStore bool           // if set, do not print the metric store; useful in test
 }
 
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
@@ -284,16 +282,6 @@ func (m *Server) Run() error {
 	m.wg.Wait()
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
-		return nil
-	}
-	if m.oneShot {
-		if m.omitDumpMetricsStore {
-			glog.Info("Store dump disabled, exiting")
-			return nil
-		}
-		if err := m.store.WriteMetrics(os.Stdout); err != nil {
-			return err
-		}
 		return nil
 	}
 	return nil
