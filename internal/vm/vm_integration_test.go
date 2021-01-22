@@ -985,6 +985,32 @@ a
 			},
 		},
 	},
+	{"ip-addr",
+		`text ipaddr
+
+/ip address (\d+\.\d+\.\d+\.\d+)/ {
+    ipaddr = $1
+}
+`, `ip address 1.1.1.1
+`, 0,
+		map[string][]*metrics.Metric{
+			"ipaddr": {
+				{
+					Name:    "ipaddr",
+					Program: "ip-addr",
+					Kind:    metrics.Text,
+					Type:    metrics.String,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{},
+							Value:  &datum.String{Value: "1.1.1.1"},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
