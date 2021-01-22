@@ -714,6 +714,38 @@ quux
 			},
 		},
 	},
+	{"strcat",
+		`counter f by s
+
+/(.*), (.*)/ {
+  f[$1 + $2]++
+}
+`, `a, b
+c, d
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"f": {
+				{
+					Name:    "f",
+					Program: "strcat",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{"s"},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{"ab"},
+							Value:  &datum.Int{Value: 1},
+						},
+						{
+							Labels: []string{"cd"},
+							Value:  &datum.Int{Value: 1},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
