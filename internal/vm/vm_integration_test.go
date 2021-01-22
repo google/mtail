@@ -935,6 +935,56 @@ seconds = 50
 			},
 		},
 	},
+	{"stringy",
+		`text str
+counter b by foo
+
+/(.*)/ {
+  str = $1
+}
+
+/b/ {
+  b[str]++
+}
+`, `1.1
+c
+b
+a
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"str": {
+				{
+					Name:    "str",
+					Program: "stringy",
+					Kind:    metrics.Text,
+					Type:    metrics.String,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{},
+							Value:  &datum.String{Value: "a"},
+						},
+					},
+				},
+			},
+			"b": {
+				{
+					Name:    "b",
+					Program: "stringy",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{"foo"},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{"b"},
+							Value:  &datum.Int{Value: 1},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
@@ -963,7 +1013,7 @@ func TestVmEndToEnd(t *testing.T) {
 			wg.Wait()
 
 			progRuntimeErrorsCheck()
-			testutil.ExpectNoDiff(t, tc.metrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
+			testutil.ExpectNoDiff(t, tc.metrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"), testutil.IgnoreFields(datum.String{}, "mu"))
 		})
 	}
 }

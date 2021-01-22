@@ -63,11 +63,6 @@ var exampleProgramTests = []struct {
 		"testdata/apache-common.golden",
 	},
 	{
-		"examples/stringy.mtail",
-		"testdata/stringy.log",
-		"testdata/stringy.golden",
-	},
-	{
 		"examples/ip-addr.mtail",
 		"testdata/ip-addr.log",
 		"testdata/ip-addr.golden",
