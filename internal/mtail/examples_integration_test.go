@@ -63,11 +63,6 @@ var exampleProgramTests = []struct {
 		"testdata/apache-common.golden",
 	},
 	{
-		"examples/metric-as-rvalue.mtail",
-		"testdata/metric-as-rvalue.log",
-		"testdata/metric-as-rvalue.golden",
-	},
-	{
 		"examples/stringy.mtail",
 		"testdata/stringy.log",
 		"testdata/stringy.golden",

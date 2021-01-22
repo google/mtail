@@ -746,7 +746,7 @@ c, d
 			},
 		},
 	},
-	{"typed comparison",
+	{"typed-comparison",
 		`counter t by le
 counter t_sum
 
@@ -769,7 +769,7 @@ counter t_sum
 			"t": {
 				{
 					Name:    "t",
-					Program: "typed comparison",
+					Program: "typed-comparison",
 					Kind:    metrics.Counter,
 					Type:    metrics.Int,
 					Keys:    []string{"le"},
@@ -792,7 +792,7 @@ counter t_sum
 			"t_sum": {
 				{
 					Name:    "t_sum",
-					Program: "typed comparison",
+					Program: "typed-comparison",
 					Kind:    metrics.Counter,
 					Type:    metrics.Float,
 					Keys:    []string{},
@@ -809,9 +809,6 @@ counter t_sum
 		`counter someas
 counter notas
 counter total
-
-# To make ex_test.go happy
-strptime("2017-12-07T16:07:14Z", "2006-01-02T15:04:05Z07:00")
 
 /(.*)/ {
   $1 =~ /a/ {
@@ -868,6 +865,70 @@ cdf
 					LabelValues: []*metrics.LabelValue{
 						{
 							Value: &datum.Int{Value: 5},
+						},
+					},
+				},
+			},
+		},
+	},
+	{"metric-as-rvalue",
+		`gauge response_time
+counter hit
+counter miss
+
+/seconds = (?P<response_seconds>\d+)/ {
+    response_time = $response_seconds * 1000
+    response_time < 100000 {
+        hit++
+    } else {
+        miss++
+    }
+}
+`, `seconds = 100
+seconds = 200
+seconds = 50
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"hit": {
+				{
+					Name:    "hit",
+					Program: "metric-as-rvalue",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 1},
+						},
+					},
+				},
+			},
+			"miss": {
+				{
+					Name:    "miss",
+					Program: "metric-as-rvalue",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Int{Value: 2},
+						},
+					},
+				},
+			},
+			"response_time": {
+				{
+					Name:    "response_time",
+					Program: "metric-as-rvalue",
+					Kind:    metrics.Gauge,
+					Type:    metrics.Int,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{},
+							Value:  &datum.Int{Value: 50000},
 						},
 					},
 				},
