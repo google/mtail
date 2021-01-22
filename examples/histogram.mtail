@@ -22,6 +22,3 @@ histogram webserver_latency buckets 0, 1, 2, 4, 8
 /latency=(?P<latency>\d+)/ {
     webserver_latency = $latency
 }
-
-# To make ex_test.go happy
-strptime("2019-03-04T02:56:21Z", "2006-01-02T15:04:05Z07:00")

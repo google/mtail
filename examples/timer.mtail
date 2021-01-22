@@ -1,3 +1,5 @@
+# `timer` is the same as gauge but has special meaning for statsd export.
+# Otherwise just use a gauge.
 timer request_time_ms by vhost
 
 /(?P<vhost>\S+) (?P<latency_s>\d+)/ {
