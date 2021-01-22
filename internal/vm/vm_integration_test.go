@@ -746,6 +746,65 @@ c, d
 			},
 		},
 	},
+	{"typed comparison",
+		`counter t by le
+counter t_sum
+
+/^(?P<v>\d+(\.\d+)?)/ {
+    $v < 0.5 {
+            t["0.5"]++
+    }
+    $v < 1 {
+            t["1"]++
+    }
+    t["inf"]++
+    t_sum += $v
+}
+`, `0.1
+1
+1.765
+`,
+		0,
+		map[string][]*metrics.Metric{
+			"t": {
+				{
+					Name:    "t",
+					Program: "typed comparison",
+					Kind:    metrics.Counter,
+					Type:    metrics.Int,
+					Keys:    []string{"le"},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Labels: []string{"0.5"},
+							Value:  &datum.Int{Value: 1},
+						},
+						{
+							Labels: []string{"1"},
+							Value:  &datum.Int{Value: 1},
+						},
+						{
+							Labels: []string{"inf"},
+							Value:  &datum.Int{Value: 3},
+						},
+					},
+				},
+			},
+			"t_sum": {
+				{
+					Name:    "t_sum",
+					Program: "typed comparison",
+					Kind:    metrics.Counter,
+					Type:    metrics.Float,
+					Keys:    []string{},
+					LabelValues: []*metrics.LabelValue{
+						{
+							Value: &datum.Float{Valuebits: math.Float64bits(2.865)},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
