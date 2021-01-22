@@ -21,29 +21,25 @@ const varzFormat = "%s{%s} %s\n"
 
 // HandleVarz exports the metrics in Varz format via HTTP.
 func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
-	e.store.SearchMu.RLock()
-	defer e.store.SearchMu.RUnlock()
-
 	w.Header().Add("Content-type", "text/plain")
 
-	for _, ml := range e.store.Metrics {
-		for _, m := range ml {
-			select {
-			case <-r.Context().Done():
-				return
-			default:
-			}
-			m.RLock()
-			exportVarzTotal.Add(1)
-			lc := make(chan *metrics.LabelSet)
-			go m.EmitLabelSets(lc)
-			for l := range lc {
-				line := metricToVarz(m, l, e.omitProgLabel, e.hostname)
-				fmt.Fprint(w, line)
-			}
-			m.RUnlock()
+	e.store.Range(func(m *metrics.Metric) error {
+		select {
+		case <-r.Context().Done():
+			return r.Context().Err()
+		default:
 		}
-	}
+		m.RLock()
+		exportVarzTotal.Add(1)
+		lc := make(chan *metrics.LabelSet)
+		go m.EmitLabelSets(lc)
+		for l := range lc {
+			line := metricToVarz(m, l, e.omitProgLabel, e.hostname)
+			fmt.Fprint(w, line)
+		}
+		m.RUnlock()
+		return nil
+	})
 }
 
 func metricToVarz(m *metrics.Metric, l *metrics.LabelSet, omitProgLabel bool, hostname string) string {

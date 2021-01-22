@@ -112,29 +112,42 @@ func (s *Store) MarshalJSON() (b []byte, err error) {
 	return json.Marshal(ms)
 }
 
-// Gc iterates through the Store looking for metrics that have been marked
-// for expiry, and removing them if their expiration time has passed.
-func (s *Store) Gc() error {
-	glog.Info("Running Store.Expire()")
+// Range calls f sequentially for each Metric present in the store.
+// The Metric is not locked when f is called.
+// If f returns non nil error, Range stops the iteration.
+// This looks a lot like sync.Map, ay.
+func (s *Store) Range(f func(*Metric) error) error {
 	s.SearchMu.RLock()
 	defer s.SearchMu.RUnlock()
-	now := time.Now()
 	for _, ml := range s.Metrics {
 		for _, m := range ml {
-			for _, lv := range m.LabelValues {
-				if lv.Expiry <= 0 {
-					continue
-				}
-				if now.Sub(lv.Value.TimeUTC()) > lv.Expiry {
-					err := m.RemoveDatum(lv.Labels...)
-					if err != nil {
-						return err
-					}
-				}
+			if err := f(m); err != nil {
+				return err
 			}
 		}
 	}
 	return nil
+}
+
+// Gc iterates through the Store looking for metrics that have been marked
+// for expiry, and removing them if their expiration time has passed.
+func (s *Store) Gc() error {
+	glog.Info("Running Store.Expire()")
+	now := time.Now()
+	return s.Range(func(m *Metric) error {
+		for _, lv := range m.LabelValues {
+			if lv.Expiry <= 0 {
+				continue
+			}
+			if now.Sub(lv.Value.TimeUTC()) > lv.Expiry {
+				err := m.RemoveDatum(lv.Labels...)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
 }
 
 // StartGcLoop runs a permanent goroutine to expire metrics every duration.
