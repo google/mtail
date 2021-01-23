@@ -92,6 +92,23 @@ func (s *Store) Add(m *Metric) error {
 	return nil
 }
 
+// FindMetricOrNil returns a metric in a store, or returns nil if not found.
+func (s *Store) FindMetricOrNil(name, prog string) *Metric {
+	s.SearchMu.RLock()
+	defer s.SearchMu.RUnlock()
+	ml, ok := s.Metrics[name]
+	if !ok {
+		return nil
+	}
+	for _, m := range ml {
+		if m.Program != prog {
+			continue
+		}
+		return m
+	}
+	return nil
+}
+
 // ClearMetrics empties the store of all metrics.
 func (s *Store) ClearMetrics() {
 	s.InsertMu.Lock()

@@ -19,18 +19,6 @@ import (
 
 var varRe = regexp.MustCompile(`^(counter|gauge|timer|text|histogram) ([^ ]+)(?: {([^}]+)})?(?: (\S+))?(?: (.+))?`)
 
-// FindMetricOrNil returns a metric in a store, or returns nil if not found.
-func FindMetricOrNil(store *metrics.Store, name string) *metrics.Metric {
-	store.SearchMu.RLock()
-	defer store.SearchMu.RUnlock()
-	for n, ml := range store.Metrics {
-		if n == name {
-			return ml[0]
-		}
-	}
-	return nil
-}
-
 // ReadTestData loads a "golden" test data file, for a programfile, into the provided store.
 func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 	prog := filepath.Base(programfile)
@@ -108,7 +96,7 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 		glog.V(2).Infof("timestamp is %s which is %v in unix", timestamp.Format(time.RFC3339), timestamp.Unix())
 
 		// Now we have enough information to get or create a metric.
-		m := FindMetricOrNil(store, match[2])
+		m := store.FindMetricOrNil(match[2], prog)
 		if m != nil {
 			if m.Type != typ {
 				glog.V(2).Infof("The type of the fetched metric is not %s: %s", typ, m)
