@@ -75,10 +75,10 @@ func BenchmarkStore(b *testing.B) {
 				addToStore(b, items, *m, s)
 			},
 			b: func(b *testing.B, items int, m []*Metric, s *Store) {
-				s.SearchMu.RLock()
+				s.searchMu.RLock()
 				for _ = range s.Metrics {
 				}
-				s.SearchMu.RUnlock()
+				s.searchMu.RUnlock()
 			},
 		},
 	}
