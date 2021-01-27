@@ -134,29 +134,29 @@ func (ts *TestServer) ExpectMapExpvarDeltaWithDeadline(name, key string, want in
 }
 
 // GetProgramMetric fetches the datum of the program metric name.
-func (ts *TestServer) GetProgramMetric(name string) datum.Datum {
+func (ts *TestServer) GetProgramMetric(name, prog string) datum.Datum {
 	ts.tb.Helper()
-	m := ts.store.Metrics[name]
-	if len(m) != 1 || len(m[0].LabelValues) != 1 {
-		ts.tb.Fatalf("Unexpected metric store content: expected a single metrics with no labels, but got %v", m)
+	m := ts.store.FindMetricOrNil(name, prog)
+	if m == nil {
+		ts.tb.Fatalf("Unexpected metric store content, got nil instead of %s %s", name, prog)
 		return nil
 	}
-	d, derr := m[0].GetDatum()
+	d, derr := m.GetDatum()
 	testutil.FatalIfErr(ts.tb, derr)
 	return d
 }
 
 // ExpectProgMetricDeltaWithDeadline tests that a given program metric increases by want within the deadline.  It assumes that the named metric is an Int type datum.Datum.
-func (ts *TestServer) ExpectProgMetricDeltaWithDeadline(name string, want int64) func() {
+func (ts *TestServer) ExpectProgMetricDeltaWithDeadline(name, prog string, want int64) func() {
 	ts.tb.Helper()
 	deadline := ts.DoOrTimeoutDeadline
 	if deadline == 0 {
 		deadline = defaultDoOrTimeoutDeadline
 	}
-	start := datum.GetInt(ts.GetProgramMetric(name))
+	start := datum.GetInt(ts.GetProgramMetric(name, prog))
 	check := func() (bool, error) {
 		ts.tb.Helper()
-		now := datum.GetInt(ts.GetProgramMetric(name))
+		now := datum.GetInt(ts.GetProgramMetric(name, prog))
 		return now-start == want, nil
 	}
 	return func() {
@@ -166,7 +166,7 @@ func (ts *TestServer) ExpectProgMetricDeltaWithDeadline(name string, want int64)
 			ts.tb.Fatal(err)
 		}
 		if !ok {
-			now := datum.GetInt(ts.GetProgramMetric(name))
+			now := datum.GetInt(ts.GetProgramMetric(name, prog))
 			delta := now - start
 			ts.tb.Errorf("Did not see %s have delta by deadline: got %v - %v = %d, want %d", name, now, start, delta, want)
 		}

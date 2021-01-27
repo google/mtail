@@ -88,7 +88,7 @@ type Metric struct {
 	Hidden      bool          `json:",omitempty"`
 	Keys        []string      `json:",omitempty"`
 	LabelValues []*LabelValue `json:",omitempty"`
-	Source      string        `json:"-"`
+	Source      string        `json:",omitempty"`
 	Buckets     []datum.Range `json:",omitempty"`
 }
 

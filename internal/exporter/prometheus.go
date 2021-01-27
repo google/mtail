@@ -30,72 +30,71 @@ func (e *Exporter) Describe(c chan<- *prometheus.Desc) {
 
 // Collect implements the prometheus.Collector interface.
 func (e *Exporter) Collect(c chan<- prometheus.Metric) {
-	e.store.SearchMu.RLock()
-	defer e.store.SearchMu.RUnlock()
+	lastMetric := ""
+	lastSource := ""
 
-	for _, ml := range e.store.Metrics {
-		lastSource := ""
-		for _, m := range ml {
-			m.RLock()
-			// We don't have a way of converting text metrics to prometheus format.
-			if m.Kind == metrics.Text {
-				m.RUnlock()
-				continue
-			}
-			metricExportTotal.Add(1)
-
-			lsc := make(chan *metrics.LabelSet)
-			go m.EmitLabelSets(lsc)
-			for ls := range lsc {
-				if lastSource == "" {
-					lastSource = m.Source
-				}
-				var keys []string
-				var vals []string
-				if !e.omitProgLabel {
-					keys = append(keys, "prog")
-					vals = append(vals, m.Program)
-				}
-				for k, v := range ls.Labels {
-					keys = append(keys, k)
-					vals = append(vals, v)
-				}
-				var pM prometheus.Metric
-				var err error
-				if m.Kind == metrics.Histogram {
-					pM, err = prometheus.NewConstHistogram(
-						prometheus.NewDesc(noHyphens(m.Name),
-							fmt.Sprintf("defined at %s", lastSource), keys, nil),
-						datum.GetBucketsCount(ls.Datum),
-						datum.GetBucketsSum(ls.Datum),
-						datum.GetBucketsCumByMax(ls.Datum),
-						vals...)
-				} else {
-					pM, err = prometheus.NewConstMetric(
-						prometheus.NewDesc(noHyphens(m.Name),
-							fmt.Sprintf("defined at %s", lastSource), keys, nil),
-						promTypeForKind(m.Kind),
-						promValueForDatum(ls.Datum),
-						vals...)
-				}
-				if err != nil {
-					glog.Warning(err)
-					continue
-				}
-				// By default no timestamp is emitted to Prometheus. Setting a
-				// timestamp is not recommended. It can lead to unexpected results
-				// if the timestamp is not updated or moved fowarded enough to avoid
-				// triggering Promtheus staleness handling.
-				// Read more in docs/faq.md
-				if e.emitTimestamp {
-					c <- prometheus.NewMetricWithTimestamp(ls.Datum.TimeUTC(), pM)
-				} else {
-					c <- pM
-				}
-			}
+	e.store.Range(func(m *metrics.Metric) error {
+		m.RLock()
+		// We don't have a way of converting text metrics to prometheus format.
+		if m.Kind == metrics.Text {
 			m.RUnlock()
+			return nil
 		}
-	}
+		metricExportTotal.Add(1)
+
+		lsc := make(chan *metrics.LabelSet)
+		go m.EmitLabelSets(lsc)
+		for ls := range lsc {
+			if lastMetric != m.Name {
+				lastSource = m.Source
+				lastMetric = m.Name
+			}
+			var keys []string
+			var vals []string
+			if !e.omitProgLabel {
+				keys = append(keys, "prog")
+				vals = append(vals, m.Program)
+			}
+			for k, v := range ls.Labels {
+				keys = append(keys, k)
+				vals = append(vals, v)
+			}
+			var pM prometheus.Metric
+			var err error
+			if m.Kind == metrics.Histogram {
+				pM, err = prometheus.NewConstHistogram(
+					prometheus.NewDesc(noHyphens(m.Name),
+						fmt.Sprintf("defined at %s", lastSource), keys, nil),
+					datum.GetBucketsCount(ls.Datum),
+					datum.GetBucketsSum(ls.Datum),
+					datum.GetBucketsCumByMax(ls.Datum),
+					vals...)
+			} else {
+				pM, err = prometheus.NewConstMetric(
+					prometheus.NewDesc(noHyphens(m.Name),
+						fmt.Sprintf("defined at %s", lastSource), keys, nil),
+					promTypeForKind(m.Kind),
+					promValueForDatum(ls.Datum),
+					vals...)
+			}
+			if err != nil {
+				glog.Warning(err)
+				return nil
+			}
+			// By default no timestamp is emitted to Prometheus. Setting a
+			// timestamp is not recommended. It can lead to unexpected results
+			// if the timestamp is not updated or moved fowarded enough to avoid
+			// triggering Promtheus staleness handling.
+			// Read more in docs/faq.md
+			if e.emitTimestamp {
+				c <- prometheus.NewMetricWithTimestamp(ls.Datum.TimeUTC(), pM)
+			} else {
+				c <- pM
+			}
+		}
+		m.RUnlock()
+		return nil
+	})
 }
 
 func promTypeForKind(k metrics.Kind) prometheus.ValueType {

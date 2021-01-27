@@ -63,7 +63,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 
 	progLoadsTotalCheck()
 
-	fooIncreaseCheck := m.ExpectProgMetricDeltaWithDeadline("foo", 1)
+	fooIncreaseCheck := m.ExpectProgMetricDeltaWithDeadline("foo", "program.mtail", 1)
 
 	testutil.WriteString(t, logFile, "foo\n")
 	m.PollWatched(1)

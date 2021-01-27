@@ -17,8 +17,8 @@ import (
 
 // Store contains Metrics.
 type Store struct {
-	SearchMu sync.RWMutex // read for iterate and insert, write for delete
-	InsertMu sync.Mutex   // locked for insert and delete, unlocked for iterate
+	searchMu sync.RWMutex // read for iterate and insert, write for delete
+	insertMu sync.Mutex   // locked for insert and delete, unlocked for iterate
 	Metrics  map[string][]*Metric
 }
 
@@ -31,15 +31,15 @@ func NewStore() (s *Store) {
 
 // Add is used to add one metric to the Store.
 func (s *Store) Add(m *Metric) error {
-	s.InsertMu.Lock()
-	defer s.InsertMu.Unlock()
-	s.SearchMu.RLock()
+	s.insertMu.Lock()
+	defer s.insertMu.Unlock()
+	s.searchMu.RLock()
 	glog.V(1).Infof("Adding a new metric %v", m)
 	dupeIndex := -1
 	if len(s.Metrics[m.Name]) > 0 {
 		t := s.Metrics[m.Name][0].Kind
 		if m.Kind != t {
-			s.SearchMu.RUnlock()
+			s.searchMu.RUnlock()
 			return errors.Errorf("Metric %s has different kind %v to existing %v.", m.Name, m.Kind, t)
 		}
 
@@ -80,31 +80,48 @@ func (s *Store) Add(m *Metric) error {
 			}
 		}
 	}
-	s.SearchMu.RUnlock()
+	s.searchMu.RUnlock()
 
 	// We're in modify mode now so lock out search
-	s.SearchMu.Lock()
+	s.searchMu.Lock()
 	s.Metrics[m.Name] = append(s.Metrics[m.Name], m)
 	if dupeIndex >= 0 {
 		s.Metrics[m.Name] = append(s.Metrics[m.Name][0:dupeIndex], s.Metrics[m.Name][dupeIndex+1:]...)
 	}
-	s.SearchMu.Unlock()
+	s.searchMu.Unlock()
+	return nil
+}
+
+// FindMetricOrNil returns a metric in a store, or returns nil if not found.
+func (s *Store) FindMetricOrNil(name, prog string) *Metric {
+	s.searchMu.RLock()
+	defer s.searchMu.RUnlock()
+	ml, ok := s.Metrics[name]
+	if !ok {
+		return nil
+	}
+	for _, m := range ml {
+		if m.Program != prog {
+			continue
+		}
+		return m
+	}
 	return nil
 }
 
 // ClearMetrics empties the store of all metrics.
 func (s *Store) ClearMetrics() {
-	s.InsertMu.Lock()
-	defer s.InsertMu.Unlock()
-	s.SearchMu.Lock()
-	defer s.SearchMu.Unlock()
+	s.insertMu.Lock()
+	defer s.insertMu.Unlock()
+	s.searchMu.Lock()
+	defer s.searchMu.Unlock()
 	s.Metrics = make(map[string][]*Metric)
 }
 
 // MarshalJSON returns a JSON byte string representing the Store.
 func (s *Store) MarshalJSON() (b []byte, err error) {
-	s.SearchMu.RLock()
-	defer s.SearchMu.RUnlock()
+	s.searchMu.RLock()
+	defer s.searchMu.RUnlock()
 	ms := make([]*Metric, 0)
 	for _, ml := range s.Metrics {
 		ms = append(ms, ml...)
@@ -112,29 +129,42 @@ func (s *Store) MarshalJSON() (b []byte, err error) {
 	return json.Marshal(ms)
 }
 
-// Gc iterates through the Store looking for metrics that have been marked
-// for expiry, and removing them if their expiration time has passed.
-func (s *Store) Gc() error {
-	glog.Info("Running Store.Expire()")
-	s.SearchMu.RLock()
-	defer s.SearchMu.RUnlock()
-	now := time.Now()
+// Range calls f sequentially for each Metric present in the store.
+// The Metric is not locked when f is called.
+// If f returns non nil error, Range stops the iteration.
+// This looks a lot like sync.Map, ay.
+func (s *Store) Range(f func(*Metric) error) error {
+	s.searchMu.RLock()
+	defer s.searchMu.RUnlock()
 	for _, ml := range s.Metrics {
 		for _, m := range ml {
-			for _, lv := range m.LabelValues {
-				if lv.Expiry <= 0 {
-					continue
-				}
-				if now.Sub(lv.Value.TimeUTC()) > lv.Expiry {
-					err := m.RemoveDatum(lv.Labels...)
-					if err != nil {
-						return err
-					}
-				}
+			if err := f(m); err != nil {
+				return err
 			}
 		}
 	}
 	return nil
+}
+
+// Gc iterates through the Store looking for metrics that have been marked
+// for expiry, and removing them if their expiration time has passed.
+func (s *Store) Gc() error {
+	glog.Info("Running Store.Expire()")
+	now := time.Now()
+	return s.Range(func(m *Metric) error {
+		for _, lv := range m.LabelValues {
+			if lv.Expiry <= 0 {
+				continue
+			}
+			if now.Sub(lv.Value.TimeUTC()) > lv.Expiry {
+				err := m.RemoveDatum(lv.Labels...)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
 }
 
 // StartGcLoop runs a permanent goroutine to expire metrics every duration.
@@ -163,9 +193,9 @@ func (s *Store) StartGcLoop(ctx context.Context, duration time.Duration) {
 // WriteMetrics dumps the current state of the metrics store in JSON format to
 // the io.Writer.
 func (s *Store) WriteMetrics(w io.Writer) error {
-	s.SearchMu.RLock()
+	s.searchMu.RLock()
 	b, err := json.MarshalIndent(s.Metrics, "", "  ")
-	s.SearchMu.RUnlock()
+	s.searchMu.RUnlock()
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal metrics into json")
 	}
