@@ -22,7 +22,7 @@ var vmTests = []struct {
 	prog          string
 	log           string
 	runtimeErrors int64
-	metrics       map[string][]*metrics.Metric
+	metrics       metrics.MetricSlice
 }{
 	{"single-dash-parseint",
 		`counter c
@@ -36,19 +36,17 @@ var vmTests = []struct {
 - b
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"c": {
-				{
-					Name:    "c",
-					Program: "single-dash-parseint",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Hidden:  false,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 1},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "c",
+				Program: "single-dash-parseint",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Hidden:  false,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 1},
 					},
 				},
 			},
@@ -73,84 +71,79 @@ b 3
 b 3
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"hist1": {
-				{
-					Name:    "hist1",
-					Program: "histogram",
-					Kind:    metrics.Histogram,
-					Type:    metrics.Buckets,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Buckets{
-								Buckets: []datum.BucketCount{
-									{Range: datum.Range{Min: 0, Max: 1}},
-									{Range: datum.Range{Min: 1, Max: 2}},
-									{Range: datum.Range{Min: 2, Max: 4},
-										Count: 3},
-									{Range: datum.Range{Min: 4, Max: 8}},
-									{Range: datum.Range{Min: 8, Max: math.Inf(+1)}},
-								},
-								Count: 3,
-								Sum:   9,
+		metrics.MetricSlice{
+			{
+				Name:    "hist1",
+				Program: "histogram",
+				Kind:    metrics.Histogram,
+				Type:    metrics.Buckets,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Buckets{
+							Buckets: []datum.BucketCount{
+								{Range: datum.Range{Min: 0, Max: 1}},
+								{Range: datum.Range{Min: 1, Max: 2}},
+								{Range: datum.Range{Min: 2, Max: 4},
+									Count: 3},
+								{Range: datum.Range{Min: 4, Max: 8}},
+								{Range: datum.Range{Min: 8, Max: math.Inf(+1)}},
 							},
+							Count: 3,
+							Sum:   9,
 						},
 					},
-					Buckets: []datum.Range{{Min: 0, Max: 1}, {Min: 1, Max: 2}, {Min: 2, Max: 4}, {Min: 4, Max: 8}, {Min: 8, Max: math.Inf(+1)}},
 				},
+				Buckets: []datum.Range{{Min: 0, Max: 1}, {Min: 1, Max: 2}, {Min: 2, Max: 4}, {Min: 4, Max: 8}, {Min: 8, Max: math.Inf(+1)}},
 			},
-			"hist2": {
-				&metrics.Metric{
-					Name:    "hist2",
-					Program: "histogram",
-					Kind:    metrics.Histogram,
-					Type:    metrics.Buckets,
-					Keys:    []string{"code"},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{"b"},
-							Value: &datum.Buckets{
-								Buckets: []datum.BucketCount{
-									{Range: datum.Range{Min: 0, Max: 1}},
-									{Range: datum.Range{Min: 1, Max: 2}},
-									{Range: datum.Range{Min: 2, Max: 4},
-										Count: 3},
-									{Range: datum.Range{Min: 4, Max: 8}},
-									{Range: datum.Range{Min: 8, Max: math.Inf(+1)}},
-								},
-								Count: 3,
-								Sum:   9,
+			{
+				Name:    "hist2",
+				Program: "histogram",
+				Kind:    metrics.Histogram,
+				Type:    metrics.Buckets,
+				Keys:    []string{"code"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"b"},
+						Value: &datum.Buckets{
+							Buckets: []datum.BucketCount{
+								{Range: datum.Range{Min: 0, Max: 1}},
+								{Range: datum.Range{Min: 1, Max: 2}},
+								{Range: datum.Range{Min: 2, Max: 4},
+									Count: 3},
+								{Range: datum.Range{Min: 4, Max: 8}},
+								{Range: datum.Range{Min: 8, Max: math.Inf(+1)}},
 							},
+							Count: 3,
+							Sum:   9,
 						},
 					},
-					Buckets: []datum.Range{{Min: 0, Max: 1}, {Min: 1, Max: 2}, {Min: 2, Max: 4}, {Min: 4, Max: 8}, {Min: 8, Max: math.Inf(+1)}},
 				},
+				Buckets: []datum.Range{{Min: 0, Max: 1}, {Min: 1, Max: 2}, {Min: 2, Max: 4}, {Min: 4, Max: 8}, {Min: 8, Max: math.Inf(+1)}},
 			},
-			"hist3": {
-				&metrics.Metric{
-					Name:    "hist3",
-					Program: "histogram",
-					Kind:    metrics.Histogram,
-					Type:    metrics.Buckets,
-					Keys:    []string{"f"},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{"b"},
-							Value: &datum.Buckets{
-								Buckets: []datum.BucketCount{
-									{Range: datum.Range{Min: -1, Max: 0}},
-									{Range: datum.Range{Min: 0, Max: 1}},
-									{Range: datum.Range{Min: 1, Max: math.Inf(+1)},
-										Count: 3},
-								},
-								Count: 3,
-								Sum:   9,
+
+			{
+				Name:    "hist3",
+				Program: "histogram",
+				Kind:    metrics.Histogram,
+				Type:    metrics.Buckets,
+				Keys:    []string{"f"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"b"},
+						Value: &datum.Buckets{
+							Buckets: []datum.BucketCount{
+								{Range: datum.Range{Min: -1, Max: 0}},
+								{Range: datum.Range{Min: 0, Max: 1}},
+								{Range: datum.Range{Min: 1, Max: math.Inf(+1)},
+									Count: 3},
 							},
+							Count: 3,
+							Sum:   9,
 						},
 					},
-					Buckets: []datum.Range{{Min: -1, Max: 0}, {Min: 0, Max: 1}, {Min: 1, Max: math.Inf(+1)}},
 				},
+				Buckets: []datum.Range{{Min: -1, Max: 0}, {Min: 0, Max: 1}, {Min: 1, Max: math.Inf(+1)}},
 			},
 		},
 	},
@@ -170,19 +163,17 @@ b 3
 2019/05/14 11:11:06 [warn] ...
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"error_log_count": {
-				{
-					Name:    "error_log_count",
-					Program: "numbers",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{
-								Value: 2,
-							},
+		metrics.MetricSlice{
+			{
+				Name:    "error_log_count",
+				Program: "numbers",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{
+							Value: 2,
 						},
 					},
 				},
@@ -200,19 +191,17 @@ b 3
 test -
 `,
 		1,
-		map[string][]*metrics.Metric{
-			"total": {
-				{
-					Name:    "total",
-					Program: "parse a hyphen",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{
-								Value: 99,
-							},
+		metrics.MetricSlice{
+			{
+				Name:    "total",
+				Program: "parse a hyphen",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{
+							Value: 99,
 						},
 					},
 				},
@@ -230,19 +219,17 @@ test -
 test -
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"total": {
-				{
-					Name:    "total",
-					Program: "parse around a hyphen",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{
-								Value: 99,
-							},
+		metrics.MetricSlice{
+			{
+				Name:    "total",
+				Program: "parse around a hyphen",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{
+							Value: 99,
 						},
 					},
 				},
@@ -258,20 +245,18 @@ test -
 `, `1.1
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"metric": {
-				{
-					Name:    "metric",
-					Program: "add_assign_float",
-					Kind:    metrics.Gauge,
-					Type:    metrics.Float,
-					Hidden:  false,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{},
-							Value:  &datum.Float{Valuebits: math.Float64bits(1.1)},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "metric",
+				Program: "add_assign_float",
+				Kind:    metrics.Gauge,
+				Type:    metrics.Float,
+				Hidden:  false,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{},
+						Value:  &datum.Float{Valuebits: math.Float64bits(1.1)},
 					},
 				},
 			},
@@ -321,49 +306,43 @@ Dec
 Oct
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"a": {
-				{
-					Name:    "a",
-					Program: "decorator",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Hidden:  false,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 3},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "a",
+				Program: "decorator",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Hidden:  false,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 3},
 					},
 				},
 			},
-			"b": {
-				{
-					Name:    "b",
-					Program: "decorator",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Hidden:  false,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 3},
-						},
+			{
+				Name:    "b",
+				Program: "decorator",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Hidden:  false,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 3},
 					},
 				},
 			},
-			"c": {
-				{
-					Name:    "c",
-					Program: "decorator",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Hidden:  false,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 3},
-						},
+			{
+				Name:    "c",
+				Program: "decorator",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Hidden:  false,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 3},
 					},
 				},
 			},
@@ -390,46 +369,40 @@ counter no
 4
 991
 `, 0,
-		map[string][]*metrics.Metric{
-			"yes": {
-				{
-					Name:    "yes",
-					Program: "else",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 1},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "yes",
+				Program: "else",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 1},
 					},
 				},
 			},
-			"maybe": {
-				{
-					Name:    "maybe",
-					Program: "else",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 2},
-						},
+			{
+				Name:    "maybe",
+				Program: "else",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 2},
 					},
 				},
 			},
-			"no": {
-				{
-					Name:    "no",
-					Program: "else",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 3},
-						},
+			{
+				Name:    "no",
+				Program: "else",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 3},
 					},
 				},
 			},
@@ -458,46 +431,40 @@ otherwise {
 4
 991
 `, 0,
-		map[string][]*metrics.Metric{
-			"yes": {
-				{
-					Name:    "yes",
-					Program: "otherwise",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 1},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "yes",
+				Program: "otherwise",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 1},
 					},
 				},
 			},
-			"maybe": {
-				{
-					Name:    "maybe",
-					Program: "otherwise",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 2},
-						},
+			{
+				Name:    "maybe",
+				Program: "otherwise",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 2},
 					},
 				},
 			},
-			"no": {
-				{
-					Name:    "no",
-					Program: "otherwise",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 3},
-						},
+			{
+				Name:    "no",
+				Program: "otherwise",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 3},
 					},
 				},
 			},
@@ -536,92 +503,80 @@ counter i
 12.8
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"should_be_int": {
-				{
-					Name:    "should_be_int",
-					Program: "types",
-					Kind:    metrics.Gauge,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{},
-							Value:  &datum.Int{Value: 37},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "should_be_int",
+				Program: "types",
+				Kind:    metrics.Gauge,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{},
+						Value:  &datum.Int{Value: 37},
 					},
 				},
 			},
-			"should_be_float": {
-				{
-					Name:    "should_be_float",
-					Program: "types",
-					Kind:    metrics.Gauge,
-					Type:    metrics.Float,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{},
-							Value:  &datum.Float{Valuebits: math.Float64bits(12.8)},
-						},
+			{
+				Name:    "should_be_float",
+				Program: "types",
+				Kind:    metrics.Gauge,
+				Type:    metrics.Float,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{},
+						Value:  &datum.Float{Valuebits: math.Float64bits(12.8)},
 					},
 				},
 			},
-			"should_be_int_map": {
-				{
-					Name:    "should_be_int_map",
-					Program: "types",
-					Kind:    metrics.Gauge,
-					Type:    metrics.Int,
-					Keys:    []string{"label"},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{"37"},
-							Value:  &datum.Int{Value: 37},
-						},
+			{
+				Name:    "should_be_int_map",
+				Program: "types",
+				Kind:    metrics.Gauge,
+				Type:    metrics.Int,
+				Keys:    []string{"label"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"37"},
+						Value:  &datum.Int{Value: 37},
 					},
 				},
 			},
-			"should_be_float_map": {
-				{
-					Name:    "should_be_float_map",
-					Program: "types",
-					Kind:    metrics.Gauge,
-					Type:    metrics.Float,
-					Keys:    []string{"label"},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{"12.8"},
-							Value:  &datum.Float{Valuebits: math.Float64bits(12.8)},
-						},
+			{
+				Name:    "should_be_float_map",
+				Program: "types",
+				Kind:    metrics.Gauge,
+				Type:    metrics.Float,
+				Keys:    []string{"label"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"12.8"},
+						Value:  &datum.Float{Valuebits: math.Float64bits(12.8)},
 					},
 				},
 			},
-			"neg": {
-				{
-					Name:    "neg",
-					Program: "types",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{},
-						},
+			{
+				Name:    "neg",
+				Program: "types",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{},
 					},
 				},
 			},
-			"i": {
-				{
-					Name:    "i",
-					Program: "types",
-					Kind:    metrics.Counter,
-					Type:    metrics.Float,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Float{Valuebits: math.Float64bits(37.0)},
-						},
+			{
+				Name:    "i",
+				Program: "types",
+				Kind:    metrics.Counter,
+				Type:    metrics.Float,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Float{Valuebits: math.Float64bits(37.0)},
 					},
 				},
 			},
@@ -641,19 +596,17 @@ counter i
 991
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"filename_lines": {
-				{
-					Name:    "filename_lines",
-					Program: "filename",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{"filename"},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{"filename"},
-							Value:  &datum.Int{Value: 6},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "filename_lines",
+				Program: "filename",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{"filename"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"filename"},
+						Value:  &datum.Int{Value: 6},
 					},
 				},
 			},
@@ -683,32 +636,28 @@ quux
 
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"foo": {
-				{
-					Name:    "foo",
-					Program: "logical operators",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 4},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "foo",
+				Program: "logical operators",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 4},
 					},
 				},
 			},
-			"bar": {
-				{
-					Name:    "bar",
-					Program: "logical operators",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 2},
-						},
+			{
+				Name:    "bar",
+				Program: "logical operators",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 2},
 					},
 				},
 			},
@@ -724,23 +673,21 @@ quux
 c, d
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"f": {
-				{
-					Name:    "f",
-					Program: "strcat",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{"s"},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{"ab"},
-							Value:  &datum.Int{Value: 1},
-						},
-						{
-							Labels: []string{"cd"},
-							Value:  &datum.Int{Value: 1},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "f",
+				Program: "strcat",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{"s"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"ab"},
+						Value:  &datum.Int{Value: 1},
+					},
+					{
+						Labels: []string{"cd"},
+						Value:  &datum.Int{Value: 1},
 					},
 				},
 			},
@@ -765,41 +712,37 @@ counter t_sum
 1.765
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"t": {
-				{
-					Name:    "t",
-					Program: "typed-comparison",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{"le"},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{"0.5"},
-							Value:  &datum.Int{Value: 1},
-						},
-						{
-							Labels: []string{"1"},
-							Value:  &datum.Int{Value: 1},
-						},
-						{
-							Labels: []string{"inf"},
-							Value:  &datum.Int{Value: 3},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "t",
+				Program: "typed-comparison",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{"le"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"0.5"},
+						Value:  &datum.Int{Value: 1},
+					},
+					{
+						Labels: []string{"1"},
+						Value:  &datum.Int{Value: 1},
+					},
+					{
+						Labels: []string{"inf"},
+						Value:  &datum.Int{Value: 3},
 					},
 				},
 			},
-			"t_sum": {
-				{
-					Name:    "t_sum",
-					Program: "typed-comparison",
-					Kind:    metrics.Counter,
-					Type:    metrics.Float,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Float{Valuebits: math.Float64bits(2.865)},
-						},
+			{
+				Name:    "t_sum",
+				Program: "typed-comparison",
+				Kind:    metrics.Counter,
+				Type:    metrics.Float,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Float{Valuebits: math.Float64bits(2.865)},
 					},
 				},
 			},
@@ -826,46 +769,40 @@ baba
 cdf
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"someas": {
-				{
-					Name:    "someas",
-					Program: "match-expression",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 3},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "someas",
+				Program: "match-expression",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 3},
 					},
 				},
 			},
-			"notas": {
-				{
-					Name:    "notas",
-					Program: "match-expression",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 2},
-						},
+			{
+				Name:    "notas",
+				Program: "match-expression",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 2},
 					},
 				},
 			},
-			"total": {
-				{
-					Name:    "total",
-					Program: "match-expression",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 5},
-						},
+			{
+				Name:    "total",
+				Program: "match-expression",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 5},
 					},
 				},
 			},
@@ -889,47 +826,41 @@ seconds = 200
 seconds = 50
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"hit": {
-				{
-					Name:    "hit",
-					Program: "metric-as-rvalue",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 1},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "hit",
+				Program: "metric-as-rvalue",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 1},
 					},
 				},
 			},
-			"miss": {
-				{
-					Name:    "miss",
-					Program: "metric-as-rvalue",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Value: &datum.Int{Value: 2},
-						},
+			{
+				Name:    "miss",
+				Program: "metric-as-rvalue",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Value: &datum.Int{Value: 2},
 					},
 				},
 			},
-			"response_time": {
-				{
-					Name:    "response_time",
-					Program: "metric-as-rvalue",
-					Kind:    metrics.Gauge,
-					Type:    metrics.Int,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{},
-							Value:  &datum.Int{Value: 50000},
-						},
+			{
+				Name:    "response_time",
+				Program: "metric-as-rvalue",
+				Kind:    metrics.Gauge,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{},
+						Value:  &datum.Int{Value: 50000},
 					},
 				},
 			},
@@ -952,34 +883,30 @@ b
 a
 `,
 		0,
-		map[string][]*metrics.Metric{
-			"str": {
-				{
-					Name:    "str",
-					Program: "stringy",
-					Kind:    metrics.Text,
-					Type:    metrics.String,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{},
-							Value:  &datum.String{Value: "a"},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "str",
+				Program: "stringy",
+				Kind:    metrics.Text,
+				Type:    metrics.String,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{},
+						Value:  &datum.String{Value: "a"},
 					},
 				},
 			},
-			"b": {
-				{
-					Name:    "b",
-					Program: "stringy",
-					Kind:    metrics.Counter,
-					Type:    metrics.Int,
-					Keys:    []string{"foo"},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{"b"},
-							Value:  &datum.Int{Value: 1},
-						},
+			{
+				Name:    "b",
+				Program: "stringy",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{"foo"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"b"},
+						Value:  &datum.Int{Value: 1},
 					},
 				},
 			},
@@ -993,19 +920,17 @@ a
 }
 `, `ip address 1.1.1.1
 `, 0,
-		map[string][]*metrics.Metric{
-			"ipaddr": {
-				{
-					Name:    "ipaddr",
-					Program: "ip-addr",
-					Kind:    metrics.Text,
-					Type:    metrics.String,
-					Keys:    []string{},
-					LabelValues: []*metrics.LabelValue{
-						{
-							Labels: []string{},
-							Value:  &datum.String{Value: "1.1.1.1"},
-						},
+		metrics.MetricSlice{
+			{
+				Name:    "ipaddr",
+				Program: "ip-addr",
+				Kind:    metrics.Text,
+				Type:    metrics.String,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{},
+						Value:  &datum.String{Value: "1.1.1.1"},
 					},
 				},
 			},
@@ -1039,7 +964,15 @@ func TestVmEndToEnd(t *testing.T) {
 			wg.Wait()
 
 			progRuntimeErrorsCheck()
-			testutil.ExpectNoDiff(t, tc.metrics, store.Metrics, testutil.IgnoreUnexported(sync.RWMutex{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"), testutil.IgnoreFields(datum.String{}, "mu"))
+
+			var ms metrics.MetricSlice
+			store.Range(func(m *metrics.Metric) error {
+				ms = append(ms, m)
+				return nil
+			})
+
+			// Ignore the datum.Time field as well, as the results will be unstable otherwise.
+			testutil.ExpectNoDiff(t, tc.metrics, ms, testutil.SortSlices(metrics.MetricsLess), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
 		})
 	}
 }

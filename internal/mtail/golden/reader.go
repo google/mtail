@@ -19,8 +19,9 @@ import (
 
 var varRe = regexp.MustCompile(`^(counter|gauge|timer|text|histogram) ([^ ]+)(?: {([^}]+)})?(?: (\S+))?(?: (.+))?`)
 
-// ReadTestData loads a "golden" test data file, for a programfile, into the provided store.
-func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
+// ReadTestData loads a "golden" test data file from a programfile and returns as a slice of Metrics.
+func ReadTestData(file io.Reader, programfile string) metrics.MetricSlice {
+	store := metrics.NewStore()
 	prog := filepath.Base(programfile)
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -145,4 +146,11 @@ func ReadTestData(file io.Reader, programfile string, store *metrics.Store) {
 		}
 		glog.V(2).Infof("Metric is now %s", m)
 	}
+
+	storeList := make([]*metrics.Metric, 0)
+	store.Range(func(m *metrics.Metric) error {
+		storeList = append(storeList, m)
+		return nil
+	})
+	return storeList
 }

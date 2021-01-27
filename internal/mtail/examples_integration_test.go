@@ -109,10 +109,15 @@ func TestExamplePrograms(t *testing.T) {
 			testutil.FatalIfErr(t, err)
 			defer g.Close()
 
-			goldenStore := metrics.NewStore()
-			golden.ReadTestData(g, tc.programfile, goldenStore)
+			goldenStore := golden.ReadTestData(g, tc.programfile)
 
-			testutil.ExpectNoDiff(t, goldenStore, store, testutil.IgnoreUnexported(metrics.Store{}, sync.RWMutex{}, sync.Mutex{}, datum.String{}))
+			var storeList metrics.MetricSlice
+			store.Range(func(m *metrics.Metric) error {
+				storeList = append(storeList, m)
+				return nil
+			})
+
+			testutil.ExpectNoDiff(t, goldenStore, storeList, testutil.SortSlices(metrics.MetricsLess), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}))
 		})
 	}
 }
@@ -234,8 +239,18 @@ func TestFilePipeStreamComparison(t *testing.T) {
 			wg.Wait()
 			cancel()
 
-			// Ignore the usual field and the datum.Time field as well, as the results will be unstable otherwise.
-			testutil.ExpectNoDiff(t, fileStore, pipeStore, testutil.IgnoreUnexported(metrics.Store{}, sync.RWMutex{}, sync.Mutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
+			var pipeMetrics, fileMetrics metrics.MetricSlice
+			pipeStore.Range(func(m *metrics.Metric) error {
+				pipeMetrics = append(pipeMetrics, m)
+				return nil
+			})
+			fileStore.Range(func(m *metrics.Metric) error {
+				fileMetrics = append(fileMetrics, m)
+				return nil
+			})
+
+			// Ignore the datum.Time field as well, as the results will be unstable otherwise.
+			testutil.ExpectNoDiff(t, fileMetrics, pipeMetrics, testutil.SortSlices(metrics.MetricsLess), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
 		})
 	}
 }
