@@ -430,7 +430,7 @@ func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath st
 	go func() {
 		defer l.wg.Done()
 		<-initDone
-		if l.programPath != "" {
+		if l.programPath == "" {
 			glog.Info("no program reload on SIGHUP without programPath")
 			return
 		}
