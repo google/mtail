@@ -6,6 +6,7 @@ package metrics
 import (
 	"context"
 	"encoding/json"
+	"hash/maphash"
 	"io"
 	"reflect"
 	"sync"
@@ -17,115 +18,90 @@ import (
 
 // Store contains Metrics.
 type Store struct {
-	searchMu sync.RWMutex // read for iterate and insert, write for delete
-	insertMu sync.Mutex   // locked for insert and delete, unlocked for iterate
-	Metrics  map[string][]*Metric
+	Metrics  sync.Map
+	hashSeed maphash.Seed
 }
 
 // NewStore returns a new metric Store.
 func NewStore() (s *Store) {
-	s = &Store{}
+	s = &Store{hashSeed: maphash.MakeSeed()}
 	s.ClearMetrics()
 	return
 }
 
+func (s *Store) hashMetric(name, prog string) uint64 {
+	var h maphash.Hash
+	h.SetSeed(s.hashSeed)
+	h.WriteString(name)
+	h.WriteString(prog)
+	return h.Sum64()
+}
+
 // Add is used to add one metric to the Store.
 func (s *Store) Add(m *Metric) error {
-	s.insertMu.Lock()
-	defer s.insertMu.Unlock()
-	s.searchMu.RLock()
-	glog.V(1).Infof("Adding a new metric %v", m)
-	dupeIndex := -1
-	if len(s.Metrics[m.Name]) > 0 {
-		t := s.Metrics[m.Name][0].Kind
-		if m.Kind != t {
-			s.searchMu.RUnlock()
-			return errors.Errorf("Metric %s has different kind %v to existing %v.", m.Name, m.Kind, t)
-		}
+	m.RLock()
+	k := s.hashMetric(m.Name, m.Program)
+	m.RUnlock()
+	actual, loaded := s.Metrics.LoadOrStore(k, m)
+	if !loaded {
+		return nil
+	}
+	v := actual.(*Metric)
+	if m.Kind != v.Kind {
+		return errors.Errorf("Metric %s has different kind %v to existing %v.", m.Name, m.Kind, v)
+	}
 
-		// To avoid duplicate metrics:
-		// - copy old LabelValues into new metric;
-		// - discard old metric.
-		for i, v := range s.Metrics[m.Name] {
-			//
-			if v.Program != m.Program {
-				continue
-			}
-			if v.Type != m.Type {
-				continue
-			}
-			if v.Source != m.Source {
-				continue
-			}
-			dupeIndex = i
-			glog.V(2).Infof("v keys: %v m.keys: %v", v.Keys, m.Keys)
-			// If a set of label keys has changed, discard
-			// old metric completely, w/o even copying old
-			// data, as they are now incompatible.
-			if len(v.Keys) != len(m.Keys) || !reflect.DeepEqual(v.Keys, m.Keys) {
-				break
-			}
-			glog.V(2).Infof("v buckets: %v m.buckets: %v", v.Buckets, m.Buckets)
+	glog.V(2).Infof("v keys: %v m.keys: %v", v.Keys, m.Keys)
 
-			// Otherwise, copy everything into the new metric
-			glog.V(2).Infof("Found duped metric: %d", dupeIndex)
-			for j, oldLabel := range v.LabelValues {
-				glog.V(2).Infof("Labels: %d %s", j, oldLabel.Labels)
-				d, err := v.GetDatum(oldLabel.Labels...)
-				if err == nil {
-					if err = m.RemoveDatum(oldLabel.Labels...); err == nil {
-						m.LabelValues = append(m.LabelValues, &LabelValue{Labels: oldLabel.Labels, Value: d})
-					}
+	// If a set of label keys has changed, discard
+	// old metric completely, w/o even copying old
+	// data, as they are now incompatible.
+	if len(v.Keys) == len(m.Keys) && reflect.DeepEqual(v.Keys, m.Keys) {
+
+		glog.V(2).Infof("v buckets: %v m.buckets: %v", v.Buckets, m.Buckets)
+
+		// Otherwise, copy everything into the new metric
+		for j, oldLabel := range v.LabelValues {
+			glog.V(2).Infof("Labels: %d %s", j, oldLabel.Labels)
+			d, err := v.GetDatum(oldLabel.Labels...)
+			if err == nil {
+				if err = m.RemoveDatum(oldLabel.Labels...); err == nil {
+					m.LabelValues = append(m.LabelValues, &LabelValue{Labels: oldLabel.Labels, Value: d})
 				}
 			}
 		}
 	}
-	s.searchMu.RUnlock()
 
-	// We're in modify mode now so lock out search
-	s.searchMu.Lock()
-	s.Metrics[m.Name] = append(s.Metrics[m.Name], m)
-	if dupeIndex >= 0 {
-		s.Metrics[m.Name] = append(s.Metrics[m.Name][0:dupeIndex], s.Metrics[m.Name][dupeIndex+1:]...)
-	}
-	s.searchMu.Unlock()
+	s.Metrics.Store(k, m)
 	return nil
 }
 
 // FindMetricOrNil returns a metric in a store, or returns nil if not found.
 func (s *Store) FindMetricOrNil(name, prog string) *Metric {
-	s.searchMu.RLock()
-	defer s.searchMu.RUnlock()
-	ml, ok := s.Metrics[name]
-	if !ok {
-		return nil
-	}
-	for _, m := range ml {
-		if m.Program != prog {
-			continue
-		}
-		return m
+	k := s.hashMetric(name, prog)
+	m, ok := s.Metrics.Load(k)
+	if ok {
+		return m.(*Metric)
 	}
 	return nil
 }
 
 // ClearMetrics empties the store of all metrics.
 func (s *Store) ClearMetrics() {
-	s.insertMu.Lock()
-	defer s.insertMu.Unlock()
-	s.searchMu.Lock()
-	defer s.searchMu.Unlock()
-	s.Metrics = make(map[string][]*Metric)
+	s.Metrics.Range(func(key, value interface{}) bool {
+		s.Metrics.Delete(key)
+		return true
+	})
 }
 
 // MarshalJSON returns a JSON byte string representing the Store.
 func (s *Store) MarshalJSON() (b []byte, err error) {
-	s.searchMu.RLock()
-	defer s.searchMu.RUnlock()
 	ms := make([]*Metric, 0)
-	for _, ml := range s.Metrics {
-		ms = append(ms, ml...)
-	}
+	s.Metrics.Range(func(key, value interface{}) bool {
+		m := value.(*Metric)
+		ms = append(ms, m)
+		return true
+	})
 	return json.Marshal(ms)
 }
 
@@ -133,17 +109,15 @@ func (s *Store) MarshalJSON() (b []byte, err error) {
 // The Metric is not locked when f is called.
 // If f returns non nil error, Range stops the iteration.
 // This looks a lot like sync.Map, ay.
-func (s *Store) Range(f func(*Metric) error) error {
-	s.searchMu.RLock()
-	defer s.searchMu.RUnlock()
-	for _, ml := range s.Metrics {
-		for _, m := range ml {
-			if err := f(m); err != nil {
-				return err
-			}
+func (s *Store) Range(f func(*Metric) error) (r error) {
+	s.Metrics.Range(func(key, value interface{}) bool {
+		if err := f(value.(*Metric)); err != nil {
+			r = err
+			return false
 		}
-	}
-	return nil
+		return true
+	})
+	return
 }
 
 // Gc iterates through the Store looking for metrics that have been marked
@@ -193,9 +167,7 @@ func (s *Store) StartGcLoop(ctx context.Context, duration time.Duration) {
 // WriteMetrics dumps the current state of the metrics store in JSON format to
 // the io.Writer.
 func (s *Store) WriteMetrics(w io.Writer) error {
-	s.searchMu.RLock()
-	b, err := json.MarshalIndent(s.Metrics, "", "  ")
-	s.searchMu.RUnlock()
+	b, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal metrics into json")
 	}

@@ -17,7 +17,7 @@ func TestMatchingKind(t *testing.T) {
 	m1 := NewMetric("foo", "prog", Counter, Int)
 	err := s.Add(m1)
 	testutil.FatalIfErr(t, err)
-	m2 := NewMetric("foo", "prog1", Gauge, Int)
+	m2 := NewMetric("foo", "prog", Gauge, Int)
 	err = s.Add(m2)
 	if err == nil {
 		t.Fatal("should be err")
@@ -25,66 +25,31 @@ func TestMatchingKind(t *testing.T) {
 }
 
 func TestDuplicateMetric(t *testing.T) {
-	expectedMetrics := 0
 	s := NewStore()
-	_ = s.Add(NewMetric("foo", "prog", Counter, Int, "user", "host"))
-	_ = s.Add(NewMetric("foo", "prog", Counter, Int))
-	expectedMetrics++
-	if len(s.Metrics["foo"]) != expectedMetrics {
-		t.Fatalf("should not add duplicate metric. Store: %v", s)
+
+	m1 := NewMetric("foo", "prog", Counter, Int, "user", "host")
+	if err := s.Add(m1); err != nil {
+		t.Error(err)
 	}
 
-	_ = s.Add(NewMetric("foo", "prog", Counter, Float))
+	if err := s.Add(NewMetric("foo", "prog", Counter, Float)); err != nil {
+		t.Error(err)
+	}
 	glog.Infof("Store: %v", s)
-	expectedMetrics++
-	if len(s.Metrics["foo"]) != expectedMetrics {
-		t.Fatalf("should add metric of a different type: %v", s)
+
+	if err := s.Add(NewMetric("foo", "prog", Counter, Int, "user", "host", "zone", "domain")); err != nil {
+		t.Error(err)
+	}
+	m2 := s.FindMetricOrNil("foo", "prog")
+	if m2 == nil {
+		t.Errorf("couldn't find metric in %v", s)
+	}
+	if len(m2.Keys) != 4 {
+		t.Fatalf("should not add duplicate metric, but replace the old one: %v Store: %v", m2, s)
 	}
 
-	_ = s.Add(NewMetric("foo", "prog", Counter, Int, "user", "host", "zone", "domain"))
-	glog.Infof("Store: %v", s)
-	if len(s.Metrics["foo"]) != expectedMetrics {
-		t.Fatalf("should not add duplicate metric, but replace the old one. Store: %v", s)
-	}
-
-	_ = s.Add(NewMetric("foo", "prog1", Counter, Int))
-	glog.Infof("Store: %v", s)
-	expectedMetrics++
-	if len(s.Metrics["foo"]) != expectedMetrics {
-		t.Fatalf("should add metric with a different prog: %v", s)
-	}
-
-	_ = s.Add(NewMetric("foo", "prog1", Counter, Float))
-	glog.Infof("Store: %v", s)
-	expectedMetrics++
-	if len(s.Metrics["foo"]) != expectedMetrics {
-		t.Fatalf("should add metric of a different type: %v", s)
-	}
-}
-
-/* A program can add a metric with the same name and
-   of different type.
-   Prometheus behavior in this case is undefined.
-   @see https://github.com/google/mtail/issues/130
-*/
-func TestAddMetricDifferentType(t *testing.T) {
-	expected := 2
-	s := NewStore()
-	err := s.Add(NewMetric("foo", "prog", Counter, Int))
-	testutil.FatalIfErr(t, err)
-	// Duplicate metric of different type from *the same program
-	err = s.Add(NewMetric("foo", "prog", Counter, Float))
-	testutil.FatalIfErr(t, err)
-	if len(s.Metrics["foo"]) != expected {
-		t.Fatalf("should have %d metrics of different Type: %v", expected, s.Metrics)
-	}
-
-	// Duplicate metric of different type from a different program
-	err = s.Add(NewMetric("foo", "prog1", Counter, Float))
-	expected++
-	testutil.FatalIfErr(t, err)
-	if len(s.Metrics["foo"]) != expected {
-		t.Fatalf("should have %d metrics of different Type: %v", expected, s.Metrics)
+	if err := s.Add(NewMetric("foo", "prog1", Counter, Int)); err != nil {
+		t.Errorf("should add metric with a different prog: %s", err)
 	}
 }
 
