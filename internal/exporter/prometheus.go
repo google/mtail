@@ -46,6 +46,7 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 		go m.EmitLabelSets(lsc)
 		for ls := range lsc {
 			if lastMetric != m.Name {
+				glog.V(2).Infof("setting source to %s", m.Source)
 				lastSource = m.Source
 				lastMetric = m.Name
 			}
