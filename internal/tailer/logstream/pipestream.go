@@ -92,11 +92,11 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 			var perr *os.PathError
 			if errors.As(err, &perr) && perr.Timeout() && n == 0 {
-				glog.Info("timed out")
+				glog.V(2).Info("timed out")
 				timedout = true
-				// Named Pipes EOF when the writer has closed, so we look for a
-				// timeout on read to detect a writer stall and thus let us check
-				// below for cancellation.
+				// Named Pipes EOF only when the writer has closed, so we look
+				// for a timeout on read to detect a writer stall and thus let
+				// us check below for cancellation.
 				goto Sleep
 			}
 			// Per pipe(7): If all file descriptors referring to the write end
