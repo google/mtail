@@ -10,7 +10,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/common v0.17.0
-	go.opencensus.io v0.22.6
+	go.opencensus.io v0.23.0
 	golang.org/x/sys v0.0.0-20201214210602-f9fddec55a1e
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
