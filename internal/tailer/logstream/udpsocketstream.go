@@ -17,11 +17,11 @@ import (
 	"github.com/google/mtail/internal/waker"
 )
 
-type socketStream struct {
+type udpSocketStream struct {
 	ctx   context.Context
 	lines chan<- *logline.LogLine
 
-	pathname string // Given name for the underlying socket path on the filesystem
+	hostspec string // Host and optionally port to bind to
 
 	mu           sync.RWMutex // protects following fields
 	completed    bool         // This pipestream is completed and can no longer be used.
@@ -31,24 +31,30 @@ type socketStream struct {
 	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
-func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine) (LogStream, error) {
-	ss := &socketStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
+func newUdpSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, hostspec string, lines chan<- *logline.LogLine) (LogStream, error) {
+	ss := &udpSocketStream{ctx: ctx, hostspec: hostspec, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
 	if err := ss.stream(ctx, wg, waker); err != nil {
 		return nil, err
 	}
 	return ss, nil
 }
 
-func (ss *socketStream) LastReadTime() time.Time {
+func (ss *udpSocketStream) LastReadTime() time.Time {
 	ss.mu.RLock()
 	defer ss.mu.RUnlock()
 	return ss.lastReadTime
 }
 
-func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker) error {
-	c, err := net.ListenUnixgram("unixgram", &net.UnixAddr{ss.pathname, "unixgram"})
+//func (ss *udpSocketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo) error {
+func (ss *udpSocketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker) error {
+	addr, err := net.ResolveUDPAddr("udp", ss.hostspec)
 	if err != nil {
-		logErrors.Add(ss.pathname, 1)
+		logErrors.Add(ss.hostspec, 1)
+		return err
+	}
+	c, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		logErrors.Add(ss.hostspec, 1)
 		return err
 	}
 	glog.V(2).Infof("opened new socket %v", c)
@@ -57,32 +63,38 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 	go func() {
 		defer wg.Done()
 		defer func() {
-			glog.V(2).Infof("%v: read total %d bytes from %s", c, total, ss.pathname)
+			glog.V(2).Infof("%v: read total %d bytes from %s", c, total, ss.hostspec)
 			glog.V(2).Infof("%v: closing connection", c)
 			err := c.Close()
 			if err != nil {
-				logErrors.Add(ss.pathname, 1)
+				logErrors.Add(ss.hostspec, 1)
 				glog.Info(err)
 			}
-			logCloses.Add(ss.pathname, 1)
+			logCloses.Add(ss.hostspec, 1)
 			ss.mu.Lock()
 			ss.completed = true
 			ss.mu.Unlock()
 		}()
+		space := []byte(" ")
 		b := make([]byte, 0, defaultReadBufferSize)
 		capB := cap(b)
-		partial := bytes.NewBufferString("")
 		var timedout bool
 		for {
 			if err := c.SetReadDeadline(time.Now().Add(defaultReadTimeout)); err != nil {
-				glog.V(2).Infof("%s: %s", ss.pathname, err)
+				glog.V(2).Infof("%s: %s", ss.hostspec, err)
 			}
 
 			n, err := c.Read(b[:capB])
 
+			// Each datagram is a separate message, and we should
+			// receive the full datagram on one socket read.
 			if n > 0 {
+				// BSD Syslog ignores a trailing space
+				if bytes.Equal(b[n-1:n], space) {
+					n--
+				}
 				total += n
-				decodeAndSend(ss.ctx, ss.lines, ss.pathname, n, b[:n], partial)
+				decodeAndSend(ss.ctx, ss.lines, ss.hostspec, n, b[:n], nil)
 				ss.mu.Lock()
 				ss.lastReadTime = time.Now()
 				ss.mu.Unlock()
@@ -100,7 +112,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 			if err != nil {
 				if err != io.EOF {
 					glog.Info(err)
-					logErrors.Add(ss.pathname, 1)
+					logErrors.Add(ss.hostspec, 1)
 				}
 				return
 			}
@@ -119,18 +131,12 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 				select {
 				case <-ss.stopChan:
 					glog.V(2).Infof("%v: stream has been stopped, exiting", c)
-					if partial.Len() > 0 {
-						sendLine(ctx, ss.pathname, partial, ss.lines)
-					}
 					ss.mu.Lock()
 					ss.completed = true
 					ss.mu.Unlock()
 					return
 				case <-ctx.Done():
 					glog.V(2).Infof("%v: context has been cancelled, exiting", c)
-					if partial.Len() > 0 {
-						sendLine(ctx, ss.pathname, partial, ss.lines)
-					}
 					ss.mu.Lock()
 					ss.completed = true
 					ss.mu.Unlock()
@@ -164,13 +170,13 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 	return nil
 }
 
-func (ss *socketStream) IsComplete() bool {
+func (ss *udpSocketStream) IsComplete() bool {
 	ss.mu.RLock()
 	defer ss.mu.RUnlock()
 	return ss.completed
 }
 
-func (ss *socketStream) Stop() {
+func (ss *udpSocketStream) Stop() {
 	ss.stopOnce.Do(func() {
 		close(ss.stopChan)
 	})

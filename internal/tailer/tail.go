@@ -39,6 +39,9 @@ type Tailer struct {
 	globPatterns       map[string]struct{} // glob patterns to match newly created logs in dir paths against
 	ignoreRegexPattern *regexp.Regexp
 
+	logSocketsMu sync.RWMutex        // protects `logSockets'
+	logSockets   map[string]struct{} // which hostspecs do we bind to
+
 	oneShot bool
 
 	pollMu sync.Mutex // protects Poll()
@@ -65,6 +68,18 @@ func (n *niladicOption) apply(t *Tailer) error {
 
 // OneShot puts the tailer in one-shot mode, where sources are read once from the start and then closed.
 var OneShot = &niladicOption{func(t *Tailer) error { t.oneShot = true; return nil }}
+
+// LogSockets sets the glob patterns to use to match pathnames.
+type LogSockets []string
+
+func (opt LogSockets) apply(t *Tailer) error {
+	for _, u := range opt {
+		if err := t.AddSocket(u); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // LogPatterns sets the glob patterns to use to match pathnames.
 type LogPatterns []string
@@ -138,19 +153,23 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 		lines:        lines,
 		initDone:     make(chan struct{}),
 		globPatterns: make(map[string]struct{}),
+		logSockets:   make(map[string]struct{}),
 		logstreams:   make(map[string]logstream.LogStream),
 	}
 	defer close(t.initDone)
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
-	if len(t.globPatterns) == 0 {
-		glog.Info("No patterns to tail, tailer done.")
+	if len(t.globPatterns) == 0 && len(t.logSockets) == 0 {
+		glog.Info("No patterns or sockets to tail, tailer done.")
 		close(t.lines)
 		return t, nil
 	}
 	// Guarantee all existing logs get tailed before we leave.  Also necessary
 	// in case oneshot mode is active, the logs get read!
+	if err := t.PollLogSockets(); err != nil {
+		return nil, err
+	}
 	if err := t.PollLogPatterns(); err != nil {
 		return nil, err
 	}
@@ -187,6 +206,15 @@ func (t *Tailer) SetOption(options ...Option) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// AddSocket adds a socket to the list of hosts and ports to listen for log events.
+func (t *Tailer) AddSocket(pathname string) error {
+	glog.V(2).Infof("AddSocket: %s", pathname)
+	t.logSocketsMu.Lock()
+	t.logSockets[pathname] = struct{}{}
+	t.logSocketsMu.Unlock()
 	return nil
 }
 
@@ -327,6 +355,18 @@ func (t *Tailer) StartLogPatternPollLoop(waker waker.Waker) {
 			}
 		}
 	}()
+}
+
+func (t *Tailer) PollLogSockets() error {
+	t.logSocketsMu.RLock()
+	defer t.logSocketsMu.RUnlock()
+	for socket := range t.logSockets {
+		glog.V(2).Infof("watched path is %q", socket)
+		if err := t.TailPath(socket); err != nil {
+			glog.Info(err)
+		}
+	}
+	return nil
 }
 
 func (t *Tailer) PollLogPatterns() error {

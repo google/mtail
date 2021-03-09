@@ -13,6 +13,7 @@ import (
 	"expvar"
 	"fmt"
 	"os"
+	"regexp"
 	"sync"
 	"time"
 
@@ -48,6 +49,13 @@ const defaultReadBufferSize = 4096
 // channel.  `seekToStart` is only used for testing and only works for regular
 // files that can be seeked.
 func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine, streamFromStart bool) (LogStream, error) {
+	protocol, spec := ParsePathName(pathname)
+	switch protocol {
+	case "udp":
+		return newUdpSocketStream(ctx, wg, waker, spec, lines)
+	case "unixgram":
+		return newSocketStream(ctx, wg, waker, spec, lines)
+	}
 	fi, err := os.Stat(pathname)
 	if err != nil {
 		logErrors.Add(pathname, 1)
@@ -58,9 +66,19 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 		return newFileStream(ctx, wg, waker, pathname, fi, lines, streamFromStart)
 	case m&os.ModeType == os.ModeNamedPipe:
 		return newPipeStream(ctx, wg, waker, pathname, fi, lines)
-	case m&os.ModeType == os.ModeSocket:
-		return newSocketStream(ctx, wg, waker, pathname, fi, lines)
-	default:
-		return nil, fmt.Errorf("unsupported file object type at %q", pathname)
 	}
+	return nil, fmt.Errorf("unsupported file object type at %q", pathname)
+}
+
+func ParsePathName(pathname string) (protocol, spec string) {
+	protocol = "file"
+	spec = pathname
+
+	parser := regexp.MustCompile("(?:(?P<protocol>unixgram|udp):)?(?P<spec>.*)")
+	matches := parser.FindStringSubmatch(pathname)
+	if len(matches) == 3 {
+		protocol = matches[1]
+		spec = matches[2]
+	}
+	return
 }

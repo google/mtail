@@ -17,6 +17,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/tailer/logstream"
 	"github.com/google/mtail/internal/waker"
 	"go.opencensus.io/trace"
 )
@@ -154,8 +155,11 @@ func main() {
 		cancel()
 	}()
 
+	logs, logsockets := parseLogsArgument(logs)
+
 	opts := []mtail.Option{
 		mtail.ProgramPath(*progs),
+		mtail.LogSockets(logsockets...),
 		mtail.LogPathPatterns(logs...),
 		mtail.IgnoreRegexPattern(*ignoreRegexPattern),
 		mtail.SetBuildInfo(buildInfo),
@@ -223,4 +227,16 @@ func main() {
 		}
 		os.Exit(1)
 	}
+}
+
+func parseLogsArgument(unparsed seqStringFlag) (logs, logSockets seqStringFlag) {
+	for _, logspec := range unparsed {
+		proto, _ := logstream.ParsePathName(logspec)
+		if proto == "file" {
+			logs = append(logs, logspec)
+		} else {
+			logSockets = append(logSockets, logspec)
+		}
+	}
+	return
 }

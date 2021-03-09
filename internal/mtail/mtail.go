@@ -43,6 +43,7 @@ type Server struct {
 
 	buildInfo          BuildInfo // go build information
 	programPath        string    // path to programs to load
+	logSockets         []string  // list of sockets to watch for logs
 	logPathPatterns    []string  // list of patterns to watch for log files to tail
 	ignoreRegexPattern string
 
@@ -135,6 +136,7 @@ func (m *Server) initExporter() (err error) {
 func (m *Server) initTailer() (err error) {
 	opts := []tailer.Option{
 		tailer.IgnoreRegex(m.ignoreRegexPattern),
+		tailer.LogSockets(m.logSockets),
 		tailer.LogPatterns(m.logPathPatterns),
 		tailer.LogPatternPollWaker(m.logPatternPollWaker),
 		tailer.StaleLogGcWaker(m.staleLogGcWaker),

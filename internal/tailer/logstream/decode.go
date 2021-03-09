@@ -22,6 +22,10 @@ func decodeAndSend(ctx context.Context, lines chan<- *logline.LogLine, pathname 
 		rune  rune
 		width int
 	)
+	if partial == nil {
+		sendLine(ctx, pathname, bytes.NewBuffer(b), lines)
+		return
+	}
 	for i := 0; i < len(b) && i < n; i += width {
 		rune, width = utf8.DecodeRune(b[i:])
 		switch {
