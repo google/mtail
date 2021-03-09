@@ -191,7 +191,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 			return false
 		}
 
-		return testutil.ExpectNoDiff(t, m, r, testutil.IgnoreUnexported(sync.RWMutex{}))
+		return testutil.ExpectNoDiff(t, m, r, testutil.IgnoreUnexported(sync.RWMutex{}, Metric{}))
 	}
 	if err := quick.Check(f, nil); err != nil {
 		t.Error(err)
@@ -201,7 +201,7 @@ func TestMetricJSONRoundTrip(t *testing.T) {
 func TestTimer(t *testing.T) {
 	m := NewMetric("test", "prog", Timer, Int)
 	n := NewMetric("test", "prog", Timer, Int)
-	testutil.ExpectNoDiff(t, m, n, testutil.IgnoreUnexported(sync.RWMutex{}))
+	testutil.ExpectNoDiff(t, m, n, testutil.IgnoreUnexported(sync.RWMutex{}, Metric{}))
 	d, _ := m.GetDatum()
 	datum.IncIntBy(d, 1, time.Now().UTC())
 	lv := m.FindLabelValueOrNil([]string{})

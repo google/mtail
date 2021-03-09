@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -81,15 +82,16 @@ type LabelValue struct {
 // labels in each dimension of the Keys.
 type Metric struct {
 	sync.RWMutex
-	Name        string // Name
-	Program     string // Instantiating program
-	Kind        Kind
-	Type        Type
-	Hidden      bool          `json:",omitempty"`
-	Keys        []string      `json:",omitempty"`
-	LabelValues []*LabelValue `json:",omitempty"`
-	Source      string        `json:",omitempty"`
-	Buckets     []datum.Range `json:",omitempty"`
+	Name           string // Name
+	Program        string // Instantiating program
+	Kind           Kind
+	Type           Type
+	Hidden         bool          `json:",omitempty"`
+	Keys           []string      `json:",omitempty"`
+	LabelValues    []*LabelValue `json:",omitempty"`
+	labelValuesMap map[string]*LabelValue
+	Source         string        `json:",omitempty"`
+	Buckets        []datum.Range `json:",omitempty"`
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).
@@ -106,20 +108,28 @@ func NewMetric(name string, prog string, kind Kind, typ Type, keys ...string) *M
 // newMetric returns a new empty Metric
 func newMetric(len int) *Metric {
 	return &Metric{Keys: make([]string, len),
-		LabelValues: make([]*LabelValue, 0)}
+		LabelValues: make([]*LabelValue, 0), labelValuesMap: make(map[string]*LabelValue)}
+}
+
+//build LabelValue key
+func buildLabelValueKey(labels []string) string {
+	var buf strings.Builder
+	for _, s := range labels {
+		rs := strings.Replace(s, "-", "\\-", -1)
+		buf.WriteString(rs)
+		buf.WriteString("-")
+	}
+	return buf.String()
 }
 
 func (m *Metric) FindLabelValueOrNil(labelvalues []string) *LabelValue {
-Loop:
-	for i, lv := range m.LabelValues {
-		for j := 0; j < len(lv.Labels); j++ {
-			if lv.Labels[j] != labelvalues[j] {
-				continue Loop
-			}
-		}
-		return m.LabelValues[i]
+	k := buildLabelValueKey(labelvalues)
+	lv, ok := m.labelValuesMap[k]
+	if ok {
+		return lv
+	} else {
+		return nil
 	}
-	return nil
 }
 
 // GetDatum returns the datum named by a sequence of string label values from a
@@ -147,7 +157,10 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 			}
 			d = datum.NewBuckets(buckets)
 		}
-		m.LabelValues = append(m.LabelValues, &LabelValue{Labels: labelvalues, Value: d})
+		lv := &LabelValue{Labels: labelvalues, Value: d}
+		m.LabelValues = append(m.LabelValues, lv)
+		k := buildLabelValueKey(labelvalues)
+		m.labelValuesMap[k] = lv
 	}
 	return d, nil
 }
@@ -159,15 +172,17 @@ func (m *Metric) RemoveDatum(labelvalues ...string) error {
 	}
 	m.Lock()
 	defer m.Unlock()
-Loop:
-	for i, lv := range m.LabelValues {
-		for j := 0; j < len(lv.Labels); j++ {
-			if lv.Labels[j] != labelvalues[j] {
-				continue Loop
+	k := buildLabelValueKey(labelvalues)
+	olv, ok := m.labelValuesMap[k]
+	if ok {
+		for i, lv := range m.LabelValues {
+			if lv == olv {
+				// remove from the slice
+				m.LabelValues = append(m.LabelValues[:i], m.LabelValues[i+1:]...)
+				delete(m.labelValuesMap, k)
+				break
 			}
 		}
-		// remove from the slice
-		m.LabelValues = append(m.LabelValues[:i], m.LabelValues[i+1:]...)
 	}
 	return nil
 }
