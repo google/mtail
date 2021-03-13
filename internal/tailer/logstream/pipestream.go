@@ -92,6 +92,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				if partial.Len() > 0 {
 					sendLine(ctx, ps.pathname, partial, ps.lines)
 				}
+				glog.V(2).Infof("%v: exiting, stream has error %s", fd, err)
 				ps.mu.Lock()
 				ps.completed = true
 				ps.mu.Unlock()
