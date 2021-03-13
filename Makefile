@@ -55,7 +55,7 @@ CLEANFILES+=\
 	internal/mtail/logo.ico\
 
 # A place to install tool dependencies.
-GOBIN ?= $(firstword $(subst :, ,$(GOPATH)))/bin
+GOBIN ?= $(firstword $(subst :, ,$(shell go env GOPATH)))/bin
 export PATH := $(GOBIN):$(PATH)
 
 TOGO = $(GOBIN)/togo
@@ -140,7 +140,9 @@ internal/mtail/logo.ico.go: | internal/mtail/logo.ico $(TOGO)
 #
 .PHONY: print-version
 print-version:
-	@go version
+	which go
+	go version
+	go env
 
 ###
 ## Install rules
@@ -207,11 +209,6 @@ container: Dockerfile
 	    --build-arg commit_hash=${revision} \
 	    --build-arg build_date=$(shell date -Iseconds --utc) \
 	    .
-
-# Append the bin subdirs of every element of the GOPATH list to PATH, so we can find goyacc.
-empty :=
-space := $(empty) $(empty)
-export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPATH))))
 
 ###
 ## Fuzz testing
