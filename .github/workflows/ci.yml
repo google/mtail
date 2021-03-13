@@ -32,7 +32,7 @@ jobs:
             ${{ runner.os }}-go-
       - name: install deps
         if: steps.cache.output.cache-hit != 'true'
-        run: make --debug install_deps
+        run: go mod download
       - name: build
         run: make --debug all
       - name: test
