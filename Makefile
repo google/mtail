@@ -40,12 +40,6 @@ endif
 # all benchmarks, not per bench.
 benchtimeout := 120m
 
-# Be verbose with `go get`, if UPDATE is y then also update dependencies.
-GOGETFLAGS = -v
-ifeq ($(UPDATE),y)
-GOGETFLAGS += -u
-endif
-
 GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
 GOTESTFILES=$(shell find . -name '*_test.go')
@@ -66,27 +60,27 @@ export PATH := $(GOBIN):$(PATH)
 
 TOGO = $(GOBIN)/togo
 $(TOGO):
-	go get $(GOGETFLAGS) github.com/flazz/togo
+	go install github.com/flazz/togo@latest
 
 GOYACC = $(GOBIN)/goyacc
 $(GOYACC):
-	go get $(GOGETFLAGS) golang.org/x/tools/cmd/goyacc
+	go install golang.org/x/tools/cmd/goyacc@latest
 
 GOFUZZBUILD = $(GOBIN)/go114-fuzz-build
 $(GOFUZZBUILD):
-	go get $(GOGETFLAGS) github.com/mdempsky/go114-fuzz-build
+	go install github.com/mdempsky/go114-fuzz-build@latest
 
 GOFUZZ = $(GOBIN)/go-fuzz
 $(GOFUZZ):
-	go get $(GOGETFLAGS) github.com/dvyukov/go-fuzz/go-fuzz
+	go install github.com/dvyukov/go-fuzz/go-fuzz@latest
 
 GOTESTSUM = $(GOBIN)/gotestsum
 $(GOTESTSUM):
-	go get $(GOGETFLAGS) gotest.tools/gotestsum
+	go install gotest.tools/gotestsum@latest
 
 BENCHSTAT = $(GOBIN)/benchstat
 $(BENCHSTAT):
-	go get $(GOGETFLAGS) golang.org/x/perf/cmd/benchstat
+	go install golang.org/x/perf/cmd/benchstat@latest
 
 
 .PHONY: clean covclean crossclean depclean veryclean
@@ -296,7 +290,7 @@ covrep: coverage.html
 #
 GHI = $(GOBIN)/ghi
 $(GHI):
-	go get $(GOGETFLAGS) github.com/markbates/ghi
+	go install github.com/markbates/ghi@latest
 
 issue-fetch: | $(GHI)
 	ghi fetch
