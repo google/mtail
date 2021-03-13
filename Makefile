@@ -5,7 +5,7 @@ export GO111MODULE ?= on
 # Build these.
 TARGETS = mtail mgen mdot mfmt
 
-GO_TEST_FLAGS ?= 
+GO_TEST_FLAGS ?=
 BENCH_COUNT ?= 1
 BASE_REF ?= master
 HEAD_REF ?= $(shell git symbolic-ref HEAD -q --short | tr / - 2>/dev/null)
@@ -270,7 +270,7 @@ fuzz-min: $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 #
 .PHONY: install_deps
 install_deps: .dep-stamp
-.dep-stamp: | $(GOGENFILES) print-version
+.dep-stamp: | print-version $(GOGENFILES)
 	go mod download
 	touch $@
 
