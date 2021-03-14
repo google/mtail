@@ -114,8 +114,8 @@ func newMetric(len int) *Metric {
 //build unique key of LabelValue
 func buildLabelValueKey(labels []string) string {
 	var buf strings.Builder
-	for _, s := range labels {
-		rs := strings.Replace(s, "-", "\\-", -1)
+	for i := 0; i < len(labels); i++ {
+		rs := strings.Replace(labels[i], "-", "\\-", -1)
 		buf.WriteString(rs)
 		buf.WriteString("-")
 	}
