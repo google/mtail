@@ -163,6 +163,7 @@ func (m *Server) initHttpServer() error {
 	mux.Handle("/progz", http.HandlerFunc(m.l.ProgzHandler))
 	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
+	mux.HandleFunc("/graphite", http.HandlerFunc(m.e.HandleGraphite))
 	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
 	mux.Handle("/debug/vars", expvar.Handler())
 	mux.HandleFunc("/debug/pprof/", pprof.Index)

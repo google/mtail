@@ -18,7 +18,7 @@ const statusTemplate = `
 <body>
 <h1>mtail on {{.BindAddress}}</h1>
 <p>Build: {{.BuildInfo}}</p>
-<p>Metrics: <a href="/json">json</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
+<p>Metrics: <a href="/json">json</a>, <a href="/graphite">graphite</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
 <p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a>, <a href="/tracez">tracez</a>, <a href="/progz">progz</a></p>
 `
 
