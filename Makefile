@@ -8,7 +8,7 @@ TARGETS = mtail mgen mdot mfmt
 GO_TEST_FLAGS ?=
 BENCH_COUNT ?= 1
 BASE_REF ?= master
-HEAD_REF ?= $(shell git symbolic-ref HEAD -q --short | tr / - 2>/dev/null)
+HEAD_REF ?= $(shell git symbolic-ref HEAD -q --short)
 
 all: $(TARGETS)
 
@@ -184,16 +184,15 @@ $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(G
 	gotestsum --debug --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -cpu 1,2,4 -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 .PHONY: bench
-bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt
-
-$(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
+bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF:/=-).txt
+$(TESTRESULTS)/benchmark-results-$(HEAD_REF:/=-).txt: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
 	mkdir -p $(TESTRESULTS)
 	go test -cpu 1,2,4 -bench=. -count=$(BENCH_COUNT) -timeout=${benchtimeout} -run=^a ./... | tee $@
 
 .PHONY: benchstat
 benchstat: $(TESTRESULTS)/benchstat.txt
-$(TESTRESULTS)/benchstat.txt: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt | print-version $(BENCHSTAT)
-	(test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt && benchstat $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $< || benchstat $<) | tee $@
+$(TESTRESULTS)/benchstat.txt: $(TESTRESULTS)/benchmark-results-$(HEAD_REF:/=-).txt | print-version $(BENCHSTAT)
+	(test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF:/=-).txt && benchstat $(TESTRESULTS)/benchmark-results-$(BASE_REF:/=-).txt $< || benchstat $<) | tee $@
 
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
