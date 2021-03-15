@@ -78,10 +78,12 @@ func TestTestWakerTwoWakeups(t *testing.T) {
 	defer cancel()
 	w, awaken := waker.NewTest(ctx, 1)
 	s := make(chan struct{})
+	begin := make(chan struct{})
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
+		<-begin
 		for i := 0; i < 2; i++ {
 			c := w.Wake()
 			select {
@@ -90,15 +92,18 @@ func TestTestWakerTwoWakeups(t *testing.T) {
 			default:
 			}
 			s <- struct{}{}
-
+			<-c // wait to receive the wake
 		}
 	}()
 	go func() {
 		defer wg.Done()
+		<-begin
 		<-s
 		awaken(1)
 		<-s
+		// we don't expect anyone to call Wake() after this
 		awaken(0)
 	}()
+	close(begin)
 	wg.Wait()
 }
