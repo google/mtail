@@ -142,6 +142,22 @@ func TestFindLabelValueOrNil(t *testing.T) {
 	}
 }
 
+func TestAppendLabelValue(t *testing.T) {
+	m := NewMetric("foo", "prog", Counter, Int,"bar")
+	l := []string{"test"}
+	d0 := datum.MakeInt(66,time.Unix(0, 0))
+	lv := &LabelValue{Labels: l, Value: d0}
+	err := m.AppendLabelValue(lv)
+	if err != nil {
+		t.Errorf("Bad append %v: %v\n", d0, err)
+	}
+	d1, err := m.GetDatum(l...)
+	if err != nil {
+		t.Errorf("Bad datum %v: %v\n", d1, err)
+	}
+	testutil.ExpectNoDiff(t, d0, d1)
+}
+
 func timeGenerator(rand *rand.Rand) time.Time {
 	months := []time.Month{
 		time.January, time.February, time.March,

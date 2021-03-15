@@ -108,10 +108,11 @@ func NewMetric(name string, prog string, kind Kind, typ Type, keys ...string) *M
 // newMetric returns a new empty Metric
 func newMetric(len int) *Metric {
 	return &Metric{Keys: make([]string, len),
-		LabelValues: make([]*LabelValue, 0), labelValuesMap: make(map[string]*LabelValue)}
+		LabelValues: make([]*LabelValue, 0),
+		labelValuesMap: make(map[string]*LabelValue)}
 }
 
-//build unique key of LabelValue
+// buildLabelValueKey returns a unique key for the given labels
 func buildLabelValueKey(labels []string) string {
 	var buf strings.Builder
 	for i := 0; i < len(labels); i++ {
@@ -122,14 +123,23 @@ func buildLabelValueKey(labels []string) string {
 	return buf.String()
 }
 
+func (m *Metric) AppendLabelValue(lv *LabelValue) error {
+	if len(lv.Labels) != len(m.Keys) {
+		return errors.Errorf("Label values requested (%q) not same length as keys for metric %v", lv.Labels, m)
+	}
+	m.LabelValues = append(m.LabelValues, lv)
+	k := buildLabelValueKey(lv.Labels)
+	m.labelValuesMap[k] = lv
+	return nil
+}
+
 func (m *Metric) FindLabelValueOrNil(labelvalues []string) *LabelValue {
 	k := buildLabelValueKey(labelvalues)
 	lv, ok := m.labelValuesMap[k]
 	if ok {
 		return lv
-	} else {
-		return nil
 	}
+	return nil
 }
 
 // GetDatum returns the datum named by a sequence of string label values from a
@@ -158,9 +168,7 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 			d = datum.NewBuckets(buckets)
 		}
 		lv := &LabelValue{Labels: labelvalues, Value: d}
-		m.LabelValues = append(m.LabelValues, lv)
-		k := buildLabelValueKey(labelvalues)
-		m.labelValuesMap[k] = lv
+		m.AppendLabelValue(lv)
 	}
 	return d, nil
 }

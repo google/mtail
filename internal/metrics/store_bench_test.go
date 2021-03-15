@@ -13,7 +13,7 @@ import (
 )
 
 const maxItemsLog2 = 10
-const maxLabesLog2 = 13
+const maxLabelsLog2 = 13
 
 // newRandMetric makes a new, randomly filled Metric
 func newRandMetric(tb testing.TB, rand *rand.Rand, i int) *Metric {
@@ -125,7 +125,7 @@ func BenchmarkStore(b *testing.B) {
 	}
 }
 
-func newLabels(tb testing.TB, rand *rand.Rand, i int) []string {
+func newRandLabels(tb testing.TB, rand *rand.Rand, i int) []string {
 	lv := make([]string,i)
 	for  j := 0; j < i; j++  {
 		val, ok := quick.Value(reflect.TypeOf(""), rand)
@@ -139,7 +139,7 @@ func newLabels(tb testing.TB, rand *rand.Rand, i int) []string {
 
 func fillLabel(b *testing.B, rand *rand.Rand, items,keys int, lvs *[][]string, _ *Metric) {
 	for i := 0; i < items; i++ {
-		(*lvs)[i] = newLabels(b, rand, keys)
+		(*lvs)[i] = newRandLabels(b, rand, keys)
 	}
 }
 
@@ -173,9 +173,9 @@ func BenchmarkMetric(b *testing.B) {
 				parallelStr = "Parallel"
 			}
 			
-			for i := 1; i <= maxLabesLog2; i++ {
+			for i := 1; i <= maxLabelsLog2; i++ {
 				items := int(math.Pow(2, float64(i)))
-				lv := newLabels(b,rand,maxKeys)
+				lv := newRandLabels(b,rand,maxKeys)
 				b.Run(fmt.Sprintf("%s%s-%d", bench.name,parallelStr,items), func(b *testing.B) {
 					m := NewMetric("test", "prog", Counter, Int, lv...)
 					lvs := make([][]string,items)
