@@ -8,6 +8,7 @@ import (
 	"errors"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -129,6 +130,27 @@ func TestMetricToGraphite(t *testing.T) {
 	expected = []string{
 		"prog.bar.host.quux_com 37 1343124840\n",
 		"prog.bar.host.snuh_teevee 37 1343124840\n"}
+	testutil.ExpectNoDiff(t, expected, r)
+
+	histogramMetric := metrics.NewMetric("hist", "prog", metrics.Histogram, metrics.Buckets, "xxx")
+	lv := &metrics.LabelValue{Labels: []string{"bar"}, Value: datum.MakeBuckets([]datum.Range{{0, 10}, {10, 20}}, time.Unix(0, 0))}
+	histogramMetric.AppendLabelValue(lv)
+	d, _ = histogramMetric.GetDatum("bar")
+	datum.SetFloat(d, 1, ts)
+	datum.SetFloat(d, 5, ts)
+	datum.SetFloat(d, 15, ts)
+	datum.SetFloat(d, 12, ts)
+	datum.SetFloat(d, 19, ts)
+	datum.SetFloat(d, 1000, ts)
+	r = FakeSocketWrite(metricToGraphite, histogramMetric)
+	r = strings.Split(strings.TrimSuffix(r[0], "\n"), "\n")
+	sort.Strings(r)
+	expected = []string{
+		"prog.hist.xxx.bar 1052 1343124840",
+		"prog.hist.xxx.bar.bin_10 2 1343124840",
+		"prog.hist.xxx.bar.bin_20 3 1343124840",
+		"prog.hist.xxx.bar.bin_inf 1 1343124840",
+		"prog.hist.xxx.bar.count 6 1343124840"}
 	testutil.ExpectNoDiff(t, expected, r)
 
 	*graphitePrefix = prefix

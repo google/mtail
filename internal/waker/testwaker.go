@@ -48,7 +48,7 @@ func NewTest(ctx context.Context, n int) (Waker, wakeFunc) {
 	}()
 	wakeFunc := func(after int) {
 		<-initDone
-		glog.InfoDepth(1, "test yielding to Wakee")
+		glog.InfoDepth(1, "TestWaker yielding to Wakee")
 		for i := 0; i < t.n; i++ {
 			t.wait <- struct{}{}
 		}
@@ -63,7 +63,7 @@ func NewTest(ctx context.Context, n int) (Waker, wakeFunc) {
 			<-t.wakeeDone
 		}
 		t.n = after
-		glog.InfoDepth(1, "Wakee yielding to test")
+		glog.InfoDepth(1, "Wakee yielding to TestWaker")
 	}
 	return t, wakeFunc
 }

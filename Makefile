@@ -5,10 +5,10 @@ export GO111MODULE ?= on
 # Build these.
 TARGETS = mtail mgen mdot mfmt
 
-GO_TEST_FLAGS ?= 
+GO_TEST_FLAGS ?=
 BENCH_COUNT ?= 1
 BASE_REF ?= master
-HEAD_REF ?= $(shell git symbolic-ref HEAD -q --short | tr / - 2>/dev/null)
+HEAD_REF ?= $(shell git symbolic-ref HEAD -q --short)
 
 all: $(TARGETS)
 
@@ -40,12 +40,6 @@ endif
 # all benchmarks, not per bench.
 benchtimeout := 120m
 
-# Be verbose with `go get`, if UPDATE is y then also update dependencies.
-GOGETFLAGS = -v
-ifeq ($(UPDATE),y)
-GOGETFLAGS += -u
-endif
-
 GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
 GOTESTFILES=$(shell find . -name '*_test.go')
@@ -61,32 +55,32 @@ CLEANFILES+=\
 	internal/mtail/logo.ico\
 
 # A place to install tool dependencies.
-GOBIN ?= $(firstword $(subst :, ,$(GOPATH)))/bin
+GOBIN ?= $(firstword $(subst :, ,$(shell go env GOPATH)))/bin
 export PATH := $(GOBIN):$(PATH)
 
 TOGO = $(GOBIN)/togo
 $(TOGO):
-	go get $(GOGETFLAGS) github.com/flazz/togo
+	go install github.com/flazz/togo@latest
 
 GOYACC = $(GOBIN)/goyacc
 $(GOYACC):
-	go get $(GOGETFLAGS) golang.org/x/tools/cmd/goyacc
+	go install golang.org/x/tools/cmd/goyacc@latest
 
 GOFUZZBUILD = $(GOBIN)/go114-fuzz-build
 $(GOFUZZBUILD):
-	go get $(GOGETFLAGS) github.com/mdempsky/go114-fuzz-build
+	go install github.com/mdempsky/go114-fuzz-build@latest
 
 GOFUZZ = $(GOBIN)/go-fuzz
 $(GOFUZZ):
-	go get $(GOGETFLAGS) github.com/dvyukov/go-fuzz/go-fuzz
+	go install github.com/dvyukov/go-fuzz/go-fuzz@latest
 
 GOTESTSUM = $(GOBIN)/gotestsum
 $(GOTESTSUM):
-	go get $(GOGETFLAGS) gotest.tools/gotestsum
+	go install gotest.tools/gotestsum@latest
 
 BENCHSTAT = $(GOBIN)/benchstat
 $(BENCHSTAT):
-	go get $(GOGETFLAGS) golang.org/x/perf/cmd/benchstat
+	go install golang.org/x/perf/cmd/benchstat@latest
 
 
 .PHONY: clean covclean crossclean depclean veryclean
@@ -146,7 +140,9 @@ internal/mtail/logo.ico.go: | internal/mtail/logo.ico $(TOGO)
 #
 .PHONY: print-version
 print-version:
-	@go version
+	which go
+	go version
+	go env
 
 ###
 ## Install rules
@@ -188,16 +184,15 @@ $(TESTRESULTS)/test-output.xml $(TESTCOVERPROFILE): $(GOFILES) $(GOGENFILES) $(G
 	gotestsum --debug --junitfile $(TESTRESULTS)/test-output.xml -- $(GO_TEST_FLAGS) -cpu 1,2,4 -race -parallel 1 -coverprofile=$(TESTCOVERPROFILE) --covermode=atomic -v -timeout=${timeout} -gcflags "$(GO_GCFLAGS)" ./...
 
 .PHONY: bench
-bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt
-
-$(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
+bench: $(TESTRESULTS)/benchmark-results-$(HEAD_REF:/=-).txt
+$(TESTRESULTS)/benchmark-results-$(HEAD_REF:/=-).txt: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version .dep-stamp
 	mkdir -p $(TESTRESULTS)
 	go test -cpu 1,2,4 -bench=. -count=$(BENCH_COUNT) -timeout=${benchtimeout} -run=^a ./... | tee $@
 
 .PHONY: benchstat
 benchstat: $(TESTRESULTS)/benchstat.txt
-$(TESTRESULTS)/benchstat.txt: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt | print-version $(BENCHSTAT)
-	(test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt && benchstat $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $< || benchstat $<) | tee $@
+$(TESTRESULTS)/benchstat.txt: $(TESTRESULTS)/benchmark-results-$(HEAD_REF:/=-).txt | print-version $(BENCHSTAT)
+	(test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF:/=-).txt && benchstat $(TESTRESULTS)/benchmark-results-$(BASE_REF:/=-).txt $< || benchstat $<) | tee $@
 
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
@@ -213,11 +208,6 @@ container: Dockerfile
 	    --build-arg commit_hash=${revision} \
 	    --build-arg build_date=$(shell date -Iseconds --utc) \
 	    .
-
-# Append the bin subdirs of every element of the GOPATH list to PATH, so we can find goyacc.
-empty :=
-space := $(empty) $(empty)
-export PATH := $(PATH):$(subst $(space),:,$(patsubst %,%/bin,$(subst :, ,$(GOPATH))))
 
 ###
 ## Fuzz testing
@@ -270,7 +260,7 @@ fuzz-min: $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 #
 .PHONY: install_deps
 install_deps: .dep-stamp
-.dep-stamp: | $(GOGENFILES) print-version
+.dep-stamp: | print-version $(GOGENFILES)
 	go mod download
 	touch $@
 
@@ -296,7 +286,7 @@ covrep: coverage.html
 #
 GHI = $(GOBIN)/ghi
 $(GHI):
-	go get $(GOGETFLAGS) github.com/markbates/ghi
+	go install github.com/markbates/ghi@latest
 
 issue-fetch: | $(GHI)
 	ghi fetch

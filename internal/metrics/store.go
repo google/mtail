@@ -74,7 +74,8 @@ func (s *Store) Add(m *Metric) error {
 				d, err := v.GetDatum(oldLabel.Labels...)
 				if err == nil {
 					if err = m.RemoveDatum(oldLabel.Labels...); err == nil {
-						m.LabelValues = append(m.LabelValues, &LabelValue{Labels: oldLabel.Labels, Value: d})
+						lv := &LabelValue{Labels: oldLabel.Labels, Value: d}
+						m.AppendLabelValue(lv)
 					}
 				}
 			}
