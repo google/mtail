@@ -262,7 +262,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
 			testutil.FatalIfErr(t, err)
-			ast, err = checker.Check(ast, 1024, 1000)
+			ast, err = checker.Check(ast, 1024, 100)
 			if err == nil {
 				s := parser.Sexp{}
 				s.EmitTypes = true

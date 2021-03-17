@@ -62,8 +62,8 @@ type Server struct {
 	omitProgLabel        bool           // if set, do not put the program name in the metric labels
 	emitMetricTimestamp  bool           // if set, emit the metric's recorded timestamp
 
-	maxRegexLength    int
-	maxRecursionDepth int
+	maxRegexLength    int // if set, mtail will accept regexs upto the max length
+	maxRecursionDepth int // if set, mtail will accept parse upto the number of parsed statements deep
 }
 
 // initLoader constructs a new program loader and performs the initial load of program files in the program directory.
