@@ -17,8 +17,6 @@ import (
 	"github.com/google/mtail/internal/vm/types"
 )
 
-const kMaxRegexpLen = 1024
-
 // checker holds data for a semantic checker
 type checker struct {
 	scope *symbol.Scope // the current scope
@@ -27,16 +25,18 @@ type checker struct {
 
 	errors errors.ErrorList
 
-	depth   int
-	tooDeep bool
+	depth             int
+	tooDeep           bool
+	maxRecursionDepth int
+	maxRegexLength    int
 }
 
 // Check performs a semantic check of the astNode, and returns a potentially
 // modified astNode and either a list of errors found, or nil if the program is
 // semantically valid.  At the completion of Check, the symbol table and type
 // annotation are also complete.
-func Check(node ast.Node) (ast.Node, error) {
-	c := &checker{}
+func Check(node ast.Node, maxRegexLength int, maxRecursionDepth int) (ast.Node, error) { // TODO is there a way to inject these integers without adding them as part of this constructor?
+	c := &checker{maxRegexLength: maxRegexLength, maxRecursionDepth: maxRecursionDepth}
 	node = ast.Walk(c, node)
 	if len(c.errors) > 0 {
 		return node, c.errors
@@ -48,9 +48,9 @@ func Check(node ast.Node) (ast.Node, error) {
 // are guaranteed to exist before their use.
 func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	c.depth++
-	if c.depth > 100 {
+	if c.depth > c.maxRecursionDepth {
 		if !c.tooDeep {
-			c.errors.Add(node.Pos(), "Expression exceeded maximum recursion depth.")
+			c.errors.Add(node.Pos(), fmt.Sprintf("Expression exceeded maximum recursion depth of %d", c.maxRecursionDepth))
 			c.tooDeep = true
 		}
 		c.depth--
@@ -722,8 +722,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 // to generate its capture groups as symbols.
 func (c *checker) checkRegex(pattern string, n ast.Node) {
 	plen := len(pattern)
-	if plen > kMaxRegexpLen {
-		c.errors.Add(n.Pos(), fmt.Sprintf("Exceeded maximum regular expression pattern length of %d bytes with %d.\n\tExcessively long patterns are likely to cause compilation and runtime performance problems.", kMaxRegexpLen, plen))
+	if plen > c.maxRegexLength {
+		c.errors.Add(n.Pos(), fmt.Sprintf("Exceeded maximum regular expression pattern length of %d bytes with %d.\n\tExcessively long patterns are likely to cause compilation and runtime performance problems.", c.maxRegexLength, plen))
 		return
 	}
 	if reAst, err := types.ParseRegexp(pattern); err == nil {

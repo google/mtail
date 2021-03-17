@@ -236,3 +236,20 @@ func (opt MetricPushInterval) apply(m *Server) error {
 	m.metricPushInterval = time.Duration(opt)
 	return nil
 }
+
+// MaxRegexLength sets the maximum length an mtail regular expression can have, in terms of characters.
+type MaxRegexLength int
+
+func (opt MaxRegexLength) apply(m *Server) error {
+	m.maxRegexLength = int(opt)
+	return nil
+}
+
+// MaxRecursionDepth sets the maximum depth the abstract syntax tree built during lexation can have
+type MaxRecursionDepth int
+
+func (opt MaxRecursionDepth) apply(m *Server) error {
+
+	m.maxRecursionDepth = int(opt)
+	return nil
+}

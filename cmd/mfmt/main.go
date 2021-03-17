@@ -37,7 +37,7 @@ func main() {
 	if err != nil {
 		glog.Exit(err)
 	}
-	ast, err = checker.Check(ast)
+	ast, err = checker.Check(ast, 1024, 1000)
 	if err != nil {
 		glog.Exit(err)
 	}

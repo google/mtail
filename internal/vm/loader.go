@@ -215,7 +215,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		glog.V(1).Infof("contents match, not recompiling %q", name)
 		return nil
 	}
-	v, errs := Compile(name, &buf, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation)
+	v, errs := Compile(name, &buf, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation, l.maxRegexLength, l.maxRecursionDepth)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("compile failed for %s:\n%s", name, errs)
@@ -293,7 +293,9 @@ type Loader struct {
 	syslogUseCurrentYear bool           // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
 	omitMetricSource     bool
 
-	signalQuit chan struct{} // When closed stops the signal handler goroutine.
+	signalQuit        chan struct{} // When closed stops the signal handler goroutine.
+	maxRegexLength    int
+	maxRecursionDepth int
 }
 
 // Option configures a new program Loader.
@@ -351,6 +353,22 @@ func DumpBytecode() Option {
 func SyslogUseCurrentYear() Option {
 	return func(l *Loader) error {
 		l.syslogUseCurrentYear = true
+		return nil
+	}
+}
+
+// MaxRegexLength sets the maximum length an mtail regular expression can have, in terms of characters.
+func MaxRegexLength(regexLength int) Option {
+	return func(l *Loader) error {
+		l.maxRegexLength = regexLength
+		return nil
+	}
+}
+
+// MaxRecursionDepth sets the maximum depth the abstract syntax tree built during lexation can have
+func MaxRecursionDepth(maxRecursionLength int) Option {
+	return func(l *Loader) error {
+		l.maxRecursionDepth = maxRecursionLength
 		return nil
 	}
 }

@@ -907,7 +907,7 @@ func TestCodegen(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.source))
 			testutil.FatalIfErr(t, err)
-			ast, err = checker.Check(ast)
+			ast, err = checker.Check(ast, 1024, 1000)
 			if *codegenTestDebug {
 				s := parser.Sexp{}
 				s.EmitTypes = true
