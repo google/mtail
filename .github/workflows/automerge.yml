@@ -1,6 +1,8 @@
 name: automerge
 on:
-  pull_request:
+  # Using _target because:
+  # https://github.blog/changelog/2021-02-19-github-actions-workflows-triggered-by-dependabot-prs-will-run-with-read-only-permissions/
+  pull_request_target:
     types:
       - labeled
       - unlabeled
