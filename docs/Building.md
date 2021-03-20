@@ -1,6 +1,6 @@
 # Building mtail
 
-mtail is implemented in [Go](http://golang.org).
+`mtail` is implemented in [Go](http://golang.org).
 
 You will need to install a recent Go.
 

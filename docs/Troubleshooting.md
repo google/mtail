@@ -1,4 +1,4 @@
-# Troubleshooting
+# Troubleshooting `mtail` installations
 
 This page gives an overview of some avenues to debug your `mtail` installation.
 

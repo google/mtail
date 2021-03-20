@@ -1,4 +1,6 @@
-# Introduction
+# `mtail` Programming Guide
+
+## Introduction
 
 `mtail` is very simple and thus limits what is possible with metric
 manipulation, but is very good for getting values into the metrics.  This page

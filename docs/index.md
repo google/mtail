@@ -10,7 +10,7 @@ export their own internal state (other than via logs) and existing monitoring
 systems, such that system operators do not need to patch those applications to
 instrument them or writing custom extraction code for every such application.
 
-The extraction is controlled by [mtail programs](docs/Programming-Guide.md)
+The extraction is controlled by [mtail programs](Programming-Guide.md)
 which define patterns and actions:
 
     # simple line counter
@@ -23,7 +23,7 @@ Metrics are exported for scraping by a collector as JSON or Prometheus format
 over HTTP, or can be periodically sent to a collectd, StatsD, or Graphite
 collector socket.
 
-Read the [programming guide](docs/Programming-Guide.md) if you want to learn how
+Read the [programming guide](Programming-Guide.md) if you want to learn how
 to write mtail programs.
 
 Ask general questions on the users mailing list: https://groups.google.com/g/mtail-users
@@ -34,11 +34,11 @@ Ask general questions on the users mailing list: https://groups.google.com/g/mta
 * [Deploying `mtail`](Deploying.md)
   * [Interoperability](Interoperability.md)
   * [Troubleshooting](Troubleshooting.md)
-* [Language](Language.md)
+* [Programming Guide](Programming-Guide.md)
+  * [Language](Language.md)
   * [Metrics](Metrics.md)
-  * [Programming Guide](Programming-Guide.md)
   * [Tracking State](state.md)
   * [Testing](Testing.md)
-* [Contributing](style.md)
+* [Contributing to `mtail`](style.md)
   * [Debugging](debugging.md)
 * [FAQ](faq.md)

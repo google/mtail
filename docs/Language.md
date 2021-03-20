@@ -1,4 +1,4 @@
-# mtail Language
+# `mtail` Language Reference
 
 ## Description
 
