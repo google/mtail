@@ -1,11 +1,17 @@
 mtail - extract whitebox monitoring data from application logs for collection into a timeseries database
 ========================================================================================================
 
-mtail is a tool for extracting metrics from application logs to be exported into a timeseries database or timeseries calculator for alerting and dashboarding.
+`mtail` is a tool for extracting metrics from application logs to be exported
+into a timeseries database or timeseries calculator for alerting and
+dashboarding.
 
-It aims to fill a niche between applications that do not export their own internal state, and existing monitoring systems, without patching those applications or rewriting the same framework for custom extraction glue code.
+It fills a monitoring niche by being the glue between applications that do not
+export their own internal state (other than via logs) and existing monitoring
+systems, such that system operators do not need to patch those applications to
+instrument them or writing custom extraction code for every such application.
 
-The extraction is controlled by `mtail` programs which define patterns and actions:
+The extraction is controlled by [mtail programs](docs/Programming-Guide.md)
+which define patterns and actions:
 
     # simple line counter
     counter lines_total
@@ -14,9 +20,25 @@ The extraction is controlled by `mtail` programs which define patterns and actio
     }
 
 Metrics are exported for scraping by a collector as JSON or Prometheus format
-over HTTP, or can be periodically sent to a collectd, statsd, or Graphite
+over HTTP, or can be periodically sent to a collectd, StatsD, or Graphite
 collector socket.
 
-Read more about `mtail` in the [Programming Guide](Programming-Guide.md), [Language](Language.md), [Building from source](Building.md) from source, help for [Interoperability](Interoperability.md) with other monitoring system components, and [Deploying](Deploying.md) and [Troubleshooting](Troubleshooting.md)
+Read the [programming guide](docs/Programming-Guide.md) if you want to learn how
+to write mtail programs.
 
-Mailing list: https://groups.google.com/forum/#!forum/mtail-users
+Ask general questions on the users mailing list: https://groups.google.com/g/mtail-users
+
+## Table of Contents
+
+* [Building `mtail`](Building.md)
+* [Deploying `mtail`](Deploying.md)
+  * [Interoperability](Interoperability.md)
+  * [Troubleshooting](Troubleshooting.md)
+* [Language](Language.md)
+  * [Metrics](Metrics.md)
+  * [Programming Guide](Programming-Guide.md)
+  * [Tracking State](state.md)
+  * [Testing](Testing.md)
+* [Contributing](style.md)
+  * [Debugging](debugging.md)
+* [FAQ](faq.md)

@@ -372,4 +372,3 @@ getfilename() !~ /apache.access.?log/ {
 This will check to see if the input filename looks like
 `/var/log/apache/accesslog` and not attempt any further pattern matching on the
 log line if it doesn't.
-
