@@ -1,4 +1,4 @@
-# mtail Language
+# `mtail` Language Reference
 
 ## Description
 
@@ -365,7 +365,7 @@ define repetetive functions that perform the same extraction across many
 different actions.
 
 For example, most log file formats start with a timestamp prefix. To reduce
-dupliation of work, decorators can be used to factor out the common work of
+duplication of work, decorators can be used to factor out the common work of
 extracting the timestamp. For example, to define a decorator, use the `def`
 keyword:
 

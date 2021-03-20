@@ -1,4 +1,6 @@
-# Introduction
+# `mtail` Programming Guide
+
+## Introduction
 
 `mtail` is very simple and thus limits what is possible with metric
 manipulation, but is very good for getting values into the metrics.  This page
@@ -372,4 +374,3 @@ getfilename() !~ /apache.access.?log/ {
 This will check to see if the input filename looks like
 `/var/log/apache/accesslog` and not attempt any further pattern matching on the
 log line if it doesn't.
-

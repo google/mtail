@@ -1,4 +1,4 @@
-# Debugging mtail
+# Tips for debugging `mtail`
 
 
 ## Parser bugs

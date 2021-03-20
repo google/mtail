@@ -1,4 +1,6 @@
-# Introduction
+# Testing `mtail` programmes
+
+## Introduction
 
 By default any compile errors are logged to the standard log `/tmp/mtail.INFO`
 unless otherwise redirected.  (You can emit to standard out with
