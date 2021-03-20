@@ -127,7 +127,7 @@ func main() {
 		runtime.SetMutexProfileFraction(*mutexProfileFraction)
 	}
 	if *progs == "" {
-		glog.Exitf("mtail requires programs that in instruct it how to extract metrics from logs; please use the flag -progs to specify the directory containing the programs.")
+		glog.Exitf("mtail requires programs that instruct it how to extract metrics from logs; please use the flag -progs to specify the directory containing the programs.")
 	}
 	if !(*dumpBytecode || *dumpAst || *dumpAstTypes || *compileOnly) {
 		if len(logs) == 0 {
