@@ -28,5 +28,5 @@ jobs:
         if: >-
           github.actor == 'dependabot[bot]'
         uses: alexwilson/enable-github-automerge-action@main
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
