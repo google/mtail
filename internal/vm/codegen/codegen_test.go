@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/mtail/internal/testutil"
+	"github.com/google/mtail/internal/vm/ast"
 	"github.com/google/mtail/internal/vm/checker"
 	"github.com/google/mtail/internal/vm/code"
 	"github.com/google/mtail/internal/vm/codegen"
@@ -901,7 +902,7 @@ foo += $value_ms / 1000.0
 	}},
 }
 
-func TestCodegen(t *testing.T) {
+func TestCodeGenFromSource(t *testing.T) {
 	for _, tc := range testCodeGenPrograms {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -917,6 +918,49 @@ func TestCodegen(t *testing.T) {
 			obj, err := codegen.CodeGen(tc.name, ast)
 			testutil.FatalIfErr(t, err)
 
+			testutil.ExpectNoDiff(t, tc.prog, obj.Program, testutil.AllowUnexported(code.Instr{}))
+		})
+	}
+}
+
+var testCodeGenASTs = []struct {
+	name string
+	ast  ast.Node     // partial AST to be converted to bytecode
+	prog []code.Instr // expected bytecode
+}{
+	{
+		name: "subst",
+		ast: &ast.BuiltinExpr{
+			Name: "subst",
+			Args: &ast.ExprList{
+				Children: []ast.Node{
+					&ast.StringLit{
+						Text: "old",
+					},
+					&ast.StringLit{
+						Text: "new",
+					},
+					&ast.StringLit{
+						Text: "value",
+					},
+				},
+			},
+		},
+		prog: []code.Instr{
+			{code.Str, 0, 0},
+			{code.Str, 1, 0},
+			{code.Str, 2, 0},
+			{code.Subst, 3, 0},
+		},
+	},
+}
+
+func TestCodeGenFromAST(t *testing.T) {
+	for _, tc := range testCodeGenASTs {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			obj, err := codegen.CodeGen(tc.name, tc.ast)
+			testutil.FatalIfErr(t, err)
 			testutil.ExpectNoDiff(t, tc.prog, obj.Program, testutil.AllowUnexported(code.Instr{}))
 		})
 	}
