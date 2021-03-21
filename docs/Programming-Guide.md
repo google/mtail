@@ -374,6 +374,20 @@ counter total
 
 `mtail` does not presently have a way to test if a capture group is defined or not.
 
+## Parsing numbers with extra characters
+
+Some programs will make their numbers human readable, by inserting thousands-separators (comma or full stop depending on your locale.)  You can remove them with the `subst` function:
+
+```
+/sent (?P<sent>[\d,]+) bytes  received (?P<received>[\d,]+) bytes/ {
+    # Sum total bytes across all sessions for this process
+    bytes_total["sent"] += int(subst(",", "", $sent))
+    bytes_total["received"] += int(subst(",", "", $received))
+}
+```
+
+As `subst` is of type String, the type inference will assign a Text type to bytes total, so here we must explicitly instruct `mtail` that we are expecting this to be an Int by using the `int` cast function.
+
 # Avoiding unnecessary work
 
 You can stop the program if it's fed data from a log file you know you want to ignore:

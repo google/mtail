@@ -962,6 +962,37 @@ a
 			},
 		},
 	},
+	{
+		name: "subst integer",
+		prog: `counter bytes_total by dir
+/sent (?P<sent>[\d,]+) bytes  received (?P<received>[\d,]+) bytes/ {
+    # Sum total bytes across all sessions for this process
+    bytes_total["sent"] += int(subst(",", "", $sent))
+    bytes_total["received"] += int(subst(",", "", $received))
+}`,
+		log: `Jun 28 20:44:32 backup rsync[3996]: sent 642,410,725 bytes  received 14,998,522,122 bytes  497,002.00 bytes/sec
+`,
+		errs: 0,
+		metrics: metrics.MetricSlice{
+			{
+				Name:    "bytes_total",
+				Program: "subst integer",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{"dir"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"sent"},
+						Value:  &datum.Int{Value: 642410725},
+					},
+					{
+						Labels: []string{"received"},
+						Value:  &datum.Int{Value: 14998522122},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
