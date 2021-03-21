@@ -456,6 +456,13 @@ var instructions = []struct {
 		[]interface{}{"abc", "def"},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
+	{"subst",
+		code.Instr{code.Subst, 0, 0},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"aa" /*old*/, "a" /*new*/, "caat"},
+		[]interface{}{"cat"},
+		thread{pc: 0, matches: map[int][]string{}}},
 }
 
 const testFilename = "test"
