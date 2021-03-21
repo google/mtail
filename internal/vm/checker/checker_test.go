@@ -460,6 +460,11 @@ gauge foo
 /(?P<value_ms>-?\d+)/ {
   foo += $value_ms / 1000.0
 }`},
+	{"substitution", `
+gauge foo
+/(\d,\d)/ {
+foo = subst(",", "", $1)
+}`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

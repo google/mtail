@@ -328,6 +328,11 @@ $foo =~ X {
 // {
   stop
 }`},
+
+	{"substitution", `
+/(\d,\d)/ {
+  subst(",", ",", $1)
+}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {
