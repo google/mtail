@@ -74,6 +74,9 @@ const (
 	Fcmp // floating point compare
 	Scmp // string compare
 
+	// String opcodes
+	Subst
+
 	lastOpcode
 )
 
@@ -134,6 +137,7 @@ var opNames = map[Opcode]string{
 	Icmp:        "icmp",
 	Fcmp:        "fcmp",
 	Scmp:        "scmp",
+	Subst:       "subst",
 }
 
 func (o Opcode) String() string {

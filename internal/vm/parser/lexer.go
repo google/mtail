@@ -47,6 +47,7 @@ var builtins = []string{
 	"string",
 	"strptime",
 	"strtol",
+	"subst",
 	"timestamp",
 	"tolower",
 }

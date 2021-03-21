@@ -456,6 +456,13 @@ var instructions = []struct {
 		[]interface{}{"abc", "def"},
 		[]interface{}{false},
 		thread{pc: 0, matches: map[int][]string{}}},
+	{"subst",
+		code.Instr{code.Subst, 0, 0},
+		[]*regexp.Regexp{},
+		[]string{},
+		[]interface{}{"aa" /*old*/, "a" /*new*/, "caat"},
+		[]interface{}{"cat"},
+		thread{pc: 0, matches: map[int][]string{}}},
 }
 
 const testFilename = "test"
@@ -506,8 +513,8 @@ func makeVM(i code.Instr, m []*metrics.Metric) *VM {
 
 }
 
-// code.Instructions with datum store side effects
-func TestDatumSetInstrs(t *testing.T) {
+// makeMetrics returns a few useful metrics for observing under test
+func makeMetrics() []*metrics.Metric {
 	var m []*metrics.Metric
 	m = append(m,
 		metrics.NewMetric("a", "tst", metrics.Counter, metrics.Int),
@@ -515,158 +522,138 @@ func TestDatumSetInstrs(t *testing.T) {
 		metrics.NewMetric("c", "tst", metrics.Gauge, metrics.String),
 		metrics.NewMetric("d", "tst", metrics.Histogram, metrics.Float),
 	)
+	return m
+}
 
-	// simple inc
-	v := makeVM(code.Instr{code.Inc, nil, 0}, m)
-	d, err := m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	v.t.Push(d)
-	v.execute(v.t, v.prog[0])
-	if v.terminate {
-		t.Fatalf("Execution failed, see info log.")
-	}
-	d, err = m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	if d.ValueString() != "1" {
-		t.Errorf("Unexpected value %v", d)
-	}
-	// inc by int
-	v = makeVM(code.Instr{code.Inc, 0, 0}, m)
-	d, err = m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	v.t.Push(d)
-	v.t.Push(2)
-	v.execute(v.t, v.prog[0])
-	if v.terminate {
-		t.Fatalf("Execution failed, see info log.")
-	}
-	d, err = m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	if d.ValueString() != "3" {
-		t.Errorf("Unexpected value %v", d)
-	}
-	// inc by str
-	v = makeVM(code.Instr{code.Inc, 0, 0}, m)
-	d, err = m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	v.t.Push(d)
-	v.t.Push("1")
-	v.execute(v.t, v.prog[0])
-	if v.terminate {
-		t.Fatalf("Execution failed, see info log.")
-	}
-	d, err = m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	if d.ValueString() != "4" {
-		t.Errorf("Unexpected value %v", d)
-	}
-	// iset
-	v = makeVM(code.Instr{code.Iset, nil, 0}, m)
-	d, err = m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	v.t.Push(d)
-	v.t.Push(2)
-	v.execute(v.t, v.prog[0])
-	if v.terminate {
-		t.Fatalf("Execution failed, see info log.")
-	}
-	d, err = m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	if d.ValueString() != "2" {
-		t.Errorf("Unexpected value %v", d)
-	}
-	// iset str
-	v = makeVM(code.Instr{code.Iset, nil, 0}, m)
-	d, err = m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	v.t.Push(d)
-	v.t.Push("3")
-	v.execute(v.t, v.prog[0])
-	if v.terminate {
-		t.Fatalf("Execution failed, see info log.")
-	}
-	d, err = m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	if d.ValueString() != "3" {
-		t.Errorf("Unexpected value %v", d)
-	}
-	// fset
-	v = makeVM(code.Instr{code.Fset, nil, 0}, m)
-	d, err = m[1].GetDatum()
-	testutil.FatalIfErr(t, err)
-	v.t.Push(d)
-	v.t.Push(3.1)
-	v.execute(v.t, v.prog[0])
-	if v.terminate {
-		t.Fatalf("Execution failed, see info log.")
-	}
-	d, err = m[1].GetDatum()
-	testutil.FatalIfErr(t, err)
-	if d.ValueString() != "3.1" {
-		t.Errorf("Unexpected value %v", d)
-	}
-	// fset str
-	v = makeVM(code.Instr{code.Fset, nil, 0}, m)
-	d, err = m[1].GetDatum()
-	testutil.FatalIfErr(t, err)
-	v.t.Push(d)
-	v.t.Push("4.1")
-	v.execute(v.t, v.prog[0])
-	if v.terminate {
-		t.Fatalf("Execution failed, see info log.")
-	}
-	d, err = m[1].GetDatum()
-	testutil.FatalIfErr(t, err)
-	if d.ValueString() != "4.1" {
-		t.Errorf("Unexpected value %v", d)
-	}
+type datumStoreTests struct {
+	name     string
+	i        code.Instr
+	d        int // index of a metric in makeMetrics
+	setup    func(t *thread, d datum.Datum)
+	expected string
+}
 
-	// sset
-	v = makeVM(code.Instr{code.Sset, nil, 0}, m)
-	d, err = m[2].GetDatum()
-	testutil.FatalIfErr(t, err)
-	v.t.Push(d)
-	v.t.Push("4.1")
-	v.execute(v.t, v.prog[0])
-	if v.terminate {
-		t.Fatalf("Execution failed, see info log.")
-	}
-	d, err = m[1].GetDatum()
-	testutil.FatalIfErr(t, err)
-	if d.ValueString() != "4.1" {
-		t.Errorf("Unexpected value %v", d)
-	}
+// code.Instructions with datum store side effects
+func TestDatumSetInstrs(t *testing.T) {
 
-	// dec
-	v = makeVM(code.Instr{code.Dec, nil, 0}, m)
-	d, err = m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	datum.SetInt(d, 1, time.Now())
-	v.t.Push(d)
-	v.execute(v.t, v.prog[0])
-	if v.terminate {
-		t.Fatalf("Execution failed, see info log.")
+	tests := []datumStoreTests{
+		{
+			name: "simple inc",
+			i:    code.Instr{code.Inc, nil, 0},
+			d:    0,
+			setup: func(t *thread, d datum.Datum) {
+				t.Push(d)
+			},
+			expected: "1",
+		},
+		{
+			name: "inc by int",
+			i:    code.Instr{code.Inc, 0, 0},
+			d:    0,
+			setup: func(t *thread, d datum.Datum) {
+				t.Push(d)
+				t.Push(2)
+			},
+			expected: "2",
+		},
+		{
+			name: "inc by str",
+			i:    code.Instr{code.Inc, 0, 0},
+			d:    0,
+			setup: func(t *thread, d datum.Datum) {
+				t.Push(d)
+				t.Push("4")
+			},
+			expected: "4",
+		},
+		{
+			name: "iset",
+			i:    code.Instr{code.Iset, nil, 0},
+			d:    0,
+			setup: func(t *thread, d datum.Datum) {
+				t.Push(d)
+				t.Push(2)
+			},
+			expected: "2",
+		},
+		{
+			name: "iset str",
+			i:    code.Instr{code.Iset, nil, 0},
+			d:    0,
+			setup: func(t *thread, d datum.Datum) {
+				t.Push(d)
+				t.Push("3")
+			},
+			expected: "3",
+		},
+		{
+			name: "fset",
+			i:    code.Instr{code.Fset, nil, 0},
+			d:    1,
+			setup: func(t *thread, d datum.Datum) {
+				t.Push(d)
+				t.Push(3.1)
+			},
+			expected: "3.1",
+		},
+		{
+			name: "fset str",
+			i:    code.Instr{code.Fset, nil, 0},
+			d:    1,
+			setup: func(t *thread, d datum.Datum) {
+				t.Push(d)
+				t.Push("4.1")
+			},
+			expected: "4.1",
+		},
+		{
+			name: "sset",
+			i:    code.Instr{code.Sset, nil, 0},
+			d:    2,
+			setup: func(t *thread, d datum.Datum) {
+				t.Push(d)
+				t.Push("4.1")
+			},
+			expected: "4.1",
+		},
+		{
+			name: "dec",
+			i:    code.Instr{code.Dec, nil, 0},
+			d:    0,
+			setup: func(t *thread, d datum.Datum) {
+				datum.SetInt(d, 1, time.Now())
+				t.Push(d)
+			},
+			expected: "0",
+		},
+		{
+			name: "set hist",
+			i:    code.Instr{code.Fset, nil, 0},
+			d:    3,
+			setup: func(t *thread, d datum.Datum) {
+				t.Push(d)
+				t.Push(3.1)
+			},
+			expected: "3.1",
+		},
 	}
-	d, err = m[0].GetDatum()
-	testutil.FatalIfErr(t, err)
-	if d.ValueString() != "0" {
-		t.Errorf("Unexpected value %v", d)
-	}
-
-	// set hist
-	v = makeVM(code.Instr{code.Fset, nil, 0}, m)
-	d, err = m[3].GetDatum()
-	testutil.FatalIfErr(t, err)
-	v.t.Push(d)
-	v.t.Push(3.1)
-	v.execute(v.t, v.prog[0])
-	if v.terminate {
-		t.Fatalf("Execution failed, see info log.")
-	}
-	d, err = m[3].GetDatum()
-	testutil.FatalIfErr(t, err)
-	if d.ValueString() != "3.1" {
-		t.Errorf("Unexpected value %v", d)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			m := makeMetrics()
+			v := makeVM(test.i, m)
+			d, err := m[test.d].GetDatum()
+			testutil.FatalIfErr(t, err)
+			test.setup(v.t, d)
+			v.execute(v.t, v.prog[0])
+			if v.terminate {
+				t.Fatalf("Execution failed, see INFO log.")
+			}
+			d, err = m[test.d].GetDatum()
+			testutil.FatalIfErr(t, err)
+			if d.ValueString() != test.expected {
+				t.Errorf("unexpected value for datum %#v, want: %s, got %s", d, test.expected, d.ValueString())
+			}
+		})
 	}
 }
 
