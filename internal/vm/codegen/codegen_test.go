@@ -900,6 +900,25 @@ foo += $value_ms / 1000.0
 		{code.Fset, nil, 3},
 		{code.Setmatched, true, 2},
 	}},
+	{"substitution", `
+gauge foo
+/(\d+,\d)/ {
+  foo = int(subst(",", "", $1))
+}`, []code.Instr{
+		{code.Match, 0, 2},
+		{code.Jnm, 13, 2},
+		{code.Setmatched, false, 2},
+		{code.Mload, 0, 3},
+		{code.Dload, 0, 3},
+		{code.Str, 0, 3},
+		{code.Str, 1, 3},
+		{code.Push, 0, 3},
+		{code.Capref, 1, 3},
+		{code.Subst, 3, 3},
+		{code.S2i, nil, 3},
+		{code.Iset, nil, 3},
+		{code.Setmatched, true, 2},
+	}},
 }
 
 func TestCodeGenFromSource(t *testing.T) {
