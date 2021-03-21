@@ -113,6 +113,19 @@ This can be used around any blocks later in the program.
 Both the foo and bar pattern actions will have the syslog timestamp parsed from
 them before being called.
 
+### Timestamps with strange characters in them
+
+Go's [time.Parse](https://golang.org/pkg/time/#Parse) does not like underscores in the format string, which may happen when one is attempting to parse a timestamp that does have underscores in the format.  Go treats the underscore as placeholding an optional digit.
+
+To work around this, you can use `subst()` to rewrite the timestamp before parsing:
+
+```
+/(\d{4}-\d{2}-\d{2}_\d{2}:\d{2}:\d{2}) / {
+  strptime(subst("_", " ", $1, "2006-01-02 15:04:05")
+}
+```
+
+Note the position of the underscore in the regular expression match.
 
 ## Conditional structures
 
