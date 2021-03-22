@@ -281,7 +281,9 @@ additive_expr
 
 match_expr
   : pattern_expr
-  { $$ = $1 }
+  {
+    $$ = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH}
+  }
   | primary_expr match_op opt_nl pattern_expr
   {
     $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}

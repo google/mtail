@@ -275,7 +275,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	case *ast.CondStmt:
 		switch n.Cond.(type) {
-		case *ast.BinaryExpr, *ast.PatternExpr, *ast.PatternFragment, *ast.OtherwiseStmt:
+		case *ast.BinaryExpr, *ast.PatternExpr, *ast.PatternFragment, *ast.OtherwiseStmt, *ast.UnaryExpr:
 			// OK as conditions
 		default:
 			c.errors.Add(n.Cond.Pos(), fmt.Sprintf("Can't interpret %s as a boolean expression here.\n\tTry using comparison operators to make the condition explicit.", n.Cond.Type()))
@@ -535,6 +535,21 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 			glog.V(2).Infof("Return type is %v", rType)
+			n.SetType(rType)
+
+		case parser.MATCH:
+			// Implicit match expressions, an expression of type Pattern returning Bool
+			rType := types.Bool
+			// recall the exprType is the language expectation
+			exprType := types.Function(rType, types.Pattern)
+			// and astType is the one we've been given
+			astType := types.Function(types.NewVariable(), t)
+			err := types.Unify(exprType, astType)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
+				n.SetType(types.Error)
+				return n
+			}
 			n.SetType(rType)
 
 		default:

@@ -195,9 +195,8 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			return nil, n
 		}
 		c.obj.Regexps = append(c.obj.Regexps, re)
-		// Store the location of this regular expression in the patternNode
+		// Store the location of this regular expression in the PatternExpr
 		n.Index = len(c.obj.Regexps) - 1
-		c.emit(n, code.Match, n.Index)
 		return nil, n
 
 	case *ast.StringLit:
@@ -438,6 +437,9 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			c.emit(n, code.Dec, nil)
 		case parser.NOT:
 			c.emit(n, code.Neg, nil)
+		case parser.MATCH:
+			index := n.Expr.(*ast.PatternExpr).Index
+			c.emit(n, code.Match, index)
 		}
 	case *ast.BinaryExpr:
 		switch n.Op {
@@ -529,18 +531,12 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			c.emit(n, code.Shr, nil)
 
 		case parser.MATCH:
-			if c.obj.Program[c.pc()].Opcode != code.Match {
-				c.errorf(n.Pos(), "internal compiler error: attempting to convert a patternexprnode match to smatch but saw a %s instead", c.obj.Program[c.pc()].Opcode)
-				return n
-			}
-			c.obj.Program[c.pc()].Opcode = code.Smatch
+			index := n.Rhs.(*ast.PatternExpr).Index
+			c.emit(n, code.Smatch, index)
 
 		case parser.NOT_MATCH:
-			if c.obj.Program[c.pc()].Opcode != code.Match {
-				c.errorf(n.Pos(), "internal compiler error: attempting to convert a patternexprnode match to smatch but saw a %s instead", c.obj.Program[c.pc()].Opcode)
-				return n
-			}
-			c.obj.Program[c.pc()].Opcode = code.Smatch
+			index := n.Rhs.(*ast.PatternExpr).Index
+			c.emit(n, code.Smatch, index)
 			c.emit(n, code.Not, nil)
 
 		case parser.CONCAT:

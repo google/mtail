@@ -164,6 +164,8 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			s.emit("decrement")
 		case NOT:
 			s.emit("unary-not")
+		case MATCH:
+			s.emit("match")
 		default:
 			s.emit(fmt.Sprintf("Unexpected op: %s", Kind(v.Op)))
 		}
