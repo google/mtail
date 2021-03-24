@@ -452,6 +452,10 @@ func TestParseInvalidPrograms(t *testing.T) {
 			testutil.ExpectNoDiff(t,
 				strings.Join(tc.errors, "\n"),             // want
 				strings.TrimRight(p.errors.Error(), "\n")) // got
+			if p.errors.Error() == "no errors" && *parserTestDebug {
+				s := Sexp{}
+				t.Log("AST:\n" + s.Dump(p.root))
+			}
 		})
 	}
 }
