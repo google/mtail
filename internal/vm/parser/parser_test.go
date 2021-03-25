@@ -61,7 +61,7 @@ var parserTests = []struct {
 	{"simple pattern action",
 		"/foo/ {}\n"},
 
-	{"more complex action, increment counter",
+	{"increment counter",
 		"counter lines_total\n" +
 			"/foo/ {\n" +
 			"  lines_total++\n" +
