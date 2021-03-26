@@ -22,6 +22,16 @@ Examples of unacceptable behavior by participants include:
 * Publishing others' private information, such as a physical or electronic address, without explicit permission
 * Other conduct which could reasonably be considered inappropriate in a professional setting
 
+Paraphrasing [@pinksoulstudios](https://www.pinksoulstudios.com/shop/we-believe-reclaimed-wood-sign):
+
+>In this project we believe
+>Black Lives Matter
+>Women's Rights are Human Rights
+>No human is illegal
+>Science is real
+>Love is love
+>KINDNESS IS EVERYTHING
+
 ## Our Responsibilities
 
 Project maintainers are responsible for clarifying the standards of acceptable behavior and are expected to take appropriate and fair corrective action in response to any instances of unacceptable behavior.
