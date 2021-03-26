@@ -118,3 +118,5 @@ Alternatively, some grepping around for `"DIV  shift"` (with two spaces) we can 
 The error recovery trace is interesting here, as it is a good example of what happens during the `.  error` rule.  State 14 saw a `NL` (newline) unexpectedly, so the `.` matches.  Error recovery doesn't do anything other than pop the stack until empty, so we can see the parse tree at the point of error.
 
 This knowledge can come in handy when improving the parser error messages, using the '%error' directive in `parser.y`.  See [debugging](debugging.md) for how to use it.
+
+Note also that knowing the reduce movements within the state machine is useful as the reduce is when the parser action is executed.  For example in the phrase `stmt_list: | stmt_list stmt` in `parser.y` the `stmt_list stmt` action is executed only once the leaves of the tree have already been accepted in order to be able to construct the tree.  Thus the action on the empty option of the expression is the one that creates the `ast.StmtList`, while the other side's action appends those `stmt` children to that `ast.StmtList`.
