@@ -262,7 +262,7 @@ func TestCheckInvalidPrograms(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
 			testutil.FatalIfErr(t, err)
-			ast, err = checker.Check(ast)
+			ast, err = checker.Check(ast, 0, 0)
 			if err == nil {
 				s := parser.Sexp{}
 				s.EmitTypes = true
@@ -473,7 +473,7 @@ func TestCheckValidPrograms(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ast, err := parser.Parse(tc.name, strings.NewReader(tc.program))
 			testutil.FatalIfErr(t, err)
-			ast, err = checker.Check(ast)
+			ast, err = checker.Check(ast, 0, 0)
 			if *checkerTestDebug {
 				s := parser.Sexp{}
 				s.EmitTypes = true
@@ -518,7 +518,7 @@ func TestCheckTypeExpressions(t *testing.T) {
 	for _, tc := range checkerTypeExpressionTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			ast, err := checker.Check(tc.expr)
+			ast, err := checker.Check(tc.expr, 0, 0)
 			testutil.FatalIfErr(t, err)
 
 			if !testutil.ExpectNoDiff(t, tc.expected, ast.Type().Root()) {
