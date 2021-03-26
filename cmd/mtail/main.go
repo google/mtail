@@ -63,8 +63,8 @@ var (
 	expiredMetricGcTickInterval = flag.Duration("expired_metrics_gc_interval", time.Hour, "interval between expired metric garbage collection runs")
 	staleLogGcTickInterval      = flag.Duration("stale_log_gc_interval", time.Hour, "interval between stale log garbage collection runs")
 	metricPushInterval          = flag.Duration("metric_push_interval", time.Minute, "interval between metric pushes to passive collectors")
-	maxRegexLength              = flag.Int("max_regex_length", 1024, "The maximum length a mtail regex expression can have. Excessively long patterns are likely to cause compilation and runtime performance problems.")
-	maxRecursionDepth           = flag.Int("max_recurision_depth", 100, "The maximum length a mtail statement can be, as measured by parsed tokens. Excessively long mtail expressions are likely to cause compilation and runtime performance problems.")
+	maxRegexpLength             = flag.Int("max_regexp_length", 1024, "The maximum length a mtail regexp expression can have. Excessively long patterns are likely to cause compilation and runtime performance problems.")
+	maxRecursionDepth           = flag.Int("max_recursion_depth", 100, "The maximum length a mtail statement can be, as measured by parsed tokens. Excessively long mtail expressions are likely to cause compilation and runtime performance problems.")
 
 	// Debugging flags
 	blockProfileRate     = flag.Int("block_profile_rate", 0, "Nanoseconds of block time before goroutine blocking events reported. 0 turns off.  See https://golang.org/pkg/runtime/#SetBlockProfileRate")
@@ -163,7 +163,7 @@ func main() {
 		mtail.SetBuildInfo(buildInfo),
 		mtail.OverrideLocation(loc),
 		mtail.MetricPushInterval(*metricPushInterval),
-		mtail.MaxRegexpLength(*maxRegexLength),
+		mtail.MaxRegexpLength(*maxRegexpLength),
 		mtail.MaxRecursionDepth(*maxRecursionDepth),
 	}
 	if *staleLogGcTickInterval > 0 {

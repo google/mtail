@@ -9,7 +9,7 @@ require (
 	github.com/google/go-cmp v0.5.5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.10.0
-	github.com/prometheus/common v0.20.0
+	github.com/prometheus/common v0.19.0
 	go.opencensus.io v0.23.0
 	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
