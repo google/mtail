@@ -139,7 +139,7 @@ func makeDot(name string, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	n, err = checker.Check(n, 1024, 1000)
+	n, err = checker.Check(n, 0, 0)
 	if err != nil {
 		return err
 	}

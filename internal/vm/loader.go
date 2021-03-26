@@ -215,7 +215,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		glog.V(1).Infof("contents match, not recompiling %q", name)
 		return nil
 	}
-	v, errs := Compile(name, &buf, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation, l.maxRegexLength, l.maxRecursionDepth)
+	v, errs := Compile(name, &buf, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation, l.maxRegexpLength, l.maxRecursionDepth)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("compile failed for %s:\n%s", name, errs)
@@ -294,7 +294,7 @@ type Loader struct {
 	omitMetricSource     bool
 
 	signalQuit        chan struct{} // When closed stops the signal handler goroutine.
-	maxRegexLength    int
+	maxRegexpLength   int
 	maxRecursionDepth int
 }
 
@@ -357,10 +357,10 @@ func SyslogUseCurrentYear() Option {
 	}
 }
 
-// MaxRegexLength sets the maximum length an mtail regular expression can have, in terms of characters.
-func MaxRegexLength(regexLength int) Option {
+// MaxRegexpLength sets the maximum length an mtail regular expression can have, in terms of characters.
+func MaxRegexpLength(maxRegexpLength int) Option {
 	return func(l *Loader) error {
-		l.maxRegexLength = regexLength
+		l.maxRegexpLength = maxRegexpLength
 		return nil
 	}
 }

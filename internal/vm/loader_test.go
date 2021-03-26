@@ -30,7 +30,7 @@ func TestCompileAndRun(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	l, err := NewLoader(lines, &wg, "", store, MaxRecursionDepth(100), MaxRegexLength(1024))
+	l, err := NewLoader(lines, &wg, "", store)
 	testutil.FatalIfErr(t, err)
 	if err := l.CompileAndRun("Test", strings.NewReader(testProgram)); err != nil {
 		t.Errorf("CompileAndRun returned error: %s", err)

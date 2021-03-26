@@ -62,7 +62,7 @@ type Server struct {
 	omitProgLabel        bool           // if set, do not put the program name in the metric labels
 	emitMetricTimestamp  bool           // if set, emit the metric's recorded timestamp
 
-	maxRegexLength    int // if set, mtail will accept regexs upto the max length
+	maxRegexpLength   int // if set, mtail will accept regexs upto the max length
 	maxRecursionDepth int // if set, mtail will accept parse upto the number of parsed statements deep
 }
 
@@ -70,7 +70,7 @@ type Server struct {
 func (m *Server) initLoader() error {
 	opts := []vm.Option{
 		vm.PrometheusRegisterer(m.reg),
-		vm.MaxRegexLength(m.maxRegexLength),
+		vm.MaxRegexpLength(m.maxRegexpLength),
 		vm.MaxRecursionDepth(m.maxRecursionDepth),
 	}
 	if m.compileOnly {

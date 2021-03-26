@@ -17,6 +17,11 @@ import (
 	"github.com/google/mtail/internal/vm/types"
 )
 
+const (
+	kDefaultMaxRegexpLength   = 1024
+	kDefaultMaxRecursionDepth = 100
+)
+
 // checker holds data for a semantic checker
 type checker struct {
 	scope *symbol.Scope // the current scope
@@ -35,8 +40,16 @@ type checker struct {
 // modified astNode and either a list of errors found, or nil if the program is
 // semantically valid.  At the completion of Check, the symbol table and type
 // annotation are also complete.
-func Check(node ast.Node, maxRegexLength int, maxRecursionDepth int) (ast.Node, error) { // TODO is there a way to inject these integers without adding them as part of this constructor?
-	c := &checker{maxRegexLength: maxRegexLength, maxRecursionDepth: maxRecursionDepth}
+func Check(node ast.Node, maxRegexpLength int, maxRecursionDepth int) (ast.Node, error) {
+	// set defaults
+	if maxRegexpLength == 0 {
+		maxRegexpLength = kDefaultMaxRegexpLength
+	}
+	if maxRecursionDepth == 0 {
+		maxRecursionDepth = kDefaultMaxRecursionDepth
+	}
+
+	c := &checker{maxRegexLength: maxRegexpLength, maxRecursionDepth: maxRecursionDepth}
 	node = ast.Walk(c, node)
 	if len(c.errors) > 0 {
 		return node, c.errors

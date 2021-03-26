@@ -163,7 +163,7 @@ func main() {
 		mtail.SetBuildInfo(buildInfo),
 		mtail.OverrideLocation(loc),
 		mtail.MetricPushInterval(*metricPushInterval),
-		mtail.MaxRegexLength(*maxRegexLength),
+		mtail.MaxRegexpLength(*maxRegexLength),
 		mtail.MaxRecursionDepth(*maxRecursionDepth),
 	}
 	if *staleLogGcTickInterval > 0 {

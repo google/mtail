@@ -1007,7 +1007,7 @@ func TestVmEndToEnd(t *testing.T) {
 			store := metrics.NewStore()
 			lines := make(chan *logline.LogLine, 1)
 			var wg sync.WaitGroup
-			l, err := NewLoader(lines, &wg, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource(), MaxRegexLength(1024), MaxRecursionDepth(100))
+			l, err := NewLoader(lines, &wg, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource())
 			testutil.FatalIfErr(t, err)
 			compileErrors := l.CompileAndRun(tc.name, strings.NewReader(tc.prog))
 			testutil.FatalIfErr(t, compileErrors)

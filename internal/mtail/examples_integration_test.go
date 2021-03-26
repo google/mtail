@@ -92,7 +92,7 @@ func TestExamplePrograms(t *testing.T) {
 			waker, _ := waker.NewTest(ctx, 0) // oneshot means we should never need to wake the stream
 			store := metrics.NewStore()
 			programFile := filepath.Join("../..", tc.programfile)
-			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker), mtail.MaxRecursionDepth(100), mtail.MaxRegexLength(1024))
+			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(t, err)
 
 			var wg sync.WaitGroup
@@ -133,7 +133,7 @@ func TestCompileExamplePrograms(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			s := metrics.NewStore()
-			mtail, err := mtail.New(ctx, s, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.MaxRegexLength(1024), mtail.MaxRecursionDepth(100))
+			mtail, err := mtail.New(ctx, s, mtail.ProgramPath(tc), mtail.CompileOnly, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode)
 			testutil.FatalIfErr(t, err)
 			// Ensure that run shuts down for CompileOnly
 			testutil.FatalIfErr(t, mtail.Run())
@@ -154,7 +154,7 @@ func BenchmarkProgram(b *testing.B) {
 			waker, awaken := waker.NewTest(ctx, 1)
 			store := metrics.NewStore()
 			programFile := filepath.Join("../..", bm.programfile)
-			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()), mtail.LogstreamPollWaker(waker), mtail.MaxRegexLength(1024), mtail.MaxRecursionDepth(100))
+			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(b, err)
 
 			var wg sync.WaitGroup
@@ -218,7 +218,7 @@ func TestFilePipeStreamComparison(t *testing.T) {
 
 			go func() {
 				defer wg.Done()
-				fileMtail, err := mtail.New(ctx, fileStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker), mtail.MaxRegexLength(1024), mtail.MaxRecursionDepth(100))
+				fileMtail, err := mtail.New(ctx, fileStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
 				if err != nil {
 					t.Error(err)
 				}
@@ -226,7 +226,7 @@ func TestFilePipeStreamComparison(t *testing.T) {
 					t.Error(err)
 				}
 			}()
-			pipeMtail, err := mtail.New(ctx, pipeStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(pipeName), mtail.OneShot, mtail.OmitMetricSource, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker), mtail.MaxRegexLength(1024), mtail.MaxRecursionDepth(100))
+			pipeMtail, err := mtail.New(ctx, pipeStore, mtail.ProgramPath(programFile), mtail.LogPathPatterns(pipeName), mtail.OneShot, mtail.OmitMetricSource, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
 			testutil.FatalIfErr(t, err)
 			go func() {
 				defer wg.Done()

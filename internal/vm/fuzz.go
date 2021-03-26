@@ -32,7 +32,7 @@ func Fuzz(data []byte) int {
 	// libfuzzer main, which we don't want to intercept here.
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	flag.CommandLine.Parse([]string{})
-	v, err := Compile("fuzz", bytes.NewReader(data[:offset]), dumpDebug, dumpDebug, false, nil, 1024, 100)
+	v, err := Compile("fuzz", bytes.NewReader(data[:offset]), dumpDebug, dumpDebug, false, nil, 0, 0)
 	if err != nil {
 		if dumpDebug {
 			fmt.Print(err)

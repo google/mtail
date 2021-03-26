@@ -237,11 +237,11 @@ func (opt MetricPushInterval) apply(m *Server) error {
 	return nil
 }
 
-// MaxRegexLength sets the maximum length an mtail regular expression can have, in terms of characters.
-type MaxRegexLength int
+// MaxRegexpLength sets the maximum length an mtail regular expression can have, in terms of characters.
+type MaxRegexpLength int
 
-func (opt MaxRegexLength) apply(m *Server) error {
-	m.maxRegexLength = int(opt)
+func (opt MaxRegexpLength) apply(m *Server) error {
+	m.maxRegexpLength = int(opt)
 	return nil
 }
 
