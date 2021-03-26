@@ -104,7 +104,7 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position.Position{"keywords", 17, 7, -1}},
 			{EOF, "", position.Position{"keywords", 17, 0, 0}}}},
 	{"builtins",
-		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\n", []Token{
+		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\nsubst\n", []Token{
 			{BUILTIN, "strptime", position.Position{"builtins", 0, 0, 7}},
 			{NL, "\n", position.Position{"builtins", 1, 8, -1}},
 			{BUILTIN, "timestamp", position.Position{"builtins", 1, 0, 8}},
@@ -127,7 +127,9 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position.Position{"builtins", 10, 5, -1}},
 			{BUILTIN, "string", position.Position{"builtins", 10, 0, 5}},
 			{NL, "\n", position.Position{"builtins", 11, 6, -1}},
-			{EOF, "", position.Position{"builtins", 11, 0, 0}}}},
+			{BUILTIN, "subst", position.Position{"builtins", 11, 0, 4}},
+			{NL, "\n", position.Position{"builtins", 12, 5, -1}},
+			{EOF, "", position.Position{"builtins", 12, 0, 0}}}},
 	{"numbers", "1 23 3.14 1.61.1 -1 -1.0 1h 0d 3d -1.5h 15m 24h0m0s 1e3 1e-3 .11 123.456e7", []Token{
 		{INTLITERAL, "1", position.Position{"numbers", 0, 0, 0}},
 		{INTLITERAL, "23", position.Position{"numbers", 0, 2, 3}},

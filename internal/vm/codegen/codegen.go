@@ -400,6 +400,7 @@ var builtin = map[string]code.Opcode{
 	"settime":     code.Settime,
 	"strptime":    code.Strptime,
 	"strtol":      code.S2i,
+	"subst":       code.Subst,
 	"timestamp":   code.Timestamp,
 	"tolower":     code.Tolower,
 }

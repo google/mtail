@@ -1,4 +1,4 @@
-# mtail Language
+# `mtail` Language Reference
 
 ## Description
 
@@ -365,7 +365,7 @@ define repetetive functions that perform the same extraction across many
 different actions.
 
 For example, most log file formats start with a timestamp prefix. To reduce
-dupliation of work, decorators can be used to factor out the common work of
+duplication of work, decorators can be used to factor out the common work of
 extracting the timestamp. For example, to define a decorator, use the `def`
 keyword:
 
@@ -441,6 +441,7 @@ program state.
     string argument `x`.
 *   `tolower(x)`, a function of one string argument, which returns the input `x`
     in all lowercase.
+*   `subst(old, new, val)`, a function of three arguments which returns the input `val` with all substrings `old` replaced by `new`.  It is a direct proxy of the Go [strings.ReplaceAll](https://golang.org/pkg/strings/#ReplaceAll) function.
 
 There are type coercion functions, useful for overriding the type inference made
 by the compiler if it chooses badly. (If the choice is egregious, please file a

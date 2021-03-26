@@ -1,4 +1,6 @@
-# Introduction
+# `mtail` Programming Guide
+
+## Introduction
 
 `mtail` is very simple and thus limits what is possible with metric
 manipulation, but is very good for getting values into the metrics.  This page
@@ -111,6 +113,19 @@ This can be used around any blocks later in the program.
 Both the foo and bar pattern actions will have the syslog timestamp parsed from
 them before being called.
 
+### Timestamps with strange characters in them
+
+Go's [time.Parse](https://golang.org/pkg/time/#Parse) does not like underscores in the format string, which may happen when one is attempting to parse a timestamp that does have underscores in the format.  Go treats the underscore as placeholding an optional digit.
+
+To work around this, you can use `subst()` to rewrite the timestamp before parsing:
+
+```
+/(\d{4}-\d{2}-\d{2}_\d{2}:\d{2}:\d{2}) / {
+  strptime(subst("_", " ", $1, "2006-01-02 15:04:05")
+}
+```
+
+Note the position of the underscore in the regular expression match.
 
 ## Conditional structures
 
@@ -359,6 +374,20 @@ counter total
 
 `mtail` does not presently have a way to test if a capture group is defined or not.
 
+## Parsing numbers with extra characters
+
+Some programs will make their numbers human readable, by inserting thousands-separators (comma or full stop depending on your locale.)  You can remove them with the `subst` function:
+
+```
+/sent (?P<sent>[\d,]+) bytes  received (?P<received>[\d,]+) bytes/ {
+    # Sum total bytes across all sessions for this process
+    bytes_total["sent"] += int(subst(",", "", $sent))
+    bytes_total["received"] += int(subst(",", "", $received))
+}
+```
+
+As `subst` is of type String, the type inference will assign a Text type to bytes total, so here we must explicitly instruct `mtail` that we are expecting this to be an Int by using the `int` cast function.
+
 # Avoiding unnecessary work
 
 You can stop the program if it's fed data from a log file you know you want to ignore:
@@ -372,4 +401,3 @@ getfilename() !~ /apache.access.?log/ {
 This will check to see if the input filename looks like
 `/var/log/apache/accesslog` and not attempt any further pattern matching on the
 log line if it doesn't.
-

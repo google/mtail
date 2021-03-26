@@ -1,4 +1,6 @@
-# Introduction
+# Deploying `mtail`
+
+## Introduction
 
 mtail is intended to run one per machine, and serve as monitoring glue for multiple applications running on that machine.  It runs one or more programs in a 1:1 mapping to those client applications.
 

@@ -1,4 +1,6 @@
-# Introduction
+# Metrics in `mtail`
+
+## Introduction
 
 A metric is a data type that describes a measurement.
 

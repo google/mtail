@@ -18,11 +18,11 @@ import (
 )
 
 var vmTests = []struct {
-	name          string
-	prog          string
-	log           string
-	runtimeErrors int64
-	metrics       metrics.MetricSlice
+	name    string
+	prog    string
+	log     string
+	errs    int64
+	metrics metrics.MetricSlice
 }{
 	{"single-dash-parseint",
 		`counter c
@@ -936,6 +936,63 @@ a
 			},
 		},
 	},
+	{
+		name: "subst timestamp",
+		prog: `gauge val
+/(\d{4}-\d{2}-\d{2}_\d{2}:\d{2}:\d{2}) .*: (\d+)/ {
+  strptime(subst("_", " ", $1), "2006-01-02 15:04:05")
+  val = $2
+}`,
+		log: `2021-01-03_17:34:23 CUL_MAXCUBE_FRONT credit10ms: 3494
+`,
+		errs: 0,
+		metrics: metrics.MetricSlice{
+			{
+				Name:    "val",
+				Program: "subst timestamp",
+				Kind:    metrics.Gauge,
+				Type:    metrics.Int,
+				Keys:    []string{},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{},
+						Value:  &datum.Int{Value: 3494},
+					},
+				},
+			},
+		},
+	},
+	{
+		name: "subst integer",
+		prog: `counter bytes_total by dir
+/sent (?P<sent>[\d,]+) bytes  received (?P<received>[\d,]+) bytes/ {
+    # Sum total bytes across all sessions for this process
+    bytes_total["sent"] += int(subst(",", "", $sent))
+    bytes_total["received"] += int(subst(",", "", $received))
+}`,
+		log: `Jun 28 20:44:32 backup rsync[3996]: sent 642,410,725 bytes  received 14,998,522,122 bytes  497,002.00 bytes/sec
+`,
+		errs: 0,
+		metrics: metrics.MetricSlice{
+			{
+				Name:    "bytes_total",
+				Program: "subst integer",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{"dir"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"sent"},
+						Value:  &datum.Int{Value: 642410725},
+					},
+					{
+						Labels: []string{"received"},
+						Value:  &datum.Int{Value: 14998522122},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {
@@ -945,7 +1002,7 @@ func TestVmEndToEnd(t *testing.T) {
 	for _, tc := range vmTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			progRuntimeErrorsCheck := testutil.ExpectMapExpvarDeltaWithDeadline(t, "prog_runtime_errors_total", tc.name, tc.runtimeErrors)
+			progRuntimeErrorsCheck := testutil.ExpectMapExpvarDeltaWithDeadline(t, "prog_runtime_errors_total", tc.name, tc.errs)
 
 			store := metrics.NewStore()
 			lines := make(chan *logline.LogLine, 1)

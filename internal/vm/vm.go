@@ -891,6 +891,24 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		}
 		t.Push(a + b)
 
+	case code.Subst:
+		val, verr := t.PopString()
+		if verr != nil {
+			v.errorf("%+v", verr)
+			return
+		}
+		new, nerr := t.PopString()
+		if nerr != nil {
+			v.errorf("%+v", nerr)
+			return
+		}
+		old, oerr := t.PopString()
+		if oerr != nil {
+			v.errorf("%+v", oerr)
+			return
+		}
+		t.Push(strings.Replace(val, old, new, -1))
+
 	default:
 		v.errorf("illegal instruction: %d", i.Opcode)
 	}
