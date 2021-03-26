@@ -33,7 +33,7 @@ import (
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
 %type <n> declaration decl_attribute_spec decorator_declaration decoration_statement regex_pattern match_expr
-%type <n> delete_statement var_name_spec
+%type <n> delete_statement var_name_spec implicit_match_expr
 %type <kind> type_spec
 %type <text> as_spec id_or_string
 %type <texts> by_spec by_expr_list
@@ -280,9 +280,9 @@ additive_expr
   ;
 
 match_expr
-  : pattern_expr
+  : implicit_match_expr
   {
-    $$ = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH}
+    $$ = $1
   }
   | primary_expr match_op opt_nl pattern_expr
   {
@@ -299,6 +299,13 @@ match_op
   { $$ = $1 }
   | NOT_MATCH
   { $$ = $1 }
+  ;
+
+implicit_match_expr
+  : pattern_expr
+  {
+    $$ = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH}
+  }
   ;
 
 pattern_expr
