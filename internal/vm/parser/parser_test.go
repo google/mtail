@@ -434,9 +434,13 @@ var parserInvalidPrograms = []parserInvalidProgram{
 
 	{"pattern without block",
 		`/(?P<a>.)/
+`, []string{"pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"}},
+
+	{"paired pattern without block",
+		`/(?P<a>.)/
 	/(?P<b>.)/ {}
 	`,
-		[]string{"pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"}},
+		[]string{"paired pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
