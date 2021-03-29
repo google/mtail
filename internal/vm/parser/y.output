@@ -757,6 +757,7 @@ state 87
 
 state 88
 	indexed_expr:  indexed_expr LSQUARE.arg_expr_list RSQUARE 
+	mark_pos: .    (117)
 
 	BUILTIN  shift 33
 	STRING  shift 36
@@ -767,23 +768,31 @@ state 88
 	FLOATLITERAL  shift 39
 	NOT  shift 40
 	LPAREN  shift 37
-	.  error
+	.  reduce 117 (src line 671)
 
 	arg_expr_list  goto 123
-	primary_expr  goto 65
+	primary_expr  goto 28
 	multiplicative_expr  goto 44
 	additive_expr  goto 41
 	postfix_expr  goto 93
 	unary_expr  goto 91
 	rel_expr  goto 26
 	shift_expr  goto 30
-	bitwise_expr  goto 124
+	bitwise_expr  goto 21
+	logical_expr  goto 124
 	indexed_expr  goto 32
 	id_expr  goto 43
+	concat_expr  goto 42
+	pattern_expr  goto 31
+	regex_pattern  goto 45
+	match_expr  goto 22
+	implicit_match_expr  goto 27
+	mark_pos  goto 92
 
 state 89
 	primary_expr:  BUILTIN LPAREN.RPAREN 
 	primary_expr:  BUILTIN LPAREN.arg_expr_list RPAREN 
+	mark_pos: .    (117)
 
 	BUILTIN  shift 33
 	STRING  shift 36
@@ -795,19 +804,26 @@ state 89
 	NOT  shift 40
 	LPAREN  shift 37
 	RPAREN  shift 125
-	.  error
+	.  reduce 117 (src line 671)
 
 	arg_expr_list  goto 126
-	primary_expr  goto 65
+	primary_expr  goto 28
 	multiplicative_expr  goto 44
 	additive_expr  goto 41
 	postfix_expr  goto 93
 	unary_expr  goto 91
 	rel_expr  goto 26
 	shift_expr  goto 30
-	bitwise_expr  goto 124
+	bitwise_expr  goto 21
+	logical_expr  goto 124
 	indexed_expr  goto 32
 	id_expr  goto 43
+	concat_expr  goto 42
+	pattern_expr  goto 31
+	regex_pattern  goto 45
+	match_expr  goto 22
+	implicit_match_expr  goto 27
+	mark_pos  goto 92
 
 state 90
 	logical_expr:  logical_expr.logical_op opt_nl bitwise_expr 
@@ -1248,7 +1264,7 @@ state 122
 
 state 123
 	indexed_expr:  indexed_expr LSQUARE arg_expr_list.RSQUARE 
-	arg_expr_list:  arg_expr_list.COMMA bitwise_expr 
+	arg_expr_list:  arg_expr_list.COMMA logical_expr 
 
 	RSQUARE  shift 151
 	COMMA  shift 152
@@ -1256,15 +1272,15 @@ state 123
 
 
 state 124
-	bitwise_expr:  bitwise_expr.bitwise_op opt_nl rel_expr 
-	arg_expr_list:  bitwise_expr.    (85)
+	logical_expr:  logical_expr.logical_op opt_nl bitwise_expr 
+	logical_expr:  logical_expr.logical_op opt_nl match_expr 
+	arg_expr_list:  logical_expr.    (85)
 
-	BITAND  shift 67
-	XOR  shift 69
-	BITOR  shift 68
+	AND  shift 51
+	OR  shift 52
 	.  reduce 85 (src line 465)
 
-	bitwise_op  goto 66
+	logical_op  goto 49
 
 state 125
 	primary_expr:  BUILTIN LPAREN RPAREN.    (74)
@@ -1274,7 +1290,7 @@ state 125
 
 state 126
 	primary_expr:  BUILTIN LPAREN arg_expr_list.RPAREN 
-	arg_expr_list:  arg_expr_list.COMMA bitwise_expr 
+	arg_expr_list:  arg_expr_list.COMMA logical_expr 
 
 	RPAREN  shift 153
 	COMMA  shift 152
@@ -1507,7 +1523,8 @@ state 151
 
 
 state 152
-	arg_expr_list:  arg_expr_list COMMA.bitwise_expr 
+	arg_expr_list:  arg_expr_list COMMA.logical_expr 
+	mark_pos: .    (117)
 
 	BUILTIN  shift 33
 	STRING  shift 36
@@ -1518,18 +1535,25 @@ state 152
 	FLOATLITERAL  shift 39
 	NOT  shift 40
 	LPAREN  shift 37
-	.  error
+	.  reduce 117 (src line 671)
 
-	primary_expr  goto 65
+	primary_expr  goto 28
 	multiplicative_expr  goto 44
 	additive_expr  goto 41
 	postfix_expr  goto 93
 	unary_expr  goto 91
 	rel_expr  goto 26
 	shift_expr  goto 30
-	bitwise_expr  goto 167
+	bitwise_expr  goto 21
+	logical_expr  goto 167
 	indexed_expr  goto 32
 	id_expr  goto 43
+	concat_expr  goto 42
+	pattern_expr  goto 31
+	regex_pattern  goto 45
+	match_expr  goto 22
+	implicit_match_expr  goto 27
+	mark_pos  goto 92
 
 state 153
 	primary_expr:  BUILTIN LPAREN arg_expr_list RPAREN.    (75)
@@ -1627,15 +1651,15 @@ state 166
 
 
 state 167
-	bitwise_expr:  bitwise_expr.bitwise_op opt_nl rel_expr 
-	arg_expr_list:  arg_expr_list COMMA bitwise_expr.    (86)
+	logical_expr:  logical_expr.logical_op opt_nl bitwise_expr 
+	logical_expr:  logical_expr.logical_op opt_nl match_expr 
+	arg_expr_list:  arg_expr_list COMMA logical_expr.    (86)
 
-	BITAND  shift 67
-	XOR  shift 69
-	BITOR  shift 68
+	AND  shift 51
+	OR  shift 52
 	.  reduce 86 (src line 471)
 
-	bitwise_op  goto 66
+	logical_op  goto 49
 
 state 168
 	by_expr_list:  by_expr_list COMMA.id_or_string 
@@ -1677,11 +1701,11 @@ state 172
 121 grammar rules, 173/16000 states
 0 shift/reduce, 0 reduce/reduce conflicts reported
 100 working sets used
-memory: parser 261/240000
+memory: parser 308/240000
 139 extra closures
-285 shift entries, 9 exceptions
-99 goto entries
-161 entries saved by goto default
-Optimizer space used: output 239/240000
-239 table entries, 5 zero
+283 shift entries, 9 exceptions
+100 goto entries
+181 entries saved by goto default
+Optimizer space used: output 235/240000
+235 table entries, 0 zero
 maximum spread: 66, maximum offset: 168

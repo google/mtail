@@ -463,12 +463,12 @@ id_expr
 
 /* Argument expression list describes the part of a builtin call inside the parentheses. */
 arg_expr_list
-  : bitwise_expr
+  : logical_expr
   {
     $$ = &ast.ExprList{}
     $$.(*ast.ExprList).Children = append($$.(*ast.ExprList).Children, $1)
   }
-  | arg_expr_list COMMA bitwise_expr
+  | arg_expr_list COMMA logical_expr
   {
     $$ = $1
     $$.(*ast.ExprList).Children = append($$.(*ast.ExprList).Children, $3)
