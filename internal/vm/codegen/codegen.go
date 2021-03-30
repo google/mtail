@@ -50,6 +50,7 @@ func (c *codegen) errorf(pos *position.Position, format string, args ...interfac
 }
 
 func (c *codegen) emit(n ast.Node, opcode code.Opcode, operand interface{}) {
+	glog.V(2).Infof("emitting a node %#v from line %d as %s %v\n", n, n.Pos().Line, opcode, operand)
 	c.obj.Program = append(c.obj.Program, code.Instr{opcode, operand, n.Pos().Line})
 }
 
@@ -197,6 +198,10 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		c.obj.Regexps = append(c.obj.Regexps, re)
 		// Store the location of this regular expression in the PatternExpr
 		n.Index = len(c.obj.Regexps) - 1
+		return nil, n
+
+	case *ast.PatternFragment:
+		// Skip, const pattern fragments are concatenated into PatternExpr storage, not executable.
 		return nil, n
 
 	case *ast.StringLit:
@@ -363,8 +368,9 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 
 var typedOperators = map[int]map[types.Type]code.Opcode{
 	parser.PLUS: {types.Int: code.Iadd,
-		types.Float:  code.Fadd,
-		types.String: code.Cat},
+		types.Float:   code.Fadd,
+		types.String:  code.Cat,
+		types.Pattern: code.Cat},
 	parser.MINUS: {types.Int: code.Isub,
 		types.Float: code.Fsub},
 	parser.MUL: {types.Int: code.Imul,
@@ -538,9 +544,6 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			index := n.Rhs.(*ast.PatternExpr).Index
 			c.emit(n, code.Smatch, index)
 			c.emit(n, code.Not, nil)
-
-		case parser.CONCAT:
-			// skip
 
 		default:
 			c.errorf(n.Pos(), "unexpected op %v", n.Op)

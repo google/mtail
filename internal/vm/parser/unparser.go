@@ -141,8 +141,6 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			u.emit(" += ")
 		case MOD:
 			u.emit(" % ")
-		case CONCAT:
-			u.emit(" + ")
 		case MATCH:
 			u.emit(" =~ ")
 		case NOT_MATCH:

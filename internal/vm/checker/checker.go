@@ -457,18 +457,6 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 
-		case parser.CONCAT:
-			rType = types.Pattern
-			exprType := types.Function(rType, rType, rType)
-			astType := types.Function(lT, rT, types.NewVariable())
-			err := types.Unify(exprType, astType)
-			if err != nil {
-				// Commented because these type mismatch errors appear to be unhelpful.
-				//c.errors.Add(n.Pos(), err.Error())
-				n.SetType(types.Error)
-				return n
-			}
-
 		case parser.MATCH, parser.NOT_MATCH:
 			rType = types.Bool
 			exprType := types.Function(types.NewVariable(), types.Pattern, rType)
@@ -794,7 +782,7 @@ type patternEvaluator struct {
 func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	switch v := n.(type) {
 	case *ast.BinaryExpr:
-		if v.Op != parser.CONCAT {
+		if v.Op != parser.PLUS {
 			p.errors.Add(v.Pos(), fmt.Sprintf("internal error: Invalid operator in concatenation: %v", v))
 			return nil, n
 		}

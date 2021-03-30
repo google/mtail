@@ -66,7 +66,6 @@ import (
 %token <op> LT GT LE GE EQ NE
 %token <op> BITAND XOR BITOR NOT AND OR
 %token <op> ADD_ASSIGN ASSIGN
-%token <op> CONCAT
 %token <op> MATCH NOT_MATCH
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
@@ -344,11 +343,11 @@ concat_expr
   { $$ = $1 }
   | concat_expr PLUS opt_nl regex_pattern
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: CONCAT}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: PLUS}
   }
   | concat_expr PLUS opt_nl id_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: CONCAT}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: PLUS}
   }
   ;
 

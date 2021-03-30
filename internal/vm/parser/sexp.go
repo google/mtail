@@ -116,8 +116,6 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			s.emit("+=")
 		case MOD:
 			s.emit("%")
-		case CONCAT:
-			s.emit("++")
 		case MATCH:
 			s.emit("=~")
 		case NOT_MATCH:
