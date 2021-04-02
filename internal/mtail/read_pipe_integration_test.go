@@ -28,6 +28,7 @@ func TestReadFromPipe(t *testing.T) {
 
 	testutil.FatalIfErr(t, unix.Mkfifo(logFile, 0600))
 
+	// TODO: race if this openfile happens after teststartserver.
 	f, err := os.OpenFile(logFile, os.O_RDWR|syscall.O_NONBLOCK, 0600)
 	testutil.FatalIfErr(t, err)
 	defer func() {
@@ -40,7 +41,7 @@ func TestReadFromPipe(t *testing.T) {
 	lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 3)
 
 	testutil.WriteString(t, f, "1\n2\n3\n")
-	m.PollWatched(1)
+	m.PollWatched(0)
 
 	lineCountCheck()
 }

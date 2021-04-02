@@ -29,11 +29,10 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker := waker.NewTestAlways()
 
-	// TODO(#486): Open the file WRONLY after the logstream starts.
-	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
 
-	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
+	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 
 	testutil.WriteString(t, f, "1\n")
@@ -70,11 +69,10 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker := waker.NewTestAlways()
 
-	// TODO(#486): Open the file WRONLY after the logstream starts.
-	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
 
-	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
+	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 
 	testutil.WriteString(t, f, "1\n")
