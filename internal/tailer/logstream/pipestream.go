@@ -6,8 +6,6 @@ package logstream
 import (
 	"bytes"
 	"context"
-	"errors"
-	"io"
 	"os"
 	"sync"
 	"syscall"
@@ -51,6 +49,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		return err
 	}
 	glog.V(2).Infof("opened new pipe %v", fd)
+
 	var total int
 	wg.Add(1)
 	go func() {
@@ -68,16 +67,14 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			ps.completed = true
 			ps.mu.Unlock()
 		}()
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		SetReadDeadlineOnDone(ctx, fd)
+
 		b := make([]byte, 0, defaultReadBufferSize)
 		capB := cap(b)
 		partial := bytes.NewBufferString("")
-		var timedout bool
 		for {
-			// Set idle timeout
-			if err := fd.SetReadDeadline(time.Now().Add(defaultReadTimeout)); err != nil {
-				logErrors.Add(ps.pathname, 1)
-				glog.V(2).Infof("%s: %s", ps.pathname, err)
-			}
 			n, err := fd.Read(b[:capB])
 			glog.V(2).Infof("%v: read %d bytes, err is %v", fd, n, err)
 
@@ -90,66 +87,25 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				ps.mu.Unlock()
 			}
 
-			var perr *os.PathError
-			if errors.As(err, &perr) && perr.Timeout() && n == 0 {
-				glog.V(2).Info("timed out")
-				timedout = true
-				// Named Pipes EOF only when the writer has closed, so we look
-				// for a timeout on read to detect a writer stall and thus let
-				// us check below for cancellation.
-				goto Sleep
-			}
-			// Per pipe(7): If all file descriptors referring to the write end
-			// of a pipe have been closed, then an attempt to read(2) from the
-			// pipe will see end-of-file (read(2) will return 0).
-			// All other errors also finish the stream and are counted.
-			// However when the pipe is freshly opened
-			if err != nil {
-				if err != io.EOF {
-					glog.Info(err)
-					logErrors.Add(ps.pathname, 1)
+			if err != nil && IsEndOrCancel(err) {
+				glog.V(2).Infof("%v: %s: exiting", fd, err)
+				if partial.Len() > 0 {
+					sendLine(ctx, ps.pathname, partial, ps.lines)
 				}
-				glog.V(2).Infof("%v: stream has errored, exiting", fd)
 				ps.mu.Lock()
 				ps.completed = true
 				ps.mu.Unlock()
 				return
 			}
 
-			// No error implies there's more to read, unless it looks like
-			// context is Done.
-			if err == nil && ctx.Err() == nil {
-				continue
-			}
-
-		Sleep:
-			// If we've stalled or it looks like the context is done, then test to see if it's time to exit.
-			if timedout || ctx.Err() != nil {
-				timedout = false
-				// Test to see if it's time to exit.
-				select {
-				case <-ctx.Done():
-					glog.V(2).Infof("%v: context has been cancelled, exiting", fd)
-					if partial.Len() > 0 {
-						sendLine(ctx, ps.pathname, partial, ps.lines)
-					}
-					ps.mu.Lock()
-					ps.completed = true
-					ps.mu.Unlock()
-					return
-				default:
-					// keep going
-				}
-			}
 			// Yield and wait
 			glog.V(2).Infof("%v: waiting", fd)
 			select {
 			case <-ctx.Done():
-				// Same for cancellation; this makes tests stable, but
-				// could argue exiting immediately is less surprising.
-				// Assumption is that this doesn't make a difference in
-				// production.
-				glog.V(2).Infof("%v: Cancelled after next read", fd)
+				// Exit immediately; cancelled context is going to cause the
+				// next read to be interrupted and exit, so don't bother going
+				// around the loop again.
+				return
 			case <-waker.Wake():
 				// sleep until next Wake()
 				glog.V(2).Infof("%v: Wake received", fd)
