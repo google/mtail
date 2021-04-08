@@ -27,6 +27,14 @@ jobs:
       - name: automerge
         if: >-
           github.actor == 'dependabot[bot]'
-        uses: alexwilson/enable-github-automerge-action@main
+        uses: octokit/graphql-action@v2.2.20
+        with:
+          query: |
+            mutation enablePullRequestAutoMerge($id: ID!) {
+              enablePullRequestAutoMerge(input: {pullRequestId: $id}) {
+                clientMutationId
+              }
+            }
+          id: ${{ github.event.pull_request.node_id }}
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
