@@ -334,10 +334,10 @@ $foo =~ X {
   subst(",", ",", $1)
 }`},
 
-	// 	{"pattern in arg expr list", `
-	// /(\d,\d)/ {
-	//     subst(/,/, "", $1)
-	// }`},
+	{"pattern in arg expr list", `
+	/(\d,\d)/ {
+	    subst(/,/, "", $1)
+	}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {

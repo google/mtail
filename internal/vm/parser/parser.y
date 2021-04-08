@@ -33,7 +33,7 @@ import (
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
 %type <n> declaration decl_attribute_spec decorator_declaration decoration_stmt regex_pattern match_expr
-%type <n> delete_stmt var_name_spec
+%type <n> delete_stmt var_name_spec builtin_expr arg_expr
 %type <kind> type_spec
 %type <text> as_spec id_or_string
 %type <texts> by_spec by_expr_list
@@ -404,14 +404,8 @@ postfix_op
 primary_expr
   : indexed_expr
   { $$ = $1 }
-  | BUILTIN LPAREN RPAREN
-  {
-    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: nil}
-  }
-  | BUILTIN LPAREN arg_expr_list RPAREN
-  {
-    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: $3}
-  }
+  | builtin_expr
+  { $$ = $1 }
   | CAPREF
   {
     $$ = &ast.CaprefTerm{tokenpos(mtaillex), $1, false, nil}
@@ -461,18 +455,38 @@ id_expr
   }
   ;
 
+/* Builtin expression describes the builtin function calls. */
+builtin_expr
+  : BUILTIN LPAREN RPAREN
+  {
+    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: nil}
+  }
+  | BUILTIN LPAREN arg_expr_list RPAREN
+  {
+    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: $3}
+  }
+  ;
+
+
 /* Argument expression list describes the part of a builtin call inside the parentheses. */
 arg_expr_list
-  : logical_expr
+  : arg_expr
   {
     $$ = &ast.ExprList{}
     $$.(*ast.ExprList).Children = append($$.(*ast.ExprList).Children, $1)
   }
-  | arg_expr_list COMMA logical_expr
+  | arg_expr_list COMMA arg_expr
   {
     $$ = $1
     $$.(*ast.ExprList).Children = append($$.(*ast.ExprList).Children, $3)
   }
+  ;
+
+arg_expr
+  : logical_expr
+  { $$ = $1 }
+  | pattern_expr
+  { $$ = $1 }
   ;
 
 /* Regular expression pattern describes a regular expression literal. */
