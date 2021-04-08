@@ -29,11 +29,11 @@ import (
     duration time.Duration
 }
 
-%type <n> stmt_list stmt arg_expr_list compound_stmt conditional_stmt expr_stmt
+%type <n> stmt_list stmt arg_expr_list compound_stmt conditional_stmt conditional_expr expr_stmt
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
 %type <n> declaration decl_attribute_spec decorator_declaration decoration_stmt regex_pattern match_expr
-%type <n> delete_stmt var_name_spec implicit_match_expr
+%type <n> delete_stmt var_name_spec
 %type <kind> type_spec
 %type <text> as_spec id_or_string
 %type <texts> by_spec by_expr_list
@@ -77,10 +77,10 @@ import (
 // The %error directive takes a list of tokens describing a parser state in error, and an error message.
 // See "Generating LR syntax error messages from examples", Jeffery, ACM TOPLAS Volume 24 Issue 5 Sep 2003.
 %error stmt_list stmt expr_stmt mark_pos DIV in_regex INVALID  : "unexpected end of file, expecting '/' to end regex"
-%error stmt_list stmt conditional_stmt logical_expr LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
-%error stmt_list stmt conditional_stmt logical_expr compound_stmt ELSE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
+%error stmt_list stmt conditional_stmt conditional_expr LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
+%error stmt_list stmt conditional_stmt conditional_expr compound_stmt ELSE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
 %error stmt_list stmt conditional_stmt OTHERWISE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
-%error stmt_list stmt conditional_stmt logical_expr compound_stmt conditional_stmt logical_expr LSQUARE : "unexpected indexing of an expression"
+%error stmt_list stmt conditional_stmt conditional_expr compound_stmt conditional_stmt conditional_expr LSQUARE : "unexpected indexing of an expression"
 %error stmt_list stmt conditional_stmt pattern_expr NL : "statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"
 
 %%
@@ -142,11 +142,11 @@ stmt
 
 /* Conditional statement is a test condition, and then actions executed depending on the result of the test. */
 conditional_stmt
-  : logical_expr compound_stmt ELSE compound_stmt
+  : conditional_expr compound_stmt ELSE compound_stmt
   {
     $$ = &ast.CondStmt{$1, $2, $4, nil}
   }
-  | logical_expr compound_stmt
+  | conditional_expr compound_stmt
   {
     if $1 != nil {
       $$ = &ast.CondStmt{$1, $2, nil, nil}
@@ -159,6 +159,18 @@ conditional_stmt
     o := &ast.OtherwiseStmt{tokenpos(mtaillex)}
     $$ = &ast.CondStmt{o, $2, nil, nil}
   }
+  ;
+
+conditional_expr
+  : pattern_expr
+  { $$ = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH} }
+  | pattern_expr logical_op opt_nl logical_expr
+  {
+    $$ = &ast.BinaryExpr{Lhs: &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH},
+       Rhs: $4, Op: $2}
+  }
+  | logical_expr
+                { $$ = $1 }
   ;
 
 /* Expression statement is a statement that is also an expression. */
@@ -300,11 +312,7 @@ add_op
 
 /* Match expressions perform pattern matching against the left hand side. */
 match_expr
-  : implicit_match_expr
-  {
-    $$ = $1
-  }
-  | primary_expr match_op opt_nl pattern_expr
+  : primary_expr match_op opt_nl pattern_expr
   {
     $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
@@ -321,13 +329,6 @@ match_op
   { $$ = $1 }
   ;
 
-/* Implicit match expression has only a pattern, and matches against the line of input. */
-implicit_match_expr
-  : pattern_expr
-  {
-    $$ = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH}
-  }
-  ;
 
 /* Pattern expression constructs a regular expression. */
 pattern_expr

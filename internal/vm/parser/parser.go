@@ -168,7 +168,7 @@ const mtailEofCode = 1
 const mtailErrCode = 2
 const mtailInitialStackSize = 16
 
-//line parser.y:696
+//line parser.y:697
 
 //  tokenpos returns the position of the current token.
 func tokenpos(mtaillex mtailLexer) position.Position {
@@ -188,155 +188,153 @@ var mtailExca = [...]int{
 	-2, 0,
 	-1, 2,
 	1, 1,
-	15, 117,
-	28, 117,
-	34, 117,
-	-2, 89,
+	15, 118,
+	28, 118,
+	34, 118,
+	-2, 90,
 	-1, 24,
-	65, 21,
-	-2, 67,
-	-1, 108,
-	15, 117,
-	28, 117,
-	34, 117,
-	-2, 89,
+	65, 24,
+	-2, 68,
+	-1, 107,
+	15, 118,
+	28, 118,
+	34, 118,
+	-2, 90,
 }
 
 const mtailPrivate = 57344
 
-const mtailLast = 258
+const mtailLast = 235
 
 var mtailAct = [...]int{
-	159, 14, 91, 44, 43, 29, 28, 41, 45, 30,
-	93, 31, 48, 24, 106, 123, 47, 153, 26, 107,
-	152, 151, 152, 89, 54, 169, 168, 65, 53, 88,
-	92, 64, 50, 19, 22, 21, 51, 52, 2, 90,
-	98, 81, 82, 94, 42, 127, 13, 65, 51, 52,
-	166, 84, 83, 61, 50, 11, 25, 143, 20, 10,
-	15, 46, 12, 114, 33, 162, 36, 34, 35, 46,
-	141, 38, 39, 51, 52, 113, 115, 67, 69, 68,
-	105, 117, 74, 75, 76, 77, 78, 79, 118, 108,
-	124, 124, 104, 40, 1, 119, 86, 87, 120, 121,
-	122, 134, 37, 97, 96, 126, 163, 16, 71, 72,
-	128, 29, 137, 129, 130, 101, 102, 100, 131, 24,
-	103, 116, 148, 149, 65, 65, 147, 142, 145, 65,
-	150, 146, 154, 157, 156, 65, 144, 65, 155, 19,
-	70, 133, 132, 71, 72, 172, 171, 80, 62, 99,
-	13, 165, 164, 161, 167, 112, 160, 95, 111, 11,
-	25, 63, 20, 10, 15, 49, 12, 61, 33, 170,
-	36, 34, 35, 46, 66, 38, 39, 85, 33, 73,
-	36, 34, 35, 46, 18, 38, 39, 158, 135, 136,
-	55, 33, 27, 36, 34, 35, 46, 40, 38, 39,
-	139, 138, 110, 9, 8, 7, 37, 40, 109, 6,
-	140, 16, 32, 23, 17, 5, 37, 125, 4, 33,
-	40, 36, 34, 35, 46, 3, 38, 39, 0, 37,
-	56, 57, 58, 59, 60, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 37,
+	162, 22, 46, 21, 30, 92, 42, 28, 29, 44,
+	43, 32, 88, 31, 105, 24, 125, 19, 157, 117,
+	27, 156, 47, 155, 156, 62, 51, 172, 171, 89,
+	90, 64, 65, 61, 48, 49, 78, 79, 62, 87,
+	129, 91, 13, 76, 75, 64, 65, 72, 74, 73,
+	50, 11, 25, 26, 20, 10, 15, 70, 12, 169,
+	35, 2, 38, 36, 37, 45, 58, 40, 41, 45,
+	35, 143, 38, 36, 37, 45, 113, 40, 41, 116,
+	141, 81, 82, 83, 84, 85, 86, 94, 95, 33,
+	165, 126, 126, 98, 97, 114, 106, 134, 39, 33,
+	112, 104, 1, 16, 68, 69, 166, 128, 39, 127,
+	137, 107, 67, 29, 101, 102, 100, 77, 144, 103,
+	24, 115, 19, 150, 151, 62, 146, 152, 153, 62,
+	148, 154, 149, 147, 159, 62, 62, 62, 160, 145,
+	158, 133, 164, 68, 69, 163, 118, 99, 142, 96,
+	119, 120, 175, 174, 71, 121, 122, 123, 170, 35,
+	124, 38, 36, 37, 45, 66, 40, 41, 13, 168,
+	167, 111, 173, 130, 110, 93, 131, 11, 25, 132,
+	20, 10, 15, 80, 12, 18, 35, 63, 38, 36,
+	37, 45, 59, 40, 41, 161, 35, 39, 38, 36,
+	37, 45, 135, 40, 41, 60, 139, 138, 136, 52,
+	109, 58, 9, 8, 7, 33, 140, 53, 54, 55,
+	56, 57, 108, 6, 39, 33, 34, 23, 17, 16,
+	5, 14, 4, 3, 39,
 }
 
 var mtailPact = [...]int{
-	-1000, -1000, 146, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
-	-1000, 34, -1000, -1000, -4, -26, -1000, -41, 225, 133,
-	197, 29, -1000, -1000, 76, -1000, 40, -1000, -15, -3,
-	56, -1000, -33, -37, -1000, -1000, -1000, 169, -1000, -1000,
-	169, 66, 2, -1000, 81, -1000, -1000, -1000, 61, -46,
-	-1000, -1000, -1000, -1000, -1000, 131, -1000, -1000, -1000, -1000,
-	-1000, -1000, 36, -26, 111, -1000, -46, -1000, -1000, -1000,
-	-1000, -1000, -1000, -46, -1000, -1000, -1000, -1000, -1000, -1000,
-	-46, -1000, -1000, -46, -46, -46, -1000, -1000, 169, 156,
-	-16, -1000, 19, 76, -1000, -46, -1000, -1000, -46, -46,
-	-1000, -1000, -1000, -1000, 2, -26, 169, -1000, 42, 189,
-	-1000, -1000, -1000, 47, -26, -1000, 26, 169, 169, 197,
-	169, 169, 169, -42, 21, -1000, -44, -1000, 169, 34,
-	169, -1000, 29, -1000, -1000, -1000, -1000, -1000, 129, 41,
-	122, 16, -1000, -1000, 40, 56, -1000, -1000, 21, 21,
-	66, -1000, 169, -1000, 81, -1000, -1000, -1000, -38, -1000,
-	-1000, -1000, -1000, -39, -1000, -1000, -1000, 21, 129, 116,
-	-1000, -1000, -1000,
+	-1000, -1000, 164, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
+	-1000, 42, -1000, -1000, -23, -23, -1000, -39, 212, 177,
+	137, -7, -7, -1000, 72, -1000, 19, -1, -1000, -11,
+	-20, -1000, 39, 174, -33, -30, -1000, -1000, -1000, 174,
+	-1000, -1000, 47, -1000, 56, -1000, 80, -1000, 77, -1000,
+	-1000, -1000, 147, -1000, -1000, -1000, -1000, -1000, -1000, 49,
+	-23, 111, -1000, -46, -1000, -1000, -46, -1000, -1000, -1000,
+	-46, -46, -1000, -1000, -1000, -46, -46, -46, -1000, -1000,
+	-46, -1000, -1000, -1000, -1000, -1000, -1000, -1000, 72, 174,
+	48, -21, -1000, -46, -1000, -1000, -46, -1000, -1000, -46,
+	-1000, -1000, -1000, -1000, 19, 32, -23, 38, 195, -1000,
+	-1000, -1000, 57, -23, -1000, 40, 174, -1000, 174, 42,
+	174, 174, 174, 137, 174, -40, -7, -1000, -43, -1000,
+	174, 174, 174, -1000, -1000, -1000, -1000, -1000, 118, 66,
+	140, 25, -1000, -1000, -7, -1, -1000, -1000, -1000, 39,
+	-7, -7, -1000, -1000, 47, -1000, 174, -1000, 56, 80,
+	-1000, -36, -1000, -1000, -1000, -1000, -37, -1000, -1000, -1000,
+	-7, 118, 123, -1000, -1000, -1000,
 }
 
 var mtailPgo = [...]int{
-	0, 38, 225, 15, 12, 218, 215, 214, 6, 3,
-	7, 10, 2, 213, 18, 9, 35, 1, 212, 4,
-	44, 11, 209, 208, 205, 204, 8, 34, 203, 202,
-	192, 190, 189, 0, 188, 187, 184, 179, 177, 174,
-	165, 157, 149, 147, 140, 112, 106, 94, 14, 30,
-	75,
+	0, 61, 233, 16, 34, 232, 231, 230, 228, 4,
+	2, 9, 12, 5, 227, 11, 6, 20, 1, 226,
+	10, 53, 3, 223, 222, 214, 213, 13, 7, 212,
+	210, 209, 208, 0, 202, 195, 185, 183, 175, 154,
+	165, 149, 147, 117, 112, 110, 106, 102, 79, 14,
+	100,
 }
 
 var mtailR1 = [...]int{
 	0, 47, 1, 1, 2, 2, 2, 2, 2, 2,
-	2, 2, 2, 2, 5, 5, 5, 6, 6, 4,
-	7, 7, 13, 13, 17, 17, 17, 17, 40, 40,
-	16, 16, 39, 39, 39, 14, 14, 37, 37, 37,
-	37, 37, 37, 15, 15, 38, 38, 10, 10, 41,
-	41, 27, 27, 27, 43, 43, 30, 21, 20, 20,
-	20, 9, 9, 42, 42, 42, 42, 12, 12, 11,
-	11, 44, 44, 8, 8, 8, 8, 8, 8, 8,
-	8, 8, 18, 18, 19, 3, 3, 26, 22, 36,
-	36, 23, 23, 23, 23, 29, 29, 31, 31, 31,
-	31, 31, 34, 35, 35, 32, 45, 46, 46, 46,
-	46, 24, 25, 28, 28, 33, 33, 49, 50, 48,
-	48,
+	2, 2, 2, 2, 5, 5, 5, 6, 6, 6,
+	7, 7, 4, 8, 8, 14, 14, 18, 18, 18,
+	18, 40, 40, 17, 17, 39, 39, 39, 15, 15,
+	37, 37, 37, 37, 37, 37, 16, 16, 38, 38,
+	11, 11, 41, 41, 28, 28, 43, 43, 22, 21,
+	21, 21, 10, 10, 42, 42, 42, 42, 13, 13,
+	12, 12, 44, 44, 9, 9, 9, 9, 9, 9,
+	9, 9, 9, 19, 19, 20, 3, 3, 27, 23,
+	36, 36, 24, 24, 24, 24, 30, 30, 31, 31,
+	31, 31, 31, 34, 35, 35, 32, 45, 46, 46,
+	46, 46, 25, 26, 29, 29, 33, 33, 49, 50,
+	48, 48,
 }
 
 var mtailR2 = [...]int{
 	0, 1, 0, 2, 1, 1, 1, 1, 1, 1,
-	1, 3, 1, 1, 4, 2, 2, 1, 2, 3,
-	1, 1, 4, 4, 1, 1, 4, 4, 1, 1,
-	1, 4, 1, 1, 1, 1, 4, 1, 1, 1,
-	1, 1, 1, 1, 4, 1, 1, 1, 4, 1,
-	1, 1, 4, 4, 1, 1, 1, 1, 1, 4,
-	4, 1, 4, 1, 1, 1, 1, 1, 2, 1,
-	2, 1, 1, 1, 3, 4, 1, 1, 1, 3,
-	1, 1, 1, 4, 1, 1, 3, 5, 3, 0,
-	1, 2, 2, 2, 1, 1, 1, 1, 1, 1,
-	1, 1, 2, 1, 3, 2, 2, 1, 1, 3,
-	3, 4, 3, 4, 2, 1, 1, 0, 0, 0,
-	1,
+	1, 3, 1, 1, 4, 2, 2, 1, 4, 1,
+	1, 2, 3, 1, 1, 4, 4, 1, 1, 4,
+	4, 1, 1, 1, 4, 1, 1, 1, 1, 4,
+	1, 1, 1, 1, 1, 1, 1, 4, 1, 1,
+	1, 4, 1, 1, 4, 4, 1, 1, 1, 1,
+	4, 4, 1, 4, 1, 1, 1, 1, 1, 2,
+	1, 2, 1, 1, 1, 3, 4, 1, 1, 1,
+	3, 1, 1, 1, 4, 1, 1, 3, 5, 3,
+	0, 1, 2, 2, 2, 1, 1, 1, 1, 1,
+	1, 1, 1, 2, 1, 3, 2, 2, 1, 1,
+	3, 3, 4, 3, 4, 2, 1, 1, 0, 0,
+	0, 1,
 }
 
 var mtailChk = [...]int{
-	-1000, -47, -1, -2, -5, -6, -22, -24, -25, -28,
-	17, 13, 20, 4, -17, 18, 65, -7, -36, -49,
-	16, -16, -27, -13, -11, 14, -14, -30, -8, -12,
-	-15, -21, -18, 22, 25, 26, 24, 60, 29, 30,
-	51, -10, -20, -19, -9, -26, 27, -19, -4, -40,
-	58, 52, 53, -4, 65, -31, 5, 6, 7, 8,
-	9, 34, 15, 28, -11, -8, -39, 48, 50, 49,
-	-44, 32, 33, -37, 42, 43, 44, 45, 46, 47,
-	-43, 56, 57, 55, 54, -38, 40, 41, 62, 60,
-	-17, -12, -49, -11, -12, -41, 38, 37, 38, -42,
-	36, 34, 35, 39, -20, 19, -48, 65, -1, -23,
-	-29, 27, 24, -50, 27, -4, 10, -48, -48, -48,
-	-48, -48, -48, -3, -17, 61, -3, 61, -48, -48,
-	-48, -4, -16, -27, 59, -34, -32, -45, 12, 11,
-	21, 23, -4, 31, -14, -15, -21, -8, -17, -17,
-	-10, 63, 64, 61, -9, -26, -19, -12, -35, -33,
-	27, 24, 24, -46, 30, 29, 34, -17, 64, 64,
-	-33, 30, 29,
+	-1000, -47, -1, -2, -5, -7, -23, -25, -26, -29,
+	17, 13, 20, 4, -6, 18, 65, -8, -36, -49,
+	16, -22, -18, -14, -12, 14, -21, -17, -28, -13,
+	-9, -27, -15, 51, -19, 22, 25, 26, 24, 60,
+	29, 30, -16, -20, -11, 27, -10, -20, -4, 58,
+	-4, 65, -31, 5, 6, 7, 8, 9, 34, 15,
+	28, -12, -9, -40, 52, 53, -40, -44, 32, 33,
+	38, -39, 48, 50, 49, 55, 54, -43, 56, 57,
+	-37, 42, 43, 44, 45, 46, 47, -13, -12, 62,
+	60, -18, -13, -38, 40, 41, -41, 38, 37, -42,
+	36, 34, 35, 39, -21, -49, 19, -1, -24, -30,
+	27, 24, -50, 27, -4, 10, -48, 65, -48, -48,
+	-48, -48, -48, -48, -48, -3, -18, 61, -3, 61,
+	-48, -48, -48, -4, 59, -34, -32, -45, 12, 11,
+	21, 23, -4, 31, -18, -17, -28, -27, -20, -15,
+	-18, -18, -22, -9, -16, 63, 64, 61, -11, -10,
+	-13, -35, -33, 27, 24, 24, -46, 30, 29, 34,
+	-18, 64, 64, -33, 30, 29,
 }
 
 var mtailDef = [...]int{
 	2, -2, -2, 3, 4, 5, 6, 7, 8, 9,
-	10, 0, 12, 13, 0, 0, 17, 0, 0, 0,
-	0, 24, 25, 20, -2, 90, 30, 51, 69, 61,
-	35, 56, 73, 0, 76, 77, 78, 117, 80, 81,
-	0, 43, 57, 82, 47, 58, 84, 117, 15, 119,
-	2, 28, 29, 16, 18, 0, 97, 98, 99, 100,
-	101, 118, 0, 0, 114, 69, 119, 32, 33, 34,
-	70, 71, 72, 119, 37, 38, 39, 40, 41, 42,
-	119, 54, 55, 119, 119, 119, 45, 46, 117, 117,
-	0, 61, 0, 67, 68, 119, 49, 50, 119, 119,
-	63, 64, 65, 66, 11, 0, 117, 120, -2, 88,
-	94, 95, 96, 0, 0, 112, 0, 0, 0, 117,
-	117, 117, 0, 0, 85, 74, 0, 79, 0, 117,
-	0, 14, 26, 27, 19, 91, 92, 93, 0, 0,
-	0, 0, 111, 113, 31, 36, 52, 53, 22, 23,
-	44, 83, 117, 75, 48, 59, 60, 62, 102, 103,
-	115, 116, 105, 106, 107, 108, 87, 86, 0, 0,
-	104, 109, 110,
+	10, 0, 12, 13, 0, 0, 20, 0, 0, 0,
+	0, 17, 19, 23, -2, 91, 58, 27, 28, 62,
+	70, 59, 33, 0, 74, 0, 77, 78, 79, 0,
+	81, 82, 38, 83, 46, 85, 50, 118, 15, 2,
+	16, 21, 0, 98, 99, 100, 101, 102, 119, 0,
+	0, 115, 70, 120, 31, 32, 120, 71, 72, 73,
+	120, 120, 35, 36, 37, 120, 120, 120, 56, 57,
+	120, 40, 41, 42, 43, 44, 45, 69, 68, 0,
+	0, 0, 62, 120, 48, 49, 120, 52, 53, 120,
+	64, 65, 66, 67, 11, 0, 0, -2, 89, 95,
+	96, 97, 0, 0, 113, 0, 0, 121, 0, 118,
+	0, 0, 0, 118, 0, 0, 86, 75, 0, 80,
+	0, 0, 0, 14, 22, 92, 93, 94, 0, 0,
+	0, 0, 112, 114, 18, 29, 30, 60, 61, 34,
+	25, 26, 54, 55, 39, 84, 0, 76, 47, 51,
+	63, 103, 104, 116, 117, 106, 107, 108, 109, 88,
+	87, 0, 0, 105, 110, 111,
 }
 
 var mtailTok1 = [...]int{
@@ -362,7 +360,7 @@ var mtailErrorMessages = [...]struct {
 	token int
 	msg   string
 }{
-	{113, 4, "unexpected end of file, expecting '/' to end regex"},
+	{112, 4, "unexpected end of file, expecting '/' to end regex"},
 	{18, 1, "unexpected end of file, expecting '}' to end block"},
 	{18, 1, "unexpected end of file, expecting '}' to end block"},
 	{18, 1, "unexpected end of file, expecting '}' to end block"},
@@ -807,57 +805,58 @@ mtaildefault:
 		}
 	case 17:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:167
+//line parser.y:166
 		{
-			mtailVAL.n = nil
+			mtailVAL.n = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: mtailDollar[1].n, Op: MATCH}
 		}
 	case 18:
-		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
-//line parser.y:169
+		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
+//line parser.y:168
 		{
-			mtailVAL.n = mtailDollar[1].n
+			mtailVAL.n = &ast.BinaryExpr{Lhs: &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: mtailDollar[1].n, Op: MATCH},
+				Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
 		}
 	case 19:
-		mtailDollar = mtailS[mtailpt-3 : mtailpt+1]
-//line parser.y:175
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:173
 		{
-			mtailVAL.n = mtailDollar[2].n
+			mtailVAL.n = mtailDollar[1].n
 		}
 	case 20:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:183
+//line parser.y:179
 		{
-			mtailVAL.n = mtailDollar[1].n
+			mtailVAL.n = nil
 		}
 	case 21:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:185
+		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
+//line parser.y:181
 		{
 			mtailVAL.n = mtailDollar[1].n
 		}
 	case 22:
-		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:191
+		mtailDollar = mtailS[mtailpt-3 : mtailpt+1]
+//line parser.y:187
 		{
-			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
+			mtailVAL.n = mtailDollar[2].n
 		}
 	case 23:
-		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
 //line parser.y:195
 		{
-			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
+			mtailVAL.n = mtailDollar[1].n
 		}
 	case 24:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:203
+//line parser.y:197
 		{
 			mtailVAL.n = mtailDollar[1].n
 		}
 	case 25:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:205
+		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
+//line parser.y:203
 		{
-			mtailVAL.n = mtailDollar[1].n
+			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
 		}
 	case 26:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
@@ -866,575 +865,581 @@ mtaildefault:
 			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
 		}
 	case 27:
-		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:211
-		{
-			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
-		}
-	case 28:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:218
-		{
-			mtailVAL.op = mtailDollar[1].op
-		}
-	case 29:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:220
-		{
-			mtailVAL.op = mtailDollar[1].op
-		}
-	case 30:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:226
+//line parser.y:215
 		{
 			mtailVAL.n = mtailDollar[1].n
 		}
-	case 31:
+	case 28:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:217
+		{
+			mtailVAL.n = mtailDollar[1].n
+		}
+	case 29:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:228
+//line parser.y:219
 		{
 			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
 		}
+	case 30:
+		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
+//line parser.y:223
+		{
+			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
+		}
+	case 31:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:230
+		{
+			mtailVAL.op = mtailDollar[1].op
+		}
 	case 32:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:235
+//line parser.y:232
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
 	case 33:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:237
-		{
-			mtailVAL.op = mtailDollar[1].op
-		}
-	case 34:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:239
-		{
-			mtailVAL.op = mtailDollar[1].op
-		}
-	case 35:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:245
+//line parser.y:238
 		{
 			mtailVAL.n = mtailDollar[1].n
 		}
-	case 36:
+	case 34:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:247
+//line parser.y:240
 		{
 			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
 		}
+	case 35:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:247
+		{
+			mtailVAL.op = mtailDollar[1].op
+		}
+	case 36:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:249
+		{
+			mtailVAL.op = mtailDollar[1].op
+		}
 	case 37:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:254
+//line parser.y:251
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
 	case 38:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:256
+//line parser.y:257
 		{
-			mtailVAL.op = mtailDollar[1].op
+			mtailVAL.n = mtailDollar[1].n
 		}
 	case 39:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:258
+		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
+//line parser.y:259
 		{
-			mtailVAL.op = mtailDollar[1].op
+			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
 		}
 	case 40:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:260
+//line parser.y:266
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
 	case 41:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:262
+//line parser.y:268
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
 	case 42:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:264
+//line parser.y:270
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
 	case 43:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:270
-		{
-			mtailVAL.n = mtailDollar[1].n
-		}
-	case 44:
-		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
 //line parser.y:272
 		{
-			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
+			mtailVAL.op = mtailDollar[1].op
+		}
+	case 44:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:274
+		{
+			mtailVAL.op = mtailDollar[1].op
 		}
 	case 45:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:279
+//line parser.y:276
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
 	case 46:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:281
-		{
-			mtailVAL.op = mtailDollar[1].op
-		}
-	case 47:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:287
+//line parser.y:282
 		{
 			mtailVAL.n = mtailDollar[1].n
 		}
-	case 48:
+	case 47:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:289
+//line parser.y:284
 		{
 			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
 		}
+	case 48:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:291
+		{
+			mtailVAL.op = mtailDollar[1].op
+		}
 	case 49:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:296
+//line parser.y:293
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
 	case 50:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:298
-		{
-			mtailVAL.op = mtailDollar[1].op
-		}
-	case 51:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:304
+//line parser.y:299
 		{
 			mtailVAL.n = mtailDollar[1].n
 		}
-	case 52:
+	case 51:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
+//line parser.y:301
+		{
+			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
+		}
+	case 52:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
 //line parser.y:308
 		{
-			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
+			mtailVAL.op = mtailDollar[1].op
 		}
 	case 53:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:310
+		{
+			mtailVAL.op = mtailDollar[1].op
+		}
+	case 54:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:312
+//line parser.y:316
 		{
 			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
 		}
-	case 54:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:319
-		{
-			mtailVAL.op = mtailDollar[1].op
-		}
 	case 55:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:321
+		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
+//line parser.y:320
 		{
-			mtailVAL.op = mtailDollar[1].op
+			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
 		}
 	case 56:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
 //line parser.y:327
 		{
-			mtailVAL.n = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: mtailDollar[1].n, Op: MATCH}
+			mtailVAL.op = mtailDollar[1].op
 		}
 	case 57:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:335
+//line parser.y:329
 		{
-			mtailVAL.n = &ast.PatternExpr{Expr: mtailDollar[1].n}
+			mtailVAL.op = mtailDollar[1].op
 		}
 	case 58:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:343
+//line parser.y:336
+		{
+			mtailVAL.n = &ast.PatternExpr{Expr: mtailDollar[1].n}
+		}
+	case 59:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:344
 		{
 			mtailVAL.n = mtailDollar[1].n
 		}
-	case 59:
-		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:345
-		{
-			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: PLUS}
-		}
 	case 60:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:349
+//line parser.y:346
 		{
 			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: PLUS}
 		}
 	case 61:
+		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
+//line parser.y:350
+		{
+			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: PLUS}
+		}
+	case 62:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:357
+//line parser.y:358
 		{
 			mtailVAL.n = mtailDollar[1].n
 		}
-	case 62:
+	case 63:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:359
+//line parser.y:360
 		{
 			mtailVAL.n = &ast.BinaryExpr{Lhs: mtailDollar[1].n, Rhs: mtailDollar[4].n, Op: mtailDollar[2].op}
 		}
-	case 63:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:366
-		{
-			mtailVAL.op = mtailDollar[1].op
-		}
 	case 64:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:368
+//line parser.y:367
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
 	case 65:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:370
+//line parser.y:369
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
 	case 66:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:372
+//line parser.y:371
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
 	case 67:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:378
-		{
-			mtailVAL.n = mtailDollar[1].n
-		}
-	case 68:
-		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
-//line parser.y:380
-		{
-			mtailVAL.n = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: mtailDollar[2].n, Op: mtailDollar[1].op}
-		}
-	case 69:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:388
-		{
-			mtailVAL.n = mtailDollar[1].n
-		}
-	case 70:
-		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
-//line parser.y:390
-		{
-			mtailVAL.n = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: mtailDollar[1].n, Op: mtailDollar[2].op}
-		}
-	case 71:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:397
+//line parser.y:373
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
+	case 68:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:379
+		{
+			mtailVAL.n = mtailDollar[1].n
+		}
+	case 69:
+		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
+//line parser.y:381
+		{
+			mtailVAL.n = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: mtailDollar[2].n, Op: mtailDollar[1].op}
+		}
+	case 70:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:389
+		{
+			mtailVAL.n = mtailDollar[1].n
+		}
+	case 71:
+		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
+//line parser.y:391
+		{
+			mtailVAL.n = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: mtailDollar[1].n, Op: mtailDollar[2].op}
+		}
 	case 72:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:399
+//line parser.y:398
 		{
 			mtailVAL.op = mtailDollar[1].op
 		}
 	case 73:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:405
+//line parser.y:400
+		{
+			mtailVAL.op = mtailDollar[1].op
+		}
+	case 74:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:406
 		{
 			mtailVAL.n = mtailDollar[1].n
 		}
-	case 74:
+	case 75:
 		mtailDollar = mtailS[mtailpt-3 : mtailpt+1]
-//line parser.y:407
+//line parser.y:408
 		{
 			mtailVAL.n = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: mtailDollar[1].text, Args: nil}
 		}
-	case 75:
+	case 76:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:411
+//line parser.y:412
 		{
 			mtailVAL.n = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: mtailDollar[1].text, Args: mtailDollar[3].n}
 		}
-	case 76:
+	case 77:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:415
+//line parser.y:416
 		{
 			mtailVAL.n = &ast.CaprefTerm{tokenpos(mtaillex), mtailDollar[1].text, false, nil}
 		}
-	case 77:
+	case 78:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:419
+//line parser.y:420
 		{
 			mtailVAL.n = &ast.CaprefTerm{tokenpos(mtaillex), mtailDollar[1].text, true, nil}
 		}
-	case 78:
+	case 79:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:423
+//line parser.y:424
 		{
 			mtailVAL.n = &ast.StringLit{tokenpos(mtaillex), mtailDollar[1].text}
 		}
-	case 79:
+	case 80:
 		mtailDollar = mtailS[mtailpt-3 : mtailpt+1]
-//line parser.y:427
+//line parser.y:428
 		{
 			mtailVAL.n = mtailDollar[2].n
 		}
-	case 80:
+	case 81:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:431
+//line parser.y:432
 		{
 			mtailVAL.n = &ast.IntLit{tokenpos(mtaillex), mtailDollar[1].intVal}
 		}
-	case 81:
+	case 82:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:435
+//line parser.y:436
 		{
 			mtailVAL.n = &ast.FloatLit{tokenpos(mtaillex), mtailDollar[1].floatVal}
 		}
-	case 82:
+	case 83:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:443
+//line parser.y:444
 		{
 			mtailVAL.n = &ast.IndexedExpr{Lhs: mtailDollar[1].n, Index: &ast.ExprList{}}
 		}
-	case 83:
+	case 84:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:447
+//line parser.y:448
 		{
 			mtailVAL.n = mtailDollar[1].n
 			mtailVAL.n.(*ast.IndexedExpr).Index.(*ast.ExprList).Children = append(
 				mtailVAL.n.(*ast.IndexedExpr).Index.(*ast.ExprList).Children,
 				mtailDollar[3].n.(*ast.ExprList).Children...)
 		}
-	case 84:
+	case 85:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:458
+//line parser.y:459
 		{
 			mtailVAL.n = &ast.IdTerm{tokenpos(mtaillex), mtailDollar[1].text, nil, false}
 		}
-	case 85:
+	case 86:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:466
+//line parser.y:467
 		{
 			mtailVAL.n = &ast.ExprList{}
 			mtailVAL.n.(*ast.ExprList).Children = append(mtailVAL.n.(*ast.ExprList).Children, mtailDollar[1].n)
 		}
-	case 86:
+	case 87:
 		mtailDollar = mtailS[mtailpt-3 : mtailpt+1]
-//line parser.y:471
+//line parser.y:472
 		{
 			mtailVAL.n = mtailDollar[1].n
 			mtailVAL.n.(*ast.ExprList).Children = append(mtailVAL.n.(*ast.ExprList).Children, mtailDollar[3].n)
 		}
-	case 87:
+	case 88:
 		mtailDollar = mtailS[mtailpt-5 : mtailpt+1]
-//line parser.y:480
+//line parser.y:481
 		{
 			mp := markedpos(mtaillex)
 			tp := tokenpos(mtaillex)
 			pos := ast.MergePosition(&mp, &tp)
 			mtailVAL.n = &ast.PatternLit{P: *pos, Pattern: mtailDollar[4].text}
 		}
-	case 88:
+	case 89:
 		mtailDollar = mtailS[mtailpt-3 : mtailpt+1]
-//line parser.y:491
+//line parser.y:492
 		{
 			mtailVAL.n = mtailDollar[3].n
 			d := mtailVAL.n.(*ast.VarDecl)
 			d.Kind = mtailDollar[2].kind
 			d.Hidden = mtailDollar[1].flag
 		}
-	case 89:
+	case 90:
 		mtailDollar = mtailS[mtailpt-0 : mtailpt+1]
-//line parser.y:502
+//line parser.y:503
 		{
 			mtailVAL.flag = false
 		}
-	case 90:
+	case 91:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:506
+//line parser.y:507
 		{
 			mtailVAL.flag = true
 		}
-	case 91:
+	case 92:
 		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
-//line parser.y:514
+//line parser.y:515
 		{
 			mtailVAL.n = mtailDollar[1].n
 			mtailVAL.n.(*ast.VarDecl).Keys = mtailDollar[2].texts
 		}
-	case 92:
+	case 93:
 		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
-//line parser.y:519
+//line parser.y:520
 		{
 			mtailVAL.n = mtailDollar[1].n
 			mtailVAL.n.(*ast.VarDecl).ExportedName = mtailDollar[2].text
 		}
-	case 93:
+	case 94:
 		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
-//line parser.y:524
+//line parser.y:525
 		{
 			mtailVAL.n = mtailDollar[1].n
 			mtailVAL.n.(*ast.VarDecl).Buckets = mtailDollar[2].floats
 		}
-	case 94:
+	case 95:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:529
+//line parser.y:530
 		{
 			mtailVAL.n = mtailDollar[1].n
 		}
-	case 95:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:537
-		{
-			mtailVAL.n = &ast.VarDecl{P: tokenpos(mtaillex), Name: mtailDollar[1].text}
-		}
 	case 96:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:541
+//line parser.y:538
 		{
 			mtailVAL.n = &ast.VarDecl{P: tokenpos(mtaillex), Name: mtailDollar[1].text}
 		}
 	case 97:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:549
+//line parser.y:542
 		{
-			mtailVAL.kind = metrics.Counter
+			mtailVAL.n = &ast.VarDecl{P: tokenpos(mtaillex), Name: mtailDollar[1].text}
 		}
 	case 98:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:553
+//line parser.y:550
 		{
-			mtailVAL.kind = metrics.Gauge
+			mtailVAL.kind = metrics.Counter
 		}
 	case 99:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:557
+//line parser.y:554
 		{
-			mtailVAL.kind = metrics.Timer
+			mtailVAL.kind = metrics.Gauge
 		}
 	case 100:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:561
+//line parser.y:558
 		{
-			mtailVAL.kind = metrics.Text
+			mtailVAL.kind = metrics.Timer
 		}
 	case 101:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:565
+//line parser.y:562
+		{
+			mtailVAL.kind = metrics.Text
+		}
+	case 102:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:566
 		{
 			mtailVAL.kind = metrics.Histogram
 		}
-	case 102:
+	case 103:
 		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
-//line parser.y:573
+//line parser.y:574
 		{
 			mtailVAL.texts = mtailDollar[2].texts
 		}
-	case 103:
+	case 104:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:580
+//line parser.y:581
 		{
 			mtailVAL.texts = make([]string, 0)
 			mtailVAL.texts = append(mtailVAL.texts, mtailDollar[1].text)
 		}
-	case 104:
+	case 105:
 		mtailDollar = mtailS[mtailpt-3 : mtailpt+1]
-//line parser.y:585
+//line parser.y:586
 		{
 			mtailVAL.texts = mtailDollar[1].texts
 			mtailVAL.texts = append(mtailVAL.texts, mtailDollar[3].text)
 		}
-	case 105:
+	case 106:
 		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
-//line parser.y:594
+//line parser.y:595
 		{
 			mtailVAL.text = mtailDollar[2].text
 		}
-	case 106:
+	case 107:
 		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
-//line parser.y:602
+//line parser.y:603
 		{
 			mtailVAL.floats = mtailDollar[2].floats
 		}
-	case 107:
+	case 108:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:608
+//line parser.y:609
 		{
 			mtailVAL.floats = make([]float64, 0)
 			mtailVAL.floats = append(mtailVAL.floats, mtailDollar[1].floatVal)
 		}
-	case 108:
+	case 109:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:613
+//line parser.y:614
 		{
 			mtailVAL.floats = make([]float64, 0)
 			mtailVAL.floats = append(mtailVAL.floats, float64(mtailDollar[1].intVal))
 		}
-	case 109:
+	case 110:
 		mtailDollar = mtailS[mtailpt-3 : mtailpt+1]
-//line parser.y:618
+//line parser.y:619
 		{
 			mtailVAL.floats = mtailDollar[1].floats
 			mtailVAL.floats = append(mtailVAL.floats, mtailDollar[3].floatVal)
 		}
-	case 110:
+	case 111:
 		mtailDollar = mtailS[mtailpt-3 : mtailpt+1]
-//line parser.y:623
+//line parser.y:624
 		{
 			mtailVAL.floats = mtailDollar[1].floats
 			mtailVAL.floats = append(mtailVAL.floats, float64(mtailDollar[3].intVal))
 		}
-	case 111:
+	case 112:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:631
+//line parser.y:632
 		{
 			mtailVAL.n = &ast.DecoDecl{P: markedpos(mtaillex), Name: mtailDollar[3].text, Block: mtailDollar[4].n}
 		}
-	case 112:
+	case 113:
 		mtailDollar = mtailS[mtailpt-3 : mtailpt+1]
-//line parser.y:639
+//line parser.y:640
 		{
 			mtailVAL.n = &ast.DecoStmt{markedpos(mtaillex), mtailDollar[2].text, mtailDollar[3].n, nil, nil}
 		}
-	case 113:
+	case 114:
 		mtailDollar = mtailS[mtailpt-4 : mtailpt+1]
-//line parser.y:647
+//line parser.y:648
 		{
 			mtailVAL.n = &ast.DelStmt{P: tokenpos(mtaillex), N: mtailDollar[2].n, Expiry: mtailDollar[4].duration}
 		}
-	case 114:
+	case 115:
 		mtailDollar = mtailS[mtailpt-2 : mtailpt+1]
-//line parser.y:651
+//line parser.y:652
 		{
 			mtailVAL.n = &ast.DelStmt{P: tokenpos(mtaillex), N: mtailDollar[2].n}
 		}
-	case 115:
-		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:658
-		{
-			mtailVAL.text = mtailDollar[1].text
-		}
 	case 116:
 		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
-//line parser.y:662
+//line parser.y:659
 		{
 			mtailVAL.text = mtailDollar[1].text
 		}
 	case 117:
+		mtailDollar = mtailS[mtailpt-1 : mtailpt+1]
+//line parser.y:663
+		{
+			mtailVAL.text = mtailDollar[1].text
+		}
+	case 118:
 		mtailDollar = mtailS[mtailpt-0 : mtailpt+1]
-//line parser.y:672
+//line parser.y:673
 		{
 			glog.V(2).Infof("position marked at %v", tokenpos(mtaillex))
 			mtaillex.(*parser).pos = tokenpos(mtaillex)
 		}
-	case 118:
+	case 119:
 		mtailDollar = mtailS[mtailpt-0 : mtailpt+1]
-//line parser.y:682
+//line parser.y:683
 		{
 			mtaillex.(*parser).inRegex()
 		}
