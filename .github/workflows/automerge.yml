@@ -1,8 +1,9 @@
+# This doesn't work on forked repos per the discussion in
+# https://github.com/pascalgn/automerge-action/issues/46 so don't attempt to
+# add people other than dependabot to the if field below.
 name: automerge
 on:
-  # Using _target because:
-  # https://github.blog/changelog/2021-02-19-github-actions-workflows-triggered-by-dependabot-prs-will-run-with-read-only-permissions/
-  pull_request_target:
+  pull_request:
     types:
       - labeled
       - unlabeled
@@ -25,8 +26,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: automerge
-        if: >-
-          github.actor == 'dependabot[bot]'
-        uses: alexwilson/enable-github-automerge-action@main
-        with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+        if: github.actor == 'dependabot[bot]'
+        uses: "pascalgn/automerge-action@v0.13.1"
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          MERGE_METHOD: "rebase"
+          MERGE_LABELS: ""
+          MERGE_RETRY_SLEEP: "60000"
+          MERGE_RETRIES: "61"
