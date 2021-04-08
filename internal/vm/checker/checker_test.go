@@ -465,6 +465,9 @@ gauge foo
 /(\d,\d)/ {
 foo = subst(",", "", $1)
 }`},
+	{"regexp subst", `
+subst(/\d+/, "d", "1234")
+`},
 }
 
 func TestCheckValidPrograms(t *testing.T) {

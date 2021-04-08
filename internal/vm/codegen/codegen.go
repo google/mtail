@@ -431,6 +431,14 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 				c.errorf(n.Pos(), "%s on node %v", err.Error(), n)
 				return n
 			}
+		case "subst":
+			if types.Equals(n.Args.(*ast.ExprList).Children[0].Type(), types.Pattern) {
+				index := n.Args.(*ast.ExprList).Children[0].(*ast.PatternExpr).Index
+				c.emit(n, code.Push, index)
+				c.emit(n, code.Rsubst, arglen)
+			} else {
+				c.emit(n, code.Subst, arglen)
+			}
 
 		default:
 			c.emit(n, builtin[n.Name], arglen)

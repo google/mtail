@@ -908,6 +908,23 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			return
 		}
 		t.Push(strings.Replace(val, old, new, -1))
+	case code.Rsubst:
+		pat, perr := t.PopInt()
+		if perr != nil {
+			v.errorf("%+v", perr)
+			return
+		}
+		val, verr := t.PopString()
+		if verr != nil {
+			v.errorf("%+v", verr)
+			return
+		}
+		new, nerr := t.PopString()
+		if nerr != nil {
+			v.errorf("%+v", nerr)
+			return
+		}
+		t.Push(v.re[pat].ReplaceAllLiteralString(val, new))
 
 	default:
 		v.errorf("illegal instruction: %d", i.Opcode)
