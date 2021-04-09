@@ -121,7 +121,7 @@ To work around this, you can use `subst()` to rewrite the timestamp before parsi
 
 ```
 /(\d{4}-\d{2}-\d{2}_\d{2}:\d{2}:\d{2}) / {
-  strptime(subst("_", " ", $1, "2006-01-02 15:04:05")
+  strptime(subst("_", " ", $1 ), "2006-01-02 15:04:05")
 }
 ```
 
