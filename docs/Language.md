@@ -441,7 +441,12 @@ program state.
     string argument `x`.
 *   `tolower(x)`, a function of one string argument, which returns the input `x`
     in all lowercase.
-*   `subst(old, new, val)`, a function of three arguments which returns the input `val` with all substrings `old` replaced by `new`.  It is a direct proxy of the Go [strings.ReplaceAll](https://golang.org/pkg/strings/#ReplaceAll) function.
+*   `subst(old, new, val)`, a function of three arguments which returns the
+    input `val` with all substrings or patterns `old` replaced by `new`.  When
+    given a string for `old`, it is a direct proxy of the Go
+    [strings.ReplaceAll](https://golang.org/pkg/strings/#ReplaceAll) function.
+    When given a regular expression pattern for `old`, it uses
+    [regexp.ReplaceAllLiteralString](https://golang.org/pkg/regexp/#Regexp.ReplaceAllLiteralString).
 
 There are type coercion functions, useful for overriding the type inference made
 by the compiler if it chooses badly. (If the choice is egregious, please file a
