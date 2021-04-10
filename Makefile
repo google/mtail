@@ -216,7 +216,7 @@ container: Dockerfile
 #
 
 # These flags set compatibility with OSS-Fuzz
-CXX ?= clang-9
+CXX ?= clang
 CXXFLAGS ?=
 LIB_FUZZING_ENGINE ?= -fsanitize=fuzzer
 OUT ?= .
