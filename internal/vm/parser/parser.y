@@ -32,14 +32,14 @@ import (
 %type <n> stmt_list stmt arg_expr_list compound_stmt conditional_stmt conditional_expr expr_stmt
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
-%type <n> declaration decl_attribute_spec decorator_declaration decoration_stmt regex_pattern match_expr
-%type <n> delete_stmt var_name_spec builtin_expr arg_expr
-%type <kind> type_spec
-%type <text> as_spec id_or_string
-%type <texts> by_spec by_expr_list
-%type <flag> hide_spec
+%type <n> metric_declaration metric_decl_attr_spec decorator_declaration decoration_stmt regex_pattern match_expr
+%type <n> delete_stmt metric_name_spec builtin_expr arg_expr
+%type <kind> metric_type_spec
+%type <text> metric_as_spec id_or_string
+%type <texts> metric_by_spec metric_by_expr_list
+%type <flag> metric_hide_spec
 %type <op> rel_op shift_op bitwise_op logical_op add_op mul_op match_op postfix_op
-%type <floats> buckets_spec buckets_list
+%type <floats> metric_buckets_spec metric_buckets_list
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
@@ -114,7 +114,7 @@ stmt
   { $$ = $1 }
   | expr_stmt
   { $$ = $1 }
-  | declaration
+  | metric_declaration
   { $$ = $1 }
   | decorator_declaration
   { $$ = $1 }
@@ -506,8 +506,8 @@ regex_pattern
   ;
 
 /* Declaration creates a new metric. */
-declaration
-  : hide_spec type_spec decl_attribute_spec
+metric_declaration
+  : metric_hide_spec metric_type_spec metric_decl_attr_spec
   {
     $$ = $3
     d := $$.(*ast.VarDecl)
@@ -516,8 +516,8 @@ declaration
   }
   ;
 
-/* A hide specification can mark a declaration as hidden from export. */
-hide_spec
+/* A hide specification can mark a metric as hidden from export. */
+metric_hide_spec
   : /* empty */
   {
     $$ = false
@@ -528,31 +528,31 @@ hide_spec
   }
   ;
 
-/* A declaration attribute specification adds attributes to the declaration such as index keys, exported name, or bucket enumerations. */
-decl_attribute_spec
-  : decl_attribute_spec by_spec
+/* A declaration attribute specification adds attributes to the metric declaration such as index keys, exported name, or bucket enumerations. */
+metric_decl_attr_spec
+  : metric_decl_attr_spec metric_by_spec
   {
     $$ = $1
     $$.(*ast.VarDecl).Keys = $2
   }
-  | decl_attribute_spec as_spec
+  | metric_decl_attr_spec metric_as_spec
   {
     $$ = $1
     $$.(*ast.VarDecl).ExportedName = $2
   }
-  | decl_attribute_spec buckets_spec
+  | metric_decl_attr_spec metric_buckets_spec
   {
     $$ = $1
     $$.(*ast.VarDecl).Buckets = $2
   }
-  | var_name_spec
+  | metric_name_spec
   {
     $$ = $1
   }
   ;
 
-/* Variable name spec names a variable in a declaration. */
-var_name_spec
+/* Variable name spec names a metric  in a declaration. */
+metric_name_spec
   : ID
   {
     $$ = &ast.VarDecl{P: tokenpos(mtaillex), Name: $1}
@@ -564,7 +564,7 @@ var_name_spec
   ;
 
 /* Type specfication enumerates the type classification of a variable. */
-type_spec
+metric_type_spec
   : COUNTER
   {
     $$ = metrics.Counter
@@ -588,20 +588,20 @@ type_spec
   ;
 
 /* By specification describes index keys for a multidimensional variable. */
-by_spec
-  : BY by_expr_list
+metric_by_spec
+  : BY metric_by_expr_list
   {
     $$ = $2
   }
   ;
 
-by_expr_list
+metric_by_expr_list
   : id_or_string
   {
     $$ = make([]string, 0)
     $$ = append($$, $1)
   }
-  | by_expr_list COMMA id_or_string
+  | metric_by_expr_list COMMA id_or_string
   {
     $$ = $1
     $$ = append($$, $3)
@@ -609,7 +609,7 @@ by_expr_list
   ;
 
 /* As specification describes how to rename a variable for export. */
-as_spec
+metric_as_spec
   : AS STRING
   {
     $$ = $2
@@ -617,13 +617,13 @@ as_spec
   ;
 
 /* Bucket specification describes the bucketing arrangement in a histogram type. */
-buckets_spec
-  : BUCKETS buckets_list
+metric_buckets_spec
+  : BUCKETS metric_buckets_list
   {
     $$ = $2
   }
 
-buckets_list
+metric_buckets_list
   : FLOATLITERAL
   {
     $$ = make([]float64, 0)
@@ -634,12 +634,12 @@ buckets_list
     $$ = make([]float64, 0)
     $$ = append($$, float64($1))
   }
-  | buckets_list COMMA FLOATLITERAL
+  | metric_buckets_list COMMA FLOATLITERAL
   {
     $$ = $1
     $$ = append($$, $3)
   }
-  | buckets_list COMMA INTLITERAL
+  | metric_buckets_list COMMA INTLITERAL
   {
     $$ = $1
     $$ = append($$, float64($3))
