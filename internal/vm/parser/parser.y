@@ -163,14 +163,19 @@ conditional_stmt
 
 conditional_expr
   : pattern_expr
-  { $$ = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH} }
+  {
+    $$ = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH}
+  }
   | pattern_expr logical_op opt_nl logical_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH},
-       Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{
+      Lhs: &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH},
+      Rhs: $4,
+      Op: $2,
+    }
   }
   | logical_expr
-                { $$ = $1 }
+  { $$ = $1 }
   ;
 
 /* Expression statement is a statement that is also an expression. */
