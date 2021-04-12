@@ -993,6 +993,40 @@ a
 			},
 		},
 	},
+	{
+		name: "regexp replace",
+		prog: `hidden text route
+	counter http_requests_total by method, route
+
+	/(?P<method>\S+) (?P<url>\S+)/ {
+	    route = subst(/\/\d+/, "/:num", $url)
+	    http_requests_total[$method, route]++
+	}
+	`,
+		log: `GET /v1/read/10001
+	GET /v1/users/1001/orders/2001
+	`,
+		errs: 0,
+		metrics: metrics.MetricSlice{
+			{
+				Name:    "http_requests_total",
+				Program: "regexp replace",
+				Kind:    metrics.Counter,
+				Type:    metrics.Int,
+				Keys:    []string{"method", "route"},
+				LabelValues: []*metrics.LabelValue{
+					{
+						Labels: []string{"GET", "/v1/read/:num"},
+						Value:  &datum.Int{Value: 1},
+					},
+					{
+						Labels: []string{"GET", "/v1/users/:num/orders/:num"},
+						Value:  &datum.Int{Value: 1},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestVmEndToEnd(t *testing.T) {

@@ -121,7 +121,7 @@ To work around this, you can use `subst()` to rewrite the timestamp before parsi
 
 ```
 /(\d{4}-\d{2}-\d{2}_\d{2}:\d{2}:\d{2}) / {
-  strptime(subst("_", " ", $1, "2006-01-02 15:04:05")
+  strptime(subst("_", " ", $1), "2006-01-02 15:04:05")
 }
 ```
 
@@ -376,7 +376,7 @@ counter total
 
 ## Parsing numbers with extra characters
 
-Some programs will make their numbers human readable, by inserting thousands-separators (comma or full stop depending on your locale.)  You can remove them with the `subst` function:
+Some logs contain human readable numbers, inserting thousands-separators (comma or full stop depending on your locale.)  You can remove them with the `subst` function:
 
 ```
 /sent (?P<sent>[\d,]+) bytes  received (?P<received>[\d,]+) bytes/ {
@@ -401,3 +401,24 @@ getfilename() !~ /apache.access.?log/ {
 This will check to see if the input filename looks like
 `/var/log/apache/accesslog` and not attempt any further pattern matching on the
 log line if it doesn't.
+
+# Canonicalising keys
+
+Some logs like webserver logs describe common elements with unique identifiers
+in them, which can result in lots of metric keys and no useful count if left
+alone.  To rewrite these capture groups, use `subst()` with a pattern as the
+first argument:
+
+```mtail
+hidden text route
+counter http_requests_total by method, route
+
+/(?P<method\S+) (?P<url>\S+)/ {
+  route = subst(/\/d+/, "/:num", $url)
+  http_requests_total[method][route]++
+}
+```
+
+Here we replace any number part following a `/` in the `$url` capture group with
+the literal string `/:num`, so we end up counting only the static part of a URL
+route.

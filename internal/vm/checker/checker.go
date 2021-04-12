@@ -275,7 +275,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	case *ast.CondStmt:
 		switch n.Cond.(type) {
-		case *ast.BinaryExpr, *ast.PatternExpr, *ast.PatternFragment, *ast.OtherwiseStmt:
+		case *ast.BinaryExpr, *ast.PatternExpr, *ast.PatternFragment, *ast.OtherwiseStmt, *ast.UnaryExpr:
 			// OK as conditions
 		default:
 			c.errors.Add(n.Cond.Pos(), fmt.Sprintf("Can't interpret %s as a boolean expression here.\n\tTry using comparison operators to make the condition explicit.", n.Cond.Type()))
@@ -457,18 +457,6 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 
-		case parser.CONCAT:
-			rType = types.Pattern
-			exprType := types.Function(rType, rType, rType)
-			astType := types.Function(lT, rT, types.NewVariable())
-			err := types.Unify(exprType, astType)
-			if err != nil {
-				// Commented because these type mismatch errors appear to be unhelpful.
-				//c.errors.Add(n.Pos(), err.Error())
-				n.SetType(types.Error)
-				return n
-			}
-
 		case parser.MATCH, parser.NOT_MATCH:
 			rType = types.Bool
 			exprType := types.Function(types.NewVariable(), types.Pattern, rType)
@@ -535,6 +523,21 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 			glog.V(2).Infof("Return type is %v", rType)
+			n.SetType(rType)
+
+		case parser.MATCH:
+			// Implicit match expressions, an expression of type Pattern returning Bool
+			rType := types.Bool
+			// recall the exprType is the language expectation
+			exprType := types.Function(rType, types.Pattern)
+			// and astType is the one we've been given
+			astType := types.Function(types.NewVariable(), t)
+			err := types.Unify(exprType, astType)
+			if err != nil {
+				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
+				n.SetType(types.Error)
+				return n
+			}
 			n.SetType(rType)
 
 		default:
@@ -779,7 +782,7 @@ type patternEvaluator struct {
 func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	switch v := n.(type) {
 	case *ast.BinaryExpr:
-		if v.Op != parser.CONCAT {
+		if v.Op != parser.PLUS {
 			p.errors.Add(v.Pos(), fmt.Sprintf("internal error: Invalid operator in concatenation: %v", v))
 			return nil, n
 		}

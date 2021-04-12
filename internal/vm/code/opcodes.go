@@ -76,6 +76,7 @@ const (
 
 	// String opcodes
 	Subst
+	Rsubst
 
 	lastOpcode
 )
@@ -138,6 +139,7 @@ var opNames = map[Opcode]string{
 	Fcmp:        "fcmp",
 	Scmp:        "scmp",
 	Subst:       "subst",
+	Rsubst:      "rsubst",
 }
 
 func (o Opcode) String() string {

@@ -3,32 +3,65 @@
 
 ## Parser bugs
 
-Run a test with logtostderr and mtailDebug up to 3.
+Run a test with logtostderr and mtailDebug up to 3, and parser_test_debug enabled to see any AST results.
 
 ```
-go test -run TestParserRoundTrip/decrement_counter --logtostderr --mtailDebug=3
+go test -run TestParserRoundTrip/decrement_counter --logtostderr --mtailDebug=3 --parser_test_debug
 ```
 
 `mtailDebug` at 2 dumps the parser states being traversed, and 3 includes the lexer token stream as well.
 
-You can use this to improve error messages in the `%error` section of [`parser.y`](../internal/vm/parser/parser.y), if you compare the "error pops" messages with the state machine in the generated [`y.output`](../internal/vm/parser/y.output).
+## Improving parser syntax error messages
 
+You can use this to improve error messages in the `%error` section of [`parser.y`](../internal/vm/parser/parser.y), if you compare the "error recovery pops" messages with the state machine in the generated [`y.output`](../internal/vm/parser/y.output).
+
+
+```
+go generate && go test -run TestParseInvalidPrograms/statement_with_no_effect --logtostderr --mtailDebug=3  --parser_test_debug
+```
+
+error log from test:
 ```
 ...
 state-14 saw LSQUARE
 error recovery pops state 14
-error recovery pops state 106
-error recovery pops state 49
+error recovery pops state 102
+error recovery pops state 46
 error recovery pops state 14
 error recovery pops state 2
 error recovery pops state 0
 ```
 
-Walking backwards from state 0 (`$start`), we can get a list of nonterminal names to put in the state machine match expression used in the `%error` directive, and fill in the gaps with our knowledge of the intermediate states in our parse tree.
+This log says the lexer sent a LSQUARE token, and the parser was in state 14 when it saw it.  The snippet below from `y.output` indicates state 14 is never expecting a LSQUARE, and the following lnies in the log above show the state stack being popped -- 0, 2, 14, 49, 102, 14.
 
+Walking backwards from state 0 (`$start`), we can get a list of nonterminal names to put in the state machine match expression used in the `%error` directive, and fill in the gaps with our knowledge of the intermediate states in our parose tree.
+
+`y.output`:
+```
+state 14
+	conditional_statement:  logical_expr.compound_statement ELSE compound_statement 
+	conditional_statement:  logical_expr.compound_statement 
+	logical_expr:  logical_expr.logical_op opt_nl bitwise_expr 
+
+	AND  shift 47
+	OR  shift 48
+	MATCH  shift 49
+	NOT_MATCH  shift 50
+	LCURLY  shift 46
+	.  error
+
+	compound_statement  goto 44
+	logical_op  goto 45
+```
+
+State 14 to state 46 shifts a LCURLY operator, follow state 46 and we will find ourselves in `compound_statement`.
+
+Add to `parser.y` the names of the states that ended up at the unexpected token, followed by the error message:
 ```
 %error stmt_list stmt conditional_statement logical_expr compound_statement conditional_statement logical_expr LSQUARE : "unexpected indexing of an expression"
 ```
+
+and instead of "syntax error", the parser now emits "unexpected indexing of an expression".
 
 
 ## Fuzzer crashes

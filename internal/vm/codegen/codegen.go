@@ -50,6 +50,7 @@ func (c *codegen) errorf(pos *position.Position, format string, args ...interfac
 }
 
 func (c *codegen) emit(n ast.Node, opcode code.Opcode, operand interface{}) {
+	glog.V(2).Infof("emitting a node %#v from line %d as %s %v\n", n, n.Pos().Line, opcode, operand)
 	c.obj.Program = append(c.obj.Program, code.Instr{opcode, operand, n.Pos().Line})
 }
 
@@ -195,9 +196,12 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 			return nil, n
 		}
 		c.obj.Regexps = append(c.obj.Regexps, re)
-		// Store the location of this regular expression in the patternNode
+		// Store the location of this regular expression in the PatternExpr
 		n.Index = len(c.obj.Regexps) - 1
-		c.emit(n, code.Match, n.Index)
+		return nil, n
+
+	case *ast.PatternFragment:
+		// Skip, const pattern fragments are concatenated into PatternExpr storage, not executable.
 		return nil, n
 
 	case *ast.StringLit:
@@ -364,8 +368,9 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 
 var typedOperators = map[int]map[types.Type]code.Opcode{
 	parser.PLUS: {types.Int: code.Iadd,
-		types.Float:  code.Fadd,
-		types.String: code.Cat},
+		types.Float:   code.Fadd,
+		types.String:  code.Cat,
+		types.Pattern: code.Cat},
 	parser.MINUS: {types.Int: code.Isub,
 		types.Float: code.Fsub},
 	parser.MUL: {types.Int: code.Imul,
@@ -426,6 +431,14 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 				c.errorf(n.Pos(), "%s on node %v", err.Error(), n)
 				return n
 			}
+		case "subst":
+			if types.Equals(n.Args.(*ast.ExprList).Children[0].Type(), types.Pattern) {
+				index := n.Args.(*ast.ExprList).Children[0].(*ast.PatternExpr).Index
+				c.emit(n, code.Push, index)
+				c.emit(n, code.Rsubst, arglen)
+			} else {
+				c.emit(n, code.Subst, arglen)
+			}
 
 		default:
 			c.emit(n, builtin[n.Name], arglen)
@@ -438,6 +451,9 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			c.emit(n, code.Dec, nil)
 		case parser.NOT:
 			c.emit(n, code.Neg, nil)
+		case parser.MATCH:
+			index := n.Expr.(*ast.PatternExpr).Index
+			c.emit(n, code.Match, index)
 		}
 	case *ast.BinaryExpr:
 		switch n.Op {
@@ -529,22 +545,13 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			c.emit(n, code.Shr, nil)
 
 		case parser.MATCH:
-			if c.obj.Program[c.pc()].Opcode != code.Match {
-				c.errorf(n.Pos(), "internal compiler error: attempting to convert a patternexprnode match to smatch but saw a %s instead", c.obj.Program[c.pc()].Opcode)
-				return n
-			}
-			c.obj.Program[c.pc()].Opcode = code.Smatch
+			index := n.Rhs.(*ast.PatternExpr).Index
+			c.emit(n, code.Smatch, index)
 
 		case parser.NOT_MATCH:
-			if c.obj.Program[c.pc()].Opcode != code.Match {
-				c.errorf(n.Pos(), "internal compiler error: attempting to convert a patternexprnode match to smatch but saw a %s instead", c.obj.Program[c.pc()].Opcode)
-				return n
-			}
-			c.obj.Program[c.pc()].Opcode = code.Smatch
+			index := n.Rhs.(*ast.PatternExpr).Index
+			c.emit(n, code.Smatch, index)
 			c.emit(n, code.Not, nil)
-
-		case parser.CONCAT:
-			// skip
 
 		default:
 			c.errorf(n.Pos(), "unexpected op %v", n.Op)

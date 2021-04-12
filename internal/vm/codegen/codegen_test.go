@@ -972,6 +972,34 @@ var testCodeGenASTs = []struct {
 			{code.Subst, 3, 0},
 		},
 	},
+	{
+		name: "regexp subst",
+		ast: &ast.BuiltinExpr{
+			Name: "subst",
+			Args: &ast.ExprList{
+				Children: []ast.Node{
+					&ast.PatternExpr{
+						Pattern: "a+",
+						Expr: &ast.PatternLit{
+							Pattern: "a+",
+						},
+					},
+					&ast.StringLit{
+						Text: "b",
+					},
+					&ast.StringLit{
+						Text: "aaaaaa",
+					},
+				},
+			},
+		},
+		prog: []code.Instr{
+			{code.Str, 0, 0},
+			{code.Str, 1, 0},
+			{code.Push, 0, 0},
+			{code.Rsubst, 3, 0},
+		},
+	},
 }
 
 func TestCodeGenFromAST(t *testing.T) {

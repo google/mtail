@@ -29,17 +29,17 @@ import (
     duration time.Duration
 }
 
-%type <n> stmt_list stmt arg_expr_list compound_statement conditional_statement expression_statement
+%type <n> stmt_list stmt arg_expr_list compound_stmt conditional_stmt conditional_expr expr_stmt
 %type <n> expr primary_expr multiplicative_expr additive_expr postfix_expr unary_expr assign_expr
 %type <n> rel_expr shift_expr bitwise_expr logical_expr indexed_expr id_expr concat_expr pattern_expr
-%type <n> declaration decl_attribute_spec decorator_declaration decoration_statement regex_pattern match_expr
-%type <n> delete_statement var_name_spec
-%type <kind> type_spec
-%type <text> as_spec id_or_string
-%type <texts> by_spec by_expr_list
-%type <flag> hide_spec
+%type <n> metric_declaration metric_decl_attr_spec decorator_declaration decoration_stmt regex_pattern match_expr
+%type <n> delete_stmt metric_name_spec builtin_expr arg_expr
+%type <kind> metric_type_spec
+%type <text> metric_as_spec id_or_string
+%type <texts> metric_by_spec metric_by_expr_list
+%type <flag> metric_hide_spec
 %type <op> rel_op shift_op bitwise_op logical_op add_op mul_op match_op postfix_op
-%type <floats> buckets_spec buckets_list
+%type <floats> metric_buckets_spec metric_buckets_list
 // Tokens and types are defined here.
 // Invalid input
 %token <text> INVALID
@@ -66,7 +66,6 @@ import (
 %token <op> LT GT LE GE EQ NE
 %token <op> BITAND XOR BITOR NOT AND OR
 %token <op> ADD_ASSIGN ASSIGN
-%token <op> CONCAT
 %token <op> MATCH NOT_MATCH
 // Punctuation
 %token LCURLY RCURLY LPAREN RPAREN LSQUARE RSQUARE
@@ -77,15 +76,16 @@ import (
 
 // The %error directive takes a list of tokens describing a parser state in error, and an error message.
 // See "Generating LR syntax error messages from examples", Jeffery, ACM TOPLAS Volume 24 Issue 5 Sep 2003.
-%error stmt_list stmt expression_statement mark_pos DIV in_regex INVALID  : "unexpected end of file, expecting '/' to end regex"
-%error stmt_list stmt conditional_statement logical_expr LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
-%error stmt_list stmt conditional_statement logical_expr compound_statement ELSE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
-%error stmt_list stmt conditional_statement OTHERWISE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
-%error stmt_list stmt conditional_statement logical_expr compound_statement conditional_statement logical_expr LSQUARE : "unexpected indexing of an expression"
-%error stmt_list stmt conditional_statement pattern_expr NL : "statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"
+%error stmt_list stmt expr_stmt mark_pos DIV in_regex INVALID  : "unexpected end of file, expecting '/' to end regex"
+%error stmt_list stmt conditional_stmt conditional_expr LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
+%error stmt_list stmt conditional_stmt conditional_expr compound_stmt ELSE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
+%error stmt_list stmt conditional_stmt OTHERWISE LCURLY stmt_list $end : "unexpected end of file, expecting '}' to end block"
+%error stmt_list stmt conditional_stmt conditional_expr compound_stmt conditional_stmt conditional_expr LSQUARE : "unexpected indexing of an expression"
+%error stmt_list stmt conditional_stmt pattern_expr NL : "statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"
 
 %%
 
+/* An `mtail` program is a list of statements. */
 start
   : stmt_list
   {
@@ -93,6 +93,7 @@ start
   }
   ;
 
+/* A statement list is either empty, or recurses another statement list and a statement. */
 stmt_list
   : /* empty */
   {
@@ -107,18 +108,19 @@ stmt_list
   }
   ;
 
+/* Types of statements. */
 stmt
-  : conditional_statement
+  : conditional_stmt
   { $$ = $1 }
-  | expression_statement
+  | expr_stmt
   { $$ = $1 }
-  | declaration
+  | metric_declaration
   { $$ = $1 }
   | decorator_declaration
   { $$ = $1 }
-  | decoration_statement
+  | decoration_stmt
   { $$ = $1 }
-  | delete_statement
+  | delete_stmt
   { $$ = $1 }
   | NEXT
   {
@@ -138,12 +140,13 @@ stmt
   }
   ;
 
-conditional_statement
-  : logical_expr compound_statement ELSE compound_statement
+/* Conditional statement is a test condition, and then actions executed depending on the result of the test. */
+conditional_stmt
+  : conditional_expr compound_stmt ELSE compound_stmt
   {
     $$ = &ast.CondStmt{$1, $2, $4, nil}
   }
-  | logical_expr compound_statement
+  | conditional_expr compound_stmt
   {
     if $1 != nil {
       $$ = &ast.CondStmt{$1, $2, nil, nil}
@@ -151,27 +154,47 @@ conditional_statement
       $$ = $2
     }
   }
-  | OTHERWISE compound_statement
+  | OTHERWISE compound_stmt
   {
     o := &ast.OtherwiseStmt{tokenpos(mtaillex)}
     $$ = &ast.CondStmt{o, $2, nil, nil}
   }
   ;
 
-expression_statement
+conditional_expr
+  : pattern_expr
+  {
+    $$ = &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH}
+  }
+  | pattern_expr logical_op opt_nl logical_expr
+  {
+    $$ = &ast.BinaryExpr{
+      Lhs: &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH},
+      Rhs: $4,
+      Op: $2,
+    }
+  }
+  | logical_expr
+  { $$ = $1 }
+  ;
+
+/* Expression statement is a statement that is also an expression. */
+expr_stmt
   : NL
   { $$ = nil }
   | expr NL
   { $$ = $1 }
   ;
 
-compound_statement
+/* Compound statement is a nested statement list with its own scope. */
+compound_stmt
   : LCURLY stmt_list RCURLY
   {
     $$ = $2
   }
   ;
 
+/* Expressions perform a computation and return a result. The expression tree is ordered in ascending associativity of the operator types. */
 expr
   : assign_expr
   { $$ = $1 }
@@ -179,6 +202,7 @@ expr
   { $$ = $1 }
   ;
 
+/* Assignment expressions assign a value to the left hand side from the results of the right hand side. */
 assign_expr
   : unary_expr ASSIGN opt_nl logical_expr
   {
@@ -190,6 +214,7 @@ assign_expr
   }
   ;
 
+/* Logical expressions perform comparisons with logical operators. */
 logical_expr
   : bitwise_expr
   { $$ = $1 }
@@ -212,6 +237,7 @@ logical_op
   { $$ = $1 }
   ;
 
+/* Bitwise expression performs bitwise comparisons of the left and right hand sides. */
 bitwise_expr
   : rel_expr
   { $$ = $1 }
@@ -230,6 +256,7 @@ bitwise_op
   { $$ = $1 }
   ;
 
+/* Relational expressions perform relational comparisons, e.g. less than */
 rel_expr
   : shift_expr
   { $$ = $1 }
@@ -254,6 +281,7 @@ rel_op
   { $$ = $1 }
   ;
 
+/* Shift expressions perform bitshift operations on the left hand side. */
 shift_expr
   : additive_expr
   { $$ = $1 }
@@ -270,6 +298,7 @@ shift_op
   { $$ = $1 }
   ;
 
+/* Additive expressions perform addition and subtraction */
 additive_expr
   : multiplicative_expr
   { $$ = $1 }
@@ -279,10 +308,16 @@ additive_expr
   }
   ;
 
-match_expr
-  : pattern_expr
+add_op
+  : PLUS
   { $$ = $1 }
-  | primary_expr match_op opt_nl pattern_expr
+  | MINUS
+  { $$ = $1 }
+  ;
+
+/* Match expressions perform pattern matching against the left hand side. */
+match_expr
+  : primary_expr match_op opt_nl pattern_expr
   {
     $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
   }
@@ -299,6 +334,8 @@ match_op
   { $$ = $1 }
   ;
 
+
+/* Pattern expression constructs a regular expression. */
 pattern_expr
   : concat_expr
   {
@@ -306,26 +343,21 @@ pattern_expr
   }
   ;
 
+/* Concatenation expression forms a regular expression pattern from fragments. */
 concat_expr
   : regex_pattern
   { $$ = $1 }
   | concat_expr PLUS opt_nl regex_pattern
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: CONCAT}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: PLUS}
   }
   | concat_expr PLUS opt_nl id_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: CONCAT}
+    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: PLUS}
   }
   ;
 
-add_op
-  : PLUS
-  { $$ = $1 }
-  | MINUS
-  { $$ = $1 }
-  ;
-
+/* Multiplicative expression performs multiply and division operations. */
 multiplicative_expr
   : unary_expr
   { $$ = $1 }
@@ -346,6 +378,7 @@ mul_op
   { $$ = $1 }
   ;
 
+/* Unary expressions perform negation */
 unary_expr
   : postfix_expr
   { $$ = $1 }
@@ -355,6 +388,7 @@ unary_expr
   }
   ;
 
+/* Postfix expressions perform increment and decrement. */
 postfix_expr
   : primary_expr
   { $$ = $1 }
@@ -371,17 +405,12 @@ postfix_op
   { $$ = $1 }
   ;
 
+/* Primary expression contains indexing, builtin calls, and terminal symbols. */
 primary_expr
   : indexed_expr
   { $$ = $1 }
-  | BUILTIN LPAREN RPAREN
-  {
-    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: nil}
-  }
-  | BUILTIN LPAREN arg_expr_list RPAREN
-  {
-    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: $3}
-  }
+  | builtin_expr
+  { $$ = $1 }
   | CAPREF
   {
     $$ = &ast.CaprefTerm{tokenpos(mtaillex), $1, false, nil}
@@ -408,6 +437,7 @@ primary_expr
   }
   ;
 
+/* Indexed expression performs index lookup. */
 indexed_expr
   : id_expr
   {
@@ -422,6 +452,7 @@ indexed_expr
   }
   ;
 
+/* Identifier expression names a variable. */
 id_expr
   : ID
   {
@@ -429,19 +460,41 @@ id_expr
   }
   ;
 
+/* Builtin expression describes the builtin function calls. */
+builtin_expr
+  : BUILTIN LPAREN RPAREN
+  {
+    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: nil}
+  }
+  | BUILTIN LPAREN arg_expr_list RPAREN
+  {
+    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: $3}
+  }
+  ;
+
+
+/* Argument expression list describes the part of a builtin call inside the parentheses. */
 arg_expr_list
-  : bitwise_expr
+  : arg_expr
   {
     $$ = &ast.ExprList{}
     $$.(*ast.ExprList).Children = append($$.(*ast.ExprList).Children, $1)
   }
-  | arg_expr_list COMMA bitwise_expr
+  | arg_expr_list COMMA arg_expr
   {
     $$ = $1
     $$.(*ast.ExprList).Children = append($$.(*ast.ExprList).Children, $3)
   }
   ;
 
+arg_expr
+  : logical_expr
+  { $$ = $1 }
+  | pattern_expr
+  { $$ = $1 }
+  ;
+
+/* Regular expression pattern describes a regular expression literal. */
 regex_pattern
   : mark_pos DIV in_regex REGEX DIV
   {
@@ -452,8 +505,9 @@ regex_pattern
   }
   ;
 
-declaration
-  : hide_spec type_spec decl_attribute_spec
+/* Declaration creates a new metric. */
+metric_declaration
+  : metric_hide_spec metric_type_spec metric_decl_attr_spec
   {
     $$ = $3
     d := $$.(*ast.VarDecl)
@@ -462,7 +516,8 @@ declaration
   }
   ;
 
-hide_spec
+/* A hide specification can mark a metric as hidden from export. */
+metric_hide_spec
   : /* empty */
   {
     $$ = false
@@ -473,29 +528,31 @@ hide_spec
   }
   ;
 
-decl_attribute_spec
-  : decl_attribute_spec by_spec
+/* A declaration attribute specification adds attributes to the metric declaration such as index keys, exported name, or bucket enumerations. */
+metric_decl_attr_spec
+  : metric_decl_attr_spec metric_by_spec
   {
     $$ = $1
     $$.(*ast.VarDecl).Keys = $2
   }
-  | decl_attribute_spec as_spec
+  | metric_decl_attr_spec metric_as_spec
   {
     $$ = $1
     $$.(*ast.VarDecl).ExportedName = $2
   }
-  | decl_attribute_spec buckets_spec
+  | metric_decl_attr_spec metric_buckets_spec
   {
     $$ = $1
     $$.(*ast.VarDecl).Buckets = $2
   }
-  | var_name_spec
+  | metric_name_spec
   {
     $$ = $1
   }
   ;
 
-var_name_spec
+/* Variable name spec names a metric  in a declaration. */
+metric_name_spec
   : ID
   {
     $$ = &ast.VarDecl{P: tokenpos(mtaillex), Name: $1}
@@ -506,7 +563,8 @@ var_name_spec
   }
   ;
 
-type_spec
+/* Type specfication enumerates the type classification of a variable. */
+metric_type_spec
   : COUNTER
   {
     $$ = metrics.Counter
@@ -529,40 +587,43 @@ type_spec
   }
   ;
 
-by_spec
-  : BY by_expr_list
+/* By specification describes index keys for a multidimensional variable. */
+metric_by_spec
+  : BY metric_by_expr_list
   {
     $$ = $2
   }
   ;
 
-by_expr_list
+metric_by_expr_list
   : id_or_string
   {
     $$ = make([]string, 0)
     $$ = append($$, $1)
   }
-  | by_expr_list COMMA id_or_string
+  | metric_by_expr_list COMMA id_or_string
   {
     $$ = $1
     $$ = append($$, $3)
   }
   ;
 
-as_spec
+/* As specification describes how to rename a variable for export. */
+metric_as_spec
   : AS STRING
   {
     $$ = $2
   }
   ;
 
-buckets_spec
-  : BUCKETS buckets_list
+/* Bucket specification describes the bucketing arrangement in a histogram type. */
+metric_buckets_spec
+  : BUCKETS metric_buckets_list
   {
     $$ = $2
   }
 
-buckets_list
+metric_buckets_list
   : FLOATLITERAL
   {
     $$ = make([]float64, 0)
@@ -573,32 +634,35 @@ buckets_list
     $$ = make([]float64, 0)
     $$ = append($$, float64($1))
   }
-  | buckets_list COMMA FLOATLITERAL
+  | metric_buckets_list COMMA FLOATLITERAL
   {
     $$ = $1
     $$ = append($$, $3)
   }
-  | buckets_list COMMA INTLITERAL
+  | metric_buckets_list COMMA INTLITERAL
   {
     $$ = $1
     $$ = append($$, float64($3))
   }
 
+/* Decorator declaration parses the declaration and definition of a match decorator. */
 decorator_declaration
-  : mark_pos DEF ID compound_statement
+  : mark_pos DEF ID compound_stmt
   {
     $$ = &ast.DecoDecl{P: markedpos(mtaillex), Name: $3, Block: $4}
   }
   ;
 
-decoration_statement
-  : mark_pos DECO compound_statement
+/* Decoration statement parses an instantiation of a decorator. */
+decoration_stmt
+  : mark_pos DECO compound_stmt
   {
     $$ = &ast.DecoStmt{markedpos(mtaillex), $2, $3, nil, nil}
   }
   ;
 
-delete_statement
+/* Delete statement parses a delete command. */
+delete_stmt
   : DEL postfix_expr AFTER DURATIONLITERAL
   {
     $$ = &ast.DelStmt{P: tokenpos(mtaillex), N: $2, Expiry: $4}
@@ -608,6 +672,7 @@ delete_statement
     $$ = &ast.DelStmt{P: tokenpos(mtaillex), N: $2}
   }
 
+/* Identifier or String parses where an ID or a string can be expected. */
 id_or_string
   : ID
   {

@@ -216,7 +216,7 @@ container: Dockerfile
 #
 
 # These flags set compatibility with OSS-Fuzz
-CXX ?= clang-9
+CXX ?= clang
 CXXFLAGS ?=
 LIB_FUZZING_ENGINE ?= -fsanitize=fuzzer
 OUT ?= .
@@ -250,7 +250,7 @@ CRASH ?=
 .PHONY: fuzz-repro
 fuzz-repro: $(OUT)/vm-fuzzer mtail
 	$(OUT)/vm-fuzzer $(CRASH) || true  # Want to continue
-	./mtail --logtostderr --vmodule=loader=2,checker=2,types=2 --mtailDebug=3 --dump_ast_types --dump_bytecode --compile_only --progs $(CRASH)
+	./mtail --logtostderr --vmodule=loader=2,checker=2,types=2,codegen=2 --mtailDebug=3 --dump_ast_types --dump_bytecode --compile_only --progs $(CRASH)
 
 # make fuzz-min CRASH=example crash
 .PHONY: fuzz-min

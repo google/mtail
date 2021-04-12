@@ -141,8 +141,6 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			u.emit(" += ")
 		case MOD:
 			u.emit(" % ")
-		case CONCAT:
-			u.emit(" + ")
 		case MATCH:
 			u.emit(" =~ ")
 		case NOT_MATCH:
@@ -209,6 +207,8 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			u.emit("--")
 		case NOT:
 			u.emit(" ~")
+			ast.Walk(u, v.Expr)
+		case MATCH:
 			ast.Walk(u, v.Expr)
 		default:
 			u.emit(fmt.Sprintf("Unexpected op: %s", Kind(v.Op)))

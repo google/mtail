@@ -64,7 +64,7 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 
 	case *ast.PatternFragment:
 		s.emit("const ")
-		n = ast.Walk(s, v.Id)
+		ast.Walk(s, v.Id)
 		s.emit(" ")
 
 	case *ast.PatternLit:
@@ -116,8 +116,6 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			s.emit("+=")
 		case MOD:
 			s.emit("%")
-		case CONCAT:
-			s.emit("++")
 		case MATCH:
 			s.emit("=~")
 		case NOT_MATCH:
@@ -164,6 +162,8 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			s.emit("decrement")
 		case NOT:
 			s.emit("unary-not")
+		case MATCH:
+			s.emit("match")
 		default:
 			s.emit(fmt.Sprintf("Unexpected op: %s", Kind(v.Op)))
 		}

@@ -61,7 +61,7 @@ var parserTests = []struct {
 	{"simple pattern action",
 		"/foo/ {}\n"},
 
-	{"more complex action, increment counter",
+	{"increment counter",
 		"counter lines_total\n" +
 			"/foo/ {\n" +
 			"  lines_total++\n" +
@@ -333,6 +333,11 @@ $foo =~ X {
 /(\d,\d)/ {
   subst(",", ",", $1)
 }`},
+
+	{"pattern in arg expr list", `
+	/(\d,\d)/ {
+	    subst(/,/, "", $1)
+	}`},
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -434,9 +439,13 @@ var parserInvalidPrograms = []parserInvalidProgram{
 
 	{"pattern without block",
 		`/(?P<a>.)/
+`, []string{"pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"}},
+
+	{"paired pattern without block",
+		`/(?P<a>.)/
 	/(?P<b>.)/ {}
 	`,
-		[]string{"pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"}},
+		[]string{"paired pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"}},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {
@@ -452,6 +461,10 @@ func TestParseInvalidPrograms(t *testing.T) {
 			testutil.ExpectNoDiff(t,
 				strings.Join(tc.errors, "\n"),             // want
 				strings.TrimRight(p.errors.Error(), "\n")) // got
+			if p.errors.Error() == "no errors" && *parserTestDebug {
+				s := Sexp{}
+				t.Log("AST:\n" + s.Dump(p.root))
+			}
 		})
 	}
 }

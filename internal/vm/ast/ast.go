@@ -263,7 +263,7 @@ func (n *FloatLit) Type() types.Type {
 	return types.Float
 }
 
-// patternExprNode is the top of a pattern expression
+// PatternExpr is the top of a pattern expression
 type PatternExpr struct {
 	Expr    Node
 	Pattern string // if not empty, the fully defined pattern after typecheck

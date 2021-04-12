@@ -34,10 +34,11 @@ func Fuzz(data []byte) int {
 	flag.CommandLine.Parse([]string{})
 	v, err := Compile("fuzz", bytes.NewReader(data[:offset]), dumpDebug, dumpDebug, false, nil, 0, 0)
 	if err != nil {
-		if dumpDebug {
-			fmt.Print(err)
-		}
+		fmt.Print(err)
 		return 0 // false
+	}
+	if dumpDebug {
+		fmt.Print(v.DumpByteCode())
 	}
 	v.HardCrash = true
 	scanner := bufio.NewScanner(bytes.NewBuffer(data[offset+2:]))
