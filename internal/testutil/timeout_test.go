@@ -1,10 +1,9 @@
 package testutil
 
 import (
+	"fmt"
 	"testing"
 	"time"
-
-	"github.com/google/mtail/internal/vm/errors"
 )
 
 func TestDoOrTimeoutNeverOK(t *testing.T) {
@@ -49,7 +48,7 @@ func TestDoOrTimeoutStallThenOK(t *testing.T) {
 func TestDoOrTimeoutAlwaysErr(t *testing.T) {
 	// Return an error, should return false,err
 	ok, err := DoOrTimeout(func() (bool, error) {
-		return false, errors.Errorf("oh no")
+		return false, fmt.Errorf("oh no")
 	}, 1*time.Second, time.Millisecond)
 	if ok || err == nil {
 		t.Errorf("Expected error (false,!nil), got %v %v", ok, err)
