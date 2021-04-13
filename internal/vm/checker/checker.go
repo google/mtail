@@ -466,7 +466,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			astType := types.Function(lT, rT, types.NewVariable())
 			err := types.Unify(exprType, astType)
 			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Parameter to =~ has a %s", err))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Parameter to %s has a %s.", parser.Kind(n.Op), err))
 				n.SetType(types.Error)
 				return n
 			}
@@ -475,7 +475,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %v in node %#v", n.Op, n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %s (%v) in node %#v", parser.Kind(n.Op), n.Op, n))
 			n.SetType(types.Error)
 			return n
 		}
