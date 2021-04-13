@@ -563,6 +563,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	case *ast.IndexedExpr:
 
+		// TODO: prune this node to n.Lhs if Index is nil or 0 length.
+
 		argTypes := []types.Type{}
 		if args, ok := n.Index.(*ast.ExprList); ok {
 			for _, arg := range args.Children {
