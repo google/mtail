@@ -70,6 +70,29 @@ var typeUnificationTests = []struct {
 		String, &Variable{},
 		String,
 	},
+	// Unification of an Alternate with a concrete operator should be concrete.
+	{
+		Alternate(Bool, Int, Float), Bool,
+		Bool,
+	},
+	{
+		Pattern, Alternate(Bool, Pattern),
+		Pattern,
+	},
+	// Unification of an Alternate with an Alternate operator should be a reduced Alternate
+	{
+		Alternate(Bool, Int, Float), Alternate(Bool, Int),
+		Alternate(Bool, Int),
+	},
+	// Decompose an alternate to an operator.
+	{
+		Alternate(Pattern), Alternate(Bool, Pattern),
+		Pattern,
+	},
+	{
+		&Variable{}, Alternate(Int, Float),
+		Alternate(Int, Float),
+	},
 	// The lub of Int and Float is Float.
 	{
 		Int, Float,
@@ -115,7 +138,7 @@ var typeUnificationTests = []struct {
 		String, Pattern,
 		Pattern,
 	},
-	// Patterns and Ints can both be Bool.
+	// Patterns and Ints can only be bool.
 	{
 		Pattern, Int,
 		Bool,
@@ -141,6 +164,23 @@ var typeUnificationTests = []struct {
 	{
 		&TypeError{}, Float,
 		&TypeError{},
+	},
+	// Numeric seceds to the concrete type
+	{
+		Numeric, Int,
+		Int,
+	},
+	{
+		Int, Numeric,
+		Int,
+	},
+	{
+		Numeric, Float,
+		Float,
+	},
+	{
+		Float, Numeric,
+		Float,
 	},
 }
 

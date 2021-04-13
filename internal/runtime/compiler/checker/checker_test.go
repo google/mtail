@@ -337,6 +337,13 @@ l++=l
 `,
 		[]string{"negate None:1:2-17: type mismatch; expected Int received None for `~' operator."},
 	},
+
+	// 	{"match against gauge",
+	// 		`gauge t
+	// t = 6 =~ t
+	// `,
+	// 		[]string{"match against gauge:2:5-10: Parameter to MATCH has a type mismatch; expected Pattern received Numeric."},
+	// 	},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
