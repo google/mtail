@@ -919,6 +919,16 @@ gauge foo
 		{code.Iset, nil, 3},
 		{code.Setmatched, true, 2},
 	}},
+	{"const term as pattern", `
+const A /n/
+A {
+}
+`, []code.Instr{
+		{code.Match, 0, 0},
+		{code.Jnm, 4, 0},
+		{code.Setmatched, false, 0},
+		{code.Setmatched, true, 0},
+	}},
 }
 
 func TestCodeGenFromSource(t *testing.T) {
