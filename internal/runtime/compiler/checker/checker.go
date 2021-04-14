@@ -398,6 +398,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(types.Error)
 				return n
 			}
+
 		case parser.LT, parser.GT, parser.LE, parser.GE, parser.EQ, parser.NE, parser.AND, parser.OR:
 			// comparable, logical
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
@@ -483,15 +484,16 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.UnaryExpr:
-		t := n.Expr.Type()
-		if types.IsErrorType(t) {
+		if types.IsErrorType(n.Expr.Type()) {
 			n.SetType(types.Error)
 			return n
 		}
 		switch n.Op {
 		case parser.NOT:
-			rType := types.Int
-			err := types.Unify(rType, t)
+			rType := types.Bool
+			exprType := types.Function(types.Int, rType)
+			astType := types.Function(n.Expr.Type(), types.NewVariable())
+			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("%s for `~' operator.", err))
 				n.SetType(types.Error)
@@ -512,14 +514,16 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 			rType := types.Int
-			err := types.Unify(rType, t)
+			exprType := types.Function(rType, rType)
+			astType := types.Function(n.Expr.Type(), types.NewVariable())
+			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
 				n.SetType(types.Error)
 				return n
 			}
-			if !types.Equals(t, types.Int) {
-				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("Expecting an Int for %s, not %v.", parser.Kind(n.Op), t))
+			if !types.Equals(types.Int, n.Expr.Type()) {
+				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("Expecting an Int for %s, not %v.", parser.Kind(n.Op), n.Expr.Type()))
 				n.SetType(types.Error)
 				return n
 			}
@@ -530,9 +534,9 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			// Implicit match expressions, an expression of type Pattern returning Bool
 			rType := types.Bool
 			// recall the exprType is the language expectation
-			exprType := types.Function(rType, types.Pattern)
+			exprType := types.Function(types.Pattern, rType)
 			// and astType is the one we've been given
-			astType := types.Function(types.NewVariable(), t)
+			astType := types.Function(n.Expr.Type(), types.NewVariable())
 			err := types.Unify(exprType, astType)
 			if err != nil {
 				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
