@@ -215,6 +215,8 @@ var Builtins = map[string]Type{
 // FreshType returns a new type from the provided type scheme, replacing any
 // unbound type variables with new type variables.
 func FreshType(t Type) Type {
+	// mappings keeps track of replaced variables in this type so that t -> t
+	// becomes q -> q not q -> r
 	mappings := make(map[*Variable]*Variable)
 
 	var freshRec func(Type) Type
