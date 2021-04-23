@@ -3,34 +3,22 @@
 # add people other than dependabot to the if field below.
 name: automerge
 on:
-  pull_request:
+  pull_request_target:
     types:
       - labeled
-      - unlabeled
-      - synchronize
-      - opened
-      - edited
-      - ready_for_review
-      - reopened
-      - unlocked
-  pull_request_review:
-    types:
-      - submitted
-  check_suite:
-    types:
-      - completed
-  status: {}
 jobs:
-  automerge:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+  approve-and-merge-dependabot:
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && contains(github.event.pull_request.labels.*.name, 'dependencies')
     runs-on: ubuntu-latest
     steps:
-      - name: automerge
-        if: github.actor == 'dependabot[bot]'
-        uses: "pascalgn/automerge-action@v0.13.1"
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          MERGE_METHOD: "rebase"
-          MERGE_LABELS: ""
-          MERGE_RETRY_SLEEP: "60000"
-          MERGE_RETRIES: "61"
+
+    # Enable auto-merge *before* issuing an approval.
+    - name: Enable Github Automerge
+      uses: alexwilson/enable-github-automerge-action@main
+      with:
+        github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+    # We "trust" dependabot updates (this still requires all other checks to pass!)
+    - uses: hmarr/auto-approve-action@bca9db08da72b576ae3273e776e7ccf3f0a36e12
+      with:
+        github-token: "${{ secrets.GITHUB_TOKEN }}"

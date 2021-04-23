@@ -1,3 +1,5 @@
+# This is a single-maintainer project but I want to require reviews before
+# merge, which means that I need a bot to review my own work.
 name: Automatic pull request approvals
 on:
   pull_request_target:
@@ -19,7 +21,6 @@ jobs:
         github.event.action == 'reopened' ||
         github.event.action == 'synchronize'
       ) && (
-        github.actor == 'dependabot[bot]' ||
         github.actor == 'jaqx0r'
       )
     steps:
