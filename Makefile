@@ -7,7 +7,7 @@ TARGETS = mtail mgen mdot mfmt
 
 GO_TEST_FLAGS ?=
 BENCH_COUNT ?= 1
-BASE_REF ?= master
+BASE_REF ?= main
 HEAD_REF ?= $(shell git symbolic-ref HEAD -q --short)
 BASE_REF := $(subst /,-,$(BASE_REF))
 HEAD_REF := $(subst /,-,$(HEAD_REF))
