@@ -50,7 +50,7 @@ func (c *codegen) errorf(pos *position.Position, format string, args ...interfac
 }
 
 func (c *codegen) emit(n ast.Node, opcode code.Opcode, operand interface{}) {
-	glog.V(2).Infof("emitting a node %#v from line %d as %s %v\n", n, n.Pos().Line, opcode, operand)
+	glog.V(2).Infof("emitting from node %#v line %d as %s %v\n", n, n.Pos().Line, opcode, operand)
 	c.obj.Program = append(c.obj.Program, code.Instr{opcode, operand, n.Pos().Line})
 }
 
@@ -245,6 +245,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 				c.emit(n, code.Sget, nil)
 			default:
 				c.errorf(n.Pos(), "invalid type for get %q in %#v", n.Type(), n)
+				return nil, n
 			}
 		}
 
@@ -544,14 +545,19 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 		case parser.SHR:
 			c.emit(n, code.Shr, nil)
 
-		case parser.MATCH:
-			index := n.Rhs.(*ast.PatternExpr).Index
-			c.emit(n, code.Smatch, index)
+		case parser.MATCH, parser.NOT_MATCH:
+			switch v := n.Rhs.(type) {
+			case *ast.PatternExpr:
+				index := v.Index
+				c.emit(n, code.Smatch, index)
+			default:
+				c.errorf(n.Pos(), "unexpected rhs expression for match %#v", n.Rhs)
+				return n
+			}
 
-		case parser.NOT_MATCH:
-			index := n.Rhs.(*ast.PatternExpr).Index
-			c.emit(n, code.Smatch, index)
-			c.emit(n, code.Not, nil)
+			if n.Op == parser.NOT_MATCH {
+				c.emit(n, code.Not, nil)
+			}
 
 		default:
 			c.errorf(n.Pos(), "unexpected op %v", n.Op)

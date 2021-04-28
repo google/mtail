@@ -124,7 +124,6 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			s.emit(fmt.Sprintf("Unexpected op: %s", Kind(v.Op)))
 		}
 		s.newline()
-		s.indent()
 
 	case *ast.IdTerm:
 		s.emit("\"" + v.Name + "\"")
@@ -168,7 +167,6 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 			s.emit(fmt.Sprintf("Unexpected op: %s", Kind(v.Op)))
 		}
 		s.newline()
-		s.indent()
 
 	case *ast.StringLit:
 		s.emit("\"" + v.Text + "\"")
@@ -223,9 +221,6 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 
 // VisitAfter implements the astNode Visitor interface.
 func (s *Sexp) VisitAfter(node ast.Node) ast.Node {
-	if _, ok := node.(*ast.BinaryExpr); ok {
-		s.outdent()
-	}
 	s.outdent()
 	s.emit(")")
 	s.newline()

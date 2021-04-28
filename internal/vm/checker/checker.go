@@ -275,8 +275,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	case *ast.CondStmt:
 		switch n.Cond.(type) {
-		case *ast.BinaryExpr, *ast.PatternExpr, *ast.PatternFragment, *ast.OtherwiseStmt, *ast.UnaryExpr:
+		case *ast.BinaryExpr, *ast.OtherwiseStmt, *ast.UnaryExpr:
 			// OK as conditions
+		case *ast.PatternExpr:
+			// The parser will always put a UnaryExpr here for a pattern, we will get a PatternExpr if the Cond was in fact an IdTerm rewritten by IndexedExpr below.
+			n.Cond = &ast.UnaryExpr{Expr: n.Cond, Op: parser.MATCH}
 		default:
 			c.errors.Add(n.Cond.Pos(), fmt.Sprintf("Can't interpret %s as a boolean expression here.\n\tTry using comparison operators to make the condition explicit.", n.Cond.Type()))
 		}
@@ -463,7 +466,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			astType := types.Function(lT, rT, types.NewVariable())
 			err := types.Unify(exprType, astType)
 			if err != nil {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Parameter to =~ has a %s", err))
+				c.errors.Add(n.Pos(), fmt.Sprintf("Parameter to %s has a %s.", parser.Kind(n.Op), err))
 				n.SetType(types.Error)
 				return n
 			}
@@ -472,7 +475,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %v in node %#v", n.Op, n))
+			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %s (%v) in node %#v", parser.Kind(n.Op), n.Op, n))
 			n.SetType(types.Error)
 			return n
 		}
@@ -512,7 +515,6 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			rType := types.Int
 			err := types.Unify(rType, t)
 			if err != nil {
-				// Commented because these type mismatch errors appear to be unhelpful.
 				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
 				n.SetType(types.Error)
 				return n
@@ -561,19 +563,19 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	case *ast.IndexedExpr:
 
+		// prune this node to n.Lhs if Index is nil.  Leave 0 length exprlist as that's a type error.
+		exprList, ok := n.Index.(*ast.ExprList)
+		if !ok {
+			return n.Lhs
+		}
+
 		argTypes := []types.Type{}
-		if args, ok := n.Index.(*ast.ExprList); ok {
-			for _, arg := range args.Children {
-				if types.IsErrorType(arg.Type()) {
-					n.SetType(types.Error)
-					return n
-				}
-				argTypes = append(argTypes, arg.Type())
+		for _, arg := range exprList.Children {
+			if types.IsErrorType(arg.Type()) {
+				n.SetType(types.Error)
+				return n
 			}
-		} else {
-			c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected %v", n.Index))
-			n.SetType(types.Error)
-			return n
+			argTypes = append(argTypes, arg.Type())
 		}
 
 		switch v := n.Lhs.(type) {
