@@ -563,21 +563,19 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	case *ast.IndexedExpr:
 
-		// TODO: prune this node to n.Lhs if Index is nil or 0 length.
+		// prune this node to n.Lhs if Index is nil.  Leave 0 length exprlist as that's a type error.
+		exprList, ok := n.Index.(*ast.ExprList)
+		if !ok {
+			return n.Lhs
+		}
 
 		argTypes := []types.Type{}
-		if args, ok := n.Index.(*ast.ExprList); ok {
-			for _, arg := range args.Children {
-				if types.IsErrorType(arg.Type()) {
-					n.SetType(types.Error)
-					return n
-				}
-				argTypes = append(argTypes, arg.Type())
+		for _, arg := range exprList.Children {
+			if types.IsErrorType(arg.Type()) {
+				n.SetType(types.Error)
+				return n
 			}
-		} else {
-			c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected %v", n.Index))
-			n.SetType(types.Error)
-			return n
+			argTypes = append(argTypes, arg.Type())
 		}
 
 		switch v := n.Lhs.(type) {
