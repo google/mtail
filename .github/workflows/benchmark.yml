@@ -4,7 +4,6 @@ on:
     tags:
       - v*
     branches:
-      - master
       - main
   pull_request:
 env:
@@ -36,9 +35,8 @@ jobs:
         uses: actions/cache@v2.1.5
         with:
           path: |
-            test-results/benchmark-results-master.txt
             test-results/benchmark-results-main.txt
-          # Use base sha for PR or new commit hash for master/main push in benchmark result key.
+          # Use base sha for PR, or new commit hash when in a push on main, in benchmark result key.
           key: ${{ runner.os }}-bench-${{ (github.event.pull_request.base.sha != github.event.after) && github.event.pull_request.base.sha || github.event.after }}
       - name: run benchmark
         run: |
