@@ -29,10 +29,14 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker := waker.NewTestAlways()
 
-	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
+	// In this and the following test, open RDWR so as to not block this thread
+	// from proceeding.  If we open the logstream first, there is a race before
+	// the write end opens that can sometimes lead to the logstream reading an
+	// EOF (because the write end is not yet open) and the test fails.
+	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 
-	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
+	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
 
 	testutil.WriteString(t, f, "1\n")
@@ -69,10 +73,10 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker := waker.NewTestAlways()
 
-	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
+	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 
-	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
+	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
 	testutil.FatalIfErr(t, err)
 
 	testutil.WriteString(t, f, "1\n")
