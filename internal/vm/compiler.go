@@ -29,7 +29,8 @@ func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, sysl
 		glog.Infof("%s AST:\n%s", name, s.Dump(ast))
 	}
 
-	if ast, err = checker.Check(ast, maxRegexpLength, maxRecursionDepth); err != nil {
+	ast, err = checker.Check(ast, maxRegexpLength, maxRecursionDepth)
+	if err != nil {
 		return nil, err
 	}
 	if emitAstTypes {

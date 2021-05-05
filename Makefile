@@ -231,6 +231,8 @@ $(OUT)/vm-fuzzer.dict: mgen
 $(OUT)/vm-fuzzer_seed_corpus.zip: $(wildcard examples/*.mtail) $(wildcard internal/vm/fuzz/*.mtail)
 	zip -j $@ $^
 
+FUZZER_FLAGS=-rss_limit_mb=4096 -timeout=60s
+
 .INTERMEDIATE: SEED/*
 SEED: $(OUT)/vm-fuzzer_seed_corpus.zip
 	mkdir -p SEED
@@ -239,17 +241,17 @@ SEED: $(OUT)/vm-fuzzer_seed_corpus.zip
 .PHONY: fuzz
 fuzz: SEED $(OUT)/vm-fuzzer $(OUT)/vm-fuzzer.dict
 	mkdir -p CORPUS
-	$(OUT)/vm-fuzzer -dict=$(OUT)/vm-fuzzer.dict CORPUS SEED
+	$(OUT)/vm-fuzzer $(FUZZER_FLAGS) -dict=$(OUT)/vm-fuzzer.dict CORPUS SEED
 
 .PHONY: fuzz-regtest
 fuzz-regtest: $(OUT)/vm-fuzzer SEED
-	$(OUT)/vm-fuzzer -rss_limit_mb=4096 $(shell ls SEED/*.mtail)
+	$(OUT)/vm-fuzzer $(FUZZER_FLAGS) $(shell ls SEED/*.mtail)
 
 CRASH ?=
 
 .PHONY: fuzz-repro
 fuzz-repro: $(OUT)/vm-fuzzer mtail
-	$(OUT)/vm-fuzzer $(CRASH) || true  # Want to continue
+	$(OUT)/vm-fuzzer $(FUZZER_FLAGS) $(CRASH) || true  # Want to continue
 	./mtail --logtostderr --vmodule=loader=2,checker=2,types=2,codegen=2 --mtailDebug=3 --dump_ast_types --dump_bytecode --compile_only --progs $(CRASH)
 
 # make fuzz-min CRASH=example crash
