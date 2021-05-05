@@ -15,8 +15,7 @@ import (
 )
 
 // Compile compiles a program from the input into a virtual machine or a list
-// of compile errors.  It takes the program's name and the metric store as
-// additional arguments to build the virtual machine.
+// of compile errors.
 func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, syslogUseCurrentYear bool, loc *time.Location, maxRegexpLength int, maxRecursionDepth int) (*VM, error) { // TODO this is a prime candidate for Options pattern. See https://github.com/google/mtail/pull/474#discussion_r598044460
 	name = filepath.Base(name)
 
@@ -29,7 +28,8 @@ func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, sysl
 		glog.Infof("%s AST:\n%s", name, s.Dump(ast))
 	}
 
-	if ast, err = checker.Check(ast, maxRegexpLength, maxRecursionDepth); err != nil {
+	ast, err = checker.Check(ast, maxRegexpLength, maxRecursionDepth)
+	if err != nil {
 		return nil, err
 	}
 	if emitAstTypes {

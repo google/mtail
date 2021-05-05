@@ -3,12 +3,8 @@
 
 package vm
 
-// mtail programs may be updated while mtail is running, and they will be
-// reloaded without having to restart the mtail process. Programs can be
-// created and deleted as well, and some configuration systems do an atomic
-// rename of the program when it is installed, so mtail is also aware of file
-// moves.  The Master Control Program is responsible for managing the lifetime
-// of mtail programs.
+// mtail programs may be created, updated, and deleted while mtail is running, and they will be
+// reloaded without having to restart the mtail process -- mtail will handle these on a HUP signal.
 
 import (
 	"bytes"
