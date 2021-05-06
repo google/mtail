@@ -13,7 +13,7 @@ import (
 	"os"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/vm/checker"
+	"github.com/google/mtail/internal/vm/compiler/checker"
 	"github.com/google/mtail/internal/vm/parser"
 )
 
