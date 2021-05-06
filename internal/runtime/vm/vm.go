@@ -3,11 +3,12 @@
 
 // Package vm provides a compiler and virtual machine environment for executing
 // mtail programs.
-package runtime
+package vm
 
 import (
 	"bytes"
 	"context"
+	"expvar"
 	"fmt"
 	"math"
 	"regexp"
@@ -29,7 +30,9 @@ import (
 )
 
 var (
-	lineProcessingDurations = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	ProgRuntimeErrors = expvar.NewMap("prog_runtime_errors_total")
+
+	LineProcessingDurations = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "mtail",
 		Subsystem: "vm",
 		Name:      "line_processing_duration_seconds",
@@ -54,9 +57,9 @@ type VM struct {
 	name string
 	prog []code.Instr
 
-	re  []*regexp.Regexp  // Regular expression constants
-	str []string          // String constants
-	m   []*metrics.Metric // Metrics accessible to this program.
+	re      []*regexp.Regexp  // Regular expression constants
+	str     []string          // String constants
+	Metrics []*metrics.Metric // Metrics accessible to this program.
 
 	timeMemos *lru.Cache // memo of time string parse results
 
@@ -92,7 +95,7 @@ func (t *thread) Pop() (value interface{}) {
 // Log a runtime error and terminate the program
 func (v *VM) errorf(format string, args ...interface{}) {
 	i := v.prog[v.t.pc-1]
-	progRuntimeErrors.Add(v.name, 1)
+	ProgRuntimeErrors.Add(v.name, 1)
 	v.runtimeErrorMu.Lock()
 	v.runtimeError = fmt.Sprintf(format+"\n", args...)
 	v.runtimeError += fmt.Sprintf(
@@ -707,7 +710,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 	case code.Mload:
 		// Load a metric at operand onto stack
-		t.Push(v.m[i.Operand.(int)])
+		t.Push(v.Metrics[i.Operand.(int)])
 
 	case code.Dload:
 		// Load a datum from metric at TOS onto stack
@@ -933,7 +936,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 func (v *VM) ProcessLogLine(ctx context.Context, line *logline.LogLine) {
 	start := time.Now()
 	defer func() {
-		lineProcessingDurations.WithLabelValues(v.name).Observe(time.Since(start).Seconds())
+		LineProcessingDurations.WithLabelValues(v.name).Observe(time.Since(start).Seconds())
 	}()
 	t := new(thread)
 	t.matched = false
@@ -963,7 +966,7 @@ func New(name string, obj *code.Object, syslogUseCurrentYear bool, loc *time.Loc
 		name:                 name,
 		re:                   obj.Regexps,
 		str:                  obj.Strings,
-		m:                    obj.Metrics,
+		Metrics:              obj.Metrics,
 		prog:                 obj.Program,
 		timeMemos:            lru.New(64),
 		syslogUseCurrentYear: syslogUseCurrentYear,
@@ -977,7 +980,7 @@ func (v *VM) DumpByteCode() string {
 	b := new(bytes.Buffer)
 	fmt.Fprintf(b, "Prog: %s\n", v.name)
 	fmt.Fprintln(b, "Metrics")
-	for i, m := range v.m {
+	for i, m := range v.Metrics {
 		if m.Program == v.name {
 			fmt.Fprintf(b, " %8d %s\n", i, m)
 		}

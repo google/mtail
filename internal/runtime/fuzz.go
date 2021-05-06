@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/runtime/compiler"
+	"github.com/google/mtail/internal/runtime/vm"
 )
 
 // U+2424 SYMBOL FOR NEWLINE
@@ -35,7 +36,7 @@ func Fuzz(data []byte) int {
 		fmt.Println(err)
 		return 0 // false
 	}
-	v := New("fuzz", obj, false, nil, dumpDebug)
+	v := vm.New("fuzz", obj, false, nil, dumpDebug)
 	if dumpDebug {
 		fmt.Println(v.DumpByteCode())
 	}

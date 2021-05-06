@@ -31,6 +31,7 @@ import (
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/runtime/compiler"
+	"github.com/google/mtail/internal/runtime/vm"
 )
 
 var (
@@ -39,8 +40,7 @@ var (
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
 	// ProgLoadErrors counts the number of program load errors.
-	ProgLoadErrors    = expvar.NewMap("prog_load_errors_total")
-	progRuntimeErrors = expvar.NewMap("prog_runtime_errors_total")
+	ProgLoadErrors = expvar.NewMap("prog_load_errors_total")
 )
 
 const (
@@ -182,8 +182,8 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 		if ProgLoads.Get(name) != nil {
 			data.Loadsuccess[name] = ProgLoads.Get(name).String()
 		}
-		if progRuntimeErrors.Get(name) != nil {
-			data.RuntimeErrors[name] = progRuntimeErrors.Get(name).String()
+		if vm.ProgRuntimeErrors.Get(name) != nil {
+			data.RuntimeErrors[name] = vm.ProgRuntimeErrors.Get(name).String()
 		}
 		data.RuntimeErrorString[name] = l.handles[name].vm.RuntimeErrorString()
 	}
@@ -206,9 +206,9 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 	}
 	contentHash := hasher.Sum(nil)
 	l.handleMu.RLock()
-	vm, ok := l.handles[name]
+	vh, ok := l.handles[name]
 	l.handleMu.RUnlock()
-	if ok && bytes.Equal(vm.contentHash, contentHash) {
+	if ok && bytes.Equal(vh.contentHash, contentHash) {
 		glog.V(1).Infof("contents match, not recompiling %q", name)
 		return nil
 	}
@@ -221,14 +221,14 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
 	}
-	v := New(name, obj, l.syslogUseCurrentYear, l.overrideLocation, l.logRuntimeErrors)
+	v := vm.New(name, obj, l.syslogUseCurrentYear, l.overrideLocation, l.logRuntimeErrors)
 
 	if l.dumpBytecode {
 		glog.Info("Dumping program objects and bytecode\n", v.DumpByteCode())
 	}
 
 	// Load the metrics from the compilation into the global metric storage for export.
-	for _, m := range v.m {
+	for _, m := range v.Metrics {
 		if !m.Hidden {
 			if l.omitMetricSource {
 				m.Source = ""
@@ -262,7 +262,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 
 type vmHandle struct {
 	contentHash []byte
-	vm          *VM
+	vm          *vm.VM
 	lines       chan *logline.LogLine
 }
 
@@ -384,7 +384,7 @@ func OmitMetricSource() Option {
 func PrometheusRegisterer(reg prometheus.Registerer) Option {
 	return func(l *Loader) error {
 		l.reg = reg
-		l.reg.MustRegister(lineProcessingDurations)
+		l.reg.MustRegister(vm.LineProcessingDurations)
 		return nil
 	}
 }
