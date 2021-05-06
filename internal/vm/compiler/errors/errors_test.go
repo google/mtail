@@ -6,7 +6,7 @@ package errors_test
 import (
 	"testing"
 
-	"github.com/google/mtail/internal/vm/errors"
+	"github.com/google/mtail/internal/vm/compiler/errors"
 )
 
 func TestNilErrorPosition(t *testing.T) {
