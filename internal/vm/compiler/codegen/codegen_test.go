@@ -11,9 +11,9 @@ import (
 
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/vm/code"
-	"github.com/google/mtail/internal/vm/codegen"
 	"github.com/google/mtail/internal/vm/compiler/ast"
 	"github.com/google/mtail/internal/vm/compiler/checker"
+	"github.com/google/mtail/internal/vm/compiler/codegen"
 	"github.com/google/mtail/internal/vm/compiler/parser"
 )
 

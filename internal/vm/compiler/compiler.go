@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/vm/codegen"
 	"github.com/google/mtail/internal/vm/compiler/checker"
+	"github.com/google/mtail/internal/vm/compiler/codegen"
 	"github.com/google/mtail/internal/vm/compiler/parser"
 	"github.com/google/mtail/internal/vm/object"
 )
