@@ -19,7 +19,6 @@ import (
 	"github.com/google/mtail/internal/vm/compiler/position"
 	"github.com/google/mtail/internal/vm/compiler/symbol"
 	"github.com/google/mtail/internal/vm/compiler/types"
-	"github.com/google/mtail/internal/vm/object"
 )
 
 // codegen represents a code generator.
@@ -27,14 +26,14 @@ type codegen struct {
 	name string // Name of the program.
 
 	errors errors.ErrorList // Any compile errors detected are accumulated here.
-	obj    object.Object    // The object to return, if successful.
+	obj    code.Object      // The object to return, if successful.
 
 	l     []int           // Label table for recording jump destinations.
 	decos []*ast.DecoStmt // Decorator stack to unwind when entering decorated blocks.
 }
 
 // CodeGen is the function that compiles the program to bytecode and data.
-func CodeGen(name string, n ast.Node) (*object.Object, error) {
+func CodeGen(name string, n ast.Node) (*code.Object, error) {
 	c := &codegen{name: name}
 	_ = ast.Walk(c, n)
 	c.writeJumps()

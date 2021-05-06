@@ -14,7 +14,6 @@ import (
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/vm/code"
-	"github.com/google/mtail/internal/vm/object"
 )
 
 var instructions = []struct {
@@ -478,7 +477,7 @@ func TestInstrs(t *testing.T) {
 				metrics.NewMetric("foo", "test", metrics.Counter, metrics.Int),
 				metrics.NewMetric("bar", "test", metrics.Counter, metrics.Int),
 				metrics.NewMetric("quux", "test", metrics.Gauge, metrics.Float))
-			obj := &object.Object{Regexps: tc.re, Strings: tc.str, Metrics: m, Program: []code.Instr{tc.i}}
+			obj := &code.Object{Regexps: tc.re, Strings: tc.str, Metrics: m, Program: []code.Instr{tc.i}}
 			v := New(tc.name, obj, true, nil, false)
 			v.t = new(thread)
 			v.t.stack = make([]interface{}, 0)
@@ -503,7 +502,7 @@ func TestInstrs(t *testing.T) {
 
 // makeVM is a helper method for construction a single-instruction VM
 func makeVM(i code.Instr, m []*metrics.Metric) *VM {
-	obj := &object.Object{Metrics: m, Program: []code.Instr{i}}
+	obj := &code.Object{Metrics: m, Program: []code.Instr{i}}
 	v := New("test", obj, true, nil, false)
 	v.t = new(thread)
 	v.t.stack = make([]interface{}, 0)
@@ -659,7 +658,7 @@ func TestDatumSetInstrs(t *testing.T) {
 
 func TestStrptimeWithTimezone(t *testing.T) {
 	loc, _ := time.LoadLocation("Europe/Berlin")
-	obj := &object.Object{Program: []code.Instr{{code.Strptime, 0, 0}}}
+	obj := &code.Object{Program: []code.Instr{{code.Strptime, 0, 0}}}
 	vm := New("strptimezone", obj, true, loc, false)
 	vm.t = new(thread)
 	vm.t.stack = make([]interface{}, 0)
@@ -672,7 +671,7 @@ func TestStrptimeWithTimezone(t *testing.T) {
 }
 
 func TestStrptimeWithoutTimezone(t *testing.T) {
-	obj := &object.Object{Program: []code.Instr{{code.Strptime, 0, 0}}}
+	obj := &code.Object{Program: []code.Instr{{code.Strptime, 0, 0}}}
 	vm := New("strptimezone", obj, true, nil, false)
 	vm.t = new(thread)
 	vm.t.stack = make([]interface{}, 0)

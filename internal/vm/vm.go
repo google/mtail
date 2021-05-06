@@ -24,7 +24,6 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/vm/code"
-	"github.com/google/mtail/internal/vm/object"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -959,7 +958,7 @@ func (v *VM) ProcessLogLine(ctx context.Context, line *logline.LogLine) {
 
 // New creates a new virtual machine with the given name, and compiler
 // artifacts for executable and data segments.
-func New(name string, obj *object.Object, syslogUseCurrentYear bool, loc *time.Location, log bool) *VM {
+func New(name string, obj *code.Object, syslogUseCurrentYear bool, loc *time.Location, log bool) *VM {
 	return &VM{
 		name:                 name,
 		re:                   obj.Regexps,

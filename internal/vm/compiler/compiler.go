@@ -8,15 +8,15 @@ import (
 	"path/filepath"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/internal/vm/code"
 	"github.com/google/mtail/internal/vm/compiler/checker"
 	"github.com/google/mtail/internal/vm/compiler/codegen"
 	"github.com/google/mtail/internal/vm/compiler/parser"
-	"github.com/google/mtail/internal/vm/object"
 )
 
 // Compile compiles a program from the input into bytecode and data stored in an Object, or a list
 // of compile errors.
-func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, maxRegexpLength int, maxRecursionDepth int) (*object.Object, error) { // TODO this is a prime candidate for Options pattern. See https://github.com/google/mtail/pull/474#discussion_r598044460
+func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, maxRegexpLength int, maxRecursionDepth int) (*code.Object, error) { // TODO this is a prime candidate for Options pattern. See https://github.com/google/mtail/pull/474#discussion_r598044460
 	name = filepath.Base(name)
 
 	ast, err := parser.Parse(name, input)
