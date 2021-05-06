@@ -14,7 +14,7 @@ import (
 	"github.com/google/mtail/internal/vm/codegen"
 	"github.com/google/mtail/internal/vm/compiler/ast"
 	"github.com/google/mtail/internal/vm/compiler/checker"
-	"github.com/google/mtail/internal/vm/parser"
+	"github.com/google/mtail/internal/vm/compiler/parser"
 )
 
 var codegenTestDebug = flag.Bool("codegen_test_debug", false, "Log ASTs and debugging information ")

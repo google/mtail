@@ -10,8 +10,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/vm/codegen"
 	"github.com/google/mtail/internal/vm/compiler/checker"
+	"github.com/google/mtail/internal/vm/compiler/parser"
 	"github.com/google/mtail/internal/vm/object"
-	"github.com/google/mtail/internal/vm/parser"
 )
 
 // Compile compiles a program from the input into bytecode and data stored in an Object, or a list

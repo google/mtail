@@ -4,7 +4,7 @@ A Yacc parser is a state machine that responds to an input stream of tokens, and
 1. **shift**, which pushes a new state on the stack
 2. **reduce**, which pops a state off the stack and sets the lookahead token
 
-[`y.output`](../internal/vm/parser/y.output) is a semi-human, semi-machine readable description of the parser state machine.  `mtail` automatically generates this during the build process with the go:generate directive in [`driver.go`](../internal/vm/parser/driver.go)
+[`y.output`](../internal/vm/compiler/parser/y.output) is a semi-human, semi-machine readable description of the parser state machine.  `mtail` automatically generates this during the build process with the go:generate directive in [`driver.go`](../internal/vm/compiler/parser/driver.go)
 
 ```y.output
 state 0
@@ -61,7 +61,7 @@ state 48
 
 In state 48 we have recognised an `AND`, and then reduction of rule 26 says we put a `logical_op` at the front of the token stream and pop the stack (back to state 14).
 
-The last couple of actions for state 14 say we can expect a `LCURLY` (token name for `{`, see [`lexer.go`](../internal/vm/parser/lexer.go)) and then move to state 47.  Or anything else (`.`) and we're now in an error state.
+The last couple of actions for state 14 say we can expect a `LCURLY` (token name for `{`, see [`lexer.go`](../internal/vm/compiler/parser/lexer.go)) and then move to state 47.  Or anything else (`.`) and we're now in an error state.
 
 
 Run a parser test with debugging flags enabled, and we can see how the parser and lexer see the input:

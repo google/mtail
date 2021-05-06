@@ -14,7 +14,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/vm/compiler/checker"
-	"github.com/google/mtail/internal/vm/parser"
+	"github.com/google/mtail/internal/vm/compiler/parser"
 )
 
 var (

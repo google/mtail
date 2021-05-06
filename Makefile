@@ -46,13 +46,13 @@ GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
 GOTESTFILES=$(shell find . -name '*_test.go')
 
-GOGENFILES=internal/vm/parser/parser.go\
+GOGENFILES=internal/vm/compiler/parser/parser.go\
 	internal/mtail/logo.ico.go
 
 
 CLEANFILES+=\
-	internal/vm/parser/parser.go\
-	internal/vm/parser/y.output\
+	internal/vm/compiler/parser/parser.go\
+	internal/vm/compiler/parser/y.output\
 	internal/mtail/logo.ico.go\
 	internal/mtail/logo.ico\
 
@@ -127,7 +127,7 @@ $(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d | print-version .dep-stamp
 	$(MAKEDEPEND)
 	go build -gcflags "$(GO_GCFLAGS)" -ldflags "$(GO_LDFLAGS)" -o $@ $<
 
-internal/vm/parser/parser.go: internal/vm/parser/parser.y | $(GOYACC)
+internal/vm/compiler/parser/parser.go: internal/vm/compiler/parser/parser.y | $(GOYACC)
 	go generate -x ./$(@D)
 
 internal/mtail/logo.ico: logo.png
