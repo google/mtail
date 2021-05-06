@@ -30,6 +30,7 @@ import (
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/vm/compiler"
 )
 
 var (
@@ -211,15 +212,16 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		glog.V(1).Infof("contents match, not recompiling %q", name)
 		return nil
 	}
-	v, errs := Compile(name, &buf, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation, l.maxRegexpLength, l.maxRecursionDepth, l.logRuntimeErrors)
+	obj, errs := compiler.Compile(name, &buf, l.dumpAst, l.dumpAstTypes, l.maxRegexpLength, l.maxRecursionDepth)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("compile failed for %s:\n%s", name, errs)
 	}
-	if v == nil {
+	if obj == nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
 	}
+	v := New(name, obj, l.syslogUseCurrentYear, l.overrideLocation, l.logRuntimeErrors)
 
 	if l.dumpBytecode {
 		glog.Info("Dumping program objects and bytecode\n", v.DumpByteCode())

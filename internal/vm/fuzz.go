@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/google/mtail/internal/logline"
+	"github.com/google/mtail/internal/vm/compiler"
 )
 
 // U+2424 SYMBOL FOR NEWLINE
@@ -29,11 +30,12 @@ func Fuzz(data []byte) int {
 	}
 	fmt.Printf("data len %d, offset is %d, input starts at %d\n", len(data), offset, offset+len(SEP))
 
-	v, err := Compile("fuzz", bytes.NewReader(data[:offset]), dumpDebug, dumpDebug, false, nil, 0, 0)
+	obj, err := compiler.Compile("fuzz", bytes.NewReader(data[:offset]), dumpDebug, dumpDebug, 0, 0)
 	if err != nil {
 		fmt.Println(err)
 		return 0 // false
 	}
+	v := New("fuzz", obj, false, nil, dumpDebug)
 	if dumpDebug {
 		fmt.Println(v.DumpByteCode())
 	}

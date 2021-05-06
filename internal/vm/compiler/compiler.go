@@ -1,22 +1,22 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
-package vm
+package compiler
 
 import (
 	"io"
 	"path/filepath"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/vm/checker"
 	"github.com/google/mtail/internal/vm/codegen"
+	"github.com/google/mtail/internal/vm/object"
 	"github.com/google/mtail/internal/vm/parser"
 )
 
-// Compile compiles a program from the input into a virtual machine or a list
+// Compile compiles a program from the input into bytecode and data stored in an Object, or a list
 // of compile errors.
-func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, syslogUseCurrentYear bool, loc *time.Location, maxRegexpLength int, maxRecursionDepth int, logRuntimeErrors bool) (*VM, error) { // TODO this is a prime candidate for Options pattern. See https://github.com/google/mtail/pull/474#discussion_r598044460
+func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, maxRegexpLength int, maxRecursionDepth int) (*object.Object, error) { // TODO this is a prime candidate for Options pattern. See https://github.com/google/mtail/pull/474#discussion_r598044460
 	name = filepath.Base(name)
 
 	ast, err := parser.Parse(name, input)
@@ -42,7 +42,5 @@ func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, sysl
 	if err != nil {
 		return nil, err
 	}
-
-	vm := New(name, obj, syslogUseCurrentYear, loc, logRuntimeErrors)
-	return vm, nil
+	return obj, nil
 }
