@@ -200,7 +200,7 @@ $(TESTRESULTS)/benchstat.txt: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt |
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
 .PHONY: testall
-testall: testrace bench regtest
+testall: testrace bench fuzz-regtest
 
 ## make u a container
 .PHONY: container
