@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - '**.go'
-      - 'internal/vm/compiler/parser/parser.y'
+      - 'internal/runtime/compiler/parser/parser.y'
       - 'Makefile'
       - 'Dockerfile'
 jobs:

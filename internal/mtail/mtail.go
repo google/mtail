@@ -16,8 +16,8 @@ import (
 	"github.com/google/mtail/internal/exporter"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
+	vm "github.com/google/mtail/internal/runtime"
 	"github.com/google/mtail/internal/tailer"
-	"github.com/google/mtail/internal/vm"
 	"github.com/google/mtail/internal/waker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -246,7 +246,7 @@ func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server,
 		"log_rotations_total": prometheus.NewDesc("log_rotations_total", "number of log rotation events per log file", []string{"logfile"}, nil),
 		"log_truncates_total": prometheus.NewDesc("log_truncates_total", "number of log truncation events log file", []string{"logfile"}, nil),
 		"log_lines_total":     prometheus.NewDesc("log_lines_total", "number of lines read per log file", []string{"logfile"}, nil),
-		// internal/vm/loader.go
+		// internal/runtime/loader.go
 		"lines_total":               prometheus.NewDesc("lines_total", "number of lines received by the program loader", nil, nil),
 		"prog_loads_total":          prometheus.NewDesc("prog_loads_total", "number of program load events by program source filename", []string{"prog"}, nil),
 		"prog_load_errors_total":    prometheus.NewDesc("prog_load_errors_total", "number of errors encountered when loading per program source filename", []string{"prog"}, nil),

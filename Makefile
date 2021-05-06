@@ -46,13 +46,13 @@ GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
 GOTESTFILES=$(shell find . -name '*_test.go')
 
-GOGENFILES=internal/vm/compiler/parser/parser.go\
+GOGENFILES=internal/runtime/compiler/parser/parser.go\
 	internal/mtail/logo.ico.go
 
 
 CLEANFILES+=\
-	internal/vm/compiler/parser/parser.go\
-	internal/vm/compiler/parser/y.output\
+	internal/runtime/compiler/parser/parser.go\
+	internal/runtime/compiler/parser/y.output\
 	internal/mtail/logo.ico.go\
 	internal/mtail/logo.ico\
 
@@ -127,7 +127,7 @@ $(TARGETS): %: cmd/%/main.go $(DEPDIR)/%.d | print-version .dep-stamp
 	$(MAKEDEPEND)
 	go build -gcflags "$(GO_GCFLAGS)" -ldflags "$(GO_LDFLAGS)" -o $@ $<
 
-internal/vm/compiler/parser/parser.go: internal/vm/compiler/parser/parser.y | $(GOYACC)
+internal/runtime/compiler/parser/parser.go: internal/runtime/compiler/parser/parser.y | $(GOYACC)
 	go generate -x ./$(@D)
 
 internal/mtail/logo.ico: logo.png
@@ -222,13 +222,13 @@ LIB_FUZZING_ENGINE ?=
 OUT ?= .
 
 $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
-	go114-fuzz-build -o fuzzer.a ./internal/vm
+	go114-fuzz-build -o fuzzer.a ./internal/runtime
 	$(CXX) $(CXXFLAGS) $(LIB_FUZZING_ENGINE) fuzzer.a -lpthread -o $(OUT)/vm-fuzzer
 
 $(OUT)/vm-fuzzer.dict: mgen
 	./mgen --dictionary | sort > $@
 
-$(OUT)/vm-fuzzer_seed_corpus.zip: $(wildcard examples/*.mtail) $(wildcard internal/vm/fuzz/*.mtail)
+$(OUT)/vm-fuzzer_seed_corpus.zip: $(wildcard examples/*.mtail) $(wildcard internal/runtime/fuzz/*.mtail)
 	zip -j $@ $^
 
 FUZZER_FLAGS=-rss_limit_mb=4096 -timeout=60s
