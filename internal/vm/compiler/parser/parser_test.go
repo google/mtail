@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/mtail/internal/testutil"
 	"github.com/google/mtail/internal/vm/compiler/ast"
-	"github.com/google/mtail/internal/vm/position"
+	"github.com/google/mtail/internal/vm/compiler/position"
 )
 
 var parserTestDebug = flag.Bool("parser_test_debug", false, "Turn on parser debug output if set.")

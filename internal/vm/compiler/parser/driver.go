@@ -26,7 +26,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/vm/compiler/ast"
 	"github.com/google/mtail/internal/vm/compiler/errors"
-	"github.com/google/mtail/internal/vm/position"
+	"github.com/google/mtail/internal/vm/compiler/position"
 )
 
 // Parse reads the program named name from the input, and if successful returns

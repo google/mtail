@@ -12,7 +12,7 @@ import (
 	"unicode"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/vm/position"
+	"github.com/google/mtail/internal/vm/compiler/position"
 )
 
 // List of keywords.  Keep this list sorted!

@@ -9,7 +9,7 @@ import (
 
     "github.com/google/mtail/internal/metrics"
     "github.com/google/mtail/internal/vm/compiler/ast"
-    "github.com/google/mtail/internal/vm/position"
+    "github.com/google/mtail/internal/vm/compiler/position"
     "github.com/golang/glog"
 )
 

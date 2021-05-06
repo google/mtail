@@ -3,17 +3,17 @@
 //line parser.y:5
 package parser
 
-import __yyfmt__ "fmt"
-
-//line parser.y:5
-
 import (
+	__yyfmt__ "fmt"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/vm/compiler/ast"
-	"github.com/google/mtail/internal/vm/position"
+
+//line parser.y:5
+
+	"github.com/google/mtail/internal/vm/compiler/position"
 )
 
 //line parser.y:18

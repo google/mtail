@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/vm/position"
+	"github.com/google/mtail/internal/vm/compiler/position"
 )
 
 type lexerTest struct {
