@@ -8,7 +8,6 @@ package vm
 import (
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"math"
 	"regexp"
@@ -38,8 +37,6 @@ var (
 		Help:      "VM line processing time distribution in seconds.",
 		Buckets:   prometheus.ExponentialBuckets(0.00002, 2.0, 10),
 	}, []string{"prog"})
-
-	runtimeLogError = flag.Bool("vm_logs_runtime_errors", true, "Enables logging of runtime errors to the standard log.  Set to false to only have the errors printed to the HTTP console.")
 )
 
 type thread struct {
@@ -75,6 +72,7 @@ type VM struct {
 	runtimeErrorMu sync.RWMutex //protects runtimeError
 	runtimeError   string       // records the last runtime error from errorf()
 
+	logRuntimeErrors     bool           // Emit runtime errors to the log.
 	syslogUseCurrentYear bool           // Overwrite zero years with the current year in a strptime.
 	loc                  *time.Location // Override local timezone with provided, if not empty
 }
@@ -102,7 +100,7 @@ func (v *VM) errorf(format string, args ...interface{}) {
 		"Error occurred at instruction %d {%s, %v}, originating in %s at line %d\n",
 		v.t.pc-1, i.Opcode, i.Operand, v.name, i.SourceLine+1)
 	v.runtimeError += fmt.Sprintf("Full input text from %q was %q", v.input.Filename, v.input.Line)
-	if *runtimeLogError || bool(glog.V(1)) {
+	if v.logRuntimeErrors || bool(glog.V(1)) {
 		glog.Info(v.name + ": Runtime error: " + v.runtimeError)
 
 		glog.Infof("Set logging verbosity higher (-v1 or more) to see full VM state dump.")
@@ -961,7 +959,7 @@ func (v *VM) ProcessLogLine(ctx context.Context, line *logline.LogLine) {
 
 // New creates a new virtual machine with the given name, and compiler
 // artifacts for executable and data segments.
-func New(name string, obj *object.Object, syslogUseCurrentYear bool, loc *time.Location) *VM {
+func New(name string, obj *object.Object, syslogUseCurrentYear bool, loc *time.Location, log bool) *VM {
 	return &VM{
 		name:                 name,
 		re:                   obj.Regexps,
@@ -971,6 +969,7 @@ func New(name string, obj *object.Object, syslogUseCurrentYear bool, loc *time.L
 		timeMemos:            lru.New(64),
 		syslogUseCurrentYear: syslogUseCurrentYear,
 		loc:                  loc,
+		logRuntimeErrors:     log,
 	}
 }
 

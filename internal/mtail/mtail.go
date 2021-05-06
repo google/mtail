@@ -61,6 +61,7 @@ type Server struct {
 	omitMetricSource     bool           // if set, do not link the source program to a metric
 	omitProgLabel        bool           // if set, do not put the program name in the metric labels
 	emitMetricTimestamp  bool           // if set, emit the metric's recorded timestamp
+	logRuntimeErrors     bool           // if set, emit VM runtime errors into the log
 
 	maxRegexpLength   int // if set, mtail will accept regexs upto the max length
 	maxRecursionDepth int // if set, mtail will accept parse upto the number of parsed statements deep
@@ -96,6 +97,9 @@ func (m *Server) initLoader() error {
 	}
 	if m.overrideLocation != nil {
 		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
+	}
+	if m.logRuntimeErrors {
+		opts = append(opts, vm.LogRuntimeErrors())
 	}
 	var err error
 	m.l, err = vm.NewLoader(m.lines, &m.wg, m.programPath, m.store, opts...)

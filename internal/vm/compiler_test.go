@@ -12,7 +12,7 @@ import (
 
 func TestCompileParserError(t *testing.T) {
 	r := strings.NewReader("bad program")
-	_, err := vm.Compile("test", r, true, true, true, nil, 0, 0)
+	_, err := vm.Compile("test", r, true, true, true, nil, 0, 0, false)
 	if err == nil {
 		t.Errorf("expected error, got nil")
 	}
@@ -22,7 +22,7 @@ func TestCompileCheckerError(t *testing.T) {
 	r := strings.NewReader(`// {
 i++
 }`)
-	_, err := vm.Compile("test", r, true, true, true, nil, 0, 0)
+	_, err := vm.Compile("test", r, true, true, true, nil, 0, 0, false)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -33,7 +33,7 @@ func TestCompileCodegen(t *testing.T) {
 // {
   i++
 }`)
-	_, err := vm.Compile("test", r, true, true, true, nil, 0, 0)
+	_, err := vm.Compile("test", r, true, true, true, nil, 0, 0, false)
 	if err != nil {
 		t.Error(err)
 	}

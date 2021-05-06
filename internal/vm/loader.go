@@ -211,7 +211,7 @@ func (l *Loader) CompileAndRun(name string, input io.Reader) error {
 		glog.V(1).Infof("contents match, not recompiling %q", name)
 		return nil
 	}
-	v, errs := Compile(name, &buf, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation, l.maxRegexpLength, l.maxRecursionDepth)
+	v, errs := Compile(name, &buf, l.dumpAst, l.dumpAstTypes, l.syslogUseCurrentYear, l.overrideLocation, l.maxRegexpLength, l.maxRecursionDepth, l.logRuntimeErrors)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("compile failed for %s:\n%s", name, errs)
@@ -288,6 +288,7 @@ type Loader struct {
 	dumpBytecode         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
 	syslogUseCurrentYear bool           // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
 	omitMetricSource     bool
+	logRuntimeErrors     bool // Instruct the VM to emit runtime errors to the log.
 
 	signalQuit        chan struct{} // When closed stops the signal handler goroutine.
 	maxRegexpLength   int
@@ -382,6 +383,14 @@ func PrometheusRegisterer(reg prometheus.Registerer) Option {
 	return func(l *Loader) error {
 		l.reg = reg
 		l.reg.MustRegister(lineProcessingDurations)
+		return nil
+	}
+}
+
+// LogRuntimeErrors instructs the VM to emit runtime errors into the log.
+func LogRuntimeErrors() Option {
+	return func(l *Loader) error {
+		l.logRuntimeErrors = true
 		return nil
 	}
 }

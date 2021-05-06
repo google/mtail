@@ -253,3 +253,11 @@ func (opt MaxRecursionDepth) apply(m *Server) error {
 	m.maxRecursionDepth = int(opt)
 	return nil
 }
+
+// LogRuntimeErrors instructs the VM to emit runtime errors to the log.
+type LogRuntimeErrors bool
+
+func (opt LogRuntimeErrors) apply(m *Server) error {
+	m.logRuntimeErrors = bool(opt)
+	return nil
+}
