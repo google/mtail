@@ -8,7 +8,7 @@ import (
     "time"
 
     "github.com/google/mtail/internal/metrics"
-    "github.com/google/mtail/internal/vm/ast"
+    "github.com/google/mtail/internal/vm/compiler/ast"
     "github.com/google/mtail/internal/vm/position"
     "github.com/golang/glog"
 )

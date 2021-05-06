@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/vm/ast"
+	"github.com/google/mtail/internal/vm/compiler/ast"
 )
 
 // Unparser is for converting program syntax trees back to program text.

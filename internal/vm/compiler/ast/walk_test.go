@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/vm/ast"
+	"github.com/google/mtail/internal/vm/compiler/ast"
 	"github.com/google/mtail/internal/vm/parser"
 	"github.com/google/mtail/internal/vm/position"
 	"github.com/google/mtail/internal/vm/types"

@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/vm/ast"
+	"github.com/google/mtail/internal/vm/compiler/ast"
 	"github.com/google/mtail/internal/vm/errors"
 	"github.com/google/mtail/internal/vm/position"
 )
