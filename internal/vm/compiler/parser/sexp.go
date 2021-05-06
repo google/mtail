@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/vm/compiler/ast"
-	"github.com/google/mtail/internal/vm/symbol"
+	"github.com/google/mtail/internal/vm/compiler/symbol"
 )
 
 // Sexp is for converting program syntax trees into typed s-expression for printing

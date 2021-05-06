@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/vm/compiler/position"
-	"github.com/google/mtail/internal/vm/symbol"
+	"github.com/google/mtail/internal/vm/compiler/symbol"
 	"github.com/google/mtail/internal/vm/types"
 )
 

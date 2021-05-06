@@ -13,7 +13,7 @@ import (
 	"github.com/google/mtail/internal/vm/compiler/ast"
 	"github.com/google/mtail/internal/vm/compiler/errors"
 	"github.com/google/mtail/internal/vm/compiler/parser"
-	"github.com/google/mtail/internal/vm/symbol"
+	"github.com/google/mtail/internal/vm/compiler/symbol"
 	"github.com/google/mtail/internal/vm/types"
 )
 
