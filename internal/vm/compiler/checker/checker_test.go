@@ -14,7 +14,7 @@ import (
 	"github.com/google/mtail/internal/vm/compiler/checker"
 	"github.com/google/mtail/internal/vm/compiler/parser"
 	"github.com/google/mtail/internal/vm/compiler/symbol"
-	"github.com/google/mtail/internal/vm/types"
+	"github.com/google/mtail/internal/vm/compiler/types"
 )
 
 var checkerTestDebug = flag.Bool("checker_test_debug", false, "Turn on to log AST in tests")

@@ -18,8 +18,8 @@ import (
 	"github.com/google/mtail/internal/vm/compiler/parser"
 	"github.com/google/mtail/internal/vm/compiler/position"
 	"github.com/google/mtail/internal/vm/compiler/symbol"
+	"github.com/google/mtail/internal/vm/compiler/types"
 	"github.com/google/mtail/internal/vm/object"
-	"github.com/google/mtail/internal/vm/types"
 )
 
 // codegen represents a code generator.

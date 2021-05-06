@@ -10,7 +10,7 @@ import (
 	"github.com/google/mtail/internal/vm/compiler/ast"
 	"github.com/google/mtail/internal/vm/compiler/parser"
 	"github.com/google/mtail/internal/vm/compiler/position"
-	"github.com/google/mtail/internal/vm/types"
+	"github.com/google/mtail/internal/vm/compiler/types"
 )
 
 type testNode struct {

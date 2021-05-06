@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/google/mtail/internal/vm/compiler/position"
-	"github.com/google/mtail/internal/vm/types"
+	"github.com/google/mtail/internal/vm/compiler/types"
 )
 
 // SymbolKind enumerates the kind of a Symbol.
