@@ -216,9 +216,9 @@ container: Dockerfile
 #
 
 # These flags set compatibility with OSS-Fuzz
-CXX ?= clang
-CXXFLAGS ?=
-LIB_FUZZING_ENGINE ?= -fsanitize=fuzzer
+CXX = clang
+CXXFLAGS ?= -fsanitize=fuzzer,address
+LIB_FUZZING_ENGINE ?=
 OUT ?= .
 
 $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
