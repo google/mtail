@@ -6,10 +6,12 @@ package logstream
 import (
 	"bytes"
 	"context"
+	"errors"
 	"expvar"
 	"io"
 	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/golang/glog"
@@ -113,8 +115,20 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 
 			if err != nil && err != io.EOF {
-				glog.Info(err)
 				logErrors.Add(fs.pathname, 1)
+				// TODO: This could be generalised to check for any retryable
+				// errors, and end on unretriables; e.g. ESTALE looks
+				// retryable.
+				var serr *os.SyscallError
+				if errors.As(err, &serr) && serr.Err == syscall.ESTALE {
+					glog.Infof("%v: reopening stream due to %s", fd, err)
+					if nerr := fs.stream(ctx, wg, waker, fi, true); nerr != nil {
+						glog.Info(nerr)
+					}
+					// Close this stream.
+					return
+				}
+				glog.Info(err)
 			}
 
 			// If we have read no bytes and are at EOF, check for truncation and rotation.
