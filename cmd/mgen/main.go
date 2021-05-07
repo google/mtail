@@ -11,7 +11,7 @@ import (
 	"math/big"
 	mrand "math/rand"
 
-	"github.com/google/mtail/internal/vm/parser"
+	"github.com/google/mtail/internal/runtime/compiler/parser"
 )
 
 var (

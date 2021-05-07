@@ -13,7 +13,7 @@ go test -run TestParserRoundTrip/decrement_counter --logtostderr --mtailDebug=3 
 
 ## Improving parser syntax error messages
 
-You can use this to improve error messages in the `%error` section of [`parser.y`](../internal/vm/parser/parser.y), if you compare the "error recovery pops" messages with the state machine in the generated [`y.output`](../internal/vm/parser/y.output).
+You can use this to improve error messages in the `%error` section of [`parser.y`](../internal/runtime/compiler/parser/parser.y), if you compare the "error recovery pops" messages with the state machine in the generated [`y.output`](../internal/runtime/compiler/parser/y.output).
 
 
 ```
@@ -97,9 +97,9 @@ so it's easier to read -- it'll be bigger cos of the whitespace and the minimise
 
 The formatted mtail program should help make it obvious what's happening and let you manually attempt to rename or remove parts of the program yourself -- perhaps a whole variable declaration and usage doesn't need to exist, but the minimiser will take a long time to figure that out.
 
-Once we have the smallest program we can add it to the crash corpus in [`internal/vm/fuzz/`](../internal/vm/fuzz/) and running `make fuzz` should run and fail on it straight away.
+Once we have the smallest program we can add it to the crash corpus in [`internal/runtime/fuzz/`](../internal/runtime/fuzz/) and running `make fuzz` should run and fail on it straight away.
 
-Or, variants of the program can be added to the various `*Invalid` tests in parts of the `vm` module, e.g. [`parser_test.go`](../internal/vm/parser/parser_test.go) or [`checker_test.go`](../internal/vm/checker/checker_test.go) depending on where in the compiler the defect is occuring.
+Or, variants of the program can be added to the various `*Invalid` tests in parts of the `vm` module, e.g. [`parser_test.go`](../internal/runtime/compiler/parser/parser_test.go) or [`checker_test.go`](../internal/runtime/compiler/checker/checker_test.go) depending on where in the compiler the defect is occuring.
 
 If the crash is in `vm.go` then we can dump the program to see what AST and types, and bytecode it generates.
 

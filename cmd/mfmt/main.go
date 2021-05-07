@@ -13,8 +13,8 @@ import (
 	"os"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/vm/checker"
-	"github.com/google/mtail/internal/vm/parser"
+	"github.com/google/mtail/internal/runtime/compiler/checker"
+	"github.com/google/mtail/internal/runtime/compiler/parser"
 )
 
 var (

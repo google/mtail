@@ -103,7 +103,7 @@ func (ts *TestServer) PollWatched(n int) {
 		glog.Info(err)
 	}
 	glog.Infof("TestServer reloading programs")
-	if err := ts.l.LoadAllPrograms(); err != nil {
+	if err := ts.r.LoadAllPrograms(); err != nil {
 		glog.Info(err)
 	}
 	glog.Infof("TestServer tailer gcing")

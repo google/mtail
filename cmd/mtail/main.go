@@ -57,6 +57,7 @@ var (
 	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of UTC.")
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 	emitMetricTimestamp  = flag.Bool("emit_metric_timestamp", false, "Emit the recorded timestamp of a metric.  If disabled (the default) no explicit timestamp is sent to a collector.")
+	logRuntimeErrors     = flag.Bool("vm_logs_runtime_errors", true, "Enables logging of runtime errors to the standard log.  Set to false to only have the errors printed to the HTTP console.")
 
 	// Ops flags
 	pollInterval                = flag.Duration("poll_interval", 250*time.Millisecond, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
@@ -165,6 +166,7 @@ func main() {
 		mtail.MetricPushInterval(*metricPushInterval),
 		mtail.MaxRegexpLength(*maxRegexpLength),
 		mtail.MaxRecursionDepth(*maxRecursionDepth),
+		mtail.LogRuntimeErrors(*logRuntimeErrors),
 	}
 	if *staleLogGcTickInterval > 0 {
 		staleLogGcWaker := waker.NewTimed(ctx, *staleLogGcTickInterval)

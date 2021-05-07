@@ -88,4 +88,36 @@ Test that when path/* is the logpathpattern that we handle log rotation, e.g. lo
  = how can this work, we can't tell the difference between log.1 being a rotation or a new log.  This could work if we can have a tailer-level registry of filenames currently with a goroutine.  But we don't know the name of the new file when filestream creates a new goroutine for the replacement; fd.Stat() doesn't return the new name of the file.
 
 
-Can we create a linter that checks for patterns like 'path.Join' and warns against them?
+VM profiler, when enabled, times instructions so user gets feedback on where their program is slow.
+
+Can we create a linter that checks for code patterns like 'path.Join' and warns against them?  Can govet be made to do this?
+
+Detect when a regular expression compiled doesn't have a onepass program, and report a compile warning.  we can't do this today with the regexp API, because it's not an exported field, and the onepass compilation step is not an exported function.  IF we can do this, we can warn the user that their regular expression has ambiguity and will backtrack.  See MATCH_NETWORK above.
+
+Use math/big for literals in the AST, and then perform const folding in the checker or post-checker before code generation.  Extra credit: find out if the vm runtime should use big internally as well!
+
+regular expression matching is expensive.  prefilter on match prefix.  for extra credit, filter on all substrings of the expressions, using aho-corasick.
+
+once the vm refactoring has completed, move the VM execute method into per-opcode functions, and use the same state machine function as in lexer.NextToken() to simulate threaded code as we don't get tail recursion in Go.  The plan is to see if execution speed is same or better -- expect moving to function calls to be slower unless inlined, but gain in readability and reuse.
+
+refactor vm further to replace stack with registers, we need typed registers to remove the pop runtime type cast. new opcodes to do migration from stack to register based ops required
+
+
+Once the tailer can read from sockets, I'll move it out of `internal/`.
+
+
+Pass a Logger as an option to tailer and vm.
+
+StatusHTML in vm reads expvars; can we not do that?
+
+Move from expvar to OpenSomething metrics.
+
+Should the exporter move into the metric package?
+
+
+Should the waker move into the tailer package?
+
+
+Benchstat using Wilcoxon... find that paper... to get more consistent results on GHA.
+
+Move loc and useCurrentYear out of VM and into Runtime env.

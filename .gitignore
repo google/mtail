@@ -24,9 +24,9 @@ workdir/*
 /mtail
 /mdot
 /mgen
-/internal/vm/fuzzer.a
-/internal/vm/fuzzer
-/internal/vm/fuzzit
+/internal/runtime/fuzzer.a
+/internal/runtime/fuzzer
+/internal/runtime/fuzzit
 /vm-fuzzer.dict
 /vendor
 /vm-fuzzer

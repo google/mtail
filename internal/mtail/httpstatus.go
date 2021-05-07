@@ -43,7 +43,7 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err = t.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	err = m.l.WriteStatusHTML(w)
+	err = m.r.WriteStatusHTML(w)
 	if err != nil {
 		glog.Warningf("Error while writing loader status: %s", err)
 	}

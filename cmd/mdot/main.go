@@ -29,9 +29,9 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/mtail"
-	"github.com/google/mtail/internal/vm/ast"
-	"github.com/google/mtail/internal/vm/checker"
-	"github.com/google/mtail/internal/vm/parser"
+	"github.com/google/mtail/internal/runtime/compiler/ast"
+	"github.com/google/mtail/internal/runtime/compiler/checker"
+	"github.com/google/mtail/internal/runtime/compiler/parser"
 )
 
 var (
