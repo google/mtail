@@ -1029,7 +1029,7 @@ a
 	},
 }
 
-func TestVmEndToEnd(t *testing.T) {
+func TestRuntimeEndToEnd(t *testing.T) {
 	if testing.Verbose() {
 		testutil.SetFlag(t, "vmodule", "vm=2,loader=2,checker=2")
 	}
