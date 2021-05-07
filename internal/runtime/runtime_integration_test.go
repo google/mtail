@@ -1041,9 +1041,9 @@ func TestRuntimeEndToEnd(t *testing.T) {
 			store := metrics.NewStore()
 			lines := make(chan *logline.LogLine, 1)
 			var wg sync.WaitGroup
-			l, err := NewLoader(lines, &wg, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource())
+			r, err := New(lines, &wg, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource())
 			testutil.FatalIfErr(t, err)
-			compileErrors := l.CompileAndRun(tc.name, strings.NewReader(tc.prog))
+			compileErrors := r.CompileAndRun(tc.name, strings.NewReader(tc.prog))
 			testutil.FatalIfErr(t, compileErrors)
 			scanner := bufio.NewScanner(strings.NewReader(tc.log))
 			lineCount := 0

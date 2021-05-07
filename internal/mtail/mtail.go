@@ -16,7 +16,7 @@ import (
 	"github.com/google/mtail/internal/exporter"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
-	vm "github.com/google/mtail/internal/runtime"
+	"github.com/google/mtail/internal/runtime"
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/waker"
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,7 +32,7 @@ type Server struct {
 	wg    sync.WaitGroup // wait for main processes to shutdown
 
 	t *tailer.Tailer     // t manages log patterns and log streams, which sends lines to the VMs
-	l *vm.Loader         // l loads programs and manages the VM lifecycle
+	r *runtime.Runtime   // r loads programs and manages the VM lifecycle
 	e *exporter.Exporter // e manages the export of metrics from the store
 
 	lines chan *logline.LogLine // primary communication channel, owned by Tailer.
@@ -67,42 +67,42 @@ type Server struct {
 	maxRecursionDepth int // if set, mtail will accept parse upto the number of parsed statements deep
 }
 
-// initLoader constructs a new program loader and performs the initial load of program files in the program directory.
-func (m *Server) initLoader() error {
-	opts := []vm.Option{
-		vm.PrometheusRegisterer(m.reg),
-		vm.MaxRegexpLength(m.maxRegexpLength),
-		vm.MaxRecursionDepth(m.maxRecursionDepth),
+// initRuntime constructs a new runtime and performs the initial load of program files in the program directory.
+func (m *Server) initRuntime() error {
+	opts := []runtime.Option{
+		runtime.PrometheusRegisterer(m.reg),
+		runtime.MaxRegexpLength(m.maxRegexpLength),
+		runtime.MaxRecursionDepth(m.maxRecursionDepth),
 	}
 	if m.compileOnly {
-		opts = append(opts, vm.CompileOnly())
+		opts = append(opts, runtime.CompileOnly())
 	}
 	if m.oneShot {
-		opts = append(opts, vm.ErrorsAbort())
+		opts = append(opts, runtime.ErrorsAbort())
 	}
 	if m.dumpAst {
-		opts = append(opts, vm.DumpAst())
+		opts = append(opts, runtime.DumpAst())
 	}
 	if m.dumpAstTypes {
-		opts = append(opts, vm.DumpAstTypes())
+		opts = append(opts, runtime.DumpAstTypes())
 	}
 	if m.dumpBytecode {
-		opts = append(opts, vm.DumpBytecode())
+		opts = append(opts, runtime.DumpBytecode())
 	}
 	if m.syslogUseCurrentYear {
-		opts = append(opts, vm.SyslogUseCurrentYear())
+		opts = append(opts, runtime.SyslogUseCurrentYear())
 	}
 	if m.omitMetricSource {
-		opts = append(opts, vm.OmitMetricSource())
+		opts = append(opts, runtime.OmitMetricSource())
 	}
 	if m.overrideLocation != nil {
-		opts = append(opts, vm.OverrideLocation(m.overrideLocation))
+		opts = append(opts, runtime.OverrideLocation(m.overrideLocation))
 	}
 	if m.logRuntimeErrors {
-		opts = append(opts, vm.LogRuntimeErrors())
+		opts = append(opts, runtime.LogRuntimeErrors())
 	}
 	var err error
-	m.l, err = vm.NewLoader(m.lines, &m.wg, m.programPath, m.store, opts...)
+	m.r, err = runtime.New(m.lines, &m.wg, m.programPath, m.store, opts...)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (m *Server) initHttpServer() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/favicon.ico", FaviconHandler)
 	mux.Handle("/", m)
-	mux.Handle("/progz", http.HandlerFunc(m.l.ProgzHandler))
+	mux.Handle("/progz", http.HandlerFunc(m.r.ProgzHandler))
 	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/graphite", http.HandlerFunc(m.e.HandleGraphite))
@@ -264,7 +264,7 @@ func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server,
 	if err := m.initExporter(); err != nil {
 		return nil, err
 	}
-	if err := m.initLoader(); err != nil {
+	if err := m.initRuntime(); err != nil {
 		return nil, err
 	}
 	if err := m.initTailer(); err != nil {

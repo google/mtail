@@ -50,7 +50,7 @@ const (
 // LoadAllPrograms loads all programs in a directory and starts watching the
 // directory for filesystem changes.  Any compile errors are stored for later retrieival.
 // This function returns an error if an internal error occurs.
-func (l *Loader) LoadAllPrograms() error {
+func (l *Runtime) LoadAllPrograms() error {
 	if l.programPath == "" {
 		glog.V(2).Info("Programpath is empty, loading nothing")
 		return nil
@@ -92,7 +92,7 @@ func (l *Loader) LoadAllPrograms() error {
 
 // LoadProgram loads or reloads a program from the full pathname programPath.  The name of
 // the program is the basename of the file.
-func (l *Loader) LoadProgram(programPath string) error {
+func (l *Runtime) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)
 	if strings.HasPrefix(name, ".") {
 		glog.V(2).Infof("Skipping %s because it is a hidden file.", programPath)
@@ -155,7 +155,7 @@ No compile errors
 `
 
 // WriteStatusHTML writes the current state of the loader as HTML to the given writer w.
-func (l *Loader) WriteStatusHTML(w io.Writer) error {
+func (l *Runtime) WriteStatusHTML(w io.Writer) error {
 	t, err := template.New("loader").Parse(loaderTemplate)
 	if err != nil {
 		return err
@@ -195,7 +195,7 @@ func (l *Loader) WriteStatusHTML(w io.Writer) error {
 // exists, the previous virtual machine is terminated and the new loaded over
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
-func (l *Loader) CompileAndRun(name string, input io.Reader) error {
+func (l *Runtime) CompileAndRun(name string, input io.Reader) error {
 	glog.V(2).Infof("CompileAndRun %s", name)
 	var buf bytes.Buffer
 	tee := io.TeeReader(input, &buf)
@@ -266,10 +266,10 @@ type vmHandle struct {
 	lines       chan *logline.LogLine
 }
 
-// Loader handles the lifecycle of programs and virtual machines, by watching
+// Runtime handles the lifecycle of programs and virtual machines, by watching
 // the configured program source directory, compiling changes to programs, and
 // managing the virtual machines.
-type Loader struct {
+type Runtime struct {
 	ctx         context.Context       // a cancellable context
 	wg          sync.WaitGroup        // used to await vm shutdown
 	ms          *metrics.Store        // pointer to metrics.Store to pass to compiler
@@ -297,44 +297,44 @@ type Loader struct {
 	maxRecursionDepth int
 }
 
-// Option configures a new program Loader.
-type Option func(*Loader) error
+// Option configures a new program Runtime.
+type Option func(*Runtime) error
 
 // OverrideLocation sets the timezone location for the VM.
 func OverrideLocation(loc *time.Location) Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.overrideLocation = loc
 		return nil
 	}
 }
 
-// CompileOnly sets the Loader to compile programs only, without executing them.
+// CompileOnly sets the Runtime to compile programs only, without executing them.
 func CompileOnly() Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.compileOnly = true
 		return ErrorsAbort()(l)
 	}
 }
 
-// ErrorsAbort sets the Loader to abort the Loader on compile errors.
+// ErrorsAbort sets the Runtime to abort the Runtime on compile errors.
 func ErrorsAbort() Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.errorsAbort = true
 		return nil
 	}
 }
 
-// DumpAst instructs the Loader to print the AST after program compilation.
+// DumpAst instructs the Runtime to print the AST after program compilation.
 func DumpAst() Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.dumpAst = true
 		return nil
 	}
 }
 
-// DumpAstTypes instructs the Loader to print the AST after type checking.
+// DumpAstTypes instructs the Runtime to print the AST after type checking.
 func DumpAstTypes() Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.dumpAstTypes = true
 		return nil
 	}
@@ -342,7 +342,7 @@ func DumpAstTypes() Option {
 
 // DumpBytecode instructs the loader to print the compiled bytecode after code generation.
 func DumpBytecode() Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.dumpBytecode = true
 		return nil
 	}
@@ -350,7 +350,7 @@ func DumpBytecode() Option {
 
 // SyslogUseCurrentYear instructs the VM to annotate yearless timestamps with the current year.
 func SyslogUseCurrentYear() Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.syslogUseCurrentYear = true
 		return nil
 	}
@@ -358,7 +358,7 @@ func SyslogUseCurrentYear() Option {
 
 // MaxRegexpLength sets the maximum length an mtail regular expression can have, in terms of characters.
 func MaxRegexpLength(maxRegexpLength int) Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.maxRegexpLength = maxRegexpLength
 		return nil
 	}
@@ -366,15 +366,15 @@ func MaxRegexpLength(maxRegexpLength int) Option {
 
 // MaxRecursionDepth sets the maximum depth the abstract syntax tree built during lexation can have
 func MaxRecursionDepth(maxRecursionLength int) Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.maxRecursionDepth = maxRecursionLength
 		return nil
 	}
 }
 
-// OmitMetricSource instructs the Loader to not annotate metrics with their program source when added to the metric store.
+// OmitMetricSource instructs the Runtime to not annotate metrics with their program source when added to the metric store.
 func OmitMetricSource() Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.omitMetricSource = true
 		return nil
 	}
@@ -382,7 +382,7 @@ func OmitMetricSource() Option {
 
 // PrometheusRegisterer passes in a registry for setting up exported metrics.
 func PrometheusRegisterer(reg prometheus.Registerer) Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.reg = reg
 		l.reg.MustRegister(vm.LineProcessingDurations)
 		return nil
@@ -391,18 +391,18 @@ func PrometheusRegisterer(reg prometheus.Registerer) Option {
 
 // LogRuntimeErrors instructs the VM to emit runtime errors into the log.
 func LogRuntimeErrors() Option {
-	return func(l *Loader) error {
+	return func(l *Runtime) error {
 		l.logRuntimeErrors = true
 		return nil
 	}
 }
 
-// NewLoader creates a new program loader that reads programs from programPath.
-func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, store *metrics.Store, options ...Option) (*Loader, error) {
+// New creates a new program loader that reads programs from programPath.
+func New(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, store *metrics.Store, options ...Option) (*Runtime, error) {
 	if store == nil {
 		return nil, errors.New("loader needs a store")
 	}
-	l := &Loader{
+	l := &Runtime{
 		ms:            store,
 		programPath:   programPath,
 		handles:       make(map[string]*vmHandle),
@@ -480,8 +480,8 @@ func NewLoader(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath st
 	return l, nil
 }
 
-// SetOption takes one or more option functions and applies them in order to Loader.
-func (l *Loader) SetOption(options ...Option) error {
+// SetOption takes one or more option functions and applies them in order to Runtime.
+func (l *Runtime) SetOption(options ...Option) error {
 	for _, option := range options {
 		if err := option(l); err != nil {
 			return err
@@ -491,7 +491,7 @@ func (l *Loader) SetOption(options ...Option) error {
 }
 
 // UnloadProgram removes the named program, any currently running VM goroutine.
-func (l *Loader) UnloadProgram(pathname string) {
+func (l *Runtime) UnloadProgram(pathname string) {
 	name := filepath.Base(pathname)
 	l.handleMu.Lock()
 	defer l.handleMu.Unlock()
@@ -500,7 +500,7 @@ func (l *Loader) UnloadProgram(pathname string) {
 	}
 }
 
-func (l *Loader) ProgzHandler(w http.ResponseWriter, r *http.Request) {
+func (l *Runtime) ProgzHandler(w http.ResponseWriter, r *http.Request) {
 	prog := r.URL.Query().Get("prog")
 	if prog != "" {
 		l.handleMu.RLock()

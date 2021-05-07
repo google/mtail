@@ -15,11 +15,11 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
-func TestNewLoader(t *testing.T) {
+func TestNewRuntime(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	_, err := NewLoader(lines, &wg, "", store)
+	_, err := New(lines, &wg, "", store)
 	testutil.FatalIfErr(t, err)
 	close(lines)
 	wg.Wait()
@@ -30,7 +30,7 @@ func TestCompileAndRun(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	l, err := NewLoader(lines, &wg, "", store)
+	l, err := New(lines, &wg, "", store)
 	testutil.FatalIfErr(t, err)
 	if err := l.CompileAndRun("Test", strings.NewReader(testProgram)); err != nil {
 		t.Errorf("CompileAndRun returned error: %s", err)
@@ -64,7 +64,7 @@ func TestLoadProg(t *testing.T) {
 
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	l, err := NewLoader(lines, &wg, tmpDir, store)
+	l, err := New(lines, &wg, tmpDir, store)
 	testutil.FatalIfErr(t, err)
 
 	for _, name := range testProgFiles {
