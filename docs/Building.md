@@ -80,20 +80,3 @@ service:
 Please use `gofmt` to format your code before committing.  Emacs' go-mode has a lovely [gofmt-before-save](http://golang.org/misc/emacs/go-mode.el) function.
 
 Please read the [test writing](Testing.md#test-writing) section for `mtail` test style guidelines.
-
-## Troubleshooting
-
-If `make` gives you the following error:
-
-```
-../github.com/google/mtail/vm/lexer.go:28: too many errors
-```
-
-Then run `make` in that dependency and run `make` again like so:
-
-```
-cd ../github.com/google/mtail
-make
-cd -
-make
-```
