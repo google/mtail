@@ -92,8 +92,6 @@ VM profiler, when enabled, times instructions so user gets feedback on where the
 
 Can we create a linter that checks for code patterns like 'path.Join' and warns against them?  Can govet be made to do this?
 
-Refactor the compiler and execution engine into separate parts of the VM -- naming is hard, compiler and VM aren't part of the same?
-
 Detect when a regular expression compiled doesn't have a onepass program, and report a compile warning.  we can't do this today with the regexp API, because it's not an exported field, and the onepass compilation step is not an exported function.  IF we can do this, we can warn the user that their regular expression has ambiguity and will backtrack.  See MATCH_NETWORK above.
 
 Use math/big for literals in the AST, and then perform const folding in the checker or post-checker before code generation.  Extra credit: find out if the vm runtime should use big internally as well!
