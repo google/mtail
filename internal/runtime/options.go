@@ -15,97 +15,97 @@ type Option func(*Runtime) error
 
 // OverrideLocation sets the timezone location for the VM.
 func OverrideLocation(loc *time.Location) Option {
-	return func(l *Runtime) error {
-		l.overrideLocation = loc
+	return func(r *Runtime) error {
+		r.overrideLocation = loc
 		return nil
 	}
 }
 
 // CompileOnly sets the Runtime to compile programs only, without executing them.
 func CompileOnly() Option {
-	return func(l *Runtime) error {
-		l.compileOnly = true
-		return ErrorsAbort()(l)
+	return func(r *Runtime) error {
+		r.compileOnly = true
+		return ErrorsAbort()(r)
 	}
 }
 
 // ErrorsAbort sets the Runtime to abort the Runtime on compile errors.
 func ErrorsAbort() Option {
-	return func(l *Runtime) error {
-		l.errorsAbort = true
+	return func(r *Runtime) error {
+		r.errorsAbort = true
 		return nil
 	}
 }
 
 // DumpAst instructs the Runtime to print the AST after program compilation.
 func DumpAst() Option {
-	return func(l *Runtime) error {
-		l.dumpAst = true
+	return func(r *Runtime) error {
+		r.dumpAst = true
 		return nil
 	}
 }
 
 // DumpAstTypes instructs the Runtime to print the AST after type checking.
 func DumpAstTypes() Option {
-	return func(l *Runtime) error {
-		l.dumpAstTypes = true
+	return func(r *Runtime) error {
+		r.dumpAstTypes = true
 		return nil
 	}
 }
 
 // DumpBytecode instructs the loader to print the compiled bytecode after code generation.
 func DumpBytecode() Option {
-	return func(l *Runtime) error {
-		l.dumpBytecode = true
+	return func(r *Runtime) error {
+		r.dumpBytecode = true
 		return nil
 	}
 }
 
 // SyslogUseCurrentYear instructs the VM to annotate yearless timestamps with the current year.
 func SyslogUseCurrentYear() Option {
-	return func(l *Runtime) error {
-		l.syslogUseCurrentYear = true
+	return func(r *Runtime) error {
+		r.syslogUseCurrentYear = true
 		return nil
 	}
 }
 
 // MaxRegexpLength sets the maximum length an mtail regular expression can have, in terms of characters.
 func MaxRegexpLength(maxRegexpLength int) Option {
-	return func(l *Runtime) error {
-		l.maxRegexpLength = maxRegexpLength
+	return func(r *Runtime) error {
+		r.maxRegexpLength = maxRegexpLength
 		return nil
 	}
 }
 
 // MaxRecursionDepth sets the maximum depth the abstract syntax tree built during lexation can have
 func MaxRecursionDepth(maxRecursionLength int) Option {
-	return func(l *Runtime) error {
-		l.maxRecursionDepth = maxRecursionLength
+	return func(r *Runtime) error {
+		r.maxRecursionDepth = maxRecursionLength
 		return nil
 	}
 }
 
 // OmitMetricSource instructs the Runtime to not annotate metrics with their program source when added to the metric store.
 func OmitMetricSource() Option {
-	return func(l *Runtime) error {
-		l.omitMetricSource = true
+	return func(r *Runtime) error {
+		r.omitMetricSource = true
 		return nil
 	}
 }
 
 // PrometheusRegisterer passes in a registry for setting up exported metrics.
 func PrometheusRegisterer(reg prometheus.Registerer) Option {
-	return func(l *Runtime) error {
-		l.reg = reg
-		l.reg.MustRegister(vm.LineProcessingDurations)
+	return func(r *Runtime) error {
+		r.reg = reg
+		r.reg.MustRegister(vm.LineProcessingDurations)
 		return nil
 	}
 }
 
 // LogRuntimeErrors instructs the VM to emit runtime errors into the log.
 func LogRuntimeErrors() Option {
-	return func(l *Runtime) error {
-		l.logRuntimeErrors = true
+	return func(r *Runtime) error {
+		r.logRuntimeErrors = true
 		return nil
 	}
 }

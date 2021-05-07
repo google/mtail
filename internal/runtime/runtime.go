@@ -11,10 +11,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"expvar"
-	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -49,38 +47,38 @@ const (
 // LoadAllPrograms loads all programs in a directory and starts watching the
 // directory for filesystem changes.  Any compile errors are stored for later retrieival.
 // This function returns an error if an internal error occurs.
-func (l *Runtime) LoadAllPrograms() error {
-	if l.programPath == "" {
+func (r *Runtime) LoadAllPrograms() error {
+	if r.programPath == "" {
 		glog.V(2).Info("Programpath is empty, loading nothing")
 		return nil
 	}
-	s, err := os.Stat(l.programPath)
+	s, err := os.Stat(r.programPath)
 	if err != nil {
-		return errors.Wrapf(err, "failed to stat %q", l.programPath)
+		return errors.Wrapf(err, "failed to stat %q", r.programPath)
 	}
 	switch {
 	case s.IsDir():
-		fis, rerr := ioutil.ReadDir(l.programPath)
+		fis, rerr := ioutil.ReadDir(r.programPath)
 		if rerr != nil {
-			return errors.Wrapf(rerr, "Failed to list programs in %q", l.programPath)
+			return errors.Wrapf(rerr, "Failed to list programs in %q", r.programPath)
 		}
 
 		for _, fi := range fis {
 			if fi.IsDir() {
 				continue
 			}
-			err = l.LoadProgram(filepath.Join(l.programPath, fi.Name()))
+			err = r.LoadProgram(filepath.Join(r.programPath, fi.Name()))
 			if err != nil {
-				if l.errorsAbort {
+				if r.errorsAbort {
 					return err
 				}
 				glog.Warning(err)
 			}
 		}
 	default:
-		err = l.LoadProgram(l.programPath)
+		err = r.LoadProgram(r.programPath)
 		if err != nil {
-			if l.errorsAbort {
+			if r.errorsAbort {
 				return err
 			}
 			glog.Warning(err)
@@ -91,7 +89,7 @@ func (l *Runtime) LoadAllPrograms() error {
 
 // LoadProgram loads or reloads a program from the full pathname programPath.  The name of
 // the program is the basename of the file.
-func (l *Runtime) LoadProgram(programPath string) error {
+func (r *Runtime) LoadProgram(programPath string) error {
 	name := filepath.Base(programPath)
 	if strings.HasPrefix(name, ".") {
 		glog.V(2).Infof("Skipping %s because it is a hidden file.", programPath)
@@ -111,14 +109,14 @@ func (l *Runtime) LoadProgram(programPath string) error {
 			glog.Warning(err)
 		}
 	}()
-	l.programErrorMu.Lock()
-	defer l.programErrorMu.Unlock()
-	l.programErrors[name] = l.CompileAndRun(name, f)
-	if l.programErrors[name] != nil {
-		if l.errorsAbort {
-			return l.programErrors[name]
+	r.programErrorMu.Lock()
+	defer r.programErrorMu.Unlock()
+	r.programErrors[name] = r.CompileAndRun(name, f)
+	if r.programErrors[name] != nil {
+		if r.errorsAbort {
+			return r.programErrors[name]
 		}
-		glog.Infof("Compile errors for %s:\n%s", name, l.programErrors[name])
+		glog.Infof("Compile errors for %s:\n%s", name, r.programErrors[name])
 	}
 	return nil
 }
@@ -128,7 +126,7 @@ func (l *Runtime) LoadProgram(programPath string) error {
 // exists, the previous virtual machine is terminated and the new loaded over
 // it.  If the new program fails to compile, any existing virtual machine with
 // the same name remains running.
-func (l *Runtime) CompileAndRun(name string, input io.Reader) error {
+func (r *Runtime) CompileAndRun(name string, input io.Reader) error {
 	glog.V(2).Infof("CompileAndRun %s", name)
 	var buf bytes.Buffer
 	tee := io.TeeReader(input, &buf)
@@ -138,14 +136,14 @@ func (l *Runtime) CompileAndRun(name string, input io.Reader) error {
 		return errors.Wrapf(err, "hashing failed for %q", name)
 	}
 	contentHash := hasher.Sum(nil)
-	l.handleMu.RLock()
-	vh, ok := l.handles[name]
-	l.handleMu.RUnlock()
+	r.handleMu.RLock()
+	vh, ok := r.handles[name]
+	r.handleMu.RUnlock()
 	if ok && bytes.Equal(vh.contentHash, contentHash) {
 		glog.V(1).Infof("contents match, not recompiling %q", name)
 		return nil
 	}
-	obj, errs := compiler.Compile(name, &buf, l.dumpAst, l.dumpAstTypes, l.maxRegexpLength, l.maxRecursionDepth)
+	obj, errs := compiler.Compile(name, &buf, r.dumpAst, r.dumpAstTypes, r.maxRegexpLength, r.maxRecursionDepth)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("compile failed for %s:\n%s", name, errs)
@@ -154,19 +152,19 @@ func (l *Runtime) CompileAndRun(name string, input io.Reader) error {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
 	}
-	v := vm.New(name, obj, l.syslogUseCurrentYear, l.overrideLocation, l.logRuntimeErrors)
+	v := vm.New(name, obj, r.syslogUseCurrentYear, r.overrideLocation, r.logRuntimeErrors)
 
-	if l.dumpBytecode {
+	if r.dumpBytecode {
 		glog.Info("Dumping program objects and bytecode\n", v.DumpByteCode())
 	}
 
 	// Load the metrics from the compilation into the global metric storage for export.
 	for _, m := range v.Metrics {
 		if !m.Hidden {
-			if l.omitMetricSource {
+			if r.omitMetricSource {
 				m.Source = ""
 			}
-			err := l.ms.Add(m)
+			err := r.ms.Add(m)
 			if err != nil {
 				return err
 			}
@@ -176,20 +174,20 @@ func (l *Runtime) CompileAndRun(name string, input io.Reader) error {
 	ProgLoads.Add(name, 1)
 	glog.Infof("Loaded program %s", name)
 
-	if l.compileOnly {
+	if r.compileOnly {
 		return nil
 	}
 
-	l.handleMu.Lock()
-	defer l.handleMu.Unlock()
+	r.handleMu.Lock()
+	defer r.handleMu.Unlock()
 	// Terminates the existing vm.
-	if handle, ok := l.handles[name]; ok {
+	if handle, ok := r.handles[name]; ok {
 		close(handle.lines)
 	}
 	lines := make(chan *logline.LogLine)
-	l.handles[name] = &vmHandle{contentHash: contentHash, vm: v, lines: lines}
-	l.wg.Add(1)
-	go v.Run(lines, &l.wg)
+	r.handles[name] = &vmHandle{contentHash: contentHash, vm: v, lines: lines}
+	r.wg.Add(1)
+	go v.Run(lines, &r.wg)
 	return nil
 }
 
@@ -235,7 +233,7 @@ func New(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, 
 	if store == nil {
 		return nil, errors.New("loader needs a store")
 	}
-	l := &Runtime{
+	r := &Runtime{
 		ms:            store,
 		programPath:   programPath,
 		handles:       make(map[string]*vmHandle),
@@ -244,51 +242,51 @@ func New(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, 
 	}
 	initDone := make(chan struct{})
 	defer close(initDone)
-	if err := l.SetOption(options...); err != nil {
+	if err := r.SetOption(options...); err != nil {
 		return nil, err
 	}
-	// Defer shutdown handling to avoid a race on l.wg.
+	// Defer shutdown handling to avoid a race on r.wg.
 	wg.Add(1)
 	defer func() {
 		go func() {
 			defer wg.Done()
 			<-initDone
-			l.wg.Wait()
+			r.wg.Wait()
 		}()
 	}()
 	// This goroutine is the main consumer/producer loop.
-	l.wg.Add(1)
+	r.wg.Add(1)
 	go func() {
-		defer l.wg.Done() // signal to owner we're done
+		defer r.wg.Done() // signal to owner we're done
 		<-initDone
 		for line := range lines {
 			LineCount.Add(1)
-			l.handleMu.RLock()
-			for prog := range l.handles {
-				l.handles[prog].lines <- line
+			r.handleMu.RLock()
+			for prog := range r.handles {
+				r.handles[prog].lines <- line
 			}
-			l.handleMu.RUnlock()
+			r.handleMu.RUnlock()
 		}
 		glog.Info("END OF LINE")
-		close(l.signalQuit)
-		l.handleMu.Lock()
-		for prog := range l.handles {
-			close(l.handles[prog].lines)
-			delete(l.handles, prog)
+		close(r.signalQuit)
+		r.handleMu.Lock()
+		for prog := range r.handles {
+			close(r.handles[prog].lines)
+			delete(r.handles, prog)
 		}
-		l.handleMu.Unlock()
+		r.handleMu.Unlock()
 	}()
-	if l.programPath == "" {
+	if r.programPath == "" {
 		glog.Info("No program path specified, no programs will be loaded.")
-		return l, nil
+		return r, nil
 	}
 
 	// Create one goroutine that handles reload signals.
-	l.wg.Add(1)
+	r.wg.Add(1)
 	go func() {
-		defer l.wg.Done()
+		defer r.wg.Done()
 		<-initDone
-		if l.programPath == "" {
+		if r.programPath == "" {
 			glog.Info("no program reload on SIGHUP without programPath")
 			return
 		}
@@ -297,26 +295,26 @@ func New(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, 
 		defer signal.Stop(n)
 		for {
 			select {
-			case <-l.signalQuit:
+			case <-r.signalQuit:
 				return
 			case <-n:
-				if err := l.LoadAllPrograms(); err != nil {
+				if err := r.LoadAllPrograms(); err != nil {
 					glog.Info(err)
 				}
 			}
 		}
 	}()
 	// Guarantee all existing programmes get loaded before we leave.
-	if err := l.LoadAllPrograms(); err != nil {
+	if err := r.LoadAllPrograms(); err != nil {
 		return nil, err
 	}
-	return l, nil
+	return r, nil
 }
 
 // SetOption takes one or more option functions and applies them in order to Runtime.
-func (l *Runtime) SetOption(options ...Option) error {
+func (r *Runtime) SetOption(options ...Option) error {
 	for _, option := range options {
-		if err := option(l); err != nil {
+		if err := option(r); err != nil {
 			return err
 		}
 	}
@@ -324,35 +322,11 @@ func (l *Runtime) SetOption(options ...Option) error {
 }
 
 // UnloadProgram removes the named program, any currently running VM goroutine.
-func (l *Runtime) UnloadProgram(pathname string) {
+func (r *Runtime) UnloadProgram(pathname string) {
 	name := filepath.Base(pathname)
-	l.handleMu.Lock()
-	defer l.handleMu.Unlock()
-	if _, ok := l.handles[name]; ok {
-		delete(l.handles, name)
+	r.handleMu.Lock()
+	defer r.handleMu.Unlock()
+	if _, ok := r.handles[name]; ok {
+		delete(r.handles, name)
 	}
-}
-
-func (l *Runtime) ProgzHandler(w http.ResponseWriter, r *http.Request) {
-	prog := r.URL.Query().Get("prog")
-	if prog != "" {
-		l.handleMu.RLock()
-		handle, ok := l.handles[prog]
-		l.handleMu.RUnlock()
-		if !ok {
-			http.Error(w, "No program found", http.StatusNotFound)
-			return
-		}
-		fmt.Fprintf(w, handle.vm.DumpByteCode())
-		fmt.Fprintf(w, "\nLast runtime error:\n%s", handle.vm.RuntimeErrorString())
-		return
-	}
-	l.handleMu.RLock()
-	defer l.handleMu.RUnlock()
-	w.Header().Add("Content-type", "text/html")
-	fmt.Fprintf(w, "<ul>")
-	for prog := range l.handles {
-		fmt.Fprintf(w, "<li><a href=\"?prog=%s\">%s</a></li>", prog, prog)
-	}
-	fmt.Fprintf(w, "</ul>")
 }

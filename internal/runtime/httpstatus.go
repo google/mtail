@@ -4,8 +4,10 @@
 package runtime
 
 import (
+	"fmt"
 	"html/template"
 	"io"
+	"net/http"
 
 	"github.com/google/mtail/internal/runtime/vm"
 )
@@ -41,13 +43,13 @@ No compile errors
 `
 
 // WriteStatusHTML writes the current state of the loader as HTML to the given writer w.
-func (l *Runtime) WriteStatusHTML(w io.Writer) error {
+func (r *Runtime) WriteStatusHTML(w io.Writer) error {
 	t, err := template.New("loader").Parse(loaderTemplate)
 	if err != nil {
 		return err
 	}
-	l.programErrorMu.RLock()
-	defer l.programErrorMu.RUnlock()
+	r.programErrorMu.RLock()
+	defer r.programErrorMu.RUnlock()
 	data := struct {
 		Errors             map[string]error
 		Loaderrors         map[string]string
@@ -55,13 +57,13 @@ func (l *Runtime) WriteStatusHTML(w io.Writer) error {
 		RuntimeErrors      map[string]string
 		RuntimeErrorString map[string]string
 	}{
-		l.programErrors,
+		r.programErrors,
 		make(map[string]string),
 		make(map[string]string),
 		make(map[string]string),
 		make(map[string]string),
 	}
-	for name := range l.programErrors {
+	for name := range r.programErrors {
 		if ProgLoadErrors.Get(name) != nil {
 			data.Loaderrors[name] = ProgLoadErrors.Get(name).String()
 		}
@@ -71,7 +73,31 @@ func (l *Runtime) WriteStatusHTML(w io.Writer) error {
 		if vm.ProgRuntimeErrors.Get(name) != nil {
 			data.RuntimeErrors[name] = vm.ProgRuntimeErrors.Get(name).String()
 		}
-		data.RuntimeErrorString[name] = l.handles[name].vm.RuntimeErrorString()
+		data.RuntimeErrorString[name] = r.handles[name].vm.RuntimeErrorString()
 	}
 	return t.Execute(w, data)
+}
+
+func (r *Runtime) ProgzHandler(w http.ResponseWriter, req *http.Request) {
+	prog := req.URL.Query().Get("prog")
+	if prog != "" {
+		r.handleMu.RLock()
+		handle, ok := r.handles[prog]
+		r.handleMu.RUnlock()
+		if !ok {
+			http.Error(w, "No program found", http.StatusNotFound)
+			return
+		}
+		fmt.Fprintf(w, handle.vm.DumpByteCode())
+		fmt.Fprintf(w, "\nLast runtime error:\n%s", handle.vm.RuntimeErrorString())
+		return
+	}
+	r.handleMu.RLock()
+	defer r.handleMu.RUnlock()
+	w.Header().Add("Content-type", "text/html")
+	fmt.Fprintf(w, "<ul>")
+	for prog := range r.handles {
+		fmt.Fprintf(w, "<li><a href=\"?prog=%s\">%s</a></li>", prog, prog)
+	}
+	fmt.Fprintf(w, "</ul>")
 }
