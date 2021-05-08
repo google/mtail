@@ -8,32 +8,43 @@ import (
 	"testing"
 
 	"github.com/google/mtail/internal/runtime/compiler"
+	"github.com/google/mtail/internal/testutil"
 )
 
+func makeCompiler(t *testing.T) *compiler.Compiler {
+	t.Helper()
+	c, err := compiler.New(compiler.EmitAst(), compiler.EmitAstTypes())
+	testutil.FatalIfErr(t, err)
+	return c
+}
+
 func TestCompileParserError(t *testing.T) {
+	c := makeCompiler(t)
 	r := strings.NewReader("bad program")
-	_, err := compiler.Compile("test", r, true, true, 0, 0)
+	_, err := c.Compile("test", r)
 	if err == nil {
 		t.Errorf("expected error, got nil")
 	}
 }
 
 func TestCompileCheckerError(t *testing.T) {
+	c := makeCompiler(t)
 	r := strings.NewReader(`// {
 i++
 }`)
-	_, err := compiler.Compile("test", r, true, true, 0, 0)
+	_, err := c.Compile("test", r)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
 }
 
 func TestCompileCodegen(t *testing.T) {
+	c := makeCompiler(t)
 	r := strings.NewReader(`counter i
 // {
   i++
 }`)
-	_, err := compiler.Compile("test", r, true, true, 0, 0)
+	_, err := c.Compile("test", r)
 	if err != nil {
 		t.Error(err)
 	}

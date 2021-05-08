@@ -14,25 +14,79 @@ import (
 	"github.com/google/mtail/internal/runtime/compiler/parser"
 )
 
+type Compiler struct {
+	emitAst           bool
+	emitAstTypes      bool
+	maxRegexpLength   int
+	maxRecursionDepth int
+}
+
+func New(options ...Option) (*Compiler, error) {
+	c := &Compiler{}
+	if err := c.SetOption(options...); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func (c *Compiler) SetOption(options ...Option) error {
+	for _, option := range options {
+		if err := option(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Option configures a new Compiler
+type Option func(*Compiler) error
+
+func EmitAst() Option {
+	return func(c *Compiler) error {
+		c.emitAst = true
+		return nil
+	}
+}
+
+func EmitAstTypes() Option {
+	return func(c *Compiler) error {
+		c.emitAstTypes = true
+		return nil
+	}
+}
+
+func MaxRegexpLength(maxRegexpLength int) Option {
+	return func(c *Compiler) error {
+		c.maxRegexpLength = maxRegexpLength
+		return nil
+	}
+}
+func MaxRecursionDepth(maxRecursionDepth int) Option {
+	return func(c *Compiler) error {
+		c.maxRecursionDepth = maxRecursionDepth
+		return nil
+	}
+}
+
 // Compile compiles a program from the input into bytecode and data stored in an Object, or a list
 // of compile errors.
-func Compile(name string, input io.Reader, emitAst bool, emitAstTypes bool, maxRegexpLength int, maxRecursionDepth int) (*code.Object, error) { // TODO this is a prime candidate for Options pattern. See https://github.com/google/mtail/pull/474#discussion_r598044460
+func (c *Compiler) Compile(name string, input io.Reader) (*code.Object, error) {
 	name = filepath.Base(name)
 
 	ast, err := parser.Parse(name, input)
 	if err != nil {
 		return nil, err
 	}
-	if emitAst {
+	if c.emitAst {
 		s := parser.Sexp{}
 		glog.Infof("%s AST:\n%s", name, s.Dump(ast))
 	}
 
-	ast, err = checker.Check(ast, maxRegexpLength, maxRecursionDepth)
+	ast, err = checker.Check(ast, c.maxRegexpLength, c.maxRecursionDepth)
 	if err != nil {
 		return nil, err
 	}
-	if emitAstTypes {
+	if c.emitAstTypes {
 		s := parser.Sexp{}
 		s.EmitTypes = true
 		glog.Infof("%s AST with Type Annotation:\n%s", name, s.Dump(ast))

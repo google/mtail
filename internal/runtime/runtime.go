@@ -143,7 +143,7 @@ func (r *Runtime) CompileAndRun(name string, input io.Reader) error {
 		glog.V(1).Infof("contents match, not recompiling %q", name)
 		return nil
 	}
-	obj, errs := compiler.Compile(name, &buf, r.dumpAst, r.dumpAstTypes, r.maxRegexpLength, r.maxRecursionDepth)
+	obj, errs := r.c.Compile(name, &buf)
 	if errs != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("compile failed for %s:\n%s", name, errs)
@@ -201,11 +201,16 @@ type vmHandle struct {
 // the configured program source directory, compiling changes to programs, and
 // managing the virtual machines.
 type Runtime struct {
-	ctx         context.Context       // a cancellable context
-	wg          sync.WaitGroup        // used to await vm shutdown
-	ms          *metrics.Store        // pointer to metrics.Store to pass to compiler
-	reg         prometheus.Registerer // plce to reg metrics
-	programPath string                // Path that contains mtail programs.
+	ctx context.Context // a cancellable context
+	wg  sync.WaitGroup  // used to await vm shutdown
+
+	ms  *metrics.Store        // pointer to metrics.Store to pass to compiler
+	reg prometheus.Registerer // plce to reg metrics
+
+	cOpts []compiler.Option // options for constructing `c`
+	c     *compiler.Compiler
+
+	programPath string // Path that contains mtail programs.
 
 	handleMu sync.RWMutex         // guards accesses to handles
 	handles  map[string]*vmHandle // map of program names to virtual machines
@@ -216,16 +221,12 @@ type Runtime struct {
 	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
 	compileOnly          bool           // Only compile programs and report errors, do not load VMs.
 	errorsAbort          bool           // Compiler errors abort the loader.
-	dumpAst              bool           // print the AST after parse
-	dumpAstTypes         bool           // print the AST after type check
 	dumpBytecode         bool           // Instructs the loader to dump to stdout the compiled program after compilation.
 	syslogUseCurrentYear bool           // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
 	omitMetricSource     bool
 	logRuntimeErrors     bool // Instruct the VM to emit runtime errors to the log.
 
-	signalQuit        chan struct{} // When closed stops the signal handler goroutine.
-	maxRegexpLength   int
-	maxRecursionDepth int
+	signalQuit chan struct{} // When closed stops the signal handler goroutine.
 }
 
 // New creates a new program loader that reads programs from programPath.
@@ -242,7 +243,11 @@ func New(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, 
 	}
 	initDone := make(chan struct{})
 	defer close(initDone)
-	if err := r.SetOption(options...); err != nil {
+	var err error
+	if err = r.SetOption(options...); err != nil {
+		return nil, err
+	}
+	if r.c, err = compiler.New(r.cOpts...); err != nil {
 		return nil, err
 	}
 	// Defer shutdown handling to avoid a race on r.wg.
