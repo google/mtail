@@ -166,7 +166,9 @@ func main() {
 		mtail.MetricPushInterval(*metricPushInterval),
 		mtail.MaxRegexpLength(*maxRegexpLength),
 		mtail.MaxRecursionDepth(*maxRecursionDepth),
-		mtail.LogRuntimeErrors(*logRuntimeErrors),
+	}
+	if *logRuntimeErrors {
+		opts = append(opts, mtail.LogRuntimeErrors)
 	}
 	if *staleLogGcTickInterval > 0 {
 		staleLogGcWaker := waker.NewTimed(ctx, *staleLogGcTickInterval)

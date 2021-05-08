@@ -31,9 +31,12 @@ type Server struct {
 	store *metrics.Store // Metrics storage
 	wg    sync.WaitGroup // wait for main processes to shutdown
 
-	t *tailer.Tailer     // t manages log patterns and log streams, which sends lines to the VMs
-	r *runtime.Runtime   // r loads programs and manages the VM lifecycle
-	e *exporter.Exporter // e manages the export of metrics from the store
+	tOpts []tailer.Option    // options for constructing `t`
+	t     *tailer.Tailer     // t manages log patterns and log streams, which sends lines to the VMs
+	rOpts []runtime.Option   // options for constructing `r`
+	r     *runtime.Runtime   // r loads programs and manages the VM lifecycle
+	eOpts []exporter.Option  // options for constructing `e`
+	e     *exporter.Exporter // e manages the export of metrics from the store
 
 	lines chan *logline.LogLine // primary communication channel, owned by Tailer.
 
@@ -69,40 +72,8 @@ type Server struct {
 
 // initRuntime constructs a new runtime and performs the initial load of program files in the program directory.
 func (m *Server) initRuntime() error {
-	opts := []runtime.Option{
-		runtime.PrometheusRegisterer(m.reg),
-		runtime.MaxRegexpLength(m.maxRegexpLength),
-		runtime.MaxRecursionDepth(m.maxRecursionDepth),
-	}
-	if m.compileOnly {
-		opts = append(opts, runtime.CompileOnly())
-	}
-	if m.oneShot {
-		opts = append(opts, runtime.ErrorsAbort())
-	}
-	if m.dumpAst {
-		opts = append(opts, runtime.DumpAst())
-	}
-	if m.dumpAstTypes {
-		opts = append(opts, runtime.DumpAstTypes())
-	}
-	if m.dumpBytecode {
-		opts = append(opts, runtime.DumpBytecode())
-	}
-	if m.syslogUseCurrentYear {
-		opts = append(opts, runtime.SyslogUseCurrentYear())
-	}
-	if m.omitMetricSource {
-		opts = append(opts, runtime.OmitMetricSource())
-	}
-	if m.overrideLocation != nil {
-		opts = append(opts, runtime.OverrideLocation(m.overrideLocation))
-	}
-	if m.logRuntimeErrors {
-		opts = append(opts, runtime.LogRuntimeErrors())
-	}
 	var err error
-	m.r, err = runtime.New(m.lines, &m.wg, m.programPath, m.store, opts...)
+	m.r, err = runtime.New(m.lines, &m.wg, m.programPath, m.store, m.rOpts...)
 	if err != nil {
 		return err
 	}
@@ -238,6 +209,7 @@ func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server,
 		// are not fully specified at startup.
 		reg: prometheus.NewRegistry(),
 	}
+	m.rOpts = append(m.rOpts, runtime.PrometheusRegisterer(m.reg))
 
 	// TODO(jaq): Should these move to initExporter?
 	expvarDescs := map[string]*prometheus.Desc{

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"contrib.go.opencensus.io/exporter/jaeger"
+	"github.com/google/mtail/internal/runtime"
 	"github.com/google/mtail/internal/waker"
 	"go.opencensus.io/trace"
 )
@@ -95,7 +96,7 @@ type overrideLocation struct {
 }
 
 func (opt overrideLocation) apply(m *Server) error {
-	m.overrideLocation = opt.Location
+	m.rOpts = append(m.rOpts, runtime.OverrideLocation(opt.Location))
 	return nil
 }
 
@@ -152,6 +153,7 @@ func (n *niladicOption) apply(m *Server) error {
 // OneShot sets one-shot mode in the Server.
 var OneShot = &niladicOption{
 	func(m *Server) error {
+		m.rOpts = append(m.rOpts, runtime.ErrorsAbort())
 		m.oneShot = true
 		return nil
 	}}
@@ -159,35 +161,35 @@ var OneShot = &niladicOption{
 // CompileOnly sets compile-only mode in the Server.
 var CompileOnly = &niladicOption{
 	func(m *Server) error {
-		m.compileOnly = true
+		m.rOpts = append(m.rOpts, runtime.CompileOnly())
 		return nil
 	}}
 
 // DumpAst instructs the Server's compiler to print the AST after parsing.
 var DumpAst = &niladicOption{
 	func(m *Server) error {
-		m.dumpAst = true
+		m.rOpts = append(m.rOpts, runtime.DumpAst())
 		return nil
 	}}
 
 // DumpAstTypes instructs the Server's copmiler to print the AST after type checking.
 var DumpAstTypes = &niladicOption{
 	func(m *Server) error {
-		m.dumpAstTypes = true
+		m.rOpts = append(m.rOpts, runtime.DumpAstTypes())
 		return nil
 	}}
 
 // DumpBytecode instructs the Server's compiuler to print the program bytecode after code generation.
 var DumpBytecode = &niladicOption{
 	func(m *Server) error {
-		m.dumpBytecode = true
+		m.rOpts = append(m.rOpts, runtime.DumpBytecode())
 		return nil
 	}}
 
 // SyslogUseCurrentYear instructs the Server to use the current year for year-less log timestamp during parsing.
 var SyslogUseCurrentYear = &niladicOption{
 	func(m *Server) error {
-		m.syslogUseCurrentYear = true
+		m.rOpts = append(m.rOpts, runtime.SyslogUseCurrentYear())
 		return nil
 	}}
 
@@ -201,7 +203,7 @@ var OmitProgLabel = &niladicOption{
 // OmitMetricSource sets the Server to not link created metrics to their source program.
 var OmitMetricSource = &niladicOption{
 	func(m *Server) error {
-		m.omitMetricSource = true
+		m.rOpts = append(m.rOpts, runtime.OmitMetricSource())
 		return nil
 	}}
 
@@ -209,6 +211,13 @@ var OmitMetricSource = &niladicOption{
 var EmitMetricTimestamp = &niladicOption{
 	func(m *Server) error {
 		m.emitMetricTimestamp = true
+		return nil
+	}}
+
+// LogRuntimeErrors instructs the VM to emit runtime errors to the log.
+var LogRuntimeErrors = &niladicOption{
+	func(m *Server) error {
+		m.rOpts = append(m.rOpts, runtime.LogRuntimeErrors())
 		return nil
 	}}
 
@@ -241,7 +250,7 @@ func (opt MetricPushInterval) apply(m *Server) error {
 type MaxRegexpLength int
 
 func (opt MaxRegexpLength) apply(m *Server) error {
-	m.maxRegexpLength = int(opt)
+	m.rOpts = append(m.rOpts, runtime.MaxRegexpLength(int(opt)))
 	return nil
 }
 
@@ -249,15 +258,6 @@ func (opt MaxRegexpLength) apply(m *Server) error {
 type MaxRecursionDepth int
 
 func (opt MaxRecursionDepth) apply(m *Server) error {
-
-	m.maxRecursionDepth = int(opt)
-	return nil
-}
-
-// LogRuntimeErrors instructs the VM to emit runtime errors to the log.
-type LogRuntimeErrors bool
-
-func (opt LogRuntimeErrors) apply(m *Server) error {
-	m.logRuntimeErrors = bool(opt)
+	m.rOpts = append(m.rOpts, runtime.MaxRecursionDepth(int(opt)))
 	return nil
 }
