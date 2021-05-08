@@ -9,8 +9,10 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/runtime/code"
+	"github.com/google/mtail/internal/runtime/compiler/ast"
 	"github.com/google/mtail/internal/runtime/compiler/checker"
 	"github.com/google/mtail/internal/runtime/compiler/codegen"
+	"github.com/google/mtail/internal/runtime/compiler/opt"
 	"github.com/google/mtail/internal/runtime/compiler/parser"
 )
 
@@ -19,6 +21,7 @@ type Compiler struct {
 	emitAstTypes      bool
 	maxRegexpLength   int
 	maxRecursionDepth int
+	optimise          bool
 }
 
 func New(options ...Option) (*Compiler, error) {
@@ -41,6 +44,7 @@ func (c *Compiler) SetOption(options ...Option) error {
 // Option configures a new Compiler
 type Option func(*Compiler) error
 
+// EmitAst emits the AST after the parse phase.
 func EmitAst() Option {
 	return func(c *Compiler) error {
 		c.emitAst = true
@@ -48,6 +52,7 @@ func EmitAst() Option {
 	}
 }
 
+// EmitAstTypes emits the AST with types after the type checking phase.
 func EmitAstTypes() Option {
 	return func(c *Compiler) error {
 		c.emitAstTypes = true
@@ -55,12 +60,15 @@ func EmitAstTypes() Option {
 	}
 }
 
+// MaxRegexpLength sets the maximum allowable length of a regular expression.
 func MaxRegexpLength(maxRegexpLength int) Option {
 	return func(c *Compiler) error {
 		c.maxRegexpLength = maxRegexpLength
 		return nil
 	}
 }
+
+// MaxRecursionDepth sets the maximum allowable depth of the AST.
 func MaxRecursionDepth(maxRecursionDepth int) Option {
 	return func(c *Compiler) error {
 		c.maxRecursionDepth = maxRecursionDepth
@@ -68,14 +76,24 @@ func MaxRecursionDepth(maxRecursionDepth int) Option {
 	}
 }
 
+// Optimise enables the optimisation phase.
+func Optimise() Option {
+	return func(c *Compiler) error {
+		c.optimise = true
+		return nil
+	}
+}
+
 // Compile compiles a program from the input into bytecode and data stored in an Object, or a list
 // of compile errors.
-func (c *Compiler) Compile(name string, input io.Reader) (*code.Object, error) {
+func (c *Compiler) Compile(name string, input io.Reader) (obj *code.Object, err error) {
 	name = filepath.Base(name)
 
-	ast, err := parser.Parse(name, input)
+	var ast ast.Node
+
+	ast, err = parser.Parse(name, input)
 	if err != nil {
-		return nil, err
+		return
 	}
 	if c.emitAst {
 		s := parser.Sexp{}
@@ -84,7 +102,7 @@ func (c *Compiler) Compile(name string, input io.Reader) (*code.Object, error) {
 
 	ast, err = checker.Check(ast, c.maxRegexpLength, c.maxRecursionDepth)
 	if err != nil {
-		return nil, err
+		return
 	}
 	if c.emitAstTypes {
 		s := parser.Sexp{}
@@ -92,9 +110,13 @@ func (c *Compiler) Compile(name string, input io.Reader) (*code.Object, error) {
 		glog.Infof("%s AST with Type Annotation:\n%s", name, s.Dump(ast))
 	}
 
-	obj, err := codegen.CodeGen(name, ast)
-	if err != nil {
-		return nil, err
+	if c.optimise {
+		ast, err = opt.Optimise(ast)
+		if err != nil {
+			return
+		}
 	}
-	return obj, nil
+
+	obj, err = codegen.CodeGen(name, ast)
+	return
 }
