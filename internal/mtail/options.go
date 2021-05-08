@@ -10,6 +10,7 @@ import (
 
 	"contrib.go.opencensus.io/exporter/jaeger"
 	"github.com/google/mtail/internal/runtime"
+	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/waker"
 	"go.opencensus.io/trace"
 )
@@ -35,7 +36,7 @@ func LogPathPatterns(patterns ...string) Option {
 type logPathPatterns []string
 
 func (opt logPathPatterns) apply(m *Server) error {
-	m.logPathPatterns = opt
+	m.tOpts = append(m.tOpts, tailer.LogPatterns(opt))
 	return nil
 }
 
@@ -43,7 +44,7 @@ func (opt logPathPatterns) apply(m *Server) error {
 type IgnoreRegexPattern string
 
 func (opt IgnoreRegexPattern) apply(m *Server) error {
-	m.ignoreRegexPattern = string(opt)
+	m.tOpts = append(m.tOpts, tailer.IgnoreRegex(string(opt)))
 	return nil
 }
 
@@ -110,7 +111,7 @@ type staleLogGcWaker struct {
 }
 
 func (opt staleLogGcWaker) apply(m *Server) error {
-	m.staleLogGcWaker = opt.Waker
+	m.tOpts = append(m.tOpts, tailer.StaleLogGcWaker(opt.Waker))
 	return nil
 }
 
@@ -124,7 +125,7 @@ type logPatternPollWaker struct {
 }
 
 func (opt logPatternPollWaker) apply(m *Server) error {
-	m.logPatternPollWaker = opt.Waker
+	m.tOpts = append(m.tOpts, tailer.LogPatternPollWaker(opt.Waker))
 	return nil
 }
 
@@ -138,7 +139,7 @@ type logstreamPollWaker struct {
 }
 
 func (opt logstreamPollWaker) apply(m *Server) error {
-	m.logstreamPollWaker = opt.Waker
+	m.tOpts = append(m.tOpts, tailer.LogstreamPollWaker(opt.Waker))
 	return nil
 }
 
@@ -154,6 +155,7 @@ func (n *niladicOption) apply(m *Server) error {
 var OneShot = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.ErrorsAbort())
+		m.tOpts = append(m.tOpts, tailer.OneShot)
 		m.oneShot = true
 		return nil
 	}}

@@ -18,7 +18,6 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/runtime"
 	"github.com/google/mtail/internal/tailer"
-	"github.com/google/mtail/internal/waker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
@@ -44,30 +43,15 @@ type Server struct {
 
 	listener net.Listener // Configured with bind address.
 
-	buildInfo          BuildInfo // go build information
-	programPath        string    // path to programs to load
-	logPathPatterns    []string  // list of patterns to watch for log files to tail
-	ignoreRegexPattern string
+	buildInfo BuildInfo // go build information
 
-	oneShot      bool // if set, mtail reads log files from the beginning, once, then exits
-	compileOnly  bool // if set, mtail compiles programs then exits
-	dumpAst      bool // if set, mtail prints the program syntax tree after parse
-	dumpAstTypes bool // if set, mtail prints the program syntax tree after type checking
-	dumpBytecode bool // if set, mtail prints the program bytecode after code generation
-
-	overrideLocation     *time.Location // Timezone location to use when parsing timestamps
-	staleLogGcWaker      waker.Waker    // Wake to run stale log gc
-	logPatternPollWaker  waker.Waker    // Wake to poll for log patterns
-	logstreamPollWaker   waker.Waker    // Wake idle logstreams to poll sfor new data
-	metricPushInterval   time.Duration  // Interval between metric pushes
-	syslogUseCurrentYear bool           // if set, use the current year for timestamps that have no year information
-	omitMetricSource     bool           // if set, do not link the source program to a metric
-	omitProgLabel        bool           // if set, do not put the program name in the metric labels
-	emitMetricTimestamp  bool           // if set, emit the metric's recorded timestamp
-	logRuntimeErrors     bool           // if set, emit VM runtime errors into the log
-
-	maxRegexpLength   int // if set, mtail will accept regexs upto the max length
-	maxRecursionDepth int // if set, mtail will accept parse upto the number of parsed statements deep
+	programPath         string        // path to programs to load
+	logPathPatterns     []string      // list of patterns to watch for log files to tail
+	oneShot             bool          // if set, mtail reads log files from the beginning, once, then exits
+	compileOnly         bool          // if set, mtail compiles programs then exits
+	metricPushInterval  time.Duration // Interval between metric pushes
+	omitProgLabel       bool          // if set, do not put the program name in the metric labels
+	emitMetricTimestamp bool          // if set, emit the metric's recorded timestamp
 }
 
 // initRuntime constructs a new runtime and performs the initial load of program files in the program directory.
@@ -113,17 +97,7 @@ func (m *Server) initExporter() (err error) {
 
 // initTailer sets up and starts a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
-	opts := []tailer.Option{
-		tailer.IgnoreRegex(m.ignoreRegexPattern),
-		tailer.LogPatterns(m.logPathPatterns),
-		tailer.LogPatternPollWaker(m.logPatternPollWaker),
-		tailer.StaleLogGcWaker(m.staleLogGcWaker),
-		tailer.LogstreamPollWaker(m.logstreamPollWaker),
-	}
-	if m.oneShot {
-		opts = append(opts, tailer.OneShot)
-	}
-	m.t, err = tailer.New(m.ctx, &m.wg, m.lines, opts...)
+	m.t, err = tailer.New(m.ctx, &m.wg, m.lines, m.tOpts...)
 	return
 }
 
