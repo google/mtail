@@ -6,6 +6,18 @@ package opt
 
 import "github.com/google/mtail/internal/runtime/compiler/ast"
 
-func Optimise(ast ast.Node) (ast.Node, error) {
-	return ast, nil
+func Optimise(n ast.Node) (ast.Node, error) {
+	o := &optimiser{}
+	return ast.Walk(o, n), nil
+}
+
+type optimiser struct {
+}
+
+func (o *optimiser) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
+	return o, node
+}
+
+func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
+	return node
 }
