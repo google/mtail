@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"contrib.go.opencensus.io/exporter/jaeger"
+	"github.com/google/mtail/internal/exporter"
 	"github.com/google/mtail/internal/runtime"
 	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/waker"
@@ -164,6 +165,7 @@ var OneShot = &niladicOption{
 var CompileOnly = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.CompileOnly())
+		m.compileOnly = true
 		return nil
 	}}
 
@@ -198,7 +200,7 @@ var SyslogUseCurrentYear = &niladicOption{
 // OmitProgLabel sets the Server to not put the program name as a label in exported metrics.
 var OmitProgLabel = &niladicOption{
 	func(m *Server) error {
-		m.omitProgLabel = true
+		m.eOpts = append(m.eOpts, exporter.OmitProgLabel())
 		return nil
 	}}
 
@@ -212,7 +214,7 @@ var OmitMetricSource = &niladicOption{
 // EmitMetricTimestamp tells the Server to export the metric's timestamp.
 var EmitMetricTimestamp = &niladicOption{
 	func(m *Server) error {
-		m.emitMetricTimestamp = true
+		m.eOpts = append(m.eOpts, exporter.EmitTimestamp())
 		return nil
 	}}
 
@@ -244,7 +246,7 @@ func (opt JaegerReporter) apply(m *Server) error {
 type MetricPushInterval time.Duration
 
 func (opt MetricPushInterval) apply(m *Server) error {
-	m.metricPushInterval = time.Duration(opt)
+	m.eOpts = append(m.eOpts, exporter.PushInterval(time.Duration(opt)))
 	return nil
 }
 

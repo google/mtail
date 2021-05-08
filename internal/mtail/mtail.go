@@ -45,13 +45,9 @@ type Server struct {
 
 	buildInfo BuildInfo // go build information
 
-	programPath         string        // path to programs to load
-	logPathPatterns     []string      // list of patterns to watch for log files to tail
-	oneShot             bool          // if set, mtail reads log files from the beginning, once, then exits
-	compileOnly         bool          // if set, mtail compiles programs then exits
-	metricPushInterval  time.Duration // Interval between metric pushes
-	omitProgLabel       bool          // if set, do not put the program name in the metric labels
-	emitMetricTimestamp bool          // if set, emit the metric's recorded timestamp
+	programPath string // path to programs to load
+	oneShot     bool   // if set, mtail reads log files from the beginning, once, then exits
+	compileOnly bool   // if set, mtail compiles programs then exits
 }
 
 // initRuntime constructs a new runtime and performs the initial load of program files in the program directory.
@@ -71,17 +67,7 @@ func (m *Server) initExporter() (err error) {
 		// mode we don't want to export anything.
 		return nil
 	}
-	opts := []exporter.Option{}
-	if m.omitProgLabel {
-		opts = append(opts, exporter.OmitProgLabel())
-	}
-	if m.emitMetricTimestamp {
-		opts = append(opts, exporter.EmitTimestamp())
-	}
-	if m.metricPushInterval > 0 {
-		opts = append(opts, exporter.PushInterval(m.metricPushInterval))
-	}
-	m.e, err = exporter.New(m.ctx, &m.wg, m.store, opts...)
+	m.e, err = exporter.New(m.ctx, &m.wg, m.store, m.eOpts...)
 	if err != nil {
 		return err
 	}
