@@ -51,13 +51,9 @@ type Server struct {
 }
 
 // initRuntime constructs a new runtime and performs the initial load of program files in the program directory.
-func (m *Server) initRuntime() error {
-	var err error
+func (m *Server) initRuntime() (err error) {
 	m.r, err = runtime.New(m.lines, &m.wg, m.programPath, m.store, m.rOpts...)
-	if err != nil {
-		return err
-	}
-	return nil
+	return
 }
 
 // initExporter sets up an Exporter for this Server.
