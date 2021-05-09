@@ -241,6 +241,7 @@ func New(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, 
 		programErrors: make(map[string]error),
 		signalQuit:    make(chan struct{}),
 	}
+	r.cOpts = append(r.cOpts, compiler.Optimise())
 	initDone := make(chan struct{})
 	defer close(initDone)
 	var err error
