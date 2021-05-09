@@ -200,7 +200,10 @@ $(TESTRESULTS)/benchstat.txt: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt |
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
 .PHONY: testall
-testall: testrace bench fuzz-regtest
+testall: testrace fuzz-regtest bench
+
+.PHONY: checkall
+checkall: all fuzz-targets check
 
 ## make u a container
 .PHONY: container
@@ -220,6 +223,9 @@ CXX = clang
 CXXFLAGS ?= -fsanitize=fuzzer,address
 LIB_FUZZING_ENGINE ?=
 OUT ?= .
+
+.PHONY: fuzz-targets
+fuzz-targets: $(OUT)/vm-fuzzer
 
 $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
 	go114-fuzz-build -o fuzzer.a ./internal/runtime
