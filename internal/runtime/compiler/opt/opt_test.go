@@ -53,6 +53,19 @@ var optimiserTests = []struct {
 		},
 		&ast.FloatLit{F: 1},
 	},
+	{
+		"nested ops",
+		&ast.BinaryExpr{
+			Lhs: &ast.BinaryExpr{
+				Lhs: &ast.IntLit{I: 2},
+				Rhs: &ast.IntLit{I: 4},
+				Op:  parser.POW,
+			},
+			Rhs: &ast.IntLit{I: 1},
+			Op:  parser.MINUS,
+		},
+		&ast.IntLit{I: 15},
+	},
 }
 
 func TestOptimiser(t *testing.T) {

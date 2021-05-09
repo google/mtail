@@ -115,6 +115,11 @@ func (c *Compiler) Compile(name string, input io.Reader) (obj *code.Object, err 
 		if err != nil {
 			return
 		}
+		if c.emitAstTypes {
+			s := parser.Sexp{}
+			s.EmitTypes = true
+			glog.Infof("Post optimisation %s AST with Type Annotation:\n%s", name, s.Dump(ast))
+		}
 	}
 
 	obj, err = codegen.CodeGen(name, ast)

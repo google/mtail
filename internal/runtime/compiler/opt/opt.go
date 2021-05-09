@@ -42,10 +42,7 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 				case parser.MOD:
 					lhs.I %= rhs.I
 				case parser.POW:
-					return &ast.FloatLit{
-						F: math.Pow(float64(lhs.I), float64(rhs.I)),
-						P: *ast.MergePosition(&(lhs.P), &(rhs.P)),
-					}
+					lhs.I = int64(math.Pow(float64(lhs.I), float64(rhs.I)))
 				default:
 					return node
 				}
