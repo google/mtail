@@ -30,86 +30,86 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 		case *ast.IntLit:
 			switch rhs := n.Rhs.(type) {
 			case *ast.IntLit:
+				r := &ast.IntLit{P: *ast.MergePosition(&(lhs.P), &(rhs.P))}
 				switch n.Op {
 				case parser.PLUS:
-					lhs.I += rhs.I
+					r.I = lhs.I + rhs.I
 				case parser.MINUS:
-					lhs.I -= rhs.I
+					r.I = lhs.I - rhs.I
 				case parser.MUL:
-					lhs.I *= rhs.I
+					r.I = lhs.I * rhs.I
 				case parser.DIV:
-					lhs.I /= rhs.I
+					r.I = lhs.I / rhs.I
 				case parser.MOD:
-					lhs.I %= rhs.I
+					r.I = lhs.I % rhs.I
 				case parser.POW:
-					lhs.I = int64(math.Pow(float64(lhs.I), float64(rhs.I)))
+					r.I = int64(math.Pow(float64(lhs.I), float64(rhs.I)))
 				default:
 					return node
 				}
-				lhs.P = *ast.MergePosition(&(lhs.P), &(rhs.P))
-				return lhs
+				return r
 			case *ast.FloatLit:
+				r := &ast.FloatLit{P: *ast.MergePosition(&(lhs.P), &(rhs.P))}
 				switch n.Op {
 				case parser.PLUS:
-					rhs.F += float64(lhs.I)
+					r.F = float64(lhs.I) + rhs.F
 				case parser.MINUS:
-					rhs.F = float64(lhs.I) - rhs.F
+					r.F = float64(lhs.I) - rhs.F
 				case parser.MUL:
-					rhs.F *= float64(lhs.I)
+					r.F = float64(lhs.I) * rhs.F
 				case parser.DIV:
-					rhs.F = float64(lhs.I) / rhs.F
+					r.F = float64(lhs.I) / rhs.F
 				case parser.MOD:
 					rhs.F = math.Mod(float64(lhs.I), rhs.F)
 				case parser.POW:
-					rhs.F = math.Pow(float64(lhs.I), rhs.F)
+					r.F = math.Pow(float64(lhs.I), rhs.F)
 				default:
 					return node
 				}
-				rhs.P = *ast.MergePosition(&(lhs.P), &(rhs.P))
-				return rhs
+				return r
 			default:
 				return node
 			}
 		case *ast.FloatLit:
 			switch rhs := n.Rhs.(type) {
 			case *ast.IntLit:
+				r := &ast.FloatLit{P: *ast.MergePosition(&(lhs.P), &(rhs.P))}
 				switch n.Op {
 				case parser.PLUS:
-					lhs.F += float64(rhs.I)
+					r.F = lhs.F + float64(rhs.I)
 				case parser.MINUS:
-					lhs.F -= float64(rhs.I)
+					r.F = lhs.F - float64(rhs.I)
 				case parser.MUL:
-					lhs.F *= float64(rhs.I)
+					r.F = lhs.F * float64(rhs.I)
 				case parser.DIV:
-					lhs.F /= float64(rhs.I)
+					r.F = lhs.F / float64(rhs.I)
 				case parser.MOD:
-					lhs.F = math.Mod(lhs.F, float64(rhs.I))
+					r.F = math.Mod(lhs.F, float64(rhs.I))
 				case parser.POW:
-					lhs.F = math.Pow(lhs.F, float64(rhs.I))
+					r.F = math.Pow(lhs.F, float64(rhs.I))
 				default:
 					return node
 				}
-				lhs.P = *ast.MergePosition(&(lhs.P), &(rhs.P))
-				return lhs
+				return r
 			case *ast.FloatLit:
+				r := &ast.FloatLit{P: *ast.MergePosition(&(lhs.P), &(rhs.P))}
 				switch n.Op {
 				case parser.PLUS:
-					lhs.F += rhs.F
+					r.F = lhs.F + rhs.F
 				case parser.MINUS:
-					lhs.F -= rhs.F
+					r.F = lhs.F - rhs.F
 				case parser.MUL:
-					lhs.F *= rhs.F
+					r.F = lhs.F * rhs.F
 				case parser.DIV:
-					lhs.F /= rhs.F
+					r.F = lhs.F / rhs.F
 				case parser.MOD:
-					lhs.F = math.Mod(lhs.F, rhs.F)
+					r.F = math.Mod(lhs.F, rhs.F)
 				case parser.POW:
-					lhs.F = math.Pow(lhs.F, rhs.F)
+					r.F = math.Pow(lhs.F, rhs.F)
 				default:
 					return node
 				}
-				lhs.P = *ast.MergePosition(&(lhs.P), &(rhs.P))
-				return lhs
+				return r
 			default:
 				return node
 			}
