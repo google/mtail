@@ -140,7 +140,7 @@ type BinaryExpr struct {
 }
 
 func (n *BinaryExpr) Pos() *position.Position {
-	return MergePosition(n.Lhs.Pos(), n.Rhs.Pos())
+	return position.Merge(n.Lhs.Pos(), n.Rhs.Pos())
 }
 
 func (n *BinaryExpr) Type() types.Type {
@@ -165,7 +165,7 @@ type UnaryExpr struct {
 }
 
 func (n *UnaryExpr) Pos() *position.Position {
-	return MergePosition(&n.P, n.Expr.Pos())
+	return position.Merge(&n.P, n.Expr.Pos())
 }
 
 func (n *UnaryExpr) Type() types.Type {
@@ -188,7 +188,7 @@ type IndexedExpr struct {
 }
 
 func (n *IndexedExpr) Pos() *position.Position {
-	return MergePosition(n.Lhs.Pos(), n.Index.Pos())
+	return position.Merge(n.Lhs.Pos(), n.Index.Pos())
 }
 
 func (n *IndexedExpr) Type() types.Type {
@@ -317,7 +317,7 @@ type DecoDecl struct {
 }
 
 func (n *DecoDecl) Pos() *position.Position {
-	return MergePosition(&n.P, n.Block.Pos())
+	return position.Merge(&n.P, n.Block.Pos())
 }
 
 func (n *DecoDecl) Type() types.Type {
@@ -336,7 +336,7 @@ type DecoStmt struct {
 }
 
 func (n *DecoStmt) Pos() *position.Position {
-	return MergePosition(&n.P, n.Block.Pos())
+	return position.Merge(&n.P, n.Block.Pos())
 }
 
 func (n *DecoStmt) Type() types.Type {
@@ -429,31 +429,6 @@ func (n *StopStmt) Type() types.Type {
 	return types.None
 }
 
-// MergePosition returns the union of two positions such that the result contains both inputs.
-func MergePosition(a, b *position.Position) *position.Position {
-	if a == nil {
-		return b
-	}
-	if b == nil {
-		return a
-	}
-	if a.Filename != b.Filename {
-		return a
-	}
-	// TODO(jaq): handle multi-line positions
-	if a.Line != b.Line {
-		return a
-	}
-	r := *a
-	if b.Startcol < r.Startcol {
-		r.Startcol = b.Startcol
-	}
-	if b.Endcol > r.Endcol {
-		r.Endcol = b.Endcol
-	}
-	return &r
-}
-
 // mergepositionlist is a helper that merges the positions of all the nodes in a list
 func mergepositionlist(l []Node) *position.Position {
 	if len(l) == 0 {
@@ -465,5 +440,5 @@ func mergepositionlist(l []Node) *position.Position {
 		}
 		return nil
 	}
-	return MergePosition(l[0].Pos(), mergepositionlist(l[1:]))
+	return position.Merge(l[0].Pos(), mergepositionlist(l[1:]))
 }

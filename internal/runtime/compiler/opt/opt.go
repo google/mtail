@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/mtail/internal/runtime/compiler/ast"
 	"github.com/google/mtail/internal/runtime/compiler/parser"
+	"github.com/google/mtail/internal/runtime/compiler/position"
 )
 
 func Optimise(n ast.Node) (ast.Node, error) {
@@ -30,7 +31,7 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 		case *ast.IntLit:
 			switch rhs := n.Rhs.(type) {
 			case *ast.IntLit:
-				r := &ast.IntLit{P: *ast.MergePosition(&(lhs.P), &(rhs.P))}
+				r := &ast.IntLit{P: *position.Merge(&(lhs.P), &(rhs.P))}
 				switch n.Op {
 				case parser.PLUS:
 					r.I = lhs.I + rhs.I
@@ -49,7 +50,7 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 				}
 				return r
 			case *ast.FloatLit:
-				r := &ast.FloatLit{P: *ast.MergePosition(&(lhs.P), &(rhs.P))}
+				r := &ast.FloatLit{P: *position.Merge(&(lhs.P), &(rhs.P))}
 				switch n.Op {
 				case parser.PLUS:
 					r.F = float64(lhs.I) + rhs.F
@@ -73,7 +74,7 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 		case *ast.FloatLit:
 			switch rhs := n.Rhs.(type) {
 			case *ast.IntLit:
-				r := &ast.FloatLit{P: *ast.MergePosition(&(lhs.P), &(rhs.P))}
+				r := &ast.FloatLit{P: *position.Merge(&(lhs.P), &(rhs.P))}
 				switch n.Op {
 				case parser.PLUS:
 					r.F = lhs.F + float64(rhs.I)
@@ -92,7 +93,7 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 				}
 				return r
 			case *ast.FloatLit:
-				r := &ast.FloatLit{P: *ast.MergePosition(&(lhs.P), &(rhs.P))}
+				r := &ast.FloatLit{P: *position.Merge(&(lhs.P), &(rhs.P))}
 				switch n.Op {
 				case parser.PLUS:
 					r.F = lhs.F + rhs.F
