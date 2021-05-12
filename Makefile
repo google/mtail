@@ -194,7 +194,7 @@ $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt: $(GOFILES) $(GOGENFILES) $(GOT
 .PHONY: benchstat
 benchstat: $(TESTRESULTS)/benchstat.txt
 $(TESTRESULTS)/benchstat.txt: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt | print-version $(BENCHSTAT)
-	(test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt && benchstat $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $< || benchstat $<) | tee $@
+	(test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt && benchstat -sort=-delta $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $< || benchstat $<) | tee $@
 
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
