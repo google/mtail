@@ -38,7 +38,7 @@ jobs:
           COMMENT="${COMMENT//$'\r'/'%0D'}"
           echo "::set-output name=comment::$COMMENT"
       - name: post benchmark results
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v2.1.0
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           header: Benchmark Results
