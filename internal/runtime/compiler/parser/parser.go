@@ -3,16 +3,16 @@
 //line parser.y:5
 package parser
 
+import __yyfmt__ "fmt"
+
+//line parser.y:5
+
 import (
-	__yyfmt__ "fmt"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/runtime/compiler/ast"
-
-//line parser.y:5
-
 	"github.com/google/mtail/internal/runtime/compiler/position"
 )
 
@@ -1262,7 +1262,7 @@ mtaildefault:
 		{
 			mp := markedpos(mtaillex)
 			tp := tokenpos(mtaillex)
-			pos := ast.MergePosition(&mp, &tp)
+			pos := position.Merge(&mp, &tp)
 			mtailVAL.n = &ast.PatternLit{P: *pos, Pattern: mtailDollar[4].text}
 		}
 	case 92:

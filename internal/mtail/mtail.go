@@ -18,7 +18,6 @@ import (
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/runtime"
 	"github.com/google/mtail/internal/tailer"
-	"github.com/google/mtail/internal/waker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
@@ -31,9 +30,12 @@ type Server struct {
 	store *metrics.Store // Metrics storage
 	wg    sync.WaitGroup // wait for main processes to shutdown
 
-	t *tailer.Tailer     // t manages log patterns and log streams, which sends lines to the VMs
-	r *runtime.Runtime   // r loads programs and manages the VM lifecycle
-	e *exporter.Exporter // e manages the export of metrics from the store
+	tOpts []tailer.Option    // options for constructing `t`
+	t     *tailer.Tailer     // t manages log patterns and log streams, which sends lines to the VMs
+	rOpts []runtime.Option   // options for constructing `r`
+	r     *runtime.Runtime   // r loads programs and manages the VM lifecycle
+	eOpts []exporter.Option  // options for constructing `e`
+	e     *exporter.Exporter // e manages the export of metrics from the store
 
 	lines chan *logline.LogLine // primary communication channel, owned by Tailer.
 
@@ -41,72 +43,17 @@ type Server struct {
 
 	listener net.Listener // Configured with bind address.
 
-	buildInfo          BuildInfo // go build information
-	programPath        string    // path to programs to load
-	logPathPatterns    []string  // list of patterns to watch for log files to tail
-	ignoreRegexPattern string
+	buildInfo BuildInfo // go build information
 
-	oneShot      bool // if set, mtail reads log files from the beginning, once, then exits
-	compileOnly  bool // if set, mtail compiles programs then exits
-	dumpAst      bool // if set, mtail prints the program syntax tree after parse
-	dumpAstTypes bool // if set, mtail prints the program syntax tree after type checking
-	dumpBytecode bool // if set, mtail prints the program bytecode after code generation
-
-	overrideLocation     *time.Location // Timezone location to use when parsing timestamps
-	staleLogGcWaker      waker.Waker    // Wake to run stale log gc
-	logPatternPollWaker  waker.Waker    // Wake to poll for log patterns
-	logstreamPollWaker   waker.Waker    // Wake idle logstreams to poll sfor new data
-	metricPushInterval   time.Duration  // Interval between metric pushes
-	syslogUseCurrentYear bool           // if set, use the current year for timestamps that have no year information
-	omitMetricSource     bool           // if set, do not link the source program to a metric
-	omitProgLabel        bool           // if set, do not put the program name in the metric labels
-	emitMetricTimestamp  bool           // if set, emit the metric's recorded timestamp
-	logRuntimeErrors     bool           // if set, emit VM runtime errors into the log
-
-	maxRegexpLength   int // if set, mtail will accept regexs upto the max length
-	maxRecursionDepth int // if set, mtail will accept parse upto the number of parsed statements deep
+	programPath string // path to programs to load
+	oneShot     bool   // if set, mtail reads log files from the beginning, once, then exits
+	compileOnly bool   // if set, mtail compiles programs then exits
 }
 
 // initRuntime constructs a new runtime and performs the initial load of program files in the program directory.
-func (m *Server) initRuntime() error {
-	opts := []runtime.Option{
-		runtime.PrometheusRegisterer(m.reg),
-		runtime.MaxRegexpLength(m.maxRegexpLength),
-		runtime.MaxRecursionDepth(m.maxRecursionDepth),
-	}
-	if m.compileOnly {
-		opts = append(opts, runtime.CompileOnly())
-	}
-	if m.oneShot {
-		opts = append(opts, runtime.ErrorsAbort())
-	}
-	if m.dumpAst {
-		opts = append(opts, runtime.DumpAst())
-	}
-	if m.dumpAstTypes {
-		opts = append(opts, runtime.DumpAstTypes())
-	}
-	if m.dumpBytecode {
-		opts = append(opts, runtime.DumpBytecode())
-	}
-	if m.syslogUseCurrentYear {
-		opts = append(opts, runtime.SyslogUseCurrentYear())
-	}
-	if m.omitMetricSource {
-		opts = append(opts, runtime.OmitMetricSource())
-	}
-	if m.overrideLocation != nil {
-		opts = append(opts, runtime.OverrideLocation(m.overrideLocation))
-	}
-	if m.logRuntimeErrors {
-		opts = append(opts, runtime.LogRuntimeErrors())
-	}
-	var err error
-	m.r, err = runtime.New(m.lines, &m.wg, m.programPath, m.store, opts...)
-	if err != nil {
-		return err
-	}
-	return nil
+func (m *Server) initRuntime() (err error) {
+	m.r, err = runtime.New(m.lines, &m.wg, m.programPath, m.store, m.rOpts...)
+	return
 }
 
 // initExporter sets up an Exporter for this Server.
@@ -116,17 +63,7 @@ func (m *Server) initExporter() (err error) {
 		// mode we don't want to export anything.
 		return nil
 	}
-	opts := []exporter.Option{}
-	if m.omitProgLabel {
-		opts = append(opts, exporter.OmitProgLabel())
-	}
-	if m.emitMetricTimestamp {
-		opts = append(opts, exporter.EmitTimestamp())
-	}
-	if m.metricPushInterval > 0 {
-		opts = append(opts, exporter.PushInterval(m.metricPushInterval))
-	}
-	m.e, err = exporter.New(m.ctx, &m.wg, m.store, opts...)
+	m.e, err = exporter.New(m.ctx, &m.wg, m.store, m.eOpts...)
 	if err != nil {
 		return err
 	}
@@ -142,17 +79,7 @@ func (m *Server) initExporter() (err error) {
 
 // initTailer sets up and starts a Tailer for this Server.
 func (m *Server) initTailer() (err error) {
-	opts := []tailer.Option{
-		tailer.IgnoreRegex(m.ignoreRegexPattern),
-		tailer.LogPatterns(m.logPathPatterns),
-		tailer.LogPatternPollWaker(m.logPatternPollWaker),
-		tailer.StaleLogGcWaker(m.staleLogGcWaker),
-		tailer.LogstreamPollWaker(m.logstreamPollWaker),
-	}
-	if m.oneShot {
-		opts = append(opts, tailer.OneShot)
-	}
-	m.t, err = tailer.New(m.ctx, &m.wg, m.lines, opts...)
+	m.t, err = tailer.New(m.ctx, &m.wg, m.lines, m.tOpts...)
 	return
 }
 
@@ -238,6 +165,7 @@ func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server,
 		// are not fully specified at startup.
 		reg: prometheus.NewRegistry(),
 	}
+	m.rOpts = append(m.rOpts, runtime.PrometheusRegisterer(m.reg))
 
 	// TODO(jaq): Should these move to initExporter?
 	expvarDescs := map[string]*prometheus.Desc{

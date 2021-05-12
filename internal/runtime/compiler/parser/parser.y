@@ -500,7 +500,7 @@ regex_pattern
   {
     mp := markedpos(mtaillex)
     tp := tokenpos(mtaillex)
-    pos := ast.MergePosition(&mp, &tp)
+    pos := position.Merge(&mp, &tp)
     $$ = &ast.PatternLit{P: *pos, Pattern: $4}
   }
   ;

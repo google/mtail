@@ -252,6 +252,7 @@ func (s *Sexp) emitScope(scope *symbol.Scope) {
 
 // Dump begins the dumping of the syntax tree, returning the s-expression as a single string
 func (s *Sexp) Dump(n ast.Node) string {
+	s.output.Reset()
 	ast.Walk(s, n)
 	return s.output.String()
 }

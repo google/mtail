@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"contrib.go.opencensus.io/exporter/jaeger"
+	"github.com/google/mtail/internal/exporter"
+	"github.com/google/mtail/internal/runtime"
+	"github.com/google/mtail/internal/tailer"
 	"github.com/google/mtail/internal/waker"
 	"go.opencensus.io/trace"
 )
@@ -34,7 +37,7 @@ func LogPathPatterns(patterns ...string) Option {
 type logPathPatterns []string
 
 func (opt logPathPatterns) apply(m *Server) error {
-	m.logPathPatterns = opt
+	m.tOpts = append(m.tOpts, tailer.LogPatterns(opt))
 	return nil
 }
 
@@ -42,7 +45,7 @@ func (opt logPathPatterns) apply(m *Server) error {
 type IgnoreRegexPattern string
 
 func (opt IgnoreRegexPattern) apply(m *Server) error {
-	m.ignoreRegexPattern = string(opt)
+	m.tOpts = append(m.tOpts, tailer.IgnoreRegex(string(opt)))
 	return nil
 }
 
@@ -95,7 +98,7 @@ type overrideLocation struct {
 }
 
 func (opt overrideLocation) apply(m *Server) error {
-	m.overrideLocation = opt.Location
+	m.rOpts = append(m.rOpts, runtime.OverrideLocation(opt.Location))
 	return nil
 }
 
@@ -109,7 +112,7 @@ type staleLogGcWaker struct {
 }
 
 func (opt staleLogGcWaker) apply(m *Server) error {
-	m.staleLogGcWaker = opt.Waker
+	m.tOpts = append(m.tOpts, tailer.StaleLogGcWaker(opt.Waker))
 	return nil
 }
 
@@ -123,7 +126,7 @@ type logPatternPollWaker struct {
 }
 
 func (opt logPatternPollWaker) apply(m *Server) error {
-	m.logPatternPollWaker = opt.Waker
+	m.tOpts = append(m.tOpts, tailer.LogPatternPollWaker(opt.Waker))
 	return nil
 }
 
@@ -137,7 +140,7 @@ type logstreamPollWaker struct {
 }
 
 func (opt logstreamPollWaker) apply(m *Server) error {
-	m.logstreamPollWaker = opt.Waker
+	m.tOpts = append(m.tOpts, tailer.LogstreamPollWaker(opt.Waker))
 	return nil
 }
 
@@ -152,6 +155,8 @@ func (n *niladicOption) apply(m *Server) error {
 // OneShot sets one-shot mode in the Server.
 var OneShot = &niladicOption{
 	func(m *Server) error {
+		m.rOpts = append(m.rOpts, runtime.ErrorsAbort())
+		m.tOpts = append(m.tOpts, tailer.OneShot)
 		m.oneShot = true
 		return nil
 	}}
@@ -159,6 +164,7 @@ var OneShot = &niladicOption{
 // CompileOnly sets compile-only mode in the Server.
 var CompileOnly = &niladicOption{
 	func(m *Server) error {
+		m.rOpts = append(m.rOpts, runtime.CompileOnly())
 		m.compileOnly = true
 		return nil
 	}}
@@ -166,49 +172,56 @@ var CompileOnly = &niladicOption{
 // DumpAst instructs the Server's compiler to print the AST after parsing.
 var DumpAst = &niladicOption{
 	func(m *Server) error {
-		m.dumpAst = true
+		m.rOpts = append(m.rOpts, runtime.DumpAst())
 		return nil
 	}}
 
 // DumpAstTypes instructs the Server's copmiler to print the AST after type checking.
 var DumpAstTypes = &niladicOption{
 	func(m *Server) error {
-		m.dumpAstTypes = true
+		m.rOpts = append(m.rOpts, runtime.DumpAstTypes())
 		return nil
 	}}
 
 // DumpBytecode instructs the Server's compiuler to print the program bytecode after code generation.
 var DumpBytecode = &niladicOption{
 	func(m *Server) error {
-		m.dumpBytecode = true
+		m.rOpts = append(m.rOpts, runtime.DumpBytecode())
 		return nil
 	}}
 
 // SyslogUseCurrentYear instructs the Server to use the current year for year-less log timestamp during parsing.
 var SyslogUseCurrentYear = &niladicOption{
 	func(m *Server) error {
-		m.syslogUseCurrentYear = true
+		m.rOpts = append(m.rOpts, runtime.SyslogUseCurrentYear())
 		return nil
 	}}
 
 // OmitProgLabel sets the Server to not put the program name as a label in exported metrics.
 var OmitProgLabel = &niladicOption{
 	func(m *Server) error {
-		m.omitProgLabel = true
+		m.eOpts = append(m.eOpts, exporter.OmitProgLabel())
 		return nil
 	}}
 
 // OmitMetricSource sets the Server to not link created metrics to their source program.
 var OmitMetricSource = &niladicOption{
 	func(m *Server) error {
-		m.omitMetricSource = true
+		m.rOpts = append(m.rOpts, runtime.OmitMetricSource())
 		return nil
 	}}
 
 // EmitMetricTimestamp tells the Server to export the metric's timestamp.
 var EmitMetricTimestamp = &niladicOption{
 	func(m *Server) error {
-		m.emitMetricTimestamp = true
+		m.eOpts = append(m.eOpts, exporter.EmitTimestamp())
+		return nil
+	}}
+
+// LogRuntimeErrors instructs the VM to emit runtime errors to the log.
+var LogRuntimeErrors = &niladicOption{
+	func(m *Server) error {
+		m.rOpts = append(m.rOpts, runtime.LogRuntimeErrors())
 		return nil
 	}}
 
@@ -233,7 +246,7 @@ func (opt JaegerReporter) apply(m *Server) error {
 type MetricPushInterval time.Duration
 
 func (opt MetricPushInterval) apply(m *Server) error {
-	m.metricPushInterval = time.Duration(opt)
+	m.eOpts = append(m.eOpts, exporter.PushInterval(time.Duration(opt)))
 	return nil
 }
 
@@ -241,7 +254,7 @@ func (opt MetricPushInterval) apply(m *Server) error {
 type MaxRegexpLength int
 
 func (opt MaxRegexpLength) apply(m *Server) error {
-	m.maxRegexpLength = int(opt)
+	m.rOpts = append(m.rOpts, runtime.MaxRegexpLength(int(opt)))
 	return nil
 }
 
@@ -249,15 +262,6 @@ func (opt MaxRegexpLength) apply(m *Server) error {
 type MaxRecursionDepth int
 
 func (opt MaxRecursionDepth) apply(m *Server) error {
-
-	m.maxRecursionDepth = int(opt)
-	return nil
-}
-
-// LogRuntimeErrors instructs the VM to emit runtime errors to the log.
-type LogRuntimeErrors bool
-
-func (opt LogRuntimeErrors) apply(m *Server) error {
-	m.logRuntimeErrors = bool(opt)
+	m.rOpts = append(m.rOpts, runtime.MaxRecursionDepth(int(opt)))
 	return nil
 }
