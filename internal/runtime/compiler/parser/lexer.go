@@ -132,6 +132,9 @@ func (l *Lexer) next() rune {
 		l.width = 1
 		l.rune = eof
 	}
+	if l.rune == '␤' {
+		l.rune = eof
+	}
 	return l.rune
 }
 

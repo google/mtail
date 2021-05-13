@@ -21,7 +21,7 @@ import (
 const SEP = "␤"
 
 // Enable this when debugging with a fuzz crash artifact; it slows the fuzzer down when enabled.
-const dumpDebug = false
+const dumpDebug = true
 
 func Fuzz(data []byte) int {
 	offset := bytes.Index(data, []byte(SEP))
@@ -31,7 +31,7 @@ func Fuzz(data []byte) int {
 	}
 	fmt.Printf("data len %d, offset is %d, input starts at %d\n", len(data), offset, offset+len(SEP))
 
-	cOpts := []compiler.Option{}
+	cOpts := []compiler.Option{compiler.Optimise()}
 	if dumpDebug {
 		cOpts = append(cOpts, compiler.EmitAst(), compiler.EmitAstTypes())
 	}

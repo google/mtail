@@ -258,7 +258,7 @@ CRASH ?=
 .PHONY: fuzz-repro
 fuzz-repro: $(OUT)/vm-fuzzer mtail
 	$(OUT)/vm-fuzzer $(FUZZER_FLAGS) $(CRASH) || true  # Want to continue
-	./mtail --logtostderr --vmodule=loader=2,checker=2,types=2,codegen=2 --mtailDebug=3 --dump_ast_types --dump_bytecode --compile_only --progs $(CRASH)
+	./mtail --logtostderr --vmodule=runtime=2,lexer=2,parser=2,checker=2,types=2,codegen=2 --mtailDebug=3 --dump_ast --dump_ast_types --dump_bytecode --compile_only --progs $(CRASH)
 
 # make fuzz-min CRASH=example crash
 .PHONY: fuzz-min

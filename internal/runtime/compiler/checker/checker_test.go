@@ -254,6 +254,10 @@ l++=l
 	{"cmp to None",
 		`strptime("","")<5{}
 `, []string{"cmp to None:1:1-17: Can't compare LHS of type None with RHS of type Int."}},
+
+	{"negate None",
+		`~strptime("", "") {}
+`, []string{"negate None:1:2-17: type mismatch; expected Int received None for `~' operator."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
