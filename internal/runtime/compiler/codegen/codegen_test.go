@@ -358,13 +358,13 @@ otherwise {
 }
 `,
 		[]code.Instr{
-			{code.Otherwise, nil, 4},
-			{code.Jnm, 7, 4},
-			{code.Setmatched, false, 4},
+			{code.Otherwise, nil, 2},
+			{code.Jnm, 7, 2},
+			{code.Setmatched, false, 2},
 			{code.Mload, 0, 3},
 			{code.Dload, 0, 3},
 			{code.Inc, nil, 3},
-			{code.Setmatched, true, 4}}},
+			{code.Setmatched, true, 2}}},
 	{"cond else",
 		`counter foo
 counter bar
