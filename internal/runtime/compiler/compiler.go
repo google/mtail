@@ -100,6 +100,17 @@ func (c *Compiler) Compile(name string, input io.Reader) (obj *code.Object, err 
 		glog.Infof("%s AST:\n%s", name, s.Dump(ast))
 	}
 
+	if c.optimise {
+		ast, err = opt.Optimise(ast)
+		if err != nil {
+			return
+		}
+		if c.emitAstTypes {
+			s := parser.Sexp{}
+			glog.Infof("Post optimisation %s AST:\n%s", name, s.Dump(ast))
+		}
+	}
+
 	ast, err = checker.Check(ast, c.maxRegexpLength, c.maxRecursionDepth)
 	if err != nil {
 		return

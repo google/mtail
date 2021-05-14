@@ -109,6 +109,7 @@ func (p *parser) inRegex() {
 }
 
 func init() {
+	// Initialise globals defined in generated parser.go, defaults to 0 and false
 	flag.IntVar(&mtailDebug, "mtailDebug", 0, "Set parser debug level.")
 	mtailErrorVerbose = true
 }
