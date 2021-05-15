@@ -493,8 +493,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			rType := types.Int
 			err := types.Unify(rType, t)
 			if err != nil {
-				// Commented because these type mismatch errors appear to be unhelpful.
-				//	c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
+				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("%s for `~' operator.", err))
 				n.SetType(types.Error)
 				return n
 			}

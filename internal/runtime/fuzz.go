@@ -24,10 +24,12 @@ const SEP = "␤"
 const dumpDebug = false
 
 func Fuzz(data []byte) int {
+	// Data contains the program and sample input, separated by SEP.
 	offset := bytes.Index(data, []byte(SEP))
 	if offset < 0 {
+		// If no SEP, then append one and an empty line of input.
 		offset = len(data)
-		data = append(data, []byte(SEP)...)
+		data = append(data, []byte(SEP+"\n")...)
 	}
 	fmt.Printf("data len %d, offset is %d, input starts at %d\n", len(data), offset, offset+len(SEP))
 

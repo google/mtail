@@ -114,5 +114,5 @@ make mtail
 Run the fuzz-repro target with the CRASH variable set, it'll do all of the above:
 
 ```
-make fuzz-repro CXX=clang CXXFLAGS=-fsanitize=fuzzer,address LIB_FUZZING_ENGINE= CRASH=bug/20720.mtail
+make fuzz-repro CRASH=bug/20720.mtail
 ```

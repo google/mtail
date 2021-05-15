@@ -17,11 +17,11 @@ import (
 )
 
 type Compiler struct {
-	emitAst           bool
-	emitAstTypes      bool
-	maxRegexpLength   int
-	maxRecursionDepth int
-	optimise          bool
+	emitAst             bool
+	emitAstTypes        bool
+	maxRegexpLength     int
+	maxRecursionDepth   int
+	disableOptimisation bool
 }
 
 func New(options ...Option) (*Compiler, error) {
@@ -76,10 +76,10 @@ func MaxRecursionDepth(maxRecursionDepth int) Option {
 	}
 }
 
-// Optimise enables the optimisation phase.
-func Optimise() Option {
+// DisableOptimisation disables the optimisation phase.
+func DisableOptimisation() Option {
 	return func(c *Compiler) error {
-		c.optimise = true
+		c.disableOptimisation = true
 		return nil
 	}
 }
@@ -100,6 +100,17 @@ func (c *Compiler) Compile(name string, input io.Reader) (obj *code.Object, err 
 		glog.Infof("%s AST:\n%s", name, s.Dump(ast))
 	}
 
+	if !c.disableOptimisation {
+		ast, err = opt.Optimise(ast)
+		if err != nil {
+			return
+		}
+		if c.emitAstTypes {
+			s := parser.Sexp{}
+			glog.Infof("Post optimisation %s AST:\n%s", name, s.Dump(ast))
+		}
+	}
+
 	ast, err = checker.Check(ast, c.maxRegexpLength, c.maxRecursionDepth)
 	if err != nil {
 		return
@@ -110,7 +121,7 @@ func (c *Compiler) Compile(name string, input io.Reader) (obj *code.Object, err 
 		glog.Infof("%s AST with Type Annotation:\n%s", name, s.Dump(ast))
 	}
 
-	if c.optimise {
+	if !c.disableOptimisation {
 		ast, err = opt.Optimise(ast)
 		if err != nil {
 			return
