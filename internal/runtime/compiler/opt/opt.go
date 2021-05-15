@@ -5,19 +5,27 @@
 package opt
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/google/mtail/internal/runtime/compiler/ast"
+	"github.com/google/mtail/internal/runtime/compiler/errors"
 	"github.com/google/mtail/internal/runtime/compiler/parser"
 	"github.com/google/mtail/internal/runtime/compiler/position"
+	"github.com/google/mtail/internal/runtime/compiler/types"
 )
 
 func Optimise(n ast.Node) (ast.Node, error) {
 	o := &optimiser{}
-	return ast.Walk(o, n), nil
+	r := ast.Walk(o, n)
+	if len(o.errors) > 0 {
+		return r, o.errors
+	}
+	return r, nil
 }
 
 type optimiser struct {
+	errors errors.ErrorList
 }
 
 func (o *optimiser) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
@@ -40,6 +48,11 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 				case parser.MUL:
 					r.I = lhs.I * rhs.I
 				case parser.DIV:
+					if rhs.I == 0 {
+						o.errors.Add(n.Pos(), fmt.Sprintf("integer divide by zero"))
+						n.SetType(types.Error)
+						return n
+					}
 					r.I = lhs.I / rhs.I
 				case parser.MOD:
 					r.I = lhs.I % rhs.I
@@ -59,6 +72,11 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 				case parser.MUL:
 					r.F = float64(lhs.I) * rhs.F
 				case parser.DIV:
+					if rhs.F == 0 {
+						o.errors.Add(n.Pos(), fmt.Sprintf("divide by zero"))
+						n.SetType(types.Error)
+						return n
+					}
 					r.F = float64(lhs.I) / rhs.F
 				case parser.MOD:
 					rhs.F = math.Mod(float64(lhs.I), rhs.F)
@@ -83,6 +101,11 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 				case parser.MUL:
 					r.F = lhs.F * float64(rhs.I)
 				case parser.DIV:
+					if rhs.I == 0 {
+						o.errors.Add(n.Pos(), fmt.Sprintf("divide by zero"))
+						n.SetType(types.Error)
+						return n
+					}
 					r.F = lhs.F / float64(rhs.I)
 				case parser.MOD:
 					r.F = math.Mod(lhs.F, float64(rhs.I))
@@ -102,6 +125,11 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 				case parser.MUL:
 					r.F = lhs.F * rhs.F
 				case parser.DIV:
+					if rhs.F == 0 {
+						o.errors.Add(n.Pos(), fmt.Sprintf("divide by zero"))
+						n.SetType(types.Error)
+						return n
+					}
 					r.F = lhs.F / rhs.F
 				case parser.MOD:
 					r.F = math.Mod(lhs.F, rhs.F)

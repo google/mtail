@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"reflect"
+	"strings"
 	"testing"
 	"testing/quick"
 
@@ -80,6 +81,41 @@ func TestOptimiser(t *testing.T) {
 			got, err := opt.Optimise(tc.ast)
 			testutil.FatalIfErr(t, err)
 			testutil.ExpectNoDiff(t, tc.want, got)
+		})
+	}
+}
+
+var optimiserErrorTests = []struct {
+	name string
+	ast  ast.Node
+	want []string
+}{
+	{
+		"integer divide by zero",
+		&ast.BinaryExpr{
+			Lhs: &ast.IntLit{I: 4},
+			Rhs: &ast.IntLit{I: 0},
+			Op:  parser.DIV,
+		},
+		[]string{":1:1: integer divide by zero"},
+	},
+	{
+		"float divide by zero",
+		&ast.BinaryExpr{
+			Lhs: &ast.FloatLit{F: 4},
+			Rhs: &ast.FloatLit{F: 0},
+			Op:  parser.DIV,
+		},
+		[]string{":1:1: divide by zero"},
+	},
+}
+
+func TestOptimiserErrors(t *testing.T) {
+	for _, tc := range optimiserErrorTests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := opt.Optimise(tc.ast)
+			testutil.ExpectNoDiff(t, tc.want, strings.Split(err.Error(), "\n"))
 		})
 	}
 }
