@@ -194,13 +194,16 @@ $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt: $(GOFILES) $(GOGENFILES) $(GOT
 .PHONY: benchstat
 benchstat: $(TESTRESULTS)/benchstat.txt
 $(TESTRESULTS)/benchstat.txt: $(TESTRESULTS)/benchmark-results-$(HEAD_REF).txt | print-version $(BENCHSTAT)
-	(test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt && benchstat $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $< || benchstat $<) | tee $@
+	(test -s $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt && benchstat -sort=-delta $(TESTRESULTS)/benchmark-results-$(BASE_REF).txt $< || benchstat $<) | tee $@
 
 
 PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cmd/ | sed -e "s@$$(pwd)@.@")
 
 .PHONY: testall
-testall: testrace bench fuzz-regtest
+testall: testrace fuzz-regtest bench
+
+.PHONY: checkall
+checkall: all fuzz-targets check
 
 ## make u a container
 .PHONY: container
@@ -220,6 +223,9 @@ CXX = clang
 CXXFLAGS ?= -fsanitize=fuzzer,address
 LIB_FUZZING_ENGINE ?=
 OUT ?= .
+
+.PHONY: fuzz-targets
+fuzz-targets: $(OUT)/vm-fuzzer
 
 $(OUT)/vm-fuzzer: $(GOFILES) | $(GOFUZZBUILD)
 	go114-fuzz-build -o fuzzer.a ./internal/runtime
@@ -252,7 +258,7 @@ CRASH ?=
 .PHONY: fuzz-repro
 fuzz-repro: $(OUT)/vm-fuzzer mtail
 	$(OUT)/vm-fuzzer $(FUZZER_FLAGS) $(CRASH) || true  # Want to continue
-	./mtail --logtostderr --vmodule=loader=2,checker=2,types=2,codegen=2 --mtailDebug=3 --dump_ast_types --dump_bytecode --compile_only --progs $(CRASH)
+	./mtail --logtostderr --vmodule=runtime=2,lexer=2,parser=2,checker=2,types=2,codegen=2 --mtailDebug=3 --dump_ast --dump_ast_types --dump_bytecode --compile_only --progs $(CRASH)
 
 # make fuzz-min CRASH=example crash
 .PHONY: fuzz-min

@@ -154,10 +154,10 @@ conditional_stmt
       $$ = $2
     }
   }
-  | OTHERWISE compound_stmt
+  | mark_pos OTHERWISE compound_stmt
   {
-    o := &ast.OtherwiseStmt{tokenpos(mtaillex)}
-    $$ = &ast.CondStmt{o, $2, nil, nil}
+    o := &ast.OtherwiseStmt{positionFromMark(mtaillex)}
+    $$ = &ast.CondStmt{o, $3, nil, nil}
   }
   ;
 
@@ -462,13 +462,13 @@ id_expr
 
 /* Builtin expression describes the builtin function calls. */
 builtin_expr
-  : BUILTIN LPAREN RPAREN
+  : mark_pos BUILTIN LPAREN RPAREN
   {
-    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: nil}
+    $$ = &ast.BuiltinExpr{P: positionFromMark(mtaillex), Name: $2, Args: nil}
   }
-  | BUILTIN LPAREN arg_expr_list RPAREN
+  | mark_pos BUILTIN LPAREN arg_expr_list RPAREN
   {
-    $$ = &ast.BuiltinExpr{P: tokenpos(mtaillex), Name: $1, Args: $3}
+    $$ = &ast.BuiltinExpr{P: positionFromMark(mtaillex), Name: $2, Args: $4}
   }
   ;
 
@@ -498,10 +498,7 @@ arg_expr
 regex_pattern
   : mark_pos DIV in_regex REGEX DIV
   {
-    mp := markedpos(mtaillex)
-    tp := tokenpos(mtaillex)
-    pos := ast.MergePosition(&mp, &tp)
-    $$ = &ast.PatternLit{P: *pos, Pattern: $4}
+    $$ = &ast.PatternLit{P: positionFromMark(mtaillex), Pattern: $4}
   }
   ;
 
@@ -663,13 +660,13 @@ decoration_stmt
 
 /* Delete statement parses a delete command. */
 delete_stmt
-  : DEL postfix_expr AFTER DURATIONLITERAL
+  : mark_pos DEL postfix_expr AFTER DURATIONLITERAL
   {
-    $$ = &ast.DelStmt{P: tokenpos(mtaillex), N: $2, Expiry: $4}
+    $$ = &ast.DelStmt{P: positionFromMark(mtaillex), N: $3, Expiry: $5}
   }
-  | DEL postfix_expr
+  | mark_pos DEL postfix_expr
   {
-    $$ = &ast.DelStmt{P: tokenpos(mtaillex), N: $2}
+    $$ = &ast.DelStmt{P: positionFromMark(mtaillex), N: $3}
   }
 
 /* Identifier or String parses where an ID or a string can be expected. */
@@ -724,4 +721,11 @@ func tokenpos(mtaillex mtailLexer) position.Position {
 // production.
 func markedpos(mtaillex mtailLexer) position.Position {
     return mtaillex.(*parser).pos
+}
+
+// positionFromMark returns a position spanning from the last mark to the current position.
+func positionFromMark(mtaillex mtailLexer) position.Position {
+    tp := tokenpos(mtaillex)
+    mp := markedpos(mtaillex)
+    return *position.Merge(&mp, &tp)
 }

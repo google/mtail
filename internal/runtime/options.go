@@ -6,6 +6,7 @@ package runtime
 import (
 	"time"
 
+	"github.com/google/mtail/internal/runtime/compiler"
 	"github.com/google/mtail/internal/runtime/vm"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -37,18 +38,18 @@ func ErrorsAbort() Option {
 	}
 }
 
-// DumpAst instructs the Runtime to print the AST after program compilation.
+// DumpAst emits the AST after program compilation.
 func DumpAst() Option {
 	return func(r *Runtime) error {
-		r.dumpAst = true
+		r.cOpts = append(r.cOpts, compiler.EmitAst())
 		return nil
 	}
 }
 
-// DumpAstTypes instructs the Runtime to print the AST after type checking.
+// DumpAstTypes emits the AST after type checking.
 func DumpAstTypes() Option {
 	return func(r *Runtime) error {
-		r.dumpAstTypes = true
+		r.cOpts = append(r.cOpts, compiler.EmitAstTypes())
 		return nil
 	}
 }
@@ -72,15 +73,15 @@ func SyslogUseCurrentYear() Option {
 // MaxRegexpLength sets the maximum length an mtail regular expression can have, in terms of characters.
 func MaxRegexpLength(maxRegexpLength int) Option {
 	return func(r *Runtime) error {
-		r.maxRegexpLength = maxRegexpLength
+		r.cOpts = append(r.cOpts, compiler.MaxRegexpLength(maxRegexpLength))
 		return nil
 	}
 }
 
 // MaxRecursionDepth sets the maximum depth the abstract syntax tree built during lexation can have
-func MaxRecursionDepth(maxRecursionLength int) Option {
+func MaxRecursionDepth(maxRecursionDepth int) Option {
 	return func(r *Runtime) error {
-		r.maxRecursionDepth = maxRecursionLength
+		r.cOpts = append(r.cOpts, compiler.MaxRecursionDepth(maxRecursionDepth))
 		return nil
 	}
 }

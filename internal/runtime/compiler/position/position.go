@@ -25,3 +25,28 @@ func (p Position) String() string {
 	}
 	return r
 }
+
+// MergePosition returns the union of two positions such that the result contains both inputs.
+func Merge(a, b *Position) *Position {
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+	if a.Filename != b.Filename {
+		return a
+	}
+	// TODO(jaq): handle multi-line positions
+	if a.Line != b.Line {
+		return a
+	}
+	r := *a
+	if b.Startcol < r.Startcol {
+		r.Startcol = b.Startcol
+	}
+	if b.Endcol > r.Endcol {
+		r.Endcol = b.Endcol
+	}
+	return &r
+}

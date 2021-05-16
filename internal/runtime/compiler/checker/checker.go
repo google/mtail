@@ -493,8 +493,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			rType := types.Int
 			err := types.Unify(rType, t)
 			if err != nil {
-				// Commented because these type mismatch errors appear to be unhelpful.
-				//	c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %s", err))
+				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("%s for `~' operator.", err))
 				n.SetType(types.Error)
 				return n
 			}
@@ -724,13 +723,13 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 	case *ast.DelStmt:
 		if ix, ok := n.N.(*ast.IndexedExpr); ok {
 			if len(ix.Index.(*ast.ExprList).Children) == 0 {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Cannot delete this.\n\tTry deleting an index from this dimensioned metric."))
+				c.errors.Add(n.N.Pos(), fmt.Sprintf("Cannot delete this.\n\tTry deleting an index from this dimensioned metric."))
 				return n
 			}
 			ix.Lhs.(*ast.IdTerm).Lvalue = true
 			return n
 		}
-		c.errors.Add(n.Pos(), fmt.Sprintf("Cannot delete this.\n\tTry deleting from a dimensioned metric with this as an index."))
+		c.errors.Add(n.N.Pos(), fmt.Sprintf("Cannot delete this.\n\tTry deleting from a dimensioned metric with this as an index."))
 	}
 
 	return node

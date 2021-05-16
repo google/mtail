@@ -71,7 +71,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker := waker.NewTestAlways()
+	waker, awaken := waker.NewTest(ctx, 1)
 
 	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
@@ -81,7 +81,11 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 
 	testutil.WriteString(t, f, "1\n")
 
-	cancel()
+	// Avoid a race with cancellation if we can synchronise with waker.Wake()
+	awaken(0)
+
+	cancel() // Cancellation here should cause the stream to shut down.
+
 	wg.Wait()
 	close(lines)
 

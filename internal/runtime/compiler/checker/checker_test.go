@@ -106,7 +106,7 @@ counter bar by a, b
 	  timestamp()
 	}
 	`,
-		[]string{"builtin parameter mismatch:2:13: call to `strptime': type mismatch; expected String→String→None received incomplete type"}},
+		[]string{"builtin parameter mismatch:2:4-13: call to `strptime': type mismatch; expected String→String→None received incomplete type"}},
 
 	{"bad strptime format",
 		`strptime("2017-10-16 06:50:25", "2017-10-16 06:50:25")
@@ -191,7 +191,7 @@ next
 		`/(.*)/ {
 del $0
 }`,
-		[]string{"delete incorrect object:3:7: Cannot delete this.", "\tTry deleting from a dimensioned metric with this as an index."}},
+		[]string{"delete incorrect object:2:5-6: Cannot delete this.", "\tTry deleting from a dimensioned metric with this as an index."}},
 
 	{"pattern fragment plus anything",
 		`gauge e
@@ -208,7 +208,7 @@ del $0
 		`histogram#
 m del#
 m`,
-		[]string{"delete a histogram:3:2: Cannot delete this.", "\tTry deleting an index from this dimensioned metric."}},
+		[]string{"delete a histogram:3:7: Cannot delete this.", "\tTry deleting an index from this dimensioned metric."}},
 
 	{"int as bool",
 		`1 {}`,
@@ -244,7 +244,7 @@ l++=l
 
 	{"dec non var",
 		`strptime("", "")--
-`, []string{"dec non var:1:16: Expecting a variable here."}},
+`, []string{"dec non var:1:1-16: Expecting a variable here."}},
 
 	// TODO(jaq): This is an instance of bug #190, the capref is ambiguous.
 	// 	{"regexp with no zero capref",
@@ -253,7 +253,11 @@ l++=l
 
 	{"cmp to None",
 		`strptime("","")<5{}
-`, []string{"cmp to None:1:15-17: Can't compare LHS of type None with RHS of type Int."}},
+`, []string{"cmp to None:1:1-17: Can't compare LHS of type None with RHS of type Int."}},
+
+	{"negate None",
+		`~strptime("", "") {}
+`, []string{"negate None:1:2-17: type mismatch; expected Int received None for `~' operator."}},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
