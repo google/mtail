@@ -49,12 +49,17 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 					r.I = lhs.I * rhs.I
 				case parser.DIV:
 					if rhs.I == 0 {
-						o.errors.Add(n.Pos(), fmt.Sprintf("integer divide by zero"))
+						o.errors.Add(n.Pos(), fmt.Sprintf("divide by zero"))
 						n.SetType(types.Error)
 						return n
 					}
 					r.I = lhs.I / rhs.I
 				case parser.MOD:
+					if rhs.I == 0 {
+						o.errors.Add(n.Pos(), fmt.Sprintf("mod by zero"))
+						n.SetType(types.Error)
+						return n
+					}
 					r.I = lhs.I % rhs.I
 				case parser.POW:
 					r.I = int64(math.Pow(float64(lhs.I), float64(rhs.I)))
@@ -79,6 +84,11 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 					}
 					r.F = float64(lhs.I) / rhs.F
 				case parser.MOD:
+					if rhs.F == 0 {
+						o.errors.Add(n.Pos(), fmt.Sprintf("mod by zero"))
+						n.SetType(types.Error)
+						return n
+					}
 					rhs.F = math.Mod(float64(lhs.I), rhs.F)
 				case parser.POW:
 					r.F = math.Pow(float64(lhs.I), rhs.F)
@@ -108,6 +118,11 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 					}
 					r.F = lhs.F / float64(rhs.I)
 				case parser.MOD:
+					if rhs.I == 0 {
+						o.errors.Add(n.Pos(), fmt.Sprintf("mod by zero"))
+						n.SetType(types.Error)
+						return n
+					}
 					r.F = math.Mod(lhs.F, float64(rhs.I))
 				case parser.POW:
 					r.F = math.Pow(lhs.F, float64(rhs.I))
@@ -132,6 +147,11 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 					}
 					r.F = lhs.F / rhs.F
 				case parser.MOD:
+					if rhs.F == 0 {
+						o.errors.Add(n.Pos(), fmt.Sprintf("mod by zero"))
+						n.SetType(types.Error)
+						return n
+					}
 					r.F = math.Mod(lhs.F, rhs.F)
 				case parser.POW:
 					r.F = math.Pow(lhs.F, rhs.F)
