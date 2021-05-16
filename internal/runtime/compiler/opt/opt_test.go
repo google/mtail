@@ -97,7 +97,7 @@ var optimiserErrorTests = []struct {
 			Rhs: &ast.IntLit{I: 0},
 			Op:  parser.DIV,
 		},
-		[]string{":1:1: integer divide by zero"},
+		[]string{":1:1: divide by zero"},
 	},
 	{
 		"float divide by zero",
@@ -107,6 +107,24 @@ var optimiserErrorTests = []struct {
 			Op:  parser.DIV,
 		},
 		[]string{":1:1: divide by zero"},
+	},
+	{
+		"integer mod by zero",
+		&ast.BinaryExpr{
+			Lhs: &ast.IntLit{I: 4},
+			Rhs: &ast.IntLit{I: 0},
+			Op:  parser.MOD,
+		},
+		[]string{":1:1: mod by zero"},
+	},
+	{
+		"float mod by zero",
+		&ast.BinaryExpr{
+			Lhs: &ast.FloatLit{F: 4},
+			Rhs: &ast.FloatLit{F: 0},
+			Op:  parser.MOD,
+		},
+		[]string{":1:1: mod by zero"},
 	},
 }
 
