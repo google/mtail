@@ -121,3 +121,8 @@ Should the waker move into the tailer package?
 Benchmarks on GHA are too variable.  Compute benchmarks old and new in same instance, per guidelines from "Software Microbenchmarking in the Cloud. How Bad is it Really?" Laaber et al.
 
 Move loc and useCurrentYear out of VM and into Runtime env.
+
+Move const folding into parser during AST build.
+Const-fold identity functions.
+
+Replace IndexedExpr with no ExprList with just the IdTerm.
