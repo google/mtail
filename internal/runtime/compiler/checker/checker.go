@@ -250,7 +250,7 @@ func (c *checker) checkSymbolUsage() {
 					// Don't warn about the zeroth capture group; it's not user-defined.
 					continue
 				}
-				glog.Infof("declaration of capture group reference `%s' at %s appears to be unused", sym.Name, sym.Pos)
+				glog.Infof("capture group reference `%s' at %s appears to be unused", sym.Name, sym.Pos)
 				continue
 			}
 			c.errors.Add(sym.Pos, fmt.Sprintf("Declaration of %s `%s' here is never used.", sym.Kind, sym.Name))
