@@ -250,7 +250,7 @@ func (c *checker) checkSymbolUsage() {
 					// Don't warn about the zeroth capture group; it's not user-defined.
 					continue
 				}
-				glog.Infof("declaration of capture group reference `%s' at %s appears to be unused", sym.Name, sym.Pos)
+				glog.Infof("capture group reference `%s' at %s appears to be unused", sym.Name, sym.Pos)
 				continue
 			}
 			c.errors.Add(sym.Pos, fmt.Sprintf("Declaration of %s `%s' here is never used.", sym.Kind, sym.Name))
@@ -638,6 +638,14 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			n.SetType(types.Error)
 			return n
 		}
+
+		// Having typechecked the expression against the expected types, we
+		// have detected mismatched keylengths, and can now fold to just IdTerm
+		// if there's no ExprList.
+		if len(exprList.Children) == 0 {
+			return n.Lhs
+		}
+
 		n.SetType(rType)
 		return n
 

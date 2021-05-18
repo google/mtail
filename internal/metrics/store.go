@@ -47,7 +47,6 @@ func (s *Store) Add(m *Metric) error {
 		// - copy old LabelValues into new metric;
 		// - discard old metric.
 		for i, v := range s.Metrics[m.Name] {
-			//
 			if v.Program != m.Program {
 				continue
 			}
@@ -87,6 +86,7 @@ func (s *Store) Add(m *Metric) error {
 	s.searchMu.Lock()
 	s.Metrics[m.Name] = append(s.Metrics[m.Name], m)
 	if dupeIndex >= 0 {
+		glog.V(2).Infof("removing original, keeping its clone")
 		s.Metrics[m.Name] = append(s.Metrics[m.Name][0:dupeIndex], s.Metrics[m.Name][dupeIndex+1:]...)
 	}
 	s.searchMu.Unlock()
