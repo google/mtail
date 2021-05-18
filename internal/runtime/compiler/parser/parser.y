@@ -441,6 +441,7 @@ primary_expr
 indexed_expr
   : id_expr
   {
+    // Build an empty IndexedExpr so that the recursive rule below doesn't need to handle the alternative.
     $$ = &ast.IndexedExpr{Lhs: $1, Index: &ast.ExprList{}}
   }
   | indexed_expr LSQUARE arg_expr_list RSQUARE

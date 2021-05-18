@@ -638,6 +638,14 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			n.SetType(types.Error)
 			return n
 		}
+
+		// Having typechecked the expression against the expected types, we
+		// have detected mismatched keylengths, and can now fold to just IdTerm
+		// if there's no ExprList.
+		if len(exprList.Children) == 0 {
+			return n.Lhs
+		}
+
 		n.SetType(rType)
 		return n
 
