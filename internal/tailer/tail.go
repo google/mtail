@@ -144,7 +144,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
-	if len(t.globPatterns) == 0 {
+	if len(t.globPatterns) == 0 && len(t.logstreams) == 0 {
 		glog.Info("No patterns to tail, tailer done.")
 		close(t.lines)
 		return t, nil

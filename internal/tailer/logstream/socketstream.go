@@ -9,7 +9,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"os"
 	"sync"
 	"time"
 
@@ -32,9 +31,9 @@ type socketStream struct {
 	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
-func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine) (LogStream, error) {
+func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine) (LogStream, error) {
 	ss := &socketStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
-	if err := ss.stream(ctx, wg, waker, fi); err != nil {
+	if err := ss.stream(ctx, wg, waker); err != nil {
 		return nil, err
 	}
 	return ss, nil
@@ -46,7 +45,7 @@ func (ss *socketStream) LastReadTime() time.Time {
 	return ss.lastReadTime
 }
 
-func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo) error {
+func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker) error {
 	c, err := net.ListenUnixgram("unixgram", &net.UnixAddr{ss.pathname, "unixgram"})
 	if err != nil {
 		logErrors.Add(ss.pathname, 1)

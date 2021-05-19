@@ -57,7 +57,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	default:
 		return nil, fmt.Errorf("unsupported URL scheme %q in path %q", u.Scheme, pathname)
 	case "unixgram":
-		return newSocketStream(ctx, wg, waker, u.Path, nil, lines)
+		return newSocketStream(ctx, wg, waker, u.Path, lines)
 	case "", "file":
 	}
 	fi, err := os.Stat(u.Path)
@@ -71,7 +71,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	case m&os.ModeType == os.ModeNamedPipe:
 		return newPipeStream(ctx, wg, waker, u.Path, fi, lines)
 	case m&os.ModeType == os.ModeSocket:
-		return newSocketStream(ctx, wg, waker, pathname, fi, lines)
+		return newSocketStream(ctx, wg, waker, pathname, lines)
 	default:
 		return nil, fmt.Errorf("unsupported file object type at %q", pathname)
 	}
