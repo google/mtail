@@ -17,18 +17,18 @@ import (
 )
 
 func TestSocketStreamRead(t *testing.T) {
-	t.Skip("logstream.New cannot stat a nonexistent socket")
 	var wg sync.WaitGroup
 
 	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "sock")
+	sockname := "unixgram://" + name
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
 
-	ss, err := logstream.New(ctx, &wg, waker, name, lines, false)
+	ss, err := logstream.New(ctx, &wg, waker, sockname, lines, false)
 	testutil.FatalIfErr(t, err)
 	awaken(1) // Synchronise past socket creation
 
@@ -58,7 +58,6 @@ func TestSocketStreamRead(t *testing.T) {
 }
 
 func TestSocketStreamCompletedBecauseSocketClosed(t *testing.T) {
-	t.Skip("logstream.New cannot stat a nonexistent socket")
 	var wg sync.WaitGroup
 
 	tmpDir := testutil.TestTempDir(t)
@@ -69,7 +68,9 @@ func TestSocketStreamCompletedBecauseSocketClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
 
-	ss, err := logstream.New(ctx, &wg, waker, name, lines, false)
+	sockName := "unixgram://" + name
+
+	ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
 	testutil.FatalIfErr(t, err)
 	awaken(1) // Synchronise past socket creation
 
@@ -102,7 +103,6 @@ func TestSocketStreamCompletedBecauseSocketClosed(t *testing.T) {
 }
 
 func TestSocketStreamCompletedBecauseCancel(t *testing.T) {
-	t.Skip("logstream.New cannot stat a nonexistent socket")
 	var wg sync.WaitGroup
 
 	tmpDir := testutil.TestTempDir(t)
@@ -113,7 +113,8 @@ func TestSocketStreamCompletedBecauseCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
 
-	ss, err := logstream.New(ctx, &wg, waker, name, lines, false)
+	sockName := "unixgram://" + name
+	ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
 	testutil.FatalIfErr(t, err)
 	awaken(1) // Synchronise past socket creation
 

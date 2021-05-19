@@ -12,6 +12,7 @@ import (
 	"context"
 	"expvar"
 	"fmt"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -48,16 +49,27 @@ const defaultReadBufferSize = 4096
 // channel.  `seekToStart` is only used for testing and only works for regular
 // files that can be seeked.
 func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine, streamFromStart bool) (LogStream, error) {
-	fi, err := os.Stat(pathname)
+	u, err := url.Parse(pathname)
 	if err != nil {
-		logErrors.Add(pathname, 1)
+		return nil, err
+	}
+	switch u.Scheme {
+	default:
+		return nil, fmt.Errorf("unsupported URL scheme %q in path %q", u.Scheme, pathname)
+	case "unixgram":
+		return newSocketStream(ctx, wg, waker, u.Path, nil, lines)
+	case "", "file":
+	}
+	fi, err := os.Stat(u.Path)
+	if err != nil {
+		logErrors.Add(u.Path, 1)
 		return nil, err
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():
-		return newFileStream(ctx, wg, waker, pathname, fi, lines, streamFromStart)
+		return newFileStream(ctx, wg, waker, u.Path, fi, lines, streamFromStart)
 	case m&os.ModeType == os.ModeNamedPipe:
-		return newPipeStream(ctx, wg, waker, pathname, fi, lines)
+		return newPipeStream(ctx, wg, waker, u.Path, fi, lines)
 	case m&os.ModeType == os.ModeSocket:
 		return newSocketStream(ctx, wg, waker, pathname, fi, lines)
 	default:
