@@ -16,48 +16,7 @@ import (
 	"github.com/google/mtail/internal/waker"
 )
 
-func TestSocketStreamRead(t *testing.T) {
-	var wg sync.WaitGroup
-
-	tmpDir := testutil.TestTempDir(t)
-
-	name := filepath.Join(tmpDir, "sock")
-	sockname := "unixgram://" + name
-
-	lines := make(chan *logline.LogLine, 1)
-	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
-
-	ss, err := logstream.New(ctx, &wg, waker, sockname, lines, false)
-	testutil.FatalIfErr(t, err)
-	awaken(1) // Synchronise past socket creation
-
-	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
-	testutil.FatalIfErr(t, err)
-
-	_, err = s.Write([]byte("1\n"))
-	testutil.FatalIfErr(t, err)
-	awaken(1)
-
-	ss.Stop()
-	wg.Wait()
-	close(lines)
-
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{context.TODO(), name, "1"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-
-	cancel()
-	wg.Wait()
-
-	if !ss.IsComplete() {
-		t.Errorf("expecting socketstream to be complete because cancellation")
-	}
-}
-
-func TestSocketStreamCompletedBecauseSocketClosed(t *testing.T) {
+func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir := testutil.TestTempDir(t)
@@ -66,23 +25,20 @@ func TestSocketStreamCompletedBecauseSocketClosed(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker := waker.NewTestAlways()
 
 	sockName := "unixgram://" + name
-
 	ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
 	testutil.FatalIfErr(t, err)
-	awaken(1) // Synchronise past socket creation
 
 	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
 	testutil.FatalIfErr(t, err)
 
 	_, err = s.Write([]byte("1\n"))
 	testutil.FatalIfErr(t, err)
-	awaken(1)
 
+	// Close the socket to signal to the socketStream to shut down.
 	testutil.FatalIfErr(t, s.Close())
-	awaken(1)
 
 	ss.Stop()
 	wg.Wait()
@@ -102,7 +58,7 @@ func TestSocketStreamCompletedBecauseSocketClosed(t *testing.T) {
 	}
 }
 
-func TestSocketStreamCompletedBecauseCancel(t *testing.T) {
+func TestSocketStreamReadxCompletedBecauseCancel(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir := testutil.TestTempDir(t)
@@ -123,9 +79,11 @@ func TestSocketStreamCompletedBecauseCancel(t *testing.T) {
 
 	_, err = s.Write([]byte("1\n"))
 	testutil.FatalIfErr(t, err)
-	awaken(1)
 
-	cancel()
+	awaken(0)
+
+	cancel() // This cancellation should cause the stream to shut down.
+
 	wg.Wait()
 	close(lines)
 
