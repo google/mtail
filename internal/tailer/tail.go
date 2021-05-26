@@ -10,6 +10,7 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -38,6 +39,8 @@ type Tailer struct {
 	globPatternsMu     sync.RWMutex        // protects `globPatterns'
 	globPatterns       map[string]struct{} // glob patterns to match newly created logs in dir paths against
 	ignoreRegexPattern *regexp.Regexp
+
+	socketPaths []string
 
 	oneShot bool
 
@@ -144,10 +147,14 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
-	if len(t.globPatterns) == 0 && len(t.logstreams) == 0 {
-		glog.Info("No patterns to tail, tailer done.")
+	if len(t.globPatterns) == 0 && len(t.socketPaths) == 0 {
+		glog.Info("No patterns or sockets to tail, tailer done.")
 		close(t.lines)
 		return t, nil
+	}
+	// Set up listeners on every socket.
+	for _, pattern := range t.socketPaths {
+		t.TailPath(pattern)
 	}
 	// Guarantee all existing logs get tailed before we leave.  Also necessary
 	// in case oneshot mode is active, the logs get read!
@@ -192,9 +199,22 @@ func (t *Tailer) SetOption(options ...Option) error {
 
 // AddPattern adds a pattern to the list of patterns to filter filenames against.
 func (t *Tailer) AddPattern(pattern string) error {
-	absPath, err := filepath.Abs(pattern)
+	u, err := url.Parse(pattern)
 	if err != nil {
-		glog.V(2).Infof("Couldn't canonicalize path %q: %s", pattern, err)
+		return err
+	}
+	switch u.Scheme {
+	default:
+		return fmt.Errorf("unsupported URL scheme %q in path pattern %q", u.Scheme, pattern)
+	case "unixgram":
+		// Keep the scheme.
+		t.socketPaths = append(t.socketPaths, pattern)
+		return nil
+	case "", "file":
+	}
+	absPath, err := filepath.Abs(u.Path)
+	if err != nil {
+		glog.V(2).Infof("Couldn't canonicalize path %q: %s", u.Path, err)
 		return err
 	}
 	glog.V(2).Infof("AddPattern: %s", absPath)
