@@ -182,7 +182,7 @@ func IsComplete(t Type) bool {
 	return false
 }
 
-// Builtin types
+// Builtin type constants.
 var (
 	Undef   = &Operator{"Undef", []Type{}}
 	Error   = &Operator{"Error", []Type{}}
