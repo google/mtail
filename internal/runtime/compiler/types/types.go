@@ -64,7 +64,7 @@ type Variable struct {
 	ID int
 
 	instanceMu sync.RWMutex
-	Instance   *Type
+	Instance   Type
 }
 
 // NewVariable constructs a new unique TypeVariable.
@@ -83,8 +83,8 @@ func (t *Variable) Root() Type {
 	if t.Instance == nil {
 		return t
 	}
-	r := (*t.Instance).Root()
-	t.Instance = &r
+	r := t.Instance.Root()
+	t.Instance = r
 	return r
 }
 
@@ -92,7 +92,7 @@ func (t *Variable) String() string {
 	t.instanceMu.RLock()
 	defer t.instanceMu.RUnlock()
 	if t.Instance != nil {
-		return (*t.Instance).String()
+		return t.Instance.String()
 	}
 	return fmt.Sprintf("typeVar%d", t.ID)
 
@@ -100,7 +100,7 @@ func (t *Variable) String() string {
 
 // SetInstance sets the exemplar instance of this TypeVariable, during
 // unification.
-func (t *Variable) SetInstance(t1 *Type) {
+func (t *Variable) SetInstance(t1 Type) {
 	t.instanceMu.Lock()
 	defer t.instanceMu.Unlock()
 	t.Instance = t1
@@ -298,7 +298,7 @@ func Unify(a, b Type) error {
 		case *Variable:
 			if a2.ID != b2.ID {
 				glog.V(2).Infof("Making %q type %q", a2, b1)
-				a2.SetInstance(&b1)
+				a2.SetInstance(b1)
 				return nil
 			}
 		case *Operator:
@@ -306,7 +306,7 @@ func Unify(a, b Type) error {
 				return fmt.Errorf("recursive unification on %v and %v", a2, b2)
 			}
 			glog.V(2).Infof("Making %q type %q", a2, b1)
-			a2.SetInstance(&b1)
+			a2.SetInstance(b1)
 			return nil
 		}
 	case *Operator:
