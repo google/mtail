@@ -38,9 +38,9 @@ func SortSlices(lessFunc interface{}) cmp.Option {
 func ExpectNoDiff(tb testing.TB, a, b interface{}, opts ...cmp.Option) bool {
 	tb.Helper()
 	if diff := Diff(a, b, opts...); diff != "" {
-		tb.Errorf("Unexpected diff, -expected +received:\n%s", diff)
-		tb.Logf("expected:\n%#v", a)
-		tb.Logf("received:\n%#v", b)
+		tb.Errorf("Unexpected diff, -want +got:\n%s", diff)
+		tb.Logf("expected:\n%#V", a)
+		tb.Logf("received:\n%#V", b)
 		return false
 	}
 	return true
