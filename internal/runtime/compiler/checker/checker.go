@@ -262,6 +262,10 @@ func (c *checker) checkSymbolUsage() {
 // of expressions have been annotated and checked.  Within this function,
 // gotType refers to the types inferred in the AST, and wantType is the type
 // expected for this expression.
+//
+// The notation for type inference used comes from the 2010 lecture notes for
+// Stanford's CS413 class.
+// https://web.stanford.edu/class/cs143/lectures/lecture09.pdf
 func (c *checker) VisitAfter(node ast.Node) ast.Node {
 	if c.tooDeep {
 		return node
