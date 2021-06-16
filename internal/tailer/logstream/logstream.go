@@ -57,6 +57,8 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	default:
 		return nil, fmt.Errorf("unsupported URL scheme %q in path %q", u.Scheme, pathname)
 	case "unixgram":
+		return newDgramStream(ctx, wg, waker, u.Path, lines)
+	case "unix":
 		return newSocketStream(ctx, wg, waker, u.Path, lines)
 	case "", "file":
 	}
