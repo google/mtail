@@ -260,6 +260,7 @@ func (fs *fileStream) IsComplete() bool {
 	return fs.completed
 }
 
+// Stop implements the LogStream interface.
 func (fs *fileStream) Stop() {
 	fs.stopOnce.Do(func() {
 		glog.Info("signalling stop at next EOF")
