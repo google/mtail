@@ -206,7 +206,7 @@ func (t *Tailer) AddPattern(pattern string) error {
 	switch u.Scheme {
 	default:
 		return fmt.Errorf("unsupported URL scheme %q in path pattern %q", u.Scheme, pattern)
-	case "unixgram":
+	case "unix", "unixgram":
 		// Keep the scheme.
 		t.socketPaths = append(t.socketPaths, pattern)
 		return nil
