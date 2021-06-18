@@ -203,7 +203,7 @@ PACKAGES := $(shell go list -f '{{.Dir}}' ./... | grep -v /vendor/ | grep -v /cm
 testall: testrace fuzz-regtest bench
 
 .PHONY: checkall
-checkall: all fuzz-targets check
+checkall: check all fuzz-targets
 
 ## make u a container
 .PHONY: container
