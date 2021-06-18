@@ -48,7 +48,7 @@ const defaultReadBufferSize = 4096
 // notify the `wg` when it is Done.  Log lines will be sent to the `lines`
 // channel.  `seekToStart` is only used for testing and only works for regular
 // files that can be seeked.
-func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine, streamFromStart bool) (LogStream, error) {
+func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine, oneShot bool) (LogStream, error) {
 	u, err := url.Parse(pathname)
 	if err != nil {
 		return nil, err
@@ -69,11 +69,12 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():
-		return newFileStream(ctx, wg, waker, u.Path, fi, lines, streamFromStart)
+		return newFileStream(ctx, wg, waker, u.Path, fi, lines, oneShot)
 	case m&os.ModeType == os.ModeNamedPipe:
 		return newPipeStream(ctx, wg, waker, u.Path, fi, lines)
-	case m&os.ModeType == os.ModeSocket:
-		return newSocketStream(ctx, wg, waker, pathname, lines)
+	// TODO(jaq): in order to listen on an existing socket filepath, we must unlink and recreate it
+	// case m&os.ModeType == os.ModeSocket:
+	// 	return newSocketStream(ctx, wg, waker, pathname, lines)
 	default:
 		return nil, fmt.Errorf("unsupported file object type at %q", pathname)
 	}
