@@ -49,7 +49,8 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		return err
 	}
 	glog.V(2).Infof("opened new pipe %v", fd)
-
+	b := make([]byte, defaultReadBufferSize)
+	partial := bytes.NewBufferString("")
 	var total int
 	wg.Add(1)
 	go func() {
@@ -71,11 +72,8 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		defer cancel()
 		SetReadDeadlineOnDone(ctx, fd)
 
-		b := make([]byte, 0, defaultReadBufferSize)
-		capB := cap(b)
-		partial := bytes.NewBufferString("")
 		for {
-			n, err := fd.Read(b[:capB])
+			n, err := fd.Read(b)
 			glog.V(2).Infof("%v: read %d bytes, err is %v", fd, n, err)
 
 			if n > 0 {
@@ -123,6 +121,6 @@ func (ps *pipeStream) IsComplete() bool {
 }
 
 // Stop implements the Logstream interface.
-// Calling Stop on a pipe is a no-op; Pipes always read until the pipe is closed, which is what calling Stop means on a Logstream.
+// Calling Stop on a PipeStream is a no-op; PipeStreams always read until the pipe is closed, which is what calling Stop means on a Logstream.
 func (ps *pipeStream) Stop() {
 }
