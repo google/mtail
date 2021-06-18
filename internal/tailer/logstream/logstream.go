@@ -59,7 +59,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	case "unixgram":
 		return newDgramStream(ctx, wg, waker, u.Path, lines)
 	case "unix":
-		return newSocketStream(ctx, wg, waker, u.Path, lines)
+		return newSocketStream(ctx, wg, waker, u.Path, lines, oneShot)
 	case "", "file":
 	}
 	fi, err := os.Stat(u.Path)
