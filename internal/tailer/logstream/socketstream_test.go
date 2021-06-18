@@ -32,6 +32,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
+
 	testutil.FatalIfErr(t, err)
 
 	_, err = s.Write([]byte("1\n"))
@@ -40,7 +41,8 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 	// Close the socket to signal to the socketStream to shut down.
 	testutil.FatalIfErr(t, s.Close())
 
-	ss.Stop()
+	ss.Stop() // no-op for streams
+	cancel()
 	wg.Wait()
 	close(lines)
 
@@ -50,15 +52,14 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
-	cancel()
-	wg.Wait()
+	//	cancel()
 
 	if !ss.IsComplete() {
 		t.Errorf("expecting socketstream to be complete because socket closed")
 	}
 }
 
-func TestSocketStreamReadxCompletedBecauseCancel(t *testing.T) {
+func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir := testutil.TestTempDir(t)
