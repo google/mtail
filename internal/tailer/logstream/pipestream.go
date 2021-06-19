@@ -86,7 +86,6 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 
 			if err != nil && IsEndOrCancel(err) {
-				glog.V(2).Infof("%v: %s: exiting", fd, err)
 				if partial.Len() > 0 {
 					sendLine(ctx, ps.pathname, partial, ps.lines)
 				}
