@@ -142,7 +142,6 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 		}
 
 		if err != nil && IsEndOrCancel(err) {
-			glog.V(2).Infof("%v: %s: exiting", c, err)
 			if partial.Len() > 0 {
 				sendLine(ctx, ss.pathname, partial, ss.lines)
 			}

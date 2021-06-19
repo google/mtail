@@ -27,11 +27,11 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker := waker.NewTestAlways()
 
-	sockName := "unixgram://" + name
+	sockName := "unix://" + name
 	ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
 	testutil.FatalIfErr(t, err)
 
-	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
+	s, err := net.DialUnix("unix", nil, &net.UnixAddr{name, "unix"})
 
 	testutil.FatalIfErr(t, err)
 
@@ -41,7 +41,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 	// Close the socket to signal to the socketStream to shut down.
 	testutil.FatalIfErr(t, s.Close())
 
-	ss.Stop() // no-op for streams
+	ss.Stop() // stop after connection closes
 	cancel()
 	wg.Wait()
 	close(lines)
@@ -70,20 +70,19 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
 
-	sockName := "unixgram://" + name
+	sockName := "unix://" + name
 	ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
 	testutil.FatalIfErr(t, err)
-	awaken(1) // Synchronise past socket creation
 
-	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
+	s, err := net.DialUnix("unix", nil, &net.UnixAddr{name, "unix"})
 	testutil.FatalIfErr(t, err)
 
 	_, err = s.Write([]byte("1\n"))
 	testutil.FatalIfErr(t, err)
 
-	awaken(0)
+	awaken(0) // Sync past read to ensure we read
 
-	cancel() // This cancellation should cause the stream to shut down.
+	cancel() // This cancellation should cause the stream to shut down immediately.
 
 	wg.Wait()
 	close(lines)
