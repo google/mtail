@@ -86,6 +86,7 @@ run with gosec, and possibly annotate safe sections in code
 
 Test that when path/* is the logpathpattern that we handle log rotation, e.g. log -> log.1
  = how can this work, we can't tell the difference between log.1 being a rotation or a new log.  This could work if we can have a tailer-level registry of filenames currently with a goroutine.  But we don't know the name of the new file when filestream creates a new goroutine for the replacement; fd.Stat() doesn't return the new name of the file.
+ - Workaround: warn when '*' is the last of a glob pattern.
 
 
 VM profiler, when enabled, times instructions so user gets feedback on where their program is slow.
@@ -126,3 +127,8 @@ Move const folding into parser during AST build.
 Const-fold identity functions.
 
 Replace IndexedExpr with no ExprList with just the IdTerm.
+
+
+Wrap each of the logstream tests in their own testutil.TimeoutTest.
+
+Both tailer and logstream probably don't need to do URL parsing.  Tailer could do it on the log path patterns before filling up the poll patterns list.  Non-globs don't need repolling, and any with a scheme can already be constructed by TailPattern.
