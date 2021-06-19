@@ -6,8 +6,6 @@ package logstream
 import (
 	"bytes"
 	"context"
-	"errors"
-	"io"
 	"net"
 	"sync"
 	"time"
@@ -45,15 +43,19 @@ func (ss *dgramStream) LastReadTime() time.Time {
 	return ss.lastReadTime
 }
 
+const datagramReadBufferSize = 131071
+
 func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker) error {
 	c, err := net.ListenUnixgram("unixgram", &net.UnixAddr{ss.pathname, "unixgram"})
 	if err != nil {
 		logErrors.Add(ss.pathname, 1)
 		return err
 	}
-	glog.V(2).Infof("opened new socket %v", c)
-	wg.Add(1)
+	glog.V(2).Infof("opened new datagram socket %v", c)
+	b := make([]byte, datagramReadBufferSize)
+	partial := bytes.NewBufferString("")
 	var total int
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		defer func() {
@@ -69,16 +71,13 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			ss.completed = true
 			ss.mu.Unlock()
 		}()
-		b := make([]byte, 0, defaultReadBufferSize)
-		capB := cap(b)
-		partial := bytes.NewBufferString("")
-		var timedout bool
-		for {
-			if err := c.SetReadDeadline(time.Now().Add(defaultReadTimeout)); err != nil {
-				glog.V(2).Infof("%s: %s", ss.pathname, err)
-			}
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		SetReadDeadlineOnDone(ctx, c)
 
-			n, err := c.Read(b[:capB])
+		for {
+			n, err := c.Read(b)
+			glog.V(2).Infof("%v: read %d bytes, err is %v", c, n, err)
 
 			if n > 0 {
 				total += n
@@ -88,57 +87,17 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				ss.mu.Unlock()
 			}
 
-			var nerr net.Error
-			if errors.As(err, &nerr) && nerr.Timeout() && n == 0 {
-				// Like pipestream, if timeout then sleep and wait for a context
-				// cancellation.
-				timedout = true
-				goto Sleep
-			}
-			// EOF means socket closed, so this dgramStream is now completed.
-			// All other errors also finish the stream and are counted.
-			if err != nil {
-				if err != io.EOF {
-					glog.Info(err)
-					logErrors.Add(ss.pathname, 1)
+			if err != nil && IsEndOrCancel(err) {
+				if partial.Len() > 0 {
+					sendLine(ctx, ss.pathname, partial, ss.lines)
 				}
+				glog.V(2).Infof("%v: exiting, stream has error %s", c, err)
+				ss.mu.Lock()
+				ss.completed = true
+				ss.mu.Unlock()
 				return
 			}
 
-			// No error implies there's more to read, unless it looks like
-			// context is Done.
-			if err == nil && ctx.Err() == nil {
-				continue
-			}
-
-		Sleep:
-			// If we've stalled or it looks like the context is done, then test to see if it's time to exit.
-			if timedout || ctx.Err() != nil {
-				timedout = false
-				// Test to see if it's time to exit.
-				select {
-				case <-ss.stopChan:
-					glog.V(2).Infof("%v: stream has been stopped, exiting", c)
-					if partial.Len() > 0 {
-						sendLine(ctx, ss.pathname, partial, ss.lines)
-					}
-					ss.mu.Lock()
-					ss.completed = true
-					ss.mu.Unlock()
-					return
-				case <-ctx.Done():
-					glog.V(2).Infof("%v: context has been cancelled, exiting", c)
-					if partial.Len() > 0 {
-						sendLine(ctx, ss.pathname, partial, ss.lines)
-					}
-					ss.mu.Lock()
-					ss.completed = true
-					ss.mu.Unlock()
-					return
-				default:
-					// keep going
-				}
-			}
 			// Yield and wait
 			glog.V(2).Infof("%v: waiting", c)
 			select {
@@ -148,7 +107,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				// written to.  The file is not technically yet at EOF so
 				// we need to go back and try one more read.  We'll exit
 				// the stream in the select stanza above.
-				glog.V(2).Infof("%v: Stopping after next read", c)
+				glog.V(2).Infof("%v: Stopping after next read timeout", c)
 			case <-ctx.Done():
 				// Same for cancellation; this makes tests stable, but
 				// could argue exiting immediately is less surprising.
@@ -159,6 +118,16 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				// sleep until next Wake()
 				glog.V(2).Infof("%v: Wake received", c)
 			}
+
+			// There's no EOF so set a short deadline on the next read.  If we
+			// get bytes, we're not done, otherwise we'll exit.  We must check
+			// again here to avoid racing with the waker above.
+			select {
+			case <-ss.stopChan:
+				c.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+			default:
+			}
+
 		}
 	}()
 	return nil
@@ -171,6 +140,7 @@ func (ss *dgramStream) IsComplete() bool {
 }
 
 func (ss *dgramStream) Stop() {
+	glog.V(2).Infof("Stop received on datagram stream.")
 	ss.stopOnce.Do(func() {
 		close(ss.stopChan)
 	})

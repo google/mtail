@@ -58,7 +58,7 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 	}
 }
 
-func TestDgramStreamReadxCompletedBecauseCancel(t *testing.T) {
+func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir := testutil.TestTempDir(t)
@@ -72,7 +72,6 @@ func TestDgramStreamReadxCompletedBecauseCancel(t *testing.T) {
 	sockName := "unixgram://" + name
 	ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
 	testutil.FatalIfErr(t, err)
-	awaken(1) // Synchronise past socket creation
 
 	s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
 	testutil.FatalIfErr(t, err)
@@ -80,7 +79,7 @@ func TestDgramStreamReadxCompletedBecauseCancel(t *testing.T) {
 	_, err = s.Write([]byte("1\n"))
 	testutil.FatalIfErr(t, err)
 
-	awaken(0)
+	awaken(0) // Synchronise past read.
 
 	cancel() // This cancellation should cause the stream to shut down.
 
