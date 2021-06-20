@@ -24,7 +24,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const exampleTimeout = 2 * time.Second
+var exampleTimeout = 2 * time.Second
+
+func init() {
+	if os.Getenv("CI") == "true" {
+		exampleTimeout = 10 * time.Second
+	}
+}
 
 var exampleProgramTests = []struct {
 	programfile string // Example program file.
