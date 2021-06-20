@@ -25,7 +25,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker := waker.NewTestAlways()
+	waker, awaken := waker.NewTest(ctx, 1)
 
 	sockName := "unix://" + name
 	ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
@@ -37,6 +37,8 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 
 	_, err = s.Write([]byte("1\n"))
 	testutil.FatalIfErr(t, err)
+
+	awaken(0) // Sync past read
 
 	// Close the socket to signal to the socketStream to shut down.
 	testutil.FatalIfErr(t, s.Close())

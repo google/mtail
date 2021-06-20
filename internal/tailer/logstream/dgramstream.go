@@ -70,6 +70,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			ss.mu.Lock()
 			ss.completed = true
 			ss.mu.Unlock()
+			ss.Stop()
 		}()
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -78,6 +79,18 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		for {
 			n, err := c.Read(b)
 			glog.V(2).Infof("%v: read %d bytes, err is %v", c, n, err)
+
+			// This is a test-only trick that says if we've already put this
+			// logstream in graceful shutdown, then a zero-byte read is
+			// equivalent to an "EOF" in connection and file oriented streams.
+			if n == 0 {
+				select {
+				case <-ss.stopChan:
+					glog.V(2).Infof("%v: exiting because zero byte read after Stop", c)
+					return
+				default:
+				}
+			}
 
 			if n > 0 {
 				total += n
@@ -92,9 +105,6 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 					sendLine(ctx, ss.pathname, partial, ss.lines)
 				}
 				glog.V(2).Infof("%v: exiting, stream has error %s", c, err)
-				ss.mu.Lock()
-				ss.completed = true
-				ss.mu.Unlock()
 				return
 			}
 
@@ -118,16 +128,6 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				// sleep until next Wake()
 				glog.V(2).Infof("%v: Wake received", c)
 			}
-
-			// There's no EOF so set a short deadline on the next read.  If we
-			// get bytes, we're not done, otherwise we'll exit.  We must check
-			// again here to avoid racing with the waker above.
-			select {
-			case <-ss.stopChan:
-				c.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
-			default:
-			}
-
 		}
 	}()
 	return nil
