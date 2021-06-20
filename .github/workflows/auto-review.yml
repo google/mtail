@@ -24,6 +24,13 @@ jobs:
         github.actor == 'jaqx0r'
       )
     steps:
+      - uses: lewagon/wait-on-check-action@v0.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: test
+          repo-token: ${{ github.token }}
+          wait-interval: 60
+
       - uses: "actions/github-script@v4.0.2"
         with:
           github-token: ${{ github.token }}

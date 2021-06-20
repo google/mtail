@@ -18,6 +18,13 @@ jobs:
       with:
         github-token: "${{ secrets.GITHUB_TOKEN }}"
 
+    - uses: lewagon/wait-on-check-action@v0.2
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        check-name: test
+        repo-token: ${{ github.token }}
+        wait-interval: 60
+
     # We "trust" dependabot updates (this still requires all other checks to pass!)
     - uses: hmarr/auto-approve-action@5d04a5ca6da9aeb8ca9f31a5239b96fc3e003029
       with:
