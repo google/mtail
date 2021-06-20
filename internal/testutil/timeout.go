@@ -3,6 +3,7 @@
 package testutil
 
 import (
+	"runtime"
 	"testing"
 	"time"
 
@@ -49,7 +50,9 @@ func TimeoutTest(timeout time.Duration, f func(t *testing.T)) func(t *testing.T)
 		}()
 		select {
 		case <-time.After(timeout * RaceDetectorMultiplier):
-			t.Fatal("timed out")
+			buf := make([]byte, 1<<20)
+			stacklen := runtime.Stack(buf, true)
+			t.Fatalf("timed out\n%s", buf[:stacklen])
 		case <-done:
 		}
 	}
