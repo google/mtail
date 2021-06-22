@@ -129,6 +129,4 @@ Const-fold identity functions.
 Replace IndexedExpr with no ExprList with just the IdTerm.
 
 
-Wrap each of the logstream tests in their own testutil.TimeoutTest.
-
 Both tailer and logstream probably don't need to do URL parsing.  Tailer could do it on the log path patterns before filling up the poll patterns list.  Non-globs don't need repolling, and any with a scheme can already be constructed by TailPattern.

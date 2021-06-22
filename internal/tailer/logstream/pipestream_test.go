@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/tailer/logstream"
@@ -18,47 +19,90 @@ import (
 )
 
 func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
-	var wg sync.WaitGroup
+	testutil.TimeoutTest(1*time.Second, func(t *testing.T) {
+		var wg sync.WaitGroup
 
-	tmpDir := testutil.TestTempDir(t)
+		tmpDir := testutil.TestTempDir(t)
 
-	name := filepath.Join(tmpDir, "fifo")
-	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
+		name := filepath.Join(tmpDir, "fifo")
+		testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
 
-	lines := make(chan *logline.LogLine, 1)
-	ctx, cancel := context.WithCancel(context.Background())
-	waker := waker.NewTestAlways()
+		lines := make(chan *logline.LogLine, 1)
+		ctx, cancel := context.WithCancel(context.Background())
+		waker := waker.NewTestAlways()
 
-	// In this and the following test, open RDWR so as to not block this thread
-	// from proceeding.  If we open the logstream first, there is a race before
-	// the write end opens that can sometimes lead to the logstream reading an
-	// EOF (because the write end is not yet open) and the test fails.
-	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
-	testutil.FatalIfErr(t, err)
+		// In this and the following test, open RDWR so as to not block this thread
+		// from proceeding.  If we open the logstream first, there is a race before
+		// the write end opens that can sometimes lead to the logstream reading an
+		// EOF (because the write end is not yet open) and the test fails.
+		f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+		testutil.FatalIfErr(t, err)
 
-	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
-	testutil.FatalIfErr(t, err)
+		ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
+		testutil.FatalIfErr(t, err)
 
-	testutil.WriteString(t, f, "1\n")
+		testutil.WriteString(t, f, "1\n")
 
-	// Pipes need to be closed to signal to the pipeStream to finish up.
-	testutil.FatalIfErr(t, f.Close())
+		// Pipes need to be closed to signal to the pipeStream to finish up.
+		testutil.FatalIfErr(t, f.Close())
 
-	ps.Stop() // no-op for pipes
-	wg.Wait()
-	close(lines)
+		ps.Stop() // no-op for pipes
+		wg.Wait()
+		close(lines)
 
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{context.TODO(), name, "1"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+		received := testutil.LinesReceived(lines)
+		expected := []*logline.LogLine{
+			{context.TODO(), name, "1"},
+		}
+		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
-	cancel()
+		cancel()
 
-	if !ps.IsComplete() {
-		t.Errorf("expecting pipestream to be complete because fifo closed")
-	}
+		if !ps.IsComplete() {
+			t.Errorf("expecting pipestream to be complete because fifo closed")
+		}
+	})(t)
+}
+
+func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
+	testutil.TimeoutTest(1*time.Second, func(t *testing.T) {
+		var wg sync.WaitGroup
+
+		tmpDir := testutil.TestTempDir(t)
+
+		name := filepath.Join(tmpDir, "fifo")
+		testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
+
+		lines := make(chan *logline.LogLine, 1)
+		ctx, cancel := context.WithCancel(context.Background())
+		waker, awaken := waker.NewTest(ctx, 1)
+
+		f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+		testutil.FatalIfErr(t, err)
+
+		ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
+		testutil.FatalIfErr(t, err)
+
+		testutil.WriteString(t, f, "1\n")
+
+		// Avoid a race with cancellation if we can synchronise with waker.Wake()
+		awaken(0)
+
+		cancel() // Cancellation here should cause the stream to shut down.
+
+		wg.Wait()
+		close(lines)
+
+		received := testutil.LinesReceived(lines)
+		expected := []*logline.LogLine{
+			{context.TODO(), name, "1"},
+		}
+		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+		if !ps.IsComplete() {
+			t.Errorf("expecting pipestream to be complete because cancelled")
+		}
+	})(t)
 }
 
 func TestPipeStreamReadURL(t *testing.T) {
@@ -97,44 +141,5 @@ func TestPipeStreamReadURL(t *testing.T) {
 
 	if !ps.IsComplete() {
 		t.Errorf("expecting pipestream to be complete because fifo closed")
-	}
-}
-
-func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
-	var wg sync.WaitGroup
-
-	tmpDir := testutil.TestTempDir(t)
-
-	name := filepath.Join(tmpDir, "fifo")
-	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
-
-	lines := make(chan *logline.LogLine, 1)
-	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
-
-	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
-	testutil.FatalIfErr(t, err)
-
-	ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
-	testutil.FatalIfErr(t, err)
-
-	testutil.WriteString(t, f, "1\n")
-
-	// Avoid a race with cancellation if we can synchronise with waker.Wake()
-	awaken(0)
-
-	cancel() // Cancellation here should cause the stream to shut down.
-
-	wg.Wait()
-	close(lines)
-
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{context.TODO(), name, "1"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-
-	if !ps.IsComplete() {
-		t.Errorf("expecting pipestream to be complete because cancelled")
 	}
 }

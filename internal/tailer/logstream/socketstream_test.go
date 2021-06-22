@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/tailer/logstream"
@@ -17,85 +18,89 @@ import (
 )
 
 func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
-	var wg sync.WaitGroup
+	testutil.TimeoutTest(time.Second, func(t *testing.T) {
+		var wg sync.WaitGroup
 
-	tmpDir := testutil.TestTempDir(t)
+		tmpDir := testutil.TestTempDir(t)
 
-	name := filepath.Join(tmpDir, "sock")
+		name := filepath.Join(tmpDir, "sock")
 
-	lines := make(chan *logline.LogLine, 1)
-	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+		lines := make(chan *logline.LogLine, 1)
+		ctx, cancel := context.WithCancel(context.Background())
+		waker, awaken := waker.NewTest(ctx, 1)
 
-	sockName := "unix://" + name
-	ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
-	testutil.FatalIfErr(t, err)
+		sockName := "unix://" + name
+		ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
+		testutil.FatalIfErr(t, err)
 
-	s, err := net.DialUnix("unix", nil, &net.UnixAddr{name, "unix"})
+		s, err := net.DialUnix("unix", nil, &net.UnixAddr{name, "unix"})
 
-	testutil.FatalIfErr(t, err)
+		testutil.FatalIfErr(t, err)
 
-	_, err = s.Write([]byte("1\n"))
-	testutil.FatalIfErr(t, err)
+		_, err = s.Write([]byte("1\n"))
+		testutil.FatalIfErr(t, err)
 
-	awaken(0) // Sync past read
+		awaken(0) // Sync past read
 
-	// Close the socket to signal to the socketStream to shut down.
-	testutil.FatalIfErr(t, s.Close())
+		// Close the socket to signal to the socketStream to shut down.
+		testutil.FatalIfErr(t, s.Close())
 
-	ss.Stop() // stop after connection closes
+		ss.Stop() // stop after connection closes
 
-	wg.Wait()
-	close(lines)
+		wg.Wait()
+		close(lines)
 
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{context.TODO(), name, "1"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+		received := testutil.LinesReceived(lines)
+		expected := []*logline.LogLine{
+			{context.TODO(), name, "1"},
+		}
+		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
-	cancel()
+		cancel()
 
-	if !ss.IsComplete() {
-		t.Errorf("expecting socketstream to be complete because socket closed")
-	}
+		if !ss.IsComplete() {
+			t.Errorf("expecting socketstream to be complete because socket closed")
+		}
+	})(t)
 }
 
 func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
-	var wg sync.WaitGroup
+	testutil.TimeoutTest(time.Second, func(t *testing.T) {
+		var wg sync.WaitGroup
 
-	tmpDir := testutil.TestTempDir(t)
+		tmpDir := testutil.TestTempDir(t)
 
-	name := filepath.Join(tmpDir, "sock")
+		name := filepath.Join(tmpDir, "sock")
 
-	lines := make(chan *logline.LogLine, 1)
-	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+		lines := make(chan *logline.LogLine, 1)
+		ctx, cancel := context.WithCancel(context.Background())
+		waker, awaken := waker.NewTest(ctx, 1)
 
-	sockName := "unix://" + name
-	ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
-	testutil.FatalIfErr(t, err)
+		sockName := "unix://" + name
+		ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
+		testutil.FatalIfErr(t, err)
 
-	s, err := net.DialUnix("unix", nil, &net.UnixAddr{name, "unix"})
-	testutil.FatalIfErr(t, err)
+		s, err := net.DialUnix("unix", nil, &net.UnixAddr{name, "unix"})
+		testutil.FatalIfErr(t, err)
 
-	_, err = s.Write([]byte("1\n"))
-	testutil.FatalIfErr(t, err)
+		_, err = s.Write([]byte("1\n"))
+		testutil.FatalIfErr(t, err)
 
-	awaken(0) // Sync past read to ensure we read
+		awaken(0) // Sync past read to ensure we read
 
-	cancel() // This cancellation should cause the stream to shut down immediately.
+		cancel() // This cancellation should cause the stream to shut down immediately.
 
-	wg.Wait()
-	close(lines)
+		wg.Wait()
+		close(lines)
 
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{context.TODO(), name, "1"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+		received := testutil.LinesReceived(lines)
+		expected := []*logline.LogLine{
+			{context.TODO(), name, "1"},
+		}
+		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
-	if !ss.IsComplete() {
-		t.Errorf("expecting socketstream to be complete because cancel")
-	}
+		if !ss.IsComplete() {
+			t.Errorf("expecting socketstream to be complete because cancel")
+		}
+	})(t)
 }
