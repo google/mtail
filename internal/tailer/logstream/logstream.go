@@ -12,6 +12,7 @@ import (
 	"context"
 	"expvar"
 	"fmt"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -47,19 +48,33 @@ const defaultReadBufferSize = 4096
 // notify the `wg` when it is Done.  Log lines will be sent to the `lines`
 // channel.  `seekToStart` is only used for testing and only works for regular
 // files that can be seeked.
-func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine, streamFromStart bool) (LogStream, error) {
-	fi, err := os.Stat(pathname)
+func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine, oneShot bool) (LogStream, error) {
+	u, err := url.Parse(pathname)
 	if err != nil {
-		logErrors.Add(pathname, 1)
+		return nil, err
+	}
+	switch u.Scheme {
+	default:
+		return nil, fmt.Errorf("unsupported URL scheme %q in path %q", u.Scheme, pathname)
+	case "unixgram":
+		return newDgramStream(ctx, wg, waker, u.Path, lines)
+	case "unix":
+		return newSocketStream(ctx, wg, waker, u.Path, lines, oneShot)
+	case "", "file":
+	}
+	fi, err := os.Stat(u.Path)
+	if err != nil {
+		logErrors.Add(u.Path, 1)
 		return nil, err
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():
-		return newFileStream(ctx, wg, waker, pathname, fi, lines, streamFromStart)
+		return newFileStream(ctx, wg, waker, u.Path, fi, lines, oneShot)
 	case m&os.ModeType == os.ModeNamedPipe:
-		return newPipeStream(ctx, wg, waker, pathname, fi, lines)
-	case m&os.ModeType == os.ModeSocket:
-		return newSocketStream(ctx, wg, waker, pathname, fi, lines)
+		return newPipeStream(ctx, wg, waker, u.Path, fi, lines)
+	// TODO(jaq): in order to listen on an existing socket filepath, we must unlink and recreate it
+	// case m&os.ModeType == os.ModeSocket:
+	// 	return newSocketStream(ctx, wg, waker, pathname, lines)
 	default:
 		return nil, fmt.Errorf("unsupported file object type at %q", pathname)
 	}

@@ -17,8 +17,10 @@ import (
 	"github.com/google/mtail/internal/waker"
 )
 
-func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
-	testutil.TimeoutTest(time.Second, func(t *testing.T) {
+const dgramTimeout = 1 * time.Second
+
+func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
+	testutil.TimeoutTest(dgramTimeout, func(t *testing.T) {
 		var wg sync.WaitGroup
 
 		tmpDir := testutil.TestTempDir(t)
@@ -29,23 +31,23 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		waker, awaken := waker.NewTest(ctx, 1)
 
-		sockName := "unix://" + name
+		sockName := "unixgram://" + name
 		ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
 		testutil.FatalIfErr(t, err)
 
-		s, err := net.DialUnix("unix", nil, &net.UnixAddr{name, "unix"})
-
+		s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
 		testutil.FatalIfErr(t, err)
 
 		_, err = s.Write([]byte("1\n"))
 		testutil.FatalIfErr(t, err)
 
-		awaken(0) // Sync past read
+		awaken(0) // sync past read
 
-		// Close the socket to signal to the socketStream to shut down.
-		testutil.FatalIfErr(t, s.Close())
+		ss.Stop()
 
-		ss.Stop() // stop after connection closes
+		// "Close" the socket by sending zero bytes, which after Stop tells the stream to act as if we're done.
+		_, err = s.Write([]byte{})
+		testutil.FatalIfErr(t, err)
 
 		wg.Wait()
 		close(lines)
@@ -57,15 +59,16 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
 		cancel()
+		wg.Wait()
 
 		if !ss.IsComplete() {
-			t.Errorf("expecting socketstream to be complete because socket closed")
+			t.Errorf("expecting dgramstream to be complete because socket closed")
 		}
 	})(t)
 }
 
-func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
-	testutil.TimeoutTest(time.Second, func(t *testing.T) {
+func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
+	testutil.TimeoutTest(dgramTimeout, func(t *testing.T) {
 		var wg sync.WaitGroup
 
 		tmpDir := testutil.TestTempDir(t)
@@ -76,19 +79,19 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		waker, awaken := waker.NewTest(ctx, 1)
 
-		sockName := "unix://" + name
+		sockName := "unixgram://" + name
 		ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
 		testutil.FatalIfErr(t, err)
 
-		s, err := net.DialUnix("unix", nil, &net.UnixAddr{name, "unix"})
+		s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
 		testutil.FatalIfErr(t, err)
 
 		_, err = s.Write([]byte("1\n"))
 		testutil.FatalIfErr(t, err)
 
-		awaken(0) // Sync past read to ensure we read
+		awaken(0) // Synchronise past read.
 
-		cancel() // This cancellation should cause the stream to shut down immediately.
+		cancel() // This cancellation should cause the stream to shut down.
 
 		wg.Wait()
 		close(lines)
@@ -100,7 +103,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
 		if !ss.IsComplete() {
-			t.Errorf("expecting socketstream to be complete because cancel")
+			t.Errorf("expecting dgramstream to be complete because cancel")
 		}
 	})(t)
 }

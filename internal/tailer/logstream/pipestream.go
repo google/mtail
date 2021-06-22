@@ -49,7 +49,8 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		return err
 	}
 	glog.V(2).Infof("opened new pipe %v", fd)
-
+	b := make([]byte, defaultReadBufferSize)
+	partial := bytes.NewBufferString("")
 	var total int
 	wg.Add(1)
 	go func() {
@@ -71,11 +72,8 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		defer cancel()
 		SetReadDeadlineOnDone(ctx, fd)
 
-		b := make([]byte, 0, defaultReadBufferSize)
-		capB := cap(b)
-		partial := bytes.NewBufferString("")
 		for {
-			n, err := fd.Read(b[:capB])
+			n, err := fd.Read(b)
 			glog.V(2).Infof("%v: read %d bytes, err is %v", fd, n, err)
 
 			if n > 0 {
@@ -87,19 +85,16 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				ps.mu.Unlock()
 			}
 
+			// Test to see if we should exit.
 			if err != nil && IsEndOrCancel(err) {
-				glog.V(2).Infof("%v: %s: exiting", fd, err)
 				if partial.Len() > 0 {
 					sendLine(ctx, ps.pathname, partial, ps.lines)
 				}
 				glog.V(2).Infof("%v: exiting, stream has error %s", fd, err)
-				ps.mu.Lock()
-				ps.completed = true
-				ps.mu.Unlock()
 				return
 			}
 
-			// Yield and wait
+			// Wait for wakeup or termination.
 			glog.V(2).Infof("%v: waiting", fd)
 			select {
 			case <-ctx.Done():
@@ -123,6 +118,6 @@ func (ps *pipeStream) IsComplete() bool {
 }
 
 // Stop implements the Logstream interface.
-// Calling Stop on a pipe is a no-op; Pipes always read until the pipe is closed, which is what calling Stop means on a Logstream.
+// Calling Stop on a PipeStream is a no-op; PipeStreams always read until the pipe is closed, which is what calling Stop means on a Logstream.
 func (ps *pipeStream) Stop() {
 }

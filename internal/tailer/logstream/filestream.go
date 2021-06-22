@@ -134,7 +134,9 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			// If we have read no bytes and are at EOF, check for truncation and rotation.
 			if err == io.EOF && count == 0 {
 				glog.V(2).Infof("%v: eof an no bytes", fd)
-				// Both rotation and truncation need to stat, so check for rotation first.  It is assumed that rotation is the more common change pattern anyway
+				// Both rotation and truncation need to stat, so check for
+				// rotation first.  It is assumed that rotation is the more
+				// common change pattern anyway.
 				newfi, serr := os.Stat(fs.pathname)
 				if serr != nil {
 					glog.Info(serr)
@@ -176,7 +178,10 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				glog.V(2).Infof("%v: new size is %d", fd, newfi.Size())
 				// We know that newfi is from the current file.  Truncation can
 				// only be detected if the new file is currently shorter than
-				// the current seek offset.
+				// the current seek offset.  In test this can be a race, but in
+				// production it's unlikely that a new file writes more bytes
+				// than the previous after rotation in the time it takes for
+				// mtail to notice.
 				if newfi.Size() < currentOffset {
 					glog.V(2).Infof("%v: truncate? currentoffset is %d and size is %d", fd, currentOffset, newfi.Size())
 					// About to lose all remaining data because of the truncate so flush the accumulator.
@@ -194,14 +199,15 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				}
 			}
 
-			// No error implies there is more to read in this file, unless it
-			// looks like context is Done.
+			// No error implies there is more to read in this file so go
+			// straight back to read unless it looks like context is Done.
 			if err == nil && ctx.Err() == nil {
 				continue
 			}
 
 		Sleep:
-			// If we have stalled or it looks like we're cancelled, then test to see if it's time to exit.
+			// If we get here it's because we've stalled.  First test to see if it's
+			// time to exit.
 			if err == io.EOF || ctx.Err() != nil {
 				select {
 				case <-fs.stopChan:
@@ -227,7 +233,8 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				}
 			}
 
-			// Time to yield and wait for a termination signal or wakeup.
+			// Don't exit, instead yield and wait for a termination signal or
+			// wakeup.
 			glog.V(2).Infof("%v: waiting", fd)
 			select {
 			case <-fs.stopChan:
@@ -260,6 +267,7 @@ func (fs *fileStream) IsComplete() bool {
 	return fs.completed
 }
 
+// Stop implements the LogStream interface.
 func (fs *fileStream) Stop() {
 	fs.stopOnce.Do(func() {
 		glog.Info("signalling stop at next EOF")
