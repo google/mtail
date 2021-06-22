@@ -3,6 +3,7 @@
 package testutil
 
 import (
+	"os"
 	"runtime"
 	"testing"
 	"time"
@@ -40,6 +41,11 @@ func DoOrTimeout(do func() (bool, error), deadline, interval time.Duration) (boo
 // test does not complete in time the test is failed.  This lets us set a
 // per-test timeout instead of the global `go test -timeout` coarse timeout.
 func TimeoutTest(timeout time.Duration, f func(t *testing.T)) func(t *testing.T) {
+	// If we're in a CI environment, raise the timeout by 10x.  This mimics the
+	// timeout gloabl flag set in the Makefile.
+	if os.Getenv("CI") == "true" {
+		timeout = 10 * timeout
+	}
 	return func(t *testing.T) {
 		t.Helper()
 		done := make(chan bool)
