@@ -73,7 +73,9 @@ func (r *Runtime) WriteStatusHTML(w io.Writer) error {
 		if vm.ProgRuntimeErrors.Get(name) != nil {
 			data.RuntimeErrors[name] = vm.ProgRuntimeErrors.Get(name).String()
 		}
-		data.RuntimeErrorString[name] = r.handles[name].vm.RuntimeErrorString()
+		if h, ok := r.handles[name]; ok {
+			data.RuntimeErrorString[name] = h.vm.RuntimeErrorString()
+		}
 	}
 	return t.Execute(w, data)
 }
