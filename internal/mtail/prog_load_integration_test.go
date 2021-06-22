@@ -81,3 +81,40 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	// Should still be 1.
 	fooIncreaseCheck()
 }
+
+func TestProgramUnloadIfDeleted(t *testing.T) {
+	testutil.SkipIfShort(t)
+
+	workdir := testutil.TestTempDir(t)
+
+	logDir := filepath.Join(workdir, "logs")
+	testutil.FatalIfErr(t, os.Mkdir(logDir, 0777))
+	progDir := filepath.Join(workdir, "progs")
+	testutil.FatalIfErr(t, os.Mkdir(progDir, 0777))
+
+	logFilepath := filepath.Join(logDir, "log")
+	logFile := testutil.TestOpenFile(t, logFilepath)
+	defer logFile.Close()
+
+	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
+	defer stopM()
+
+	progLoadsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("prog_loads_total", "program.mtail", 1)
+
+	progpath := filepath.Join(progDir, "program.mtail")
+	p := testutil.TestOpenFile(t, progpath)
+	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
+	testutil.FatalIfErr(t, p.Close())
+	m.PollWatched(0)
+
+	progLoadsTotalCheck()
+
+	progUnloadsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("prog_unloads_total", "program.mtail", 1)
+
+	testutil.FatalIfErr(t, os.Remove(progpath))
+
+	m.PollWatched(1)
+
+	progUnloadsTotalCheck()
+
+}
