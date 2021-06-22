@@ -60,7 +60,7 @@ func TimeoutTest(timeout time.Duration, f func(t *testing.T)) func(t *testing.T)
 		case <-time.After(timeout):
 			buf := make([]byte, 1<<20)
 			stacklen := runtime.Stack(buf, true)
-			t.Fatalf("timed out\n%s", buf[:stacklen])
+			t.Fatalf("timed out after %s\n%s", timeout, buf[:stacklen])
 		case <-done:
 		}
 	}
