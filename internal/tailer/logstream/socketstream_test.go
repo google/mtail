@@ -44,7 +44,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 	testutil.FatalIfErr(t, s.Close())
 
 	ss.Stop() // stop after connection closes
-	cancel()
+
 	wg.Wait()
 	close(lines)
 
@@ -54,7 +54,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
-	//	cancel()
+	cancel()
 
 	if !ss.IsComplete() {
 		t.Errorf("expecting socketstream to be complete because socket closed")
