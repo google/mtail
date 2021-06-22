@@ -41,6 +41,8 @@ func DoOrTimeout(do func() (bool, error), deadline, interval time.Duration) (boo
 // test does not complete in time the test is failed.  This lets us set a
 // per-test timeout instead of the global `go test -timeout` coarse timeout.
 func TimeoutTest(timeout time.Duration, f func(t *testing.T)) func(t *testing.T) {
+	// Raise the timeout if we're run under the race detector.
+	timeout = timeout * RaceDetectorMultiplier
 	// If we're in a CI environment, raise the timeout by 10x.  This mimics the
 	// timeout gloabl flag set in the Makefile.
 	if os.Getenv("CI") == "true" {
@@ -55,7 +57,7 @@ func TimeoutTest(timeout time.Duration, f func(t *testing.T)) func(t *testing.T)
 			f(t)
 		}()
 		select {
-		case <-time.After(timeout * RaceDetectorMultiplier):
+		case <-time.After(timeout):
 			buf := make([]byte, 1<<20)
 			stacklen := runtime.Stack(buf, true)
 			t.Fatalf("timed out\n%s", buf[:stacklen])
