@@ -310,9 +310,11 @@ func TestFileSocketStreamComparison(t *testing.T) {
 						n, err := io.Copy(s, source)
 						testutil.FatalIfErr(t, err)
 						glog.Infof("Copied %d bytes into socket", n)
-						// Write zero bytes after Stop is called to signal that this is the "end of the stream".
-						_, err = s.Write([]byte{})
-						testutil.FatalIfErr(t, err)
+						if scheme == "unixgram" {
+							// Write zero bytes after Stop is called to signal that this is the "end of the stream".
+							_, err = s.Write([]byte{})
+							testutil.FatalIfErr(t, err)
+						}
 						source.Close()
 						s.Close()
 					}()
