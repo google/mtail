@@ -36,6 +36,8 @@ var (
 	LineCount = expvar.NewInt("lines_total")
 	// ProgLoads counts the number of program load events.
 	ProgLoads = expvar.NewMap("prog_loads_total")
+	// ProgUnloads counts the number of program unload events.
+	ProgUnloads = expvar.NewMap("prog_unloads_total")
 	// ProgLoadErrors counts the number of program load errors.
 	ProgLoadErrors = expvar.NewMap("prog_load_errors_total")
 )
@@ -63,6 +65,13 @@ func (r *Runtime) LoadAllPrograms() error {
 			return errors.Wrapf(rerr, "Failed to list programs in %q", r.programPath)
 		}
 
+		markDeleted := make(map[string]struct{})
+		r.handleMu.RLock()
+		for name := range r.handles {
+			glog.Infof("added %s", name)
+			markDeleted[name] = struct{}{}
+		}
+		r.handleMu.RUnlock()
 		for _, fi := range fis {
 			if fi.IsDir() {
 				continue
@@ -74,6 +83,12 @@ func (r *Runtime) LoadAllPrograms() error {
 				}
 				glog.Warning(err)
 			}
+			glog.Infof("unmarking %s", filepath.Base(fi.Name()))
+			delete(markDeleted, filepath.Base(fi.Name()))
+		}
+		for name := range markDeleted {
+			glog.Infof("unloading %s", name)
+			r.UnloadProgram(name)
 		}
 	default:
 		err = r.LoadProgram(r.programPath)
@@ -331,7 +346,9 @@ func (r *Runtime) UnloadProgram(pathname string) {
 	name := filepath.Base(pathname)
 	r.handleMu.Lock()
 	defer r.handleMu.Unlock()
+	close(r.handles[name].lines)
 	if _, ok := r.handles[name]; ok {
 		delete(r.handles, name)
 	}
+	ProgUnloads.Add(name, 1)
 }

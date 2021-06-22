@@ -20,12 +20,13 @@ const loaderTemplate = `
 <th>errors</th>
 <th>load errors</th>
 <th>load successes</th>
+<th>unloads</th>
 <th>runtime errors</th>
 <th>last runtime error</th>
 </tr>
 <tr>
 {{range $name, $errors := $.Errors}}
-<td><a href="/progz?prog={{$name}}">{{$name}}</a></td>
+<td>{{ if index $.ProgLoaded $name}}<a href="/progz?prog={{$name}}">{{$name}}</a>{{else}}{{$name}}{{end}}</td>
 <td>
 {{if $errors}}
 {{$errors}}
@@ -35,6 +36,7 @@ No compile errors
 </td>
 <td>{{index $.Loaderrors $name}}</td>
 <td>{{index $.Loadsuccess $name}}</td>
+<td>{{index $.Unloads $name}}</td>
 <td>{{index $.RuntimeErrors $name}}</td>
 <td><pre>{{index $.RuntimeErrorString $name}}</pre></td>
 </tr>
@@ -51,13 +53,17 @@ func (r *Runtime) WriteStatusHTML(w io.Writer) error {
 	r.programErrorMu.RLock()
 	defer r.programErrorMu.RUnlock()
 	data := struct {
+		ProgLoaded         map[string]bool
 		Errors             map[string]error
 		Loaderrors         map[string]string
 		Loadsuccess        map[string]string
+		Unloads            map[string]string
 		RuntimeErrors      map[string]string
 		RuntimeErrorString map[string]string
 	}{
+		make(map[string]bool),
 		r.programErrors,
+		make(map[string]string),
 		make(map[string]string),
 		make(map[string]string),
 		make(map[string]string),
@@ -70,12 +76,18 @@ func (r *Runtime) WriteStatusHTML(w io.Writer) error {
 		if ProgLoads.Get(name) != nil {
 			data.Loadsuccess[name] = ProgLoads.Get(name).String()
 		}
+		if ProgUnloads.Get(name) != nil {
+			data.Unloads[name] = ProgUnloads.Get(name).String()
+		}
 		if vm.ProgRuntimeErrors.Get(name) != nil {
 			data.RuntimeErrors[name] = vm.ProgRuntimeErrors.Get(name).String()
 		}
+		r.handleMu.RLock()
 		if h, ok := r.handles[name]; ok {
+			data.ProgLoaded[name] = true
 			data.RuntimeErrorString[name] = h.vm.RuntimeErrorString()
 		}
+		r.handleMu.RUnlock()
 	}
 	return t.Execute(w, data)
 }
