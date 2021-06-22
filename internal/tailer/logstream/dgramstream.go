@@ -116,14 +116,13 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				// arrives, but since that wait the file may have been
 				// written to.  The file is not technically yet at EOF so
 				// we need to go back and try one more read.  We'll exit
-				// the stream in the select stanza above.
-				glog.V(2).Infof("%v: Stopping after next read timeout", c)
+				// the stream in the zero byte handler above.
+				glog.V(2).Infof("%v: Stopping after next zero byte read", c)
 			case <-ctx.Done():
-				// Same for cancellation; this makes tests stable, but
-				// could argue exiting immediately is less surprising.
-				// Assumption is that this doesn't make a difference in
-				// production.
-				glog.V(2).Infof("%v: Cancelled after next read", c)
+				// Exit immediately; a cancelled context will set an immediate
+				// deadline on the next read which will cause us to exit then,
+				// so don't bother going around the loop again.
+				return
 			case <-waker.Wake():
 				// sleep until next Wake()
 				glog.V(2).Infof("%v: Wake received", c)
