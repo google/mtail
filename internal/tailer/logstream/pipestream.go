@@ -85,18 +85,16 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				ps.mu.Unlock()
 			}
 
+			// Test to see if we should exit.
 			if err != nil && IsEndOrCancel(err) {
 				if partial.Len() > 0 {
 					sendLine(ctx, ps.pathname, partial, ps.lines)
 				}
 				glog.V(2).Infof("%v: exiting, stream has error %s", fd, err)
-				ps.mu.Lock()
-				ps.completed = true
-				ps.mu.Unlock()
 				return
 			}
 
-			// Yield and wait
+			// Wait for wakeup or termination.
 			glog.V(2).Infof("%v: waiting", fd)
 			select {
 			case <-ctx.Done():

@@ -161,7 +161,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			return
 		case <-ss.stopChan:
 			// Stop after connection is closed.
-			glog.V(2).Infof("%v: stopchan closed, exiting after next read", c)
+			glog.V(2).Infof("%v: stopchan closed, exiting after next read timeout", c)
 		case <-waker.Wake():
 			// sleep until next Wake()
 			glog.V(2).Infof("%v: Wake received", c)
@@ -176,7 +176,7 @@ func (ss *socketStream) IsComplete() bool {
 }
 
 // Stop implements the Logstream interface.
-// Stop will exit this stream after the next read is completed.
+// Stop will close the listener so no new connections will be accepted, and close all current connections once they have been closed by their peers.
 func (ss *socketStream) Stop() {
 	ss.stopOnce.Do(func() {
 		glog.Info("signalling stop at next EOF")
