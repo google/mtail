@@ -6,6 +6,7 @@ package logstream
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -19,7 +20,8 @@ type dgramStream struct {
 	ctx   context.Context
 	lines chan<- *logline.LogLine
 
-	pathname string // Given name for the underlying socket path on the filesystem
+	scheme  string // Datagram scheme, either "unixgram" or "udp".
+	address string // Given name for the underlying socket path on the filesystem or hostport.
 
 	mu           sync.RWMutex // protects following fields
 	completed    bool         // This pipestream is completed and can no longer be used.
@@ -29,8 +31,11 @@ type dgramStream struct {
 	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
-func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine) (LogStream, error) {
-	ss := &dgramStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
+func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, lines chan<- *logline.LogLine) (LogStream, error) {
+	if address == "" {
+		return nil, fmt.Errorf("socket address cannot be empty, please provide a unix domain socket filename or a udp host:port.")
+	}
+	ss := &dgramStream{ctx: ctx, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
 	if err := ss.stream(ctx, wg, waker); err != nil {
 		return nil, err
 	}
@@ -46,9 +51,9 @@ func (ss *dgramStream) LastReadTime() time.Time {
 const datagramReadBufferSize = 131071
 
 func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker) error {
-	c, err := net.ListenUnixgram("unixgram", &net.UnixAddr{ss.pathname, "unixgram"})
+	c, err := net.ListenPacket(ss.scheme, ss.address)
 	if err != nil {
-		logErrors.Add(ss.pathname, 1)
+		logErrors.Add(ss.address, 1)
 		return err
 	}
 	glog.V(2).Infof("opened new datagram socket %v", c)
@@ -59,14 +64,14 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 	go func() {
 		defer wg.Done()
 		defer func() {
-			glog.V(2).Infof("%v: read total %d bytes from %s", c, total, ss.pathname)
+			glog.V(2).Infof("%v: read total %d bytes from %s", c, total, ss.address)
 			glog.V(2).Infof("%v: closing connection", c)
 			err := c.Close()
 			if err != nil {
-				logErrors.Add(ss.pathname, 1)
+				logErrors.Add(ss.address, 1)
 				glog.Info(err)
 			}
-			logCloses.Add(ss.pathname, 1)
+			logCloses.Add(ss.address, 1)
 			ss.mu.Lock()
 			ss.completed = true
 			ss.mu.Unlock()
@@ -77,7 +82,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		SetReadDeadlineOnDone(ctx, c)
 
 		for {
-			n, err := c.Read(b)
+			n, _, err := c.ReadFrom(b)
 			glog.V(2).Infof("%v: read %d bytes, err is %v", c, n, err)
 
 			// This is a test-only trick that says if we've already put this
@@ -94,7 +99,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 
 			if n > 0 {
 				total += n
-				decodeAndSend(ss.ctx, ss.lines, ss.pathname, n, b[:n], partial)
+				decodeAndSend(ss.ctx, ss.lines, ss.address, n, b[:n], partial)
 				ss.mu.Lock()
 				ss.lastReadTime = time.Now()
 				ss.mu.Unlock()
@@ -102,7 +107,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 
 			if err != nil && IsEndOrCancel(err) {
 				if partial.Len() > 0 {
-					sendLine(ctx, ss.pathname, partial, ss.lines)
+					sendLine(ctx, ss.address, partial, ss.lines)
 				}
 				glog.V(2).Infof("%v: exiting, stream has error %s", c, err)
 				return
