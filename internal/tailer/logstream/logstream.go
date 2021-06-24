@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/waker"
 )
@@ -53,13 +54,18 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	if err != nil {
 		return nil, err
 	}
+	glog.Infof("Parsed url as %v", u)
 	switch u.Scheme {
 	default:
 		return nil, fmt.Errorf("unsupported URL scheme %q in path %q", u.Scheme, pathname)
 	case "unixgram":
-		return newDgramStream(ctx, wg, waker, u.Path, lines)
+		return newDgramStream(ctx, wg, waker, u.Scheme, u.Path, lines)
 	case "unix":
-		return newSocketStream(ctx, wg, waker, u.Path, lines, oneShot)
+		return newSocketStream(ctx, wg, waker, u.Scheme, u.Path, lines, oneShot)
+	case "tcp":
+		return newSocketStream(ctx, wg, waker, u.Scheme, u.Host, lines, oneShot)
+	case "udp":
+		return newDgramStream(ctx, wg, waker, u.Scheme, u.Host, lines)
 	case "", "file":
 	}
 	fi, err := os.Stat(u.Path)

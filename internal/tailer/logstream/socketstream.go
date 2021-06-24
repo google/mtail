@@ -6,6 +6,7 @@ package logstream
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -19,8 +20,9 @@ type socketStream struct {
 	ctx   context.Context
 	lines chan<- *logline.LogLine
 
-	oneShot  bool
-	pathname string // Given name for the underlying socket path on the filesystem
+	oneShot bool
+	scheme  string // URL Scheme to listen with, either tcp or unix
+	address string // Given name for the underlying socket path on the filesystem or host/port.
 
 	mu           sync.RWMutex // protects following fields
 	completed    bool         // This socketStream is completed and can no longer be used.
@@ -30,8 +32,11 @@ type socketStream struct {
 	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
-func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine, oneShot bool) (LogStream, error) {
-	ss := &socketStream{ctx: ctx, oneShot: oneShot, pathname: pathname, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
+func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, lines chan<- *logline.LogLine, oneShot bool) (LogStream, error) {
+	if address == "" {
+		return nil, fmt.Errorf("socket address cannot be empty, please provide a unix domain socket filename or a tcp host:port.")
+	}
+	ss := &socketStream{ctx: ctx, oneShot: oneShot, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
 	if err := ss.stream(ctx, wg, waker); err != nil {
 		return nil, err
 	}
@@ -44,11 +49,11 @@ func (ss *socketStream) LastReadTime() time.Time {
 	return ss.lastReadTime
 }
 
-// stream starts goroutines to read data from the unix domain socket, until Stop is called or the context is cancelled.
+// stream starts goroutines to read data from the stream socket, until Stop is called or the context is cancelled.
 func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker) error {
-	l, err := net.Listen("unix", ss.pathname)
+	l, err := net.Listen(ss.scheme, ss.address)
 	if err != nil {
-		logErrors.Add(ss.pathname, 1)
+		logErrors.Add(ss.address, 1)
 		return err
 	}
 	glog.V(2).Infof("opened new socket listener %v", l)
@@ -119,14 +124,14 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 	partial := bytes.NewBufferString("")
 	var total int
 	defer func() {
-		glog.V(2).Infof("%v: read total %d bytes from %s", c, total, ss.pathname)
+		glog.V(2).Infof("%v: read total %d bytes from %s", c, total, ss.address)
 		glog.V(2).Infof("%v: closing connection", c)
 		err := c.Close()
 		if err != nil {
-			logErrors.Add(ss.pathname, 1)
+			logErrors.Add(ss.address, 1)
 			glog.Info(err)
 		}
-		logCloses.Add(ss.pathname, 1)
+		logCloses.Add(ss.address, 1)
 	}()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -138,7 +143,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 
 		if n > 0 {
 			total += n
-			decodeAndSend(ss.ctx, ss.lines, ss.pathname, n, b[:n], partial)
+			decodeAndSend(ss.ctx, ss.lines, ss.address, n, b[:n], partial)
 			ss.mu.Lock()
 			ss.lastReadTime = time.Now()
 			ss.mu.Unlock()
@@ -146,7 +151,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 
 		if err != nil && IsEndOrCancel(err) {
 			if partial.Len() > 0 {
-				sendLine(ctx, ss.pathname, partial, ss.lines)
+				sendLine(ctx, ss.address, partial, ss.lines)
 			}
 			glog.V(2).Infof("%v: exiting, conn has error %s", c, err)
 

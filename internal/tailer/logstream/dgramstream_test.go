@@ -5,6 +5,7 @@ package logstream_test
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"path/filepath"
 	"sync"
@@ -20,90 +21,106 @@ import (
 const dgramTimeout = 1 * time.Second
 
 func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
-	testutil.TimeoutTest(dgramTimeout, func(t *testing.T) {
-		var wg sync.WaitGroup
+	for _, scheme := range []string{"unixgram", "udp"} {
+		t.Run(scheme, testutil.TimeoutTest(dgramTimeout, func(t *testing.T) {
+			var wg sync.WaitGroup
 
-		tmpDir := testutil.TestTempDir(t)
+			var addr string
+			switch scheme {
+			case "unixgram":
+				tmpDir := testutil.TestTempDir(t)
+				addr = filepath.Join(tmpDir, "sock")
+			case "udp":
+				addr = fmt.Sprintf("[::]:%d", testutil.FreePort(t))
+			default:
+				t.Fatalf("bad scheme %s", scheme)
+			}
+			lines := make(chan *logline.LogLine, 1)
+			ctx, cancel := context.WithCancel(context.Background())
+			waker, awaken := waker.NewTest(ctx, 1)
 
-		name := filepath.Join(tmpDir, "sock")
+			sockName := scheme + "://" + addr
+			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
+			testutil.FatalIfErr(t, err)
 
-		lines := make(chan *logline.LogLine, 1)
-		ctx, cancel := context.WithCancel(context.Background())
-		waker, awaken := waker.NewTest(ctx, 1)
+			s, err := net.Dial(scheme, addr)
+			testutil.FatalIfErr(t, err)
 
-		sockName := "unixgram://" + name
-		ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
-		testutil.FatalIfErr(t, err)
+			_, err = s.Write([]byte("1\n"))
+			testutil.FatalIfErr(t, err)
 
-		s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
-		testutil.FatalIfErr(t, err)
+			awaken(0) // sync past read
 
-		_, err = s.Write([]byte("1\n"))
-		testutil.FatalIfErr(t, err)
+			ss.Stop()
 
-		awaken(0) // sync past read
+			// "Close" the socket by sending zero bytes, which after Stop tells the stream to act as if we're done.
+			_, err = s.Write([]byte{})
+			testutil.FatalIfErr(t, err)
 
-		ss.Stop()
+			wg.Wait()
+			close(lines)
 
-		// "Close" the socket by sending zero bytes, which after Stop tells the stream to act as if we're done.
-		_, err = s.Write([]byte{})
-		testutil.FatalIfErr(t, err)
+			received := testutil.LinesReceived(lines)
+			expected := []*logline.LogLine{
+				{context.TODO(), addr, "1"},
+			}
+			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
-		wg.Wait()
-		close(lines)
+			cancel()
+			wg.Wait()
 
-		received := testutil.LinesReceived(lines)
-		expected := []*logline.LogLine{
-			{context.TODO(), name, "1"},
-		}
-		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-
-		cancel()
-		wg.Wait()
-
-		if !ss.IsComplete() {
-			t.Errorf("expecting dgramstream to be complete because socket closed")
-		}
-	})(t)
+			if !ss.IsComplete() {
+				t.Errorf("expecting dgramstream to be complete because socket closed")
+			}
+		}))
+	}
 }
 
 func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
-	testutil.TimeoutTest(dgramTimeout, func(t *testing.T) {
-		var wg sync.WaitGroup
+	for _, scheme := range []string{"unixgram", "udp"} {
+		t.Run(scheme, testutil.TimeoutTest(dgramTimeout, func(t *testing.T) {
+			var wg sync.WaitGroup
 
-		tmpDir := testutil.TestTempDir(t)
+			var addr string
+			switch scheme {
+			case "unixgram":
+				tmpDir := testutil.TestTempDir(t)
+				addr = filepath.Join(tmpDir, "sock")
+			case "udp":
+				addr = fmt.Sprintf("[::]:%d", testutil.FreePort(t))
+			default:
+				t.Fatalf("bad scheme %s", scheme)
+			}
+			lines := make(chan *logline.LogLine, 1)
+			ctx, cancel := context.WithCancel(context.Background())
+			waker, awaken := waker.NewTest(ctx, 1)
 
-		name := filepath.Join(tmpDir, "sock")
+			sockName := scheme + "://" + addr
+			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
+			testutil.FatalIfErr(t, err)
 
-		lines := make(chan *logline.LogLine, 1)
-		ctx, cancel := context.WithCancel(context.Background())
-		waker, awaken := waker.NewTest(ctx, 1)
+			s, err := net.Dial(scheme, addr)
+			testutil.FatalIfErr(t, err)
 
-		sockName := "unixgram://" + name
-		ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
-		testutil.FatalIfErr(t, err)
+			_, err = s.Write([]byte("1\n"))
+			testutil.FatalIfErr(t, err)
 
-		s, err := net.DialUnix("unixgram", nil, &net.UnixAddr{name, "unixgram"})
-		testutil.FatalIfErr(t, err)
+			awaken(0) // Synchronise past read.
 
-		_, err = s.Write([]byte("1\n"))
-		testutil.FatalIfErr(t, err)
+			cancel() // This cancellation should cause the stream to shut down.
 
-		awaken(0) // Synchronise past read.
+			wg.Wait()
+			close(lines)
 
-		cancel() // This cancellation should cause the stream to shut down.
+			received := testutil.LinesReceived(lines)
+			expected := []*logline.LogLine{
+				{context.TODO(), addr, "1"},
+			}
+			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
-		wg.Wait()
-		close(lines)
-
-		received := testutil.LinesReceived(lines)
-		expected := []*logline.LogLine{
-			{context.TODO(), name, "1"},
-		}
-		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-
-		if !ss.IsComplete() {
-			t.Errorf("expecting dgramstream to be complete because cancel")
-		}
-	})(t)
+			if !ss.IsComplete() {
+				t.Errorf("expecting dgramstream to be complete because cancel")
+			}
+		}))
+	}
 }
