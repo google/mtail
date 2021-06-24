@@ -121,7 +121,5 @@ Move loc and useCurrentYear out of VM and into Runtime env.
 Move const folding into parser during AST build.
 Const-fold identity functions.
 
-Replace IndexedExpr with no ExprList with just the IdTerm.
-
 
 Both tailer and logstream probably don't need to do URL parsing.  Tailer could do it on the log path patterns before filling up the poll patterns list.  Non-globs don't need repolling, and any with a scheme can already be constructed by TailPattern.
