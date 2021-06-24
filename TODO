@@ -8,11 +8,13 @@ parse tree/ast testing? - expected AST as result from parse/check instead of
 mapping between progs and logs to reduce wasted processing- issue #35
 
 bytecode like
-[{push 1} {push 0} {cmp 1} {jm 6} {push 0} {jmp 7} {push 1} {jnm 13}
-    {setmatched false} {mload 0} {dload 0} {inc <nil>} {setmatched true}]
+[{push 1} {push 0} {cmp 1}
+{jm 6} {push 0} {jmp 7} {push 1} {jnm 13}
+{setmatched false} {mload 0} {dload 0} {inc <nil>} {setmatched true}]
 can be expressed as
-[{push 1} {push 0} {cmp 1} {jm 9} {setmatched false} {mload 0} {dload 0} {inc
-    <nil>} {setmatched true}]
+[{push 1} {push 0} {cmp 1}
+{jm 9}
+{setmatched false} {mload 0} {dload 0} {inc <nil>} {setmatched true}]
 but jnm 13 is from the condExpr and the previous is from a comparison binary
     expr; an optimizer is needed to collapse the bytecode to undersand that
     cmp, jm, push, jump, push, jnm in sequence like so is the same as a cmp, jm
