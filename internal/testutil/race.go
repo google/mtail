@@ -4,4 +4,4 @@
 
 package testutil
 
-const RaceDetectorMultiplier = 20.0
+const RaceDetectorMultiplier = 30.0
