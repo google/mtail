@@ -1,11 +1,15 @@
-standard library, search path
+Implement a standard library, search path:
+  Means we can provide standard syslog decorator.
+  Requires figuring out where we keep standard library definitions, and what the syntax for import looks like.
 
-no trailing newline in parser test, requires changes to expr stmt
+Can't put trailing newlines in cases in parser test, requires changes to expr stmt
 
 parse tree/ast testing? - expected AST as result from parse/check instead of
-    merely getting a result
+    merely getting a result.  A similar version of this is in codegen_test.go:TestCodeGenFromAST
 
-mapping between progs and logs to reduce wasted processing- issue #35
+A mapping between progs and logs to reduce wasted processing- issue #35
+  Means we don't fan out log lines to every VM if reading from multiple sources.
+  Requires figuring out how to provide this configuration.  Special syntax in a program?  Not very flexible.  A real config file?  Been trying to avoid that.  Commandline flag?  Seems difficult to maintain.
 
 bytecode like
 [{push 1} {push 0} {cmp 1}
@@ -46,10 +50,11 @@ When using a const by itself as a match condition, then we get warnings about
 
 Can't define string constants, like const STRPTIME_FORMAT "Jan _2"
 
-Multline const can't startwith a newline, must be const FOO // +\n...
+Multline const can't startwith a newline, must be const FOO // +\n..., yuo might want to do this for long first fragments, e.e.g const FOO\n   /somethign/
 
 Can't chain two matches in same expresison like getfilename() =~ 'name' &&
     EXPR_RE because $0 is redefined
+    This seems like somethign you might weant to do, and we are unlikely to want to use $0, but this is also true for the first capture group.  Do we standardise on "the last pattern match wins"?
 
 
 Can't set the timestamp when processing one log line and reuse it in another; must use the
@@ -58,24 +63,26 @@ Can't set the timestamp when processing one log line and reuse it in another; mu
 
 Get a list of non-stdlib deps
 go list -f "{{if not .Standard}}{{.ImportPath}}{{end}}" $(go list -f '{{join .Deps "\n"}}' ./...)
+This is just a neat thing to remember for Go.
 
-Programs may not use mtail_ as a metric prefix.
+Programs may not use mtail_ as a metric prefix.  Should just document this.
+
 
 Theory: Implicitly cast Int shouldn't get the S2i conversion applied to them.  Do we need to name Implicit Int separate from Int and then not create s2i or other conversions for implicits.  (and we need to keep the runtime conversions?)
 
 
-if you comment out the MATCH_NETWORK clase in dhcpd.mtail it gets 30x faster... because the regexp no longer backtracks... why...
+if you comment out the MATCH_NETWORK clase in dhcpd.mtail it gets 30x faster... because the regexp no longer backtracks... why...  hints are that we exeute in an NFA regular expression becayuse it's unanchored.
 
 
-Avoid byte to string conversions in the tailer and vm FindStringSubmatch > https://dave.cheney.net/high-performance-go-workshop/dotgo-paris.html#strings_and_bytes
+Avoid byte to string conversions in the tailer and vm FindStringSubmatch > https://dave.cheney.net/high-performance-go-workshop/dotgo-paris.html#strings_and_bytes .  Pro: speed.  Con, not sure how we manage utf-8 in decode.go?
 
-Use FindSubmatchIndex to avoid copies?
+Use FindSubmatchIndex to avoid copies?  Not sure if there's a performance win here, but we want to avoid memcpy if we can.
 
 
 Why is strings.Builder slower than bytes.Buffer when the latter's docstring recommends the former?
 
 
-ci: rerun failed tests to see if they're flaky
+ci: rerun failed tests to see if they're flaky.
 
 
 Find out if OpenTelemetry is better than OpenCensus when creating no-op trace spans.
