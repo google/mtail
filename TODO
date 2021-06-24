@@ -51,7 +51,8 @@ Can't chain two matches in same expresison like getfilename() =~ 'name' &&
 
 
 Can't set the timestamp when processing one log line and reuse it in another; must use the
-    caching state metric pattern, hidden gauge time.
+    caching state metric pattern, hidden gauge time.  (I think this shows up in the original mysql example.)
+    Could one preserve the last parsed timestamp in VM state between runs?  How does this interact with programs that never strptime because they have no timestamp in the log?  #pragma notimestamp?
 
 Get a list of non-stdlib deps
 go list -f "{{if not .Standard}}{{.ImportPath}}{{end}}" $(go list -f '{{join .Deps "\n"}}' ./...)
@@ -59,9 +60,6 @@ go list -f "{{if not .Standard}}{{.ImportPath}}{{end}}" $(go list -f '{{join .De
 Programs may not use mtail_ as a metric prefix.
 
 Theory: Implicitly cast Int shouldn't get the S2i conversion applied to them.  Do we need to name Implicit Int separate from Int and then not create s2i or other conversions for implicits.  (and we need to keep the runtime conversions?)
-
-
-=~ isn't documented in the language or programming guide docs
 
 
 if you comment out the MATCH_NETWORK clase in dhcpd.mtail it gets 30x faster... because the regexp no longer backtracks... why...
