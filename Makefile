@@ -220,7 +220,7 @@ gosec: gosec
 	docker run --rm -t \
 		-w /mtail \
 		-v $(CURDIR):/mtail \
-		securego/gosec /mtail/...
+		securego/gosec --exclude=G104 /mtail/...
 
 
 ###
