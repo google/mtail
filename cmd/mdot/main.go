@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/golang/glog"
@@ -131,7 +132,7 @@ func (d *dotter) VisitAfter(node ast.Node) ast.Node {
 }
 
 func makeDot(name string, w io.Writer) error {
-	f, err := os.Open(name)
+	f, err := os.Open(filepath.Clean(name))
 	if err != nil {
 		return err
 	}

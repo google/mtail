@@ -214,6 +214,15 @@ container: Dockerfile
 	    --build-arg build_date=$(shell date -Iseconds --utc) \
 	    .
 
+## Run gosec
+.PHONY: gosec
+gosec: gosec
+	docker run --rm -t \
+		-w /mtail \
+		-v $(CURDIR):/mtail \
+		securego/gosec --exclude=G104 /mtail/...
+
+
 ###
 ## Fuzz testing
 #

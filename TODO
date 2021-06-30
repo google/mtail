@@ -81,9 +81,6 @@ ci: rerun failed tests to see if they're flaky
 Find out if OpenTelemetry is better than OpenCensus when creating no-op trace spans.
 
 
-run with gosec, and possibly annotate safe sections in code
-
-
 Test that when path/* is the logpathpattern that we handle log rotation, e.g. log -> log.1
  = how can this work, we can't tell the difference between log.1 being a rotation or a new log.  This could work if we can have a tailer-level registry of filenames currently with a goroutine.  But we don't know the name of the new file when filestream creates a new goroutine for the replacement; fd.Stat() doesn't return the new name of the file.
  - Workaround: warn when '*' is the last of a glob pattern.

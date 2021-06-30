@@ -60,6 +60,15 @@ jobs:
           fetch-depth: 0 # so that we get tags
       - run: make --debug container
 
+  gosec:
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v2
+      - run: make gosec
+
   fuzz:
     runs-on: ubuntu-latest
     container:

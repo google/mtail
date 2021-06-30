@@ -95,6 +95,7 @@ func rand(n int) (r int) {
 		a, _ := crand.Int(crand.Reader, big.NewInt(int64(n)))
 		r = int(a.Int64())
 	} else {
+		/* #nosec G404 */
 		r = mrand.Intn(n)
 	}
 	return
