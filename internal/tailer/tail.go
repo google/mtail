@@ -85,8 +85,7 @@ func (opt LogPatterns) apply(t *Tailer) error {
 type IgnoreRegex string
 
 func (opt IgnoreRegex) apply(t *Tailer) error {
-	t.SetIgnorePattern(string(opt))
-	return nil
+	return t.SetIgnorePattern(string(opt))
 }
 
 // StaleLogGcWaker triggers garbage collection runs for stale logs in the tailer.
@@ -154,7 +153,9 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	}
 	// Set up listeners on every socket.
 	for _, pattern := range t.socketPaths {
-		t.TailPath(pattern)
+		if err := t.TailPath(pattern); err != nil {
+			return nil, err
+		}
 	}
 	// Guarantee all existing logs get tailed before we leave.  Also necessary
 	// in case oneshot mode is active, the logs get read!
