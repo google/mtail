@@ -22,7 +22,7 @@ const (
 	kDefaultMaxRecursionDepth = 100
 )
 
-// checker holds data for a semantic checker
+// checker holds data for a semantic checker.
 type checker struct {
 	scope *symbol.Scope // the current scope
 

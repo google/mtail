@@ -45,21 +45,21 @@ var (
 
 	version = flag.Bool("version", false, "Print mtail version information.")
 
-	// Compiler behaviour flags
+	// Compiler behaviour flags.
 	oneShot      = flag.Bool("one_shot", false, "Compile the programs, then read the contents of the provided logs from start until EOF, print the values of the metrics store and exit. This is a debugging flag only, not for production use.")
 	compileOnly  = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
 	dumpAst      = flag.Bool("dump_ast", false, "Dump AST of programs after parse (to INFO log).")
 	dumpAstTypes = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck (to INFO log).")
 	dumpBytecode = flag.Bool("dump_bytecode", false, "Dump bytecode of programs (to INFO log).")
 
-	// VM Runtime behaviour flags
+	// VM Runtime behaviour flags.
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
 	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of UTC.")
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 	emitMetricTimestamp  = flag.Bool("emit_metric_timestamp", false, "Emit the recorded timestamp of a metric.  If disabled (the default) no explicit timestamp is sent to a collector.")
 	logRuntimeErrors     = flag.Bool("vm_logs_runtime_errors", true, "Enables logging of runtime errors to the standard log.  Set to false to only have the errors printed to the HTTP console.")
 
-	// Ops flags
+	// Ops flags.
 	pollInterval                = flag.Duration("poll_interval", 250*time.Millisecond, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
 	expiredMetricGcTickInterval = flag.Duration("expired_metrics_gc_interval", time.Hour, "interval between expired metric garbage collection runs")
 	staleLogGcTickInterval      = flag.Duration("stale_log_gc_interval", time.Hour, "interval between stale log garbage collection runs")
@@ -67,15 +67,15 @@ var (
 	maxRegexpLength             = flag.Int("max_regexp_length", 1024, "The maximum length a mtail regexp expression can have. Excessively long patterns are likely to cause compilation and runtime performance problems.")
 	maxRecursionDepth           = flag.Int("max_recursion_depth", 100, "The maximum length a mtail statement can be, as measured by parsed tokens. Excessively long mtail expressions are likely to cause compilation and runtime performance problems.")
 
-	// Debugging flags
+	// Debugging flags.
 	blockProfileRate     = flag.Int("block_profile_rate", 0, "Nanoseconds of block time before goroutine blocking events reported. 0 turns off.  See https://golang.org/pkg/runtime/#SetBlockProfileRate")
 	mutexProfileFraction = flag.Int("mutex_profile_fraction", 0, "Fraction of mutex contention events reported.  0 turns off.  See http://golang.org/pkg/runtime/#SetMutexProfileFraction")
 
-	// Tracing
+	// Tracing.
 	jaegerEndpoint    = flag.String("jaeger_endpoint", "", "If set, collector endpoint URL of jaeger thrift service")
 	traceSamplePeriod = flag.Int("trace_sample_period", 0, "Sample period for traces.  If non-zero, every nth trace will be sampled.")
 
-	// Deprecated
+	// Deprecated.
 	_ = flag.Bool("disable_fsnotify", true, "DEPRECATED: this flag is no longer in use.")
 	_ = flag.Int("metric_push_interval_seconds", 0, "DEPRECATED: use --metric_push_interval instead")
 )

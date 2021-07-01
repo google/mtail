@@ -263,7 +263,7 @@ func (n *FloatLit) Type() types.Type {
 	return types.Float
 }
 
-// PatternExpr is the top of a pattern expression
+// PatternExpr is the top of a pattern expression.
 type PatternExpr struct {
 	Expr    Node
 	Pattern string // if not empty, the fully defined pattern after typecheck
@@ -278,7 +278,7 @@ func (n *PatternExpr) Type() types.Type {
 	return types.Pattern
 }
 
-// patternConstNode holds inline constant pattern fragments
+// patternConstNode holds inline constant pattern fragments.
 type PatternLit struct {
 	P       position.Position
 	Pattern string
@@ -292,7 +292,7 @@ func (n *PatternLit) Type() types.Type {
 	return types.Pattern
 }
 
-// patternDefNode holds a named pattern expression
+// patternDefNode holds a named pattern expression.
 type PatternFragment struct {
 	Id      Node
 	Expr    Node
@@ -429,7 +429,7 @@ func (n *StopStmt) Type() types.Type {
 	return types.None
 }
 
-// mergepositionlist is a helper that merges the positions of all the nodes in a list
+// mergepositionlist is a helper that merges the positions of all the nodes in a list.
 func mergepositionlist(l []Node) *position.Position {
 	if len(l) == 0 {
 		return nil

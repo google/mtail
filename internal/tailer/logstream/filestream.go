@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	// fileTruncates counts the truncations of a file stream
+	// fileTruncates counts the truncations of a file stream.
 	fileTruncates = expvar.NewMap("file_truncates_total")
 )
 

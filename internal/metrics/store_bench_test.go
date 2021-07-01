@@ -15,7 +15,7 @@ import (
 const maxItemsLog2 = 10
 const maxLabelsLog2 = 13
 
-// newRandMetric makes a new, randomly filled Metric
+// newRandMetric makes a new, randomly filled Metric.
 func newRandMetric(tb testing.TB, rand *rand.Rand, i int) *Metric {
 	nameVal, ok := quick.Value(reflect.TypeOf(""), rand)
 	if !ok {

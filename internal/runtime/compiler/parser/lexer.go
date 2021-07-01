@@ -181,7 +181,7 @@ func (l *Lexer) ignore() {
 	l.startcol = l.col
 }
 
-// errorf returns an error token and resets the scanner
+// errorf returns an error token and resets the scanner.
 func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 	pos := position.Position{
 		Filename: l.name,

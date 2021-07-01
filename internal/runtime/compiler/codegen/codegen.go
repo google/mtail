@@ -53,19 +53,19 @@ func (c *codegen) emit(n ast.Node, opcode code.Opcode, operand interface{}) {
 	c.obj.Program = append(c.obj.Program, code.Instr{opcode, operand, n.Pos().Line})
 }
 
-// newLabel creates a new label to jump to
+// newLabel creates a new label to jump to.
 func (c *codegen) newLabel() (l int) {
 	l = len(c.l)
 	c.l = append(c.l, -1)
 	return
 }
 
-// setLabel points a label to the next instruction
+// setLabel points a label to the next instruction.
 func (c *codegen) setLabel(l int) {
 	c.l[l] = c.pc() + 1
 }
 
-// pc returns the program offset of the last instruction
+// pc returns the program offset of the last instruction.
 func (c *codegen) pc() int {
 	return len(c.obj.Program) - 1
 }

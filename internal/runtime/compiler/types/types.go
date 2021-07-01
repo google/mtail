@@ -22,7 +22,7 @@ type Type interface {
 	String() string
 }
 
-// Equals compares two types, testing for equality
+// Equals compares two types, testing for equality.
 func Equals(t1, t2 Type) bool {
 	t1, t2 = t1.Root(), t2.Root()
 	switch t1 := t1.(type) {
@@ -192,7 +192,7 @@ var (
 	Float   = &Operator{"Float", []Type{}}
 	String  = &Operator{"String", []Type{}}
 	Pattern = &Operator{"Pattern", []Type{}}
-	// TODO(jaq): use composite type so we can typecheck the bucket directly, e.g. hist[j] = i
+	// TODO(jaq): use composite type so we can typecheck the bucket directly, e.g. hist[j] = i.
 	Buckets = &Operator{"Buckets", []Type{}}
 )
 

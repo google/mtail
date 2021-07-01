@@ -23,22 +23,22 @@ import (
 )
 
 var (
-	// logErrors counts the IO errors encountered per log
+	// logErrors counts the IO errors encountered per log.
 	logErrors = expvar.NewMap("log_errors_total")
-	// logOpens counts the opens of new log file descriptors/sockets
+	// logOpens counts the opens of new log file descriptors/sockets.
 	logOpens = expvar.NewMap("log_opens_total")
-	// logCloses counts the closes of old log file descriptors/sockets
+	// logCloses counts the closes of old log file descriptors/sockets.
 	logCloses = expvar.NewMap("log_closes_total")
 )
 
-// LogStream
+// LogStream.
 type LogStream interface {
 	LastReadTime() time.Time // Return the time when the last log line was read from the source
 	Stop()                   // Ask to gracefully stop the stream; e.g. stream keeps reading until EOF and then completes work.
 	IsComplete() bool        // True if the logstream has completed work and cannot recover.  The caller should clean up this logstream, creating a new logstream on a pathname if necessary.
 }
 
-// defaultReadBufferSize the size of the buffer for reading bytes into
+// defaultReadBufferSize the size of the buffer for reading bytes into.
 const defaultReadBufferSize = 4096
 
 // New creates a LogStream from the file object located at the absolute path

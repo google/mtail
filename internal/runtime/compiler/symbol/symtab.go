@@ -49,7 +49,7 @@ type Symbol struct {
 	Used    bool               // Optional marker that this symbol is used after declaration.
 }
 
-// NewSymbol creates a record of a given symbol kind, named name, found at loc
+// NewSymbol creates a record of a given symbol kind, named name, found at loc.
 func NewSymbol(name string, kind SymbolKind, pos *position.Position) (sym *Symbol) {
 	return &Symbol{name, kind, types.Undef, pos, nil, 0, false}
 }
@@ -61,7 +61,7 @@ type Scope struct {
 	Symbols map[string]*Symbol
 }
 
-// NewScope creates a new scope within the parent scope
+// NewScope creates a new scope within the parent scope.
 func NewScope(parent *Scope) *Scope {
 	return &Scope{parent, make(map[string]*Symbol)}
 }

@@ -41,7 +41,7 @@ func (c *Compiler) SetOption(options ...Option) error {
 	return nil
 }
 
-// Option configures a new Compiler
+// Option configures a new Compiler.
 type Option func(*Compiler) error
 
 // EmitAst emits the AST after the parse phase.

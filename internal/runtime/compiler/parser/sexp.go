@@ -13,7 +13,7 @@ import (
 	"github.com/google/mtail/internal/runtime/compiler/symbol"
 )
 
-// Sexp is for converting program syntax trees into typed s-expression for printing
+// Sexp is for converting program syntax trees into typed s-expression for printing.
 type Sexp struct {
 	output strings.Builder // Accumulator for the result
 
@@ -250,7 +250,7 @@ func (s *Sexp) emitScope(scope *symbol.Scope) {
 	s.newline()
 }
 
-// Dump begins the dumping of the syntax tree, returning the s-expression as a single string
+// Dump begins the dumping of the syntax tree, returning the s-expression as a single string.
 func (s *Sexp) Dump(n ast.Node) string {
 	s.output.Reset()
 	ast.Walk(s, n)

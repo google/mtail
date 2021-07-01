@@ -13,7 +13,7 @@ import (
 	"github.com/google/mtail/internal/logline"
 )
 
-// logLines counts the number of lines read per log file
+// logLines counts the number of lines read per log file.
 var logLines = expvar.NewMap("log_lines_total")
 
 // decodeAndSend transforms the byte array `b` into unicode in `partial`, sending to the llp as each newline is decoded.

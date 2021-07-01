@@ -500,7 +500,7 @@ func TestInstrs(t *testing.T) {
 	}
 }
 
-// makeVM is a helper method for construction a single-instruction VM
+// makeVM is a helper method for construction a single-instruction VM.
 func makeVM(i code.Instr, m []*metrics.Metric) *VM {
 	obj := &code.Object{Metrics: m, Program: []code.Instr{i}}
 	v := New("test", obj, true, nil, false)
@@ -512,7 +512,7 @@ func makeVM(i code.Instr, m []*metrics.Metric) *VM {
 
 }
 
-// makeMetrics returns a few useful metrics for observing under test
+// makeMetrics returns a few useful metrics for observing under test.
 func makeMetrics() []*metrics.Metric {
 	var m []*metrics.Metric
 	m = append(m,
@@ -532,7 +532,7 @@ type datumStoreTests struct {
 	expected string
 }
 
-// code.Instructions with datum store side effects
+// code.Instructions with datum store side effects.
 func TestDatumSetInstrs(t *testing.T) {
 
 	tests := []datumStoreTests{
@@ -683,7 +683,7 @@ func TestStrptimeWithoutTimezone(t *testing.T) {
 	}
 }
 
-// code.Instructions with datum retrieve
+// code.Instructions with datum retrieve.
 func TestDatumFetchInstrs(t *testing.T) {
 	var m []*metrics.Metric
 	m = append(m,

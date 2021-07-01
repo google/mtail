@@ -17,7 +17,7 @@ type Visitor interface {
 	VisitAfter(n Node) Node
 }
 
-// convenience function
+// convenience function.
 func walknodelist(v Visitor, list []Node) []Node {
 	r := make([]Node, 0, len(list))
 	for _, x := range list {

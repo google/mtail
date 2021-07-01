@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	// logCount records the number of logs that are being tailed
+	// logCount records the number of logs that are being tailed.
 	logCount = expvar.NewInt("log_count")
 )
 
@@ -81,7 +81,7 @@ func (opt LogPatterns) apply(t *Tailer) error {
 	return nil
 }
 
-// IgnoreRegex sets the regular expression to use to filter away pathnames that match the LogPatterns glob
+// IgnoreRegex sets the regular expression to use to filter away pathnames that match the LogPatterns glob.
 type IgnoreRegex string
 
 func (opt IgnoreRegex) apply(t *Tailer) error {

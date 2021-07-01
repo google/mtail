@@ -18,7 +18,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Option configures mtail.Server
+// Option configures mtail.Server.
 type Option interface {
 	apply(*Server) error
 }
@@ -263,7 +263,7 @@ func (opt MaxRegexpLength) apply(m *Server) error {
 	return nil
 }
 
-// MaxRecursionDepth sets the maximum depth the abstract syntax tree built during lexation can have
+// MaxRecursionDepth sets the maximum depth the abstract syntax tree built during lexation can have.
 type MaxRecursionDepth int
 
 func (opt MaxRecursionDepth) apply(m *Server) error {

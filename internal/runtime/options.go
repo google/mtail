@@ -78,7 +78,7 @@ func MaxRegexpLength(maxRegexpLength int) Option {
 	}
 }
 
-// MaxRecursionDepth sets the maximum depth the abstract syntax tree built during lexation can have
+// MaxRecursionDepth sets the maximum depth the abstract syntax tree built during lexation can have.
 func MaxRecursionDepth(maxRecursionDepth int) Option {
 	return func(r *Runtime) error {
 		r.cOpts = append(r.cOpts, compiler.MaxRecursionDepth(maxRecursionDepth))

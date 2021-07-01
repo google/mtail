@@ -25,7 +25,7 @@ func (d *String) Set(value string, timestamp time.Time) {
 	d.mu.Unlock()
 }
 
-// Get returns the value of the String
+// Get returns the value of the String.
 func (d *String) Get() string {
 	d.mu.RLock()
 	defer d.mu.RUnlock()

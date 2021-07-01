@@ -79,12 +79,12 @@ type VM struct {
 	loc                  *time.Location // Override local timezone with provided, if not empty
 }
 
-// Push a value onto the stack
+// Push a value onto the stack.
 func (t *thread) Push(value interface{}) {
 	t.stack = append(t.stack, value)
 }
 
-// Pop a value off the stack
+// Pop a value off the stack.
 func (t *thread) Pop() (value interface{}) {
 	last := len(t.stack) - 1
 	value = t.stack[last]
@@ -92,7 +92,7 @@ func (t *thread) Pop() (value interface{}) {
 	return
 }
 
-// Log a runtime error and terminate the program
+// Log a runtime error and terminate the program.
 func (v *VM) errorf(format string, args ...interface{}) {
 	i := v.prog[v.t.pc-1]
 	ProgRuntimeErrors.Add(v.name, 1)
