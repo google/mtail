@@ -401,11 +401,10 @@ func (t *Tailer) PollLogStreams() error {
 func (t *Tailer) Poll() error {
 	t.pollMu.Lock()
 	defer t.pollMu.Unlock()
-	if err := t.PollLogPatterns(); err != nil {
-		return err
-	}
-	if err := t.PollLogStreams(); err != nil {
-		return err
+	for _, f := range []func() error{t.PollLogPatterns, t.PollLogStreams} {
+		if err := f(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
