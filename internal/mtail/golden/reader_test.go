@@ -117,5 +117,5 @@ func TestReadTestData(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 	defer f.Close()
 	readMetrics := ReadTestData(f, "reader_test")
-	testutil.ExpectNoDiff(t, expectedMetrics, readMetrics, testutil.SortSlices(metrics.MetricsLess), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}))
+	testutil.ExpectNoDiff(t, expectedMetrics, readMetrics, testutil.SortSlices(metrics.Less), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}))
 }

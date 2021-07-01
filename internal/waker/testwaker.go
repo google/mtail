@@ -26,11 +26,11 @@ type testWaker struct {
 	wake chan struct{}
 }
 
-// wakeFunc describes a function used by tests to trigger a wakeup of blocked idle goroutines under test.  It takes as first parameter the number of goroutines to await before returning to the caller.
-type wakeFunc func(int)
+// WakeFunc describes a function used by tests to trigger a wakeup of blocked idle goroutines under test.  It takes as first parameter the number of goroutines to await before returning to the caller.
+type WakeFunc func(int)
 
 // NewTest creates a new Waker to be used in tests, returning it and a function to trigger a wakeup.  The constructor parameter says how many wakees are expected in the first pass.
-func NewTest(ctx context.Context, n int) (Waker, wakeFunc) {
+func NewTest(ctx context.Context, n int) (Waker, WakeFunc) {
 	t := &testWaker{
 		ctx:        ctx,
 		n:          n,

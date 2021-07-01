@@ -1085,7 +1085,7 @@ func TestRuntimeEndToEnd(t *testing.T) {
 			})
 
 			// Ignore the datum.Time field as well, as the results will be unstable otherwise.
-			testutil.ExpectNoDiff(t, tc.metrics, ms, testutil.SortSlices(metrics.MetricsLess), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
+			testutil.ExpectNoDiff(t, tc.metrics, ms, testutil.SortSlices(metrics.Less), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
 		})
 	}
 }

@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	kDefaultMaxRegexpLength   = 1024
-	kDefaultMaxRecursionDepth = 100
+	defaultMaxRegexpLength   = 1024
+	defaultMaxRecursionDepth = 100
 )
 
 // checker holds data for a semantic checker.
@@ -43,10 +43,10 @@ type checker struct {
 func Check(node ast.Node, maxRegexpLength int, maxRecursionDepth int) (ast.Node, error) {
 	// set defaults
 	if maxRegexpLength == 0 {
-		maxRegexpLength = kDefaultMaxRegexpLength
+		maxRegexpLength = defaultMaxRegexpLength
 	}
 	if maxRecursionDepth == 0 {
-		maxRecursionDepth = kDefaultMaxRecursionDepth
+		maxRecursionDepth = defaultMaxRecursionDepth
 	}
 
 	c := &checker{maxRegexLength: maxRegexpLength, maxRecursionDepth: maxRecursionDepth}
