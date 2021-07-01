@@ -22,13 +22,12 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/runtime/compiler"
 	"github.com/google/mtail/internal/runtime/vm"
+	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (

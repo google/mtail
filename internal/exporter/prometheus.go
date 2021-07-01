@@ -11,7 +11,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
