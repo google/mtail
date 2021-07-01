@@ -92,7 +92,7 @@ func TestExamplePrograms(t *testing.T) {
 	testutil.SkipIfShort(t)
 	for _, tc := range exampleProgramTests {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile),
-			testutil.TimeoutTest(exampleTimeout, func(t *testing.T) {
+			testutil.TimeoutTest(exampleTimeout, func(t *testing.T) { //nolint:thelper
 				ctx, cancel := context.WithCancel(context.Background())
 				waker, _ := waker.NewTest(ctx, 0) // oneshot means we should never need to wake the stream
 				store := metrics.NewStore()
@@ -194,7 +194,7 @@ func TestFilePipeStreamComparison(t *testing.T) {
 	for _, tc := range exampleProgramTests {
 		tc := tc
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile),
-			testutil.TimeoutTest(exampleTimeout, func(t *testing.T) {
+			testutil.TimeoutTest(exampleTimeout, func(t *testing.T) { //nolint:thelper
 				ctx, cancel := context.WithCancel(context.Background())
 				waker := waker.NewTestAlways()
 				fileStore, pipeStore := metrics.NewStore(), metrics.NewStore()
@@ -269,7 +269,7 @@ func TestFileSocketStreamComparison(t *testing.T) {
 		for _, tc := range exampleProgramTests {
 			tc := tc
 			t.Run(fmt.Sprintf("%s on %s://%s", tc.programfile, scheme, tc.logfile),
-				testutil.TimeoutTest(exampleTimeout, func(t *testing.T) {
+				testutil.TimeoutTest(exampleTimeout, func(t *testing.T) { //nolint:thelper
 					ctx, cancel := context.WithCancel(context.Background())
 					waker := waker.NewTestAlways()
 					fileStore, sockStore := metrics.NewStore(), metrics.NewStore()

@@ -17,6 +17,7 @@ import (
 )
 
 func makeTestTail(t *testing.T, options ...Option) (*Tailer, chan *logline.LogLine, func(int), string, func()) {
+	t.Helper()
 	tmpDir := testutil.TestTempDir(t)
 
 	ctx, cancel := context.WithCancel(context.Background())

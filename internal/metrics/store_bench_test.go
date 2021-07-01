@@ -19,6 +19,7 @@ const (
 
 // newRandMetric makes a new, randomly filled Metric.
 func newRandMetric(tb testing.TB, rand *rand.Rand, i int) *Metric {
+	tb.Helper()
 	nameVal, ok := quick.Value(reflect.TypeOf(""), rand)
 	if !ok {
 		tb.Fatalf("%d: can't make a name", i)
@@ -53,12 +54,14 @@ type bench struct {
 }
 
 func fillMetric(b *testing.B, rand *rand.Rand, items int, m *[]*Metric, _ *Store) {
+	b.Helper()
 	for i := 0; i < items; i++ {
 		(*m)[i] = newRandMetric(b, rand, i)
 	}
 }
 
 func addToStore(b *testing.B, items int, m []*Metric, s *Store) {
+	b.Helper()
 	for j := 0; j < items; j++ {
 		s.Add(m[j])
 	}
@@ -74,10 +77,12 @@ func BenchmarkStore(b *testing.B) {
 		{
 			name: "Iterate",
 			setup: func(b *testing.B, rand *rand.Rand, items int, m *[]*Metric, s *Store) {
+				b.Helper()
 				fillMetric(b, rand, items, m, s)
 				addToStore(b, items, *m, s)
 			},
 			b: func(b *testing.B, items int, m []*Metric, s *Store) {
+				b.Helper()
 				s.Range(func(*Metric) error {
 					return nil
 				})
@@ -128,6 +133,7 @@ func BenchmarkStore(b *testing.B) {
 }
 
 func newRandLabels(tb testing.TB, rand *rand.Rand, i int) []string {
+	tb.Helper()
 	lv := make([]string, i)
 	for j := 0; j < i; j++ {
 		val, ok := quick.Value(reflect.TypeOf(""), rand)
@@ -140,12 +146,14 @@ func newRandLabels(tb testing.TB, rand *rand.Rand, i int) []string {
 }
 
 func fillLabel(b *testing.B, rand *rand.Rand, items, keys int, lvs *[][]string, _ *Metric) {
+	b.Helper()
 	for i := 0; i < items; i++ {
 		(*lvs)[i] = newRandLabels(b, rand, keys)
 	}
 }
 
 func getDatum(b *testing.B, items int, lvs *[][]string, m *Metric) {
+	b.Helper()
 	for j := 0; j < items; j++ {
 		lv := (*lvs)[j]
 		m.GetDatum(lv...)
