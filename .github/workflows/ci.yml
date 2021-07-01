@@ -7,8 +7,6 @@ on:
       - master
       - main
   pull_request:
-  schedule:
-    - cron: 25 1 * * 1
 env:
   GOPROXY: "https://proxy.golang.org"
 jobs:
@@ -65,9 +63,11 @@ jobs:
     env:
       GO111MODULE: on
     steps:
-      - name: Checkout Source
-        uses: actions/checkout@v2
-      - run: make gosec
+      - uses: actions/checkout@v2
+      - uses: securego/gosec@master
+        with:
+          args: '-tags fuzz ./...'
+
 
   fuzz:
     runs-on: ubuntu-latest
