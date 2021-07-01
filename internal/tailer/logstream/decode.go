@@ -19,11 +19,11 @@ var logLines = expvar.NewMap("log_lines_total")
 // decodeAndSend transforms the byte array `b` into unicode in `partial`, sending to the llp as each newline is decoded.
 func decodeAndSend(ctx context.Context, lines chan<- *logline.LogLine, pathname string, n int, b []byte, partial *bytes.Buffer) {
 	var (
-		rune  rune
+		r     rune
 		width int
 	)
 	for i := 0; i < len(b) && i < n; i += width {
-		rune, width = utf8.DecodeRune(b[i:])
+		r, width = utf8.DecodeRune(b[i:])
 		// Most file-based log sources will end with \n on Unixlike systems.
 		// On Windows they appear to be both \r\n.  syslog disallows \r (and \t
 		// and others) and writes them escaped, per syslog(7).  [RFC
@@ -32,12 +32,12 @@ func decodeAndSend(ctx context.Context, lines chan<- *logline.LogLine, pathname 
 		// (printing) characters."  So for now let's assume that a \r only
 		// occurs at the end of a line anyway, and we can just eat it.
 		switch {
-		case rune == '\r':
+		case r == '\r':
 			// nom
-		case rune == '\n':
+		case r == '\n':
 			sendLine(ctx, pathname, partial, lines)
 		default:
-			partial.WriteRune(rune)
+			partial.WriteRune(r)
 		}
 	}
 }

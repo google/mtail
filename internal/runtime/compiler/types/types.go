@@ -406,10 +406,10 @@ func LeastUpperBound(a, b Type) Type {
 	return Error
 }
 
-// inferCaprefType determines a type for a capturing group, based on contents
+// inferCaprefType determines a type for the nth capturing group in re, based on contents
 // of that capture group.
-func InferCaprefType(re *syntax.Regexp, cap int) Type {
-	group := getCaptureGroup(re, cap)
+func InferCaprefType(re *syntax.Regexp, n int) Type {
+	group := getCaptureGroup(re, n)
 	if group == nil {
 		return None
 	}
@@ -448,14 +448,14 @@ func inferGroupType(group *syntax.Regexp) Type {
 	return String
 }
 
-// getCaptureGroup returns the Regexp node of the capturing group numbered cap
+// getCaptureGroup returns the Regexp node of the capturing group numbered cgID
 // in re.
-func getCaptureGroup(re *syntax.Regexp, cap int) *syntax.Regexp {
-	if re.Op == syntax.OpCapture && re.Cap == cap {
+func getCaptureGroup(re *syntax.Regexp, cgID int) *syntax.Regexp {
+	if re.Op == syntax.OpCapture && re.Cap == cgID {
 		return re.Sub[0]
 	}
 	for _, sub := range re.Sub {
-		r := getCaptureGroup(sub, cap)
+		r := getCaptureGroup(sub, cgID)
 		if r != nil {
 			return r
 		}

@@ -897,7 +897,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			v.errorf("%+v", verr)
 			return
 		}
-		new, nerr := t.PopString()
+		repl, nerr := t.PopString()
 		if nerr != nil {
 			v.errorf("%+v", nerr)
 			return
@@ -907,7 +907,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			v.errorf("%+v", oerr)
 			return
 		}
-		t.Push(strings.ReplaceAll(val, old, new))
+		t.Push(strings.ReplaceAll(val, old, repl))
 	case code.Rsubst:
 		pat, perr := t.PopInt()
 		if perr != nil {
@@ -919,12 +919,12 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			v.errorf("%+v", verr)
 			return
 		}
-		new, nerr := t.PopString()
+		repl, nerr := t.PopString()
 		if nerr != nil {
 			v.errorf("%+v", nerr)
 			return
 		}
-		t.Push(v.re[pat].ReplaceAllLiteralString(val, new))
+		t.Push(v.re[pat].ReplaceAllLiteralString(val, repl))
 
 	default:
 		v.errorf("illegal instruction: %d", i.Opcode)
