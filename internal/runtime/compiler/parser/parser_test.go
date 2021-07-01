@@ -19,81 +19,124 @@ var parserTests = []struct {
 	name    string
 	program string
 }{
-	{"empty",
-		""},
+	{
+		"empty",
+		"",
+	},
 
-	{"newline",
-		"\n"},
+	{
+		"newline",
+		"\n",
+	},
 
-	{"declare counter",
-		"counter lines_total\n"},
+	{
+		"declare counter",
+		"counter lines_total\n",
+	},
 
-	{"declare counter string name",
-		"counter lines_total as \"line-count\"\n"},
+	{
+		"declare counter string name",
+		"counter lines_total as \"line-count\"\n",
+	},
 
-	{"declare dimensioned counter",
-		"counter foo by bar\n"},
+	{
+		"declare dimensioned counter",
+		"counter foo by bar\n",
+	},
 
-	{"declare multi-dimensioned counter",
-		"counter foo by bar, baz, quux\n"},
+	{
+		"declare multi-dimensioned counter",
+		"counter foo by bar, baz, quux\n",
+	},
 
-	{"declare hidden counter",
-		"hidden counter foo\n"},
+	{
+		"declare hidden counter",
+		"hidden counter foo\n",
+	},
 
-	{"declare gauge",
-		"gauge foo\n"},
+	{
+		"declare gauge",
+		"gauge foo\n",
+	},
 
-	{"declare timer",
-		"timer foo\n"},
+	{
+		"declare timer",
+		"timer foo\n",
+	},
 
-	{"declare text",
-		"text stringy\n"},
+	{
+		"declare text",
+		"text stringy\n",
+	},
 
-	{"declare histogram",
-		"histogram foo buckets 0, 1, 2\n"},
-	{"declare histogram float",
-		"histogram foo buckets 0, 0.01, 0.1, 1, 10\n"},
-	{"declare histogram by ",
-		"histogram foo by code buckets 0, 1, 2\n"},
-	{"declare histogram reversed syntax ",
-		"histogram foo buckets 0, 1, 2 by code\n"},
+	{
+		"declare histogram",
+		"histogram foo buckets 0, 1, 2\n",
+	},
+	{
+		"declare histogram float",
+		"histogram foo buckets 0, 0.01, 0.1, 1, 10\n",
+	},
+	{
+		"declare histogram by ",
+		"histogram foo by code buckets 0, 1, 2\n",
+	},
+	{
+		"declare histogram reversed syntax ",
+		"histogram foo buckets 0, 1, 2 by code\n",
+	},
 
-	{"simple pattern action",
-		"/foo/ {}\n"},
+	{
+		"simple pattern action",
+		"/foo/ {}\n",
+	},
 
-	{"increment counter",
+	{
+		"increment counter",
 		"counter lines_total\n" +
 			"/foo/ {\n" +
 			"  lines_total++\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"decrement counter",
+	{
+		"decrement counter",
 		`counter i
 /foo/ {
   i--
 }
-`},
+`,
+	},
 
-	{"regex match includes escaped slashes",
+	{
+		"regex match includes escaped slashes",
 		"counter foo\n" +
-			"/foo\\// { foo++\n}\n"},
+			"/foo\\// { foo++\n}\n",
+	},
 
-	{"numeric capture group reference",
+	{
+		"numeric capture group reference",
 		"/(foo)/ {\n" +
 			"  $1++\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"strptime and capref",
+	{
+		"strptime and capref",
 		"/(.*)/ {\n" +
 			"strptime($1, \"2006-01-02T15:04:05Z07:00\")\n" +
-			" }\n"},
+			" }\n",
+	},
 
-	{"named capture group reference",
+	{
+		"named capture group reference",
 		"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
 			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"nested match conditions",
+	{
+		"nested match conditions",
 		"counter foo\n" +
 			"counter bar\n" +
 			"/match(\\d+)/ {\n" +
@@ -102,9 +145,11 @@ var parserTests = []struct {
 			"    bar++\n" +
 			"    $1++\n" +
 			"  }\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"nested scope",
+	{
+		"nested scope",
 		"counter foo\n" +
 			"/fo(o)/ {\n" +
 			"  $1++\n" +
@@ -112,51 +157,67 @@ var parserTests = []struct {
 			"    $1 += $1\n" +
 			"    foo = $1\n" +
 			"  }\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"comment then code",
+	{
+		"comment then code",
 		"# %d [%p]\n" +
 			"/^(?P<date>\\d+\\/\\d+\\/\\d+ \\d+:\\d+:\\d+) \\[(?P<pid>\\d+)\\] / {\n" +
 			"  strptime($1, \"2006/01/02 15:04:05\")\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"assignment",
+	{
+		"assignment",
 		"counter variable\n" +
 			"/(?P<foo>.*)/ {\n" +
 			"variable = $foo\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"increment operator",
+	{
+		"increment operator",
 		"counter var\n" +
 			"/foo/ {\n" +
 			"  var++\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"incby operator",
+	{
+		"incby operator",
 		"counter var\n" +
-			"/foo/ {\n  var += 2\n}\n"},
+			"/foo/ {\n  var += 2\n}\n",
+	},
 
-	{"additive",
+	{
+		"additive",
 		"counter time_total\n" +
 			"/(?P<foo>.*)/ {\n" +
 			" time_total = timestamp() - time_total\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"multiplicative",
+	{
+		"multiplicative",
 		"counter a\n" +
 			"counter b\n" +
 			"   /foo/ {\n   a = a * b\n" +
 			"      a = a ** b\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"additive and mem storage",
+	{
+		"additive and mem storage",
 		"counter time_total\n" +
 			"counter variable by foo\n" +
 			"/(?P<foo>.*)/ {\n" +
 			"  time_total += timestamp() - variable[$foo]\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"conditional expressions",
+	{
+		"conditional expressions",
 		"counter foo\n" +
 			"/(?P<foo>.*)/ {\n" +
 			"  $foo > 0 {\n" +
@@ -177,43 +238,52 @@ var parserTests = []struct {
 			"  $foo != 0 {\n" +
 			"    foo += $foo\n" +
 			"  }\n" +
-			"}\n"},
+			"}\n",
+	},
 
-	{"decorator definition and invocation",
+	{
+		"decorator definition and invocation",
 		"def foo { next\n }\n" +
 			"@foo { }\n",
 	},
 
-	{"const regex",
+	{
+		"const regex",
 		"const X /foo/\n" +
 			"/foo / + X + / bar/ {\n" +
 			"}\n",
 	},
 
-	{"multiline regex",
+	{
+		"multiline regex",
 		"/foo / +\n" +
 			"/barrr/ {\n" +
 			"}\n",
 	},
 
-	{"len",
+	{
+		"len",
 		"/(?P<foo>foo)/ {\n" +
 			"len($foo) > 0 {\n" +
 			"}\n" +
 			"}\n",
 	},
 
-	{"def and next",
+	{
+		"def and next",
 		"def foobar {/(?P<date>.*)/ {" +
 			"  next" +
 			"}" +
 			"}",
 	},
 
-	{"const",
-		`const IP /\d+(\.\d+){3}/`},
+	{
+		"const",
+		`const IP /\d+(\.\d+){3}/`,
+	},
 
-	{"bitwise",
+	{
+		"bitwise",
 		`gauge a
 /foo(\d)/ {
   a = $1 & 7
@@ -222,55 +292,73 @@ var parserTests = []struct {
   a = $1 >> 20
   a = $1 ^ 15
   a = ~ 1
-}`},
+}`,
+	},
 
-	{"logical",
+	{
+		"logical",
 		`0 || 1 && 0 {
 }
 `,
 	},
 
-	{"floats",
+	{
+		"floats",
 		`gauge foo
 /foo/ {
 foo = 3.14
-}`},
+}`,
+	},
 
-	{"simple otherwise action",
-		"otherwise {}\n"},
+	{
+		"simple otherwise action",
+		"otherwise {}\n",
+	},
 
-	{"pattern action then otherwise action",
+	{
+		"pattern action then otherwise action",
 		`counter lines_total by type
 		/foo/ {
 			lines_total["foo"]++
 		}
 		otherwise {
 			lines_total["misc"] += 10
-		}`},
+		}`,
+	},
 
-	{"simple else clause",
-		"/foo/ {} else {}"},
+	{
+		"simple else clause",
+		"/foo/ {} else {}",
+	},
 
-	{"nested else clause",
-		"/foo/ { / bar/ {}  } else { /quux/ {} else {} }"},
+	{
+		"nested else clause",
+		"/foo/ { / bar/ {}  } else { /quux/ {} else {} }",
+	},
 
-	{"mod operator",
+	{
+		"mod operator",
 		`gauge a
 /foo/ {
   a = 3 % 1
-}`},
+}`,
+	},
 
-	{"delete",
+	{
+		"delete",
 		`counter foo by bar
 /foo/ {
   del foo[$1]
-}`},
+}`,
+	},
 
-	{"delete after",
+	{
+		"delete after",
 		`counter foo by bar
 /foo/ {
   del foo[$1] after 168h
-}`},
+}`,
+	},
 
 	{"getfilename", `
 getfilename()
@@ -393,59 +481,89 @@ type parserInvalidProgram struct {
 }
 
 var parserInvalidPrograms = []parserInvalidProgram{
-	{"unknown character",
+	{
+		"unknown character",
 		"?\n",
-		[]string{"unknown character:1:1: Unexpected input: '?'"}},
+		[]string{"unknown character:1:1: Unexpected input: '?'"},
+	},
 
-	{"unterminated regex",
+	{
+		"unterminated regex",
 		"/foo\n",
-		[]string{"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\"",
-			"unterminated regex:1:2-4: syntax error: unexpected end of file, expecting '/' to end regex"}},
+		[]string{
+			"unterminated regex:1:2-4: Unterminated regular expression: \"/foo\"",
+			"unterminated regex:1:2-4: syntax error: unexpected end of file, expecting '/' to end regex",
+		},
+	},
 
-	{"unterminated string",
+	{
+		"unterminated string",
 		" \"foo }\n",
-		[]string{"unterminated string:1:2-7: Unterminated quoted string: \"\\\"foo }\""}},
+		[]string{"unterminated string:1:2-7: Unterminated quoted string: \"\\\"foo }\""},
+	},
 
-	{"unterminated const regex",
+	{
+		"unterminated const regex",
 		"const X /(?P<foo>",
-		[]string{"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",
-			"unterminated const regex:1:10-17: syntax error: unexpected end of file, expecting '/' to end regex"}},
+		[]string{
+			"unterminated const regex:1:10-17: Unterminated regular expression: \"/(?P<foo>\"",
+			"unterminated const regex:1:10-17: syntax error: unexpected end of file, expecting '/' to end regex",
+		},
+	},
 
-	{"unbalanced {",
+	{
+		"unbalanced {",
 		"/foo/ {\n",
-		[]string{"unbalanced {:2:1: syntax error: unexpected end of file, expecting '}' to end block"}},
-	{"unbalanced else {",
+		[]string{"unbalanced {:2:1: syntax error: unexpected end of file, expecting '}' to end block"},
+	},
+	{
+		"unbalanced else {",
 		"/foo/ { } else {\n",
-		[]string{"unbalanced else {:2:1: syntax error: unexpected end of file, expecting '}' to end block"}},
-	{"unbalanced otherwise {",
+		[]string{"unbalanced else {:2:1: syntax error: unexpected end of file, expecting '}' to end block"},
+	},
+	{
+		"unbalanced otherwise {",
 		"otherwise {\n",
-		[]string{"unbalanced otherwise {:2:1: syntax error: unexpected end of file, expecting '}' to end block"}},
+		[]string{"unbalanced otherwise {:2:1: syntax error: unexpected end of file, expecting '}' to end block"},
+	},
 
-	{"index of non-terminal 1",
+	{
+		"index of non-terminal 1",
 		`// {
 	foo++[$1]++
 	}`,
-		[]string{"index of non-terminal 1:2:7: syntax error: unexpected indexing of an expression"}},
-	{"index of non-terminal 2",
+		[]string{"index of non-terminal 1:2:7: syntax error: unexpected indexing of an expression"},
+	},
+	{
+		"index of non-terminal 2",
 		`// {
 	0[$1]++
 	}`,
-		[]string{"index of non-terminal 2:2:3: syntax error: unexpected indexing of an expression"}},
+		[]string{"index of non-terminal 2:2:3: syntax error: unexpected indexing of an expression"},
+	},
 
-	{"statement with no effect",
+	{
+		"statement with no effect",
 		`/(\d)foo/ {
  timestamp() - $1
-}`, []string{"statement with no effect:3:18: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"}},
+}`,
+		[]string{"statement with no effect:3:18: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"},
+	},
 
-	{"pattern without block",
+	{
+		"pattern without block",
 		`/(?P<a>.)/
-`, []string{"pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"}},
+`,
+		[]string{"pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"},
+	},
 
-	{"paired pattern without block",
+	{
+		"paired pattern without block",
 		`/(?P<a>.)/
 	/(?P<b>.)/ {}
 	`,
-		[]string{"paired pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"}},
+		[]string{"paired pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"},
+	},
 }
 
 func TestParseInvalidPrograms(t *testing.T) {

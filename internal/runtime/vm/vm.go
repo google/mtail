@@ -71,7 +71,7 @@ type VM struct {
 
 	HardCrash bool // User settable flag to make the VM crash instead of recover on panic.
 
-	runtimeErrorMu sync.RWMutex //protects runtimeError
+	runtimeErrorMu sync.RWMutex // protects runtimeError
 	runtimeError   string       // records the last runtime error from errorf()
 
 	logRuntimeErrors     bool           // Emit runtime errors to the log.
@@ -714,29 +714,29 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 	case code.Dload:
 		// Load a datum from metric at TOS onto stack
-		//fmt.Printf("Stack: %v\n", t.stack)
+		// fmt.Printf("Stack: %v\n", t.stack)
 		m := t.Pop().(*metrics.Metric)
-		//fmt.Printf("Metric: %v\n", m)
+		// fmt.Printf("Metric: %v\n", m)
 		index := i.Operand.(int)
 		keys := make([]string, index)
-		//fmt.Printf("keys: %v\n", keys)
+		// fmt.Printf("keys: %v\n", keys)
 		for a := index - 1; a >= 0; a-- {
 			s, err := t.PopString()
 			if err != nil {
 				v.errorf("%+v", err)
 				return
 			}
-			//fmt.Printf("s: %v\n", s)
+			// fmt.Printf("s: %v\n", s)
 			keys[a] = s
-			//fmt.Printf("Keys: %v\n", keys)
+			// fmt.Printf("Keys: %v\n", keys)
 		}
-		//fmt.Printf("Keys: %v\n", keys)
+		// fmt.Printf("Keys: %v\n", keys)
 		d, err := m.GetDatum(keys...)
 		if err != nil {
 			v.errorf("dload (GetDatum) failed: %s", err)
 			return
 		}
-		//fmt.Printf("Found %v\n", d)
+		// fmt.Printf("Found %v\n", d)
 		t.Push(d)
 
 	case code.Iget, code.Fget, code.Sget:

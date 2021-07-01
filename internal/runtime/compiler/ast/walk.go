@@ -28,7 +28,6 @@ func walknodelist(v Visitor, list []Node) []Node {
 
 // Walk traverses (walks) an AST node with the provided Visitor v.
 func Walk(v Visitor, node Node) Node {
-
 	glog.V(2).Infof("About to VisitBefore node at %s", node.Pos())
 	// Returning nil from VisitBefore signals to Walk that the Visitor has
 	// handled the children of this node.  VisitAfter will not be called.

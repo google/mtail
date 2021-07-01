@@ -15,9 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	metricExportTotal = expvar.NewInt("metric_export_total")
-)
+var metricExportTotal = expvar.NewInt("metric_export_total")
 
 func noHyphens(s string) string {
 	return strings.Replace(s, "-", "_", -1)

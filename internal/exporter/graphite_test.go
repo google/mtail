@@ -22,11 +22,13 @@ var handleGraphiteTests = []struct {
 	metrics  []*metrics.Metric
 	expected string
 }{
-	{"empty",
+	{
+		"empty",
 		[]*metrics.Metric{},
 		"",
 	},
-	{"single",
+	{
+		"single",
 		[]*metrics.Metric{
 			{
 				Name:        "foo",

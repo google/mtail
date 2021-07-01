@@ -89,7 +89,8 @@ func TestMetricToCollectd(t *testing.T) {
 	r = FakeSocketWrite(metricToCollectd, dimensionedMetric)
 	expected = []string{
 		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-quux\" interval=60 1343124840:37\n",
-		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n"}
+		"PUTVAL \"gunstar/mtail-prog/gauge-bar-label-snuh\" interval=60 1343124840:37\n",
+	}
 	testutil.ExpectNoDiff(t, expected, r)
 
 	timingMetric := metrics.NewMetric("foo", "prog", metrics.Timer, metrics.Int)
@@ -129,7 +130,8 @@ func TestMetricToGraphite(t *testing.T) {
 	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
 	expected = []string{
 		"prog.bar.host.quux_com 37 1343124840\n",
-		"prog.bar.host.snuh_teevee 37 1343124840\n"}
+		"prog.bar.host.snuh_teevee 37 1343124840\n",
+	}
 	testutil.ExpectNoDiff(t, expected, r)
 
 	histogramMetric := metrics.NewMetric("hist", "prog", metrics.Histogram, metrics.Buckets, "xxx")
@@ -150,14 +152,16 @@ func TestMetricToGraphite(t *testing.T) {
 		"prog.hist.xxx.bar.bin_10 2 1343124840",
 		"prog.hist.xxx.bar.bin_20 3 1343124840",
 		"prog.hist.xxx.bar.bin_inf 1 1343124840",
-		"prog.hist.xxx.bar.count 6 1343124840"}
+		"prog.hist.xxx.bar.count 6 1343124840",
+	}
 	testutil.ExpectNoDiff(t, expected, r)
 
 	*graphitePrefix = prefix
 	r = FakeSocketWrite(metricToGraphite, dimensionedMetric)
 	expected = []string{
 		"prefixprog.bar.host.quux_com 37 1343124840\n",
-		"prefixprog.bar.host.snuh_teevee 37 1343124840\n"}
+		"prefixprog.bar.host.snuh_teevee 37 1343124840\n",
+	}
 	testutil.ExpectNoDiff(t, expected, r)
 }
 
@@ -185,7 +189,8 @@ func TestMetricToStatsd(t *testing.T) {
 	r = FakeSocketWrite(metricToStatsd, dimensionedMetric)
 	expected = []string{
 		"prog.bar.l.quux:37|g",
-		"prog.bar.l.snuh:42|g"}
+		"prog.bar.l.snuh:42|g",
+	}
 	if !reflect.DeepEqual(expected, r) {
 		t.Errorf("String didn't match:\n\texpected: %v\n\treceived: %v", expected, r)
 	}

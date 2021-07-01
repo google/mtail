@@ -95,7 +95,6 @@ func (t *testWaker) Wake() (w <-chan struct{}) {
 			return
 		case t.wakeeReady <- struct{}{}:
 		}
-
 	}()
 	return
 }

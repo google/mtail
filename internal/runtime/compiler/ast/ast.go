@@ -235,6 +235,7 @@ type StringLit struct {
 func (n *StringLit) Pos() *position.Position {
 	return &n.P
 }
+
 func (n *StringLit) Type() types.Type {
 	return types.String
 }
@@ -247,6 +248,7 @@ type IntLit struct {
 func (n *IntLit) Pos() *position.Position {
 	return &n.P
 }
+
 func (n *IntLit) Type() types.Type {
 	return types.Int
 }
@@ -259,6 +261,7 @@ type FloatLit struct {
 func (n *FloatLit) Pos() *position.Position {
 	return &n.P
 }
+
 func (n *FloatLit) Type() types.Type {
 	return types.Float
 }

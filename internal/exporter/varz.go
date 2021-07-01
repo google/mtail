@@ -13,9 +13,7 @@ import (
 	"github.com/google/mtail/internal/metrics"
 )
 
-var (
-	exportVarzTotal = expvar.NewInt("exporter_varz_total")
-)
+var exportVarzTotal = expvar.NewInt("exporter_varz_total")
 
 const varzFormat = "%s{%s} %s\n"
 

@@ -23,11 +23,13 @@ var handleJSONTests = []struct {
 	metrics  []*metrics.Metric
 	expected string
 }{
-	{"empty",
+	{
+		"empty",
 		[]*metrics.Metric{},
 		"[]",
 	},
-	{"single",
+	{
+		"single",
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -53,7 +55,8 @@ var handleJSONTests = []struct {
   }
 ]`,
 	},
-	{"dimensioned",
+	{
+		"dimensioned",
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -88,7 +91,8 @@ var handleJSONTests = []struct {
   }
 ]`,
 	},
-	{"histogram",
+	{
+		"histogram",
 		[]*metrics.Metric{
 			{
 				Name:        "foo",

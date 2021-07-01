@@ -164,7 +164,8 @@ var OneShot = &niladicOption{
 		m.tOpts = append(m.tOpts, tailer.OneShot)
 		m.oneShot = true
 		return nil
-	}}
+	},
+}
 
 // CompileOnly sets compile-only mode in the Server.
 var CompileOnly = &niladicOption{
@@ -172,63 +173,72 @@ var CompileOnly = &niladicOption{
 		m.rOpts = append(m.rOpts, runtime.CompileOnly())
 		m.compileOnly = true
 		return nil
-	}}
+	},
+}
 
 // DumpAst instructs the Server's compiler to print the AST after parsing.
 var DumpAst = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.DumpAst())
 		return nil
-	}}
+	},
+}
 
 // DumpAstTypes instructs the Server's copmiler to print the AST after type checking.
 var DumpAstTypes = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.DumpAstTypes())
 		return nil
-	}}
+	},
+}
 
 // DumpBytecode instructs the Server's compiuler to print the program bytecode after code generation.
 var DumpBytecode = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.DumpBytecode())
 		return nil
-	}}
+	},
+}
 
 // SyslogUseCurrentYear instructs the Server to use the current year for year-less log timestamp during parsing.
 var SyslogUseCurrentYear = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.SyslogUseCurrentYear())
 		return nil
-	}}
+	},
+}
 
 // OmitProgLabel sets the Server to not put the program name as a label in exported metrics.
 var OmitProgLabel = &niladicOption{
 	func(m *Server) error {
 		m.eOpts = append(m.eOpts, exporter.OmitProgLabel())
 		return nil
-	}}
+	},
+}
 
 // OmitMetricSource sets the Server to not link created metrics to their source program.
 var OmitMetricSource = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.OmitMetricSource())
 		return nil
-	}}
+	},
+}
 
 // EmitMetricTimestamp tells the Server to export the metric's timestamp.
 var EmitMetricTimestamp = &niladicOption{
 	func(m *Server) error {
 		m.eOpts = append(m.eOpts, exporter.EmitTimestamp())
 		return nil
-	}}
+	},
+}
 
 // LogRuntimeErrors instructs the VM to emit runtime errors to the log.
 var LogRuntimeErrors = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.LogRuntimeErrors())
 		return nil
-	}}
+	},
+}
 
 // JaegerReporter creates a new jaeger reporter that sends to the given Jaeger endpoint address.
 type JaegerReporter string

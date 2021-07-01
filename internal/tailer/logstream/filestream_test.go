@@ -48,7 +48,6 @@ func TestFileStreamRead(t *testing.T) {
 	}
 	cancel()
 	wg.Wait()
-
 }
 
 func TestFileStreamURL(t *testing.T) {
@@ -82,7 +81,6 @@ func TestFileStreamURL(t *testing.T) {
 	}
 	cancel()
 	wg.Wait()
-
 }
 
 func TestFileStreamRotation(t *testing.T) {

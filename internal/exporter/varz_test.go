@@ -22,11 +22,13 @@ var handleVarzTests = []struct {
 	metrics  []*metrics.Metric
 	expected string
 }{
-	{"empty",
+	{
+		"empty",
 		[]*metrics.Metric{},
 		"",
 	},
-	{"single",
+	{
+		"single",
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -38,7 +40,8 @@ var handleVarzTests = []struct {
 		`foo{prog=test,instance=gunstar} 1
 `,
 	},
-	{"dimensioned",
+	{
+		"dimensioned",
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -51,7 +54,8 @@ var handleVarzTests = []struct {
 		`foo{a=1,b=2,prog=test,instance=gunstar} 1
 `,
 	},
-	{"text",
+	{
+		"text",
 		[]*metrics.Metric{
 			{
 				Name:        "foo",

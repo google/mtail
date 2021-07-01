@@ -51,7 +51,6 @@ func Equals(t1, t2 Type) bool {
 		return true
 	}
 	return true
-
 }
 
 var (
@@ -95,7 +94,6 @@ func (t *Variable) String() string {
 		return t.Instance.String()
 	}
 	return fmt.Sprintf("typeVar%d", t.ID)
-
 }
 
 // SetInstance sets the exemplar instance of this TypeVariable, during

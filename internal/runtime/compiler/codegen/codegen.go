@@ -367,23 +367,37 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 }
 
 var typedOperators = map[int]map[types.Type]code.Opcode{
-	parser.PLUS: {types.Int: code.Iadd,
+	parser.PLUS: {
+		types.Int:     code.Iadd,
 		types.Float:   code.Fadd,
 		types.String:  code.Cat,
-		types.Pattern: code.Cat},
-	parser.MINUS: {types.Int: code.Isub,
-		types.Float: code.Fsub},
-	parser.MUL: {types.Int: code.Imul,
-		types.Float: code.Fmul},
-	parser.DIV: {types.Int: code.Idiv,
-		types.Float: code.Fdiv},
-	parser.MOD: {types.Int: code.Imod,
-		types.Float: code.Fmod},
-	parser.POW: {types.Int: code.Ipow,
-		types.Float: code.Fpow},
-	parser.ASSIGN: {types.Int: code.Iset,
+		types.Pattern: code.Cat,
+	},
+	parser.MINUS: {
+		types.Int:   code.Isub,
+		types.Float: code.Fsub,
+	},
+	parser.MUL: {
+		types.Int:   code.Imul,
+		types.Float: code.Fmul,
+	},
+	parser.DIV: {
+		types.Int:   code.Idiv,
+		types.Float: code.Fdiv,
+	},
+	parser.MOD: {
+		types.Int:   code.Imod,
+		types.Float: code.Fmod,
+	},
+	parser.POW: {
+		types.Int:   code.Ipow,
+		types.Float: code.Fpow,
+	},
+	parser.ASSIGN: {
+		types.Int:    code.Iset,
 		types.Float:  code.Fset,
-		types.String: code.Sset},
+		types.String: code.Sset,
+	},
 }
 
 func getOpcodeForType(op int, opT types.Type) (code.Opcode, error) {

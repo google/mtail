@@ -256,7 +256,7 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	}
 	ta.logstreamsMu.RUnlock()
 	ta.logstreamsMu.Lock()
-	//ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 + time.Minute)
+	// ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 + time.Minute)
 	ta.logstreamsMu.Unlock()
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
@@ -267,7 +267,7 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	}
 	ta.logstreamsMu.RUnlock()
 	ta.logstreamsMu.Lock()
-	//ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 - time.Minute)
+	// ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 - time.Minute)
 	ta.logstreamsMu.Unlock()
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)

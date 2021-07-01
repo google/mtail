@@ -19,16 +19,21 @@ type lexerTest struct {
 
 var lexerTests = []lexerTest{
 	{"empty", "", []Token{
-		{EOF, "", position.Position{"empty", 0, 0, 0}}}},
+		{EOF, "", position.Position{"empty", 0, 0, 0}},
+	}},
 	{"spaces", " \t", []Token{
-		{EOF, "", position.Position{"spaces", 0, 2, 2}}}},
+		{EOF, "", position.Position{"spaces", 0, 2, 2}},
+	}},
 	{"newlines", "\n", []Token{
 		{NL, "\n", position.Position{"newlines", 1, 0, -1}},
-		{EOF, "", position.Position{"newlines", 1, 0, 0}}}},
+		{EOF, "", position.Position{"newlines", 1, 0, 0}},
+	}},
 	{"comment", "# comment", []Token{
-		{EOF, "", position.Position{"comment", 0, 9, 9}}}},
+		{EOF, "", position.Position{"comment", 0, 9, 9}},
+	}},
 	{"comment not at col 1", "  # comment", []Token{
-		{EOF, "", position.Position{"comment not at col 1", 0, 11, 11}}}},
+		{EOF, "", position.Position{"comment not at col 1", 0, 11, 11}},
+	}},
 	{"punctuation", "{}()[],", []Token{
 		{LCURLY, "{", position.Position{"punctuation", 0, 0, 0}},
 		{RCURLY, "}", position.Position{"punctuation", 0, 1, 1}},
@@ -37,7 +42,8 @@ var lexerTests = []lexerTest{
 		{LSQUARE, "[", position.Position{"punctuation", 0, 4, 4}},
 		{RSQUARE, "]", position.Position{"punctuation", 0, 5, 5}},
 		{COMMA, ",", position.Position{"punctuation", 0, 6, 6}},
-		{EOF, "", position.Position{"punctuation", 0, 7, 7}}}},
+		{EOF, "", position.Position{"punctuation", 0, 7, 7}},
+	}},
 	{"operators", "- + = ++ += < > <= >= == != * / << >> & | ^ ~ ** % || && =~ !~ --", []Token{
 		{MINUS, "-", position.Position{"operators", 0, 0, 0}},
 		{PLUS, "+", position.Position{"operators", 0, 2, 2}},
@@ -65,9 +71,12 @@ var lexerTests = []lexerTest{
 		{MATCH, "=~", position.Position{"operators", 0, 57, 58}},
 		{NOT_MATCH, "!~", position.Position{"operators", 0, 60, 61}},
 		{DEC, "--", position.Position{"operators", 0, 63, 64}},
-		{EOF, "", position.Position{"operators", 0, 65, 65}}}},
-	{"keywords",
-		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\nafter\nstop\nhistogram\nbuckets\n", []Token{
+		{EOF, "", position.Position{"operators", 0, 65, 65}},
+	}},
+	{
+		"keywords",
+		"counter\ngauge\nas\nby\nhidden\ndef\nnext\nconst\ntimer\notherwise\nelse\ndel\ntext\nafter\nstop\nhistogram\nbuckets\n",
+		[]Token{
 			{COUNTER, "counter", position.Position{"keywords", 0, 0, 6}},
 			{NL, "\n", position.Position{"keywords", 1, 7, -1}},
 			{GAUGE, "gauge", position.Position{"keywords", 1, 0, 4}},
@@ -102,9 +111,13 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position.Position{"keywords", 16, 9, -1}},
 			{BUCKETS, "buckets", position.Position{"keywords", 16, 0, 6}},
 			{NL, "\n", position.Position{"keywords", 17, 7, -1}},
-			{EOF, "", position.Position{"keywords", 17, 0, 0}}}},
-	{"builtins",
-		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\nsubst\n", []Token{
+			{EOF, "", position.Position{"keywords", 17, 0, 0}},
+		},
+	},
+	{
+		"builtins",
+		"strptime\ntimestamp\ntolower\nlen\nstrtol\nsettime\ngetfilename\nint\nbool\nfloat\nstring\nsubst\n",
+		[]Token{
 			{BUILTIN, "strptime", position.Position{"builtins", 0, 0, 7}},
 			{NL, "\n", position.Position{"builtins", 1, 8, -1}},
 			{BUILTIN, "timestamp", position.Position{"builtins", 1, 0, 8}},
@@ -129,7 +142,9 @@ var lexerTests = []lexerTest{
 			{NL, "\n", position.Position{"builtins", 11, 6, -1}},
 			{BUILTIN, "subst", position.Position{"builtins", 11, 0, 4}},
 			{NL, "\n", position.Position{"builtins", 12, 5, -1}},
-			{EOF, "", position.Position{"builtins", 12, 0, 0}}}},
+			{EOF, "", position.Position{"builtins", 12, 0, 0}},
+		},
+	},
 	{"numbers", "1 23 3.14 1.61.1 -1 -1.0 1h 0d 3d -1.5h 15m 24h0m0s 1e3 1e-3 .11 123.456e7", []Token{
 		{INTLITERAL, "1", position.Position{"numbers", 0, 0, 0}},
 		{INTLITERAL, "23", position.Position{"numbers", 0, 2, 3}},
@@ -157,47 +172,59 @@ var lexerTests = []lexerTest{
 		{NL, "\n", position.Position{"identifier", 1, 8, -1}},
 		{ID, "quux", position.Position{"identifier", 1, 0, 3}},
 		{ID, "lines_total", position.Position{"identifier", 1, 5, 15}},
-		{EOF, "", position.Position{"identifier", 1, 16, 16}}}},
+		{EOF, "", position.Position{"identifier", 1, 16, 16}},
+	}},
 	{"regex", "/asdf/", []Token{
 		{DIV, "/", position.Position{"regex", 0, 0, 0}},
 		{REGEX, "asdf", position.Position{"regex", 0, 1, 4}},
 		{DIV, "/", position.Position{"regex", 0, 5, 5}},
-		{EOF, "", position.Position{"regex", 0, 6, 6}}}},
+		{EOF, "", position.Position{"regex", 0, 6, 6}},
+	}},
 	{"regex with escape", `/asdf\//`, []Token{
 		{DIV, "/", position.Position{"regex with escape", 0, 0, 0}},
 		{REGEX, `asdf/`, position.Position{"regex with escape", 0, 1, 6}},
 		{DIV, "/", position.Position{"regex with escape", 0, 7, 7}},
-		{EOF, "", position.Position{"regex with escape", 0, 8, 8}}}},
+		{EOF, "", position.Position{"regex with escape", 0, 8, 8}},
+	}},
 	{"regex with escape and special char", `/foo\d\//`, []Token{
 		{DIV, "/", position.Position{"regex with escape and special char", 0, 0, 0}},
 		{REGEX, `foo\d/`, position.Position{"regex with escape and special char", 0, 1, 7}},
 		{DIV, "/", position.Position{"regex with escape and special char", 0, 8, 8}},
-		{EOF, "", position.Position{"regex with escape and special char", 0, 9, 9}}}},
+		{EOF, "", position.Position{"regex with escape and special char", 0, 9, 9}},
+	}},
 	{"capref", "$foo $1", []Token{
 		{CAPREF_NAMED, "foo", position.Position{"capref", 0, 0, 3}},
 		{CAPREF, "1", position.Position{"capref", 0, 5, 6}},
-		{EOF, "", position.Position{"capref", 0, 7, 7}}}},
+		{EOF, "", position.Position{"capref", 0, 7, 7}},
+	}},
 	{"numerical capref", "$1", []Token{
 		{CAPREF, "1", position.Position{"numerical capref", 0, 0, 1}},
-		{EOF, "", position.Position{"numerical capref", 0, 2, 2}}}},
+		{EOF, "", position.Position{"numerical capref", 0, 2, 2}},
+	}},
 	{"capref with trailing punc", "$foo,", []Token{
 		{CAPREF_NAMED, "foo", position.Position{"capref with trailing punc", 0, 0, 3}},
 		{COMMA, ",", position.Position{"capref with trailing punc", 0, 4, 4}},
-		{EOF, "", position.Position{"capref with trailing punc", 0, 5, 5}}}},
+		{EOF, "", position.Position{"capref with trailing punc", 0, 5, 5}},
+	}},
 	{"quoted string", `"asdf"`, []Token{
 		{STRING, `asdf`, position.Position{"quoted string", 0, 0, 5}},
-		{EOF, "", position.Position{"quoted string", 0, 6, 6}}}},
+		{EOF, "", position.Position{"quoted string", 0, 6, 6}},
+	}},
 	{"escaped quote in quoted string", `"\""`, []Token{
 		{STRING, `"`, position.Position{"escaped quote in quoted string", 0, 0, 3}},
-		{EOF, "", position.Position{"escaped quote in quoted string", 0, 4, 4}}}},
+		{EOF, "", position.Position{"escaped quote in quoted string", 0, 4, 4}},
+	}},
 	{"decorator", `@foo`, []Token{
 		{DECO, "foo", position.Position{"decorator", 0, 0, 3}},
-		{EOF, "", position.Position{"decorator", 0, 4, 4}}}},
-	{"large program",
+		{EOF, "", position.Position{"decorator", 0, 4, 4}},
+	}},
+	{
+		"large program",
 		"/(?P<date>[[:digit:]-\\/ ])/ {\n" +
 			"  strptime($date, \"%Y/%m/%d %H:%M:%S\")\n" +
 			"  foo++\n" +
-			"}", []Token{
+			"}",
+		[]Token{
 			{DIV, "/", position.Position{"large program", 0, 0, 0}},
 			{REGEX, "(?P<date>[[:digit:]-/ ])", position.Position{"large program", 0, 1, 25}},
 			{DIV, "/", position.Position{"large program", 0, 26, 26}},
@@ -214,26 +241,35 @@ var lexerTests = []lexerTest{
 			{INC, "++", position.Position{"large program", 2, 5, 6}},
 			{NL, "\n", position.Position{"large program", 3, 7, -1}},
 			{RCURLY, "}", position.Position{"large program", 3, 0, 0}},
-			{EOF, "", position.Position{"large program", 3, 1, 1}}}},
-	{"linecount",
+			{EOF, "", position.Position{"large program", 3, 1, 1}},
+		},
+	},
+	{
+		"linecount",
 		"# comment\n" +
 			"# blank line\n" +
 			"\n" +
-			"foo", []Token{
+			"foo",
+		[]Token{
 			{NL, "\n", position.Position{"linecount", 3, 12, -1}},
 			{ID, "foo", position.Position{"linecount", 3, 0, 2}},
-			{EOF, "", position.Position{"linecount", 3, 3, 3}}}},
+			{EOF, "", position.Position{"linecount", 3, 3, 3}},
+		},
+	},
 	// errors
 	{"unexpected char", "?", []Token{
 		{INVALID, "Unexpected input: '?'", position.Position{"unexpected char", 0, 0, 0}},
-		{EOF, "", position.Position{"unexpected char", 0, 1, 1}}}},
+		{EOF, "", position.Position{"unexpected char", 0, 1, 1}},
+	}},
 	{"unterminated regex", "/foo\n", []Token{
 		{DIV, "/", position.Position{"unterminated regex", 0, 0, 0}},
 		{INVALID, "Unterminated regular expression: \"/foo\"", position.Position{"unterminated regex", 0, 1, 3}},
-		{EOF, "", position.Position{"unterminated regex", 0, 4, 4}}}},
+		{EOF, "", position.Position{"unterminated regex", 0, 4, 4}},
+	}},
 	{"unterminated quoted string", "\"foo\n", []Token{
 		{INVALID, "Unterminated quoted string: \"\\\"foo\"", position.Position{"unterminated quoted string", 0, 0, 3}},
-		{EOF, "", position.Position{"unterminated quoted string", 0, 4, 4}}}},
+		{EOF, "", position.Position{"unterminated quoted string", 0, 4, 4}},
+	}},
 }
 
 // collect gathers the emitted items into a slice.

@@ -143,9 +143,9 @@ func TestFindLabelValueOrNil(t *testing.T) {
 }
 
 func TestAppendLabelValue(t *testing.T) {
-	m := NewMetric("foo", "prog", Counter, Int,"bar")
+	m := NewMetric("foo", "prog", Counter, Int, "bar")
 	l := []string{"test"}
-	d0 := datum.MakeInt(66,time.Unix(0, 0))
+	d0 := datum.MakeInt(66, time.Unix(0, 0))
 	lv := &LabelValue{Labels: l, Value: d0}
 	err := m.AppendLabelValue(lv)
 	if err != nil {

@@ -362,7 +362,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			err := types.Unify(wantType, gotType)
 			if err != nil {
 				// Commented because these type mismatch errors appear to be unhelpful.
-				//c.errors.Add(n.Pos(), err.Error())
+				// c.errors.Add(n.Pos(), err.Error())
 				n.SetType(types.Error)
 				return n
 			}
@@ -421,7 +421,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			err := types.Unify(wantType, gotType)
 			if err != nil {
 				// Commented because these type mismatch errors appear to be unhelpful.
-				//c.errors.Add(n.Pos(), err.Error())
+				// c.errors.Add(n.Pos(), err.Error())
 				n.SetType(types.Error)
 				return n
 			}
@@ -450,7 +450,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			err := types.Unify(rType, t)
 			if err != nil {
 				// Commented because these type mismatch errors appear to be unhelpful.
-				//c.errors.Add(n.Pos(), err.Error())
+				// c.errors.Add(n.Pos(), err.Error())
 				n.SetType(types.Error)
 				return n
 			}

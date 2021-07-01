@@ -200,7 +200,6 @@ func (e *Exporter) PushMetrics() {
 		}
 		err = conn.Close()
 		if err != nil {
-
 			glog.Infof("connection close failed: %s", err)
 		}
 	}

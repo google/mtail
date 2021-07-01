@@ -12,8 +12,10 @@ import (
 	"testing/quick"
 )
 
-const maxItemsLog2 = 10
-const maxLabelsLog2 = 13
+const (
+	maxItemsLog2  = 10
+	maxLabelsLog2 = 13
+)
 
 // newRandMetric makes a new, randomly filled Metric.
 func newRandMetric(tb testing.TB, rand *rand.Rand, i int) *Metric {
@@ -126,18 +128,18 @@ func BenchmarkStore(b *testing.B) {
 }
 
 func newRandLabels(tb testing.TB, rand *rand.Rand, i int) []string {
-	lv := make([]string,i)
-	for  j := 0; j < i; j++  {
+	lv := make([]string, i)
+	for j := 0; j < i; j++ {
 		val, ok := quick.Value(reflect.TypeOf(""), rand)
 		if !ok {
-			tb.Fatalf("%d-%d: can't make a label", i,j)
+			tb.Fatalf("%d-%d: can't make a label", i, j)
 		}
 		lv[j] = val.Interface().(string)
 	}
 	return lv
 }
 
-func fillLabel(b *testing.B, rand *rand.Rand, items,keys int, lvs *[][]string, _ *Metric) {
+func fillLabel(b *testing.B, rand *rand.Rand, items, keys int, lvs *[][]string, _ *Metric) {
 	for i := 0; i < items; i++ {
 		(*lvs)[i] = newRandLabels(b, rand, keys)
 	}
@@ -152,7 +154,7 @@ func getDatum(b *testing.B, items int, lvs *[][]string, m *Metric) {
 
 type metric_bench struct {
 	name  string
-	setup func(b *testing.B, rand *rand.Rand, items,keys int, lvs *[][]string, m *Metric)
+	setup func(b *testing.B, rand *rand.Rand, items, keys int, lvs *[][]string, m *Metric)
 	b     func(b *testing.B, items int, lv *[][]string, m *Metric)
 }
 
@@ -172,15 +174,15 @@ func BenchmarkMetric(b *testing.B) {
 			if parallel {
 				parallelStr = "Parallel"
 			}
-			
+
 			for i := 1; i <= maxLabelsLog2; i++ {
 				items := int(math.Pow(2, float64(i)))
-				lv := newRandLabels(b,rand,maxKeys)
-				b.Run(fmt.Sprintf("%s%s-%d", bench.name,parallelStr,items), func(b *testing.B) {
+				lv := newRandLabels(b, rand, maxKeys)
+				b.Run(fmt.Sprintf("%s%s-%d", bench.name, parallelStr, items), func(b *testing.B) {
 					m := NewMetric("test", "prog", Counter, Int, lv...)
-					lvs := make([][]string,items)
+					lvs := make([][]string, items)
 					if bench.setup != nil {
-						bench.setup(b, rand, items,maxKeys, &lvs, m)
+						bench.setup(b, rand, items, maxKeys, &lvs, m)
 					}
 					b.ResetTimer()
 					if parallel {
@@ -194,6 +196,6 @@ func BenchmarkMetric(b *testing.B) {
 					}
 				})
 			}
-		}	
+		}
 	}
 }

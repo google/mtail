@@ -19,10 +19,8 @@ import (
 	"github.com/google/mtail/internal/waker"
 )
 
-var (
-	// fileTruncates counts the truncations of a file stream.
-	fileTruncates = expvar.NewMap("file_truncates_total")
-)
+// fileTruncates counts the truncations of a file stream.
+var fileTruncates = expvar.NewMap("file_truncates_total")
 
 // fileStream streams log lines from a regular file on the file system.  These
 // log files are appended to by another process, and are either rotated or

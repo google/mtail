@@ -24,7 +24,8 @@ var vmTests = []struct {
 	errs    int64
 	metrics metrics.MetricSlice
 }{
-	{"single-dash-parseint",
+	{
+		"single-dash-parseint",
 		`counter c
 
 /(?P<x>-)/ {
@@ -52,7 +53,8 @@ var vmTests = []struct {
 			},
 		},
 	},
-	{"histogram",
+	{
+		"histogram",
 		`histogram hist1 buckets 1, 2, 4, 8
 histogram hist2 by code buckets 0, 1, 2, 4, 8
 histogram hist3 by f buckets -1, 0, 1
@@ -84,8 +86,10 @@ b 3
 							Buckets: []datum.BucketCount{
 								{Range: datum.Range{Min: 0, Max: 1}},
 								{Range: datum.Range{Min: 1, Max: 2}},
-								{Range: datum.Range{Min: 2, Max: 4},
-									Count: 3},
+								{
+									Range: datum.Range{Min: 2, Max: 4},
+									Count: 3,
+								},
 								{Range: datum.Range{Min: 4, Max: 8}},
 								{Range: datum.Range{Min: 8, Max: math.Inf(+1)}},
 							},
@@ -109,8 +113,10 @@ b 3
 							Buckets: []datum.BucketCount{
 								{Range: datum.Range{Min: 0, Max: 1}},
 								{Range: datum.Range{Min: 1, Max: 2}},
-								{Range: datum.Range{Min: 2, Max: 4},
-									Count: 3},
+								{
+									Range: datum.Range{Min: 2, Max: 4},
+									Count: 3,
+								},
 								{Range: datum.Range{Min: 4, Max: 8}},
 								{Range: datum.Range{Min: 8, Max: math.Inf(+1)}},
 							},
@@ -135,8 +141,10 @@ b 3
 							Buckets: []datum.BucketCount{
 								{Range: datum.Range{Min: -1, Max: 0}},
 								{Range: datum.Range{Min: 0, Max: 1}},
-								{Range: datum.Range{Min: 1, Max: math.Inf(+1)},
-									Count: 3},
+								{
+									Range: datum.Range{Min: 1, Max: math.Inf(+1)},
+									Count: 3,
+								},
 							},
 							Count: 3,
 							Sum:   9,
@@ -147,7 +155,8 @@ b 3
 			},
 		},
 	},
-	{"numbers",
+	{
+		"numbers",
 		`counter error_log_count
 
 /^/ +
@@ -180,7 +189,8 @@ b 3
 			},
 		},
 	},
-	{"parse a hyphen",
+	{
+		"parse a hyphen",
 		`counter total
 /^[a-z]+ ((?P<response_size>\d+)|-)$/ {
   $response_size > 0 {
@@ -208,7 +218,8 @@ test -
 			},
 		},
 	},
-	{"parse around a hyphen",
+	{
+		"parse around a hyphen",
 		`counter total
 /^[a-z]+ ((?P<response_size>\d+)|-)$/ {
   $1 != "-" {
@@ -348,7 +359,8 @@ Oct
 			},
 		},
 	},
-	{"else",
+	{
+		"else",
 		`counter yes
 counter maybe
 counter no
@@ -408,7 +420,8 @@ counter no
 			},
 		},
 	},
-	{"otherwise",
+	{
+		"otherwise",
 		`counter yes
 counter maybe
 counter no
@@ -470,7 +483,8 @@ otherwise {
 			},
 		},
 	},
-	{"types",
+	{
+		"types",
 		`gauge should_be_int
 gauge should_be_float
 counter neg
@@ -582,7 +596,8 @@ counter i
 			},
 		},
 	},
-	{"filename",
+	{
+		"filename",
 		`counter filename_lines by filename
 
 // {
@@ -612,7 +627,8 @@ counter i
 			},
 		},
 	},
-	{"logical operators",
+	{
+		"logical operators",
 		`counter foo
 counter bar
 
@@ -663,7 +679,8 @@ quux
 			},
 		},
 	},
-	{"strcat",
+	{
+		"strcat",
 		`counter f by s
 
 /(.*), (.*)/ {
@@ -693,7 +710,8 @@ c, d
 			},
 		},
 	},
-	{"typed-comparison",
+	{
+		"typed-comparison",
 		`counter t by le
 counter t_sum
 
@@ -748,7 +766,8 @@ counter t_sum
 			},
 		},
 	},
-	{"match-expression",
+	{
+		"match-expression",
 		`counter someas
 counter notas
 counter total
@@ -808,7 +827,8 @@ cdf
 			},
 		},
 	},
-	{"metric-as-rvalue",
+	{
+		"metric-as-rvalue",
 		`gauge response_time
 counter hit
 counter miss
@@ -866,7 +886,8 @@ seconds = 50
 			},
 		},
 	},
-	{"stringy",
+	{
+		"stringy",
 		`text str
 counter b by foo
 
@@ -912,7 +933,8 @@ a
 			},
 		},
 	},
-	{"ip-addr",
+	{
+		"ip-addr",
 		`text ipaddr
 
 /ip address (\d+\.\d+\.\d+\.\d+)/ {

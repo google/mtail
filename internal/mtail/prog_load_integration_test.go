@@ -116,5 +116,4 @@ func TestProgramUnloadIfDeleted(t *testing.T) {
 	m.PollWatched(1)
 
 	progUnloadsTotalCheck()
-
 }

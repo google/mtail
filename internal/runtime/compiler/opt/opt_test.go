@@ -147,14 +147,16 @@ func TestConstFoldQuickIntComm(t *testing.T) {
 				a, aErr := opt.Optimise(&ast.BinaryExpr{
 					Lhs: &ast.IntLit{I: int64(x)},
 					Rhs: &ast.IntLit{I: int64(y)},
-					Op:  op})
+					Op:  op,
+				})
 				if aErr != nil {
 					t.Fatal(aErr)
 				}
 				b, bErr := opt.Optimise(&ast.BinaryExpr{
 					Lhs: &ast.IntLit{I: int64(y)},
 					Rhs: &ast.IntLit{I: int64(x)},
-					Op:  op})
+					Op:  op,
+				})
 				if bErr != nil {
 					t.Fatal(bErr)
 				}
@@ -173,14 +175,16 @@ func TestConstFoldQuickFloatComm(t *testing.T) {
 				a, aErr := opt.Optimise(&ast.BinaryExpr{
 					Lhs: &ast.FloatLit{F: float64(x)},
 					Rhs: &ast.FloatLit{F: float64(y)},
-					Op:  op})
+					Op:  op,
+				})
 				if aErr != nil {
 					t.Fatal(aErr)
 				}
 				b, bErr := opt.Optimise(&ast.BinaryExpr{
 					Lhs: &ast.FloatLit{F: float64(y)},
 					Rhs: &ast.FloatLit{F: float64(x)},
-					Op:  op})
+					Op:  op,
+				})
 				if bErr != nil {
 					t.Fatal(bErr)
 				}
@@ -199,14 +203,16 @@ func TestConstFoldQuickMixedComm(t *testing.T) {
 				a, aErr := opt.Optimise(&ast.BinaryExpr{
 					Lhs: &ast.IntLit{I: int64(x)},
 					Rhs: &ast.FloatLit{F: float64(y)},
-					Op:  op})
+					Op:  op,
+				})
 				if aErr != nil {
 					t.Fatal(aErr)
 				}
 				b, bErr := opt.Optimise(&ast.BinaryExpr{
 					Lhs: &ast.FloatLit{F: float64(y)},
 					Rhs: &ast.IntLit{I: int64(x)},
-					Op:  op})
+					Op:  op,
+				})
 				if bErr != nil {
 					t.Fatal(bErr)
 				}
@@ -223,7 +229,8 @@ func TestConstFoldQuickIntAddSub(t *testing.T) {
 		a, aErr := opt.Optimise(&ast.BinaryExpr{
 			Lhs: &ast.IntLit{I: int64(x)},
 			Rhs: &ast.IntLit{I: int64(y)},
-			Op:  parser.MINUS})
+			Op:  parser.MINUS,
+		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
@@ -234,7 +241,8 @@ func TestConstFoldQuickIntAddSub(t *testing.T) {
 				Op:  parser.MINUS,
 			},
 			Rhs: &ast.IntLit{I: int64(x)},
-			Op:  parser.PLUS})
+			Op:  parser.PLUS,
+		})
 		if bErr != nil {
 			t.Fatal(bErr)
 		}
@@ -249,7 +257,8 @@ func TestConstFoldQuickFloatAddSub(t *testing.T) {
 		a, aErr := opt.Optimise(&ast.BinaryExpr{
 			Lhs: &ast.FloatLit{F: float64(x)},
 			Rhs: &ast.FloatLit{F: float64(y)},
-			Op:  parser.MINUS})
+			Op:  parser.MINUS,
+		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
@@ -260,7 +269,8 @@ func TestConstFoldQuickFloatAddSub(t *testing.T) {
 				Op:  parser.MINUS,
 			},
 			Rhs: &ast.FloatLit{F: float64(x)},
-			Op:  parser.PLUS})
+			Op:  parser.PLUS,
+		})
 		if bErr != nil {
 			t.Fatal(bErr)
 		}
@@ -275,7 +285,8 @@ func TestConstFoldQuickMixedAddSub(t *testing.T) {
 		a, aErr := opt.Optimise(&ast.BinaryExpr{
 			Lhs: &ast.IntLit{I: int64(x)},
 			Rhs: &ast.FloatLit{F: float64(y)},
-			Op:  parser.MINUS})
+			Op:  parser.MINUS,
+		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
@@ -286,7 +297,8 @@ func TestConstFoldQuickMixedAddSub(t *testing.T) {
 				Op:  parser.MINUS,
 			},
 			Rhs: &ast.IntLit{I: int64(x)},
-			Op:  parser.PLUS})
+			Op:  parser.PLUS,
+		})
 		if bErr != nil {
 			t.Fatal(bErr)
 		}
@@ -307,7 +319,8 @@ func TestConstFoldQuickFloatMulDiv(t *testing.T) {
 		a, aErr := opt.Optimise(&ast.BinaryExpr{
 			Lhs: &ast.FloatLit{F: float64(x)},
 			Rhs: &ast.FloatLit{F: float64(y)},
-			Op:  parser.DIV})
+			Op:  parser.DIV,
+		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
@@ -318,7 +331,8 @@ func TestConstFoldQuickFloatMulDiv(t *testing.T) {
 				Op:  parser.DIV,
 			},
 			Rhs: &ast.FloatLit{F: float64(x)},
-			Op:  parser.MUL})
+			Op:  parser.MUL,
+		})
 		if bErr != nil {
 			t.Fatal(bErr)
 		}
@@ -353,7 +367,8 @@ func TestConstFoldQuickIntModAddition(t *testing.T) {
 				Op:  parser.PLUS,
 			},
 			Rhs: &ast.IntLit{I: int64(z)},
-			Op:  parser.MOD})
+			Op:  parser.MOD,
+		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
@@ -369,9 +384,11 @@ func TestConstFoldQuickIntModAddition(t *testing.T) {
 					Rhs: &ast.IntLit{I: int64(z)},
 					Op:  parser.MOD,
 				},
-				Op: parser.PLUS},
+				Op: parser.PLUS,
+			},
 			Rhs: &ast.IntLit{I: int64(z)},
-			Op:  parser.MOD})
+			Op:  parser.MOD,
+		})
 		if bErr != nil {
 			t.Fatal(bErr)
 		}
@@ -406,7 +423,8 @@ func TestConstFoldQuickFloatModAddition(t *testing.T) {
 				Op:  parser.PLUS,
 			},
 			Rhs: &ast.FloatLit{F: float64(z)},
-			Op:  parser.MOD})
+			Op:  parser.MOD,
+		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
@@ -422,9 +440,11 @@ func TestConstFoldQuickFloatModAddition(t *testing.T) {
 					Rhs: &ast.FloatLit{F: float64(z)},
 					Op:  parser.MOD,
 				},
-				Op: parser.PLUS},
+				Op: parser.PLUS,
+			},
 			Rhs: &ast.FloatLit{F: float64(z)},
-			Op:  parser.MOD})
+			Op:  parser.MOD,
+		})
 		if bErr != nil {
 			t.Fatal(bErr)
 		}
@@ -451,7 +471,8 @@ func TestConstFoldQuickMixedPowProduct(t *testing.T) {
 				Rhs: &ast.IntLit{I: int64(z)},
 				Op:  parser.PLUS,
 			},
-			Op: parser.POW})
+			Op: parser.POW,
+		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
@@ -466,7 +487,8 @@ func TestConstFoldQuickMixedPowProduct(t *testing.T) {
 				Rhs: &ast.IntLit{I: int64(z)},
 				Op:  parser.POW,
 			},
-			Op: parser.MUL})
+			Op: parser.MUL,
+		})
 		if bErr != nil {
 			t.Fatal(bErr)
 		}

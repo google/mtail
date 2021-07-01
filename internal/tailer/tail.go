@@ -24,10 +24,8 @@ import (
 	"github.com/google/mtail/internal/waker"
 )
 
-var (
-	// logCount records the number of logs that are being tailed.
-	logCount = expvar.NewInt("log_count")
-)
+// logCount records the number of logs that are being tailed.
+var logCount = expvar.NewInt("log_count")
 
 // Tailer polls the filesystem for log sources that match given
 // `LogPathPatterns` and creates `LogStream`s to tail them.
@@ -309,7 +307,7 @@ func (t *Tailer) StartGcLoop(waker waker.Waker) {
 			glog.Info("No gc loop in oneshot mode.")
 			return
 		}
-		//glog.Infof("Starting log handle expiry loop every %s", duration.String())
+		// glog.Infof("Starting log handle expiry loop every %s", duration.String())
 		for {
 			select {
 			case <-t.ctx.Done():
@@ -337,7 +335,7 @@ func (t *Tailer) StartLogPatternPollLoop(waker waker.Waker) {
 			glog.Info("No polling loop in oneshot mode.")
 			return
 		}
-		//glog.Infof("Starting log pattern poll loop every %s", duration.String())
+		// glog.Infof("Starting log pattern poll loop every %s", duration.String())
 		for {
 			select {
 			case <-t.ctx.Done():

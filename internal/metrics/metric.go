@@ -107,9 +107,11 @@ func NewMetric(name string, prog string, kind Kind, typ Type, keys ...string) *M
 
 // newMetric returns a new empty Metric.
 func newMetric(len int) *Metric {
-	return &Metric{Keys: make([]string, len),
+	return &Metric{
+		Keys:           make([]string, len),
 		LabelValues:    make([]*LabelValue, 0),
-		labelValuesMap: make(map[string]*LabelValue)}
+		labelValuesMap: make(map[string]*LabelValue),
+	}
 }
 
 // buildLabelValueKey returns a unique key for the given labels.

@@ -187,11 +187,13 @@ func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 		Filename: l.name,
 		Line:     l.line,
 		Startcol: l.startcol,
-		Endcol:   l.col - 1}
+		Endcol:   l.col - 1,
+	}
 	l.tokens <- Token{
 		Kind:     INVALID,
 		Spelling: fmt.Sprintf(format, args...),
-		Pos:      pos}
+		Pos:      pos,
+	}
 	// Reset the current token
 	l.text.Reset()
 	l.startcol = l.col
@@ -546,7 +548,6 @@ Loop:
 		l.emit(ID)
 	}
 	return lexProg
-
 }
 
 // Lex a regular expression pattern. The text of the regular expression does
