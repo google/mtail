@@ -19,8 +19,6 @@ import (
 	"github.com/google/mtail/internal/waker"
 )
 
-const timeoutMultiplier = 3
-
 const defaultDoOrTimeoutDeadline = 10 * time.Second
 
 type TestServer struct {
