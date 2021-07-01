@@ -43,7 +43,7 @@ type LogStream interface {
 const defaultReadBufferSize = 4096
 
 var (
-	ErrUnsupportedUrlScheme = errors.New("unsupported URL scheme")
+	ErrUnsupportedURLScheme = errors.New("unsupported URL scheme")
 	ErrUnsupportedFileType  = errors.New("unsupported file type")
 	ErrEmptySocketAddress   = errors.New("socket address cannot be empty, please provide a unix domain socket filename or host:port")
 )
@@ -61,7 +61,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	glog.Infof("Parsed url as %v", u)
 	switch u.Scheme {
 	default:
-		return nil, fmt.Errorf("%w %q in path %q", ErrUnsupportedUrlScheme, u.Scheme, pathname)
+		return nil, fmt.Errorf("%w %q in path %q", ErrUnsupportedURLScheme, u.Scheme, pathname)
 	case "unixgram":
 		return newDgramStream(ctx, wg, waker, u.Scheme, u.Path, lines)
 	case "unix":

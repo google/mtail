@@ -129,7 +129,7 @@ stmt
   }
   | CONST id_expr concat_expr
   {
-    $$ = &ast.PatternFragment{Id: $2, Expr: $3}
+    $$ = &ast.PatternFragment{ID: $2, Expr: $3}
   }
   | STOP
   {
@@ -170,8 +170,8 @@ conditional_expr
   | pattern_expr logical_op opt_nl logical_expr
   {
     $$ = &ast.BinaryExpr{
-      Lhs: &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH},
-      Rhs: $4,
+      LHS: &ast.UnaryExpr{P: tokenpos(mtaillex), Expr: $1, Op: MATCH},
+      RHS: $4,
       Op: $2,
     }
   }
@@ -207,11 +207,11 @@ expr
 assign_expr
   : unary_expr ASSIGN opt_nl logical_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: $2}
   }
   | unary_expr ADD_ASSIGN opt_nl logical_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: $2}
   }
   ;
 
@@ -223,11 +223,11 @@ logical_expr
   { $$ = $1 }
   | logical_expr logical_op opt_nl bitwise_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: $2}
   }
   | logical_expr logical_op opt_nl match_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: $2}
   }
   ;
 
@@ -244,7 +244,7 @@ bitwise_expr
   { $$ = $1 }
   | bitwise_expr bitwise_op opt_nl rel_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: $2}
   }
   ;
 
@@ -263,7 +263,7 @@ rel_expr
   { $$ = $1 }
   | rel_expr rel_op opt_nl shift_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: $2}
   }
   ;
 
@@ -288,7 +288,7 @@ shift_expr
   { $$ = $1 }
   | shift_expr shift_op opt_nl additive_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: $2}
   }
   ;
 
@@ -305,7 +305,7 @@ additive_expr
   { $$ = $1 }
   | additive_expr add_op opt_nl multiplicative_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: $2}
   }
   ;
 
@@ -320,11 +320,11 @@ add_op
 match_expr
   : primary_expr match_op opt_nl pattern_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: $2}
   }
   | primary_expr match_op opt_nl primary_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: $2}
   }
   ;
 
@@ -350,11 +350,11 @@ concat_expr
   { $$ = $1 }
   | concat_expr PLUS opt_nl regex_pattern
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: PLUS}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: PLUS}
   }
   | concat_expr PLUS opt_nl id_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: PLUS}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: PLUS}
   }
   ;
 
@@ -364,7 +364,7 @@ multiplicative_expr
   { $$ = $1 }
   | multiplicative_expr mul_op opt_nl unary_expr
   {
-    $$ = &ast.BinaryExpr{Lhs: $1, Rhs: $4, Op: $2}
+    $$ = &ast.BinaryExpr{LHS: $1, RHS: $4, Op: $2}
   }
   ;
 
@@ -443,7 +443,7 @@ indexed_expr
   : id_expr
   {
     // Build an empty IndexedExpr so that the recursive rule below doesn't need to handle the alternative.
-    $$ = &ast.IndexedExpr{Lhs: $1, Index: &ast.ExprList{}}
+    $$ = &ast.IndexedExpr{LHS: $1, Index: &ast.ExprList{}}
   }
   | indexed_expr LSQUARE arg_expr_list RSQUARE
   {
@@ -458,7 +458,7 @@ indexed_expr
 id_expr
   : ID
   {
-    $$ = &ast.IdTerm{tokenpos(mtaillex), $1, nil, false}
+    $$ = &ast.IDTerm{tokenpos(mtaillex), $1, nil, false}
   }
   ;
 

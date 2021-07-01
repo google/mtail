@@ -69,7 +69,7 @@ func (n *CondStmt) Type() types.Type {
 	return types.None
 }
 
-type IdTerm struct {
+type IDTerm struct {
 	P      position.Position
 	Name   string
 	Symbol *symbol.Symbol
@@ -77,11 +77,11 @@ type IdTerm struct {
 	// assignment and needs to have its address taken only.
 }
 
-func (n *IdTerm) Pos() *position.Position {
+func (n *IDTerm) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *IdTerm) Type() types.Type {
+func (n *IDTerm) Type() types.Type {
 	if n.Symbol != nil {
 		return n.Symbol.Type
 	}
@@ -132,7 +132,7 @@ func (n *BuiltinExpr) SetType(t types.Type) {
 }
 
 type BinaryExpr struct {
-	Lhs, Rhs Node
+	LHS, RHS Node
 	Op       int
 
 	typMu sync.RWMutex
@@ -140,7 +140,7 @@ type BinaryExpr struct {
 }
 
 func (n *BinaryExpr) Pos() *position.Position {
-	return position.Merge(n.Lhs.Pos(), n.Rhs.Pos())
+	return position.Merge(n.LHS.Pos(), n.RHS.Pos())
 }
 
 func (n *BinaryExpr) Type() types.Type {
@@ -181,14 +181,14 @@ func (n *UnaryExpr) SetType(t types.Type) {
 }
 
 type IndexedExpr struct {
-	Lhs, Index Node
+	LHS, Index Node
 
 	typMu sync.RWMutex
 	typ   types.Type
 }
 
 func (n *IndexedExpr) Pos() *position.Position {
-	return position.Merge(n.Lhs.Pos(), n.Index.Pos())
+	return position.Merge(n.LHS.Pos(), n.Index.Pos())
 }
 
 func (n *IndexedExpr) Type() types.Type {
@@ -297,14 +297,14 @@ func (n *PatternLit) Type() types.Type {
 
 // patternDefNode holds a named pattern expression.
 type PatternFragment struct {
-	Id      Node
+	ID      Node
 	Expr    Node
 	Symbol  *symbol.Symbol // Optional Symbol for a named pattern
 	Pattern string         // If not empty, contains the complete evaluated pattern of the expr
 }
 
 func (n *PatternFragment) Pos() *position.Position {
-	return n.Id.Pos()
+	return n.ID.Pos()
 }
 
 func (n *PatternFragment) Type() types.Type {

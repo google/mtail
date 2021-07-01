@@ -64,7 +64,7 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 
 	case *ast.PatternFragment:
 		s.emit("const ")
-		ast.Walk(s, v.Id)
+		ast.Walk(s, v.ID)
 		s.emit(" ")
 
 	case *ast.PatternLit:
@@ -125,7 +125,7 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		}
 		s.newline()
 
-	case *ast.IdTerm:
+	case *ast.IDTerm:
 		s.emit("\"" + v.Name + "\"")
 
 	case *ast.CaprefTerm:

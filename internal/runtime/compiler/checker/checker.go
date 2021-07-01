@@ -141,7 +141,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		}
 		return c, n
 
-	case *ast.IdTerm:
+	case *ast.IDTerm:
 		if n.Symbol == nil {
 			if sym := c.scope.Lookup(n.Name, symbol.VarSymbol); sym != nil {
 				glog.V(2).Infof("found varsymbol sym %v", sym)
@@ -214,7 +214,7 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		return c, n
 
 	case *ast.PatternFragment:
-		id, ok := n.Id.(*ast.IdTerm)
+		id, ok := n.ID.(*ast.IDTerm)
 		if !ok {
 			c.errors.Add(n.Pos(), fmt.Sprintf("Internal error: no identifier attached to pattern fragment %#v", n))
 			c.depth--
@@ -284,7 +284,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		case *ast.BinaryExpr, *ast.OtherwiseStmt, *ast.UnaryExpr:
 			// OK as conditions
 		case *ast.PatternExpr:
-			// The parser will always put a UnaryExpr here for a pattern, we will get a PatternExpr if the Cond was in fact an IdTerm rewritten by IndexedExpr below.
+			// The parser will always put a UnaryExpr here for a pattern, we will get a PatternExpr if the Cond was in fact an IDTerm rewritten by IndexedExpr below.
 			n.Cond = &ast.UnaryExpr{Expr: n.Cond, Op: parser.MATCH}
 		default:
 			c.errors.Add(n.Cond.Pos(), fmt.Sprintf("Can't interpret %s as a boolean expression here.\n\tTry using comparison operators to make the condition explicit.", n.Cond.Type()))
@@ -332,12 +332,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	case *ast.BinaryExpr:
 		var rType types.Type
-		lT := n.Lhs.Type()
+		lT := n.LHS.Type()
 		if types.IsErrorType(lT) {
 			n.SetType(types.Error)
 			return n
 		}
-		rT := n.Rhs.Type()
+		rT := n.RHS.Type()
 		if types.IsErrorType(rT) {
 			n.SetType(types.Error)
 			return n
@@ -369,18 +369,18 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			// Implicit type conversion for non-comparisons, promoting each
 			// half to the return type of the op.
 			if !types.Equals(rType, lT) {
-				conv := &ast.ConvExpr{N: n.Lhs}
+				conv := &ast.ConvExpr{N: n.LHS}
 				conv.SetType(rType)
-				n.Lhs = conv
+				n.LHS = conv
 			}
 			if !types.Equals(rType, rT) {
-				conv := &ast.ConvExpr{N: n.Rhs}
+				conv := &ast.ConvExpr{N: n.RHS}
 				conv.SetType(rType)
-				n.Rhs = conv
+				n.RHS = conv
 			}
 
 			if n.Op == parser.DIV || n.Op == parser.MOD {
-				if i, ok := n.Rhs.(*ast.IntLit); ok {
+				if i, ok := n.RHS.(*ast.IntLit); ok {
 					if i.I == 0 {
 						c.errors.Add(n.Pos(), "Can't divide by zero.")
 						n.SetType(types.Error)
@@ -427,15 +427,15 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 			// Promote types if the ast types are not the same as the expression type.
 			if !types.Equals(t, lT) {
-				conv := &ast.ConvExpr{N: n.Lhs}
+				conv := &ast.ConvExpr{N: n.LHS}
 				conv.SetType(t)
-				n.Lhs = conv
+				n.LHS = conv
 				glog.V(2).Infof("Emitting convnode %#v on %#v", conv, n)
 			}
 			if !types.Equals(t, rT) {
-				conv := &ast.ConvExpr{N: n.Rhs}
+				conv := &ast.ConvExpr{N: n.RHS}
 				conv.SetType(t)
-				n.Rhs = conv
+				n.RHS = conv
 				glog.V(2).Infof("Emitting convnode %+v", conv)
 			}
 
@@ -454,14 +454,14 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(types.Error)
 				return n
 			}
-			switch v := n.Lhs.(type) {
-			case *ast.IdTerm:
+			switch v := n.LHS.(type) {
+			case *ast.IDTerm:
 				v.Lvalue = true
 			case *ast.IndexedExpr:
-				v.Lhs.(*ast.IdTerm).Lvalue = true
+				v.LHS.(*ast.IDTerm).Lvalue = true
 			default:
-				glog.V(2).Infof("The lhs is a %T %v", n.Lhs, n.Lhs)
-				c.errors.Add(n.Lhs.Pos(), "Can't assign to this expression on the left.")
+				glog.V(2).Infof("The lhs is a %T %v", n.LHS, n.LHS)
+				c.errors.Add(n.LHS.Pos(), "Can't assign to this expression on the left.")
 				n.SetType(types.Error)
 				return n
 			}
@@ -477,7 +477,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 			if !types.Equals(rT, types.Pattern) {
-				n.Rhs = ast.Walk(c, &ast.PatternExpr{Expr: n.Rhs})
+				n.RHS = ast.Walk(c, &ast.PatternExpr{Expr: n.RHS})
 			}
 
 		default:
@@ -508,10 +508,10 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		case parser.INC, parser.DEC:
 			// First check what sort of expression it is
 			switch v := n.Expr.(type) {
-			case *ast.IdTerm:
+			case *ast.IDTerm:
 				v.Lvalue = true
 			case *ast.IndexedExpr:
-				v.Lhs.(*ast.IdTerm).Lvalue = true
+				v.LHS.(*ast.IDTerm).Lvalue = true
 			default:
 				glog.V(2).Infof("the expr is a %T %v", n.Expr, n.Expr)
 				c.errors.Add(n.Expr.Pos(), "Expecting a variable here.")
@@ -571,10 +571,10 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	case *ast.IndexedExpr:
 
-		// prune this node to n.Lhs if Index is nil.  Leave 0 length exprlist as that's a type error.
+		// prune this node to n.LHS if Index is nil.  Leave 0 length exprlist as that's a type error.
 		exprList, ok := n.Index.(*ast.ExprList)
 		if !ok {
-			return n.Lhs
+			return n.LHS
 		}
 
 		argTypes := []types.Type{}
@@ -586,8 +586,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			argTypes = append(argTypes, arg.Type())
 		}
 
-		switch v := n.Lhs.(type) {
-		case *ast.IdTerm:
+		switch v := n.LHS.(type) {
+		case *ast.IDTerm:
 			if v.Symbol == nil {
 				// undefined, already caught
 				n.SetType(types.Error)
@@ -596,7 +596,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 			if v.Type() == types.Pattern {
 				// We now have enough information to tell that something the
-				// parser thought was an IdTerm is really a pattern constant.
+				// parser thought was an IDTerm is really a pattern constant.
 				// Let's now rewrite the AST correctly.
 				// TODO: Haven't checked that this IndexedExpr has no args.
 				return ast.Walk(c, &ast.PatternExpr{Expr: v})
@@ -625,12 +625,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		rType := types.NewVariable()
 		argTypes = append(argTypes, rType)
 		gotType := types.Dimension(argTypes...)
-		fresh := n.Lhs.Type()
+		fresh := n.LHS.Type()
 		err := types.Unify(fresh, gotType)
 		if err != nil {
-			wantType, ok := n.Lhs.Type().(*types.Operator)
+			wantType, ok := n.LHS.Type().(*types.Operator)
 			if !ok {
-				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected lhs type %v", n.Lhs.Type()))
+				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected lhs type %v", n.LHS.Type()))
 				n.SetType(types.Error)
 				return n
 			}
@@ -649,10 +649,10 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		}
 
 		// Having typechecked the expression against the expected types, we
-		// have detected mismatched keylengths, and can now fold to just IdTerm
+		// have detected mismatched keylengths, and can now fold to just IDTerm
 		// if there's no ExprList.
 		if len(exprList.Children) == 0 {
-			return n.Lhs
+			return n.LHS
 		}
 
 		n.SetType(rType)
@@ -743,7 +743,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				c.errors.Add(n.N.Pos(), fmt.Sprintf("Cannot delete this.\n\tTry deleting an index from this dimensioned metric."))
 				return n
 			}
-			ix.Lhs.(*ast.IdTerm).Lvalue = true
+			ix.LHS.(*ast.IDTerm).Lvalue = true
 			return n
 		}
 		c.errors.Add(n.N.Pos(), fmt.Sprintf("Cannot delete this.\n\tTry deleting from a dimensioned metric with this as an index."))
@@ -808,7 +808,7 @@ func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 	case *ast.PatternLit:
 		p.pattern.WriteString(v.Pattern)
 		return p, v
-	case *ast.IdTerm:
+	case *ast.IDTerm:
 		// Already looked up sym, if still nil undefined.
 		if v.Symbol == nil {
 			return nil, n

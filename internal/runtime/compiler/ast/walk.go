@@ -56,15 +56,15 @@ func Walk(v Visitor, node Node) Node {
 		}
 
 	case *BinaryExpr:
-		n.Lhs = Walk(v, n.Lhs)
-		n.Rhs = Walk(v, n.Rhs)
+		n.LHS = Walk(v, n.LHS)
+		n.RHS = Walk(v, n.RHS)
 
 	case *UnaryExpr:
 		n.Expr = Walk(v, n.Expr)
 
 	case *IndexedExpr:
 		n.Index = Walk(v, n.Index)
-		n.Lhs = Walk(v, n.Lhs)
+		n.LHS = Walk(v, n.LHS)
 
 	case *DecoDecl:
 		n.Block = Walk(v, n.Block)
@@ -81,7 +81,7 @@ func Walk(v Visitor, node Node) Node {
 	case *PatternFragment:
 		n.Expr = Walk(v, n.Expr)
 
-	case *IdTerm, *CaprefTerm, *VarDecl, *StringLit, *IntLit, *FloatLit, *PatternLit, *NextStmt, *OtherwiseStmt, *DelStmt, *StopStmt:
+	case *IDTerm, *CaprefTerm, *VarDecl, *StringLit, *IntLit, *FloatLit, *PatternLit, *NextStmt, *OtherwiseStmt, *DelStmt, *StopStmt:
 		// These nodes are terminals, thus have no children to walk.
 
 	default:

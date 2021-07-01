@@ -84,8 +84,8 @@ func (m *Server) initTailer() (err error) {
 	return
 }
 
-// initHttpServer begins the http server.
-func (m *Server) initHttpServer() error {
+// initHTTPServer begins the http server.
+func (m *Server) initHTTPServer() error {
 	initDone := make(chan struct{})
 	defer close(initDone)
 
@@ -199,7 +199,7 @@ func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server,
 	if err := m.initTailer(); err != nil {
 		return nil, err
 	}
-	if err := m.initHttpServer(); err != nil {
+	if err := m.initHTTPServer(); err != nil {
 		return nil, err
 	}
 	return m, nil

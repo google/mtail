@@ -216,7 +216,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	case *ast.StopStmt:
 		c.emit(n, code.Stop, nil)
 
-	case *ast.IdTerm:
+	case *ast.IDTerm:
 		if n.Symbol == nil || n.Symbol.Kind != symbol.VarSymbol {
 			break
 		}
@@ -276,7 +276,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 				}
 			}
 		}
-		ast.Walk(c, n.Lhs)
+		ast.Walk(c, n.LHS)
 		return nil, n
 
 	case *ast.DecoDecl:
@@ -326,9 +326,9 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		case parser.AND:
 			lFalse := c.newLabel()
 			lEnd := c.newLabel()
-			ast.Walk(c, n.Lhs)
+			ast.Walk(c, n.LHS)
 			c.emit(n, code.Jnm, lFalse)
-			ast.Walk(c, n.Rhs)
+			ast.Walk(c, n.RHS)
 			c.emit(n, code.Jnm, lFalse)
 			c.emit(n, code.Push, true)
 			c.emit(n, code.Jmp, lEnd)
@@ -340,9 +340,9 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		case parser.OR:
 			lTrue := c.newLabel()
 			lEnd := c.newLabel()
-			ast.Walk(c, n.Lhs)
+			ast.Walk(c, n.LHS)
 			c.emit(n, code.Jm, lTrue)
-			ast.Walk(c, n.Rhs)
+			ast.Walk(c, n.RHS)
 			c.emit(n, code.Jm, lTrue)
 			c.emit(n, code.Push, false)
 			c.emit(n, code.Jmp, lEnd)
@@ -354,7 +354,7 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		case parser.ADD_ASSIGN:
 			if !types.Equals(n.Type(), types.Int) {
 				// Double-emit the lhs so that it can be assigned to
-				ast.Walk(c, n.Lhs)
+				ast.Walk(c, n.LHS)
 			}
 
 		default:
@@ -497,8 +497,8 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 				jumpOp = code.Jm
 			}
 			cmpOp := code.Cmp
-			if types.Equals(n.Lhs.Type(), n.Rhs.Type()) {
-				switch n.Lhs.Type() {
+			if types.Equals(n.LHS.Type(), n.RHS.Type()) {
+				switch n.LHS.Type() {
 				case types.Float:
 					cmpOp = code.Fcmp
 				case types.Int:
@@ -559,12 +559,12 @@ func (c *codegen) VisitAfter(node ast.Node) ast.Node {
 			c.emit(n, code.Shr, nil)
 
 		case parser.MATCH, parser.NOT_MATCH:
-			switch v := n.Rhs.(type) {
+			switch v := n.RHS.(type) {
 			case *ast.PatternExpr:
 				index := v.Index
 				c.emit(n, code.Smatch, index)
 			default:
-				c.errorf(n.Pos(), "unexpected rhs expression for match %#v", n.Rhs)
+				c.errorf(n.Pos(), "unexpected rhs expression for match %#v", n.RHS)
 				return n
 			}
 

@@ -65,15 +65,15 @@ func (t *testWalker) VisitAfter(n ast.Node) ast.Node {
 
 func TestAstReplacement(t *testing.T) {
 	var a ast.Node = &ast.BinaryExpr{
-		Lhs: &ast.BinaryExpr{Lhs: &ast.IntLit{I: 0}, Rhs: &ast.IntLit{I: 1}, Op: parser.DIV},
-		Rhs: &ast.BinaryExpr{Lhs: &ast.IntLit{I: 2}, Rhs: &ast.IntLit{I: 3}, Op: parser.MINUS},
+		LHS: &ast.BinaryExpr{LHS: &ast.IntLit{I: 0}, RHS: &ast.IntLit{I: 1}, Op: parser.DIV},
+		RHS: &ast.BinaryExpr{LHS: &ast.IntLit{I: 2}, RHS: &ast.IntLit{I: 3}, Op: parser.MINUS},
 		Op:  parser.PLUS,
 	}
 	tw := &testWalker{}
 	a = ast.Walk(tw, a)
 	expected := &ast.BinaryExpr{
-		Lhs: &ast.IntLit{I: 4},
-		Rhs: &ast.IntLit{I: 5},
+		LHS: &ast.IntLit{I: 4},
+		RHS: &ast.IntLit{I: 5},
 		Op:  parser.PLUS,
 	}
 	if !testutil.ExpectNoDiff(t, expected, a, testutil.IgnoreUnexported(ast.BinaryExpr{})) {

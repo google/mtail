@@ -35,9 +35,9 @@ func (o *optimiser) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 	switch n := node.(type) {
 	case *ast.BinaryExpr:
-		switch lhs := n.Lhs.(type) {
+		switch lhs := n.LHS.(type) {
 		case *ast.IntLit:
-			switch rhs := n.Rhs.(type) {
+			switch rhs := n.RHS.(type) {
 			case *ast.IntLit:
 				r := &ast.IntLit{P: *position.Merge(&(lhs.P), &(rhs.P))}
 				switch n.Op {
@@ -100,7 +100,7 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 				return node
 			}
 		case *ast.FloatLit:
-			switch rhs := n.Rhs.(type) {
+			switch rhs := n.RHS.(type) {
 			case *ast.IntLit:
 				r := &ast.FloatLit{P: *position.Merge(&(lhs.P), &(rhs.P))}
 				switch n.Op {

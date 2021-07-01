@@ -197,7 +197,7 @@ func (t *Tailer) SetOption(options ...Option) error {
 	return nil
 }
 
-var ErrUnsupportedUrlScheme = errors.New("unsupported URL scheme")
+var ErrUnsupportedURLScheme = errors.New("unsupported URL scheme")
 
 // AddPattern adds a pattern to the list of patterns to filter filenames against.
 func (t *Tailer) AddPattern(pattern string) error {
@@ -207,7 +207,7 @@ func (t *Tailer) AddPattern(pattern string) error {
 	}
 	switch u.Scheme {
 	default:
-		return fmt.Errorf("%w: %q in path pattern %q", ErrUnsupportedUrlScheme, u.Scheme, pattern)
+		return fmt.Errorf("%w: %q in path pattern %q", ErrUnsupportedURLScheme, u.Scheme, pattern)
 	case "unix", "unixgram", "tcp", "udp":
 		// Keep the scheme.
 		glog.V(2).Infof("AddPattern: socket %q", pattern)

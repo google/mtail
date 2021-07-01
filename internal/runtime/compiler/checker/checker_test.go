@@ -599,8 +599,8 @@ var checkerTypeExpressionTests = []struct {
 	{
 		"Int + Int -> Int",
 		&ast.BinaryExpr{
-			Lhs: &ast.IntLit{I: 1},
-			Rhs: &ast.IntLit{I: 1},
+			LHS: &ast.IntLit{I: 1},
+			RHS: &ast.IntLit{I: 1},
 			Op:  parser.PLUS,
 		},
 		types.Int,
@@ -608,8 +608,8 @@ var checkerTypeExpressionTests = []struct {
 	{
 		"Int + Float -> Float",
 		&ast.BinaryExpr{
-			Lhs: &ast.IntLit{I: 1},
-			Rhs: &ast.FloatLit{F: 1.0},
+			LHS: &ast.IntLit{I: 1},
+			RHS: &ast.FloatLit{F: 1.0},
 			Op:  parser.PLUS,
 		},
 		types.Float,
@@ -617,8 +617,8 @@ var checkerTypeExpressionTests = []struct {
 	{
 		"⍺ + Float -> Float",
 		&ast.BinaryExpr{
-			Lhs: &ast.IdTerm{Symbol: &symbol.Symbol{Name: "i", Kind: symbol.VarSymbol, Type: types.NewVariable()}},
-			Rhs: &ast.CaprefTerm{Symbol: &symbol.Symbol{Kind: symbol.CaprefSymbol, Type: types.Float}},
+			LHS: &ast.IDTerm{Symbol: &symbol.Symbol{Name: "i", Kind: symbol.VarSymbol, Type: types.NewVariable()}},
+			RHS: &ast.CaprefTerm{Symbol: &symbol.Symbol{Kind: symbol.CaprefSymbol, Type: types.Float}},
 			Op:  parser.PLUS,
 		},
 		types.Float,

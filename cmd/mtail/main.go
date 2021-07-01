@@ -89,9 +89,9 @@ var (
 	// history the build came from, as supplied by the linker when copmiled
 	// with `make'.  The defaults here indicate that the user did not use
 	// `make' as instructed.
-	Branch   string = "invalid:-use-make-to-build"
-	Version  string = "invalid:-use-make-to-build"
-	Revision string = "invalid:-use-make-to-build"
+	Branch   = "invalid:-use-make-to-build"
+	Version  = "invalid:-use-make-to-build"
+	Revision = "invalid:-use-make-to-build"
 )
 
 func main() {

@@ -26,8 +26,8 @@ var optimiserTests = []struct {
 	{
 		"int add",
 		&ast.BinaryExpr{
-			Lhs: &ast.IntLit{I: 1},
-			Rhs: &ast.IntLit{I: 2},
+			LHS: &ast.IntLit{I: 1},
+			RHS: &ast.IntLit{I: 2},
 			Op:  parser.PLUS,
 		},
 		&ast.IntLit{I: 3},
@@ -35,8 +35,8 @@ var optimiserTests = []struct {
 	{
 		"float mul",
 		&ast.BinaryExpr{
-			Lhs: &ast.FloatLit{F: 2},
-			Rhs: &ast.FloatLit{F: 3},
+			LHS: &ast.FloatLit{F: 2},
+			RHS: &ast.FloatLit{F: 3},
 			Op:  parser.MUL,
 		},
 		&ast.FloatLit{F: 6},
@@ -44,8 +44,8 @@ var optimiserTests = []struct {
 	{
 		"int float pow",
 		&ast.BinaryExpr{
-			Lhs: &ast.IntLit{I: 2},
-			Rhs: &ast.FloatLit{F: 3},
+			LHS: &ast.IntLit{I: 2},
+			RHS: &ast.FloatLit{F: 3},
 			Op:  parser.POW,
 		},
 		&ast.FloatLit{F: 8},
@@ -53,8 +53,8 @@ var optimiserTests = []struct {
 	{
 		"float int mod",
 		&ast.BinaryExpr{
-			Lhs: &ast.FloatLit{F: 3},
-			Rhs: &ast.IntLit{I: 2},
+			LHS: &ast.FloatLit{F: 3},
+			RHS: &ast.IntLit{I: 2},
 			Op:  parser.MOD,
 		},
 		&ast.FloatLit{F: 1},
@@ -62,12 +62,12 @@ var optimiserTests = []struct {
 	{
 		"nested ops",
 		&ast.BinaryExpr{
-			Lhs: &ast.BinaryExpr{
-				Lhs: &ast.IntLit{I: 2},
-				Rhs: &ast.IntLit{I: 4},
+			LHS: &ast.BinaryExpr{
+				LHS: &ast.IntLit{I: 2},
+				RHS: &ast.IntLit{I: 4},
 				Op:  parser.POW,
 			},
-			Rhs: &ast.IntLit{I: 1},
+			RHS: &ast.IntLit{I: 1},
 			Op:  parser.MINUS,
 		},
 		&ast.IntLit{I: 15},
@@ -93,8 +93,8 @@ var optimiserErrorTests = []struct {
 	{
 		"integer divide by zero",
 		&ast.BinaryExpr{
-			Lhs: &ast.IntLit{I: 4},
-			Rhs: &ast.IntLit{I: 0},
+			LHS: &ast.IntLit{I: 4},
+			RHS: &ast.IntLit{I: 0},
 			Op:  parser.DIV,
 		},
 		[]string{":1:1: divide by zero"},
@@ -102,8 +102,8 @@ var optimiserErrorTests = []struct {
 	{
 		"float divide by zero",
 		&ast.BinaryExpr{
-			Lhs: &ast.FloatLit{F: 4},
-			Rhs: &ast.FloatLit{F: 0},
+			LHS: &ast.FloatLit{F: 4},
+			RHS: &ast.FloatLit{F: 0},
 			Op:  parser.DIV,
 		},
 		[]string{":1:1: divide by zero"},
@@ -111,8 +111,8 @@ var optimiserErrorTests = []struct {
 	{
 		"integer mod by zero",
 		&ast.BinaryExpr{
-			Lhs: &ast.IntLit{I: 4},
-			Rhs: &ast.IntLit{I: 0},
+			LHS: &ast.IntLit{I: 4},
+			RHS: &ast.IntLit{I: 0},
 			Op:  parser.MOD,
 		},
 		[]string{":1:1: mod by zero"},
@@ -120,8 +120,8 @@ var optimiserErrorTests = []struct {
 	{
 		"float mod by zero",
 		&ast.BinaryExpr{
-			Lhs: &ast.FloatLit{F: 4},
-			Rhs: &ast.FloatLit{F: 0},
+			LHS: &ast.FloatLit{F: 4},
+			RHS: &ast.FloatLit{F: 0},
 			Op:  parser.MOD,
 		},
 		[]string{":1:1: mod by zero"},
@@ -145,16 +145,16 @@ func TestConstFoldQuickIntComm(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			if err := quick.Check(func(x, y int32) bool {
 				a, aErr := opt.Optimise(&ast.BinaryExpr{
-					Lhs: &ast.IntLit{I: int64(x)},
-					Rhs: &ast.IntLit{I: int64(y)},
+					LHS: &ast.IntLit{I: int64(x)},
+					RHS: &ast.IntLit{I: int64(y)},
 					Op:  op,
 				})
 				if aErr != nil {
 					t.Fatal(aErr)
 				}
 				b, bErr := opt.Optimise(&ast.BinaryExpr{
-					Lhs: &ast.IntLit{I: int64(y)},
-					Rhs: &ast.IntLit{I: int64(x)},
+					LHS: &ast.IntLit{I: int64(y)},
+					RHS: &ast.IntLit{I: int64(x)},
 					Op:  op,
 				})
 				if bErr != nil {
@@ -173,16 +173,16 @@ func TestConstFoldQuickFloatComm(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			if err := quick.Check(func(x, y float32) bool {
 				a, aErr := opt.Optimise(&ast.BinaryExpr{
-					Lhs: &ast.FloatLit{F: float64(x)},
-					Rhs: &ast.FloatLit{F: float64(y)},
+					LHS: &ast.FloatLit{F: float64(x)},
+					RHS: &ast.FloatLit{F: float64(y)},
 					Op:  op,
 				})
 				if aErr != nil {
 					t.Fatal(aErr)
 				}
 				b, bErr := opt.Optimise(&ast.BinaryExpr{
-					Lhs: &ast.FloatLit{F: float64(y)},
-					Rhs: &ast.FloatLit{F: float64(x)},
+					LHS: &ast.FloatLit{F: float64(y)},
+					RHS: &ast.FloatLit{F: float64(x)},
 					Op:  op,
 				})
 				if bErr != nil {
@@ -201,16 +201,16 @@ func TestConstFoldQuickMixedComm(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			if err := quick.Check(func(x int32, y float32) bool {
 				a, aErr := opt.Optimise(&ast.BinaryExpr{
-					Lhs: &ast.IntLit{I: int64(x)},
-					Rhs: &ast.FloatLit{F: float64(y)},
+					LHS: &ast.IntLit{I: int64(x)},
+					RHS: &ast.FloatLit{F: float64(y)},
 					Op:  op,
 				})
 				if aErr != nil {
 					t.Fatal(aErr)
 				}
 				b, bErr := opt.Optimise(&ast.BinaryExpr{
-					Lhs: &ast.FloatLit{F: float64(y)},
-					Rhs: &ast.IntLit{I: int64(x)},
+					LHS: &ast.FloatLit{F: float64(y)},
+					RHS: &ast.IntLit{I: int64(x)},
 					Op:  op,
 				})
 				if bErr != nil {
@@ -227,20 +227,20 @@ func TestConstFoldQuickMixedComm(t *testing.T) {
 func TestConstFoldQuickIntAddSub(t *testing.T) {
 	if err := quick.Check(func(x, y int32) bool {
 		a, aErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.IntLit{I: int64(x)},
-			Rhs: &ast.IntLit{I: int64(y)},
+			LHS: &ast.IntLit{I: int64(x)},
+			RHS: &ast.IntLit{I: int64(y)},
 			Op:  parser.MINUS,
 		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
 		b, bErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.BinaryExpr{
-				Lhs: &ast.IntLit{I: 0},
-				Rhs: &ast.IntLit{I: int64(y)},
+			LHS: &ast.BinaryExpr{
+				LHS: &ast.IntLit{I: 0},
+				RHS: &ast.IntLit{I: int64(y)},
 				Op:  parser.MINUS,
 			},
-			Rhs: &ast.IntLit{I: int64(x)},
+			RHS: &ast.IntLit{I: int64(x)},
 			Op:  parser.PLUS,
 		})
 		if bErr != nil {
@@ -255,20 +255,20 @@ func TestConstFoldQuickIntAddSub(t *testing.T) {
 func TestConstFoldQuickFloatAddSub(t *testing.T) {
 	if err := quick.Check(func(x, y float32) bool {
 		a, aErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.FloatLit{F: float64(x)},
-			Rhs: &ast.FloatLit{F: float64(y)},
+			LHS: &ast.FloatLit{F: float64(x)},
+			RHS: &ast.FloatLit{F: float64(y)},
 			Op:  parser.MINUS,
 		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
 		b, bErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.BinaryExpr{
-				Lhs: &ast.FloatLit{F: 0},
-				Rhs: &ast.FloatLit{F: float64(y)},
+			LHS: &ast.BinaryExpr{
+				LHS: &ast.FloatLit{F: 0},
+				RHS: &ast.FloatLit{F: float64(y)},
 				Op:  parser.MINUS,
 			},
-			Rhs: &ast.FloatLit{F: float64(x)},
+			RHS: &ast.FloatLit{F: float64(x)},
 			Op:  parser.PLUS,
 		})
 		if bErr != nil {
@@ -283,20 +283,20 @@ func TestConstFoldQuickFloatAddSub(t *testing.T) {
 func TestConstFoldQuickMixedAddSub(t *testing.T) {
 	if err := quick.Check(func(x int32, y float32) bool {
 		a, aErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.IntLit{I: int64(x)},
-			Rhs: &ast.FloatLit{F: float64(y)},
+			LHS: &ast.IntLit{I: int64(x)},
+			RHS: &ast.FloatLit{F: float64(y)},
 			Op:  parser.MINUS,
 		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
 		b, bErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.BinaryExpr{
-				Lhs: &ast.FloatLit{F: 0},
-				Rhs: &ast.FloatLit{F: float64(y)},
+			LHS: &ast.BinaryExpr{
+				LHS: &ast.FloatLit{F: 0},
+				RHS: &ast.FloatLit{F: float64(y)},
 				Op:  parser.MINUS,
 			},
-			Rhs: &ast.IntLit{I: int64(x)},
+			RHS: &ast.IntLit{I: int64(x)},
 			Op:  parser.PLUS,
 		})
 		if bErr != nil {
@@ -317,20 +317,20 @@ var cmpFloat = cmp.Comparer(func(x, y float64) bool {
 func TestConstFoldQuickFloatMulDiv(t *testing.T) {
 	if err := quick.Check(func(x, y float32) bool {
 		a, aErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.FloatLit{F: float64(x)},
-			Rhs: &ast.FloatLit{F: float64(y)},
+			LHS: &ast.FloatLit{F: float64(x)},
+			RHS: &ast.FloatLit{F: float64(y)},
 			Op:  parser.DIV,
 		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
 		b, bErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.BinaryExpr{
-				Lhs: &ast.FloatLit{F: 1},
-				Rhs: &ast.FloatLit{F: float64(y)},
+			LHS: &ast.BinaryExpr{
+				LHS: &ast.FloatLit{F: 1},
+				RHS: &ast.FloatLit{F: float64(y)},
 				Op:  parser.DIV,
 			},
-			Rhs: &ast.FloatLit{F: float64(x)},
+			RHS: &ast.FloatLit{F: float64(x)},
 			Op:  parser.MUL,
 		})
 		if bErr != nil {
@@ -361,32 +361,32 @@ func TestConstFoldQuickIntModAddition(t *testing.T) {
 	}
 	if err := quick.Check(func(x, y, z int32) bool {
 		a, aErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.BinaryExpr{
-				Lhs: &ast.IntLit{I: int64(x)},
-				Rhs: &ast.IntLit{I: int64(y)},
+			LHS: &ast.BinaryExpr{
+				LHS: &ast.IntLit{I: int64(x)},
+				RHS: &ast.IntLit{I: int64(y)},
 				Op:  parser.PLUS,
 			},
-			Rhs: &ast.IntLit{I: int64(z)},
+			RHS: &ast.IntLit{I: int64(z)},
 			Op:  parser.MOD,
 		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
 		b, bErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.BinaryExpr{
-				Lhs: &ast.BinaryExpr{
-					Lhs: &ast.IntLit{I: int64(x)},
-					Rhs: &ast.IntLit{I: int64(z)},
+			LHS: &ast.BinaryExpr{
+				LHS: &ast.BinaryExpr{
+					LHS: &ast.IntLit{I: int64(x)},
+					RHS: &ast.IntLit{I: int64(z)},
 					Op:  parser.MOD,
 				},
-				Rhs: &ast.BinaryExpr{
-					Lhs: &ast.IntLit{I: int64(y)},
-					Rhs: &ast.IntLit{I: int64(z)},
+				RHS: &ast.BinaryExpr{
+					LHS: &ast.IntLit{I: int64(y)},
+					RHS: &ast.IntLit{I: int64(z)},
 					Op:  parser.MOD,
 				},
 				Op: parser.PLUS,
 			},
-			Rhs: &ast.IntLit{I: int64(z)},
+			RHS: &ast.IntLit{I: int64(z)},
 			Op:  parser.MOD,
 		})
 		if bErr != nil {
@@ -417,32 +417,32 @@ func TestConstFoldQuickFloatModAddition(t *testing.T) {
 	}
 	if err := quick.Check(func(x, y, z float32) bool {
 		a, aErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.BinaryExpr{
-				Lhs: &ast.FloatLit{F: float64(x)},
-				Rhs: &ast.FloatLit{F: float64(y)},
+			LHS: &ast.BinaryExpr{
+				LHS: &ast.FloatLit{F: float64(x)},
+				RHS: &ast.FloatLit{F: float64(y)},
 				Op:  parser.PLUS,
 			},
-			Rhs: &ast.FloatLit{F: float64(z)},
+			RHS: &ast.FloatLit{F: float64(z)},
 			Op:  parser.MOD,
 		})
 		if aErr != nil {
 			t.Fatal(aErr)
 		}
 		b, bErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.BinaryExpr{
-				Lhs: &ast.BinaryExpr{
-					Lhs: &ast.FloatLit{F: float64(x)},
-					Rhs: &ast.FloatLit{F: float64(z)},
+			LHS: &ast.BinaryExpr{
+				LHS: &ast.BinaryExpr{
+					LHS: &ast.FloatLit{F: float64(x)},
+					RHS: &ast.FloatLit{F: float64(z)},
 					Op:  parser.MOD,
 				},
-				Rhs: &ast.BinaryExpr{
-					Lhs: &ast.FloatLit{F: float64(y)},
-					Rhs: &ast.FloatLit{F: float64(z)},
+				RHS: &ast.BinaryExpr{
+					LHS: &ast.FloatLit{F: float64(y)},
+					RHS: &ast.FloatLit{F: float64(z)},
 					Op:  parser.MOD,
 				},
 				Op: parser.PLUS,
 			},
-			Rhs: &ast.FloatLit{F: float64(z)},
+			RHS: &ast.FloatLit{F: float64(z)},
 			Op:  parser.MOD,
 		})
 		if bErr != nil {
@@ -465,10 +465,10 @@ func TestConstFoldQuickMixedPowProduct(t *testing.T) {
 	}
 	if err := quick.Check(func(x float32, y, z int32) bool {
 		a, aErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.FloatLit{F: float64(x)},
-			Rhs: &ast.BinaryExpr{
-				Lhs: &ast.IntLit{I: int64(y)},
-				Rhs: &ast.IntLit{I: int64(z)},
+			LHS: &ast.FloatLit{F: float64(x)},
+			RHS: &ast.BinaryExpr{
+				LHS: &ast.IntLit{I: int64(y)},
+				RHS: &ast.IntLit{I: int64(z)},
 				Op:  parser.PLUS,
 			},
 			Op: parser.POW,
@@ -477,14 +477,14 @@ func TestConstFoldQuickMixedPowProduct(t *testing.T) {
 			t.Fatal(aErr)
 		}
 		b, bErr := opt.Optimise(&ast.BinaryExpr{
-			Lhs: &ast.BinaryExpr{
-				Lhs: &ast.FloatLit{F: float64(x)},
-				Rhs: &ast.IntLit{I: int64(y)},
+			LHS: &ast.BinaryExpr{
+				LHS: &ast.FloatLit{F: float64(x)},
+				RHS: &ast.IntLit{I: int64(y)},
 				Op:  parser.POW,
 			},
-			Rhs: &ast.BinaryExpr{
-				Lhs: &ast.FloatLit{F: float64(x)},
-				Rhs: &ast.IntLit{I: int64(z)},
+			RHS: &ast.BinaryExpr{
+				LHS: &ast.FloatLit{F: float64(x)},
+				RHS: &ast.IntLit{I: int64(z)},
 				Op:  parser.POW,
 			},
 			Op: parser.MUL,
