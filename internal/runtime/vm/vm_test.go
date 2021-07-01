@@ -760,6 +760,7 @@ func TestDatumSetInstrs(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			m := makeMetrics()
 			v := makeVM(test.i, m)

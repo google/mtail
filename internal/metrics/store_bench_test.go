@@ -91,12 +91,15 @@ func BenchmarkStore(b *testing.B) {
 	}
 	rand := rand.New(rand.NewSource(99))
 	for _, bench := range benches {
+		bench := bench
 		for _, gc := range []bool{false, true} {
+			gc := gc
 			gcStr := ""
 			if gc {
 				gcStr = "WithGc"
 			}
 			for _, parallel := range []bool{false, true} {
+				parallel := parallel
 				parallelStr := ""
 				if parallel {
 					parallelStr = "Parallel"
@@ -177,7 +180,9 @@ func BenchmarkMetric(b *testing.B) {
 	}
 	rand := rand.New(rand.NewSource(99))
 	for _, bench := range benches {
+		bench := bench
 		for _, parallel := range []bool{false, true} {
+			parallel := parallel
 			parallelStr := ""
 			if parallel {
 				parallelStr = "Parallel"

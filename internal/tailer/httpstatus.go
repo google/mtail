@@ -75,6 +75,7 @@ func (t *Tailer) WriteStatusHTML(w io.Writer) error {
 		{"file_truncates_total", data.Truncs},
 		{"log_lines_total", data.Lines},
 	} {
+		pair := pair
 		v := expvar.Get(pair.k).(*expvar.Map)
 		v.Do(func(kv expvar.KeyValue) {
 			pair.m[kv.Key] = kv.Value.String()

@@ -142,6 +142,7 @@ var commOps = map[int]string{parser.PLUS: "add", parser.MUL: "mul"}
 
 func TestConstFoldQuickIntComm(t *testing.T) {
 	for op, name := range commOps {
+		op := op
 		t.Run(name, func(t *testing.T) {
 			if err := quick.Check(func(x, y int32) bool {
 				a, aErr := opt.Optimise(&ast.BinaryExpr{
@@ -170,6 +171,7 @@ func TestConstFoldQuickIntComm(t *testing.T) {
 
 func TestConstFoldQuickFloatComm(t *testing.T) {
 	for op, name := range commOps {
+		op := op
 		t.Run(name, func(t *testing.T) {
 			if err := quick.Check(func(x, y float32) bool {
 				a, aErr := opt.Optimise(&ast.BinaryExpr{
@@ -198,6 +200,7 @@ func TestConstFoldQuickFloatComm(t *testing.T) {
 
 func TestConstFoldQuickMixedComm(t *testing.T) {
 	for op, name := range commOps {
+		op := op
 		t.Run(name, func(t *testing.T) {
 			if err := quick.Check(func(x int32, y float32) bool {
 				a, aErr := opt.Optimise(&ast.BinaryExpr{

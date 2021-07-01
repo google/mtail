@@ -91,6 +91,7 @@ var exampleProgramTests = []struct {
 func TestExamplePrograms(t *testing.T) {
 	testutil.SkipIfShort(t)
 	for _, tc := range exampleProgramTests {
+		tc := tc
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile),
 			testutil.TimeoutTest(exampleTimeout, func(t *testing.T) { //nolint:thelper
 				ctx, cancel := context.WithCancel(context.Background())
@@ -134,6 +135,7 @@ func TestCompileExamplePrograms(t *testing.T) {
 	matches, err := filepath.Glob("../../examples/*.mtail")
 	testutil.FatalIfErr(t, err)
 	for _, tc := range matches {
+		tc := tc
 		name := filepath.Base(tc)
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())

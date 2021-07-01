@@ -20,6 +20,7 @@ import (
 
 func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 	for _, scheme := range []string{"unix", "tcp"} {
+		scheme := scheme
 		t.Run(scheme, testutil.TimeoutTest(time.Second, func(t *testing.T) { //nolint:thelper
 			var wg sync.WaitGroup
 
@@ -74,6 +75,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 
 func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 	for _, scheme := range []string{"unix", "tcp"} {
+		scheme := scheme
 		t.Run(scheme, testutil.TimeoutTest(time.Second, func(t *testing.T) { //nolint:thelper
 			var wg sync.WaitGroup
 

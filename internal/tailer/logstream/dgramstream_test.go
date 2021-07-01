@@ -22,6 +22,7 @@ const dgramTimeout = 1 * time.Second
 
 func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 	for _, scheme := range []string{"unixgram", "udp"} {
+		scheme := scheme
 		t.Run(scheme, testutil.TimeoutTest(dgramTimeout, func(t *testing.T) { //nolint:thelper
 			var wg sync.WaitGroup
 
@@ -78,6 +79,7 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 
 func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
 	for _, scheme := range []string{"unixgram", "udp"} {
+		scheme := scheme
 		t.Run(scheme, testutil.TimeoutTest(dgramTimeout, func(t *testing.T) { //nolint:thelper
 			var wg sync.WaitGroup
 
