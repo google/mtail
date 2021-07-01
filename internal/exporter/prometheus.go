@@ -33,6 +33,7 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 	lastMetric := ""
 	lastSource := ""
 
+	/* #nosec G104 always retursn nil */
 	e.store.Range(func(m *metrics.Metric) error {
 		m.RLock()
 		// We don't have a way of converting text metrics to prometheus format.

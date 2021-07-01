@@ -44,7 +44,7 @@ func TimeoutTest(timeout time.Duration, f func(t *testing.T)) func(t *testing.T)
 	// Raise the timeout if we're run under the race detector.
 	timeout = timeout * RaceDetectorMultiplier
 	// If we're in a CI environment, raise the timeout by 10x.  This mimics the
-	// timeout gloabl flag set in the Makefile.
+	// timeout global flag set in the Makefile.
 	if os.Getenv("CI") == "true" {
 		timeout = 10 * timeout
 	}

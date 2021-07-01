@@ -44,11 +44,16 @@ func main() {
 	up := parser.Unparser{}
 	out := up.Unparse(ast)
 	if *write {
-		f.Truncate(0)
-		f.Seek(0, io.SeekStart)
-		f.WriteString(out)
+		if err := f.Truncate(0); err != nil {
+			glog.Exit(err)
+		}
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			glog.Exit(err)
+		}
+		if _, err := f.WriteString(out); err != nil {
+			glog.Exit(err)
+		}
 	} else {
-
 		fmt.Print(out)
 	}
 }

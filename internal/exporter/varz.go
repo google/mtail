@@ -23,7 +23,7 @@ const varzFormat = "%s{%s} %s\n"
 func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-type", "text/plain")
 
-	e.store.Range(func(m *metrics.Metric) error {
+	err := e.store.Range(func(m *metrics.Metric) error {
 		select {
 		case <-r.Context().Done():
 			return r.Context().Err()
@@ -40,6 +40,9 @@ func (e *Exporter) HandleVarz(w http.ResponseWriter, r *http.Request) {
 		m.RUnlock()
 		return nil
 	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s", err), http.StatusInternalServerError)
+	}
 }
 
 func metricToVarz(m *metrics.Metric, l *metrics.LabelSet, omitProgLabel bool, hostname string) string {

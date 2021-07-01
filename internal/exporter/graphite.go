@@ -29,7 +29,7 @@ var (
 func (e *Exporter) HandleGraphite(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-type", "text/plain")
 
-	e.store.Range(func(m *metrics.Metric) error {
+	err := e.store.Range(func(m *metrics.Metric) error {
 		select {
 		case <-r.Context().Done():
 			return r.Context().Err()
@@ -46,13 +46,16 @@ func (e *Exporter) HandleGraphite(w http.ResponseWriter, r *http.Request) {
 		m.RUnlock()
 		return nil
 	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s", err), http.StatusInternalServerError)
+	}
 }
 
 // metricToGraphite encodes a metric in the graphite text protocol format.  The
 // metric lock is held before entering this function.
 func metricToGraphite(hostname string, m *metrics.Metric, l *metrics.LabelSet, _ time.Duration) string {
 	var b strings.Builder
-	if (m.Kind == metrics.Histogram && m.Type == metrics.Buckets) {
+	if m.Kind == metrics.Histogram && m.Type == metrics.Buckets {
 		d := m.LabelValues[0].Value
 		buckets := datum.GetBuckets(d)
 		for r, c := range buckets.GetBuckets() {
