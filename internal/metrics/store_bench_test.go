@@ -186,9 +186,11 @@ func BenchmarkMetric(b *testing.B) {
 					}
 					b.ResetTimer()
 					if parallel {
-						for n := 0; n < b.N; n++ {
-							bench.b(b, items, &lvs, m)
-						}
+						b.RunParallel(func(pb *testing.PB) {
+							for pb.Next() {
+								bench.b(b, items, &lvs, m)
+							}
+						})
 					} else {
 						for n := 0; n < b.N; n++ {
 							bench.b(b, items, &lvs, m)
