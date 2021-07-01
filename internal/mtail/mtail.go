@@ -20,6 +20,7 @@ import (
 	"github.com/google/mtail/internal/runtime"
 	"github.com/google/mtail/internal/tailer"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
 	"go.opencensus.io/zpages"
@@ -182,11 +183,11 @@ func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server,
 		"prog_runtime_errors_total": prometheus.NewDesc("prog_runtime_errors_total", "number of errors encountered when executing programs per source filename", []string{"prog"}, nil),
 	}
 	m.reg.MustRegister(
-		prometheus.NewGoCollector(),
-		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	// Prefix all expvar metrics with 'mtail_'
 	prometheus.WrapRegistererWithPrefix("mtail_", m.reg).MustRegister(
-		prometheus.NewExpvarCollector(expvarDescs))
+		collectors.NewExpvarCollector(expvarDescs))
 	if err := m.SetOption(options...); err != nil {
 		return nil, err
 	}

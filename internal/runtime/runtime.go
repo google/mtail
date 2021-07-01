@@ -344,8 +344,6 @@ func (r *Runtime) UnloadProgram(pathname string) {
 	r.handleMu.Lock()
 	defer r.handleMu.Unlock()
 	close(r.handles[name].lines)
-	if _, ok := r.handles[name]; ok {
-		delete(r.handles, name)
-	}
+	delete(r.handles, name)
 	ProgUnloads.Add(name, 1)
 }

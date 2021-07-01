@@ -91,7 +91,7 @@ func (d *Buckets) MarshalJSON() ([]byte, error) {
 	d.RLock()
 	defer d.RUnlock()
 
-	bs := make(map[string]uint64, 0)
+	bs := make(map[string]uint64)
 
 	for _, b := range d.Buckets {
 		bs[strconv.FormatFloat(b.Range.Max, 'g', -1, 64)] = b.Count

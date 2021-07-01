@@ -306,12 +306,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		// have entered a DecoDecl yet.
 		last := len(c.decoScopes) - 1
 		if last < 0 {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Can't use `next' outside of a decorator."))
+			c.errors.Add(n.Pos(), "Can't use `next' outside of a decorator.")
 			return n
 		}
 		decoScope := c.decoScopes[last]
 		if len(decoScope.Symbols) > 0 {
-			c.errors.Add(n.Pos(), fmt.Sprintf("Can't use `next' statement twice in a decorator."))
+			c.errors.Add(n.Pos(), "Can't use `next' statement twice in a decorator.")
 			return n
 		}
 		// Merge the current scope into it.
@@ -609,7 +609,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				if len(argTypes) > 0 {
 					glog.V(1).Infof("Our idNode is not a dimension type")
 					n.SetType(types.Error)
-					c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
+					c.errors.Add(n.Pos(), "Index taken on unindexable expression")
 				} else {
 					n.SetType(v.Type())
 				}
@@ -617,7 +617,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 
 		default:
-			c.errors.Add(n.Pos(), fmt.Sprintf("Index taken on unindexable expression"))
+			c.errors.Add(n.Pos(), "Index taken on unindexable expression")
 			n.SetType(types.Error)
 			return n
 		}
@@ -740,13 +740,13 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 	case *ast.DelStmt:
 		if ix, ok := n.N.(*ast.IndexedExpr); ok {
 			if len(ix.Index.(*ast.ExprList).Children) == 0 {
-				c.errors.Add(n.N.Pos(), fmt.Sprintf("Cannot delete this.\n\tTry deleting an index from this dimensioned metric."))
+				c.errors.Add(n.N.Pos(), "Cannot delete this.\n\tTry deleting an index from this dimensioned metric.")
 				return n
 			}
 			ix.LHS.(*ast.IDTerm).Lvalue = true
 			return n
 		}
-		c.errors.Add(n.N.Pos(), fmt.Sprintf("Cannot delete this.\n\tTry deleting from a dimensioned metric with this as an index."))
+		c.errors.Add(n.N.Pos(), "Cannot delete this.\n\tTry deleting from a dimensioned metric with this as an index.")
 	}
 
 	return node

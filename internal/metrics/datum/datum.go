@@ -240,13 +240,13 @@ func GetBucketsSum(d Datum) float64 {
 func GetBucketsCumByMax(d Datum) map[float64]uint64 {
 	switch d := d.(type) {
 	case *Buckets:
-		buckets := make(map[float64]uint64, 0)
+		buckets := make(map[float64]uint64)
 		maxes := make([]float64, 0)
 		for r, c := range d.GetBuckets() {
 			maxes = append(maxes, r.Max)
 			buckets[r.Max] = c
 		}
-		sort.Sort(sort.Float64Slice(maxes))
+		sort.Float64s(maxes)
 		cum := uint64(0)
 		for _, m := range maxes {
 			cum += buckets[m]

@@ -101,7 +101,6 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 			}
 			glog.Info("oneshot mode, retuning")
 			close(initDone)
-			return
 		}()
 		return nil
 	}

@@ -58,9 +58,7 @@ func Dictionary() (r []string) {
 	for k := range keywords {
 		r = append(r, k)
 	}
-	for _, b := range builtins {
-		r = append(r, b)
-	}
+	r = append(r, builtins...)
 	return
 }
 

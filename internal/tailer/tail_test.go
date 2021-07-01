@@ -185,7 +185,7 @@ func TestTailerOpenRetries(t *testing.T) {
 
 func TestTailerInitErrors(t *testing.T) {
 	var wg sync.WaitGroup
-	_, err := New(nil, &wg, nil)
+	_, err := New(context.TODO(), &wg, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -256,9 +256,9 @@ func TestTailExpireStaleHandles(t *testing.T) {
 		t.Errorf("expecting 2 handles, got %v", ta.logstreams)
 	}
 	ta.logstreamsMu.RUnlock()
-	ta.logstreamsMu.Lock()
+	// ta.logstreamsMu.Lock()
 	// ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 + time.Minute)
-	ta.logstreamsMu.Unlock()
+	// ta.logstreamsMu.Unlock()
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
 	}
@@ -267,9 +267,9 @@ func TestTailExpireStaleHandles(t *testing.T) {
 		t.Errorf("expecting 2 handles, got %v", ta.logstreams)
 	}
 	ta.logstreamsMu.RUnlock()
-	ta.logstreamsMu.Lock()
+	// ta.logstreamsMu.Lock()
 	// ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 - time.Minute)
-	ta.logstreamsMu.Unlock()
+	// ta.logstreamsMu.Unlock()
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
 	}

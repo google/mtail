@@ -99,7 +99,7 @@ func TestExpireMetric(t *testing.T) {
 	datum.SetInt(d, 1, time.Now().Add(-time.Hour))
 	lv := m.FindLabelValueOrNil([]string{"1", "2", "3"})
 	if lv == nil {
-		t.Errorf("couldn't find lv")
+		t.Fatal("couldn't find lv")
 	}
 	lv.Expiry = time.Minute
 	d, err = m.GetDatum("4", "5", "6")

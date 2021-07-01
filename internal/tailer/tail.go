@@ -251,7 +251,7 @@ func (t *Tailer) SetIgnorePattern(pattern string) error {
 	ignoreRegexPattern, err := regexp.Compile(pattern)
 	if err != nil {
 		glog.V(2).Infof("Couldn't compile regex %q: %s", pattern, err)
-		fmt.Println(fmt.Sprintf("error: %v", err))
+		fmt.Printf("error: %v\n", err)
 		return err
 	}
 	t.ignoreRegexPattern = ignoreRegexPattern
