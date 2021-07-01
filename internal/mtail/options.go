@@ -4,7 +4,7 @@
 package mtail
 
 import (
-	"fmt"
+	"errors"
 	"net"
 	"os"
 	"path/filepath"
@@ -63,9 +63,11 @@ type bindAddress struct {
 	address, port string
 }
 
+var ErrDuplicateHTTPBindAddress = errors.New("HTTP server bind address already supplied")
+
 func (opt bindAddress) apply(m *Server) error {
 	if m.listener != nil {
-		return fmt.Errorf("HTTP server bind address already supplied")
+		return ErrDuplicateHTTPBindAddress
 	}
 	bindAddress := net.JoinHostPort(opt.address, opt.port)
 	var err error
@@ -78,7 +80,7 @@ type BindUnixSocket string
 
 func (opt BindUnixSocket) apply(m *Server) error {
 	if m.listener != nil {
-		return fmt.Errorf("HTTP server bind address already supplied")
+		return ErrDuplicateHTTPBindAddress
 	}
 	var err error
 	m.listener, err = net.Listen("unix", string(opt))

@@ -10,6 +10,7 @@ package logstream
 
 import (
 	"context"
+	"errors"
 	"expvar"
 	"fmt"
 	"net/url"
@@ -41,6 +42,12 @@ type LogStream interface {
 // defaultReadBufferSize the size of the buffer for reading bytes into.
 const defaultReadBufferSize = 4096
 
+var (
+	ErrUnsupportedUrlScheme = errors.New("unsupported URL scheme")
+	ErrUnsupportedFileType  = errors.New("unsupported file type")
+	ErrEmptySocketAddress   = errors.New("socket address cannot be empty, please provide a unix domain socket filename or host:port")
+)
+
 // New creates a LogStream from the file object located at the absolute path
 // `pathname`.  The LogStream will watch `ctx` for a cancellation signal, and
 // notify the `wg` when it is Done.  Log lines will be sent to the `lines`
@@ -54,7 +61,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	glog.Infof("Parsed url as %v", u)
 	switch u.Scheme {
 	default:
-		return nil, fmt.Errorf("unsupported URL scheme %q in path %q", u.Scheme, pathname)
+		return nil, fmt.Errorf("%w %q in path %q", ErrUnsupportedUrlScheme, u.Scheme, pathname)
 	case "unixgram":
 		return newDgramStream(ctx, wg, waker, u.Scheme, u.Path, lines)
 	case "unix":
@@ -79,6 +86,6 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	// case m&os.ModeType == os.ModeSocket:
 	// 	return newSocketStream(ctx, wg, waker, pathname, lines)
 	default:
-		return nil, fmt.Errorf("unsupported file object type at %q", pathname)
+		return nil, fmt.Errorf("%w: %q", ErrUnsupportedFileType, pathname)
 	}
 }

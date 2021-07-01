@@ -127,10 +127,12 @@ func (opt logstreamPollWaker) apply(t *Tailer) error {
 	return nil
 }
 
+var ErrNoLinesChannel = errors.New("Tailer needs a lines channel")
+
 // New creates a new Tailer.
 func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine, options ...Option) (*Tailer, error) {
 	if lines == nil {
-		return nil, errors.New("Tailer needs a lines channel")
+		return nil, ErrNoLinesChannel
 	}
 	t := &Tailer{
 		ctx:          ctx,
@@ -195,6 +197,8 @@ func (t *Tailer) SetOption(options ...Option) error {
 	return nil
 }
 
+var ErrUnsupportedUrlScheme = errors.New("unsupported URL scheme")
+
 // AddPattern adds a pattern to the list of patterns to filter filenames against.
 func (t *Tailer) AddPattern(pattern string) error {
 	u, err := url.Parse(pattern)
@@ -203,7 +207,7 @@ func (t *Tailer) AddPattern(pattern string) error {
 	}
 	switch u.Scheme {
 	default:
-		return fmt.Errorf("unsupported URL scheme %q in path pattern %q", u.Scheme, pattern)
+		return fmt.Errorf("%w: %q in path pattern %q", ErrUnsupportedUrlScheme, u.Scheme, pattern)
 	case "unix", "unixgram", "tcp", "udp":
 		// Keep the scheme.
 		glog.V(2).Infof("AddPattern: socket %q", pattern)

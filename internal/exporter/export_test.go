@@ -39,7 +39,7 @@ func TestCreateExporter(t *testing.T) {
 	wg.Wait()
 	ctx, cancel = context.WithCancel(context.Background())
 	failopt := func(*Exporter) error {
-		return errors.New("busted")
+		return errors.New("busted") // nolint:goerr113
 	}
 	_, err = New(ctx, &wg, store, failopt)
 	if err == nil {
