@@ -75,7 +75,6 @@ func ReadTestData(file io.Reader, programfile string) metrics.MetricSlice {
 				typ = metrics.Float
 				if err != nil || fval == 0.0 {
 					sval = match[4]
-					err = nil
 					typ = metrics.String
 				}
 			}

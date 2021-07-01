@@ -4,6 +4,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"regexp/syntax"
 	"strings"
@@ -266,6 +267,8 @@ type TypeError struct {
 	received Type
 }
 
+var ErrRecursiveUnification = errors.New("recursive unification error")
+
 func (e *TypeError) Error() string {
 	var estr, rstr string
 	if IsComplete(e.expected) {
@@ -301,7 +304,7 @@ func Unify(a, b Type) error {
 			}
 		case *Operator:
 			if occursInType(a2, b2) {
-				return fmt.Errorf("recursive unification on %v and %v", a2, b2)
+				return fmt.Errorf("%w on %v and %v", ErrRecursiveUnification, a2, b2)
 			}
 			glog.V(2).Infof("Making %q type %q", a2, b1)
 			a2.SetInstance(b1)
@@ -313,7 +316,8 @@ func Unify(a, b Type) error {
 			err := Unify(b, a)
 			if err != nil {
 				// We flipped the args, flip them back.
-				if e, ok := err.(*TypeError); ok {
+				var e *TypeError
+				if errors.As(err, &e) {
 					return &TypeError{e.received, e.expected}
 				}
 			}

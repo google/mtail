@@ -34,7 +34,7 @@ type socketStream struct {
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, lines chan<- *logline.LogLine, oneShot bool) (LogStream, error) {
 	if address == "" {
-		return nil, fmt.Errorf("socket address cannot be empty, please provide a unix domain socket filename or a tcp host:port.")
+		return nil, fmt.Errorf("socket address cannot be empty, please provide a unix domain socket filename or a tcp host:port")
 	}
 	ss := &socketStream{ctx: ctx, oneShot: oneShot, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
 	if err := ss.stream(ctx, wg, waker); err != nil {

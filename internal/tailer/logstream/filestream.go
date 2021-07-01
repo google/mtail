@@ -117,8 +117,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				// TODO: This could be generalised to check for any retryable
 				// errors, and end on unretriables; e.g. ESTALE looks
 				// retryable.
-				var serr *os.SyscallError
-				if errors.As(err, &serr) && serr.Err == syscall.ESTALE {
+				if errors.Is(err, syscall.ESTALE) {
 					glog.Infof("%v: reopening stream due to %s", fd, err)
 					if nerr := fs.stream(ctx, wg, waker, fi, true); nerr != nil {
 						glog.Info(nerr)

@@ -907,7 +907,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			v.errorf("%+v", oerr)
 			return
 		}
-		t.Push(strings.Replace(val, old, new, -1))
+		t.Push(strings.ReplaceAll(val, old, new))
 	case code.Rsubst:
 		pat, perr := t.PopInt()
 		if perr != nil {

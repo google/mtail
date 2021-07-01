@@ -5,6 +5,7 @@ package parser
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -128,7 +129,7 @@ var eof rune = -1
 func (l *Lexer) next() rune {
 	var err error
 	l.rune, l.width, err = l.input.ReadRune()
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		l.width = 1
 		l.rune = eof
 	}

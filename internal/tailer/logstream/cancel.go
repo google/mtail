@@ -2,6 +2,7 @@ package logstream
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -25,7 +26,7 @@ func SetReadDeadlineOnDone(ctx context.Context, d ReadDeadliner) {
 }
 
 func IsEndOrCancel(err error) bool {
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		return true
 	}
 	if os.IsTimeout(err) {

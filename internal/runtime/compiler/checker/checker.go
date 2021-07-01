@@ -693,7 +693,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				// field if the layout field can contain two digits; but they
 				// won't parse themselves.  Zulu Timezones in the layout need
 				// to be converted to offset in the parsed time.
-				timeStr := strings.Replace(strings.Replace(f.Text, "_", "", -1), "Z", "+", -1)
+				timeStr := strings.ReplaceAll(strings.ReplaceAll(f.Text, "_", ""), "Z", "+")
 				glog.V(2).Infof("time_str is %q", timeStr)
 				_, err := time.Parse(f.Text, timeStr)
 				if err != nil {

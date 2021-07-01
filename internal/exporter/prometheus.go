@@ -17,7 +17,7 @@ import (
 var metricExportTotal = expvar.NewInt("metric_export_total")
 
 func noHyphens(s string) string {
-	return strings.Replace(s, "-", "_", -1)
+	return strings.ReplaceAll(s, "-", "_")
 }
 
 // Describe implements the prometheus.Collector interface.

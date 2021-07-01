@@ -118,7 +118,7 @@ func newMetric(len int) *Metric {
 func buildLabelValueKey(labels []string) string {
 	var buf strings.Builder
 	for i := 0; i < len(labels); i++ {
-		rs := strings.Replace(labels[i], "-", "\\-", -1)
+		rs := strings.ReplaceAll(labels[i], "-", "\\-")
 		buf.WriteString(rs)
 		buf.WriteString("-")
 	}

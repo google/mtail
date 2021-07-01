@@ -92,7 +92,7 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		ast.Walk(u, v.Expr)
 
 	case *ast.PatternLit:
-		u.emit("/" + strings.Replace(v.Pattern, "/", "\\/", -1) + "/")
+		u.emit("/" + strings.ReplaceAll(v.Pattern, "/", "\\/") + "/")
 
 	case *ast.BinaryExpr:
 		ast.Walk(u, v.Lhs)

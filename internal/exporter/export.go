@@ -142,8 +142,8 @@ func formatLabels(name string, m map[string]string, ksep, sep, rep string) strin
 	if len(m) > 0 {
 		var s []string
 		for k, v := range m {
-			k1 := strings.Replace(strings.Replace(k, ksep, rep, -1), sep, rep, -1)
-			v1 := strings.Replace(strings.Replace(v, ksep, rep, -1), sep, rep, -1)
+			k1 := strings.ReplaceAll(strings.ReplaceAll(k, ksep, rep), sep, rep)
+			v1 := strings.ReplaceAll(strings.ReplaceAll(v, ksep, rep), sep, rep)
 			s = append(s, fmt.Sprintf("%s%s%s", k1, ksep, v1))
 		}
 		return r + sep + strings.Join(s, sep)

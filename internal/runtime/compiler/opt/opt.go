@@ -165,6 +165,7 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 		default:
 			return node
 		}
+	default:
+		return node
 	}
-	return node
 }
