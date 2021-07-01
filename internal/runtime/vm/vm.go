@@ -563,7 +563,16 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 		case int: /* capref */
 			// First find the match storage index on the stack
-			re := t.Pop().(int)
+			val, err := t.PopInt()
+			if err != nil {
+				v.errorf("%s", err)
+				return
+			}
+			if val < 0 || val >= math.MaxInt32 {
+				v.errorf("int32 index out of range")
+				return
+			}
+			re := int(val)
 			// Store the result from the re'th index at the s'th index
 			ts = t.matches[re][s]
 		}
@@ -685,8 +694,16 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			// TODO(jaq): replace with type coercion
 			t.Push(int64(math.Pow(float64(a), float64(b))))
 		case code.Shl:
+			if b < 0 || b >= math.MaxInt32 {
+				v.errorf("shift int out of range")
+				return
+			}
 			t.Push(a << uint(b))
 		case code.Shr:
+			if b < 0 || b >= math.MaxInt32 {
+				v.errorf("shift int out of range")
+				return
+			}
 			t.Push(a >> uint(b))
 		case code.And:
 			t.Push(a & b)
@@ -809,26 +826,27 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		t.Push(len(s))
 
 	case code.S2i:
-		base := int64(10)
+		base := 10
 		var err error
 		if i.Operand != nil {
 			// strtol is emitted with an arglen, int is not
-			base, err = t.PopInt()
+			val, err := t.PopInt()
 			if err != nil {
 				v.errorf("%s", err)
 				return
 			}
-			if base > 2147483647 || base < -2147483648 {
+			if val <= 0 || val >= math.MaxInt32 {
 				v.errorf("int32 out of range")
 				return
 			}
+			base = int(val)
 		}
 		str, err := t.PopString()
 		if err != nil {
 			v.errorf("%+v", err)
 			return
 		}
-		val, err := strconv.ParseInt(str, int(base), 64)
+		val, err := strconv.ParseInt(str, base, 64)
 		if err != nil {
 			v.errorf("%s", err)
 			return
