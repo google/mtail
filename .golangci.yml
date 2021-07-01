@@ -14,6 +14,18 @@ linters-settings:
 linters:
   enable-all: true
   disable:
+    - whitespace # broken by goyuacc
+    - dupl # can't exclude test code
+    - forbidigo # can't exclude non prod tools
+    - gocognit # worst check ever
+    - errcheck # handled by gosec
+    - godox # TODOs are fine
+    - gosec # run independently
+    - golint # deprecated
+    - interfacer # deprecated
+    - exhaustivestruct # too noisy
+    - testpackage # need to test internal methods
+    - paralleltest # i had a good reason for this
     - maligned
     - megacheck
     - lll

@@ -88,6 +88,10 @@ GOSEC = $(GOBIN)/gosec
 $(GOSEC):
 	go install github.com/securego/gosec/v2/cmd/gosec@latest
 
+GOLANGCILINT = $(GOBIN)/golangci-lint
+$(GOLANGCILINT):
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
 
 .PHONY: clean covclean crossclean depclean veryclean
 clean: covclean crossclean
@@ -100,9 +104,10 @@ depclean:
 	rm -f .d/*  .*dep-stamp
 veryclean: clean depclean
 
+# lint
 .PHONY: lint
-lint:
-	golangci-lint run ./...
+lint:  $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(GOLANGCILINT)
+	$(GOLANGCILINT) run ./...
 
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 version := $(shell git describe --tags --always --dirty)
