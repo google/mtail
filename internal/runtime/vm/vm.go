@@ -818,18 +818,22 @@ func (v *VM) execute(t *thread, i code.Instr) {
 				v.errorf("%s", err)
 				return
 			}
+			if base > 2147483647 || base < -2147483648 {
+				v.errorf("int32 out of range")
+				return
+			}
 		}
 		str, err := t.PopString()
 		if err != nil {
 			v.errorf("%+v", err)
 			return
 		}
-		i, err := strconv.ParseInt(str, int(base), 64)
+		val, err := strconv.ParseInt(str, int(base), 64)
 		if err != nil {
 			v.errorf("%s", err)
 			return
 		}
-		t.Push(i)
+		t.Push(val)
 
 	case code.S2f:
 		str, err := t.PopString()
