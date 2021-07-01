@@ -2,6 +2,7 @@
 // This file is available under the Apache license.
 
 %{
+/* #nosec G104 generated code, errors reported do not make sense */
 package parser
 
 import (

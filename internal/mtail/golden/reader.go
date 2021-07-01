@@ -148,6 +148,7 @@ func ReadTestData(file io.Reader, programfile string) metrics.MetricSlice {
 	}
 
 	storeList := make([]*metrics.Metric, 0)
+	/* #nosec G104 always returns nil */
 	store.Range(func(m *metrics.Metric) error {
 		storeList = append(storeList, m)
 		return nil

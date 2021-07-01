@@ -84,6 +84,10 @@ BENCHSTAT = $(GOBIN)/benchstat
 $(BENCHSTAT):
 	go install golang.org/x/perf/cmd/benchstat@latest
 
+GOSEC = $(GOBIN)/gosec
+$(GOSEC):
+	go install github.com/securego/gosec/v2/cmd/gosec@latest
+
 
 .PHONY: clean covclean crossclean depclean veryclean
 clean: covclean crossclean
@@ -216,11 +220,8 @@ container: Dockerfile
 
 ## Run gosec
 .PHONY: gosec
-gosec: gosec
-	docker run --rm -t \
-		-w /mtail \
-		-v $(CURDIR):/mtail \
-		securego/gosec --exclude=G104 /mtail/...
+gosec: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(GOSEC)
+	$(GOSEC) -tags fuzz ./...
 
 
 ###

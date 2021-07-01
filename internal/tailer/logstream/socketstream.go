@@ -97,7 +97,9 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			acceptConn()
+			if err := acceptConn(); err != nil {
+				glog.Info(err)
+			}
 			glog.Info("oneshot mode, retuning")
 			close(initDone)
 			return

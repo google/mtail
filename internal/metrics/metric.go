@@ -108,7 +108,7 @@ func NewMetric(name string, prog string, kind Kind, typ Type, keys ...string) *M
 // newMetric returns a new empty Metric
 func newMetric(len int) *Metric {
 	return &Metric{Keys: make([]string, len),
-		LabelValues: make([]*LabelValue, 0),
+		LabelValues:    make([]*LabelValue, 0),
 		labelValuesMap: make(map[string]*LabelValue)}
 }
 
@@ -168,7 +168,9 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 			d = datum.NewBuckets(buckets)
 		}
 		lv := &LabelValue{Labels: labelvalues, Value: d}
-		m.AppendLabelValue(lv)
+		if err := m.AppendLabelValue(lv); err != nil {
+			return nil, err
+		}
 	}
 	return d, nil
 }

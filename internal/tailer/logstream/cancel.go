@@ -18,7 +18,9 @@ func SetReadDeadlineOnDone(ctx context.Context, d ReadDeadliner) {
 	go func() {
 		<-ctx.Done()
 		glog.Info("cancelled, setting read deadline to interrupt read")
-		d.SetReadDeadline(time.Now())
+		if err := d.SetReadDeadline(time.Now()); err != nil {
+			glog.Info(err)
+		}
 	}()
 }
 
