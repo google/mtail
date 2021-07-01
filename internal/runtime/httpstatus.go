@@ -102,7 +102,7 @@ func (r *Runtime) ProgzHandler(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, "No program found", http.StatusNotFound)
 			return
 		}
-		fmt.Fprintf(w, handle.vm.DumpByteCode())
+		fmt.Fprint(w, handle.vm.DumpByteCode())
 		fmt.Fprintf(w, "\nLast runtime error:\n%s", handle.vm.RuntimeErrorString())
 		return
 	}

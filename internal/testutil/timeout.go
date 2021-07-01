@@ -42,11 +42,11 @@ func DoOrTimeout(do func() (bool, error), deadline, interval time.Duration) (boo
 // per-test timeout instead of the global `go test -timeout` coarse timeout.
 func TimeoutTest(timeout time.Duration, f func(t *testing.T)) func(t *testing.T) {
 	// Raise the timeout if we're run under the race detector.
-	timeout = timeout * RaceDetectorMultiplier
+	timeout *= RaceDetectorMultiplier
 	// If we're in a CI environment, raise the timeout by 10x.  This mimics the
 	// timeout global flag set in the Makefile.
 	if os.Getenv("CI") == "true" {
-		timeout = 10 * timeout
+		timeout *= 10
 	}
 	return func(t *testing.T) {
 		t.Helper()

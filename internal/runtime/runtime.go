@@ -8,7 +8,6 @@ package runtime
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"expvar"
 	"io"
@@ -22,13 +21,12 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/runtime/compiler"
 	"github.com/google/mtail/internal/runtime/vm"
+	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -216,8 +214,7 @@ type vmHandle struct {
 // the configured program source directory, compiling changes to programs, and
 // managing the virtual machines.
 type Runtime struct {
-	ctx context.Context // a cancellable context
-	wg  sync.WaitGroup  // used to await vm shutdown
+	wg sync.WaitGroup // used to await vm shutdown
 
 	ms  *metrics.Store        // pointer to metrics.Store to pass to compiler
 	reg prometheus.Registerer // plce to reg metrics
@@ -347,8 +344,6 @@ func (r *Runtime) UnloadProgram(pathname string) {
 	r.handleMu.Lock()
 	defer r.handleMu.Unlock()
 	close(r.handles[name].lines)
-	if _, ok := r.handles[name]; ok {
-		delete(r.handles, name)
-	}
+	delete(r.handles, name)
 	ProgUnloads.Add(name, 1)
 }

@@ -25,14 +25,14 @@ func TestInsertLookup(t *testing.T) {
 }
 
 // Generate implements the quick.Generator interface for SymbolKind.
-func (SymbolKind) Generate(rand *rand.Rand, size int) reflect.Value {
-	return reflect.ValueOf(SymbolKind(rand.Intn(int(endSymbol))))
+func (Kind) Generate(rand *rand.Rand, size int) reflect.Value {
+	return reflect.ValueOf(Kind(rand.Intn(int(endSymbol))))
 }
 
 func TestInsertLookupQuick(t *testing.T) {
 	testutil.SkipIfShort(t)
 
-	check := func(name string, kind SymbolKind) bool {
+	check := func(name string, kind Kind) bool {
 		// Create a new scope each run because scope doesn't overwrite on insert.
 		scope := NewScope(nil)
 		sym := NewSymbol(name, kind, nil)

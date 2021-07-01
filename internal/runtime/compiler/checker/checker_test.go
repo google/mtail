@@ -24,43 +24,60 @@ var checkerInvalidPrograms = []struct {
 	program string
 	errors  []string
 }{
-	{"undefined named capture group",
+	{
+		"undefined named capture group",
 		"/blurgh/ { $undef++\n }\n",
-		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression visible to this scope.", "\tTry using `(?P<undef>...)' to name the capture group."}},
+		[]string{"undefined named capture group:1:12-17: Capture group `$undef' was not defined by a regular expression visible to this scope.", "\tTry using `(?P<undef>...)' to name the capture group."},
+	},
 
-	{"out of bounds capref",
+	{
+		"out of bounds capref",
 		"/(blyurg)/ { $2++ \n}\n",
 		[]string{"out of bounds capref:1:14-15: Capture group `$2' was not defined by a regular expression " +
 			"visible to this scope.", "\tCheck that there are at least 2 pairs of parentheses."},
 	},
 
-	{"undefined decorator",
+	{
+		"undefined decorator",
 		"@foo {}\n",
-		[]string{"undefined decorator:1:1-4: Decorator `@foo' is not defined.", "\tTry adding a definition `def foo {}' earlier in the program."}},
+		[]string{"undefined decorator:1:1-4: Decorator `@foo' is not defined.", "\tTry adding a definition `def foo {}' earlier in the program."},
+	},
 
-	{"undefined identifier",
+	{
+		"undefined identifier",
 		"// { x++ \n}\n",
 		[]string{"undefined identifier:1:6: Identifier `x' not declared.", "\tTry adding `counter x' to the top of the program."},
 	},
 
-	{"invalid regex 1",
+	{
+		"invalid regex 1",
 		"/foo(/ {}\n",
-		[]string{"invalid regex 1:1:1-6: error parsing regexp: missing closing ): `foo(`"}},
+		[]string{"invalid regex 1:1:1-6: error parsing regexp: missing closing ): `foo(`"},
+	},
 
-	{"invalid regex 2",
+	{
+		"invalid regex 2",
 		"/blurg(?P<x.)/ {}\n",
-		[]string{"invalid regex 2:1:1-14: error parsing regexp: invalid named capture: `(?P<x.)`"}},
+		[]string{"invalid regex 2:1:1-14: error parsing regexp: invalid named capture: `(?P<x.)`"},
+	},
 
-	{"invalid regex 3",
+	{
+		"invalid regex 3",
 		"/blurg(?P<x>[[:alph:]])/ {}\n",
-		[]string{"invalid regex 3:1:1-24: error parsing regexp: invalid character class range: `[:alph:]`"}},
+		[]string{"invalid regex 3:1:1-24: error parsing regexp: invalid character class range: `[:alph:]`"},
+	},
 
-	{"duplicate declaration",
+	{
+		"duplicate declaration",
 		"counter foo\ncounter foo\n",
-		[]string{"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11",
-			"duplicate declaration:1:9-11: Declaration of variable `foo' here is never used."}},
+		[]string{
+			"duplicate declaration:2:9-11: Redeclaration of metric `foo' previously declared at duplicate declaration:1:9-11",
+			"duplicate declaration:1:9-11: Declaration of variable `foo' here is never used.",
+		},
+	},
 
-	{"indexedExpr parameter count",
+	{
+		"indexedExpr parameter count",
 		`counter n
     counter foo by a, b
 	counter bar by a, b
@@ -80,9 +97,11 @@ var checkerInvalidPrograms = []struct {
 			// bar[$1][0] is ok
 			// quux[$1][0] has too many keys
 			"indexedExpr parameter count:9:7-16: Too many keys for indexed expression: expecting 1, received 2.",
-		}},
+		},
+	},
 
-	{"indexedExpr binary expression",
+	{
+		"indexedExpr binary expression",
 		`counter foo by a, b
 counter bar by a, b
 /(\d+)/ {
@@ -96,9 +115,11 @@ counter bar by a, b
 			"indexedExpr binary expression:4:3-8: Not enough keys for indexed expression: expecting 2, received 1",
 			"indexedExpr binary expression:7:3-5: Not enough keys for indexed expression: expecting 2, received 0",
 			"indexedExpr binary expression:7:9-14: Not enough keys for indexed expression: expecting 2, received 1",
-		}},
+		},
+	},
 
-	{"builtin parameter mismatch",
+	{
+		"builtin parameter mismatch",
 		`/\d+/ {
 	  strptime()
 	}
@@ -106,34 +127,46 @@ counter bar by a, b
 	  timestamp()
 	}
 	`,
-		[]string{"builtin parameter mismatch:2:4-13: call to `strptime': type mismatch; expected String→String→None received incomplete type"}},
+		[]string{"builtin parameter mismatch:2:4-13: call to `strptime': type mismatch; expected String→String→None received incomplete type"},
+	},
 
-	{"bad strptime format",
+	{
+		"bad strptime format",
 		`strptime("2017-10-16 06:50:25", "2017-10-16 06:50:25")
 `,
 		[]string{
-			"bad strptime format:1:33-53: invalid time format string \"2017-10-16 06:50:25\"", "\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice."}},
+			"bad strptime format:1:33-53: invalid time format string \"2017-10-16 06:50:25\"", "\tRefer to the documentation at https://golang.org/pkg/time/#pkg-constants for advice.",
+		},
+	},
 
-	{"undefined const regex",
+	{
+		"undefined const regex",
 		"/foo / + X + / bar/ {}\n",
-		[]string{"undefined const regex:1:10: Identifier `X' not declared.", "\tTry adding `const X /.../' earlier in the program."}},
+		[]string{"undefined const regex:1:10: Identifier `X' not declared.", "\tTry adding `const X /.../' earlier in the program."},
+	},
 
-	{"unused symbols",
+	{
+		"unused symbols",
 		`counter foo
 const ID /bar/
 /asdf/ {
 }
 `,
-		[]string{"unused symbols:1:9-11: Declaration of variable `foo' here is never used.",
-			"unused symbols:2:7-8: Declaration of named pattern constant `ID' here is never used."}},
-	{"invalid del index count",
+		[]string{
+			"unused symbols:1:9-11: Declaration of variable `foo' here is never used.",
+			"unused symbols:2:7-8: Declaration of named pattern constant `ID' here is never used.",
+		},
+	},
+	{
+		"invalid del index count",
 		`gauge t by x, y
 /.*/ {
   del t["x"]
   t["x"]["y"]
 }
 `,
-		[]string{"invalid del index count:3:7-11: Not enough keys for indexed expression: expecting 2, received 1"}},
+		[]string{"invalid del index count:3:7-11: Not enough keys for indexed expression: expecting 2, received 1"},
+	},
 	// TODO(jaq): is it an error to make a counter of type string?
 	// 	{"counter as string",
 	// 		`counter foo
@@ -143,15 +176,20 @@ const ID /bar/
 	// }
 	// `,
 	// 	[]string{"counter as string:4:4-11: Can't assign rhs of type String to lhs of type Int"}},
-	{"def without usage",
+	{
+		"def without usage",
 		`def x{next}`,
-		[]string{"def without usage:1:1-10: Declaration of decorator `x' here is never used."}},
-	{"def without next",
+		[]string{"def without usage:1:1-10: Declaration of decorator `x' here is never used."},
+	},
+	{
+		"def without next",
 		`def x{}
 @x {
 }`,
-		[]string{"def without next:1:1-3: No symbols found in decorator `@x'.", "\tTry adding a `next' statement inside the `{}' block."}},
-	{"def with two nexts",
+		[]string{"def without next:1:1-3: No symbols found in decorator `@x'.", "\tTry adding a `next' statement inside the `{}' block."},
+	},
+	{
+		"def with two nexts",
 		`def x{
   /a/ {
     next
@@ -162,16 +200,20 @@ const ID /bar/
 }
 @x {
 }`,
-		[]string{"def with two nexts:6:5-8: Can't use `next' statement twice in a decorator."}},
+		[]string{"def with two nexts:6:5-8: Can't use `next' statement twice in a decorator."},
+	},
 
-	{"counter with buckets",
+	{
+		"counter with buckets",
 		`counter foo buckets 1, 2, 3
 /(\d)/ {
 foo = $1
 }`,
-		[]string{"counter with buckets:1:9-11: Can't specify buckets for non-histogram metric `foo'."}},
+		[]string{"counter with buckets:1:9-11: Can't specify buckets for non-histogram metric `foo'."},
+	},
 
-	{"next outside of decorator",
+	{
+		"next outside of decorator",
 		`def x{
 next
 }
@@ -179,85 +221,122 @@ next
 next
 }
 `,
-		[]string{"next outside of decorator:5:1-4: Can't use `next' outside of a decorator."}},
+		[]string{"next outside of decorator:5:1-4: Can't use `next' outside of a decorator."},
+	},
 
-	{"use decorator in decorator",
+	{
+		"use decorator in decorator",
 		`def x {
 @x {}
 }`,
-		[]string{"use decorator in decorator:2:1-2: Decorator `@x' is not completely defined yet.", "\tTry removing @x from here.", "use decorator in decorator:2:1-2: No symbols found in decorator `@x'.", "\tTry adding a `next' statement inside the `{}' block."}},
+		[]string{"use decorator in decorator:2:1-2: Decorator `@x' is not completely defined yet.", "\tTry removing @x from here.", "use decorator in decorator:2:1-2: No symbols found in decorator `@x'.", "\tTry adding a `next' statement inside the `{}' block."},
+	},
 
-	{"delete incorrect object",
+	{
+		"delete incorrect object",
 		`/(.*)/ {
 del $0
 }`,
-		[]string{"delete incorrect object:2:5-6: Cannot delete this.", "\tTry deleting from a dimensioned metric with this as an index."}},
+		[]string{"delete incorrect object:2:5-6: Cannot delete this.", "\tTry deleting from a dimensioned metric with this as an index."},
+	},
 
-	{"pattern fragment plus anything",
+	{
+		"pattern fragment plus anything",
 		`gauge e
 // + e {
 }
 `,
-		[]string{"pattern fragment plus anything:2:6: Can't append variable `e' to this pattern.", "\tTry using a `const'-defined pattern fragment."}},
+		[]string{"pattern fragment plus anything:2:6: Can't append variable `e' to this pattern.", "\tTry using a `const'-defined pattern fragment."},
+	},
 
-	{"recursive pattern fragment",
+	{
+		"recursive pattern fragment",
 		`const P//+P`,
-		[]string{"recursive pattern fragment:1:11: Can't evaluate pattern fragment `P' here.", "\tTry defining it earlier in the program."}},
+		[]string{"recursive pattern fragment:1:11: Can't evaluate pattern fragment `P' here.", "\tTry defining it earlier in the program."},
+	},
 
-	{"delete a histogram",
+	{
+		"delete a histogram",
 		`histogram#
 m del#
 m`,
-		[]string{"delete a histogram:3:7: Cannot delete this.", "\tTry deleting an index from this dimensioned metric."}},
+		[]string{"delete a histogram:3:7: Cannot delete this.", "\tTry deleting an index from this dimensioned metric."},
+	},
 
-	{"int as bool",
+	{
+		"int as bool",
 		`1 {}`,
-		[]string{"int as bool:1:1: Can't interpret Int as a boolean expression here.", "\tTry using comparison operators to make the condition explicit."}},
+		[]string{"int as bool:1:1: Can't interpret Int as a boolean expression here.", "\tTry using comparison operators to make the condition explicit."},
+	},
 
-	{"regexp too long",
+	{
+		"regexp too long",
 		"/" + strings.Repeat("c", 1025) + "/ {}",
-		[]string{"regexp too long:1:1-1027: Exceeded maximum regular expression pattern length of 1024 bytes with 1025.", "\tExcessively long patterns are likely to cause compilation and runtime performance problems."}},
+		[]string{"regexp too long:1:1-1027: Exceeded maximum regular expression pattern length of 1024 bytes with 1025.", "\tExcessively long patterns are likely to cause compilation and runtime performance problems."},
+	},
 
-	{"strptime invalid args",
+	{
+		"strptime invalid args",
 		`strptime("",8)
 `,
-		[]string{"strptime invalid args:1:13: Expecting a format string for argument 2 of strptime(), not Int."}},
+		[]string{"strptime invalid args:1:13: Expecting a format string for argument 2 of strptime(), not Int."},
+	},
 
-	{"len invalid args",
+	{
+		"len invalid args",
 		`text l
 l++
 `,
-		[]string{"len invalid args:2:1: Expecting an Int for INC, not String."}},
+		[]string{"len invalid args:2:1: Expecting an Int for INC, not String."},
+	},
 
-	{"mod by zero",
+	{
+		"mod by zero",
 		`2=9%0
-`, []string{"mod by zero:1:3-5: Can't divide by zero."}},
+`,
+		[]string{"mod by zero:1:3-5: Can't divide by zero."},
+	},
 
-	{"assign to rvalue",
+	{
+		"assign to rvalue",
 		`gauge l
 l++=l
-`, []string{"assign to rvalue:2:1-3: Can't assign to this expression on the left."}},
+`,
+		[]string{"assign to rvalue:2:1-3: Can't assign to this expression on the left."},
+	},
 
-	{"tolower non string",
+	{
+		"tolower non string",
 		`tolower(2)
-`, []string{"tolower non string:1:9: Expecting a String for argument 1 of tolower(), not Int."}},
+`,
+		[]string{"tolower non string:1:9: Expecting a String for argument 1 of tolower(), not Int."},
+	},
 
-	{"dec non var",
+	{
+		"dec non var",
 		`strptime("", "")--
-`, []string{"dec non var:1:1-16: Expecting a variable here."}},
+`,
+		[]string{"dec non var:1:1-16: Expecting a variable here."},
+	},
 
 	// TODO(jaq): This is an instance of bug #190, the capref is ambiguous.
 	// 	{"regexp with no zero capref",
 	// 		`//||/;0/ {$0||// {}}
 	// `, []string{"regexp with no zero capref:1:5-6: Nonexistent capref =."}},
 
-	{"cmp to None",
+	{
+		"cmp to None",
 		`strptime("","")<5{}
-`, []string{"cmp to None:1:1-17: Can't compare LHS of type None with RHS of type Int."}},
+`,
+		[]string{"cmp to None:1:1-17: Can't compare LHS of type None with RHS of type Int."},
+	},
 
-	{"negate None",
+	{
+		"negate None",
 		`~strptime("", "") {}
-`, []string{"negate None:1:2-17: type mismatch; expected Int received None for `~' operator."}},
+`,
+		[]string{"negate None:1:2-17: type mismatch; expected Int received None for `~' operator."},
+	},
 }
 
 func TestCheckInvalidPrograms(t *testing.T) {
@@ -291,14 +370,16 @@ var checkerValidPrograms = []struct {
 	name    string
 	program string
 }{
-	{"capture group",
+	{
+		"capture group",
 		`counter foo
 /(.*)/ {
   foo += $1
 }
 `,
 	},
-	{"shadowed positionals",
+	{
+		"shadowed positionals",
 		`counter foo
 /(.*)/ {
   foo += $1
@@ -306,8 +387,10 @@ var checkerValidPrograms = []struct {
    foo += $1
   }
 }
-`},
-	{"sibling positionals",
+`,
+	},
+	{
+		"sibling positionals",
 		`counter foo
 /(.*)/ {
   foo += $1
@@ -315,45 +398,60 @@ var checkerValidPrograms = []struct {
 /bar(\d+)/ {
    foo += $1
 }
-`},
+`,
+	},
 
-	{"index expression",
+	{
+		"index expression",
 		`counter foo by a, b
 /(\d)/ {
   foo[1,$1] = 3
-}`},
-	{"odd indexes",
+}`,
+	},
+	{
+		"odd indexes",
 		`counter foo by a,b,c
 	/(\d) (\d)/ {
 	  foo[$1,$2][0]++
 	}
-	`},
-	{"implicit int",
+	`,
+	},
+	{
+		"implicit int",
 		`counter foo
 /$/ {
   foo++
-}`},
-	{"function return value",
-		`len("foo") > 0 {}`},
-	{"conversions",
+}`,
+	},
+	{
+		"function return value",
+		`len("foo") > 0 {}`,
+	},
+	{
+		"conversions",
 		`counter i
 	counter f
 	/(.*)/ {
 	  i = int($1)
 	  f = float($1)
 	}
-	`},
+	`,
+	},
 
-	{"logical operators",
+	{
+		"logical operators",
 		`0 || 1 {
 }
 1 && 0 {
 }
-`},
-	{"nested binary conditional",
+`,
+	},
+	{
+		"nested binary conditional",
 		`1 != 0 && 0 == 1 {
 }
-`},
+`,
+	},
 	{"paren expr", `
 (0) || (1 && 3) {
 }`},
@@ -498,25 +596,31 @@ var checkerTypeExpressionTests = []struct {
 	expr     ast.Node
 	expected types.Type
 }{
-	{"Int + Int -> Int",
+	{
+		"Int + Int -> Int",
 		&ast.BinaryExpr{
-			Lhs: &ast.IntLit{I: 1},
-			Rhs: &ast.IntLit{I: 1},
-			Op:  parser.PLUS},
+			LHS: &ast.IntLit{I: 1},
+			RHS: &ast.IntLit{I: 1},
+			Op:  parser.PLUS,
+		},
 		types.Int,
 	},
-	{"Int + Float -> Float",
+	{
+		"Int + Float -> Float",
 		&ast.BinaryExpr{
-			Lhs: &ast.IntLit{I: 1},
-			Rhs: &ast.FloatLit{F: 1.0},
-			Op:  parser.PLUS},
+			LHS: &ast.IntLit{I: 1},
+			RHS: &ast.FloatLit{F: 1.0},
+			Op:  parser.PLUS,
+		},
 		types.Float,
 	},
-	{"⍺ + Float -> Float",
+	{
+		"⍺ + Float -> Float",
 		&ast.BinaryExpr{
-			Lhs: &ast.IdTerm{Symbol: &symbol.Symbol{Name: "i", Kind: symbol.VarSymbol, Type: types.NewVariable()}},
-			Rhs: &ast.CaprefTerm{Symbol: &symbol.Symbol{Kind: symbol.CaprefSymbol, Type: types.Float}},
-			Op:  parser.PLUS},
+			LHS: &ast.IDTerm{Symbol: &symbol.Symbol{Name: "i", Kind: symbol.VarSymbol, Type: types.NewVariable()}},
+			RHS: &ast.CaprefTerm{Symbol: &symbol.Symbol{Kind: symbol.CaprefSymbol, Type: types.Float}},
+			Op:  parser.PLUS,
+		},
 		types.Float,
 	},
 }

@@ -11,9 +11,7 @@ import (
 	"github.com/golang/glog"
 )
 
-var (
-	exportJSONErrors = expvar.NewInt("exporter_json_errors")
-)
+var exportJSONErrors = expvar.NewInt("exporter_json_errors")
 
 // HandleJSON exports the metrics in JSON format via HTTP.
 func (e *Exporter) HandleJSON(w http.ResponseWriter, r *http.Request) {

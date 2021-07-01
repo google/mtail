@@ -1,57 +1,76 @@
-service:
-  prepare:
-    - make install_deps
-
 run:
   tests: true
   build-tags:
     - integration
+    - fuzz
+  # fail if go.mod needs changing
+  modules-download-mode: readonly
 
 linters-settings:
   govet:
     check-shadowing: true
 
 linters:
-  enable-all: true
+  presets:
+    - bugs
+    - error
+    - format
+    - import
+    - module
+    - performance
+    - test
+    - unused
+    - metalinter
+  enable:
+    - exportloopref
+  # A general rule is if the lint author can't be bothered supplying automated
+  # fixes for obvious lint warnings, I'm not bothered using their tool.
   disable:
-    - maligned
-    - megacheck
-    - lll
-    - gocyclo
-    - unparam
-    # Not sure what this is telling me yet.
-    - scopelint
-    # How dare you tell me not to use inits.
-    - gochecknoinits
-    # Flags are fine, as are test tables.
-    - gochecknoglobals
-    # wsl doesn't explain any of its recommendations
-    - wsl
-    # magic numbers in test tables are fine actually
-    - gomnd
-    # My tests will be as long as they need to be thanks
-    - funlen
-    # Not a fan of this one, looks messy
-    - nlreturn
+    - cyclop # boo cyclomatic complexity
+    - dupl # exclude test code
+    - errcheck # handled by gosec, lots of false posi
+    - exhaustive # this false-positives for switches with a default
+    - exhaustivestruct # too noisy, labelling fields is not my jam
+    - forbidigo # exclude non prod tools
+    - forcetypeassert # too many at the moment
+    - funlen    # My tests will be as long as they need to be thanks
+    - gochecknoglobals    # Flags are fine, as are test tables.
+    - gochecknoinits    # How dare you tell me not to use inits.
+    - gocognit # boo cyclomatic complexity
+    - gocyclo  # boo cyclomatic complexity
+    - godox # TODOs are fine
+    - golint # deprecated
+    - gomnd    # magic numbers in test tables are fine actually
+    - gosec # run independently
+    - ifshort    # buggy, false positives
+    - interfacer # deprecated
+    - lll # go says long lines are ok, and this is trivially automatable
+    - maligned # deprecated
+    - nakedret    # weird thing to report on
+    - nestif # cognitive complexity
+    - nlreturn    # Not a fan of this one, looks messy
+    - nolintlint    # broken on gocritic
+    - paralleltest # i had a good reason for this
+    - testpackage # need to test internal methods
+    - unparam # too noisy
+    - whitespace # broken by goyacc
+    - wrapcheck # not sure this is necessary
+    - wsl    # wsl doesn't explain any of its recommendations
 
 issues:
-  max-per-linter: 0
-  max-same: 0
+  # Show everything.
+  max-issues-per-linter: 0
+  max-same-issues: 0
   exclude-use-default: true
   exclude:
-  #   # Captured by errcheck.
-  #   - '^(G104|G204):'
-  #   # Very commonly not checked.
-  #   - 'Error return value of .(.*\.Help|.*\.MarkFlagRequired|(os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*printf?|os\.(Un)?Setenv). is not checked'
-  #   #- 'exported method (.*\.MarshalJSON|.*\.UnmarshalJSON|.*\.EntityURN|.*\.GoString|.*\.Pos) should have comment or be unexported'
-     # If you liked it you shoulda put a gofix on it.
+     # `gofix` should fix this if it really cared
      - 'composite literal uses unkeyed fields'
-     # I like shadowing err
+     # I like common patterns of shadowing: ctx and err
+     - 'declaration of "ctx" shadows declaration'
      - 'declaration of "err" shadows declaration'
-  #   #- 'bad syntax for struct tag key'
-  #   #- 'bad syntax for struct tag pair'
      # goyacc generated error in three locations
      - 'this value of `mtailDollar.* is never used'
      # Incorrectly reports undeclared in same package
      - "undeclared name:"
-
+     # Disagree with capitalisation of identifier names
+     - "ST1003:"

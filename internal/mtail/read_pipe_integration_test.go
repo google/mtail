@@ -52,6 +52,7 @@ func TestReadFromSocket(t *testing.T) {
 	testutil.SkipIfShort(t)
 
 	for _, scheme := range []string{"unix", "unixgram"} {
+		scheme := scheme
 		t.Run(scheme, func(t *testing.T) {
 			tmpDir := testutil.TestTempDir(t)
 

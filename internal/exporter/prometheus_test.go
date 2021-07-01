@@ -23,40 +23,46 @@ var handlePrometheusTests = []struct {
 	metrics   []*metrics.Metric
 	expected  string
 }{
-	{"empty",
+	{
+		"empty",
 		false,
 		[]*metrics.Metric{},
 		"",
 	},
-	{"single",
+	{
+		"single",
 		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+			},
 		},
 		`# HELP foo defined at 
 # TYPE foo counter
 foo{} 1
 `,
 	},
-	{"with prog label",
+	{
+		"with prog label",
 		true,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Counter,
-				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+			},
 		},
 		`# HELP foo defined at 
 # TYPE foo counter
 foo{prog="test"} 1
 `,
 	},
-	{"dimensioned",
+	{
+		"dimensioned",
 		false,
 		[]*metrics.Metric{
 			{
@@ -72,46 +78,53 @@ foo{prog="test"} 1
 foo{a="1",b="2"} 1
 `,
 	},
-	{"gauge",
+	{
+		"gauge",
 		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Gauge,
-				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+			},
 		},
 		`# HELP foo defined at 
 # TYPE foo gauge
 foo{} 1
 `,
 	},
-	{"timer",
+	{
+		"timer",
 		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Timer,
-				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+			},
 		},
 		`# HELP foo defined at 
 # TYPE foo gauge
 foo{} 1
 `,
 	},
-	{"text",
+	{
+		"text",
 		false,
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
 				Program:     "test",
 				Kind:        metrics.Text,
-				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeString("hi", time.Unix(0, 0))}}},
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeString("hi", time.Unix(0, 0))}},
+			},
 		},
 		"",
 	},
-	{"quotes",
+	{
+		"quotes",
 		false,
 		[]*metrics.Metric{
 			{
@@ -127,7 +140,8 @@ foo{} 1
 foo{a="str\"bang\"blah"} 1
 `,
 	},
-	{"help",
+	{
+		"help",
 		false,
 		[]*metrics.Metric{
 			{
@@ -143,7 +157,8 @@ foo{a="str\"bang\"blah"} 1
 foo{} 1
 `,
 	},
-	{"2 help with label",
+	{
+		"2 help with label",
 		true,
 		[]*metrics.Metric{
 			{
@@ -167,7 +182,8 @@ foo{prog="test2"} 1
 foo{prog="test1"} 1
 `,
 	},
-	{"histo",
+	{
+		"histo",
 		true,
 		[]*metrics.Metric{
 			{
@@ -188,7 +204,8 @@ foo_sum{a="bar",prog="test"} 0
 foo_count{a="bar",prog="test"} 0
 `,
 	},
-	{"histo-count-eq-inf",
+	{
+		"histo-count-eq-inf",
 		true,
 		[]*metrics.Metric{
 			{
@@ -201,12 +218,18 @@ foo_count{a="bar",prog="test"} 0
 						Labels: []string{"bar"},
 						Value: &datum.Buckets{
 							Buckets: []datum.BucketCount{
-								{Range: datum.Range{Min: 0, Max: 1},
-									Count: 1},
-								{Range: datum.Range{Min: 1, Max: 2},
-									Count: 1},
-								{Range: datum.Range{Min: 2, Max: math.Inf(+1)},
-									Count: 2},
+								{
+									Range: datum.Range{Min: 0, Max: 1},
+									Count: 1,
+								},
+								{
+									Range: datum.Range{Min: 1, Max: 2},
+									Count: 1,
+								},
+								{
+									Range: datum.Range{Min: 2, Max: math.Inf(+1)},
+									Count: 2,
+								},
 							},
 							Count: 4,
 							Sum:   5,

@@ -69,7 +69,7 @@ func (n *CondStmt) Type() types.Type {
 	return types.None
 }
 
-type IdTerm struct {
+type IDTerm struct {
 	P      position.Position
 	Name   string
 	Symbol *symbol.Symbol
@@ -77,11 +77,11 @@ type IdTerm struct {
 	// assignment and needs to have its address taken only.
 }
 
-func (n *IdTerm) Pos() *position.Position {
+func (n *IDTerm) Pos() *position.Position {
 	return &n.P
 }
 
-func (n *IdTerm) Type() types.Type {
+func (n *IDTerm) Type() types.Type {
 	if n.Symbol != nil {
 		return n.Symbol.Type
 	}
@@ -132,7 +132,7 @@ func (n *BuiltinExpr) SetType(t types.Type) {
 }
 
 type BinaryExpr struct {
-	Lhs, Rhs Node
+	LHS, RHS Node
 	Op       int
 
 	typMu sync.RWMutex
@@ -140,7 +140,7 @@ type BinaryExpr struct {
 }
 
 func (n *BinaryExpr) Pos() *position.Position {
-	return position.Merge(n.Lhs.Pos(), n.Rhs.Pos())
+	return position.Merge(n.LHS.Pos(), n.RHS.Pos())
 }
 
 func (n *BinaryExpr) Type() types.Type {
@@ -181,14 +181,14 @@ func (n *UnaryExpr) SetType(t types.Type) {
 }
 
 type IndexedExpr struct {
-	Lhs, Index Node
+	LHS, Index Node
 
 	typMu sync.RWMutex
 	typ   types.Type
 }
 
 func (n *IndexedExpr) Pos() *position.Position {
-	return position.Merge(n.Lhs.Pos(), n.Index.Pos())
+	return position.Merge(n.LHS.Pos(), n.Index.Pos())
 }
 
 func (n *IndexedExpr) Type() types.Type {
@@ -235,6 +235,7 @@ type StringLit struct {
 func (n *StringLit) Pos() *position.Position {
 	return &n.P
 }
+
 func (n *StringLit) Type() types.Type {
 	return types.String
 }
@@ -247,6 +248,7 @@ type IntLit struct {
 func (n *IntLit) Pos() *position.Position {
 	return &n.P
 }
+
 func (n *IntLit) Type() types.Type {
 	return types.Int
 }
@@ -259,11 +261,12 @@ type FloatLit struct {
 func (n *FloatLit) Pos() *position.Position {
 	return &n.P
 }
+
 func (n *FloatLit) Type() types.Type {
 	return types.Float
 }
 
-// PatternExpr is the top of a pattern expression
+// PatternExpr is the top of a pattern expression.
 type PatternExpr struct {
 	Expr    Node
 	Pattern string // if not empty, the fully defined pattern after typecheck
@@ -278,7 +281,7 @@ func (n *PatternExpr) Type() types.Type {
 	return types.Pattern
 }
 
-// patternConstNode holds inline constant pattern fragments
+// patternConstNode holds inline constant pattern fragments.
 type PatternLit struct {
 	P       position.Position
 	Pattern string
@@ -292,16 +295,16 @@ func (n *PatternLit) Type() types.Type {
 	return types.Pattern
 }
 
-// patternDefNode holds a named pattern expression
+// patternDefNode holds a named pattern expression.
 type PatternFragment struct {
-	Id      Node
+	ID      Node
 	Expr    Node
 	Symbol  *symbol.Symbol // Optional Symbol for a named pattern
 	Pattern string         // If not empty, contains the complete evaluated pattern of the expr
 }
 
 func (n *PatternFragment) Pos() *position.Position {
-	return n.Id.Pos()
+	return n.ID.Pos()
 }
 
 func (n *PatternFragment) Type() types.Type {
@@ -429,7 +432,7 @@ func (n *StopStmt) Type() types.Type {
 	return types.None
 }
 
-// mergepositionlist is a helper that merges the positions of all the nodes in a list
+// mergepositionlist is a helper that merges the positions of all the nodes in a list.
 func mergepositionlist(l []Node) *position.Position {
 	if len(l) == 0 {
 		return nil

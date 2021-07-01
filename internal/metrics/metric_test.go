@@ -45,14 +45,14 @@ func TestScalarMetric(t *testing.T) {
 	datum.IncIntBy(d, 1, time.Now().UTC())
 	lv := v.FindLabelValueOrNil([]string{})
 	if lv == nil {
-		t.Errorf("couldn't find labelvalue")
+		t.Fatal("couldn't find labelvalue")
 	}
 	newD := lv.Value
 	if newD == nil {
-		t.Errorf("new_d is nil")
+		t.Error("new_d is nil")
 	}
 	if newD.ValueString() != "1" {
-		t.Errorf("value not 1")
+		t.Error("value not 1")
 	}
 	d2, err := v.GetDatum("a", "b")
 	if err == nil {
@@ -143,9 +143,9 @@ func TestFindLabelValueOrNil(t *testing.T) {
 }
 
 func TestAppendLabelValue(t *testing.T) {
-	m := NewMetric("foo", "prog", Counter, Int,"bar")
+	m := NewMetric("foo", "prog", Counter, Int, "bar")
 	l := []string{"test"}
-	d0 := datum.MakeInt(66,time.Unix(0, 0))
+	d0 := datum.MakeInt(66, time.Unix(0, 0))
 	lv := &LabelValue{Labels: l, Value: d0}
 	err := m.AppendLabelValue(lv)
 	if err != nil {
@@ -222,7 +222,7 @@ func TestTimer(t *testing.T) {
 	datum.IncIntBy(d, 1, time.Now().UTC())
 	lv := m.FindLabelValueOrNil([]string{})
 	if lv == nil {
-		t.Errorf("couldn't find labelvalue")
+		t.Fatal("couldn't find labelvalue")
 	}
 	newD := lv.Value
 	if newD == nil {

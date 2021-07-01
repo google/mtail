@@ -10,6 +10,7 @@ package logstream
 
 import (
 	"context"
+	"errors"
 	"expvar"
 	"fmt"
 	"net/url"
@@ -23,26 +24,29 @@ import (
 )
 
 var (
-	// logErrors counts the IO errors encountered per log
+	// logErrors counts the IO errors encountered per log.
 	logErrors = expvar.NewMap("log_errors_total")
-	// logOpens counts the opens of new log file descriptors/sockets
+	// logOpens counts the opens of new log file descriptors/sockets.
 	logOpens = expvar.NewMap("log_opens_total")
-	// logCloses counts the closes of old log file descriptors/sockets
+	// logCloses counts the closes of old log file descriptors/sockets.
 	logCloses = expvar.NewMap("log_closes_total")
 )
 
-// LogStream
+// LogStream.
 type LogStream interface {
 	LastReadTime() time.Time // Return the time when the last log line was read from the source
 	Stop()                   // Ask to gracefully stop the stream; e.g. stream keeps reading until EOF and then completes work.
 	IsComplete() bool        // True if the logstream has completed work and cannot recover.  The caller should clean up this logstream, creating a new logstream on a pathname if necessary.
 }
 
-// defaultReadTimeout contains the timeout for reads from nonblocking read sources.
-const defaultReadTimeout = 10 * time.Millisecond
-
-// defaultReadBufferSize the size of the buffer for reading bytes into
+// defaultReadBufferSize the size of the buffer for reading bytes into.
 const defaultReadBufferSize = 4096
+
+var (
+	ErrUnsupportedURLScheme = errors.New("unsupported URL scheme")
+	ErrUnsupportedFileType  = errors.New("unsupported file type")
+	ErrEmptySocketAddress   = errors.New("socket address cannot be empty, please provide a unix domain socket filename or host:port")
+)
 
 // New creates a LogStream from the file object located at the absolute path
 // `pathname`.  The LogStream will watch `ctx` for a cancellation signal, and
@@ -57,7 +61,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	glog.Infof("Parsed url as %v", u)
 	switch u.Scheme {
 	default:
-		return nil, fmt.Errorf("unsupported URL scheme %q in path %q", u.Scheme, pathname)
+		return nil, fmt.Errorf("%w %q in path %q", ErrUnsupportedURLScheme, u.Scheme, pathname)
 	case "unixgram":
 		return newDgramStream(ctx, wg, waker, u.Scheme, u.Path, lines)
 	case "unix":
@@ -82,6 +86,6 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	// case m&os.ModeType == os.ModeSocket:
 	// 	return newSocketStream(ctx, wg, waker, pathname, lines)
 	default:
-		return nil, fmt.Errorf("unsupported file object type at %q", pathname)
+		return nil, fmt.Errorf("%w: %q", ErrUnsupportedFileType, pathname)
 	}
 }

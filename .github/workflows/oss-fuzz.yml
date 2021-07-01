@@ -1,4 +1,4 @@
-name: CIFuzz
+name: OSS-Fuzz
 on:
   pull_request:
     paths:
@@ -7,7 +7,7 @@ on:
       - 'Makefile'
       - 'Dockerfile'
 jobs:
-  CIFuzz:
+  oss-fuzz:
     runs-on: ubuntu-latest
     steps:
     - name: Build Fuzzers

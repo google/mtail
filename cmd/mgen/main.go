@@ -36,7 +36,8 @@ var table = map[string]node{
 		{"def_spec"},
 		{"deco_spec"},
 		{"next"},
-		{"const", "ID", "pattern_expr"}}, ""},
+		{"const", "ID", "pattern_expr"},
+	}, ""},
 	"expr":          {[][]string{{"assign_expr"}}, ""},
 	"assign_expr":   {[][]string{{"rel_expr"}, {"unary_expr", "=", "rel_expr"}, {"unary_expr", "+=", "rel_expr"}}, ""},
 	"rel_expr":      {[][]string{{"additive_expr"}, {"additive_expr", "relop", "additive_expr"}}, ""},
@@ -110,38 +111,37 @@ func generateProgram() {
 	runs := *minIterations
 
 	// Initial state
-	var states = []string{"start"}
+	states := []string{"start"}
 
 	// While the state stack is not empty
 	for len(states) > 0 && runs > 0 {
 		// Pop the next state
 		state := states[len(states)-1]
 		states = states[:len(states)-1]
-		//fmt.Println("state", state, "states", states)
+		// fmt.Println("state", state, "states", states)
 
 		// Look for the state transition
 		if n, ok := table[state]; ok {
-
 			// If there are state transition alternatives
-			//fmt.Println("n", n)
+			// fmt.Println("n", n)
 			if len(n.alts) > 0 {
 				// Pick a state transition at random
 				a := rand(len(n.alts))
-				//fmt.Println("a", a, n.alts[a], len(n.alts[a]))
+				// fmt.Println("a", a, n.alts[a], len(n.alts[a]))
 				// Push the states picked onto the stack (in reverse order)
 				for i := 0; i < len(n.alts[a]); i++ {
-					//fmt.Println("i", i, n.alts[a][len(n.alts[a])-i-1])
+					// fmt.Println("i", i, n.alts[a][len(n.alts[a])-i-1])
 					states = append(states, n.alts[a][len(n.alts[a])-i-1])
 				}
-				//fmt.Println("states", states)
+				// fmt.Println("states", states)
 			} else {
 				// If there is a terminal, emit it
-				//fmt.Println("(term)", state, n.term)
+				// fmt.Println("(term)", state, n.term)
 				c <- n.term
 			}
 		} else {
 			// If the state doesn't exist in the table, treat it as a terminal, and emit it.
-			//fmt.Println("(state)", state, state)
+			// fmt.Println("(state)", state, state)
 			c <- state
 		}
 		runs--

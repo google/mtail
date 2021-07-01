@@ -5,7 +5,6 @@
 package opt
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/google/mtail/internal/runtime/compiler/ast"
@@ -35,9 +34,9 @@ func (o *optimiser) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 	switch n := node.(type) {
 	case *ast.BinaryExpr:
-		switch lhs := n.Lhs.(type) {
+		switch lhs := n.LHS.(type) {
 		case *ast.IntLit:
-			switch rhs := n.Rhs.(type) {
+			switch rhs := n.RHS.(type) {
 			case *ast.IntLit:
 				r := &ast.IntLit{P: *position.Merge(&(lhs.P), &(rhs.P))}
 				switch n.Op {
@@ -49,14 +48,14 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 					r.I = lhs.I * rhs.I
 				case parser.DIV:
 					if rhs.I == 0 {
-						o.errors.Add(n.Pos(), fmt.Sprintf("divide by zero"))
+						o.errors.Add(n.Pos(), "divide by zero")
 						n.SetType(types.Error)
 						return n
 					}
 					r.I = lhs.I / rhs.I
 				case parser.MOD:
 					if rhs.I == 0 {
-						o.errors.Add(n.Pos(), fmt.Sprintf("mod by zero"))
+						o.errors.Add(n.Pos(), "mod by zero")
 						n.SetType(types.Error)
 						return n
 					}
@@ -78,14 +77,14 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 					r.F = float64(lhs.I) * rhs.F
 				case parser.DIV:
 					if rhs.F == 0 {
-						o.errors.Add(n.Pos(), fmt.Sprintf("divide by zero"))
+						o.errors.Add(n.Pos(), "divide by zero")
 						n.SetType(types.Error)
 						return n
 					}
 					r.F = float64(lhs.I) / rhs.F
 				case parser.MOD:
 					if rhs.F == 0 {
-						o.errors.Add(n.Pos(), fmt.Sprintf("mod by zero"))
+						o.errors.Add(n.Pos(), "mod by zero")
 						n.SetType(types.Error)
 						return n
 					}
@@ -100,7 +99,7 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 				return node
 			}
 		case *ast.FloatLit:
-			switch rhs := n.Rhs.(type) {
+			switch rhs := n.RHS.(type) {
 			case *ast.IntLit:
 				r := &ast.FloatLit{P: *position.Merge(&(lhs.P), &(rhs.P))}
 				switch n.Op {
@@ -112,14 +111,14 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 					r.F = lhs.F * float64(rhs.I)
 				case parser.DIV:
 					if rhs.I == 0 {
-						o.errors.Add(n.Pos(), fmt.Sprintf("divide by zero"))
+						o.errors.Add(n.Pos(), "divide by zero")
 						n.SetType(types.Error)
 						return n
 					}
 					r.F = lhs.F / float64(rhs.I)
 				case parser.MOD:
 					if rhs.I == 0 {
-						o.errors.Add(n.Pos(), fmt.Sprintf("mod by zero"))
+						o.errors.Add(n.Pos(), "mod by zero")
 						n.SetType(types.Error)
 						return n
 					}
@@ -141,14 +140,14 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 					r.F = lhs.F * rhs.F
 				case parser.DIV:
 					if rhs.F == 0 {
-						o.errors.Add(n.Pos(), fmt.Sprintf("divide by zero"))
+						o.errors.Add(n.Pos(), "divide by zero")
 						n.SetType(types.Error)
 						return n
 					}
 					r.F = lhs.F / rhs.F
 				case parser.MOD:
 					if rhs.F == 0 {
-						o.errors.Add(n.Pos(), fmt.Sprintf("mod by zero"))
+						o.errors.Add(n.Pos(), "mod by zero")
 						n.SetType(types.Error)
 						return n
 					}
@@ -165,6 +164,7 @@ func (o *optimiser) VisitAfter(node ast.Node) ast.Node {
 		default:
 			return node
 		}
+	default:
+		return node
 	}
-	return node
 }

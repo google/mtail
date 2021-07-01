@@ -13,7 +13,7 @@ import (
 	"github.com/google/mtail/internal/runtime/compiler/symbol"
 )
 
-// Sexp is for converting program syntax trees into typed s-expression for printing
+// Sexp is for converting program syntax trees into typed s-expression for printing.
 type Sexp struct {
 	output strings.Builder // Accumulator for the result
 
@@ -64,7 +64,7 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 
 	case *ast.PatternFragment:
 		s.emit("const ")
-		ast.Walk(s, v.Id)
+		ast.Walk(s, v.ID)
 		s.emit(" ")
 
 	case *ast.PatternLit:
@@ -125,7 +125,7 @@ func (s *Sexp) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		}
 		s.newline()
 
-	case *ast.IdTerm:
+	case *ast.IDTerm:
 		s.emit("\"" + v.Name + "\"")
 
 	case *ast.CaprefTerm:
@@ -250,7 +250,7 @@ func (s *Sexp) emitScope(scope *symbol.Scope) {
 	s.newline()
 }
 
-// Dump begins the dumping of the syntax tree, returning the s-expression as a single string
+// Dump begins the dumping of the syntax tree, returning the s-expression as a single string.
 func (s *Sexp) Dump(n ast.Node) string {
 	s.output.Reset()
 	ast.Walk(s, n)

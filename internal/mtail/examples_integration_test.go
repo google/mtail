@@ -91,8 +91,9 @@ var exampleProgramTests = []struct {
 func TestExamplePrograms(t *testing.T) {
 	testutil.SkipIfShort(t)
 	for _, tc := range exampleProgramTests {
+		tc := tc
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile),
-			testutil.TimeoutTest(exampleTimeout, func(t *testing.T) {
+			testutil.TimeoutTest(exampleTimeout, func(t *testing.T) { //nolint:thelper
 				ctx, cancel := context.WithCancel(context.Background())
 				waker, _ := waker.NewTest(ctx, 0) // oneshot means we should never need to wake the stream
 				store := metrics.NewStore()
@@ -122,7 +123,7 @@ func TestExamplePrograms(t *testing.T) {
 					return nil
 				})
 
-				testutil.ExpectNoDiff(t, goldenStore, storeList, testutil.SortSlices(metrics.MetricsLess), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}))
+				testutil.ExpectNoDiff(t, goldenStore, storeList, testutil.SortSlices(metrics.Less), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}))
 			}))
 	}
 }
@@ -134,6 +135,7 @@ func TestCompileExamplePrograms(t *testing.T) {
 	matches, err := filepath.Glob("../../examples/*.mtail")
 	testutil.FatalIfErr(t, err)
 	for _, tc := range matches {
+		tc := tc
 		name := filepath.Base(tc)
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
@@ -194,7 +196,7 @@ func TestFilePipeStreamComparison(t *testing.T) {
 	for _, tc := range exampleProgramTests {
 		tc := tc
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile),
-			testutil.TimeoutTest(exampleTimeout, func(t *testing.T) {
+			testutil.TimeoutTest(exampleTimeout, func(t *testing.T) { //nolint:thelper
 				ctx, cancel := context.WithCancel(context.Background())
 				waker := waker.NewTestAlways()
 				fileStore, pipeStore := metrics.NewStore(), metrics.NewStore()
@@ -256,7 +258,7 @@ func TestFilePipeStreamComparison(t *testing.T) {
 				})
 
 				// Ignore the datum.Time field as well, as the results will be unstable otherwise.
-				testutil.ExpectNoDiff(t, fileMetrics, pipeMetrics, testutil.SortSlices(metrics.MetricsLess), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
+				testutil.ExpectNoDiff(t, fileMetrics, pipeMetrics, testutil.SortSlices(metrics.Less), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
 			}))
 	}
 }
@@ -269,7 +271,7 @@ func TestFileSocketStreamComparison(t *testing.T) {
 		for _, tc := range exampleProgramTests {
 			tc := tc
 			t.Run(fmt.Sprintf("%s on %s://%s", tc.programfile, scheme, tc.logfile),
-				testutil.TimeoutTest(exampleTimeout, func(t *testing.T) {
+				testutil.TimeoutTest(exampleTimeout, func(t *testing.T) { //nolint:thelper
 					ctx, cancel := context.WithCancel(context.Background())
 					waker := waker.NewTestAlways()
 					fileStore, sockStore := metrics.NewStore(), metrics.NewStore()
@@ -334,7 +336,7 @@ func TestFileSocketStreamComparison(t *testing.T) {
 					})
 
 					// Ignore the datum.Time field as well, as the results will be unstable otherwise.
-					testutil.ExpectNoDiff(t, fileMetrics, sockMetrics, testutil.SortSlices(metrics.MetricsLess), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
+					testutil.ExpectNoDiff(t, fileMetrics, sockMetrics, testutil.SortSlices(metrics.Less), testutil.IgnoreUnexported(metrics.Metric{}, sync.RWMutex{}, datum.String{}), testutil.IgnoreFields(datum.BaseDatum{}, "Time"))
 				}))
 		}
 	}

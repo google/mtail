@@ -26,7 +26,7 @@ func TestNewRuntime(t *testing.T) {
 }
 
 func TestCompileAndRun(t *testing.T) {
-	var testProgram = "/$/ {}\n"
+	testProgram := "/$/ {}\n"
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup

@@ -11,19 +11,19 @@ import (
 	"github.com/google/mtail/internal/runtime/compiler/types"
 )
 
-// SymbolKind enumerates the kind of a Symbol.
-type SymbolKind int
+// Kind enumerates the kind of a Symbol.
+type Kind int
 
-// SymbolKind enumerates the kinds of symbols found in the program text.
+// Kind enumerates the kinds of symbols found in the program text.
 const (
-	VarSymbol     SymbolKind = iota // Variables
-	CaprefSymbol                    // Capture group references
-	DecoSymbol                      // Decorators
-	PatternSymbol                   // Named pattern constants
-	endSymbol                       // for testing
+	VarSymbol     Kind = iota // Variables
+	CaprefSymbol              // Capture group references
+	DecoSymbol                // Decorators
+	PatternSymbol             // Named pattern constants
+	endSymbol                 // for testing
 )
 
-func (k SymbolKind) String() string {
+func (k Kind) String() string {
 	switch k {
 	case VarSymbol:
 		return "variable"
@@ -41,7 +41,7 @@ func (k SymbolKind) String() string {
 // Symbol describes a named program object.
 type Symbol struct {
 	Name    string             // identifier name
-	Kind    SymbolKind         // kind of program object
+	Kind    Kind               // kind of program object
 	Type    types.Type         // object's type
 	Pos     *position.Position // Source file position of definition
 	Binding interface{}        // binding to storage allocated in runtime
@@ -49,8 +49,8 @@ type Symbol struct {
 	Used    bool               // Optional marker that this symbol is used after declaration.
 }
 
-// NewSymbol creates a record of a given symbol kind, named name, found at loc
-func NewSymbol(name string, kind SymbolKind, pos *position.Position) (sym *Symbol) {
+// NewSymbol creates a record of a given symbol kind, named name, found at loc.
+func NewSymbol(name string, kind Kind, pos *position.Position) (sym *Symbol) {
 	return &Symbol{name, kind, types.Undef, pos, nil, 0, false}
 }
 
@@ -61,7 +61,7 @@ type Scope struct {
 	Symbols map[string]*Symbol
 }
 
-// NewScope creates a new scope within the parent scope
+// NewScope creates a new scope within the parent scope.
 func NewScope(parent *Scope) *Scope {
 	return &Scope{parent, make(map[string]*Symbol)}
 }
@@ -89,7 +89,7 @@ func (s *Scope) InsertAlias(sym *Symbol, alias string) (alt *Symbol) {
 
 // Lookup returns the symbol with the given name if it is found in this or any
 // parent scope, otherwise nil.
-func (s *Scope) Lookup(name string, kind SymbolKind) *Symbol {
+func (s *Scope) Lookup(name string, kind Kind) *Symbol {
 	for scope := s; scope != nil; scope = scope.Parent {
 		if sym := scope.Symbols[name]; sym != nil && sym.Kind == kind {
 			return sym

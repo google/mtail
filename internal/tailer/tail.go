@@ -18,16 +18,13 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/tailer/logstream"
 	"github.com/google/mtail/internal/waker"
 )
 
-var (
-	// logCount records the number of logs that are being tailed
-	logCount = expvar.NewInt("log_count")
-)
+// logCount records the number of logs that are being tailed.
+var logCount = expvar.NewInt("log_count")
 
 // Tailer polls the filesystem for log sources that match given
 // `LogPathPatterns` and creates `LogStream`s to tail them.
@@ -81,7 +78,7 @@ func (opt LogPatterns) apply(t *Tailer) error {
 	return nil
 }
 
-// IgnoreRegex sets the regular expression to use to filter away pathnames that match the LogPatterns glob
+// IgnoreRegex sets the regular expression to use to filter away pathnames that match the LogPatterns glob.
 type IgnoreRegex string
 
 func (opt IgnoreRegex) apply(t *Tailer) error {
@@ -130,10 +127,12 @@ func (opt logstreamPollWaker) apply(t *Tailer) error {
 	return nil
 }
 
+var ErrNoLinesChannel = errors.New("Tailer needs a lines channel")
+
 // New creates a new Tailer.
 func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine, options ...Option) (*Tailer, error) {
 	if lines == nil {
-		return nil, errors.New("Tailer needs a lines channel")
+		return nil, ErrNoLinesChannel
 	}
 	t := &Tailer{
 		ctx:          ctx,
@@ -198,6 +197,8 @@ func (t *Tailer) SetOption(options ...Option) error {
 	return nil
 }
 
+var ErrUnsupportedURLScheme = errors.New("unsupported URL scheme")
+
 // AddPattern adds a pattern to the list of patterns to filter filenames against.
 func (t *Tailer) AddPattern(pattern string) error {
 	u, err := url.Parse(pattern)
@@ -206,7 +207,7 @@ func (t *Tailer) AddPattern(pattern string) error {
 	}
 	switch u.Scheme {
 	default:
-		return fmt.Errorf("unsupported URL scheme %q in path pattern %q", u.Scheme, pattern)
+		return fmt.Errorf("%w: %q in path pattern %q", ErrUnsupportedURLScheme, u.Scheme, pattern)
 	case "unix", "unixgram", "tcp", "udp":
 		// Keep the scheme.
 		glog.V(2).Infof("AddPattern: socket %q", pattern)
@@ -250,7 +251,7 @@ func (t *Tailer) SetIgnorePattern(pattern string) error {
 	ignoreRegexPattern, err := regexp.Compile(pattern)
 	if err != nil {
 		glog.V(2).Infof("Couldn't compile regex %q: %s", pattern, err)
-		fmt.Println(fmt.Sprintf("error: %v", err))
+		fmt.Printf("error: %v\n", err)
 		return err
 	}
 	t.ignoreRegexPattern = ignoreRegexPattern
@@ -309,7 +310,7 @@ func (t *Tailer) StartGcLoop(waker waker.Waker) {
 			glog.Info("No gc loop in oneshot mode.")
 			return
 		}
-		//glog.Infof("Starting log handle expiry loop every %s", duration.String())
+		// glog.Infof("Starting log handle expiry loop every %s", duration.String())
 		for {
 			select {
 			case <-t.ctx.Done():
@@ -337,7 +338,7 @@ func (t *Tailer) StartLogPatternPollLoop(waker waker.Waker) {
 			glog.Info("No polling loop in oneshot mode.")
 			return
 		}
-		//glog.Infof("Starting log pattern poll loop every %s", duration.String())
+		// glog.Infof("Starting log pattern poll loop every %s", duration.String())
 		for {
 			select {
 			case <-t.ctx.Done():
@@ -400,11 +401,10 @@ func (t *Tailer) PollLogStreams() error {
 func (t *Tailer) Poll() error {
 	t.pollMu.Lock()
 	defer t.pollMu.Unlock()
-	if err := t.PollLogPatterns(); err != nil {
-		return err
-	}
-	if err := t.PollLogStreams(); err != nil {
-		return err
+	for _, f := range []func() error{t.PollLogPatterns, t.PollLogStreams} {
+		if err := f(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

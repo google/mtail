@@ -19,8 +19,6 @@ import (
 	"github.com/google/mtail/internal/waker"
 )
 
-const timeoutMultiplier = 3
-
 const defaultDoOrTimeoutDeadline = 10 * time.Second
 
 type TestServer struct {
@@ -115,7 +113,7 @@ func (ts *TestServer) PollWatched(n int) {
 	glog.Info("Testserver finishing poll")
 }
 
-/// GetExpvar is a helper function on TestServer that acts like TestGetExpvar.
+// GetExpvar is a helper function on TestServer that acts like TestGetExpvar.
 func (ts *TestServer) GetExpvar(name string) expvar.Var {
 	ts.tb.Helper()
 	return testutil.TestGetExpvar(ts.tb, name)

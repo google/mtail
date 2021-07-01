@@ -8,10 +8,10 @@ type MetricSlice []*Metric
 func (s MetricSlice) Len() int      { return len(s) }
 func (s MetricSlice) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s MetricSlice) Less(i, j int) bool {
-	return MetricsLess(s[i], s[j])
+	return Less(s[i], s[j])
 }
 
-func MetricsLess(m1, m2 *Metric) bool {
+func Less(m1, m2 *Metric) bool {
 	if m1.Name < m2.Name {
 		return true
 	}

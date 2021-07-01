@@ -5,6 +5,7 @@ package parser
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -57,9 +58,7 @@ func Dictionary() (r []string) {
 	for k := range keywords {
 		r = append(r, k)
 	}
-	for _, b := range builtins {
-		r = append(r, b)
-	}
+	r = append(r, builtins...)
 	return
 }
 
@@ -128,7 +127,7 @@ var eof rune = -1
 func (l *Lexer) next() rune {
 	var err error
 	l.rune, l.width, err = l.input.ReadRune()
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		l.width = 1
 		l.rune = eof
 	}
@@ -181,17 +180,19 @@ func (l *Lexer) ignore() {
 	l.startcol = l.col
 }
 
-// errorf returns an error token and resets the scanner
+// errorf returns an error token and resets the scanner.
 func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 	pos := position.Position{
 		Filename: l.name,
 		Line:     l.line,
 		Startcol: l.startcol,
-		Endcol:   l.col - 1}
+		Endcol:   l.col - 1,
+	}
 	l.tokens <- Token{
 		Kind:     INVALID,
 		Spelling: fmt.Sprintf(format, args...),
-		Pos:      pos}
+		Pos:      pos,
+	}
 	// Reset the current token
 	l.text.Reset()
 	l.startcol = l.col
@@ -546,7 +547,6 @@ Loop:
 		l.emit(ID)
 	}
 	return lexProg
-
 }
 
 // Lex a regular expression pattern. The text of the regular expression does

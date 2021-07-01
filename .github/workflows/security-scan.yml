@@ -7,10 +7,10 @@ on:
     - cron: 25 1 * * 1
 
 jobs:
-  tests:
+  gosec:
     runs-on: ubuntu-latest
-    env:
-      GO111MODULE: on
+    permissions:
+      security-events: write
     steps:
       - uses: actions/checkout@v2
       - uses: securego/gosec@master

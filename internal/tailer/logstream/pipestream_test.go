@@ -19,7 +19,7 @@ import (
 )
 
 func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
-	testutil.TimeoutTest(1*time.Second, func(t *testing.T) {
+	testutil.TimeoutTest(1*time.Second, func(t *testing.T) { //nolint:thelper
 		var wg sync.WaitGroup
 
 		tmpDir := testutil.TestTempDir(t)
@@ -65,7 +65,7 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 }
 
 func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
-	testutil.TimeoutTest(1*time.Second, func(t *testing.T) {
+	testutil.TimeoutTest(1*time.Second, func(t *testing.T) { // nolint:thelper
 		var wg sync.WaitGroup
 
 		tmpDir := testutil.TestTempDir(t)

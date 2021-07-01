@@ -62,7 +62,7 @@ func (m Kind) String() string {
 	return "Unknown"
 }
 
-// Generate implements the quick.Generator interface for Kind
+// Generate implements the quick.Generator interface for Kind.
 func (Kind) Generate(rand *rand.Rand, size int) reflect.Value {
 	return reflect.ValueOf(Kind(rand.Intn(int(endKind))))
 }
@@ -105,18 +105,20 @@ func NewMetric(name string, prog string, kind Kind, typ Type, keys ...string) *M
 	return m
 }
 
-// newMetric returns a new empty Metric
-func newMetric(len int) *Metric {
-	return &Metric{Keys: make([]string, len),
+// newMetric returns a new empty Metric.
+func newMetric(keyLen int) *Metric {
+	return &Metric{
+		Keys:           make([]string, keyLen),
 		LabelValues:    make([]*LabelValue, 0),
-		labelValuesMap: make(map[string]*LabelValue)}
+		labelValuesMap: make(map[string]*LabelValue),
+	}
 }
 
-// buildLabelValueKey returns a unique key for the given labels
+// buildLabelValueKey returns a unique key for the given labels.
 func buildLabelValueKey(labels []string) string {
 	var buf strings.Builder
 	for i := 0; i < len(labels); i++ {
-		rs := strings.Replace(labels[i], "-", "\\-", -1)
+		rs := strings.ReplaceAll(labels[i], "-", "\\-")
 		buf.WriteString(rs)
 		buf.WriteString("-")
 	}
@@ -236,7 +238,7 @@ func (m *Metric) EmitLabelSets(c chan *LabelSet) {
 	close(c)
 }
 
-// UnmarshalJSON converts a JSON byte string into a LabelValue
+// UnmarshalJSON converts a JSON byte string into a LabelValue.
 func (lv *LabelValue) UnmarshalJSON(b []byte) error {
 	var obj map[string]*json.RawMessage
 	err := json.Unmarshal(b, &obj)

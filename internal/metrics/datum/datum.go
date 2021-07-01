@@ -85,7 +85,7 @@ func MakeFloat(v float64, ts time.Time) Datum {
 	return d
 }
 
-// MakeString creates a new string datum with the provided value and timestamp
+// MakeString creates a new string datum with the provided value and timestamp.
 func MakeString(v string, ts time.Time) Datum {
 	d := &String{}
 	d.Set(v, ts)
@@ -166,7 +166,7 @@ func SetFloat(d Datum, v float64, ts time.Time) {
 	}
 }
 
-// SetString sets a string Datum to the provided value and timestamp, or panics if the Datym is not a String Datum
+// SetString sets a string Datum to the provided value and timestamp, or panics if the Datym is not a String Datum.
 func SetString(d Datum, v string, ts time.Time) {
 	switch d := d.(type) {
 	case *String:
@@ -205,7 +205,7 @@ func GetBuckets(d Datum) *Buckets {
 	}
 }
 
-// Observe records an observation v at time ts in d, or panics if d is not a BucketsDatum
+// Observe records an observation v at time ts in d, or panics if d is not a BucketsDatum.
 func Observe(d Datum, v float64, ts time.Time) {
 	switch d := d.(type) {
 	case *Buckets:
@@ -215,7 +215,7 @@ func Observe(d Datum, v float64, ts time.Time) {
 	}
 }
 
-// GetBucketCount returns the total count of observations in d, or panics if d is not a BucketsDatum
+// GetBucketCount returns the total count of observations in d, or panics if d is not a BucketsDatum.
 func GetBucketsCount(d Datum) uint64 {
 	switch d := d.(type) {
 	case *Buckets:
@@ -225,7 +225,7 @@ func GetBucketsCount(d Datum) uint64 {
 	}
 }
 
-// GetBucketsSum returns the sum of observations in d, or panics if d is not a BucketsDatum
+// GetBucketsSum returns the sum of observations in d, or panics if d is not a BucketsDatum.
 func GetBucketsSum(d Datum) float64 {
 	switch d := d.(type) {
 	case *Buckets:
@@ -240,13 +240,13 @@ func GetBucketsSum(d Datum) float64 {
 func GetBucketsCumByMax(d Datum) map[float64]uint64 {
 	switch d := d.(type) {
 	case *Buckets:
-		buckets := make(map[float64]uint64, 0)
+		buckets := make(map[float64]uint64)
 		maxes := make([]float64, 0)
 		for r, c := range d.GetBuckets() {
 			maxes = append(maxes, r.Max)
 			buckets[r.Max] = c
 		}
-		sort.Sort(sort.Float64Slice(maxes))
+		sort.Float64s(maxes)
 		cum := uint64(0)
 		for _, m := range maxes {
 			cum += buckets[m]

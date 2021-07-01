@@ -51,7 +51,7 @@ const (
 	Del                      // Pop `operand` keys and metric off stack, and remove the datum at metric[key,...] from memory
 	Expire                   // Set the expiry duration of a datum, perfoming the same as del but after the expiry time passes.
 
-	// Floating point ops
+	// Floating point ops.
 	Fadd
 	Fsub
 	Fmul
@@ -62,7 +62,7 @@ const (
 
 	Getfilename // Push input.Filename onto the stack.
 
-	// Conversions
+	// Conversions.
 	I2f // int to float
 	S2i // string to int
 	S2f // string to float
@@ -74,7 +74,7 @@ const (
 	Fcmp // floating point compare
 	Scmp // string compare
 
-	// String opcodes
+	// String opcodes.
 	Subst
 	Rsubst
 

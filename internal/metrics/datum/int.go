@@ -34,7 +34,7 @@ func (d *Int) DecBy(delta int64, timestamp time.Time) {
 	d.stamp(timestamp)
 }
 
-// Get returns the value of the Int
+// Get returns the value of the Int.
 func (d *Int) Get() int64 {
 	return atomic.LoadInt64(&d.Value)
 }

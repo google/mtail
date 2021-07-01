@@ -5,6 +5,7 @@ package mtail
 
 import (
 	"context"
+	"errors"
 	"expvar"
 	"net"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 	"github.com/google/mtail/internal/runtime"
 	"github.com/google/mtail/internal/tailer"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
 	"go.opencensus.io/zpages"
@@ -83,8 +85,8 @@ func (m *Server) initTailer() (err error) {
 	return
 }
 
-// initHttpServer begins the http server.
-func (m *Server) initHttpServer() error {
+// initHTTPServer begins the http server.
+func (m *Server) initHTTPServer() error {
 	initDone := make(chan struct{})
 	defer close(initDone)
 
@@ -122,7 +124,7 @@ func (m *Server) initHttpServer() error {
 		defer wg.Done()
 		<-initDone
 		glog.Infof("Listening on %s", m.listener.Addr())
-		if err := srv.Serve(m.listener); err != nil && err != http.ErrServerClosed {
+		if err := srv.Serve(m.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errc <- err
 		}
 	}()
@@ -181,11 +183,11 @@ func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server,
 		"prog_runtime_errors_total": prometheus.NewDesc("prog_runtime_errors_total", "number of errors encountered when executing programs per source filename", []string{"prog"}, nil),
 	}
 	m.reg.MustRegister(
-		prometheus.NewGoCollector(),
-		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	// Prefix all expvar metrics with 'mtail_'
 	prometheus.WrapRegistererWithPrefix("mtail_", m.reg).MustRegister(
-		prometheus.NewExpvarCollector(expvarDescs))
+		collectors.NewExpvarCollector(expvarDescs))
 	if err := m.SetOption(options...); err != nil {
 		return nil, err
 	}
@@ -198,7 +200,7 @@ func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server,
 	if err := m.initTailer(); err != nil {
 		return nil, err
 	}
-	if err := m.initHttpServer(); err != nil {
+	if err := m.initHTTPServer(); err != nil {
 		return nil, err
 	}
 	return m, nil

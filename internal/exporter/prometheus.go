@@ -11,16 +11,13 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	metricExportTotal = expvar.NewInt("metric_export_total")
-)
+var metricExportTotal = expvar.NewInt("metric_export_total")
 
 func noHyphens(s string) string {
-	return strings.Replace(s, "-", "_", -1)
+	return strings.ReplaceAll(s, "-", "_")
 }
 
 // Describe implements the prometheus.Collector interface.

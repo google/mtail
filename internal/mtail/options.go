@@ -4,7 +4,7 @@
 package mtail
 
 import (
-	"fmt"
+	"errors"
 	"net"
 	"os"
 	"path/filepath"
@@ -18,7 +18,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Option configures mtail.Server
+// Option configures mtail.Server.
 type Option interface {
 	apply(*Server) error
 }
@@ -63,9 +63,11 @@ type bindAddress struct {
 	address, port string
 }
 
+var ErrDuplicateHTTPBindAddress = errors.New("HTTP server bind address already supplied")
+
 func (opt bindAddress) apply(m *Server) error {
 	if m.listener != nil {
-		return fmt.Errorf("HTTP server bind address already supplied")
+		return ErrDuplicateHTTPBindAddress
 	}
 	bindAddress := net.JoinHostPort(opt.address, opt.port)
 	var err error
@@ -78,7 +80,7 @@ type BindUnixSocket string
 
 func (opt BindUnixSocket) apply(m *Server) error {
 	if m.listener != nil {
-		return fmt.Errorf("HTTP server bind address already supplied")
+		return ErrDuplicateHTTPBindAddress
 	}
 	var err error
 	m.listener, err = net.Listen("unix", string(opt))
@@ -164,7 +166,8 @@ var OneShot = &niladicOption{
 		m.tOpts = append(m.tOpts, tailer.OneShot)
 		m.oneShot = true
 		return nil
-	}}
+	},
+}
 
 // CompileOnly sets compile-only mode in the Server.
 var CompileOnly = &niladicOption{
@@ -172,63 +175,72 @@ var CompileOnly = &niladicOption{
 		m.rOpts = append(m.rOpts, runtime.CompileOnly())
 		m.compileOnly = true
 		return nil
-	}}
+	},
+}
 
 // DumpAst instructs the Server's compiler to print the AST after parsing.
 var DumpAst = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.DumpAst())
 		return nil
-	}}
+	},
+}
 
 // DumpAstTypes instructs the Server's copmiler to print the AST after type checking.
 var DumpAstTypes = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.DumpAstTypes())
 		return nil
-	}}
+	},
+}
 
 // DumpBytecode instructs the Server's compiuler to print the program bytecode after code generation.
 var DumpBytecode = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.DumpBytecode())
 		return nil
-	}}
+	},
+}
 
 // SyslogUseCurrentYear instructs the Server to use the current year for year-less log timestamp during parsing.
 var SyslogUseCurrentYear = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.SyslogUseCurrentYear())
 		return nil
-	}}
+	},
+}
 
 // OmitProgLabel sets the Server to not put the program name as a label in exported metrics.
 var OmitProgLabel = &niladicOption{
 	func(m *Server) error {
 		m.eOpts = append(m.eOpts, exporter.OmitProgLabel())
 		return nil
-	}}
+	},
+}
 
 // OmitMetricSource sets the Server to not link created metrics to their source program.
 var OmitMetricSource = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.OmitMetricSource())
 		return nil
-	}}
+	},
+}
 
 // EmitMetricTimestamp tells the Server to export the metric's timestamp.
 var EmitMetricTimestamp = &niladicOption{
 	func(m *Server) error {
 		m.eOpts = append(m.eOpts, exporter.EmitTimestamp())
 		return nil
-	}}
+	},
+}
 
 // LogRuntimeErrors instructs the VM to emit runtime errors to the log.
 var LogRuntimeErrors = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.LogRuntimeErrors())
 		return nil
-	}}
+	},
+}
 
 // JaegerReporter creates a new jaeger reporter that sends to the given Jaeger endpoint address.
 type JaegerReporter string
@@ -263,7 +275,7 @@ func (opt MaxRegexpLength) apply(m *Server) error {
 	return nil
 }
 
-// MaxRecursionDepth sets the maximum depth the abstract syntax tree built during lexation can have
+// MaxRecursionDepth sets the maximum depth the abstract syntax tree built during lexation can have.
 type MaxRecursionDepth int
 
 func (opt MaxRecursionDepth) apply(m *Server) error {

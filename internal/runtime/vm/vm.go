@@ -71,7 +71,7 @@ type VM struct {
 
 	HardCrash bool // User settable flag to make the VM crash instead of recover on panic.
 
-	runtimeErrorMu sync.RWMutex //protects runtimeError
+	runtimeErrorMu sync.RWMutex // protects runtimeError
 	runtimeError   string       // records the last runtime error from errorf()
 
 	logRuntimeErrors     bool           // Emit runtime errors to the log.
@@ -79,12 +79,12 @@ type VM struct {
 	loc                  *time.Location // Override local timezone with provided, if not empty
 }
 
-// Push a value onto the stack
+// Push a value onto the stack.
 func (t *thread) Push(value interface{}) {
 	t.stack = append(t.stack, value)
 }
 
-// Pop a value off the stack
+// Pop a value off the stack.
 func (t *thread) Pop() (value interface{}) {
 	last := len(t.stack) - 1
 	value = t.stack[last]
@@ -92,7 +92,7 @@ func (t *thread) Pop() (value interface{}) {
 	return
 }
 
-// Log a runtime error and terminate the program
+// Log a runtime error and terminate the program.
 func (v *VM) errorf(format string, args ...interface{}) {
 	i := v.prog[v.t.pc-1]
 	ProgRuntimeErrors.Add(v.name, 1)
@@ -714,29 +714,29 @@ func (v *VM) execute(t *thread, i code.Instr) {
 
 	case code.Dload:
 		// Load a datum from metric at TOS onto stack
-		//fmt.Printf("Stack: %v\n", t.stack)
+		// fmt.Printf("Stack: %v\n", t.stack)
 		m := t.Pop().(*metrics.Metric)
-		//fmt.Printf("Metric: %v\n", m)
+		// fmt.Printf("Metric: %v\n", m)
 		index := i.Operand.(int)
 		keys := make([]string, index)
-		//fmt.Printf("keys: %v\n", keys)
+		// fmt.Printf("keys: %v\n", keys)
 		for a := index - 1; a >= 0; a-- {
 			s, err := t.PopString()
 			if err != nil {
 				v.errorf("%+v", err)
 				return
 			}
-			//fmt.Printf("s: %v\n", s)
+			// fmt.Printf("s: %v\n", s)
 			keys[a] = s
-			//fmt.Printf("Keys: %v\n", keys)
+			// fmt.Printf("Keys: %v\n", keys)
 		}
-		//fmt.Printf("Keys: %v\n", keys)
+		// fmt.Printf("Keys: %v\n", keys)
 		d, err := m.GetDatum(keys...)
 		if err != nil {
 			v.errorf("dload (GetDatum) failed: %s", err)
 			return
 		}
-		//fmt.Printf("Found %v\n", d)
+		// fmt.Printf("Found %v\n", d)
 		t.Push(d)
 
 	case code.Iget, code.Fget, code.Sget:
@@ -818,18 +818,22 @@ func (v *VM) execute(t *thread, i code.Instr) {
 				v.errorf("%s", err)
 				return
 			}
+			if base > 2147483647 || base < -2147483648 {
+				v.errorf("int32 out of range")
+				return
+			}
 		}
 		str, err := t.PopString()
 		if err != nil {
 			v.errorf("%+v", err)
 			return
 		}
-		i, err := strconv.ParseInt(str, int(base), 64)
+		val, err := strconv.ParseInt(str, int(base), 64)
 		if err != nil {
 			v.errorf("%s", err)
 			return
 		}
-		t.Push(i)
+		t.Push(val)
 
 	case code.S2f:
 		str, err := t.PopString()
@@ -897,7 +901,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			v.errorf("%+v", verr)
 			return
 		}
-		new, nerr := t.PopString()
+		repl, nerr := t.PopString()
 		if nerr != nil {
 			v.errorf("%+v", nerr)
 			return
@@ -907,7 +911,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			v.errorf("%+v", oerr)
 			return
 		}
-		t.Push(strings.Replace(val, old, new, -1))
+		t.Push(strings.ReplaceAll(val, old, repl))
 	case code.Rsubst:
 		pat, perr := t.PopInt()
 		if perr != nil {
@@ -919,12 +923,12 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			v.errorf("%+v", verr)
 			return
 		}
-		new, nerr := t.PopString()
+		repl, nerr := t.PopString()
 		if nerr != nil {
 			v.errorf("%+v", nerr)
 			return
 		}
-		t.Push(v.re[pat].ReplaceAllLiteralString(val, new))
+		t.Push(v.re[pat].ReplaceAllLiteralString(val, repl))
 
 	default:
 		v.errorf("illegal instruction: %d", i.Opcode)

@@ -67,11 +67,11 @@ func (d *dotter) emitNode(id int, node ast.Node) {
 		case *ast.DecoDecl:
 			attrs["label"] += n.Name
 		}
-	case *ast.IdTerm, *ast.CaprefTerm:
+	case *ast.IDTerm, *ast.CaprefTerm:
 		attrs["fillcolor"] = "pink"
 		attrs["shape"] = "ellipse"
 		switch n := n.(type) {
-		case *ast.IdTerm:
+		case *ast.IDTerm:
 			attrs["label"] += n.Name
 		case *ast.CaprefTerm:
 			attrs["label"] += fmt.Sprintf("$%s", n.Name)

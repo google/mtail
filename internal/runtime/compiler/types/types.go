@@ -4,6 +4,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"regexp/syntax"
 	"strings"
@@ -22,7 +23,7 @@ type Type interface {
 	String() string
 }
 
-// Equals compares two types, testing for equality
+// Equals compares two types, testing for equality.
 func Equals(t1, t2 Type) bool {
 	t1, t2 = t1.Root(), t2.Root()
 	switch t1 := t1.(type) {
@@ -51,7 +52,6 @@ func Equals(t1, t2 Type) bool {
 		return true
 	}
 	return true
-
 }
 
 var (
@@ -95,7 +95,6 @@ func (t *Variable) String() string {
 		return t.Instance.String()
 	}
 	return fmt.Sprintf("typeVar%d", t.ID)
-
 }
 
 // SetInstance sets the exemplar instance of this TypeVariable, during
@@ -192,7 +191,7 @@ var (
 	Float   = &Operator{"Float", []Type{}}
 	String  = &Operator{"String", []Type{}}
 	Pattern = &Operator{"Pattern", []Type{}}
-	// TODO(jaq): use composite type so we can typecheck the bucket directly, e.g. hist[j] = i
+	// TODO(jaq): use composite type so we can typecheck the bucket directly, e.g. hist[j] = i.
 	Buckets = &Operator{"Buckets", []Type{}}
 )
 
@@ -268,6 +267,8 @@ type TypeError struct {
 	received Type
 }
 
+var ErrRecursiveUnification = errors.New("recursive unification error")
+
 func (e *TypeError) Error() string {
 	var estr, rstr string
 	if IsComplete(e.expected) {
@@ -303,7 +304,7 @@ func Unify(a, b Type) error {
 			}
 		case *Operator:
 			if occursInType(a2, b2) {
-				return fmt.Errorf("recursive unification on %v and %v", a2, b2)
+				return fmt.Errorf("%w on %v and %v", ErrRecursiveUnification, a2, b2)
 			}
 			glog.V(2).Infof("Making %q type %q", a2, b1)
 			a2.SetInstance(b1)
@@ -315,7 +316,8 @@ func Unify(a, b Type) error {
 			err := Unify(b, a)
 			if err != nil {
 				// We flipped the args, flip them back.
-				if e, ok := err.(*TypeError); ok {
+				var e *TypeError
+				if errors.As(err, &e) {
 					return &TypeError{e.received, e.expected}
 				}
 			}
@@ -404,10 +406,10 @@ func LeastUpperBound(a, b Type) Type {
 	return Error
 }
 
-// inferCaprefType determines a type for a capturing group, based on contents
+// inferCaprefType determines a type for the nth capturing group in re, based on contents
 // of that capture group.
-func InferCaprefType(re *syntax.Regexp, cap int) Type {
-	group := getCaptureGroup(re, cap)
+func InferCaprefType(re *syntax.Regexp, n int) Type {
+	group := getCaptureGroup(re, n)
 	if group == nil {
 		return None
 	}
@@ -446,14 +448,14 @@ func inferGroupType(group *syntax.Regexp) Type {
 	return String
 }
 
-// getCaptureGroup returns the Regexp node of the capturing group numbered cap
+// getCaptureGroup returns the Regexp node of the capturing group numbered cgID
 // in re.
-func getCaptureGroup(re *syntax.Regexp, cap int) *syntax.Regexp {
-	if re.Op == syntax.OpCapture && re.Cap == cap {
+func getCaptureGroup(re *syntax.Regexp, cgID int) *syntax.Regexp {
+	if re.Op == syntax.OpCapture && re.Cap == cgID {
 		return re.Sub[0]
 	}
 	for _, sub := range re.Sub {
-		r := getCaptureGroup(sub, cap)
+		r := getCaptureGroup(sub, cgID)
 		if r != nil {
 			return r
 		}

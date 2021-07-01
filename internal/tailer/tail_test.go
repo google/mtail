@@ -17,14 +17,15 @@ import (
 )
 
 func makeTestTail(t *testing.T, options ...Option) (*Tailer, chan *logline.LogLine, func(int), string, func()) {
+	t.Helper()
 	tmpDir := testutil.TestTempDir(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	lines := make(chan *logline.LogLine, 5) // 5 loglines ought to be enough for any test
 	var wg sync.WaitGroup
 	waker, awaken := waker.NewTest(ctx, 1)
-	opts := append(options, LogPatterns([]string{tmpDir}), LogstreamPollWaker(waker))
-	ta, err := New(ctx, &wg, lines, opts...)
+	options = append(options, LogPatterns([]string{tmpDir}), LogstreamPollWaker(waker))
+	ta, err := New(ctx, &wg, lines, options...)
 	testutil.FatalIfErr(t, err)
 	return ta, lines, awaken, tmpDir, func() { cancel(); wg.Wait() }
 }
@@ -184,7 +185,7 @@ func TestTailerOpenRetries(t *testing.T) {
 
 func TestTailerInitErrors(t *testing.T) {
 	var wg sync.WaitGroup
-	_, err := New(nil, &wg, nil)
+	_, err := New(context.TODO(), &wg, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -255,9 +256,9 @@ func TestTailExpireStaleHandles(t *testing.T) {
 		t.Errorf("expecting 2 handles, got %v", ta.logstreams)
 	}
 	ta.logstreamsMu.RUnlock()
-	ta.logstreamsMu.Lock()
-	//ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 + time.Minute)
-	ta.logstreamsMu.Unlock()
+	// ta.logstreamsMu.Lock()
+	// ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 + time.Minute)
+	// ta.logstreamsMu.Unlock()
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
 	}
@@ -266,9 +267,9 @@ func TestTailExpireStaleHandles(t *testing.T) {
 		t.Errorf("expecting 2 handles, got %v", ta.logstreams)
 	}
 	ta.logstreamsMu.RUnlock()
-	ta.logstreamsMu.Lock()
-	//ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 - time.Minute)
-	ta.logstreamsMu.Unlock()
+	// ta.logstreamsMu.Lock()
+	// ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 - time.Minute)
+	// ta.logstreamsMu.Unlock()
 	if err := ta.Gc(); err != nil {
 		t.Fatal(err)
 	}

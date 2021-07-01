@@ -23,11 +23,13 @@ var handleJSONTests = []struct {
 	metrics  []*metrics.Metric
 	expected string
 }{
-	{"empty",
+	{
+		"empty",
 		[]*metrics.Metric{},
 		"[]",
 	},
-	{"single",
+	{
+		"single",
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -53,7 +55,8 @@ var handleJSONTests = []struct {
   }
 ]`,
 	},
-	{"dimensioned",
+	{
+		"dimensioned",
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -88,7 +91,8 @@ var handleJSONTests = []struct {
   }
 ]`,
 	},
-	{"histogram",
+	{
+		"histogram",
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -96,7 +100,7 @@ var handleJSONTests = []struct {
 				Kind:        metrics.Histogram,
 				Keys:        []string{"a", "b"},
 				LabelValues: []*metrics.LabelValue{{Labels: []string{"1", "2"}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
-				Buckets:     []datum.Range{datum.Range{Min: 0, Max: math.Inf(1)}},
+				Buckets:     []datum.Range{{Min: 0, Max: math.Inf(1)}},
 			},
 		},
 		`[

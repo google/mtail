@@ -87,15 +87,15 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 
 	case *ast.PatternFragment:
 		u.emit("const ")
-		ast.Walk(u, v.Id)
+		ast.Walk(u, v.ID)
 		u.emit(" ")
 		ast.Walk(u, v.Expr)
 
 	case *ast.PatternLit:
-		u.emit("/" + strings.Replace(v.Pattern, "/", "\\/", -1) + "/")
+		u.emit("/" + strings.ReplaceAll(v.Pattern, "/", "\\/") + "/")
 
 	case *ast.BinaryExpr:
-		ast.Walk(u, v.Lhs)
+		ast.Walk(u, v.LHS)
 		switch v.Op {
 		case LT:
 			u.emit(" < ")
@@ -148,9 +148,9 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		default:
 			u.emit(fmt.Sprintf("Unexpected op: %v", v.Op))
 		}
-		ast.Walk(u, v.Rhs)
+		ast.Walk(u, v.RHS)
 
-	case *ast.IdTerm:
+	case *ast.IDTerm:
 		u.emit(v.Name)
 
 	case *ast.CaprefTerm:
@@ -164,7 +164,7 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		u.emit(")")
 
 	case *ast.IndexedExpr:
-		ast.Walk(u, v.Lhs)
+		ast.Walk(u, v.LHS)
 		if len(v.Index.(*ast.ExprList).Children) > 0 {
 			u.emit("[")
 			ast.Walk(u, v.Index)

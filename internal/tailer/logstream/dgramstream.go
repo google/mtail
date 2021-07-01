@@ -6,7 +6,6 @@ package logstream
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -33,7 +32,7 @@ type dgramStream struct {
 
 func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, lines chan<- *logline.LogLine) (LogStream, error) {
 	if address == "" {
-		return nil, fmt.Errorf("socket address cannot be empty, please provide a unix domain socket filename or a udp host:port.")
+		return nil, ErrEmptySocketAddress
 	}
 	ss := &dgramStream{ctx: ctx, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
 	if err := ss.stream(ctx, wg, waker); err != nil {

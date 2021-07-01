@@ -22,11 +22,13 @@ var handleGraphiteTests = []struct {
 	metrics  []*metrics.Metric
 	expected string
 }{
-	{"empty",
+	{
+		"empty",
 		[]*metrics.Metric{},
 		"",
 	},
-	{"single",
+	{
+		"single",
 		[]*metrics.Metric{
 			{
 				Name:        "foo",
@@ -42,6 +44,7 @@ var handleGraphiteTests = []struct {
 func TestHandleGraphite(t *testing.T) {
 	*graphitePrefix = "foobar."
 	for _, tc := range handleGraphiteTests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			var wg sync.WaitGroup
