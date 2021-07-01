@@ -217,18 +217,21 @@ func main() {
 	m, err := mtail.New(ctx, store, opts...)
 	if err != nil {
 		glog.Error(err)
-		os.Exit(1)
+		cancel()
+		os.Exit(1) //nolint:gocritic // false positive
 	}
 	err = m.Run()
 	if err != nil {
 		glog.Error(err)
-		os.Exit(1)
+		cancel()
+		os.Exit(1) //nolint:gocritic // false positive
 	}
 	if *oneShot {
 		err = store.WriteMetrics(os.Stdout)
 		if err != nil {
 			glog.Error(err)
 		}
-		os.Exit(1)
+		cancel()
+		os.Exit(1) //nolint:gocritic // false positive
 	}
 }

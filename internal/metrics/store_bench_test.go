@@ -152,7 +152,7 @@ func getDatum(b *testing.B, items int, lvs *[][]string, m *Metric) {
 	}
 }
 
-type metric_bench struct {
+type metricBench struct {
 	name  string
 	setup func(b *testing.B, rand *rand.Rand, items, keys int, lvs *[][]string, m *Metric)
 	b     func(b *testing.B, items int, lv *[][]string, m *Metric)
@@ -160,7 +160,7 @@ type metric_bench struct {
 
 func BenchmarkMetric(b *testing.B) {
 	maxKeys := 4
-	benches := []metric_bench{
+	benches := []metricBench{
 		{
 			name:  "GetDatum",
 			setup: fillLabel,

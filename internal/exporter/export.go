@@ -207,7 +207,7 @@ func (e *Exporter) PushMetrics() {
 
 // StartMetricPush pushes metrics to the configured services each interval.
 func (e *Exporter) StartMetricPush() {
-	if len(e.pushTargets) <= 0 {
+	if len(e.pushTargets) == 0 {
 		return
 	}
 	if e.pushInterval <= 0 {

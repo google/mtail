@@ -5,6 +5,7 @@ package mtail
 
 import (
 	"context"
+	"errors"
 	"expvar"
 	"net"
 	"net/http"
@@ -122,7 +123,7 @@ func (m *Server) initHttpServer() error {
 		defer wg.Done()
 		<-initDone
 		glog.Infof("Listening on %s", m.listener.Addr())
-		if err := srv.Serve(m.listener); err != nil && err != http.ErrServerClosed {
+		if err := srv.Serve(m.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errc <- err
 		}
 	}()

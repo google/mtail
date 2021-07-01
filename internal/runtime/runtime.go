@@ -8,7 +8,6 @@ package runtime
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"expvar"
 	"io"
@@ -215,8 +214,7 @@ type vmHandle struct {
 // the configured program source directory, compiling changes to programs, and
 // managing the virtual machines.
 type Runtime struct {
-	ctx context.Context // a cancellable context
-	wg  sync.WaitGroup  // used to await vm shutdown
+	wg sync.WaitGroup // used to await vm shutdown
 
 	ms  *metrics.Store        // pointer to metrics.Store to pass to compiler
 	reg prometheus.Registerer // plce to reg metrics

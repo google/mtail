@@ -48,7 +48,7 @@ func TestGlobBeforeStart(t *testing.T) {
 	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
 	stopM()
 
-	if r := m.GetExpvar("log_count"); r.(*expvar.Int).Value() != int64(count) {
+	if r := m.GetExpvar("log_count"); r.(*expvar.Int).Value() != count {
 		t.Errorf("Expecting log count of %d, received %d", count, r)
 	}
 }
