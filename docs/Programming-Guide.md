@@ -163,6 +163,18 @@ otherwise { _action3_ }
 In this example, "action3" would execute if both pattern1 and pattern2 did not
 match the current line.
 
+### Explicit matching
+
+The above `/pattern/ { _action_ }` form implicitly matches the current input log line.
+
+If one wants to match against another string variable, one can use the `=~` operator, or to negate the match the `!~`, like so:
+
+```mtail
+  $1 =~ /GET/ {
+    ...
+  }
+```
+
 ## Storing intermediate state
 
 Hidden metrics are metrics that can be used for internal state and are never

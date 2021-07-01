@@ -6,6 +6,8 @@ package mtail
 import (
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"time"
 
 	"contrib.go.opencensus.io/exporter/jaeger"
@@ -25,7 +27,10 @@ type Option interface {
 type ProgramPath string
 
 func (opt ProgramPath) apply(m *Server) error {
-	m.programPath = string(opt)
+	m.programPath = filepath.Clean(string(opt))
+	if _, err := os.Stat(m.programPath); os.IsNotExist(err) {
+		return err
+	}
 	return nil
 }
 
