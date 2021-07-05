@@ -1,13 +1,13 @@
-<img src="https://raw.githubusercontent.com/google/mtail/master/logo.png" alt="mtail" title="mtail" align="right" width="140">
+<img src="https://raw.githubusercontent.com/google/mtail/main/logo.png" alt="mtail" title="mtail" align="right" width="140">
 
 # mtail - extract whitebox monitoring data from application logs for collection into a timeseries database
 
-[![ci](https://github.com/google/mtail/workflows/CI/badge.svg)](https://github.com/google/mtail/actions?query=workflow%3ACI+branch%3Amaster)
+[![ci](https://github.com/google/mtail/workflows/CI/badge.svg)](https://github.com/google/mtail/actions?query=workflow%3ACI+branch%3main)
 [![GoDoc](https://godoc.org/github.com/google/mtail?status.png)](http://godoc.org/github.com/google/mtail)
 [![Go Report Card](https://goreportcard.com/badge/github.com/google/mtail)](https://goreportcard.com/report/github.com/google/mtail)
 [![OSS-Fuzz](https://oss-fuzz-build-logs.storage.googleapis.com/badges/mtail.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:mtail)
 [![CirrusCI Build Status](https://api.cirrus-ci.com/github/google/mtail.svg)](https://cirrus-ci.com/github/google/mtail)
-[![codecov](https://codecov.io/gh/google/mtail/branch/master/graph/badge.svg)](https://codecov.io/gh/google/mtail)
+[![codecov](https://codecov.io/gh/google/mtail/branch/main/graph/badge.svg)](https://codecov.io/gh/google/mtail)
 
 `mtail` is a tool for extracting metrics from application logs to be exported
 into a timeseries database or timeseries calculator for alerting and
