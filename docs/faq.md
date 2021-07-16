@@ -87,3 +87,11 @@ So, given that the monitoring system needs to handle missing and resetting data
 already in a distributed system, there is no compelling reason to implement
 metric checkpointing in `mtail` as well.  It just adds complexity for little
 overall gain.
+
+## Why doesn't `mtail` automatically reload programme files?
+
+`mtail` will reload programme files when it receives a `SIGHUP` signal.
+
+It's assumed that programmes do not change very often, so it relies on an external trigger rather than spend resourecs of its own polling for changes at all.  `inotify` is not used either, as programme reloads would be the only use of that library, and the benefit does not seem worth the cost of including the extra dependency.
+
+See the [Deployment](Deployment.md) guide for suggestions for "automatic" programme reloads.

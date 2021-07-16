@@ -6,7 +6,7 @@ mtail is intended to run one per machine, and serve as monitoring glue for multi
 
 ## Configuration Overview
 
-mtail is configured through commandline flags.
+mtail is configured with commandline flags.
 
 The `--help` flag will print a list of flags for configuring `mtail`.
 
@@ -98,6 +98,26 @@ Read the [Programming Guide](Programming-Guide.md) for instructions on how to wr
 ### Reloading programmes
 
 `mtail` does not automatically reload programmes after it starts up.  To ask `mtail` to scan for and reload programmes from the supplied `--progs` directory, send it a `SIGHUP` signal on UNIX-like systems.
+
+For example, if configs are being delivered by a configuration management tool like Puppet, then program Puppet to send a SIGHUP when it has copied a new config file over.
+
+```puppet
+exec { 'reload_mtail_programmes':
+  command => "killall -HUP mtail",
+  refreshonly = True,
+}
+
+file { mtail_programme:
+  source => mtail_programme,
+  notify => Exec['reload_mtail_programmes'],
+}
+```
+
+Alternatively, if you're using `scp` or some similiar method to copy the programme files without a receiver, then either follow it with a `ssh $host 'killall -HUP mtail'` or use a tool like [`inotifywait`](https://linux.die.net/man/1/inotifywait) in a side process next to mtail to watch for changes and send the reload signal.
+
+```shell
+inotifywait /etc/mtail/progs | while read event; do killall -HUP mtail; done
+```
 
 ## Getting the Metrics Out
 
