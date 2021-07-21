@@ -116,7 +116,7 @@ file { mtail_programme:
 Alternatively, if you're using `scp` or some similiar method to copy the programme files without a receiver, then either follow it with a `ssh $host 'killall -HUP mtail'` or use a tool like [`inotifywait`](https://linux.die.net/man/1/inotifywait) in a side process next to mtail to watch for changes and send the reload signal.
 
 ```shell
-inotifywait /etc/mtail/progs | while read event; do killall -HUP mtail; done
+inotifywait -m /etc/mtail/progs | while read event; do killall -HUP mtail; done
 ```
 
 ## Getting the Metrics Out
