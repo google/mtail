@@ -12,7 +12,8 @@ env:
 jobs:
   benchmark:
     permissions:
-      # none
+      # none-all, which doesn't exist, but https://docs.github.com/en/actions/reference/authentication-in-a-workflow#using-the-github_token-in-a-workflow implies that the token still gets created.
+      actions: none
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v2
