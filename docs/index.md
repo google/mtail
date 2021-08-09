@@ -1,4 +1,4 @@
-mtail - extract whitebox monitoring data from application logs for collection into a timeseries database
+mtail - extract internal monitoring data from application logs for collection into a timeseries database
 ========================================================================================================
 
 `mtail` is a tool for extracting metrics from application logs to be exported

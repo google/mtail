@@ -40,7 +40,7 @@ mtail --one_shot --progs ./progs --logs testdata/foo.log
 
 If you wish, send a PR containing your program, some sample input, and a golden
 output to be run as a test in
-http://github.com/google/mtail/blob/master/ex_test.go to ensure that mtail
+http://github.com/google/mtail/blob/main/ex_test.go to ensure that mtail
 never breaks your program (or that your program gets any updates if the
 language changes.)
 
