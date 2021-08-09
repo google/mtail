@@ -6,6 +6,13 @@ on:
     branches:
       - main
   pull_request:
+
+permissions:
+  # golangci-lint does annotations, not comments
+  # No-one knows what an annotation is, but I suspect it's printing file:line: msg to stdout.
+  # https://github.community/t/what-are-annotations/16173/2
+  checks: none
+
 jobs:
   golangci:
     name: lint

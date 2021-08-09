@@ -9,11 +9,16 @@ on:
 env:
   GO111MODULE: "on"
   GOPROXY: https://proxy.golang.org
+
+permissions:
+  # none-all, which doesn't exist, but
+  # https://docs.github.com/en/actions/reference/authentication-in-a-workflow#using-the-github_token-in-a-workflow
+  # implies that the token still gets created.  Elsewhere we learn that any
+  # permission not mentioned here gets turned to `none`.
+  actions: none
+
 jobs:
   benchmark:
-    permissions:
-      # none-all, which doesn't exist, but https://docs.github.com/en/actions/reference/authentication-in-a-workflow#using-the-github_token-in-a-workflow implies that the token still gets created.
-      actions: none
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v2

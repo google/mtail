@@ -20,6 +20,10 @@ on:
   schedule:
     - cron: '34 6 * * 3'
 
+permissions:
+  # https://github.com/github/codeql-action/issues/464
+  security-events: write
+
 jobs:
   analyze:
     name: Analyze
