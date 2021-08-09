@@ -1,6 +1,6 @@
 <img src="https://raw.githubusercontent.com/google/mtail/main/logo.png" alt="mtail" title="mtail" align="right" width="140">
 
-# mtail - extract whitebox monitoring data from application logs for collection into a timeseries database
+# mtail - extract internal monitoring data from application logs for collection into a timeseries database
 
 [![ci](https://github.com/google/mtail/workflows/CI/badge.svg)](https://github.com/google/mtail/actions?query=workflow%3ACI+branch%3main)
 [![GoDoc](https://godoc.org/github.com/google/mtail?status.png)](http://godoc.org/github.com/google/mtail)
