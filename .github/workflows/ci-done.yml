@@ -11,7 +11,7 @@ jobs:
       # list and download
       actions: read
       # post results
-      pull-request: write
+      pull-requests: write
     steps:
       - uses: actions/github-script@v4.0.2
         with:
