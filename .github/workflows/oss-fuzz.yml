@@ -6,6 +6,11 @@ on:
       - 'internal/runtime/compiler/parser/parser.y'
       - 'Makefile'
       - 'Dockerfile'
+
+permissions:
+  # Secret code for "the github token should have no tokens at all"
+  actions: none
+
 jobs:
   oss-fuzz:
     runs-on: ubuntu-latest
