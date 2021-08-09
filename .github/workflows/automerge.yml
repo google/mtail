@@ -10,6 +10,17 @@ jobs:
   approve-and-merge-dependabot:
     if: github.event.pull_request.user.login == 'dependabot[bot]' && contains(github.event.pull_request.labels.*.name, 'dependencies')
     runs-on: ubuntu-latest
+    permissions:
+      # wait-on-check requires check read
+      checks: read
+      # enable-automerge is a graphql query, not REST, so isn't documented,
+      # except in a mention in
+      # https://github.blog/changelog/2021-02-04-pull-request-auto-merge-is-now-generally-available/
+      # which says "can only be enabled by users with permissino to merge"; the
+      # REST documentation says you need contents: write to perform a merge.
+      contents: write
+      # auto-approve-action requires write on actions
+      actions: write
     steps:
 
     # Enable auto-merge *before* issuing an approval.
@@ -22,7 +33,7 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.head.sha }}
         check-name: test
-        repo-token: ${{ github.token }}
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
         wait-interval: 60
 
     # We "trust" dependabot updates (this still requires all other checks to pass!)
