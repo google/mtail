@@ -10,8 +10,10 @@ jobs:
     permissions:
       # list and download
       actions: read
-      # post results
+      # post results as comment
       pull-requests: write
+      # publish creates a check run
+      checks: write
     steps:
       - uses: actions/github-script@v4.0.2
         with:
