@@ -11,6 +11,8 @@ env:
   GOPROXY: https://proxy.golang.org
 jobs:
   benchmark:
+    permissions:
+      # none
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v2
