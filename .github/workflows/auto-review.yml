@@ -23,6 +23,11 @@ jobs:
       ) && (
         github.actor == 'jaqx0r'
       )
+    permissions:
+      # wait on check
+      checks: read
+      # create review
+      pull-requests: write
     steps:
       - uses: lewagon/wait-on-check-action@v0.2
         with:

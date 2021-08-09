@@ -7,6 +7,11 @@ on:
 jobs:
   comment:
     runs-on: ubuntu-latest
+    permissions:
+      # list and download
+      actions: read
+      # post results
+      pull-request: write
     steps:
       - uses: actions/github-script@v4.0.2
         with:

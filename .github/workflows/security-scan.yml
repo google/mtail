@@ -1,6 +1,5 @@
 name: "Security Scan"
 
-# Run workflow each time code is pushed to your repository and on a schedule.
 on:
   pull_request:
   schedule:
