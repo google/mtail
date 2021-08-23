@@ -230,8 +230,9 @@ func main() {
 		err = store.WriteMetrics(os.Stdout)
 		if err != nil {
 			glog.Error(err)
+			os.Exit(1) //nolint:gocritic // false positive
 		}
 		cancel()
-		os.Exit(1) //nolint:gocritic // false positive
+		os.Exit(0) //nolint:gocritic // false positive
 	}
 }
