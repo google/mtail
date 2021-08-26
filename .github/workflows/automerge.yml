@@ -31,7 +31,7 @@ jobs:
       with:
         github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-    - uses: lewagon/wait-on-check-action@v0.2
+    - uses: lewagon/wait-on-check-action@1.0.0
       with:
         ref: ${{ github.event.pull_request.head.sha }}
         check-name: test
