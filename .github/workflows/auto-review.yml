@@ -36,7 +36,7 @@ jobs:
           repo-token: ${{ github.token }}
           wait-interval: 60
 
-      - uses: "actions/github-script@v4.0.2"
+      - uses: "actions/github-script@v4.1"
         with:
           github-token: ${{ github.token }}
           script: |
