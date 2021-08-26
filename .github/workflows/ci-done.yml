@@ -15,7 +15,7 @@ jobs:
       # publish creates a check run
       checks: write
     steps:
-      - uses: actions/github-script@v4.0.2
+      - uses: actions/github-script@v4.1
         with:
           script: |
             var artifacts = await github.actions.listWorkflowRunArtifacts({
