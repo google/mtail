@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/internal/exporter"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/waker"
@@ -46,11 +47,12 @@ var (
 	version = flag.Bool("version", false, "Print mtail version information.")
 
 	// Compiler behaviour flags.
-	oneShot      = flag.Bool("one_shot", false, "Compile the programs, then read the contents of the provided logs from start until EOF, print the values of the metrics store and exit. This is a debugging flag only, not for production use.")
-	compileOnly  = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
-	dumpAst      = flag.Bool("dump_ast", false, "Dump AST of programs after parse (to INFO log).")
-	dumpAstTypes = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck (to INFO log).")
-	dumpBytecode = flag.Bool("dump_bytecode", false, "Dump bytecode of programs (to INFO log).")
+	oneShot       = flag.Bool("one_shot", false, "Compile the programs, then read the contents of the provided logs from start until EOF, print the values of the metrics store in the given format and exit. This is a debugging flag only, not for production use.")
+	oneShotFormat = flag.String("format", "json", "Format to use with -one_shot. This is a debugging flag only, not for production use. Supported formats: json, prometheus.")
+	compileOnly   = flag.Bool("compile_only", false, "Compile programs only, do not load the virtual machine.")
+	dumpAst       = flag.Bool("dump_ast", false, "Dump AST of programs after parse (to INFO log).")
+	dumpAstTypes  = flag.Bool("dump_ast_types", false, "Dump AST of programs with type annotation after typecheck (to INFO log).")
+	dumpBytecode  = flag.Bool("dump_bytecode", false, "Dump bytecode of programs (to INFO log).")
 
 	// VM Runtime behaviour flags.
 	syslogUseCurrentYear = flag.Bool("syslog_use_current_year", true, "Patch yearless timestamps with the present year.")
@@ -227,12 +229,34 @@ func main() {
 		os.Exit(1) //nolint:gocritic // false positive
 	}
 	if *oneShot {
-		err = store.WriteMetrics(os.Stdout)
-		if err != nil {
-			glog.Error(err)
+		switch *oneShotFormat {
+		case "prometheus":
+			e, err := exporter.New(ctx, nil, store)
+			if err != nil {
+				glog.Error(err)
+				cancel()
+				os.Exit(1) //nolint:gocritic // false positive
+			}
+			err = e.Write(os.Stdout)
+			if err != nil {
+				glog.Error(err)
+				cancel()
+				os.Exit(1) //nolint:gocritic // false positive
+			}
+			cancel()
+			os.Exit(0) //nolint:gocritic // false positive
+		case "json":
+			err = store.WriteMetrics(os.Stdout)
+			if err != nil {
+				glog.Error(err)
+				os.Exit(1) //nolint:gocritic // false positive
+			}
+			cancel()
+			os.Exit(0) //nolint:gocritic // false positive
+		default:
+			glog.Errorf("unsupported format: %q", *oneShotFormat)
+			cancel()
 			os.Exit(1) //nolint:gocritic // false positive
 		}
-		cancel()
-		os.Exit(0) //nolint:gocritic // false positive
 	}
 }

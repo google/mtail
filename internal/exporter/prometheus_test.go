@@ -4,6 +4,7 @@
 package exporter
 
 import (
+	"bytes"
 	"context"
 	"math"
 	"strings"
@@ -272,6 +273,85 @@ func TestHandlePrometheus(t *testing.T) {
 			if err = promtest.CollectAndCompare(e, r); err != nil {
 				t.Error(err)
 			}
+			cancel()
+			wg.Wait()
+		})
+	}
+}
+
+var writePrometheusTests = []struct {
+	name     string
+	metrics  []*metrics.Metric
+	expected string
+}{
+	{
+		"empty",
+		[]*metrics.Metric{},
+		"",
+	},
+	{
+		"single",
+		[]*metrics.Metric{
+			{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Counter,
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+			},
+		},
+		`# HELP foo defined at 
+# TYPE foo counter
+foo 1
+`,
+	},
+	{
+		"multi",
+		[]*metrics.Metric{
+			{
+				Name:        "foo",
+				Program:     "test",
+				Kind:        metrics.Counter,
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(1, time.Unix(0, 0))}},
+			},
+			{
+				Name:        "bar",
+				Program:     "test",
+				Kind:        metrics.Counter,
+				LabelValues: []*metrics.LabelValue{{Labels: []string{}, Value: datum.MakeInt(2, time.Unix(0, 0))}},
+			},
+		},
+		`# HELP bar defined at 
+# TYPE bar counter
+bar 2
+# HELP foo defined at 
+# TYPE foo counter
+foo 1
+`,
+	},
+}
+
+func TestWritePrometheus(t *testing.T) {
+	for _, tc := range writePrometheusTests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			ctx, cancel := context.WithCancel(context.Background())
+			ms := metrics.NewStore()
+			for _, metric := range tc.metrics {
+				testutil.FatalIfErr(t, ms.Add(metric))
+			}
+			opts := []Option{
+				Hostname("gunstar"),
+				OmitProgLabel(),
+			}
+			e, err := New(ctx, &wg, ms, opts...)
+			testutil.FatalIfErr(t, err)
+
+			var buf bytes.Buffer
+			err = e.Write(&buf)
+			testutil.FatalIfErr(t, err)
+			testutil.ExpectNoDiff(t, tc.expected, buf.String())
+
 			cancel()
 			wg.Wait()
 		})
