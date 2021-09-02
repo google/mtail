@@ -6,12 +6,14 @@ package exporter
 import (
 	"expvar"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/expfmt"
 )
 
 var metricExportTotal = expvar.NewInt("metric_export_total")
@@ -94,6 +96,27 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 		m.RUnlock()
 		return nil
 	})
+}
+
+// Write is used to write Prometheus metrics to an io.Writer.
+func (e *Exporter) Write(w io.Writer) error {
+	reg := prometheus.NewRegistry()
+	err := reg.Register(e)
+	if err != nil {
+		return err
+	}
+	mfs, err := reg.Gather()
+	if err != nil {
+		return err
+	}
+	enc := expfmt.NewEncoder(w, expfmt.FmtText)
+	for _, mf := range mfs {
+		err := enc.Encode(mf)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func promTypeForKind(k metrics.Kind) prometheus.ValueType {
