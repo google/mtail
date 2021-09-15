@@ -169,6 +169,7 @@ func main() {
 		mtail.MaxRegexpLength(*maxRegexpLength),
 		mtail.MaxRecursionDepth(*maxRecursionDepth),
 	}
+	eOpts := []exporter.Option{}
 	if *logRuntimeErrors {
 		opts = append(opts, mtail.LogRuntimeErrors)
 	}
@@ -205,9 +206,11 @@ func main() {
 	}
 	if !*emitProgLabel {
 		opts = append(opts, mtail.OmitProgLabel)
+		eOpts = append(eOpts, exporter.OmitProgLabel())
 	}
 	if *emitMetricTimestamp {
 		opts = append(opts, mtail.EmitMetricTimestamp)
+		eOpts = append(eOpts, exporter.EmitTimestamp())
 	}
 	if *jaegerEndpoint != "" {
 		opts = append(opts, mtail.JaegerReporter(*jaegerEndpoint))
@@ -231,7 +234,7 @@ func main() {
 	if *oneShot {
 		switch *oneShotFormat {
 		case "prometheus":
-			e, err := exporter.New(ctx, nil, store)
+			e, err := exporter.New(ctx, nil, store, eOpts...)
 			if err != nil {
 				glog.Error(err)
 				cancel()
