@@ -27,7 +27,7 @@ No configuration is required to enable Prometheus export from `mtail`.
 
 ## Prometheus Exporter Metrics
 
-https://prometheus.io/docs/instrumenting/writing_exporters/ describes useful metrics for a Prometheus exporter to export. `mtail` does not follow that guide, for these reasons.
+Prometheus' [writing exporters documentation](https://prometheus.io/docs/instrumenting/writing_exporters/) describes useful metrics for a Prometheus exporter to export. `mtail` does not follow that guide, for these reasons.
 
 The exporter model described in that document is for active proxies between an application and Prometheus.  The expectation is that when Prometheus scrapes the proxy (the exporter) that it then performs its own scrape of the target application, and translates the results back into the Prometheus exposition format.  The time taken to query the target application is what is exported as `X_scrape_duration_seconds` and its availability as `X_up`.
 
@@ -35,7 +35,7 @@ The exporter model described in that document is for active proxies between an a
 
 TODO(jaq): Instead, mtail will export a histogram of the runtime per line of each VM program.
 
-`mtail` doesn't export `mtail_up` or `mtail_scrape_duration_seconds` because they are exactly equivalent* the synthetic metrics that Prometheus creates automatically: https://prometheus.io/docs/concepts/jobs_instances/
+`mtail` doesn't export `mtail_up` or `mtail scrape_duration_seconds` because they are exactly equivalent* to the [synthetic metrics](https://prometheus.io/docs/concepts/jobs_instances/) that Prometheus creates automatically.
 
 \* The difference between a scrape duration measured in mtail versus Prometheus would differ in the network round trip time, TCP setup time, and send/receive queue time.  For practical purposes you can ignore them as the usefulness of a scrape duration metric is not in its absolute value, but how it changes over time.
 
@@ -52,7 +52,7 @@ It's probably not a good idea to have `mtail` listen directly to `/dev/log` or r
 
 * syslog-ng supports output to [named pipe](https://www.syslog-ng.com/technical-documents/doc/syslog-ng-open-source-edition/3.30/administration-guide/44#TOPIC-1595018) and [unix domain socket](https://www.syslog-ng.com/technical-documents/doc/syslog-ng-open-source-edition/3.30/administration-guide/54#TOPIC-1595060)
 
-Additionally, use a proper syslog to transmit and receive logs over the network.  `mtail` does not provide any transprot security, nor does TCP itself guarantee that no loss of data will occur: the [RELP spec](https://www.rsyslog.com/doc/v8-stable/tutorials/reliable_forwarding.html) exists for the latter.
+Additionally, use a proper syslog to transmit and receive logs over the network.  `mtail` does not provide any transport security, nor does TCP itself guarantee that no loss of data will occur: the [RELP spec](https://www.rsyslog.com/doc/v8-stable/tutorials/reliable_forwarding.html) exists for the latter.
 
 *Recommendation*
 
