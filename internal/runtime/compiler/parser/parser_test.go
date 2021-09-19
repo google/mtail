@@ -255,6 +255,13 @@ var parserTests = []struct {
 	},
 
 	{
+		"multiline regex starting with newline",
+		"const FOO\n" +
+			"/some regex here/ +\n" +
+			"/plus some other things/",
+	},
+
+	{
 		"multiline regex",
 		"/foo / +\n" +
 			"/barrr/ {\n" +

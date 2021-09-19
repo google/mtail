@@ -127,9 +127,9 @@ stmt
   {
     $$ = &ast.NextStmt{tokenpos(mtaillex)}
   }
-  | CONST id_expr concat_expr
+  | CONST id_expr opt_nl concat_expr
   {
-    $$ = &ast.PatternFragment{ID: $2, Expr: $3}
+    $$ = &ast.PatternFragment{ID: $2, Expr: $4}
   }
   | STOP
   {

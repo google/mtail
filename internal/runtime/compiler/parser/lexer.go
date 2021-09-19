@@ -121,7 +121,7 @@ func (l *Lexer) emit(kind Kind) {
 }
 
 // Internal end of file value.
-var eof rune = -1
+const eof rune = -1
 
 // next returns the next rune in the input.
 func (l *Lexer) next() rune {
