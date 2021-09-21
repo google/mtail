@@ -612,7 +612,14 @@ var parsePositionTests = []struct {
 	{
 		"pattern",
 		`const ID /foo/`,
-		[]*position.Position{{"pattern", 0, 6, 13}},
+		[]*position.Position{{"pattern", 0, 9, 13}},
+	},
+	{
+		"multiline regex",
+		"const ID\n" +
+			"/foo/ +\n" +
+			"/bar/",
+		[]*position.Position{{"multiline regex", 1, 0, 4}, {"multiline regex", 2, 0, 4}},
 	},
 }
 
