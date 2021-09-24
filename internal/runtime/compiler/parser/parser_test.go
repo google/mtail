@@ -255,6 +255,13 @@ var parserTests = []struct {
 	},
 
 	{
+		"multiline regex starting with newline",
+		"const FOO\n" +
+			"/some regex here/ +\n" +
+			"/plus some other things/",
+	},
+
+	{
 		"multiline regex",
 		"/foo / +\n" +
 			"/barrr/ {\n" +
@@ -605,7 +612,15 @@ var parsePositionTests = []struct {
 	{
 		"pattern",
 		`const ID /foo/`,
-		[]*position.Position{{"pattern", 0, 6, 13}},
+		[]*position.Position{{"pattern", 0, 9, 13}},
+	},
+	{
+		"multiline regex",
+		"const ID\n" +
+			"/foo/ +\n" +
+			"/bar/",
+		// TODO: Update position for the first token to `1, 0, 4` when position tracking is fixed
+		[]*position.Position{{"multiline regex", 1, 4, 4}, {"multiline regex", 2, 0, 4}},
 	},
 }
 
