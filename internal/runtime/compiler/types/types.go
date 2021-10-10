@@ -23,35 +23,36 @@ type Type interface {
 	String() string
 }
 
-// Equals compares two types, testing for equality.
-func Equals(t1, t2 Type) bool {
-	t1, t2 = t1.Root(), t2.Root()
-	switch t1 := t1.(type) {
-	case *Variable:
-		r2, ok := t2.(*Variable)
-		if !ok {
-			return occursInType(t1, t2)
-		}
-		return t1 == r2
-	case *Operator:
-		t2, ok := t2.(*Operator)
-		if !ok {
-			return false
-		}
-		if t1.Name != t2.Name {
-			return false
-		}
-		if len(t1.Args) != len(t2.Args) {
-			return false
-		}
-		for i := range t1.Args {
-			if !Equals(t1.Args[i], t2.Args[2]) {
-				return false
-			}
-		}
-		return true
+// TypeError describes an error in which a type was expected, but another was encountered.
+type TypeError struct {
+	expected Type
+	received Type
+}
+
+var ErrRecursiveUnification = errors.New("recursive unification error")
+
+func (e *TypeError) Root() Type {
+	return e
+}
+
+func (e *TypeError) Error() string {
+	var estr, rstr string
+	if IsComplete(e.expected) {
+		estr = e.expected.String()
+	} else {
+		estr = "incomplete type"
 	}
-	return true
+	if IsComplete(e.received) {
+		rstr = e.received.String()
+	} else {
+		rstr = "incomplete type"
+	}
+	glog.V(2).Infof("type mismatch: expected %q received %q", e.expected, e.received)
+	return fmt.Sprintf("type mismatch; expected %s received %s", estr, rstr)
+}
+
+func (e *TypeError) String() string {
+	return e.Error()
 }
 
 var (
@@ -261,28 +262,37 @@ func occursInType(v *Variable, t2 Type) bool {
 	return false
 }
 
-// TypeError describes an error in which a type was expected, but another was encountered.
-type TypeError struct {
-	expected Type
-	received Type
-}
-
-var ErrRecursiveUnification = errors.New("recursive unification error")
-
-func (e *TypeError) Error() string {
-	var estr, rstr string
-	if IsComplete(e.expected) {
-		estr = e.expected.String()
-	} else {
-		estr = "incomplete type"
+// Equals compares two types, testing for equality.
+func Equals(t1, t2 Type) bool {
+	t1, t2 = t1.Root(), t2.Root()
+	switch t1 := t1.(type) {
+	case *Variable:
+		r2, ok := t2.(*Variable)
+		if !ok {
+			return occursInType(t1, t2)
+		}
+		return t1 == r2
+	case *Operator:
+		t2, ok := t2.(*Operator)
+		if !ok {
+			return false
+		}
+		if t1.Name != t2.Name {
+			return false
+		}
+		if len(t1.Args) != len(t2.Args) {
+			return false
+		}
+		for i := range t1.Args {
+			if !Equals(t1.Args[i], t2.Args[2]) {
+				return false
+			}
+		}
+		return true
+	case *TypeError:
+		return false
 	}
-	if IsComplete(e.received) {
-		rstr = e.received.String()
-	} else {
-		rstr = "incomplete type"
-	}
-	glog.V(2).Infof("type mismatch: expected %q received %q", e.expected, e.received)
-	return fmt.Sprintf("type mismatch; expected %s received %s", estr, rstr)
+	return true
 }
 
 // Unify performs type unification of both parameter Types.  It returns the

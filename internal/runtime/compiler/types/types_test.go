@@ -128,7 +128,7 @@ var typeUnificationTests = []struct {
 		Pattern, Int,
 		Bool,
 	},
-	// Undef secedes to oether
+	// Undef secedes to other
 	{
 		Undef, Int,
 		Int,
@@ -140,6 +140,15 @@ var typeUnificationTests = []struct {
 	{
 		Undef, Undef,
 		Undef,
+	},
+	// TypeError supercedes to other.
+	{
+		Pattern, &TypeError{},
+		&TypeError{},
+	},
+	{
+		&TypeError{}, Float,
+		&TypeError{},
 	},
 }
 
@@ -328,5 +337,10 @@ func TestTypeEquals(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 	if !Equals(t3, Int) {
 		t.Error("unified variable and const not same")
+	}
+
+	typeErr := &TypeError{}
+	if Equals(typeErr, typeErr) {
+		t.Error("error type equals itself")
 	}
 }
