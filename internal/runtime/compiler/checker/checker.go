@@ -333,13 +333,13 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 	case *ast.BinaryExpr:
 		var rType types.Type
 		lT := n.LHS.Type()
-		if types.IsErrorType(lT) {
-			n.SetType(types.Error)
+		if types.IsTypeError(lT) {
+			n.SetType(lT)
 			return n
 		}
 		rT := n.RHS.Type()
-		if types.IsErrorType(rT) {
-			n.SetType(types.Error)
+		if types.IsTypeError(rT) {
+			n.SetType(rT)
 			return n
 		}
 		switch n.Op {
@@ -349,7 +349,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
 			rType = types.LeastUpperBound(lT, rT)
-			if types.IsErrorType(rType) {
+			if types.IsTypeError(rType) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
 				n.SetType(rType)
 				return n
@@ -412,7 +412,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			rType = types.Bool
 			gotType := types.Function(lT, rT, rType)
 			t := types.LeastUpperBound(lT, rT)
-			if types.IsErrorType(t) {
+			if types.IsTypeError(t) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Can't compare LHS of type %s with RHS of type %s.", lT, rT))
 				n.SetType(t)
 				return n
@@ -489,8 +489,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.UnaryExpr:
-		if types.IsErrorType(n.Expr.Type()) {
-			n.SetType(types.Error)
+		if types.IsTypeError(n.Expr.Type()) {
+			n.SetType(n.Expr.Type())
 			return n
 		}
 		switch n.Op {
@@ -560,8 +560,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 	case *ast.ExprList:
 		argTypes := []types.Type{}
 		for _, arg := range n.Children {
-			if types.IsErrorType(arg.Type()) {
-				n.SetType(types.Error)
+			if types.IsTypeError(arg.Type()) {
+				n.SetType(arg.Type())
 				return n
 			}
 			argTypes = append(argTypes, arg.Type())
@@ -579,8 +579,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 		argTypes := []types.Type{}
 		for _, arg := range exprList.Children {
-			if types.IsErrorType(arg.Type()) {
-				n.SetType(types.Error)
+			if types.IsTypeError(arg.Type()) {
+				n.SetType(arg.Type())
 				return n
 			}
 			argTypes = append(argTypes, arg.Type())

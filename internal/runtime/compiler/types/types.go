@@ -25,17 +25,24 @@ type Type interface {
 
 // TypeError describes an error in which a type was expected, but another was encountered.
 type TypeError struct {
+	error    error
 	expected Type
 	received Type
 }
 
-var ErrRecursiveUnification = errors.New("recursive unification error")
+var (
+	ErrRecursiveUnification = errors.New("recursive unification error")
+	ErrTypeMismatch         = errors.New("type mismatch")
+)
 
 func (e *TypeError) Root() Type {
 	return e
 }
 
-func (e *TypeError) Error() string {
+func (e *TypeError) String() string {
+	if e == nil || e.error == nil {
+		return fmt.Sprintf("type error")
+	}
 	var estr, rstr string
 	if IsComplete(e.expected) {
 		estr = e.expected.String()
@@ -47,12 +54,25 @@ func (e *TypeError) Error() string {
 	} else {
 		rstr = "incomplete type"
 	}
-	glog.V(2).Infof("type mismatch: expected %q received %q", e.expected, e.received)
-	return fmt.Sprintf("type mismatch; expected %s received %s", estr, rstr)
+	glog.V(2).Infof("%s: expected %q received %q", e.error, e.expected, e.received)
+	return fmt.Sprintf("%s; expected %s received %s", e.error, estr, rstr)
 }
 
-func (e *TypeError) String() string {
-	return e.Error()
+func (e TypeError) Error() string {
+	return e.String()
+}
+
+// AsTypeError behaves like `errors.As`, attempting to cast the type `t` into a
+// provided `target` TypeError and returning if it was successful.
+func AsTypeError(t Type, target **TypeError) (ok bool) {
+	*target, ok = t.(*TypeError)
+	return ok
+}
+
+// IsTypeError behaves like `errors.Is`, indicating that the type is a TypeError.
+func IsTypeError(t Type) bool {
+	var e *TypeError
+	return AsTypeError(t, &e)
 }
 
 var (
@@ -184,8 +204,8 @@ func IsComplete(t Type) bool {
 
 // Builtin type constants.
 var (
+	Error   = &TypeError{}
 	Undef   = &Operator{"Undef", []Type{}}
-	Error   = &Operator{"Error", []Type{}}
 	None    = &Operator{"None", []Type{}}
 	Bool    = &Operator{"Bool", []Type{}}
 	Int     = &Operator{"Int", []Type{}}
@@ -328,20 +348,21 @@ func Unify(a, b Type) error {
 				// We flipped the args, flip them back.
 				var e *TypeError
 				if errors.As(err, &e) {
-					return &TypeError{e.received, e.expected}
+					return &TypeError{ErrTypeMismatch, e.received, e.expected}
 				}
 			}
 			return err
 
 		case *Operator:
 			if len(a2.Args) != len(b2.Args) {
-				return &TypeError{a2, b2}
+				return &TypeError{ErrTypeMismatch, a2, b2}
 			}
 			if a2.Name != b2.Name {
 				t := LeastUpperBound(a, b)
-				glog.V(2).Infof("Got LUB = %q", t)
-				if t == Error {
-					return &TypeError{a2, b2}
+				glog.V(2).Infof("Got LUB = %#v", t)
+				var e *TypeError
+				if AsTypeError(t, &e) {
+					return e
 				}
 				// if !Equals(t, a2) {
 				// 	a2.SetInstance(&t)
@@ -413,7 +434,7 @@ func LeastUpperBound(a, b Type) Type {
 		(Equals(a1, Int) && Equals(b1, Pattern)) {
 		return Bool
 	}
-	return Error
+	return &TypeError{ErrTypeMismatch, a, b}
 }
 
 // inferCaprefType determines a type for the nth capturing group in re, based on contents
@@ -509,14 +530,4 @@ func groupOnlyMatches(group *syntax.Regexp, s string) bool {
 		return false
 	}
 	return true
-}
-
-// isErrorType indicates that a given type is the result of a type error.
-func IsErrorType(t Type) bool {
-	if o, ok := t.(*Operator); ok {
-		if o.Name == "Error" {
-			return true
-		}
-	}
-	return false
 }

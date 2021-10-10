@@ -4,6 +4,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -342,5 +343,21 @@ func TestTypeEquals(t *testing.T) {
 	typeErr := &TypeError{}
 	if Equals(typeErr, typeErr) {
 		t.Error("error type equals itself")
+	}
+}
+
+func TestAsTypeError(t *testing.T) {
+	e := &TypeError{ErrTypeMismatch, Int, Bool}
+
+	var e1 *TypeError
+	if !AsTypeError(e, &e1) {
+		t.Errorf("want type error, got: %#v", e1)
+	}
+	if !errors.Is(e1.error, ErrTypeMismatch) {
+		t.Errorf("want ErrTypeMismatch, got: %#v", e1.error)
+	}
+	if e.expected != e1.expected || e.received != e1.received {
+		t.Errorf("want %#v, got: %#v", e.expected, e1.expected)
+		t.Errorf("want %#v, got: %#v", e.received, e1.received)
 	}
 }
