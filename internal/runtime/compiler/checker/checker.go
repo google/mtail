@@ -359,8 +359,9 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			t := types.NewVariable()
 			// wantType is the type signature of this expression
 			wantType := types.Function(t, t, t)
-			err := types.Unify(wantType, gotType)
-			if err != nil {
+			uType := types.Unify(wantType, gotType)
+			var err *types.TypeError
+			if types.AsTypeError(uType, &err) {
 				// Commented because these type mismatch errors appear to be unhelpful.
 				// c.errors.Add(n.Pos(), err.Error())
 				n.SetType(types.Error)
@@ -396,11 +397,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			rType = types.Int
 			wantType := types.Function(rType, rType, rType)
 			gotType := types.Function(lT, rT, types.NewVariable())
-			err := types.Unify(wantType, gotType)
-			if err != nil {
+			uType := types.Unify(wantType, gotType)
+			var err *types.TypeError
+			if types.AsTypeError(uType, &err) {
 				c.errors.Add(n.Pos(), err.Error())
 				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.Op, lT, rT))
-				n.SetType(types.Error)
+				n.SetType(err)
 				return n
 			}
 
@@ -418,11 +420,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 			wantType := types.Function(t, t, types.Bool)
-			err := types.Unify(wantType, gotType)
-			if err != nil {
+			uType := types.Unify(wantType, gotType)
+			var err *types.TypeError
+			if types.AsTypeError(uType, &err) {
 				// Commented because these type mismatch errors appear to be unhelpful.
 				// c.errors.Add(n.Pos(), err.Error())
-				n.SetType(types.Error)
+				n.SetType(err)
 				return n
 			}
 			// Promote types if the ast types are not the same as the expression type.
@@ -447,11 +450,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			rType = lT
 			// TODO(jaq): the rT <= lT relationship is not correctly encoded here.
 			t := types.LeastUpperBound(lT, rT)
-			err := types.Unify(rType, t)
-			if err != nil {
+			uType := types.Unify(rType, t)
+			var err *types.TypeError
+			if types.AsTypeError(uType, &err) {
 				// Commented because these type mismatch errors appear to be unhelpful.
 				// c.errors.Add(n.Pos(), err.Error())
-				n.SetType(types.Error)
+				n.SetType(err)
 				return n
 			}
 			switch v := n.LHS.(type) {
@@ -470,10 +474,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			rType = types.Bool
 			wantType := types.Function(types.NewVariable(), types.Pattern, rType)
 			gotType := types.Function(lT, rT, types.NewVariable())
-			err := types.Unify(wantType, gotType)
-			if err != nil {
+			uType := types.Unify(wantType, gotType)
+			var err *types.TypeError
+			if types.AsTypeError(uType, &err) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("Parameter to %s has a %s.", parser.Kind(n.Op), err))
-				n.SetType(types.Error)
+				n.SetType(err)
 				return n
 			}
 			if !types.Equals(rT, types.Pattern) {
@@ -498,10 +503,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			rType := types.Bool
 			wantType := types.Function(types.Int, rType)
 			gotType := types.Function(n.Expr.Type(), types.NewVariable())
-			err := types.Unify(wantType, gotType)
-			if err != nil {
+			uType := types.Unify(wantType, gotType)
+			var err *types.TypeError
+			if types.AsTypeError(uType, &err) {
 				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("%s for `~' operator.", err))
-				n.SetType(types.Error)
+				n.SetType(err)
 				return n
 			}
 			n.SetType(rType)
@@ -521,10 +527,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			rType := types.Int
 			wantType := types.Function(rType, rType)
 			gotType := types.Function(n.Expr.Type(), types.NewVariable())
-			err := types.Unify(wantType, gotType)
-			if err != nil {
+			uType := types.Unify(wantType, gotType)
+			var err *types.TypeError
+			if types.AsTypeError(uType, &err) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
-				n.SetType(types.Error)
+				n.SetType(err)
 				return n
 			}
 			if !types.Equals(types.Int, n.Expr.Type()) {
@@ -542,10 +549,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			wantType := types.Function(types.Pattern, rType)
 			// and gotType is the one we've been given
 			gotType := types.Function(n.Expr.Type(), types.NewVariable())
-			err := types.Unify(wantType, gotType)
-			if err != nil {
+			uType := types.Unify(wantType, gotType)
+			var err *types.TypeError
+			if types.AsTypeError(uType, &err) {
 				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
-				n.SetType(types.Error)
+				n.SetType(err)
 				return n
 			}
 			n.SetType(rType)
@@ -626,12 +634,13 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		argTypes = append(argTypes, rType)
 		gotType := types.Dimension(argTypes...)
 		fresh := n.LHS.Type()
-		err := types.Unify(fresh, gotType)
-		if err != nil {
+		uType := types.Unify(fresh, gotType)
+		var err *types.TypeError
+		if types.AsTypeError(uType, &err) {
 			wantType, ok := n.LHS.Type().(*types.Operator)
 			if !ok {
 				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected lhs type %v", n.LHS.Type()))
-				n.SetType(types.Error)
+				n.SetType(err)
 				return n
 			}
 			switch {
@@ -670,10 +679,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 		fn := types.Function(typs...)
 		fresh := types.FreshType(types.Builtins[n.Name])
-		err := types.Unify(fresh, fn)
-		if err != nil {
+		uType := types.Unify(fresh, fn)
+		var err *types.TypeError
+		if types.AsTypeError(uType, &err) {
 			c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.Name, err))
-			n.SetType(types.Error)
+			n.SetType(err)
 			return n
 		}
 		n.SetType(rType)

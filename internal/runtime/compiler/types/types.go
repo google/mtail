@@ -33,6 +33,7 @@ type TypeError struct {
 var (
 	ErrRecursiveUnification = errors.New("recursive unification error")
 	ErrTypeMismatch         = errors.New("type mismatch")
+	ErrInternalUnification  = errors.New("internal unification error")
 )
 
 func (e *TypeError) Root() Type {
@@ -262,7 +263,8 @@ func FreshType(t Type) Type {
 	return freshRec(t)
 }
 
-func occursIn(v *Variable, types []Type) bool {
+// occursIn returns true if `v` is in any of `types`.
+func occursIn(v Type, types []Type) bool {
 	for _, t2 := range types {
 		if occursInType(v, t2) {
 			return true
@@ -271,7 +273,8 @@ func occursIn(v *Variable, types []Type) bool {
 	return false
 }
 
-func occursInType(v *Variable, t2 Type) bool {
+// occursInType returns true if `v` is `t2` or recursively contained within `t2`.
+func occursInType(v Type, t2 Type) bool {
 	root := t2.Root()
 	if Equals(root, v) {
 		return true
@@ -291,7 +294,7 @@ func Equals(t1, t2 Type) bool {
 		if !ok {
 			return occursInType(t1, t2)
 		}
-		return t1 == r2
+		return t1.ID == r2.ID
 	case *Operator:
 		t2, ok := t2.(*Operator)
 		if !ok {
@@ -320,7 +323,7 @@ func Equals(t1, t2 Type) bool {
 // representing both parameters.  If either type is a type variable, then that
 // variable is unified with the LUB.  In reporting errors, it is assumed that a
 // is the expected type and b is the type observed.
-func Unify(a, b Type) error {
+func Unify(a, b Type) Type {
 	glog.V(2).Infof("Unifying %v and %v", a, b)
 	a1, b1 := a.Root(), b.Root()
 	switch a2 := a1.(type) {
@@ -330,33 +333,32 @@ func Unify(a, b Type) error {
 			if a2.ID != b2.ID {
 				glog.V(2).Infof("Making %q type %q", a2, b1)
 				a2.SetInstance(b1)
-				return nil
+				return b1
 			}
+			return a1
 		case *Operator:
 			if occursInType(a2, b2) {
 				return &TypeError{ErrRecursiveUnification, a2, b2}
 			}
 			glog.V(2).Infof("Making %q type %q", a2, b1)
 			a2.SetInstance(b1)
-			return nil
+			return b1
 		}
 	case *Operator:
 		switch b2 := b1.(type) {
 		case *Variable:
-			err := Unify(b, a)
-			if err != nil {
-				// We flipped the args, flip them back.
-				var e *TypeError
-				if errors.As(err, &e) {
-					return &TypeError{ErrTypeMismatch, e.received, e.expected}
-				}
+			t := Unify(b, a)
+			var e *TypeError
+			if AsTypeError(t, &e) {
+				return &TypeError{ErrTypeMismatch, e.received, e.expected}
 			}
-			return err
+			return t
 
 		case *Operator:
 			if len(a2.Args) != len(b2.Args) {
 				return &TypeError{ErrTypeMismatch, a2, b2}
 			}
+			var rType *Operator
 			if a2.Name != b2.Name {
 				t := LeastUpperBound(a, b)
 				glog.V(2).Infof("Got LUB = %#v", t)
@@ -364,23 +366,26 @@ func Unify(a, b Type) error {
 				if AsTypeError(t, &e) {
 					return e
 				}
-				// if !Equals(t, a2) {
-				// 	a2.SetInstance(&t)
-				// }
-				// if !Equals(t, b2) {
-				// 	b2.SetInstance(&t)
-				// }
-				return nil
-			}
-			for i, argA := range a2.Args {
-				err := Unify(argA, b2.Args[i])
-				if err != nil {
-					return err
+				var ok bool
+				if rType, ok = t.(*Operator); !ok {
+					return &TypeError{ErrInternalUnification, a2, b2}
 				}
+			} else {
+				rType = &Operator{a2.Name, []Type{}}
 			}
+			rType.Args = make([]Type, len(a2.Args))
+			for i, argA := range a2.Args {
+				t := Unify(argA, b2.Args[i])
+				var e *TypeError
+				if AsTypeError(t, &e) {
+					return e
+				}
+				rType.Args[i] = t
+			}
+			return rType
 		}
 	}
-	return nil
+	return &TypeError{ErrInternalUnification, a, b}
 }
 
 // LeastUpperBound returns the smallest type that may contain both parameter types.

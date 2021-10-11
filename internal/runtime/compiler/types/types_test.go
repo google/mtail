@@ -142,7 +142,7 @@ var typeUnificationTests = []struct {
 		Undef, Undef,
 		Undef,
 	},
-	// TypeError supercedes to other.
+	// TypeError supercedes other.
 	{
 		Pattern, &TypeError{},
 		&TypeError{},
@@ -157,9 +157,13 @@ func TestTypeUnification(t *testing.T) {
 	for _, tc := range typeUnificationTests {
 		tc := tc
 		t.Run(fmt.Sprintf("%s %s", tc.a, tc.b), func(t *testing.T) {
-			err := Unify(tc.a, tc.b)
-			if err != nil {
-				t.Errorf("%s", err)
+			tU := Unify(tc.a, tc.b)
+			/* Type Errors never equal. */
+			if IsTypeError(tc.expected) && IsTypeError(tU) {
+				return
+			}
+			if !Equals(tc.expected, tU) {
+				t.Errorf("want %#v, got %#v", tc.expected, tU)
 			}
 		})
 	}
@@ -319,10 +323,14 @@ func TestTypeEquals(t *testing.T) {
 		t.Error("Type variables are not same")
 	}
 
+	var e *TypeError
+
 	t1 := NewVariable()
 	t2 := NewVariable()
-	err := Unify(t1, t2)
-	testutil.FatalIfErr(t, err)
+	ty := Unify(t1, t2)
+	if AsTypeError(ty, &e) {
+		t.Fatal(e)
+	}
 	if !Equals(t1, t2) {
 		t.Errorf("Unified variables should be same: %v %v", t1, t2)
 	}
@@ -334,8 +342,10 @@ func TestTypeEquals(t *testing.T) {
 	if Equals(t3, Int) {
 		t.Error("ununified type const and var")
 	}
-	err = Unify(Int, t3)
-	testutil.FatalIfErr(t, err)
+	ty = Unify(Int, t3)
+	if AsTypeError(ty, &e) {
+		t.Fatal(e)
+	}
 	if !Equals(t3, Int) {
 		t.Error("unified variable and const not same")
 	}
