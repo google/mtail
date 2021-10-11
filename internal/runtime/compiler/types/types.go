@@ -334,7 +334,7 @@ func Unify(a, b Type) error {
 			}
 		case *Operator:
 			if occursInType(a2, b2) {
-				return fmt.Errorf("%w on %v and %v", ErrRecursiveUnification, a2, b2)
+				return &TypeError{ErrRecursiveUnification, a2, b2}
 			}
 			glog.V(2).Infof("Making %q type %q", a2, b1)
 			a2.SetInstance(b1)
