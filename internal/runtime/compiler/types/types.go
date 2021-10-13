@@ -138,7 +138,7 @@ type Operator struct {
 	// Args is the sequence of types that are parameters to this type.  They
 	// may be fully bound type operators, or partially defined (i.e. contain
 	// TypeVariables) in which case they represent polymorphism in the operator
-	// they are argyments to.
+	// they are arguments to.
 	Args []Type
 }
 
@@ -178,7 +178,8 @@ func IsFunction(t Type) bool {
 }
 
 // Dimension is a convenience method which instantiates a new Dimension type
-// scheme, with the given args as the dimensions of the type.
+// scheme, with the given args as the dimensions of the type.  (This type looks
+// a lot like a Product type.)
 func Dimension(args ...Type) *Operator {
 	return &Operator{"⨯", args}
 }

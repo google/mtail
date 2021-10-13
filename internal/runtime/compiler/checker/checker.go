@@ -4,6 +4,7 @@
 package checker
 
 import (
+	goerrors "errors"
 	"fmt"
 	"strings"
 	"time"
@@ -261,7 +262,8 @@ func (c *checker) checkSymbolUsage() {
 // VisitAfter performs the type annotation and checking, once the child nodes
 // of expressions have been annotated and checked.  Within this function,
 // gotType refers to the types inferred in the AST, and wantType is the type
-// expected for this expression.
+// expected for this expression.  After unification, uType is the concrete type
+// of the expression, and the visitor should set any node Types as appropriate.
 //
 // The notation for type inference used comes from the 2010 lecture notes for
 // Stanford's CS413 class.
@@ -331,7 +333,6 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.BinaryExpr:
-		var rType types.Type
 		lT := n.LHS.Type()
 		if types.IsTypeError(lT) {
 			n.SetType(lT)
@@ -342,31 +343,38 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			n.SetType(rT)
 			return n
 		}
+		var rType types.Type
 		switch n.Op {
 		case parser.DIV, parser.MOD, parser.MUL, parser.MINUS, parser.PLUS, parser.POW:
-			// Numeric
+			// Arithmetic: e1 OP e2
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : lub(Tl, Tr)
+
+			// First handle the Tl <= Tr and vice versa.
 			rType = types.LeastUpperBound(lT, rT)
-			if types.IsTypeError(rType) {
-				c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: %q and %q have no common type", lT, rT))
-				n.SetType(rType)
+			var err *types.TypeError
+			if types.AsTypeError(rType, &err) {
+				// Change the type mismatch error to make more sense in this context.
+				if goerrors.Is(err, types.ErrTypeMismatch) {
+					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: can't apply %s to LHS of type %q with RHS of type %q.", parser.Kind(n.Op), lT, rT))
+				} else {
+					c.errors.Add(n.Pos(), err.Error())
+				}
+				n.SetType(err)
 				return n
 			}
-			gotType := types.Function(lT, rT, rType)
 
+			gotType := types.Function(lT, rT, rType)
 			t := types.NewVariable()
-			// wantType is the type signature of this expression
 			wantType := types.Function(t, t, t)
 			uType := types.Unify(wantType, gotType)
-			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
-				// Commented because these type mismatch errors appear to be unhelpful.
-				// c.errors.Add(n.Pos(), err.Error())
-				n.SetType(types.Error)
+				c.errors.Add(n.Pos(), err.Error())
+				n.SetType(err)
 				return n
 			}
+
 			// Implicit type conversion for non-comparisons, promoting each
 			// half to the return type of the op.
 			if !types.Equals(rType, lT) {
@@ -391,8 +399,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 
 		case parser.SHL, parser.SHR, parser.BITAND, parser.BITOR, parser.XOR, parser.NOT:
-			// bitwise
-			// O ⊢ e1 :Int, O ⊢ e2 : Int
+			// bitwise: e1 OP e2
+			// O ⊢ e1 : Int, O ⊢ e2 : Int
 			// ⇒ O ⊢ e : Int
 			rType = types.Int
 			wantType := types.Function(rType, rType, rType)
@@ -400,35 +408,46 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			uType := types.Unify(wantType, gotType)
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
-				c.errors.Add(n.Pos(), err.Error())
-				c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise op %q, got %s and %s", n.Op, lT, rT))
+				if goerrors.Is(err, types.ErrTypeMismatch) {
+					c.errors.Add(n.Pos(), fmt.Sprintf("Integer types expected for bitwise %s, got %s and %s", parser.Kind(n.Op), lT, rT))
+				} else {
+					c.errors.Add(n.Pos(), err.Error())
+				}
 				n.SetType(err)
 				return n
 			}
 
 		case parser.LT, parser.GT, parser.LE, parser.GE, parser.EQ, parser.NE, parser.AND, parser.OR:
-			// comparable, logical
+			// comparable, logical: e2 OP e2
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl
 			// ⇒ O ⊢ e : Bool
-			rType = types.Bool
-			gotType := types.Function(lT, rT, rType)
+
+			// First handle the Tl <= Tr and vice versa.
 			t := types.LeastUpperBound(lT, rT)
-			if types.IsTypeError(t) {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Can't compare LHS of type %s with RHS of type %s.", lT, rT))
-				n.SetType(t)
-				return n
-			}
-			wantType := types.Function(t, t, types.Bool)
-			uType := types.Unify(wantType, gotType)
 			var err *types.TypeError
-			if types.AsTypeError(uType, &err) {
-				// Commented because these type mismatch errors appear to be unhelpful.
-				// c.errors.Add(n.Pos(), err.Error())
+			if types.AsTypeError(t, &err) {
+				if goerrors.Is(err, types.ErrTypeMismatch) {
+					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: can't apply %s to LHS of type %q with RHS of type %q.", parser.Kind(n.Op), lT, rT))
+				} else {
+					c.errors.Add(n.Pos(), err.Error())
+				}
 				n.SetType(err)
 				return n
 			}
-			// Promote types if the ast types are not the same as the expression type.
+
+			rType = types.Bool
+			gotType := types.Function(lT, rT, rType)
+			wantType := types.Function(t, t, types.Bool)
+			uType := types.Unify(wantType, gotType)
+			if types.AsTypeError(uType, &err) {
+				c.errors.Add(n.Pos(), err.Error())
+				n.SetType(err)
+				return n
+			}
+
+			// Implicit type conversion: Promote types if the ast types are not
+			// the same as the expression type.
 			if !types.Equals(t, lT) {
 				conv := &ast.ConvExpr{N: n.LHS}
 				conv.SetType(t)
@@ -443,21 +462,22 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 
 		case parser.ASSIGN, parser.ADD_ASSIGN:
+			// e1 = e2; e1 += e2
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tr <= Tl
 			// ⇒ O ⊢ e : Tl
-			glog.V(2).Infof("lt %q, rt %q", lT, rT)
 			rType = lT
 			// TODO(jaq): the rT <= lT relationship is not correctly encoded here.
 			t := types.LeastUpperBound(lT, rT)
 			uType := types.Unify(rType, t)
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
-				// Commented because these type mismatch errors appear to be unhelpful.
-				// c.errors.Add(n.Pos(), err.Error())
+				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(err)
 				return n
 			}
+
+			// If the LHS is assignable, mark it as an lvalue, otherwise error.
 			switch v := n.LHS.(type) {
 			case *ast.IDTerm:
 				v.Lvalue = true
@@ -465,29 +485,35 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				v.LHS.(*ast.IDTerm).Lvalue = true
 			default:
 				glog.V(2).Infof("The lhs is a %T %v", n.LHS, n.LHS)
-				c.errors.Add(n.LHS.Pos(), "Can't assign to this expression on the left.")
+				c.errors.Add(n.LHS.Pos(), "Can't assign to expression on left; expecting a variable here.")
 				n.SetType(types.Error)
 				return n
 			}
 
 		case parser.MATCH, parser.NOT_MATCH:
+			// e1 =~ e2, e1 !~ e2
+			// O ⊢ e1 : String , O ⊢ e2 : Pattern
+			// ⇒ O ⊢ e : Bool
+			// TODO(jaq): We're not correctly encoding this.
 			rType = types.Bool
 			wantType := types.Function(types.NewVariable(), types.Pattern, rType)
 			gotType := types.Function(lT, rT, types.NewVariable())
 			uType := types.Unify(wantType, gotType)
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
-				c.errors.Add(n.Pos(), fmt.Sprintf("Parameter to %s has a %s.", parser.Kind(n.Op), err))
+				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(err)
 				return n
 			}
+
+			// Implicit conversion of the RHS to a PatternExpr if not already.
 			if !types.Equals(rT, types.Pattern) {
 				n.RHS = ast.Walk(c, &ast.PatternExpr{Expr: n.RHS})
 			}
 
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("Unexpected operator %s (%v) in node %#v", parser.Kind(n.Op), n.Op, n))
-			n.SetType(types.Error)
+			n.SetType(types.InternalError)
 			return n
 		}
 		n.SetType(rType)
@@ -500,6 +526,9 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		}
 		switch n.Op {
 		case parser.NOT:
+			// !e1
+			// O ⊢ e1 : Int
+			// ⇒ O ⊢ e : Bool
 			rType := types.Bool
 			wantType := types.Function(types.Int, rType)
 			gotType := types.Function(n.Expr.Type(), types.NewVariable())
@@ -511,8 +540,15 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 			n.SetType(rType)
+
 		case parser.INC, parser.DEC:
-			// First check what sort of expression it is
+			// e1++ , e1--
+			// O ⊢ e1 : Int
+			// ⇒ O ⊢ e : Int
+
+			// TODO we do this backwards versus ADD_ASSIGN above, why
+
+			// If the expr is assignable, mark it as an lvalue, otherwise error.
 			switch v := n.Expr.(type) {
 			case *ast.IDTerm:
 				v.Lvalue = true
@@ -520,39 +556,48 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				v.LHS.(*ast.IDTerm).Lvalue = true
 			default:
 				glog.V(2).Infof("the expr is a %T %v", n.Expr, n.Expr)
-				c.errors.Add(n.Expr.Pos(), "Expecting a variable here.")
+				c.errors.Add(n.Expr.Pos(), "Can't assign to expression; expecting a variable here.")
 				n.SetType(types.Error)
 				return n
 			}
+
 			rType := types.Int
 			wantType := types.Function(rType, rType)
 			gotType := types.Function(n.Expr.Type(), types.NewVariable())
 			uType := types.Unify(wantType, gotType)
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
-				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
+				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(err)
 				return n
 			}
-			if !types.Equals(types.Int, n.Expr.Type()) {
-				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("Expecting an Int for %s, not %v.", parser.Kind(n.Op), n.Expr.Type()))
+
+			uTypeOperator, ok := uType.(*types.Operator)
+			if !ok {
+				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected type for Expr %v", uType))
+				n.SetType(types.InternalError)
+				return n
+			}
+			// After unification, the expr still has to be of Int type.
+			if !types.Equals(types.Int, uTypeOperator.Args[0]) {
+				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("type mismatch: expecting an Int for %s, not %v.", parser.Kind(n.Op), n.Expr.Type()))
 				n.SetType(types.Error)
 				return n
 			}
-			glog.V(2).Infof("Return type is %v", rType)
 			n.SetType(rType)
 
 		case parser.MATCH:
 			// Implicit match expressions, an expression of type Pattern returning Bool
+			// /e1/
+			// O ⊢ e1 : Pattern
+			// ⇒ O ⊢ e : Bool
 			rType := types.Bool
-			// recall the wantType is the language expectation
 			wantType := types.Function(types.Pattern, rType)
-			// and gotType is the one we've been given
 			gotType := types.Function(n.Expr.Type(), types.NewVariable())
 			uType := types.Unify(wantType, gotType)
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
-				c.errors.Add(n.Pos(), fmt.Sprintf("%s", err))
+				c.errors.Add(n.Pos(), err.Error())
 				n.SetType(err)
 				return n
 			}
@@ -560,12 +605,14 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", parser.Kind(n.Op), n))
-			n.SetType(types.Error)
+			n.SetType(types.InternalError)
 			return n
 		}
 		return n
 
 	case *ast.ExprList:
+		// (e1, e2, ...)
+		// ⇒ O ⊢ e: e1⨯e1⨯...
 		argTypes := []types.Type{}
 		for _, arg := range n.Children {
 			if types.IsTypeError(arg.Type()) {
@@ -578,6 +625,10 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.IndexedExpr:
+		// e1[e2, e3, ..., en]
+		// O ⊢ e1 : T1⨯T2⨯...Tn⨯Tr
+		// O ⊢ e2,e3,...,en : T1,T2,...,Tn
+		// ⇒ O ⊢ e : Tr
 
 		// prune this node to n.LHS if Index is nil.  Leave 0 length exprlist as that's a type error.
 		exprList, ok := n.Index.(*ast.ExprList)
@@ -597,12 +648,12 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		switch v := n.LHS.(type) {
 		case *ast.IDTerm:
 			if v.Symbol == nil {
-				// undefined, already caught
+				// undefined, already caught (where?)
 				n.SetType(types.Error)
 				return n
 			}
 
-			if v.Type() == types.Pattern {
+			if types.Equals(types.Pattern, v.Type()) {
 				// We now have enough information to tell that something the
 				// parser thought was an IDTerm is really a pattern constant.
 				// Let's now rewrite the AST correctly.
@@ -610,19 +661,17 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return ast.Walk(c, &ast.PatternExpr{Expr: v})
 			}
 
-			if t, ok := v.Type().(*types.Operator); ok && types.IsDimension(t) {
-				glog.V(1).Infof("Our idNode is a dimension type")
-				// TODO: should this call n.SetType like below?
-			} else {
+			if !types.IsDimension(v.Type()) {
 				if len(argTypes) > 0 {
-					glog.V(1).Infof("Our idNode is not a dimension type")
-					n.SetType(types.Error)
 					c.errors.Add(n.Pos(), "Index taken on unindexable expression")
+					n.SetType(types.Error)
 				} else {
 					n.SetType(v.Type())
 				}
 				return n
 			}
+
+			// it's a Dimension, continue after switch
 
 		default:
 			c.errors.Add(n.Pos(), "Index taken on unindexable expression")
@@ -632,17 +681,18 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 		rType := types.NewVariable()
 		argTypes = append(argTypes, rType)
+		// T1,T2,...,Tn
 		gotType := types.Dimension(argTypes...)
-		fresh := n.LHS.Type()
-		uType := types.Unify(fresh, gotType)
+		// Tr
+		wantType, ok := n.LHS.Type().(*types.Operator)
+		if !ok {
+			c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected type on LHS %v", n.LHS.Type()))
+			n.SetType(types.InternalError)
+			return n
+		}
+		uType := types.Unify(wantType, gotType)
 		var err *types.TypeError
 		if types.AsTypeError(uType, &err) {
-			wantType, ok := n.LHS.Type().(*types.Operator)
-			if !ok {
-				c.errors.Add(n.Pos(), fmt.Sprintf("internal error: unexpected lhs type %v", n.LHS.Type()))
-				n.SetType(err)
-				return n
-			}
 			switch {
 			case len(wantType.Args) > len(gotType.Args):
 				c.errors.Add(n.Pos(), fmt.Sprintf("Not enough keys for indexed expression: expecting %d, received %d", len(wantType.Args)-1, len(gotType.Args)-1))
@@ -651,15 +701,15 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			case len(wantType.Args) < len(gotType.Args):
 				c.errors.Add(n.Pos(), fmt.Sprintf("Too many keys for indexed expression: expecting %d, received %d.", len(wantType.Args)-1, len(gotType.Args)-1))
 			default:
-				c.errors.Add(n.Pos(), fmt.Sprintf("Index lookup expression %s", err))
+				c.errors.Add(n.Pos(), err.Error())
 			}
 			n.SetType(types.Error)
 			return n
 		}
 
-		// Having typechecked the expression against the expected types, we
-		// have detected mismatched keylengths, and can now fold to just IDTerm
-		// if there's no ExprList.
+		// Having typechecked the expression against the expected types, and
+		// have detected mismatched keylengths, we have a well-formed
+		// expression, so can now fold to just IDTerm if there's no ExprList.
 		if len(exprList.Children) == 0 {
 			return n.LHS
 		}
@@ -668,21 +718,30 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		return n
 
 	case *ast.BuiltinExpr:
-		typs := []types.Type{}
+		// f(e1, e2, ..., en)
+		// O ⊢ f : T1⨯T2⨯...Tn⨯Tr
+		// O ⊢ e1,e2,...,en : T1,T2,...,Tn
+		// ⇒ O ⊢ e : Tr
+		// TODO: recall the syntax for subst a fresh type above
+		argTypes := []types.Type{}
 		if args, ok := n.Args.(*ast.ExprList); ok {
 			for _, arg := range args.Children {
-				typs = append(typs, arg.Type())
+				argTypes = append(argTypes, arg.Type())
 			}
 		}
 		rType := types.NewVariable()
-		typs = append(typs, rType)
+		argTypes = append(argTypes, rType)
 
-		fn := types.Function(typs...)
-		fresh := types.FreshType(types.Builtins[n.Name])
-		uType := types.Unify(fresh, fn)
+		gotType := types.Function(argTypes...)
+		wantType := types.FreshType(types.Builtins[n.Name])
+		uType := types.Unify(wantType, gotType)
 		var err *types.TypeError
 		if types.AsTypeError(uType, &err) {
-			c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.Name, err))
+			if goerrors.Is(err, types.ErrTypeMismatch) {
+				c.errors.Add(n.Pos(), fmt.Sprintf("call to `%s': %s", n.Name, err))
+			} else {
+				c.errors.Add(n.Pos(), err.Error())
+			}
 			n.SetType(err)
 			return n
 		}
@@ -690,8 +749,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 		switch n.Name {
 		case "strptime":
-			if !types.Equals(fn.Args[1], types.String) {
-				c.errors.Add(n.Args.(*ast.ExprList).Children[1].Pos(), fmt.Sprintf("Expecting a format string for argument 2 of strptime(), not %v.", fn.Args[1]))
+			if !types.Equals(gotType.Args[1], types.String) {
+				c.errors.Add(n.Args.(*ast.ExprList).Children[1].Pos(), fmt.Sprintf("Expecting a format string for argument 2 of strptime(), not %v.", gotType.Args[1]))
 				n.SetType(types.Error)
 				return n
 			}
@@ -718,8 +777,8 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 
 		case "tolower":
-			if !types.Equals(fn.Args[0], types.String) {
-				c.errors.Add(n.Args.(*ast.ExprList).Children[0].Pos(), fmt.Sprintf("Expecting a String for argument 1 of tolower(), not %v.", fn.Args[0]))
+			if !types.Equals(gotType.Args[0], types.String) {
+				c.errors.Add(n.Args.(*ast.ExprList).Children[0].Pos(), fmt.Sprintf("Expecting a String for argument 1 of tolower(), not %v.", gotType.Args[0]))
 				n.SetType(types.Error)
 				return n
 			}

@@ -287,7 +287,7 @@ m`,
 		`text l
 l++
 `,
-		[]string{"len invalid args:2:1: Expecting an Int for INC, not String."},
+		[]string{"len invalid args:2:1: type mismatch: expecting an Int for INC, not String."},
 	},
 
 	{
@@ -302,7 +302,7 @@ l++
 		`gauge l
 l++=l
 `,
-		[]string{"assign to rvalue:2:1-3: Can't assign to this expression on the left."},
+		[]string{"assign to rvalue:2:1-3: Can't assign to expression on left; expecting a variable here."},
 	},
 
 	{
@@ -316,7 +316,7 @@ l++=l
 		"dec non var",
 		`strptime("", "")--
 `,
-		[]string{"dec non var:1:1-16: Expecting a variable here."},
+		[]string{"dec non var:1:1-16: Can't assign to expression; expecting a variable here."},
 	},
 
 	// TODO(jaq): This is an instance of bug #190, the capref is ambiguous.
@@ -328,7 +328,7 @@ l++=l
 		"cmp to None",
 		`strptime("","")<5{}
 `,
-		[]string{"cmp to None:1:1-17: Can't compare LHS of type None with RHS of type Int."},
+		[]string{"cmp to None:1:1-17: type mismatch: can't apply LT to LHS of type \"None\" with RHS of type \"Int\"."},
 	},
 
 	{
