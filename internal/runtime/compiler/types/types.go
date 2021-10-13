@@ -201,7 +201,9 @@ func IsDimension(t Type) bool {
 	return false
 }
 
-// Alternate is a convenience method which instantiates a new Alternate type scheme, with the given args as the possible types this type may take.
+// Alternate is a convenience method which instantiates a new Alternate type
+// scheme, with the given args as the possible types this type may take.  (You
+// might know this sort of type by the name Sum type.)
 func Alternate(args ...Type) *Operator {
 	return &Operator{alternateName, args}
 }
