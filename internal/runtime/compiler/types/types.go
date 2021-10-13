@@ -33,7 +33,7 @@ type TypeError struct {
 var (
 	ErrRecursiveUnification = errors.New("recursive unification error")
 	ErrTypeMismatch         = errors.New("type mismatch")
-	ErrInternalUnification  = errors.New("internal unification error")
+	ErrInternal             = errors.New("internal error")
 )
 
 func (e *TypeError) Root() Type {
@@ -61,6 +61,10 @@ func (e *TypeError) String() string {
 
 func (e TypeError) Error() string {
 	return e.String()
+}
+
+func (e *TypeError) Unwrap() error {
+	return e.error
 }
 
 // AsTypeError behaves like `errors.As`, attempting to cast the type `t` into a
@@ -205,14 +209,15 @@ func IsComplete(t Type) bool {
 
 // Builtin type constants.
 var (
-	Error   = &TypeError{}
-	Undef   = &Operator{"Undef", []Type{}}
-	None    = &Operator{"None", []Type{}}
-	Bool    = &Operator{"Bool", []Type{}}
-	Int     = &Operator{"Int", []Type{}}
-	Float   = &Operator{"Float", []Type{}}
-	String  = &Operator{"String", []Type{}}
-	Pattern = &Operator{"Pattern", []Type{}}
+	Error         = &TypeError{}
+	InternalError = &TypeError{error: ErrInternal}
+	Undef         = &Operator{"Undef", []Type{}}
+	None          = &Operator{"None", []Type{}}
+	Bool          = &Operator{"Bool", []Type{}}
+	Int           = &Operator{"Int", []Type{}}
+	Float         = &Operator{"Float", []Type{}}
+	String        = &Operator{"String", []Type{}}
+	Pattern       = &Operator{"Pattern", []Type{}}
 	// TODO(jaq): use composite type so we can typecheck the bucket directly, e.g. hist[j] = i.
 	Buckets = &Operator{"Buckets", []Type{}}
 )
@@ -368,7 +373,7 @@ func Unify(a, b Type) Type {
 				}
 				var ok bool
 				if rType, ok = t.(*Operator); !ok {
-					return &TypeError{ErrInternalUnification, a2, b2}
+					return &TypeError{ErrInternal, a2, b2}
 				}
 			} else {
 				rType = &Operator{a2.Name, []Type{}}
@@ -385,7 +390,7 @@ func Unify(a, b Type) Type {
 			return rType
 		}
 	}
-	return &TypeError{ErrInternalUnification, a, b}
+	return &TypeError{ErrInternal, a, b}
 }
 
 // LeastUpperBound returns the smallest type that may contain both parameter types.
