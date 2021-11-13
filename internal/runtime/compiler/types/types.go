@@ -394,9 +394,12 @@ func Unify(a, b Type) Type {
 	return &TypeError{ErrInternal, a, b}
 }
 
-var typeCoercions = []struct {
+type TypeCoercion struct {
 	sub, sup Type
-}{
+}
+
+// type coercions for builtin types
+var typeCoercions = []TypeCoercion{
 	{Bool, Int},
 	{Bool, Float}, // contentious
 	{Int, Float},  // contentious
