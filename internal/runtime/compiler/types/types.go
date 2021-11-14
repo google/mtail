@@ -353,6 +353,7 @@ func Unify(a, b Type) Type {
 	case *Operator:
 		switch b2 := b1.(type) {
 		case *Variable:
+			// reverse args to call above
 			t := Unify(b, a)
 			var e *TypeError
 			if AsTypeError(t, &e) {
