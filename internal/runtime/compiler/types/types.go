@@ -270,7 +270,7 @@ func FreshType(t Type) Type {
 }
 
 // occursIn returns true if `v` is in any of `types`.
-func occursIn(v Type, types []Type) bool {
+func OccursIn(v Type, types []Type) bool {
 	for _, t2 := range types {
 		if occursInType(v, t2) {
 			return true
@@ -286,7 +286,7 @@ func occursInType(v Type, t2 Type) bool {
 		return true
 	}
 	if to, ok := root.(*Operator); ok {
-		return occursIn(v, to.Args)
+		return OccursIn(v, to.Args)
 	}
 	return false
 }

@@ -579,7 +579,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 			// After unification, the expr still has to be of Int type.
-			if !types.Equals(types.Int, uTypeOperator.Args[0]) {
+			if !types.OccursIn(types.Int, []types.Type{uTypeOperator.Args[0]}) {
 				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("type mismatch: expecting an Int for %s, not %v.", parser.Kind(n.Op), n.Expr.Type()))
 				n.SetType(types.Error)
 				return n
