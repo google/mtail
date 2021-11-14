@@ -238,9 +238,9 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	return c, node
 }
 
-// checkSymbolUsage emits errors if any eligible symbols in the current scope
-// are not marked as used.
-func (c *checker) checkSymbolUsage() {
+// checkSymbolTable emits errors if any eligible symbols in the current scope
+// are not marked as used or have an invalid type.
+func (c *checker) checkSymbolTable() {
 	for _, sym := range c.scope.Symbols {
 		if !sym.Used {
 			// Users don't have control over the patterns given from decorators
@@ -276,7 +276,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	switch n := node.(type) {
 	case *ast.StmtList:
-		c.checkSymbolUsage()
+		c.checkSymbolTable()
 		// Pop the scope
 		c.scope = n.Scope.Parent
 		return n
@@ -291,7 +291,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		default:
 			c.errors.Add(n.Cond.Pos(), fmt.Sprintf("Can't interpret %s as a boolean expression here.\n\tTry using comparison operators to make the condition explicit.", n.Cond.Type()))
 		}
-		c.checkSymbolUsage()
+		c.checkSymbolTable()
 		// Pop the scope.
 		c.scope = n.Scope.Parent
 		return n
