@@ -283,11 +283,11 @@ m`,
 	},
 
 	{
-		"len invalid args",
+		"inc invalid args",
 		`text l
 l++
 `,
-		[]string{"len invalid args:2:1: type mismatch: expecting an Int for INC, not String."},
+		[]string{"inc invalid args:2:1: type mismatch: expecting an Int for INC, not String."},
 	},
 
 	{
