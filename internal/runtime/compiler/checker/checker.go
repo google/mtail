@@ -417,7 +417,26 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 
-		case parser.LT, parser.GT, parser.LE, parser.GE, parser.EQ, parser.NE, parser.AND, parser.OR:
+		case parser.AND, parser.OR:
+			// logical: e1 OP e2
+			// O ⊢ e1 : Bool, O ⊢ e2 : Bool
+			// ⇒ O ⊢ e : Bool
+			rType = types.Bool
+			wantType := types.Function(rType, rType, rType)
+			gotType := types.Function(lT, rT, types.NewVariable())
+			uType := types.Unify(wantType, gotType)
+			var err *types.TypeError
+			if types.AsTypeError(uType, &err) {
+				if goerrors.Is(err, types.ErrTypeMismatch) {
+					c.errors.Add(n.Pos(), fmt.Sprintf("Boolean types expected for bitwise %s, got %s and %s", parser.Kind(n.Op), lT, rT))
+				} else {
+					c.errors.Add(n.Pos(), err.Error())
+				}
+				n.SetType(err)
+				return n
+			}
+
+		case parser.LT, parser.GT, parser.LE, parser.GE, parser.EQ, parser.NE:
 			// comparable, logical: e2 OP e2
 			// O ⊢ e1 : Tl, O ⊢ e2 : Tr
 			// Tl <= Tr , Tr <= Tl

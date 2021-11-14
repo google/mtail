@@ -97,15 +97,6 @@ var typeUnificationTests = []struct {
 		String, Float,
 		String,
 	},
-	// Implicitly, a Pattern by itself returns the value of its' match
-	{
-		Pattern, Bool,
-		Bool,
-	},
-	{
-		Bool, Pattern,
-		Bool,
-	},
 	// lub of Bool and Int is an Int.
 	{
 		Bool, Int,

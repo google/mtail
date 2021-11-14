@@ -408,6 +408,7 @@ var typeCoercions = []TypeCoercion{
 	{Int, String},
 	{Float, String},
 	{String, Pattern},
+	{Int, Bool}, // an integer using C style cast to bool
 }
 
 // LeastUpperBound returns the smallest type that may contain both parameter types.
