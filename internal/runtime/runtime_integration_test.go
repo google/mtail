@@ -1052,6 +1052,7 @@ a
 }
 
 func TestRuntimeEndToEnd(t *testing.T) {
+	testutil.SkipIfShort(t)
 	if testing.Verbose() {
 		testutil.SetFlag(t, "vmodule", "vm=2,loader=2,checker=2")
 	}
