@@ -357,7 +357,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			if types.AsTypeError(rType, &err) {
 				// Change the type mismatch error to make more sense in this context.
 				if goerrors.Is(err, types.ErrTypeMismatch) {
-					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: can't apply %s to LHS of type %q with RHS of type %q.", parser.Kind(n.Op), lT, rT))
+					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch; can't apply %s to LHS of type %q with RHS of type %q.", parser.Kind(n.Op), lT, rT))
 				} else {
 					c.errors.Add(n.Pos(), err.Error())
 				}
@@ -501,7 +501,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			uType := types.Unify(wantType, gotType)
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
-				c.errors.Add(n.Pos(), err.Error())
+				if goerrors.Is(err, types.ErrTypeMismatch) {
+					c.errors.Add(n.Pos(), fmt.Sprintf("%s for %s operator.", err, parser.Kind(n.Op)))
+				} else {
+					c.errors.Add(n.Pos(), err.Error())
+				}
 				n.SetType(err)
 				return n
 			}
@@ -597,7 +601,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			uType := types.Unify(wantType, gotType)
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
-				c.errors.Add(n.Pos(), err.Error())
+				if goerrors.Is(err, types.ErrTypeMismatch) {
+					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: MATCH expects Pattern, received %s", n.Expr.Type()))
+				} else {
+					c.errors.Add(n.Pos(), err.Error())
+				}
 				n.SetType(err)
 				return n
 			}
