@@ -561,9 +561,9 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 
-			rType := types.Int
-			wantType := types.Function(rType, rType)
-			gotType := types.Function(n.Expr.Type(), types.NewVariable())
+			rType := types.NewVariable()
+			wantType := types.Function(types.Int, types.Int)
+			gotType := types.Function(n.Expr.Type(), rType)
 			uType := types.Unify(wantType, gotType)
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
