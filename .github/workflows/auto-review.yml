@@ -40,7 +40,7 @@ jobs:
         with:
           github-token: ${{ github.token }}
           script: |
-            await github.pulls.createReview({
+            await github.rest.pulls.createReview({
               event: "APPROVE",
               owner: context.repo.owner,
               pull_number: context.payload.pull_request.number,
