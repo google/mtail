@@ -49,7 +49,7 @@ func (c *codegen) errorf(pos *position.Position, format string, args ...interfac
 }
 
 func (c *codegen) emit(n ast.Node, opcode code.Opcode, operand interface{}) {
-	glog.V(2).Infof("emitting from node %#v line %d as %s %v\n", n, n.Pos().Line, opcode, operand)
+	glog.V(2).Infof("emitting `%s %v' from line %d node %#v\n", opcode, operand, n.Pos().Line, n)
 	c.obj.Program = append(c.obj.Program, code.Instr{opcode, operand, n.Pos().Line})
 }
 

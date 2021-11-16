@@ -1029,11 +1029,17 @@ gauge foo
 	}},
 	{"const term as pattern", `
 const A /n/
-A {
+A && 1 {
 }
 `, []code.Instr{
 		{code.Match, 0, 0},
-		{code.Jnm, 4, 0},
+		{code.Jnm, 6, 0},
+		{code.Push, int64(1), 2},
+		{code.Jnm, 6, 0},
+		{code.Push, true, 0},
+		{code.Jmp, 7, 0},
+		{code.Push, false, 0},
+		{code.Jnm, 10, 0},
 		{code.Setmatched, false, 0},
 		{code.Setmatched, true, 0},
 	}},

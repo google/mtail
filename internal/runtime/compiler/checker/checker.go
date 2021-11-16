@@ -286,7 +286,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		case *ast.BinaryExpr, *ast.OtherwiseStmt, *ast.UnaryExpr:
 			// OK as conditions
 		case *ast.PatternExpr:
-			// The parser will always put a UnaryExpr here for a pattern, we will get a PatternExpr if the Cond was in fact an IDTerm rewritten by IndexedExpr below.
+			// If the parser saw an IDTerm with type Pattern, then we know it's really a pattern constant and need to wrap it in an unary match in this context.
 			cond := &ast.UnaryExpr{Expr: n.Cond, Op: parser.MATCH}
 			cond.SetType(types.Bool)
 			n.Cond = cond
@@ -420,6 +420,19 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			}
 
 		case parser.AND, parser.OR:
+			// If the parser saw an IDTerm with type Pattern, then we know it's really a pattern constant and need to wrap it in an unary match in this context.
+			if v, ok := n.LHS.(*ast.PatternExpr); ok {
+				match := &ast.UnaryExpr{Expr: v, Op: parser.MATCH}
+				match.SetType(types.Bool)
+				n.LHS = match
+			}
+			// Likewise for the RHS
+			if v, ok := n.RHS.(*ast.PatternExpr); ok {
+				match := &ast.UnaryExpr{Expr: v, Op: parser.MATCH}
+				match.SetType(types.Bool)
+				n.RHS = match
+			}
+
 			// logical: e1 OP e2
 			// O ⊢ e1 : Bool, O ⊢ e2 : Bool
 			// ⇒ O ⊢ e : Bool
@@ -623,7 +636,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
 				if goerrors.Is(err, types.ErrTypeMismatch) {
-					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: MATCH expects Pattern, received %s", n.Expr.Type()))
+					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: Unary MATCH expects Pattern, received %s", n.Expr.Type()))
 				} else {
 					c.errors.Add(n.Pos(), err.Error())
 				}
@@ -678,15 +691,19 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		case *ast.IDTerm:
 			if v.Symbol == nil {
 				// undefined, already caught (where?)
+				glog.V(2).Infof("undefined ID %v", v)
 				n.SetType(types.Error)
 				return n
 			}
 
 			if types.Equals(types.Pattern, v.Type()) {
 				// We now have enough information to tell that something the
-				// parser thought was an IDTerm is really a pattern constant.
-				// Let's now rewrite the AST correctly.
-				// TODO: Haven't checked that this IndexedExpr has no args.
+				// parser thought was an IDTerm is really a pattern constant,
+				// so we can rewrite the AST here.  We can't yet wrap the
+				// pattern expression with Unary Match because we don't know
+				// the context yet, but see CondExpr and BinaryExpr's
+				// logical-op.  TODO: Haven't checked that this IndexedExpr has
+				// no args.
 				return ast.Walk(c, &ast.PatternExpr{Expr: v})
 			}
 
@@ -907,7 +924,7 @@ func (p *patternEvaluator) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		p.pattern.WriteString(v.Pattern)
 		return p, v
 	case *ast.IDTerm:
-		// Already looked up sym, if still nil undefined.
+		// Already looked up sym, if still nil then undefined.
 		if v.Symbol == nil {
 			return nil, n
 		}

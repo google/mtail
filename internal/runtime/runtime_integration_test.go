@@ -1049,6 +1049,19 @@ a
 			},
 		},
 	},
+	{
+		name: "match a pattern in a binary expr",
+		prog: `const N /n/
+N {
+}
+N && 1 {
+}
+`,
+		log: `
+`,
+		errs:    0,
+		metrics: nil,
+	},
 }
 
 func TestRuntimeEndToEnd(t *testing.T) {
