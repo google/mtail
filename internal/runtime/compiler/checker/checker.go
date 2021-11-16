@@ -702,8 +702,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				// so we can rewrite the AST here.  We can't yet wrap the
 				// pattern expression with Unary Match because we don't know
 				// the context yet, but see CondExpr and BinaryExpr's
-				// logical-op.  TODO: Haven't checked that this IndexedExpr has
-				// no args.
+				// logical-op.
 				return ast.Walk(c, &ast.PatternExpr{Expr: v})
 			}
 

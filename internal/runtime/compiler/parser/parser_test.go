@@ -548,6 +548,12 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	}`,
 		[]string{"index of non-terminal 2:2:3: syntax error: unexpected indexing of an expression"},
 	},
+	{
+		"index of pattern",
+		`/foo/[0]
+`,
+		[]string{"index of pattern:1:6: syntax error: unexpected indexing of an expression"},
+	},
 
 	{
 		"statement with no effect",
