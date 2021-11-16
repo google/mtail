@@ -47,7 +47,7 @@ func Fuzz(data []byte) int {
 		fmt.Println(err)
 		return 0 // false
 	}
-	v := vm.New("fuzz", obj, false, nil, dumpDebug)
+	v := vm.New("fuzz", obj, false, nil, dumpDebug, dumpDebug)
 	if dumpDebug {
 		fmt.Println(v.DumpByteCode())
 	}

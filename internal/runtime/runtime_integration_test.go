@@ -1064,7 +1064,7 @@ func TestRuntimeEndToEnd(t *testing.T) {
 			store := metrics.NewStore()
 			lines := make(chan *logline.LogLine, 1)
 			var wg sync.WaitGroup
-			r, err := New(lines, &wg, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource())
+			r, err := New(lines, &wg, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource(), TraceExecution())
 			testutil.FatalIfErr(t, err)
 			compileErrors := r.CompileAndRun(tc.name, strings.NewReader(tc.prog))
 			testutil.FatalIfErr(t, compileErrors)

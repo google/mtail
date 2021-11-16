@@ -110,3 +110,10 @@ func LogRuntimeErrors() Option {
 		return nil
 	}
 }
+
+func TraceExecution() Option {
+	return func(r *Runtime) error {
+		r.trace = true
+		return nil
+	}
+}

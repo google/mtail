@@ -603,7 +603,7 @@ func TestInstrs(t *testing.T) {
 				metrics.NewMetric("bar", "test", metrics.Counter, metrics.Int),
 				metrics.NewMetric("quux", "test", metrics.Gauge, metrics.Float))
 			obj := &code.Object{Regexps: tc.re, Strings: tc.str, Metrics: m, Program: []code.Instr{tc.i}}
-			v := New(tc.name, obj, true, nil, false)
+			v := New(tc.name, obj, true, nil, false, false)
 			v.t = new(thread)
 			v.t.stack = make([]interface{}, 0)
 			for _, item := range tc.reversedStack {
@@ -628,7 +628,7 @@ func TestInstrs(t *testing.T) {
 // makeVM is a helper method for construction a single-instruction VM.
 func makeVM(i code.Instr, m []*metrics.Metric) *VM {
 	obj := &code.Object{Metrics: m, Program: []code.Instr{i}}
-	v := New("test", obj, true, nil, false)
+	v := New("test", obj, true, nil, false, false)
 	v.t = new(thread)
 	v.t.stack = make([]interface{}, 0)
 	v.t.matches = make(map[int][]string)
@@ -783,7 +783,7 @@ func TestDatumSetInstrs(t *testing.T) {
 func TestStrptimeWithTimezone(t *testing.T) {
 	loc, _ := time.LoadLocation("Europe/Berlin")
 	obj := &code.Object{Program: []code.Instr{{code.Strptime, 0, 0}}}
-	vm := New("strptimezone", obj, true, loc, false)
+	vm := New("strptimezone", obj, true, loc, false, false)
 	vm.t = new(thread)
 	vm.t.stack = make([]interface{}, 0)
 	vm.t.Push("2012/01/18 06:25:00")
@@ -796,7 +796,7 @@ func TestStrptimeWithTimezone(t *testing.T) {
 
 func TestStrptimeWithoutTimezone(t *testing.T) {
 	obj := &code.Object{Program: []code.Instr{{code.Strptime, 0, 0}}}
-	vm := New("strptimezone", obj, true, nil, false)
+	vm := New("strptimezone", obj, true, nil, false, false)
 	vm.t = new(thread)
 	vm.t.stack = make([]interface{}, 0)
 	vm.t.Push("2012/01/18 06:25:00")
