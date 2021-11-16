@@ -287,7 +287,9 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			// OK as conditions
 		case *ast.PatternExpr:
 			// The parser will always put a UnaryExpr here for a pattern, we will get a PatternExpr if the Cond was in fact an IDTerm rewritten by IndexedExpr below.
-			n.Cond = &ast.UnaryExpr{Expr: n.Cond, Op: parser.MATCH}
+			cond := &ast.UnaryExpr{Expr: n.Cond, Op: parser.MATCH}
+			cond.SetType(types.Bool)
+			n.Cond = cond
 		default:
 			c.errors.Add(n.Cond.Pos(), fmt.Sprintf("Can't interpret %s as a boolean expression here.\n\tTry using comparison operators to make the condition explicit.", n.Cond.Type()))
 		}
