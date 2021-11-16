@@ -132,3 +132,8 @@ Const-fold identity functions.
 
 
 Both tailer and logstream probably don't need to do URL parsing.  Tailer could do it on the log path patterns before filling up the poll patterns list.  Non-globs don't need repolling, and any with a scheme can already be constructed by TailPattern.
+
+
+Trim unused string and regexp constants, as .e.g /s/ && 1 gets optimised away.
+
+Collapse duplicate string and regexp constants.
