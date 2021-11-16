@@ -281,7 +281,7 @@ func (n *PatternExpr) Type() types.Type {
 	return types.Pattern
 }
 
-// patternConstNode holds inline constant pattern fragments.
+// PatternLit holds inline constant pattern fragments.
 type PatternLit struct {
 	P       position.Position
 	Pattern string
@@ -295,7 +295,7 @@ func (n *PatternLit) Type() types.Type {
 	return types.Pattern
 }
 
-// patternDefNode holds a named pattern expression.
+// PatternFragment holds a named pattern part.
 type PatternFragment struct {
 	ID      Node
 	Expr    Node

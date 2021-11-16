@@ -165,7 +165,7 @@ func (r *Runtime) CompileAndRun(name string, input io.Reader) error {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
 	}
-	v := vm.New(name, obj, r.syslogUseCurrentYear, r.overrideLocation, r.logRuntimeErrors)
+	v := vm.New(name, obj, r.syslogUseCurrentYear, r.overrideLocation, r.logRuntimeErrors, r.trace)
 
 	if r.dumpBytecode {
 		glog.Info("Dumping program objects and bytecode\n", v.DumpByteCode())
@@ -237,6 +237,7 @@ type Runtime struct {
 	syslogUseCurrentYear bool           // Instructs the VM to overwrite zero years with the current year in a strptime instruction.
 	omitMetricSource     bool
 	logRuntimeErrors     bool // Instruct the VM to emit runtime errors to the log.
+	trace                bool // Trace execution of each VM.
 
 	signalQuit chan struct{} // When closed stops the signal handler goroutine.
 }

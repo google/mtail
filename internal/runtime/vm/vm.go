@@ -76,7 +76,8 @@ type VM struct {
 
 	logRuntimeErrors     bool           // Emit runtime errors to the log.
 	syslogUseCurrentYear bool           // Overwrite zero years with the current year in a strptime.
-	loc                  *time.Location // Override local timezone with provided, if not empty
+	loc                  *time.Location // Override local timezone with provided, if not empty.
+	trace                []int          // Record program counter in program execution, for testing.
 }
 
 // Push a value onto the stack.
@@ -119,6 +120,9 @@ func (v *VM) errorf(format string, args ...interface{}) {
 		glog.Infof(" Timestamp %v", v.t.time)
 		glog.Infof(" Stack %v", v.t.stack)
 		glog.Infof(v.DumpByteCode())
+	}
+	if v.trace != nil {
+		glog.Infof("Execution Trace: %v", v.trace)
 	}
 	v.runtimeErrorMu.Unlock()
 	v.terminate = true
@@ -970,6 +974,9 @@ func (v *VM) ProcessLogLine(ctx context.Context, line *logline.LogLine) {
 		if t.pc >= len(v.prog) {
 			return
 		}
+		if v.trace != nil {
+			v.trace = append(v.trace, t.pc)
+		}
 		i := v.prog[t.pc]
 		t.pc++
 		v.execute(t, i)
@@ -983,8 +990,8 @@ func (v *VM) ProcessLogLine(ctx context.Context, line *logline.LogLine) {
 
 // New creates a new virtual machine with the given name, and compiler
 // artifacts for executable and data segments.
-func New(name string, obj *code.Object, syslogUseCurrentYear bool, loc *time.Location, log bool) *VM {
-	return &VM{
+func New(name string, obj *code.Object, syslogUseCurrentYear bool, loc *time.Location, log bool, trace bool) *VM {
+	v := &VM{
 		name:                 name,
 		re:                   obj.Regexps,
 		str:                  obj.Strings,
@@ -995,6 +1002,10 @@ func New(name string, obj *code.Object, syslogUseCurrentYear bool, loc *time.Loc
 		loc:                  loc,
 		logRuntimeErrors:     log,
 	}
+	if trace {
+		v.trace = make([]int, 0, len(v.prog))
+	}
+	return v
 }
 
 // DumpByteCode emits the program disassembly and program objects to a string.

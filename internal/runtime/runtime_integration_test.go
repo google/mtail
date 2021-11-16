@@ -1049,6 +1049,19 @@ a
 			},
 		},
 	},
+	{
+		name: "match a pattern in a binary expr",
+		prog: `const N /n/
+N {
+}
+N && 1 {
+}
+`,
+		log: `
+`,
+		errs:    0,
+		metrics: nil,
+	},
 }
 
 func TestRuntimeEndToEnd(t *testing.T) {
@@ -1064,7 +1077,7 @@ func TestRuntimeEndToEnd(t *testing.T) {
 			store := metrics.NewStore()
 			lines := make(chan *logline.LogLine, 1)
 			var wg sync.WaitGroup
-			r, err := New(lines, &wg, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource())
+			r, err := New(lines, &wg, "", store, ErrorsAbort(), DumpAst(), DumpAstTypes(), DumpBytecode(), OmitMetricSource(), TraceExecution())
 			testutil.FatalIfErr(t, err)
 			compileErrors := r.CompileAndRun(tc.name, strings.NewReader(tc.prog))
 			testutil.FatalIfErr(t, compileErrors)
