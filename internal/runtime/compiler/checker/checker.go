@@ -549,12 +549,14 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			n.SetType(n.Expr.Type())
 			return n
 		}
+
+		var rType types.Type
 		switch n.Op {
 		case parser.NOT:
 			// !e1
 			// O ⊢ e1 : Int
 			// ⇒ O ⊢ e : Bool
-			rType := types.Bool
+			rType = types.Bool
 			wantType := types.Function(types.Int, rType)
 			gotType := types.Function(n.Expr.Type(), types.NewVariable())
 			uType := types.Unify(wantType, gotType)
@@ -564,7 +566,6 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(err)
 				return n
 			}
-			n.SetType(rType)
 
 		case parser.INC, parser.DEC:
 			// e1++ , e1--
@@ -586,7 +587,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 
-			rType := types.NewVariable()
+			rType = types.NewVariable()
 			wantType := types.Function(types.Int, types.Int)
 			gotType := types.Function(n.Expr.Type(), rType)
 			uType := types.Unify(wantType, gotType)
@@ -609,14 +610,13 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(types.Error)
 				return n
 			}
-			n.SetType(rType)
 
 		case parser.MATCH:
 			// Implicit match expressions, an expression of type Pattern returning Bool
 			// /e1/
 			// O ⊢ e1 : Pattern
 			// ⇒ O ⊢ e : Bool
-			rType := types.Bool
+			rType = types.Bool
 			wantType := types.Function(types.Pattern, rType)
 			gotType := types.Function(n.Expr.Type(), types.NewVariable())
 			uType := types.Unify(wantType, gotType)
@@ -630,13 +630,13 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				n.SetType(err)
 				return n
 			}
-			n.SetType(rType)
 
 		default:
 			c.errors.Add(n.Pos(), fmt.Sprintf("unknown unary op %s in expr %#v", parser.Kind(n.Op), n))
 			n.SetType(types.InternalError)
 			return n
 		}
+		n.SetType(rType)
 		return n
 
 	case *ast.ExprList:
