@@ -45,3 +45,4 @@ workdir/*
 /fuzzit
 /fuzzer.h
 /dist/
+/main.*.go
