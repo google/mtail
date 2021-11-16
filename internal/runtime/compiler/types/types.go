@@ -23,35 +23,61 @@ type Type interface {
 	String() string
 }
 
-// Equals compares two types, testing for equality.
-func Equals(t1, t2 Type) bool {
-	t1, t2 = t1.Root(), t2.Root()
-	switch t1 := t1.(type) {
-	case *Variable:
-		r2, ok := t2.(*Variable)
-		if !ok {
-			return occursInType(t1, t2)
-		}
-		return t1 == r2
-	case *Operator:
-		t2, ok := t2.(*Operator)
-		if !ok {
-			return false
-		}
-		if t1.Name != t2.Name {
-			return false
-		}
-		if len(t1.Args) != len(t2.Args) {
-			return false
-		}
-		for i := range t1.Args {
-			if !Equals(t1.Args[i], t2.Args[2]) {
-				return false
-			}
-		}
-		return true
+// TypeError describes an error in which a type was expected, but another was encountered.
+type TypeError struct {
+	error    error
+	expected Type
+	received Type
+}
+
+var (
+	ErrRecursiveUnification = errors.New("recursive unification error")
+	ErrTypeMismatch         = errors.New("type mismatch")
+	ErrInternal             = errors.New("internal error")
+)
+
+func (e *TypeError) Root() Type {
+	return e
+}
+
+func (e *TypeError) String() string {
+	if e == nil || e.error == nil {
+		return fmt.Sprintf("type error")
 	}
-	return true
+	var estr, rstr string
+	if IsComplete(e.expected) {
+		estr = e.expected.String()
+	} else {
+		estr = "incomplete type"
+	}
+	if IsComplete(e.received) {
+		rstr = e.received.String()
+	} else {
+		rstr = "incomplete type"
+	}
+	glog.V(2).Infof("%s: expected %q received %q", e.error, e.expected, e.received)
+	return fmt.Sprintf("%s; expected %s received %s", e.error, estr, rstr)
+}
+
+func (e TypeError) Error() string {
+	return e.String()
+}
+
+func (e *TypeError) Unwrap() error {
+	return e.error
+}
+
+// AsTypeError behaves like `errors.As`, attempting to cast the type `t` into a
+// provided `target` TypeError and returning if it was successful.
+func AsTypeError(t Type, target **TypeError) (ok bool) {
+	*target, ok = t.(*TypeError)
+	return ok
+}
+
+// IsTypeError behaves like `errors.Is`, indicating that the type is a TypeError.
+func IsTypeError(t Type) bool {
+	var e *TypeError
+	return AsTypeError(t, &e)
 }
 
 var (
@@ -112,7 +138,7 @@ type Operator struct {
 	// Args is the sequence of types that are parameters to this type.  They
 	// may be fully bound type operators, or partially defined (i.e. contain
 	// TypeVariables) in which case they represent polymorphism in the operator
-	// they are argyments to.
+	// they are arguments to.
 	Args []Type
 }
 
@@ -152,7 +178,8 @@ func IsFunction(t Type) bool {
 }
 
 // Dimension is a convenience method which instantiates a new Dimension type
-// scheme, with the given args as the dimensions of the type.
+// scheme, with the given args as the dimensions of the type.  (This type looks
+// a lot like a Product type.)
 func Dimension(args ...Type) *Operator {
 	return &Operator{"⨯", args}
 }
@@ -183,14 +210,15 @@ func IsComplete(t Type) bool {
 
 // Builtin type constants.
 var (
-	Undef   = &Operator{"Undef", []Type{}}
-	Error   = &Operator{"Error", []Type{}}
-	None    = &Operator{"None", []Type{}}
-	Bool    = &Operator{"Bool", []Type{}}
-	Int     = &Operator{"Int", []Type{}}
-	Float   = &Operator{"Float", []Type{}}
-	String  = &Operator{"String", []Type{}}
-	Pattern = &Operator{"Pattern", []Type{}}
+	Error         = &TypeError{}
+	InternalError = &TypeError{error: ErrInternal}
+	Undef         = &Operator{"Undef", []Type{}}
+	None          = &Operator{"None", []Type{}}
+	Bool          = &Operator{"Bool", []Type{}}
+	Int           = &Operator{"Int", []Type{}}
+	Float         = &Operator{"Float", []Type{}}
+	String        = &Operator{"String", []Type{}}
+	Pattern       = &Operator{"Pattern", []Type{}}
 	// TODO(jaq): use composite type so we can typecheck the bucket directly, e.g. hist[j] = i.
 	Buckets = &Operator{"Buckets", []Type{}}
 )
@@ -241,7 +269,8 @@ func FreshType(t Type) Type {
 	return freshRec(t)
 }
 
-func occursIn(v *Variable, types []Type) bool {
+// occursIn returns true if `v` is in any of `types`.
+func occursIn(v Type, types []Type) bool {
 	for _, t2 := range types {
 		if occursInType(v, t2) {
 			return true
@@ -250,7 +279,8 @@ func occursIn(v *Variable, types []Type) bool {
 	return false
 }
 
-func occursInType(v *Variable, t2 Type) bool {
+// occursInType returns true if `v` is `t2` or recursively contained within `t2`.
+func occursInType(v Type, t2 Type) bool {
 	root := t2.Root()
 	if Equals(root, v) {
 		return true
@@ -261,28 +291,37 @@ func occursInType(v *Variable, t2 Type) bool {
 	return false
 }
 
-// TypeError describes an error in which a type was expected, but another was encountered.
-type TypeError struct {
-	expected Type
-	received Type
-}
-
-var ErrRecursiveUnification = errors.New("recursive unification error")
-
-func (e *TypeError) Error() string {
-	var estr, rstr string
-	if IsComplete(e.expected) {
-		estr = e.expected.String()
-	} else {
-		estr = "incomplete type"
+// Equals compares two types, testing for equality.
+func Equals(t1, t2 Type) bool {
+	t1, t2 = t1.Root(), t2.Root()
+	switch t1 := t1.(type) {
+	case *Variable:
+		r2, ok := t2.(*Variable)
+		if !ok {
+			return occursInType(t1, t2)
+		}
+		return t1.ID == r2.ID
+	case *Operator:
+		t2, ok := t2.(*Operator)
+		if !ok {
+			return false
+		}
+		if t1.Name != t2.Name {
+			return false
+		}
+		if len(t1.Args) != len(t2.Args) {
+			return false
+		}
+		for i := range t1.Args {
+			if !Equals(t1.Args[i], t2.Args[2]) {
+				return false
+			}
+		}
+		return true
+	case *TypeError:
+		return false
 	}
-	if IsComplete(e.received) {
-		rstr = e.received.String()
-	} else {
-		rstr = "incomplete type"
-	}
-	glog.V(2).Infof("type mismatch: expected %q received %q", e.expected, e.received)
-	return fmt.Sprintf("type mismatch; expected %s received %s", estr, rstr)
+	return true
 }
 
 // Unify performs type unification of both parameter Types.  It returns the
@@ -290,7 +329,7 @@ func (e *TypeError) Error() string {
 // representing both parameters.  If either type is a type variable, then that
 // variable is unified with the LUB.  In reporting errors, it is assumed that a
 // is the expected type and b is the type observed.
-func Unify(a, b Type) error {
+func Unify(a, b Type) Type {
 	glog.V(2).Infof("Unifying %v and %v", a, b)
 	a1, b1 := a.Root(), b.Root()
 	switch a2 := a1.(type) {
@@ -300,56 +339,59 @@ func Unify(a, b Type) error {
 			if a2.ID != b2.ID {
 				glog.V(2).Infof("Making %q type %q", a2, b1)
 				a2.SetInstance(b1)
-				return nil
+				return b1
 			}
+			return a1
 		case *Operator:
 			if occursInType(a2, b2) {
-				return fmt.Errorf("%w on %v and %v", ErrRecursiveUnification, a2, b2)
+				return &TypeError{ErrRecursiveUnification, a2, b2}
 			}
 			glog.V(2).Infof("Making %q type %q", a2, b1)
 			a2.SetInstance(b1)
-			return nil
+			return b1
 		}
 	case *Operator:
 		switch b2 := b1.(type) {
 		case *Variable:
-			err := Unify(b, a)
-			if err != nil {
-				// We flipped the args, flip them back.
-				var e *TypeError
-				if errors.As(err, &e) {
-					return &TypeError{e.received, e.expected}
-				}
+			t := Unify(b, a)
+			var e *TypeError
+			if AsTypeError(t, &e) {
+				return &TypeError{ErrTypeMismatch, e.received, e.expected}
 			}
-			return err
+			return t
 
 		case *Operator:
 			if len(a2.Args) != len(b2.Args) {
-				return &TypeError{a2, b2}
+				return &TypeError{ErrTypeMismatch, a2, b2}
 			}
+			var rType *Operator
 			if a2.Name != b2.Name {
 				t := LeastUpperBound(a, b)
-				glog.V(2).Infof("Got LUB = %q", t)
-				if t == Error {
-					return &TypeError{a2, b2}
+				glog.V(2).Infof("Got LUB = %#v", t)
+				var e *TypeError
+				if AsTypeError(t, &e) {
+					return e
 				}
-				// if !Equals(t, a2) {
-				// 	a2.SetInstance(&t)
-				// }
-				// if !Equals(t, b2) {
-				// 	b2.SetInstance(&t)
-				// }
-				return nil
+				var ok bool
+				if rType, ok = t.(*Operator); !ok {
+					return &TypeError{ErrInternal, a2, b2}
+				}
+			} else {
+				rType = &Operator{a2.Name, []Type{}}
 			}
+			rType.Args = make([]Type, len(a2.Args))
 			for i, argA := range a2.Args {
-				err := Unify(argA, b2.Args[i])
-				if err != nil {
-					return err
+				t := Unify(argA, b2.Args[i])
+				var e *TypeError
+				if AsTypeError(t, &e) {
+					return e
 				}
+				rType.Args[i] = t
 			}
+			return rType
 		}
 	}
-	return nil
+	return &TypeError{ErrInternal, a, b}
 }
 
 // LeastUpperBound returns the smallest type that may contain both parameter types.
@@ -403,7 +445,7 @@ func LeastUpperBound(a, b Type) Type {
 		(Equals(a1, Int) && Equals(b1, Pattern)) {
 		return Bool
 	}
-	return Error
+	return &TypeError{ErrTypeMismatch, a, b}
 }
 
 // inferCaprefType determines a type for the nth capturing group in re, based on contents
@@ -499,14 +541,4 @@ func groupOnlyMatches(group *syntax.Regexp, s string) bool {
 		return false
 	}
 	return true
-}
-
-// isErrorType indicates that a given type is the result of a type error.
-func IsErrorType(t Type) bool {
-	if o, ok := t.(*Operator); ok {
-		if o.Name == "Error" {
-			return true
-		}
-	}
-	return false
 }
