@@ -270,7 +270,7 @@ func FreshType(t Type) Type {
 }
 
 // occursIn returns true if `v` is in any of `types`.
-func occursIn(v Type, types []Type) bool {
+func OccursIn(v Type, types []Type) bool {
 	for _, t2 := range types {
 		if occursInType(v, t2) {
 			return true
@@ -286,7 +286,7 @@ func occursInType(v Type, t2 Type) bool {
 		return true
 	}
 	if to, ok := root.(*Operator); ok {
-		return occursIn(v, to.Args)
+		return OccursIn(v, to.Args)
 	}
 	return false
 }
@@ -353,6 +353,7 @@ func Unify(a, b Type) Type {
 	case *Operator:
 		switch b2 := b1.(type) {
 		case *Variable:
+			// reverse args to call above
 			t := Unify(b, a)
 			var e *TypeError
 			if AsTypeError(t, &e) {
@@ -394,6 +395,21 @@ func Unify(a, b Type) Type {
 	return &TypeError{ErrInternal, a, b}
 }
 
+type TypeCoercion struct {
+	sub, sup Type
+}
+
+// type coercions for builtin types
+var typeCoercions = []TypeCoercion{
+	{Bool, Int},
+	{Bool, Float}, // contentious
+	{Int, Float},  // contentious
+	{Bool, String},
+	{Int, String},
+	{Float, String},
+	{String, Pattern},
+}
+
 // LeastUpperBound returns the smallest type that may contain both parameter types.
 func LeastUpperBound(a, b Type) Type {
 	a1, b1 := a.Root(), b.Root()
@@ -416,29 +432,19 @@ func LeastUpperBound(a, b Type) Type {
 	if Equals(b1, Undef) {
 		return a1
 	}
+
 	// Easy substitutions
-	if (Equals(a1, Float) && Equals(b1, Int)) ||
-		(Equals(b1, Float) && Equals(a1, Int)) {
-		return Float
+	for _, pair := range typeCoercions {
+		if (Equals(a1, pair.sub) && Equals(b1, pair.sup)) ||
+			(Equals(b1, pair.sub) && Equals(a1, pair.sup)) {
+			return pair.sup
+		}
 	}
-	if (Equals(a1, String) && Equals(b1, Int)) ||
-		(Equals(b1, String) && Equals(a1, Int)) ||
-		(Equals(a1, String) && Equals(b1, Float)) ||
-		(Equals(b1, String) && Equals(a1, Float)) {
-		return String
-	}
+	// TODO bogus?
+	// Patterns imply match status, which is boolean.
 	if (Equals(a1, Pattern) && Equals(b1, Bool)) ||
 		(Equals(a1, Bool) && Equals(b1, Pattern)) {
 		return Bool
-	}
-	if (Equals(a1, Bool) && Equals(b1, Int)) ||
-		(Equals(a1, Int) && Equals(b1, Bool)) {
-		return Int
-	}
-	// A string can be a pattern, but not vice versa.
-	if (Equals(a1, String) && Equals(b1, Pattern)) ||
-		(Equals(a1, Pattern) && Equals(b1, String)) {
-		return Pattern
 	}
 	// A pattern and an Int are Bool
 	if (Equals(a1, Pattern) && Equals(b1, Int)) ||

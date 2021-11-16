@@ -238,9 +238,9 @@ func (c *checker) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 	return c, node
 }
 
-// checkSymbolUsage emits errors if any eligible symbols in the current scope
-// are not marked as used.
-func (c *checker) checkSymbolUsage() {
+// checkSymbolTable emits errors if any eligible symbols in the current scope
+// are not marked as used or have an invalid type.
+func (c *checker) checkSymbolTable() {
 	for _, sym := range c.scope.Symbols {
 		if !sym.Used {
 			// Users don't have control over the patterns given from decorators
@@ -276,7 +276,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 
 	switch n := node.(type) {
 	case *ast.StmtList:
-		c.checkSymbolUsage()
+		c.checkSymbolTable()
 		// Pop the scope
 		c.scope = n.Scope.Parent
 		return n
@@ -291,7 +291,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 		default:
 			c.errors.Add(n.Cond.Pos(), fmt.Sprintf("Can't interpret %s as a boolean expression here.\n\tTry using comparison operators to make the condition explicit.", n.Cond.Type()))
 		}
-		c.checkSymbolUsage()
+		c.checkSymbolTable()
 		// Pop the scope.
 		c.scope = n.Scope.Parent
 		return n
@@ -357,7 +357,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			if types.AsTypeError(rType, &err) {
 				// Change the type mismatch error to make more sense in this context.
 				if goerrors.Is(err, types.ErrTypeMismatch) {
-					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: can't apply %s to LHS of type %q with RHS of type %q.", parser.Kind(n.Op), lT, rT))
+					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch; can't apply %s to LHS of type %q with RHS of type %q.", parser.Kind(n.Op), lT, rT))
 				} else {
 					c.errors.Add(n.Pos(), err.Error())
 				}
@@ -501,7 +501,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			uType := types.Unify(wantType, gotType)
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
-				c.errors.Add(n.Pos(), err.Error())
+				if goerrors.Is(err, types.ErrTypeMismatch) {
+					c.errors.Add(n.Pos(), fmt.Sprintf("%s for %s operator.", err, parser.Kind(n.Op)))
+				} else {
+					c.errors.Add(n.Pos(), err.Error())
+				}
 				n.SetType(err)
 				return n
 			}
@@ -579,7 +583,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 				return n
 			}
 			// After unification, the expr still has to be of Int type.
-			if !types.Equals(types.Int, uTypeOperator.Args[0]) {
+			if !types.OccursIn(types.Int, []types.Type{uTypeOperator.Args[0]}) {
 				c.errors.Add(n.Expr.Pos(), fmt.Sprintf("type mismatch: expecting an Int for %s, not %v.", parser.Kind(n.Op), n.Expr.Type()))
 				n.SetType(types.Error)
 				return n
@@ -597,7 +601,11 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			uType := types.Unify(wantType, gotType)
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
-				c.errors.Add(n.Pos(), err.Error())
+				if goerrors.Is(err, types.ErrTypeMismatch) {
+					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: MATCH expects Pattern, received %s", n.Expr.Type()))
+				} else {
+					c.errors.Add(n.Pos(), err.Error())
+				}
 				n.SetType(err)
 				return n
 			}

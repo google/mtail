@@ -163,7 +163,7 @@ func TestTypeUnification(t *testing.T) {
 				return
 			}
 			if !Equals(tc.expected, tU) {
-				t.Errorf("want %#v, got %#v", tc.expected, tU)
+				t.Errorf("want %q, got %q", tc.expected, tU)
 			}
 		})
 	}
