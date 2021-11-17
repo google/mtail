@@ -8,6 +8,8 @@ on:
 jobs:
   gosec:
     runs-on: ubuntu-latest
+    # gosec is regularly broken and reporting false positives, don't let it interfere
+    continue-on-error: true
     permissions:
       security-events: write
     steps:
