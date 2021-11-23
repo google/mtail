@@ -1,7 +1,10 @@
+# We "trust" dependabot updates once they pass tests.
+# (this still requires all other checks to pass!)
+
 # This doesn't work on forked repos per the discussion in
 # https://github.com/pascalgn/automerge-action/issues/46 so don't attempt to
 # add people other than dependabot to the if field below.
-name: automerge
+name: dependabot-auto-merge
 on:
   pull_request_target:
     types:
@@ -9,37 +12,48 @@ on:
       - labeled
       # Dependabot has rebased the PR
       - synchronize
+
 jobs:
-  approve-and-merge-dependabot:
+  enable-automerge:
     if: github.event.pull_request.user.login == 'dependabot[bot]' && contains(github.event.pull_request.labels.*.name, 'dependencies')
     runs-on: ubuntu-latest
     permissions:
-      # wait-on-check requires check read
-      checks: read
       # enable-automerge is a graphql query, not REST, so isn't documented,
       # except in a mention in
       # https://github.blog/changelog/2021-02-04-pull-request-auto-merge-is-now-generally-available/
       # which says "can only be enabled by users with permissino to merge"; the
       # REST documentation says you need contents: write to perform a merge.
+      # https://github.community/t/what-permission-does-a-github-action-need-to-call-graphql-enablepullrequestautomerge/197708
+      # says this is it
       contents: write
+    steps:
+      # Enable auto-merge *before* issuing an approval.
+      - uses: alexwilson/enable-github-automerge-action@main
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+  wait-on-checks:
+    needs: enable-automerge
+    runs-on: ubuntu-latest
+    permissions:
+      # wait-on-check requires only checks read
+      checks: read
+    steps:
+      - uses: lewagon/wait-on-check-action@v1.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: test
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 60
+
+  approve:
+    needs: wait-on-checks
+    runs-on: ubuntu-latest
+    permissions:
+      # https://github.com/hmarr/auto-approve-action/issues/183 says
       # auto-approve-action requires write on pull-requests
       pull-requests: write
     steps:
-
-    # Enable auto-merge *before* issuing an approval.
-    - name: Enable Github Automerge
-      uses: alexwilson/enable-github-automerge-action@main
-      with:
-        github-token: "${{ secrets.GITHUB_TOKEN }}"
-
-    - uses: lewagon/wait-on-check-action@v1.1.1
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
-        check-name: test
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        wait-interval: 60
-
-    # We "trust" dependabot updates (this still requires all other checks to pass!)
-    - uses: hmarr/auto-approve-action@5d04a5ca6da9aeb8ca9f31a5239b96fc3e003029
-      with:
-        github-token: "${{ secrets.GITHUB_TOKEN }}"
+      - uses: hmarr/auto-approve-action@5d04a5ca6da9aeb8ca9f31a5239b96fc3e003029
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
