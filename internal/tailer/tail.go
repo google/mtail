@@ -123,7 +123,7 @@ type logstreamPollWaker struct {
 }
 
 func (opt logstreamPollWaker) apply(t *Tailer) error {
-	t.logstreamPollWaker = opt.Waker
+	t.StartLogStreamPollLoop(opt.Waker)
 	return nil
 }
 
@@ -284,7 +284,7 @@ func (t *Tailer) TailPath(pathname string) error {
 	return nil
 }
 
-// Gc removes logstreams that have had no reads for 24h or more.
+// Gc removes logstreams that have had no reads for 1h or more.
 func (t *Tailer) Gc() error {
 	t.logstreamsMu.Lock()
 	defer t.logstreamsMu.Unlock()
@@ -344,7 +344,7 @@ func (t *Tailer) StartLogPatternPollLoop(waker waker.Waker) {
 			case <-t.ctx.Done():
 				return
 			case <-waker.Wake():
-				if err := t.Poll(); err != nil {
+				if err := t.PollLogPatterns(); err != nil {
 					glog.Info(err)
 				}
 			}
@@ -382,6 +382,35 @@ func (t *Tailer) PollLogPatterns() error {
 	return nil
 }
 
+// StartLogStreamPollLoop runs a permanent goroutine to poll for new log files.
+func (t *Tailer) StartLogStreamPollLoop(waker waker.Waker) {
+	if waker == nil {
+		glog.Info("Log stream polling disabled")
+		return
+	}
+	t.logstreamPollWaker = waker
+	t.wg.Add(1)
+	go func() {
+		defer t.wg.Done()
+		<-t.initDone
+		if t.oneShot {
+			glog.Info("No polling loop in oneshot mode.")
+			return
+		}
+		// glog.Infof("Starting log stream poll loop every %s", duration.String())
+		for {
+			select {
+			case <-t.ctx.Done():
+				return
+			case <-waker.Wake():
+				if err := t.PollLogStreams(); err != nil {
+					glog.Info(err)
+				}
+			}
+		}
+	}()
+}
+
 // PollLogStreams looks at the existing paths and checks if they're already
 // complete, removing it from the map if so.
 func (t *Tailer) PollLogStreams() error {
@@ -393,17 +422,6 @@ func (t *Tailer) PollLogStreams() error {
 			delete(t.logstreams, name)
 			logCount.Add(-1)
 			continue
-		}
-	}
-	return nil
-}
-
-func (t *Tailer) Poll() error {
-	t.pollMu.Lock()
-	defer t.pollMu.Unlock()
-	for _, f := range []func() error{t.PollLogPatterns, t.PollLogStreams} {
-		if err := f(); err != nil {
-			return err
 		}
 	}
 	return nil

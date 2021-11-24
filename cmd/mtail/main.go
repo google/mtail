@@ -62,7 +62,8 @@ var (
 	logRuntimeErrors     = flag.Bool("vm_logs_runtime_errors", true, "Enables logging of runtime errors to the standard log.  Set to false to only have the errors printed to the HTTP console.")
 
 	// Ops flags.
-	pollInterval                = flag.Duration("poll_interval", 250*time.Millisecond, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
+	pollInterval                = flag.Duration("poll_interval", 250*time.Millisecond, "Set the interval to poll all log files for list; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
+	pollLogInterval             = flag.Duration("poll_log_interval", 250*time.Millisecond, "Set the interval to poll all log files for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
 	expiredMetricGcTickInterval = flag.Duration("expired_metrics_gc_interval", time.Hour, "interval between expired metric garbage collection runs")
 	staleLogGcTickInterval      = flag.Duration("stale_log_gc_interval", time.Hour, "interval between stale log garbage collection runs")
 	metricPushInterval          = flag.Duration("metric_push_interval", time.Minute, "interval between metric pushes to passive collectors")
@@ -147,6 +148,10 @@ func main() {
 		glog.Infof("no poll interval specified; defaulting to 250ms poll")
 		*pollInterval = time.Millisecond * 250
 	}
+	if *pollLogInterval == 0 {
+		glog.Infof("no poll interval specified; defaulting to pollInterval")
+		*pollLogInterval = *pollInterval
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -179,7 +184,8 @@ func main() {
 	}
 	if *pollInterval > 0 {
 		logPatternPollWaker := waker.NewTimed(ctx, *pollInterval)
-		opts = append(opts, mtail.LogPatternPollWaker(logPatternPollWaker), mtail.LogstreamPollWaker(logPatternPollWaker))
+		logStreamPollWaker := waker.NewTimed(ctx, *pollLogInterval)
+		opts = append(opts, mtail.LogPatternPollWaker(logPatternPollWaker), mtail.LogstreamPollWaker(logStreamPollWaker))
 	}
 	if *unixSocket == "" {
 		opts = append(opts, mtail.BindAddress(*address, *port))
