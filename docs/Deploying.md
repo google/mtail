@@ -39,13 +39,13 @@ want to tail.  This includes named pipes.
 
 ### Polling the file system
 
-`mtail` polls every `--poll_interval`, or 250ms by default, the supplied `--logs` patterns for newly created or deleted log pathnames.
+`mtail` polls matched log files every `--poll_log_interval`, or 250ms by default, the supplied `--logs` patterns for newly created or deleted log pathnames.
 
-Known and active logs are read until EOF every 250ms by default.
+Known and active logs are read until EOF every `--poll_interval`, or 250ms by default.
 
 Example:
 ```
-mtail --progs /etc/mtail --logs /var/log/syslog --poll_interval 250ms
+mtail --progs /etc/mtail --logs /var/log/syslog --poll_interval 250ms --poll_log_interval 250ms
 ```
 
 
