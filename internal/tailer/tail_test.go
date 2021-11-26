@@ -85,7 +85,6 @@ func TestHandleLogTruncate(t *testing.T) {
 
 	testutil.WriteString(t, f, "a\nb\nc\n")
 	awaken(1)
-	awaken(1) // double sync to ensure that a whole pass through the filestream has occurred
 
 	if err := f.Truncate(0); err != nil {
 		t.Fatal(err)
