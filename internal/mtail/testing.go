@@ -97,10 +97,7 @@ func (ts *TestServer) Start() func() {
 func (ts *TestServer) PollWatched(n int) {
 	glog.Info("Testserver starting poll")
 	glog.Infof("TestServer polling filesystem patterns")
-	if err := ts.t.PollLogPatterns(); err != nil {
-		glog.Info(err)
-	}
-	if err := ts.t.PollLogStreams(); err != nil {
+	if err := ts.t.Poll(); err != nil {
 		glog.Info(err)
 	}
 	glog.Infof("TestServer reloading programs")
@@ -108,7 +105,7 @@ func (ts *TestServer) PollWatched(n int) {
 		glog.Info(err)
 	}
 	glog.Infof("TestServer tailer gcing")
-	if err := ts.t.Gc(); err != nil {
+	if err := ts.t.ExpireStaleLogstreams(); err != nil {
 		glog.Info(err)
 	}
 	glog.Info("TestServer waking idle routines")

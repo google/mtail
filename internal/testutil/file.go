@@ -20,6 +20,7 @@ func WriteString(tb testing.TB, f io.StringWriter, str string) int {
 		fi, err := v.Stat()
 		FatalIfErr(tb, err)
 		if fi.Mode().IsRegular() {
+			glog.Infof("This is a regular file, doing a sync.")
 			FatalIfErr(tb, v.Sync())
 		}
 	}
