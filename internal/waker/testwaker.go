@@ -73,7 +73,7 @@ func (t *testWaker) Wake() (w <-chan struct{}) {
 	t.mu.Lock()
 	w = t.wake
 	t.mu.Unlock()
-	glog.Infof("waiting for wake on chan %p", w)
+	glog.InfoDepth(1, "waiting for wakeup on chan ", w)
 	// Background this so we can return the wake channel.
 	// The wakeFunc won't close the channel until this completes.
 	go func() {
