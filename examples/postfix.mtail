@@ -1,5 +1,5 @@
 # vim:ts=2:sw=2:et:ai:sts=2:cinoptions=(0
-# Copyright 2017 Martín Ferrari <tincho@tincho.org>. All Rights Reserved.
+# Copyright 2017 Martina Ferrari <tina@tina.pm>. All Rights Reserved.
 # This file is available under the Apache license.
 
 # Syslog parser for Postfix, based on the parsing rules from:
