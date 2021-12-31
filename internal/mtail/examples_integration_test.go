@@ -24,7 +24,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const exampleTimeout = 2 * time.Second
+const exampleTimeout = 10 * time.Second
 
 var exampleProgramTests = []struct {
 	programfile string // Example program file.

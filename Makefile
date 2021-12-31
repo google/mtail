@@ -33,10 +33,12 @@ $(DEPDIR)/%.d: ;
 # This instruction loads any dependency includes for our targets.
 -include $(patsubst %,$(DEPDIR)/%.d,$(TARGETS))
 
-# Set the timeout for tests run under the race detector.
-timeout := 120s
+# Set the timeout for tests.
+test_timeout := 20s
+testrace_timeout := 4m
 ifeq ($(CI),true)
-timeout := 10m
+test_timeout := 100s
+testrace_timeout := 20m
 endif
 # Let the benchmarks run for a long time.  The timeout is for the total time of
 # all benchmarks, not per bench.
@@ -170,11 +172,11 @@ $(PREFIX)/bin/%: %
 
 .PHONY: test check
 check test: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout 10s ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout ${test_timeout} ./...
 
 .PHONY: testrace
 testrace: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout ${timeout} -race -v ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -timeout ${testrace_timeout} -race -v ./...
 
 .PHONY: smoke
 smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
@@ -182,7 +184,7 @@ smoke: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-s
 
 .PHONY: regtest
 regtest: $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | print-version $(LOGO_GO) .dep-stamp
-	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -v -timeout=${timeout} ./...
+	go test $(GO_TEST_FLAGS) -gcflags "$(GO_GCFLAGS)" -v -timeout=${testrace_timeout} ./...
 
 TESTRESULTS ?= test-results
 TESTCOVERPROFILE ?= out.coverprofile
