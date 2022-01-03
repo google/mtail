@@ -187,6 +187,35 @@ func TestTailerOpenRetries(t *testing.T) {
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
+func TestTailerUnreadableFile(t *testing.T) {
+	// Test broken files are skipped.
+	ta, lines, awaken, dir, stop := makeTestTail(t)
+
+	brokenfile := filepath.Join(dir, "brokenlog")
+	logfile := filepath.Join(dir, "log")
+	testutil.FatalIfErr(t, ta.AddPattern(brokenfile))
+	testutil.FatalIfErr(t, ta.AddPattern(logfile))
+
+	glog.Info("create logs")
+	testutil.FatalIfErr(t, os.Symlink("/nonexistent", brokenfile))
+	f := testutil.TestOpenFile(t, logfile)
+
+	testutil.FatalIfErr(t, ta.PollLogPatterns())
+	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
+
+	glog.Info("write string")
+	testutil.WriteString(t, f, "\n")
+	awaken(1)
+
+	stop()
+
+	received := testutil.LinesReceived(lines)
+	expected := []*logline.LogLine{
+		{context.Background(), logfile, ""},
+	}
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+}
+
 func TestTailerInitErrors(t *testing.T) {
 	var wg sync.WaitGroup
 	_, err := New(context.TODO(), &wg, nil)

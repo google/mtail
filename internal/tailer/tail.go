@@ -227,20 +227,22 @@ func (t *Tailer) AddPattern(pattern string) error {
 	return nil
 }
 
-func (t *Tailer) Ignore(pathname string) (bool, error) {
+func (t *Tailer) Ignore(pathname string) bool {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
-		return false, err
+		glog.V(2).Infof("Couldn't get absolute path for %q: %s", pathname, err)
+		return true
 	}
 	fi, err := os.Stat(absPath)
 	if err != nil {
-		return false, err
+		glog.V(2).Infof("Couldn't stat path %q: %s", pathname, err)
+		return true
 	}
 	if fi.Mode().IsDir() {
 		glog.V(2).Infof("ignore path %q because it is a folder", pathname)
-		return true, nil
+		return true
 	}
-	return t.ignoreRegexPattern != nil && t.ignoreRegexPattern.MatchString(fi.Name()), nil
+	return t.ignoreRegexPattern != nil && t.ignoreRegexPattern.MatchString(fi.Name())
 }
 
 func (t *Tailer) SetIgnorePattern(pattern string) error {
@@ -362,16 +364,13 @@ func (t *Tailer) PollLogPatterns() error {
 		}
 		glog.V(1).Infof("glob matches: %v", matches)
 		for _, pathname := range matches {
-			ignore, err := t.Ignore(pathname)
-			if err != nil {
-				return err
-			}
-			if ignore {
+			if t.Ignore(pathname) {
 				continue
 			}
 			absPath, err := filepath.Abs(pathname)
 			if err != nil {
-				return err
+				glog.V(2).Infof("Couldn't get absolute path for %q: %s", pathname, err)
+				continue
 			}
 			glog.V(2).Infof("watched path is %q", absPath)
 			if err := t.TailPath(absPath); err != nil {
