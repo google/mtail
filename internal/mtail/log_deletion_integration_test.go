@@ -28,6 +28,7 @@ func TestLogDeletion(t *testing.T) {
 	logCloseCheck := m.ExpectMapExpvarDeltaWithDeadline("log_closes_total", logFilepath, 1)
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", -1)
 
+	m.PollWatched(1) // Force sync to EOF
 	glog.Info("remove")
 	testutil.FatalIfErr(t, os.Remove(logFilepath))
 
