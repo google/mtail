@@ -5,6 +5,7 @@ package mtail_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -314,8 +315,20 @@ func TestFileSocketStreamComparison(t *testing.T) {
 						glog.Infof("Copied %d bytes into socket", n)
 						if scheme == "unixgram" {
 							// Write zero bytes after Stop is called to signal that this is the "end of the stream".
-							_, err = s.Write([]byte{})
-							testutil.FatalIfErr(t, err)
+							for {
+								_, err = s.Write([]byte{})
+								if err == nil {
+									glog.Infof("Zero bytes written to socket to signal EOF")
+									break
+								}
+								var netErr net.Error
+								if errors.As(err, &netErr) && netErr.Timeout() {
+									glog.Infof("Write timeout")
+									time.Sleep(1 * time.Second)
+								} else {
+									testutil.FatalIfErr(t, err)
+								}
+							}
 						}
 						source.Close()
 						s.Close()
