@@ -147,7 +147,7 @@ func ReadTestData(file io.Reader, programfile string) metrics.MetricSlice {
 	}
 
 	storeList := make([]*metrics.Metric, 0)
-	/* nolint:errcheck #nosec G104 always returns nil */
+	/* #nosec G104 -- Always returns nil. nolint:errcheck */
 	store.Range(func(m *metrics.Metric) error {
 		storeList = append(storeList, m)
 		return nil
