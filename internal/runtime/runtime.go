@@ -112,7 +112,7 @@ func (r *Runtime) LoadProgram(programPath string) error {
 		glog.V(2).Infof("Skipping %s due to file extension.", programPath)
 		return nil
 	}
-	f, err := os.OpenFile(filepath.Clean(programPath), os.O_RDONLY, 0600)
+	f, err := os.OpenFile(filepath.Clean(programPath), os.O_RDONLY, 0o600)
 	if err != nil {
 		ProgLoadErrors.Add(name, 1)
 		return errors.Wrapf(err, "Failed to read program %q", programPath)

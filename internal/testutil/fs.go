@@ -28,7 +28,7 @@ func TestTempDir(tb testing.TB) string {
 // TestOpenFile creates a new file called name and returns the opened file.
 func TestOpenFile(tb testing.TB, name string) *os.File {
 	tb.Helper()
-	f, err := os.OpenFile(filepath.Clean(name), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+	f, err := os.OpenFile(filepath.Clean(name), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		tb.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestOpenFile(tb testing.TB, name string) *os.File {
 // OpenLogFile creates a new file that emulates being a log.
 func OpenLogFile(tb testing.TB, name string) *os.File {
 	tb.Helper()
-	f, err := os.OpenFile(filepath.Clean(name), os.O_CREATE|os.O_TRUNC|os.O_WRONLY|os.O_APPEND, 0600)
+	f, err := os.OpenFile(filepath.Clean(name), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
 		tb.Fatal(err)
 	}

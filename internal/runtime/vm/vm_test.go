@@ -789,7 +789,7 @@ func TestStrptimeWithTimezone(t *testing.T) {
 	vm.t.Push("2012/01/18 06:25:00")
 	vm.t.Push("2006/01/02 15:04:05")
 	vm.execute(vm.t, obj.Program[0])
-	if vm.t.time != time.Date(2012, 01, 18, 06, 25, 00, 00, loc) {
+	if vm.t.time != time.Date(2012, 1, 18, 6, 25, 0, 0, loc) {
 		t.Errorf("Time didn't parse with location: %s received", vm.t.time)
 	}
 }
@@ -802,7 +802,7 @@ func TestStrptimeWithoutTimezone(t *testing.T) {
 	vm.t.Push("2012/01/18 06:25:00")
 	vm.t.Push("2006/01/02 15:04:05")
 	vm.execute(vm.t, obj.Program[0])
-	if vm.t.time != time.Date(2012, 01, 18, 06, 25, 00, 00, time.UTC) {
+	if vm.t.time != time.Date(2012, 1, 18, 6, 25, 0, 0, time.UTC) {
 		t.Errorf("Time didn't parse with location: %s received", vm.t.time)
 	}
 }

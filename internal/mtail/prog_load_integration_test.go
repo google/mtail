@@ -19,9 +19,9 @@ func TestNewProg(t *testing.T) {
 
 	logDir := filepath.Join(tmpDir, "logs")
 	progDir := filepath.Join(tmpDir, "progs")
-	err := os.Mkdir(logDir, 0700)
+	err := os.Mkdir(logDir, 0o700)
 	testutil.FatalIfErr(t, err)
-	err = os.Mkdir(progDir, 0700)
+	err = os.Mkdir(progDir, 0o700)
 	testutil.FatalIfErr(t, err)
 
 	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
@@ -29,7 +29,8 @@ func TestNewProg(t *testing.T) {
 
 	progLoadsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("prog_loads_total", "nocode.mtail", 1)
 
-	testutil.TestOpenFile(t, progDir+"/nocode.mtail")
+	f := testutil.TestOpenFile(t, progDir+"/nocode.mtail")
+	defer f.Close()
 	// No logs get watched here.
 	m.PollWatched(0)
 
@@ -42,9 +43,9 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	workdir := testutil.TestTempDir(t)
 
 	logDir := filepath.Join(workdir, "logs")
-	testutil.FatalIfErr(t, os.Mkdir(logDir, 0777))
+	testutil.FatalIfErr(t, os.Mkdir(logDir, 0o777))
 	progDir := filepath.Join(workdir, "progs")
-	testutil.FatalIfErr(t, os.Mkdir(progDir, 0777))
+	testutil.FatalIfErr(t, os.Mkdir(progDir, 0o777))
 
 	logFilepath := filepath.Join(logDir, "log")
 	logFile := testutil.TestOpenFile(t, logFilepath)
@@ -88,9 +89,9 @@ func TestProgramUnloadIfDeleted(t *testing.T) {
 	workdir := testutil.TestTempDir(t)
 
 	logDir := filepath.Join(workdir, "logs")
-	testutil.FatalIfErr(t, os.Mkdir(logDir, 0777))
+	testutil.FatalIfErr(t, os.Mkdir(logDir, 0o777))
 	progDir := filepath.Join(workdir, "progs")
-	testutil.FatalIfErr(t, os.Mkdir(progDir, 0777))
+	testutil.FatalIfErr(t, os.Mkdir(progDir, 0o777))
 
 	logFilepath := filepath.Join(logDir, "log")
 	logFile := testutil.TestOpenFile(t, logFilepath)

@@ -1,6 +1,9 @@
 // Copyright 2019 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
+//go:build unix
+// +build unix
+
 package mtail_test
 
 import (
@@ -12,6 +15,8 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
+// TestPermissionDeniedOnLog is a unix-specific test because on Windows, it is not possible to create a file
+// that you yourself cannot read (minimum permissions are 0222).
 func TestPermissionDeniedOnLog(t *testing.T) {
 	testutil.SkipIfShort(t)
 	// Can't force a permission denied error if run as root.
@@ -21,9 +26,9 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 
 	logDir := filepath.Join(tmpDir, "logs")
 	progDir := filepath.Join(tmpDir, "progs")
-	err := os.Mkdir(logDir, 0700)
+	err := os.Mkdir(logDir, 0o700)
 	testutil.FatalIfErr(t, err)
-	err = os.Mkdir(progDir, 0700)
+	err = os.Mkdir(progDir, 0o700)
 	testutil.FatalIfErr(t, err)
 
 	logFile := filepath.Join(logDir, "log")

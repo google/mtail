@@ -19,8 +19,8 @@ func TestLogTruncation(t *testing.T) {
 
 	logDir := filepath.Join(tmpDir, "logs")
 	progDir := filepath.Join(tmpDir, "progs")
-	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
-	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
+	testutil.FatalIfErr(t, os.Mkdir(logDir, 0o700))
+	testutil.FatalIfErr(t, os.Mkdir(progDir, 0o700))
 
 	m, stopM := mtail.TestStartServer(t, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
@@ -30,6 +30,7 @@ func TestLogTruncation(t *testing.T) {
 
 	logFile := filepath.Join(logDir, "log")
 	f := testutil.TestOpenFile(t, logFile)
+	defer f.Close()
 	m.PollWatched(1)
 
 	testutil.WriteString(t, f, "line 1\n")
@@ -44,8 +45,9 @@ func TestLogTruncation(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	glog.Info("truncate")
-	f, err = os.OpenFile(logFile, os.O_TRUNC|os.O_WRONLY, 0600)
+	f, err = os.OpenFile(logFile, os.O_TRUNC|os.O_WRONLY, 0o600)
 	testutil.FatalIfErr(t, err)
+	defer f.Close()
 	m.PollWatched(1)
 
 	testutil.WriteString(t, f, "2\n")

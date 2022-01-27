@@ -74,6 +74,7 @@ func TestLoadProg(t *testing.T) {
 		glog.Infof("Wrote %d bytes", n)
 		err = l.LoadProgram(filepath.Join(tmpDir, name))
 		testutil.FatalIfErr(t, err)
+		f.Close()
 	}
 	close(lines)
 	wg.Wait()

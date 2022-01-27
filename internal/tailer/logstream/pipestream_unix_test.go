@@ -1,6 +1,9 @@
 // Copyright 2020 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
+//go:build unix
+// +build unix
+
 package logstream_test
 
 import (
@@ -25,7 +28,7 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 		tmpDir := testutil.TestTempDir(t)
 
 		name := filepath.Join(tmpDir, "fifo")
-		testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
+		testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
 
 		lines := make(chan *logline.LogLine, 1)
 		ctx, cancel := context.WithCancel(context.Background())
@@ -71,7 +74,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 		tmpDir := testutil.TestTempDir(t)
 
 		name := filepath.Join(tmpDir, "fifo")
-		testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
+		testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
 
 		lines := make(chan *logline.LogLine, 1)
 		ctx, cancel := context.WithCancel(context.Background())
@@ -111,7 +114,7 @@ func TestPipeStreamReadURL(t *testing.T) {
 	tmpDir := testutil.TestTempDir(t)
 
 	name := filepath.Join(tmpDir, "fifo")
-	testutil.FatalIfErr(t, unix.Mkfifo(name, 0666))
+	testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())

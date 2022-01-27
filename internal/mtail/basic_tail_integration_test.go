@@ -30,6 +30,7 @@ func TestBasicTail(t *testing.T) {
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
 
 	f := testutil.TestOpenFile(t, logFile)
+	defer f.Close()
 	m.PollWatched(1) // Force sync to EOF
 
 	for i := 1; i <= 3; i++ {
