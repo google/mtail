@@ -45,6 +45,11 @@ var parserTests = []struct {
 	},
 
 	{
+		"declare dimensioned metric with limit",
+		"counter foo by a, b limit 100",
+	},
+
+	{
 		"declare multi-dimensioned counter",
 		"counter foo by bar, baz, quux\n",
 	},
@@ -576,6 +581,12 @@ var parserInvalidPrograms = []parserInvalidProgram{
 	/(?P<b>.)/ {}
 	`,
 		[]string{"paired pattern without block:2:11: syntax error: statement with no effect, missing an assignment, `+' concatenation, or `{}' block?"},
+	},
+
+	{
+		"dimensioned limit per dimension",
+		"counter foo by a limit 10, b",
+		[]string{"dimensioned limit per dimension:1:26: syntax error: unexpected COMMA"},
 	},
 }
 

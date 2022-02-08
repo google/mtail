@@ -155,6 +155,7 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	if lv := m.FindLabelValueOrNil(labelvalues); lv != nil {
 		d = lv.Value
 	} else {
+		// TODO Check m.Limit and expire old data
 		switch m.Type {
 		case Int:
 			d = datum.NewInt()

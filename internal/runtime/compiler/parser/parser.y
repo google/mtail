@@ -36,7 +36,8 @@ import (
 %type <n> metric_declaration metric_decl_attr_spec decorator_declaration decoration_stmt regex_pattern match_expr
 %type <n> delete_stmt metric_name_spec builtin_expr arg_expr
 %type <kind> metric_type_spec
-%type <text> metric_as_spec id_or_string
+%type <intVal> metric_limit_spec
+%type <text> metric_as_spec id_or_string metric_by_expr
 %type <texts> metric_by_spec metric_by_expr_list
 %type <flag> metric_hide_spec
 %type <op> rel_op shift_op bitwise_op logical_op add_op mul_op match_op postfix_op
@@ -47,7 +48,7 @@ import (
 // Types
 %token COUNTER GAUGE TIMER TEXT HISTOGRAM
 // Reserved words
-%token AFTER AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE STOP BUCKETS
+%token AFTER AS BY CONST HIDDEN DEF DEL NEXT OTHERWISE ELSE STOP BUCKETS LIMIT
 // Builtins
 %token <text> BUILTIN
 // Literals: re2 syntax regular expression, quoted strings, regex capture group
@@ -544,6 +545,11 @@ metric_decl_attr_spec
     $$ = $1
     $$.(*ast.VarDecl).Buckets = $2
   }
+  | metric_decl_attr_spec metric_limit_spec
+  {
+    $$ = $1
+    $$.(*ast.VarDecl).Limit = $2
+  }
   | metric_name_spec
   {
     $$ = $1
@@ -595,21 +601,33 @@ metric_by_spec
   ;
 
 metric_by_expr_list
-  : id_or_string
+  : metric_by_expr
   {
     $$ = make([]string, 0)
     $$ = append($$, $1)
   }
-  | metric_by_expr_list COMMA id_or_string
+  | metric_by_expr_list COMMA metric_by_expr
   {
     $$ = $1
     $$ = append($$, $3)
   }
   ;
 
+metric_by_expr
+  : id_or_string
+  { $$ = $1 }
+  ;
+
 /* As specification describes how to rename a variable for export. */
 metric_as_spec
   : AS STRING
+  {
+    $$ = $2
+  }
+  ;
+
+metric_limit_spec
+  : LIMIT INTLITERAL
   {
     $$ = $2
   }

@@ -188,6 +188,9 @@ func (u *Unparser) VisitBefore(n ast.Node) (ast.Visitor, ast.Node) {
 		if len(v.Keys) > 0 {
 			u.emit(" by " + strings.Join(v.Keys, ", "))
 		}
+		if v.Limit > 0 {
+			u.emit(fmt.Sprintf(" limit %d", v.Limit))
+		}
 		if len(v.Buckets) > 0 {
 			buckets := strings.Builder{}
 			buckets.WriteString(" buckets ")

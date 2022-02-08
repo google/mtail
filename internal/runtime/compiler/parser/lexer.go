@@ -30,6 +30,7 @@ var keywords = map[string]Kind{
 	"gauge":     GAUGE,
 	"hidden":    HIDDEN,
 	"histogram": HISTOGRAM,
+	"limit":     LIMIT,
 	"next":      NEXT,
 	"otherwise": OTHERWISE,
 	"stop":      STOP,
