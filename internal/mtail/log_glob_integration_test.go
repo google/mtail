@@ -39,11 +39,11 @@ func TestGlobBeforeStart(t *testing.T) {
 	var count int64
 	for _, tt := range globTests {
 		log := testutil.TestOpenFile(t, tt.name)
-		defer log.Close()
 		if tt.expected {
 			count++
 		}
 		testutil.WriteString(t, log, "\n")
+		log.Close()
 	}
 	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
 	stopM()
@@ -89,8 +89,8 @@ func TestGlobAfterStart(t *testing.T) {
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", count)
 	for _, tt := range globTests {
 		log := testutil.TestOpenFile(t, tt.name)
-		m.PollWatched(0) // Force sync to EOF
 		defer log.Close()
+		m.PollWatched(0) // Force sync to EOF
 	}
 	// m.PollWatched(2)
 	logCountCheck()
@@ -128,7 +128,7 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		var log *os.File
 
 		if tt.isFolder {
-			err = os.Mkdir(tt.name, 0700)
+			err = os.Mkdir(tt.name, 0o700)
 			testutil.FatalIfErr(t, err)
 			continue
 		} else {
@@ -200,9 +200,9 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 	logDir := filepath.Join(tmpDir, "logs")
 	progDir := filepath.Join(tmpDir, "progs")
-	err := os.Mkdir(logDir, 0700)
+	err := os.Mkdir(logDir, 0o700)
 	testutil.FatalIfErr(t, err)
-	err = os.Mkdir(progDir, 0700)
+	err = os.Mkdir(progDir, 0o700)
 	testutil.FatalIfErr(t, err)
 
 	// Move to logdir to make relative paths
@@ -216,6 +216,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logFile := filepath.Join(logDir, "log.1.txt")
 		f := testutil.TestOpenFile(t, logFile)
+		defer f.Close()
+
 		m.PollWatched(1) // Force sync to EOF
 		testutil.WriteString(t, f, "line 1\n")
 		m.PollWatched(1)
@@ -229,6 +231,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logFile := filepath.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
+		defer f.Close()
+
 		m.PollWatched(2)
 		testutil.WriteString(t, f, "line 1\n")
 		m.PollWatched(2)
@@ -240,6 +244,8 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 
 		logFile := filepath.Join(logDir, "log.2.txt")
 		f := testutil.TestOpenFile(t, logFile)
+		defer f.Close()
+
 		m.PollWatched(2)
 		testutil.WriteString(t, f, "line 2\n")
 		m.PollWatched(2)

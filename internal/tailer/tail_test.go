@@ -52,6 +52,7 @@ func TestHandleLogUpdate(t *testing.T) {
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
+	defer f.Close()
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
 	awaken(1)
@@ -78,7 +79,8 @@ func TestHandleLogTruncate(t *testing.T) {
 	ta, lines, awaken, dir, stop := makeTestTail(t)
 
 	logfile := filepath.Join(dir, "log")
-	f := testutil.TestOpenFile(t, logfile)
+	f := testutil.OpenLogFile(t, logfile)
+	defer f.Close()
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
 	// Expect to wake 1 wakee, the logstream reading `logfile`.
@@ -90,6 +92,7 @@ func TestHandleLogTruncate(t *testing.T) {
 	if err := f.Truncate(0); err != nil {
 		t.Fatal(err)
 	}
+
 	// "File.Truncate" does not change the file offset, force a seek to start.
 	_, err := f.Seek(0, 0)
 	testutil.FatalIfErr(t, err)
@@ -116,6 +119,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 
 	logfile := filepath.Join(dir, "log")
 	f := testutil.TestOpenFile(t, logfile)
+	defer f.Close()
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
 	awaken(1) // ensure we've hit an EOF before writing starts
@@ -138,55 +142,6 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
-func TestTailerOpenRetries(t *testing.T) {
-	// Can't force a permission denied error if run as root.
-	testutil.SkipIfRoot(t)
-
-	ta, lines, awaken, dir, stop := makeTestTail(t)
-
-	logfile := filepath.Join(dir, "log")
-	if _, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0); err != nil {
-		t.Fatal(err)
-	}
-
-	testutil.FatalIfErr(t, ta.AddPattern(logfile))
-
-	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
-		t.Fatalf("Expected a permission denied error here: %s", err)
-	}
-	testutil.FatalIfErr(t, ta.PollLogPatterns())
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
-	glog.Info("remove")
-	if err := os.Remove(logfile); err != nil {
-		t.Fatal(err)
-	}
-	testutil.FatalIfErr(t, ta.PollLogPatterns())
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
-	glog.Info("openfile")
-	f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
-	testutil.FatalIfErr(t, err)
-	testutil.FatalIfErr(t, ta.PollLogPatterns())
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
-	glog.Info("chmod")
-	if err := os.Chmod(logfile, 0666); err != nil {
-		t.Fatal(err)
-	}
-	testutil.FatalIfErr(t, ta.PollLogPatterns())
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
-	awaken(1) // force sync to EOF
-	glog.Info("write string")
-	testutil.WriteString(t, f, "\n")
-	awaken(1)
-
-	stop()
-
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{context.Background(), logfile, ""},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-}
-
 func TestTailerUnreadableFile(t *testing.T) {
 	// Test broken files are skipped.
 	ta, lines, awaken, dir, stop := makeTestTail(t)
@@ -199,6 +154,7 @@ func TestTailerUnreadableFile(t *testing.T) {
 	glog.Info("create logs")
 	testutil.FatalIfErr(t, os.Symlink("/nonexistent", brokenfile))
 	f := testutil.TestOpenFile(t, logfile)
+	defer f.Close()
 
 	testutil.FatalIfErr(t, ta.PollLogPatterns())
 	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())

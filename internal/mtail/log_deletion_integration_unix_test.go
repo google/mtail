@@ -1,6 +1,9 @@
 // Copyright 2020 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
+//go:build unix
+// +build unix
+
 package mtail_test
 
 import (
@@ -13,6 +16,7 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
+// TestLogDeletion is a unix-only test because on Windows files with open read handles cannot be deleted.
 func TestLogDeletion(t *testing.T) {
 	testutil.SkipIfShort(t)
 	workdir := testutil.TestTempDir(t)

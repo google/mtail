@@ -1,15 +1,16 @@
 // Copyright 2019 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
+//go:build unix
+// +build unix
+
 package mtail_test
 
 import (
-	"net"
 	"os"
 	"path/filepath"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
@@ -22,16 +23,16 @@ func TestReadFromPipe(t *testing.T) {
 
 	logDir := filepath.Join(tmpDir, "logs")
 	progDir := filepath.Join(tmpDir, "progs")
-	testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
-	testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
+	testutil.FatalIfErr(t, os.Mkdir(logDir, 0o700))
+	testutil.FatalIfErr(t, os.Mkdir(progDir, 0o700))
 	testutil.Chdir(t, logDir)
 
 	logFile := filepath.Join(logDir, "logpipe")
 
-	testutil.FatalIfErr(t, unix.Mkfifo(logFile, 0600))
+	testutil.FatalIfErr(t, unix.Mkfifo(logFile, 0o600))
 
 	// TODO: race if this openfile happens after teststartserver.
-	f, err := os.OpenFile(logFile, os.O_RDWR|syscall.O_NONBLOCK, 0600)
+	f, err := os.OpenFile(logFile, os.O_RDWR|syscall.O_NONBLOCK, 0o600)
 	testutil.FatalIfErr(t, err)
 	defer func() {
 		testutil.FatalIfErr(t, f.Close())
@@ -58,8 +59,8 @@ func TestReadFromSocket(t *testing.T) {
 
 			logDir := filepath.Join(tmpDir, "logs")
 			progDir := filepath.Join(tmpDir, "progs")
-			testutil.FatalIfErr(t, os.Mkdir(logDir, 0700))
-			testutil.FatalIfErr(t, os.Mkdir(progDir, 0700))
+			testutil.FatalIfErr(t, os.Mkdir(logDir, 0o700))
+			testutil.FatalIfErr(t, os.Mkdir(progDir, 0o700))
 			testutil.Chdir(t, logDir)
 
 			logFile := filepath.Join(logDir, "sock")

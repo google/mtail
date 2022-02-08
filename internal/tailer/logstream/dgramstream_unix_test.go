@@ -1,6 +1,9 @@
 // Copyright 2020 Google Inc. All Rights Reserved.
 // This file is available under the Apache license.
 
+//go:build unix
+// +build unix
+
 package logstream_test
 
 import (
@@ -18,18 +21,20 @@ import (
 	"github.com/google/mtail/internal/waker"
 )
 
-func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
-	for _, scheme := range []string{"unix", "tcp"} {
+const dgramTimeout = 1 * time.Second
+
+func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
+	for _, scheme := range []string{"unixgram", "udp"} {
 		scheme := scheme
-		t.Run(scheme, testutil.TimeoutTest(time.Second, func(t *testing.T) { //nolint:thelper
+		t.Run(scheme, testutil.TimeoutTest(dgramTimeout, func(t *testing.T) { //nolint:thelper
 			var wg sync.WaitGroup
 
 			var addr string
 			switch scheme {
-			case "unix":
+			case "unixgram":
 				tmpDir := testutil.TestTempDir(t)
 				addr = filepath.Join(tmpDir, "sock")
-			case "tcp":
+			case "udp":
 				addr = fmt.Sprintf("[::]:%d", testutil.FreePort(t))
 			default:
 				t.Fatalf("bad scheme %s", scheme)
@@ -48,12 +53,13 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
 
-			awaken(0) // Sync past read
+			awaken(0) // sync past read
 
-			// Close the socket to signal to the socketStream to shut down.
-			testutil.FatalIfErr(t, s.Close())
+			ss.Stop()
 
-			ss.Stop() // stop after connection closes
+			// "Close" the socket by sending zero bytes, which after Stop tells the stream to act as if we're done.
+			_, err = s.Write([]byte{})
+			testutil.FatalIfErr(t, err)
 
 			wg.Wait()
 			close(lines)
@@ -65,26 +71,27 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
 			cancel()
+			wg.Wait()
 
 			if !ss.IsComplete() {
-				t.Errorf("expecting socketstream to be complete because socket closed")
+				t.Errorf("expecting dgramstream to be complete because socket closed")
 			}
 		}))
 	}
 }
 
-func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
-	for _, scheme := range []string{"unix", "tcp"} {
+func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
+	for _, scheme := range []string{"unixgram", "udp"} {
 		scheme := scheme
-		t.Run(scheme, testutil.TimeoutTest(time.Second, func(t *testing.T) { //nolint:thelper
+		t.Run(scheme, testutil.TimeoutTest(dgramTimeout, func(t *testing.T) { //nolint:thelper
 			var wg sync.WaitGroup
 
 			var addr string
 			switch scheme {
-			case "unix":
+			case "unixgram":
 				tmpDir := testutil.TestTempDir(t)
 				addr = filepath.Join(tmpDir, "sock")
-			case "tcp":
+			case "udp":
 				addr = fmt.Sprintf("[::]:%d", testutil.FreePort(t))
 			default:
 				t.Fatalf("bad scheme %s", scheme)
@@ -103,9 +110,9 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
 
-			awaken(0) // Sync past read to ensure we read
+			awaken(0) // Synchronise past read.
 
-			cancel() // This cancellation should cause the stream to shut down immediately.
+			cancel() // This cancellation should cause the stream to shut down.
 
 			wg.Wait()
 			close(lines)
@@ -117,7 +124,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
 			if !ss.IsComplete() {
-				t.Errorf("expecting socketstream to be complete because cancel")
+				t.Errorf("expecting dgramstream to be complete because cancel")
 			}
 		}))
 	}

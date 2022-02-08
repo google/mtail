@@ -205,17 +205,20 @@ func (t *Tailer) AddPattern(pattern string) error {
 	if err != nil {
 		return err
 	}
+
+	path := pattern
 	switch u.Scheme {
 	default:
-		return fmt.Errorf("%w: %q in path pattern %q", ErrUnsupportedURLScheme, u.Scheme, pattern)
+		glog.V(2).Infof("%v: %q in path pattern %q, treating as path", ErrUnsupportedURLScheme, u.Scheme, pattern)
 	case "unix", "unixgram", "tcp", "udp":
 		// Keep the scheme.
 		glog.V(2).Infof("AddPattern: socket %q", pattern)
 		t.socketPaths = append(t.socketPaths, pattern)
 		return nil
 	case "", "file":
+		path = u.Path
 	}
-	absPath, err := filepath.Abs(u.Path)
+	absPath, err := filepath.Abs(path)
 	if err != nil {
 		glog.V(2).Infof("Couldn't canonicalize path %q: %s", u.Path, err)
 		return err

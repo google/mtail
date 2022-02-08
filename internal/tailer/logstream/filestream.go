@@ -63,7 +63,7 @@ func (fs *fileStream) LastReadTime() time.Time {
 }
 
 func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, streamFromStart bool) error {
-	fd, err := os.OpenFile(fs.pathname, os.O_RDONLY, 0600)
+	fd, err := os.OpenFile(fs.pathname, os.O_RDONLY, 0o600)
 	if err != nil {
 		logErrors.Add(fs.pathname, 1)
 		return err

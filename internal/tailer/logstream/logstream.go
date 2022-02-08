@@ -59,9 +59,11 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 		return nil, err
 	}
 	glog.Infof("Parsed url as %v", u)
+
+	path := pathname
 	switch u.Scheme {
 	default:
-		return nil, fmt.Errorf("%w %q in path %q", ErrUnsupportedURLScheme, u.Scheme, pathname)
+		glog.V(2).Infof("%v: %q in path pattern %q, treating as path", ErrUnsupportedURLScheme, u.Scheme, pathname)
 	case "unixgram":
 		return newDgramStream(ctx, wg, waker, u.Scheme, u.Path, lines)
 	case "unix":
@@ -71,17 +73,18 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	case "udp":
 		return newDgramStream(ctx, wg, waker, u.Scheme, u.Host, lines)
 	case "", "file":
+		path = u.Path
 	}
-	fi, err := os.Stat(u.Path)
+	fi, err := os.Stat(path)
 	if err != nil {
-		logErrors.Add(u.Path, 1)
+		logErrors.Add(path, 1)
 		return nil, err
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():
-		return newFileStream(ctx, wg, waker, u.Path, fi, lines, oneShot)
+		return newFileStream(ctx, wg, waker, path, fi, lines, oneShot)
 	case m&os.ModeType == os.ModeNamedPipe:
-		return newPipeStream(ctx, wg, waker, u.Path, fi, lines)
+		return newPipeStream(ctx, wg, waker, path, fi, lines)
 	// TODO(jaq): in order to listen on an existing socket filepath, we must unlink and recreate it
 	// case m&os.ModeType == os.ModeSocket:
 	// 	return newSocketStream(ctx, wg, waker, pathname, lines)

@@ -106,7 +106,7 @@ var expectedMetrics = metrics.MetricSlice{
 		LabelValues: []*metrics.LabelValue{
 			{
 				Labels: []string{},
-				Value:  datum.MakeString("hi", time.Date(2018, 6, 16, 18, 04, 0, 0, time.UTC)),
+				Value:  datum.MakeString("hi", time.Date(2018, 6, 16, 18, 4, 0, 0, time.UTC)),
 			},
 		},
 	},

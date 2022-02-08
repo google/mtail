@@ -19,14 +19,15 @@ func TestPartialLineRead(t *testing.T) {
 
 	logDir := filepath.Join(tmpDir, "logs")
 	progDir := filepath.Join(tmpDir, "progs")
-	err := os.Mkdir(logDir, 0700)
+	err := os.Mkdir(logDir, 0o700)
 	testutil.FatalIfErr(t, err)
-	err = os.Mkdir(progDir, 0700)
+	err = os.Mkdir(progDir, 0o700)
 	testutil.FatalIfErr(t, err)
 
 	logFile := filepath.Join(logDir, "log")
 
 	f := testutil.TestOpenFile(t, logFile)
+	defer f.Close()
 
 	m, stopM := mtail.TestStartServer(t, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
