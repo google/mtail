@@ -18,7 +18,10 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runs-on: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -31,7 +34,7 @@ jobs:
             ~/go/pkg/mod              # Module download cache
             ~/.cache/go-build         # Build cache (Linux)
             ~/Library/Caches/go-build # Build cache (Mac)
-            '%LocalAppData%\go-build' # Build cache (Windows)      
+            '%LocalAppData%\go-build' # Build cache (Windows)
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
