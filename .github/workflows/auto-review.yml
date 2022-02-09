@@ -32,8 +32,8 @@ jobs:
       - uses: lewagon/wait-on-check-action@v1.1.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          check-name: test
           repo-token: ${{ github.token }}
+          check-regexp: "test.*"
           wait-interval: 60
 
       - uses: "actions/github-script@v5"
