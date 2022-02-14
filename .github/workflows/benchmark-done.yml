@@ -13,7 +13,7 @@ jobs:
       # post benchmark results
       pull-requests: write
     steps:
-      - uses: actions/github-script@v5
+      - uses: actions/github-script@v6
         with:
           script: |
             var artifacts = await github.rest.actions.listWorkflowRunArtifacts({
