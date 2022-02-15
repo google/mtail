@@ -36,7 +36,7 @@ jobs:
           check-regexp: "test.*"
           wait-interval: 60
 
-      - uses: "actions/github-script@v5"
+      - uses: "actions/github-script@v6"
         with:
           github-token: ${{ github.token }}
           script: |
