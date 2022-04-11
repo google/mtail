@@ -54,7 +54,7 @@ jobs:
         if: always()
         with:
           file: coverprofile
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: always()
         with:
           name: test-results
