@@ -92,6 +92,7 @@ type Metric struct {
 	labelValuesMap map[string]*LabelValue
 	Source         string        `json:",omitempty"`
 	Buckets        []datum.Range `json:",omitempty"`
+	Limit          int64         `json:",omitempty"`
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).

@@ -161,6 +161,8 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		}
 
 		m.Hidden = n.Hidden
+		m.Limit = n.Limit
+
 		n.Symbol.Binding = m
 		n.Symbol.Addr = len(c.obj.Metrics)
 		c.obj.Metrics = append(c.obj.Metrics, m)
