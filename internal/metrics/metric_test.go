@@ -252,3 +252,23 @@ func TestRemoveMetricLabelValue(t *testing.T) {
 		t.Errorf("label value still exists")
 	}
 }
+
+func TestMetricLabelValueRemovePastLimit(t *testing.T) {
+	m := NewMetric("test", "prog", Counter, Int, "foo")
+	m.Limit = 1
+	_, err := m.GetDatum("a")
+	testutil.FatalIfErr(t, err)
+	m.RemoveOldestDatum()
+	_, err = m.GetDatum("b")
+	testutil.FatalIfErr(t, err)
+	m.RemoveOldestDatum()
+	_, err = m.GetDatum("c")
+	testutil.FatalIfErr(t, err)
+	m.RemoveOldestDatum()
+	if len(m.LabelValues) > 2 {
+		t.Errorf("Expected 2 labelvalues got %#v", m.LabelValues)
+	}
+	if x := m.FindLabelValueOrNil([]string{"a"}); x != nil {
+		t.Errorf("found label a which is unexpected: %#v", x)
+	}
+}

@@ -340,7 +340,8 @@ For example, parsing syslog timestamps is something you may only wish to do
 once, as it's expensive to match (and difficult to read!)
 
 ```
-counter foo counter bar
+counter foo
+counter bar
 
 /^(?P<date>\w+\s+\d+\s+\d+:\d+:\d+)/ {
   strptime($date, "Jan 02 15:04:05")
@@ -539,6 +540,8 @@ that log line.
 
 #### Variable Storage Management
 
+##### `del`
+
 `mtail` performs no implicit garbage collection in the metric storage. The
 program can hint to the virtual machine that a specific datum in a dimensioned
 metric is no longer going to be used with the `del` keyword.
@@ -574,6 +577,21 @@ The del-after form takes any time period supported by the go
 [`time.ParseDuration`](https://golang.org/pkg/time/#ParseDuration) function.
 
 Expiry is only processed once ever hour, so durations shorter than 1h won't take effect until the next hour has passed.
+
+This command only makes sense for dimensioned metrics.
+
+##### `limit`
+
+A size limit can be specified on a metric with the modifier `limit`.
+
+```
+counter bytes_total by operation limit 500
+```
+
+When the garbage collection run encounters a variable with size limit that is over its size limit, it will remove the oldest values until the whole metric is below its limit again.  Oldest values are chosen by the timestamp of the datum.
+
+This modifier only makes sense for dimensioned metrics.
+
 
 ### Stopping the program
 

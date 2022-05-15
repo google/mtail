@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/pkg/errors"
 )
@@ -92,6 +93,7 @@ type Metric struct {
 	labelValuesMap map[string]*LabelValue
 	Source         string        `json:",omitempty"`
 	Buckets        []datum.Range `json:",omitempty"`
+	Limit          int           `json:",omitempty"`
 }
 
 // NewMetric returns a new empty metric of dimension len(keys).
@@ -155,6 +157,7 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	if lv := m.FindLabelValueOrNil(labelvalues); lv != nil {
 		d = lv.Value
 	} else {
+		// TODO Check m.Limit and expire old data
 		switch m.Type {
 		case Int:
 			d = datum.NewInt()
@@ -175,6 +178,20 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 		}
 	}
 	return d, nil
+}
+
+// RemoveOldestDatum scans the Metric's LabelValues for the Datum with the oldest timestamp, and removes it.
+func (m *Metric) RemoveOldestDatum() {
+	var oldestLV *LabelValue
+	for _, lv := range m.LabelValues {
+		if oldestLV == nil || lv.Value.TimeUTC().Before(oldestLV.Value.TimeUTC()) {
+			oldestLV = lv
+		}
+	}
+	if oldestLV != nil {
+		glog.V(1).Infof("removeOldest: removing oldest LV: %v", oldestLV)
+		m.RemoveDatum(oldestLV.Labels...)
+	}
 }
 
 // RemoveDatum removes the Datum described by labelvalues from the Metric m.

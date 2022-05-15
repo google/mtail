@@ -208,6 +208,7 @@ type VarDecl struct {
 	Name         string
 	Hidden       bool
 	Keys         []string
+	Limit        int64
 	Buckets      []float64
 	Kind         metrics.Kind
 	ExportedName string
