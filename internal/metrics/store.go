@@ -151,12 +151,17 @@ func (s *Store) Range(f func(*Metric) error) error {
 	return nil
 }
 
-// Gc iterates through the Store looking for metrics that have been marked
-// for expiry, and removing them if their expiration time has passed.
+// Gc iterates through the Store looking for metrics that can be tidied up,
+// if they are passed their expiry or sized greater than their limit.
 func (s *Store) Gc() error {
 	glog.Info("Running Store.Expire()")
 	now := time.Now()
 	return s.Range(func(m *Metric) error {
+		if m.Limit > 0 && len(m.LabelValues) >= m.Limit {
+			for i := len(m.LabelValues); i > m.Limit; i-- {
+				m.RemoveOldestDatum()
+			}
+		}
 		for _, lv := range m.LabelValues {
 			if lv.Expiry <= 0 {
 				continue

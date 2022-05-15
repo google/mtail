@@ -161,7 +161,14 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 		}
 
 		m.Hidden = n.Hidden
-		m.Limit = n.Limit
+		// int is int64 only on 64bit platforms.  To be fair MaxInt is a
+		// ridiculously excessive size for this anyway, you're going to use 2GiB
+		// x sizeof(datum) in a single metric.
+		if n.Limit > math.MaxInt {
+			c.errorf(n.Pos(), "limit %d too large; max %d", n.Limit, math.MaxInt)
+			return nil, n
+		}
+		m.Limit = int(n.Limit)
 
 		n.Symbol.Binding = m
 		n.Symbol.Addr = len(c.obj.Metrics)
