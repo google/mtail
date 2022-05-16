@@ -149,5 +149,4 @@ func TestExpireOversizeDatum(t *testing.T) {
 	if x := m.FindLabelValueOrNil([]string{"a"}); x != nil {
 		t.Errorf("found label a which is unexpected: %#v", x)
 	}
-
 }
