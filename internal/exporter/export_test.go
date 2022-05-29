@@ -196,7 +196,7 @@ func TestMetricToStatsd(t *testing.T) {
 	}
 
 	multiLabelMetric := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "c", "a", "b")
-	d, _ = multiLabelMetric.GetDatum("x","z","y")
+	d, _ = multiLabelMetric.GetDatum("x", "z", "y")
 	datum.SetInt(d, 37, ts)
 	r = FakeSocketWrite(metricToStatsd, multiLabelMetric)
 	expected = []string{"prog.bar.a.z.b.y.c.x:37|g"}
