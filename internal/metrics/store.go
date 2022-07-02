@@ -162,7 +162,8 @@ func (s *Store) Gc() error {
 				m.RemoveOldestDatum()
 			}
 		}
-		for _, lv := range m.LabelValues {
+		for i := 0; i < len(m.LabelValues); i++ {
+			lv := m.LabelValues[i]
 			if lv.Expiry <= 0 {
 				continue
 			}
@@ -171,6 +172,7 @@ func (s *Store) Gc() error {
 				if err != nil {
 					return err
 				}
+				i--
 			}
 		}
 		return nil
