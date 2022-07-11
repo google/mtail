@@ -107,7 +107,8 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			if count > 0 {
 				total += count
 				glog.V(2).Infof("%v: decode and send", fd)
-				needSend := append(lastBytes, b[:count]...)
+				needSend := lastBytes
+				needSend = append(needSend, b[:count]...)
 				sendCount := decodeAndSend(ctx, fs.lines, fs.pathname, len(needSend), needSend, partial)
 				if sendCount < len(needSend) {
 					lastBytes = append([]byte{}, needSend[sendCount:]...)
