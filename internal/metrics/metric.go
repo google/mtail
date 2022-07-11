@@ -209,7 +209,6 @@ func (m *Metric) RemoveDatum(labelvalues ...string) error {
 			if lv == olv {
 				// remove from the slice
 				m.LabelValues = append(m.LabelValues[:i], m.LabelValues[i+1:]...)
-				i--
 				delete(m.labelValuesMap, k)
 				break
 			}

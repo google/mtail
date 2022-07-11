@@ -172,7 +172,7 @@ func TestExpireManyMetrics(t *testing.T) {
 			t.Error(err)
 		}
 		datum.SetInt(d, 1, time.Now().Add(-time.Hour))
-		lv := m.FindLabelValueOrNil([]string{strconv.Itoa(i)})
+		lv = m.FindLabelValueOrNil([]string{strconv.Itoa(i)})
 		if lv == nil {
 			t.Fatal("couldn't find lv")
 		}
