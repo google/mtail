@@ -82,6 +82,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		glog.V(2).Infof("%v: seeked to end", fd)
 	}
 	b := make([]byte, defaultReadBufferSize)
+	var lastBytes []byte
 	partial := bytes.NewBufferString("")
 	started := make(chan struct{})
 	var total int
@@ -106,7 +107,14 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			if count > 0 {
 				total += count
 				glog.V(2).Infof("%v: decode and send", fd)
-				decodeAndSend(ctx, fs.lines, fs.pathname, count, b[:count], partial)
+				needSend := lastBytes
+				needSend = append(needSend, b[:count]...)
+				sendCount := decodeAndSend(ctx, fs.lines, fs.pathname, len(needSend), needSend, partial)
+				if sendCount < len(needSend) {
+					lastBytes = append([]byte{}, needSend[sendCount:]...)
+				} else {
+					lastBytes = []byte{}
+				}
 				fs.mu.Lock()
 				fs.lastReadTime = time.Now()
 				fs.mu.Unlock()
