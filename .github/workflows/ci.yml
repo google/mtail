@@ -51,7 +51,7 @@ jobs:
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
              echo ${{ github.event.pull_request.head.sha }}  > test-results/sha-number
           else
-             echo ${{ github.sha }} > test-result/sha-number
+             echo ${{ github.sha }} > test-results/sha-number
           fi
           make --debug junit-regtest TESTCOVERPROFILE=coverprofile
         shell: bash
