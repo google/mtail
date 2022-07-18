@@ -401,7 +401,7 @@ pattern `some event`, and if it does match, increments `variable`.
 
 #### Types
 
-`mtail` metrics have a *kind* and a *type*.  The *kind* effects how the metric is recorded, and the *type* describes the data being recorded.
+`mtail` metrics have a *kind* and a *type*.  The *kind* affects how the metric is recorded, and the *type* describes the data being recorded.
 
 Ordinarily `mtail` doesn't treat kinds specially, except when they are being exported.
 
@@ -456,7 +456,7 @@ bug!)
 *   `int(x)`, a function of one argument performs type conversion to integer. If
     `x` is a type that can be converted to integer, it does so. If the type of
     `x` cannot be converted to an integer, a compile error is triggered. If the
-    valye of `x` cannot be converted to an integer, then a runtime error is
+    value of `x` cannot be converted to an integer, then a runtime error is
     triggered.
 *   `float(x)`, a function of one argument that performs type conversion to
     floating point numbers. The same rules apply as for `int()` above.
@@ -535,7 +535,7 @@ The advantage of limiting pattern matches to specific values is that `mtail` can
 generate faster bytecode if it knows at compile-time the types to expect. If
 `mtail` can't infer the value types, they default to `String` and `mtail` will
 attempt a value conversion at runtime if necessary. Runtime conversion errors
-will be emitted to the standard INFO log, and terminate program exection for
+will be emitted to the standard INFO log, and terminate program execution for
 that log line.
 
 #### Variable Storage Management
