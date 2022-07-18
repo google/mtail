@@ -362,7 +362,7 @@ log line's parsed time, once they match a line.
 #### Decorated actions
 
 Decorated actions are an inversion of nested actions. They allow the program to
-define repetetive functions that perform the same extraction across many
+define repetitive functions that perform the same extraction across many
 different actions.
 
 For example, most log file formats start with a timestamp prefix. To reduce
