@@ -202,10 +202,18 @@ var DumpBytecode = &niladicOption{
 	},
 }
 
-// Debug enables debug http endpoints
-var HttpDebugEndpoints = &niladicOption{
+// HttpDebugEndpoints enables debug http endpoints
+var HTTPDebugEndpoints = &niladicOption{
 	func(m *Server) error {
 		m.httpDebugEndpoints = true
+		return nil
+	},
+}
+
+// HttpInfoEndpoints enables info http endpoints
+var HTTPInfoEndpoints = &niladicOption{
+	func(m *Server) error {
+		m.httpInfoEndpoints = true
 		return nil
 	},
 }
