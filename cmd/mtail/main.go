@@ -73,6 +73,7 @@ var (
 	// Debugging flags.
 	blockProfileRate     = flag.Int("block_profile_rate", 0, "Nanoseconds of block time before goroutine blocking events reported. 0 turns off.  See https://golang.org/pkg/runtime/#SetBlockProfileRate")
 	mutexProfileFraction = flag.Int("mutex_profile_fraction", 0, "Fraction of mutex contention events reported.  0 turns off.  See http://golang.org/pkg/runtime/#SetMutexProfileFraction")
+	httpDebugEndpoints   = flag.Bool("http_debugging_endpoint", true, "Enable debugging endpoints.")
 
 	// Tracing.
 	jaegerEndpoint    = flag.String("jaeger_endpoint", "", "If set, collector endpoint URL of jaeger thrift service")
@@ -206,6 +207,9 @@ func main() {
 	}
 	if *dumpBytecode {
 		opts = append(opts, mtail.DumpBytecode)
+	}
+	if *httpDebugEndpoints {
+		opts = append(opts, mtail.HttpDebugEndpoints)
 	}
 	if *syslogUseCurrentYear {
 		opts = append(opts, mtail.SyslogUseCurrentYear)
