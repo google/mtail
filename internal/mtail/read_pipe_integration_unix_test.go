@@ -7,10 +7,12 @@
 package mtail_test
 
 import (
+	"net"
 	"os"
 	"path/filepath"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"

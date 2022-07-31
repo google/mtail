@@ -6,6 +6,27 @@
 
 package mtail_test
 
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"os"
+	"path/filepath"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/golang/glog"
+	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/google/mtail/internal/mtail"
+	"github.com/google/mtail/internal/testutil"
+	"github.com/google/mtail/internal/waker"
+	"golang.org/x/sys/unix"
+)
+
 // TestFilePipeStreamComparison is a unix-specific test since unix.Mkfifo is not defined on Windows.
 // Two mtails both alike in dignity.
 func TestFilePipeStreamComparison(t *testing.T) {
