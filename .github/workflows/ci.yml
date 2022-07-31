@@ -28,19 +28,7 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      - uses: actions/cache@v3
-        id: cache
-        with:
-          path: |
-            ~/go/pkg/mod              # Module download cache
-            ~/.cache/go-build         # Build cache (Linux)
-            ~/Library/Caches/go-build # Build cache (Mac)
-            '%LocalAppData%\go-build' # Build cache (Windows)
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
       - name: install deps
-        if: steps.cache.output.cache-hit != 'true'
         run: go mod download
       - name: build
         run: make --debug all
