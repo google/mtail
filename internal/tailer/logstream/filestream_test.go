@@ -91,6 +91,52 @@ func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 	wg.Wait()
 }
 
+func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
+	var wg sync.WaitGroup
+
+	tmpDir := testutil.TestTempDir(t)
+
+	name := filepath.Join(tmpDir, "log")
+	f := testutil.TestOpenFile(t, name)
+	defer f.Close()
+
+	lines := make(chan *logline.LogLine, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	waker, awaken := waker.NewTest(ctx, 1)
+	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
+	testutil.FatalIfErr(t, err)
+	awaken(1)
+
+	s := string([]byte{0xF1})
+	// 0xF1 = 11110001 , a byte signaling the start of a unicode character that
+	// is 4 bytes long.
+	// The following characters are regular single-byte
+	// characters, which don't start with a 1 bit to signal it's part of a
+	// unicode character. This will result in a RuneError.
+	for i := 0; i < 100; i++ {
+		s += "a"
+	}
+
+	testutil.WriteString(t, f, s+"\n")
+	awaken(1)
+
+	fs.Stop()
+	wg.Wait()
+	close(lines)
+	received := testutil.LinesReceived(lines)
+	expected := []*logline.LogLine{
+		{context.TODO(), name, s[1:]},
+	}
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	if !fs.IsComplete() {
+		t.Errorf("expecting filestream to be complete because stopped")
+	}
+	cancel()
+	wg.Wait()
+
+}
+
 func TestFileStreamTruncation(t *testing.T) {
 	var wg sync.WaitGroup
 

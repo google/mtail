@@ -21,12 +21,15 @@ func decodeAndSend(ctx context.Context, lines chan<- *logline.LogLine, pathname 
 	var (
 		r     rune
 		width int
-		count int
 	)
-	for i := 0; i < len(b) && i < n; i += width {
+	var i int
+	for ; i < len(b) && i < n; i += width {
 		r, width = utf8.DecodeRune(b[i:])
 		if r == utf8.RuneError {
-			return count
+			if len(b)-i > 10 {
+				continue
+			}
+			return i
 		}
 		// Most file-based log sources will end with \n on Unixlike systems.
 		// On Windows they appear to be both \r\n.  syslog disallows \r (and \t
@@ -43,9 +46,8 @@ func decodeAndSend(ctx context.Context, lines chan<- *logline.LogLine, pathname 
 		default:
 			partial.WriteRune(r)
 		}
-		count += width
 	}
-	return count
+	return i
 }
 
 func sendLine(ctx context.Context, pathname string, partial *bytes.Buffer, lines chan<- *logline.LogLine) {
