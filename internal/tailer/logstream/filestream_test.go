@@ -110,9 +110,10 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 	s := string([]byte{0xF1})
 	// 0xF1 = 11110001 , a byte signaling the start of a unicode character that
 	// is 4 bytes long.
-	// The following characters are regular single-byte
-	// characters, which don't start with a 1 bit to signal it's part of a
-	// unicode character. This will result in a RuneError.
+
+	// The following characters are regular single-byte characters.
+	// utf8.DecodeRune will expect bytes that start with a 1 after the initial
+	// unicode character 0xF1. This will result in a RuneError.
 	for i := 0; i < 100; i++ {
 		s += "a"
 	}
@@ -134,7 +135,6 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 	}
 	cancel()
 	wg.Wait()
-
 }
 
 func TestFileStreamTruncation(t *testing.T) {
