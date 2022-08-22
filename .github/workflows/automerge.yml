@@ -54,6 +54,6 @@ jobs:
       # auto-approve-action requires write on pull-requests
       pull-requests: write
     steps:
-      - uses: hmarr/auto-approve-action@24ec4c8cc344fe1cdde70ff37e55ace9e848a1d8
+      - uses: hmarr/auto-approve-action@9ae347e9f84a25da76c915a406cb17cfece1716d
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
