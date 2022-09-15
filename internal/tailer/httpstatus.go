@@ -20,7 +20,7 @@ const tailerTemplate = `
 {{end}}
 </ul>
 <h3>Log files watched</h3>
-<table border=1>
+<table border="1">
 <tr>
 <th>pathname</th>
 <th>errors</th>
@@ -38,7 +38,6 @@ const tailerTemplate = `
 </tr>
 {{end}}
 </table>
-</ul>
 `
 
 // WriteStatusHTML emits the Tailer's state in HTML format to the io.Writer w.

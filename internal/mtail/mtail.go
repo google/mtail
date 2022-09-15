@@ -107,11 +107,11 @@ func (m *Server) initHTTPServer() error {
 		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	}
 	if m.httpInfoEndpoints {
-		mux.Handle("/", m)
 		mux.HandleFunc("/favicon.ico", FaviconHandler)
 		mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
 		mux.Handle("/progz", http.HandlerFunc(m.r.ProgzHandler))
 	}
+	mux.Handle("/", m)
 	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	mux.HandleFunc("/graphite", http.HandlerFunc(m.e.HandleGraphite))

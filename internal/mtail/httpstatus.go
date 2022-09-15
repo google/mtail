@@ -11,6 +11,7 @@ import (
 )
 
 const statusTemplate = `
+<!DOCTYPE html>
 <html>
 <head>
 <title>mtail on {{.BindAddress}}</title>
@@ -18,8 +19,13 @@ const statusTemplate = `
 <body>
 <h1>mtail on {{.BindAddress}}</h1>
 <p>Build: {{.BuildInfo}}</p>
-<p>Metrics: <a href="/json">json</a>, <a href="/graphite">graphite</a>, <a href="/metrics">prometheus</a>, <a href="/varz">varz</a></p>
-<p>Debug: <a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a>, <a href="/tracez">tracez</a>, <a href="/progz">progz</a></p>
+<p>Metrics: <a href="/json">json</a>, <a href="/graphite">graphite</a>, <a href="/metrics">prometheus</a></p>
+<p>Info: {{ if .HTTPInfoEndpoints }}<a href="/varz">varz</a>, <a href="/progz">progz</a> <a href="/tracez">tracez</a></p>{{ else }} disabled {{ end }}</p>
+<p>Debug: {{ if .HTTPDebugEndpoints }}<a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a>{{ else }} disabled {{ end }}</p>
+`
+const statusTemplateEnd = `
+</body>
+</html>
 `
 
 // ServeHTTP satisfies the http.Handler interface, and is used to serve the
@@ -31,25 +37,41 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	te, err := template.New("statusend").Parse(statusTemplateEnd)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	data := struct {
-		BindAddress string
-		BuildInfo   string
+		BindAddress        string
+		BuildInfo          string
+		HTTPDebugEndpoints bool
+		HTTPInfoEndpoints  bool
 	}{
 		m.listener.Addr().String(),
 		m.buildInfo.String(),
+		m.httpDebugEndpoints,
+		m.httpInfoEndpoints,
 	}
 	w.Header().Add("Content-type", "text/html")
 	w.WriteHeader(http.StatusOK)
 	if err = t.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	err = m.r.WriteStatusHTML(w)
-	if err != nil {
-		glog.Warningf("Error while writing loader status: %s", err)
+	if m.httpInfoEndpoints {
+		err = m.r.WriteStatusHTML(w)
+		if err != nil {
+			glog.Warningf("Error while writing loader status: %s", err)
+		}
+		err = m.t.WriteStatusHTML(w)
+		if err != nil {
+			glog.Warningf("Error while writing tailer status: %s", err)
+		}
 	}
-	err = m.t.WriteStatusHTML(w)
-	if err != nil {
-		glog.Warningf("Error while writing tailer status: %s", err)
+
+	if err = te.Execute(w, data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 

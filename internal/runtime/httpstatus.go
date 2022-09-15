@@ -14,7 +14,7 @@ import (
 
 const loaderTemplate = `
 <h2 id="loader">Program Loader</h2>
-<table border=1>
+<table border="1">
 <tr>
 <th>program name</th>
 <th>errors</th>
