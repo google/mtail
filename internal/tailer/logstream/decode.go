@@ -23,9 +23,20 @@ func decodeAndSend(ctx context.Context, lines chan<- *logline.LogLine, pathname 
 		width int
 		count int
 	)
-	for i := 0; i < len(b) && i < n; i += width {
+	var i int
+	for ; i < len(b) && i < n; i += width {
 		r, width = utf8.DecodeRune(b[i:])
 		if r == utf8.RuneError {
+			if len(b)-i > 10 {
+				// If there are more than enough bytes in the buffer
+				// after this, ignore the error as it's not fixable.
+				// If not, return so that the caller can try again
+				// with a larger buffer, in the event that a unicode
+				// character has been cut in half by the buffer.
+
+				count += width
+				continue
+			}
 			return count
 		}
 		// Most file-based log sources will end with \n on Unixlike systems.
@@ -43,6 +54,7 @@ func decodeAndSend(ctx context.Context, lines chan<- *logline.LogLine, pathname 
 		default:
 			partial.WriteRune(r)
 		}
+
 		count += width
 	}
 	return count
