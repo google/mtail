@@ -23,6 +23,7 @@ const statusTemplate = `
 <p>Info: {{ if .HTTPInfoEndpoints }}<a href="/varz">varz</a>, <a href="/progz">progz</a> <a href="/tracez">tracez</a></p>{{ else }} disabled {{ end }}</p>
 <p>Debug: {{ if .HTTPDebugEndpoints }}<a href="/debug/pprof">debug/pprof</a>, <a href="/debug/vars">debug/vars</a>{{ else }} disabled {{ end }}</p>
 `
+
 const statusTemplateEnd = `
 </body>
 </html>
