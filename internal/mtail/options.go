@@ -202,6 +202,22 @@ var DumpBytecode = &niladicOption{
 	},
 }
 
+// HttpDebugEndpoints enables debug http endpoints
+var HTTPDebugEndpoints = &niladicOption{
+	func(m *Server) error {
+		m.httpDebugEndpoints = true
+		return nil
+	},
+}
+
+// HttpInfoEndpoints enables info http endpoints
+var HTTPInfoEndpoints = &niladicOption{
+	func(m *Server) error {
+		m.httpInfoEndpoints = true
+		return nil
+	},
+}
+
 // SyslogUseCurrentYear instructs the Server to use the current year for year-less log timestamp during parsing.
 var SyslogUseCurrentYear = &niladicOption{
 	func(m *Server) error {
