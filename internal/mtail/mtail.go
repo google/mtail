@@ -47,9 +47,11 @@ type Server struct {
 
 	buildInfo BuildInfo // go build information
 
-	programPath string // path to programs to load
-	oneShot     bool   // if set, mtail reads log files from the beginning, once, then exits
-	compileOnly bool   // if set, mtail compiles programs then exits
+	programPath        string // path to programs to load
+	oneShot            bool   // if set, mtail reads log files from the beginning, once, then exits
+	compileOnly        bool   // if set, mtail compiles programs then exit
+	httpDebugEndpoints bool   // if set, mtail will enable debug endpoints
+	httpInfoEndpoints  bool   // if set, mtail will enable info endpoints for progz and varz
 }
 
 // initRuntime constructs a new runtime and performs the initial load of program files in the program directory.
@@ -96,19 +98,23 @@ func (m *Server) initHTTPServer() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/favicon.ico", FaviconHandler)
+	if m.httpDebugEndpoints {
+		mux.Handle("/debug/vars", expvar.Handler())
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	}
+	if m.httpInfoEndpoints {
+		mux.HandleFunc("/favicon.ico", FaviconHandler)
+		mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
+		mux.Handle("/progz", http.HandlerFunc(m.r.ProgzHandler))
+	}
 	mux.Handle("/", m)
-	mux.Handle("/progz", http.HandlerFunc(m.r.ProgzHandler))
-	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
+	mux.HandleFunc("/json", http.HandlerFunc(m.e.HandleJSON))
 	mux.HandleFunc("/graphite", http.HandlerFunc(m.e.HandleGraphite))
-	mux.HandleFunc("/varz", http.HandlerFunc(m.e.HandleVarz))
-	mux.Handle("/debug/vars", expvar.Handler())
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	zpages.Handle(mux, "/")
 
 	srv := &http.Server{
