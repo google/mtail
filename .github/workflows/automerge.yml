@@ -39,7 +39,7 @@ jobs:
       # wait-on-check requires only checks read
       checks: read
     steps:
-      - uses: lewagon/wait-on-check-action@v1.1.2
+      - uses: lewagon/wait-on-check-action@v1.2.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           check-regexp: "test.*"
