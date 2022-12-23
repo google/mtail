@@ -179,7 +179,7 @@ func (e *Exporter) writeSocketMetrics(c io.Writer, f formatter, exportTotal *exp
 			if err == nil {
 				exportSuccess.Add(1)
 			} else {
-				return errors.Errorf("write error: %s\n", err)
+				return errors.Errorf("write error: %s", err)
 			}
 		}
 		m.RUnlock()

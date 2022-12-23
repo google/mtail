@@ -163,7 +163,7 @@ func (r *Runtime) CompileAndRun(name string, input io.Reader) error {
 	}
 	if obj == nil {
 		ProgLoadErrors.Add(name, 1)
-		return errors.Errorf("Internal error: Compilation failed for %s: No program returned, but no errors.", name)
+		return errors.Errorf("internal error: compilation failed for %s: no program returned, but no errors", name)
 	}
 	v := vm.New(name, obj, r.syslogUseCurrentYear, r.overrideLocation, r.logRuntimeErrors, r.trace)
 
