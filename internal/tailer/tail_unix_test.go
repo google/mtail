@@ -45,6 +45,7 @@ func TestTailerOpenRetries(t *testing.T) {
 	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
 	glog.Info("openfile")
 	f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
+	//nolint:staticcheck // test code
 	defer f.Close()
 	testutil.FatalIfErr(t, err)
 	testutil.FatalIfErr(t, ta.PollLogPatterns())

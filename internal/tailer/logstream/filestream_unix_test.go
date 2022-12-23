@@ -123,6 +123,7 @@ func TestFileStreamOpenFailure(t *testing.T) {
 
 	name := filepath.Join(tmpDir, "log")
 	f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
+	//nolint:staticcheck // test code
 	defer f.Close()
 
 	testutil.FatalIfErr(t, err)
