@@ -11,6 +11,9 @@ linters-settings:
     check-shadowing: true
     disable:
       composites # same as exhaustruct below
+  asasalint:
+    exclude:
+      - glog\.Infof
 
 linters:
   presets:
