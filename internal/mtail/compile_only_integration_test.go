@@ -5,7 +5,7 @@ package mtail_test
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -19,7 +19,7 @@ func TestBadProgramFailsCompilation(t *testing.T) {
 	testutil.SkipIfShort(t)
 	progDir := testutil.TestTempDir(t)
 
-	err := ioutil.WriteFile(filepath.Join(progDir, "bad.mtail"), []byte("asdfasdf\n"), 0o666)
+	err := os.WriteFile(filepath.Join(progDir, "bad.mtail"), []byte("asdfasdf\n"), 0o666)
 	testutil.FatalIfErr(t, err)
 
 	ctx := context.Background()

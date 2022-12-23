@@ -4,7 +4,6 @@
 package testutil
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,7 +12,7 @@ import (
 // TestTempDir creates a temporary directory for use during tests, returning the pathname.
 func TestTempDir(tb testing.TB) string {
 	tb.Helper()
-	name, err := ioutil.TempDir("", "mtail-test")
+	name, err := os.MkdirTemp("", "mtail-test")
 	if err != nil {
 		tb.Fatal(err)
 	}

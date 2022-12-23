@@ -11,7 +11,6 @@ import (
 	"crypto/sha256"
 	"expvar"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -58,7 +57,7 @@ func (r *Runtime) LoadAllPrograms() error {
 	}
 	switch {
 	case s.IsDir():
-		fis, rerr := ioutil.ReadDir(r.programPath)
+		dirents, rerr := os.ReadDir(r.programPath)
 		if rerr != nil {
 			return errors.Wrapf(rerr, "Failed to list programs in %q", r.programPath)
 		}
@@ -70,19 +69,19 @@ func (r *Runtime) LoadAllPrograms() error {
 			markDeleted[name] = struct{}{}
 		}
 		r.handleMu.RUnlock()
-		for _, fi := range fis {
-			if fi.IsDir() {
+		for _, dirent := range dirents {
+			if dirent.IsDir() {
 				continue
 			}
-			err = r.LoadProgram(filepath.Join(r.programPath, fi.Name()))
+			err = r.LoadProgram(filepath.Join(r.programPath, dirent.Name()))
 			if err != nil {
 				if r.errorsAbort {
 					return err
 				}
 				glog.Warning(err)
 			}
-			glog.Infof("unmarking %s", filepath.Base(fi.Name()))
-			delete(markDeleted, filepath.Base(fi.Name()))
+			glog.Infof("unmarking %s", filepath.Base(dirent.Name()))
+			delete(markDeleted, filepath.Base(dirent.Name()))
 		}
 		for name := range markDeleted {
 			glog.Infof("unloading %s", name)
