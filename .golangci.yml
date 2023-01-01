@@ -9,6 +9,11 @@ run:
 linters-settings:
   govet:
     check-shadowing: true
+    disable:
+      composites # same as exhaustruct below
+  asasalint:
+    exclude:
+      - glog\.Infof
 
 linters:
   presets:
@@ -31,6 +36,7 @@ linters:
     - errcheck # handled by gosec, lots of false posi
     - exhaustive # this false-positives for switches with a default
     - exhaustivestruct # too noisy, labelling fields is not my jam
+    - exhaustruct # above, renamed
     - forbidigo # exclude non prod tools
     - forcetypeassert # too many at the moment
     - funlen    # My tests will be as long as they need to be thanks

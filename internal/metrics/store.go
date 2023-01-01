@@ -40,7 +40,7 @@ func (s *Store) Add(m *Metric) error {
 		t := s.Metrics[m.Name][0].Kind
 		if m.Kind != t {
 			s.searchMu.RUnlock()
-			return errors.Errorf("Metric %s has different kind %v to existing %v.", m.Name, m.Kind, t)
+			return errors.Errorf("metric %s has different kind %v to existing %v", m.Name, m.Kind, t)
 		}
 
 		// To avoid duplicate metrics:

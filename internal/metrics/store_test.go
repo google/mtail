@@ -63,11 +63,9 @@ func TestDuplicateMetric(t *testing.T) {
 	}
 }
 
-/* A program can add a metric with the same name and
-   of different type.
-   Prometheus behavior in this case is undefined.
-   @see https://github.com/google/mtail/issues/130
-*/
+// A program can add a metric with the same name and of different type.
+// Prometheus behavior in this case is undefined.  @see
+// https://github.com/google/mtail/issues/130
 func TestAddMetricDifferentType(t *testing.T) {
 	expected := 2
 	s := NewStore()

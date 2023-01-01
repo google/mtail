@@ -5,7 +5,7 @@ package exporter
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -59,7 +59,7 @@ func TestHandleGraphite(t *testing.T) {
 			if response.Code != 200 {
 				t.Errorf("response code not 200: %d", response.Code)
 			}
-			b, err := ioutil.ReadAll(response.Body)
+			b, err := io.ReadAll(response.Body)
 			if err != nil {
 				t.Errorf("failed to read response %s", err)
 			}

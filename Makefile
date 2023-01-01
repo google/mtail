@@ -90,10 +90,6 @@ GOSEC = $(GOBIN)/gosec
 $(GOSEC):
 	go install github.com/securego/gosec/v2/cmd/gosec@latest
 
-GOLANGCILINT = $(GOBIN)/golangci-lint
-$(GOLANGCILINT):
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
 
 .PHONY: clean covclean crossclean depclean veryclean
 clean: covclean crossclean
@@ -106,10 +102,12 @@ depclean:
 	rm -f .d/*  .*dep-stamp
 veryclean: clean depclean
 
+GOLANGCILINT_VERSION=v1.50.1
 # lint
 .PHONY: lint
-lint:  $(GOFILES) $(GOGENFILES) $(GOTESTFILES) | $(GOLANGCILINT)
-	$(GOLANGCILINT) run ./...
+lint:  $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
+	mkdir -p $(HOME)/.cache/golangci-lint/$(GOLANGCILINT_VERSION)
+	podman run --rm -v $(shell pwd):/app -v $(HOME)/.cache/golangci-lint/$(GOLANGCILINT_VERSION):/root/.cache -w /app golangci/golangci-lint:$(GOLANGCILINT_VERSION) golangci-lint run -v
 
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 version := $(shell git describe --tags --always --dirty)
