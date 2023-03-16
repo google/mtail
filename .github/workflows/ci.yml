@@ -24,7 +24,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -86,7 +86,7 @@ jobs:
       image: gcr.io/oss-fuzz-base/base-builder
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version: '^1.x'
       - uses: actions/cache@v3
