@@ -98,6 +98,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 
 			if n > 0 {
 				total += n
+				//nolint:contextcheck
 				decodeAndSend(ss.ctx, ss.lines, ss.address, n, b[:n], partial)
 				ss.mu.Lock()
 				ss.lastReadTime = time.Now()

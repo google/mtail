@@ -200,12 +200,14 @@ func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server,
 	if err := m.initExporter(); err != nil {
 		return nil, err
 	}
+	//nolint:contextcheck // TODO
 	if err := m.initRuntime(); err != nil {
 		return nil, err
 	}
 	if err := m.initTailer(); err != nil {
 		return nil, err
 	}
+	//nolint:contextcheck // TODO
 	if err := m.initHTTPServer(); err != nil {
 		return nil, err
 	}

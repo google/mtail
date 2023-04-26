@@ -143,6 +143,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 
 		if n > 0 {
 			total += n
+			//nolint:contextcheck
 			decodeAndSend(ss.ctx, ss.lines, ss.address, n, b[:n], partial)
 			ss.mu.Lock()
 			ss.lastReadTime = time.Now()
