@@ -41,7 +41,7 @@ func (ps *pipeStream) LastReadTime() time.Time {
 	return ps.lastReadTime
 }
 
-func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo) error {
+func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, _ os.FileInfo) error {
 	// Open in nonblocking mode because the write end of the pipe may not have started yet.
 	fd, err := os.OpenFile(ps.pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0o600)
 	if err != nil {

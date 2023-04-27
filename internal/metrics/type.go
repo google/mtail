@@ -39,6 +39,6 @@ func (t Type) String() string {
 }
 
 // Generate implements the quick.Generator interface for Type.
-func (Type) Generate(rand *rand.Rand, size int) reflect.Value {
+func (Type) Generate(rand *rand.Rand, _ int) reflect.Value {
 	return reflect.ValueOf(Type(rand.Intn(int(endType))))
 }

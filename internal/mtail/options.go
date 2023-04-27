@@ -261,7 +261,7 @@ var LogRuntimeErrors = &niladicOption{
 // JaegerReporter creates a new jaeger reporter that sends to the given Jaeger endpoint address.
 type JaegerReporter string
 
-func (opt JaegerReporter) apply(m *Server) error {
+func (opt JaegerReporter) apply(_ *Server) error {
 	je, err := jaeger.NewExporter(jaeger.Options{
 		CollectorEndpoint: string(opt),
 		Process: jaeger.Process{

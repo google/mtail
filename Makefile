@@ -104,7 +104,7 @@ veryclean: clean depclean
 
 # This version should match the one in .github/workflows/golangci-lint.yml
 GOLANGCILINT_VERSION=$(shell grep 'version: v' .github/workflows/golangci-lint.yml | cut -f2 -d: | tr -d ' ')
-#GOLANGCILINT_VERSION=v1.52
+
 # lint
 .PHONY: lint
 lint:  $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
