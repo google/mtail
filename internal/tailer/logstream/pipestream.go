@@ -78,6 +78,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 			if n > 0 {
 				total += n
+				//nolint:contextcheck
 				decodeAndSend(ps.ctx, ps.lines, ps.pathname, n, b[:n], partial)
 				// Update the last read time if we were able to read anything.
 				ps.mu.Lock()
