@@ -52,7 +52,7 @@ linters:
     - interfacer # deprecated
     - lll # go says long lines are ok, and this is trivially automatable
     - maligned # deprecated
-    - musttag # don't tell me how to live
+    - musttag # don't agree with the premise
     - nakedret    # weird thing to report on
     - nestif # cognitive complexity
     - nlreturn    # Not a fan of this one, looks messy
