@@ -36,12 +36,12 @@ jobs:
         run: |
           mkdir -p benchmark-comment
           unzip -d benchmark-comment benchmark-comment.zip
-          echo "::set-output name=pr-number::$(cat benchmark-comment/pr-number)"
+          echo "pr-number=$(cat benchmark-comment/pr-number)" >> $GITHUB_OUTPUT
           COMMENT=$(cat benchmark-comment/benchstat.txt)
           COMMENT="${COMMENT//'%'/'%25'}"
           COMMENT="${COMMENT//$'\n'/'%0A'}"
           COMMENT="${COMMENT//$'\r'/'%0D'}"
-          echo "::set-output name=comment::$COMMENT"
+          echo "comment=$COMMENT" >> $GITHUB_OUTPUT
       - name: post benchmark results
         uses: marocchino/sticky-pull-request-comment@v2
         with:
