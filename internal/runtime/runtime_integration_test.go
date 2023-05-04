@@ -71,6 +71,7 @@ histogram hist3 by f buckets -1, 0, 1
 		`b 3
 b 3
 b 3
+b 0
 `,
 		0,
 		metrics.MetricSlice{
@@ -84,7 +85,10 @@ b 3
 					{
 						Value: &datum.Buckets{
 							Buckets: []datum.BucketCount{
-								{Range: datum.Range{Min: 0, Max: 1}},
+								{
+									Range: datum.Range{Min: 0, Max: 1},
+									Count: 1,
+								},
 								{Range: datum.Range{Min: 1, Max: 2}},
 								{
 									Range: datum.Range{Min: 2, Max: 4},
@@ -93,7 +97,7 @@ b 3
 								{Range: datum.Range{Min: 4, Max: 8}},
 								{Range: datum.Range{Min: 8, Max: math.Inf(+1)}},
 							},
-							Count: 3,
+							Count: 4,
 							Sum:   9,
 						},
 					},
@@ -111,7 +115,10 @@ b 3
 						Labels: []string{"b"},
 						Value: &datum.Buckets{
 							Buckets: []datum.BucketCount{
-								{Range: datum.Range{Min: 0, Max: 1}},
+								{
+									Range: datum.Range{Min: 0, Max: 1},
+									Count: 1,
+								},
 								{Range: datum.Range{Min: 1, Max: 2}},
 								{
 									Range: datum.Range{Min: 2, Max: 4},
@@ -120,7 +127,7 @@ b 3
 								{Range: datum.Range{Min: 4, Max: 8}},
 								{Range: datum.Range{Min: 8, Max: math.Inf(+1)}},
 							},
-							Count: 3,
+							Count: 4,
 							Sum:   9,
 						},
 					},
@@ -139,14 +146,17 @@ b 3
 						Labels: []string{"b"},
 						Value: &datum.Buckets{
 							Buckets: []datum.BucketCount{
-								{Range: datum.Range{Min: -1, Max: 0}},
+								{
+									Range: datum.Range{Min: -1, Max: 0},
+									Count: 1,
+								},
 								{Range: datum.Range{Min: 0, Max: 1}},
 								{
 									Range: datum.Range{Min: 1, Max: math.Inf(+1)},
 									Count: 3,
 								},
 							},
-							Count: 3,
+							Count: 4,
 							Sum:   9,
 						},
 					},
