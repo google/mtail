@@ -89,6 +89,7 @@ var (
 type Variable struct {
 	ID int
 
+	// Instance is set if this variable has been bound to a type.
 	instanceMu sync.RWMutex
 	Instance   Type
 }
@@ -353,10 +354,11 @@ func Unify(a, b Type) Type {
 	case *Operator:
 		switch b2 := b1.(type) {
 		case *Variable:
-			// reverse args to call above
+			// reverse args, to recurse the pattern above
 			t := Unify(b, a)
 			var e *TypeError
 			if AsTypeError(t, &e) {
+				// Re-reverse from the recursion
 				return &TypeError{ErrTypeMismatch, e.received, e.expected}
 			}
 			return t
