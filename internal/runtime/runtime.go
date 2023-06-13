@@ -285,6 +285,7 @@ func New(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, 
 			r.handleMu.RUnlock()
 		}
 		glog.Info("END OF LINE")
+		glog.Infof("processed %s lines", LineCount.String())
 		close(r.signalQuit)
 		r.handleMu.Lock()
 		for prog := range r.handles {
