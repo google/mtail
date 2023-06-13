@@ -359,7 +359,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			if types.AsTypeError(rType, &err) {
 				// Change the type mismatch error to make more sense in this context.
 				if goerrors.Is(err, types.ErrTypeMismatch) {
-					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch; can't apply %s to LHS of type %q with RHS of type %q.", parser.Kind(n.Op), lT, rT))
+					c.errors.Add(n.Pos(), fmt.Sprintf("type mismatch: can't apply %s to LHS of type %q with RHS of type %q.", parser.Kind(n.Op), lT, rT))
 				} else {
 					c.errors.Add(n.Pos(), err.Error())
 				}
@@ -443,7 +443,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
 				if goerrors.Is(err, types.ErrTypeMismatch) {
-					c.errors.Add(n.Pos(), fmt.Sprintf("Boolean types expected for bitwise %s, got %s and %s", parser.Kind(n.Op), lT, rT))
+					c.errors.Add(n.Pos(), fmt.Sprintf("Boolean types expected for logical %s, got %s and %s", parser.Kind(n.Op), lT, rT))
 				} else {
 					c.errors.Add(n.Pos(), err.Error())
 				}
@@ -536,7 +536,7 @@ func (c *checker) VisitAfter(node ast.Node) ast.Node {
 			var err *types.TypeError
 			if types.AsTypeError(uType, &err) {
 				if goerrors.Is(err, types.ErrTypeMismatch) {
-					c.errors.Add(n.Pos(), fmt.Sprintf("%s for %s operator.", err, parser.Kind(n.Op)))
+					c.errors.Add(n.Pos(), fmt.Sprintf("Parameter to %s has a %s.", parser.Kind(n.Op), err))
 				} else {
 					c.errors.Add(n.Pos(), err.Error())
 				}
