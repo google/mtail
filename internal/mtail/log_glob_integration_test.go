@@ -131,9 +131,8 @@ func TestGlobIgnoreFolder(t *testing.T) {
 			err = os.Mkdir(tt.name, 0o700)
 			testutil.FatalIfErr(t, err)
 			continue
-		} else {
-			log, err = os.Create(tt.name)
 		}
+		log, err = os.Create(tt.name)
 
 		if !tt.isFolder && tt.expected {
 			count++
