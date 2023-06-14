@@ -16,7 +16,8 @@ import (
 // Type represents a type in the mtail program.
 type Type interface {
 	// Root returns an exemplar Type after unification occurs.  If the type
-	// system is complete after unification, Root will be a TypeOperator.
+	// system is complete after unification, Root will be a TypeOperator.  Root
+	// is the equivalent of Find in the union-find algorithm.
 	Root() Type
 
 	// String returns a string representation of a Type.
@@ -89,6 +90,7 @@ var (
 type Variable struct {
 	ID int
 
+	// Instance is set if this variable has been bound to a type.
 	instanceMu sync.RWMutex
 	Instance   Type
 }
@@ -124,7 +126,8 @@ func (t *Variable) String() string {
 }
 
 // SetInstance sets the exemplar instance of this TypeVariable, during
-// unification.
+// unification.  SetInstance is the equivalent of Union in the Union-Find
+// algorithm.
 func (t *Variable) SetInstance(t1 Type) {
 	t.instanceMu.Lock()
 	defer t.instanceMu.Unlock()
@@ -163,16 +166,22 @@ func (t *Operator) String() (s string) {
 	return s
 }
 
+const (
+	functionName  = "→"
+	dimensionName = "⨯"
+	alternateName = "|"
+)
+
 // Function is a convenience method, which instantiates a new Function type
 // scheme, with the given args as parameters.
 func Function(args ...Type) *Operator {
-	return &Operator{"→", args}
+	return &Operator{functionName, args}
 }
 
 // IsFunction returns true if the given type is a Function type.
 func IsFunction(t Type) bool {
 	if v, ok := t.(*Operator); ok {
-		return v.Name == "→"
+		return v.Name == functionName
 	}
 	return false
 }
@@ -181,13 +190,28 @@ func IsFunction(t Type) bool {
 // scheme, with the given args as the dimensions of the type.  (This type looks
 // a lot like a Product type.)
 func Dimension(args ...Type) *Operator {
-	return &Operator{"⨯", args}
+	return &Operator{dimensionName, args}
 }
 
 // IsDimension returns true if the given type is a Dimension type.
 func IsDimension(t Type) bool {
 	if v, ok := t.(*Operator); ok {
-		return v.Name == "⨯"
+		return v.Name == dimensionName
+	}
+	return false
+}
+
+// Alternate is a convenience method which instantiates a new Alternate type
+// scheme, with the given args as the possible types this type may take.  (You
+// might know this sort of type by the name Sum type.)
+func Alternate(args ...Type) *Operator {
+	return &Operator{alternateName, args}
+}
+
+// IsAlternate returns true if the given type is an Alternate type.
+func IsAlternate(t Type) bool {
+	if v, ok := t.(*Operator); ok {
+		return v.Name == alternateName
 	}
 	return false
 }
@@ -221,6 +245,9 @@ var (
 	Pattern       = &Operator{"Pattern", []Type{}}
 	// TODO(jaq): use composite type so we can typecheck the bucket directly, e.g. hist[j] = i.
 	Buckets = &Operator{"Buckets", []Type{}}
+
+	// Numeric types can be either Int or Float.
+	Numeric = Alternate(Int, Float)
 )
 
 // Builtins is a mapping of the builtin language functions to their type definitions.
@@ -313,7 +340,7 @@ func Equals(t1, t2 Type) bool {
 			return false
 		}
 		for i := range t1.Args {
-			if !Equals(t1.Args[i], t2.Args[2]) {
+			if !Equals(t1.Args[i], t2.Args[i]) {
 				return false
 			}
 		}
@@ -325,71 +352,106 @@ func Equals(t1, t2 Type) bool {
 }
 
 // Unify performs type unification of both parameter Types.  It returns the
-// least upper bound of both types, the smallest type that is capable of
+// least upper bound of both types, the most general type that is capable of
 // representing both parameters.  If either type is a type variable, then that
 // variable is unified with the LUB.  In reporting errors, it is assumed that a
 // is the expected type and b is the type observed.
 func Unify(a, b Type) Type {
 	glog.V(2).Infof("Unifying %v and %v", a, b)
-	a1, b1 := a.Root(), b.Root()
-	switch a2 := a1.(type) {
+	aR, bR := a.Root(), b.Root()
+	switch aT := aR.(type) {
 	case *Variable:
-		switch b2 := b1.(type) {
+		switch bT := bR.(type) {
 		case *Variable:
-			if a2.ID != b2.ID {
-				glog.V(2).Infof("Making %q type %q", a2, b1)
-				a2.SetInstance(b1)
-				return b1
+			if aT.ID != bT.ID {
+				glog.V(2).Infof("Making %q type %q", aT, bR)
+				aT.SetInstance(bR)
+				return bR
 			}
-			return a1
+			return aT
 		case *Operator:
-			if occursInType(a2, b2) {
-				return &TypeError{ErrRecursiveUnification, a2, b2}
+			if occursInType(aT, bT) {
+				return &TypeError{ErrRecursiveUnification, aT, bT}
 			}
-			glog.V(2).Infof("Making %q type %q", a2, b1)
-			a2.SetInstance(b1)
-			return b1
+			glog.V(2).Infof("Making %q type %q", aT, bR)
+			aT.SetInstance(bR)
+			return bR
 		}
 	case *Operator:
-		switch b2 := b1.(type) {
+		switch bT := bR.(type) {
 		case *Variable:
-			// reverse args to call above
+			// reverse args, to recurse the pattern above
 			t := Unify(b, a)
 			var e *TypeError
 			if AsTypeError(t, &e) {
+				// Re-reverse from the recursion
 				return &TypeError{ErrTypeMismatch, e.received, e.expected}
 			}
 			return t
 
 		case *Operator:
-			if len(a2.Args) != len(b2.Args) {
-				return &TypeError{ErrTypeMismatch, a2, b2}
-			}
-			var rType *Operator
-			if a2.Name != b2.Name {
-				t := LeastUpperBound(a, b)
-				glog.V(2).Infof("Got LUB = %#v", t)
+			switch {
+			case IsAlternate(aT) && !IsAlternate(bT):
+				if OccursIn(bT, aT.Args) {
+					return bT
+				}
+				return &TypeError{ErrTypeMismatch, aT, bT}
+
+			case IsAlternate(bT) && !IsAlternate(aT):
+				t := Unify(b, a)
 				var e *TypeError
 				if AsTypeError(t, &e) {
-					return e
+					// We flipped the args, flip them back.
+					return &TypeError{e.error, e.received, e.expected}
 				}
-				var ok bool
-				if rType, ok = t.(*Operator); !ok {
-					return &TypeError{ErrInternal, a2, b2}
+				return t
+
+			case IsAlternate(aT) && IsAlternate(bT):
+				// Both are Alternates, find intersection of type arguments.
+				var args []Type
+				for _, arg := range bT.Args {
+					if OccursIn(arg, aT.Args) {
+						args = append(args, arg)
+					}
 				}
-			} else {
-				rType = &Operator{a2.Name, []Type{}}
+				if len(args) == 0 {
+					return &TypeError{ErrTypeMismatch, aT, bT}
+				}
+				if len(args) == 1 {
+					return args[0]
+				}
+				return &Operator{alternateName, args}
+
+			default:
+				if len(aT.Args) != len(bT.Args) {
+					return &TypeError{ErrTypeMismatch, aT, bT}
+				}
+				var rType *Operator
+				if aT.Name != bT.Name {
+					t := LeastUpperBound(a, b)
+					glog.V(2).Infof("Got LUB = %#v", t)
+					var e *TypeError
+					if AsTypeError(t, &e) {
+						return e
+					}
+					var ok bool
+					if rType, ok = t.(*Operator); !ok {
+						return &TypeError{ErrRecursiveUnification, aT, bT}
+					}
+				} else {
+					rType = &Operator{aT.Name, []Type{}}
+				}
+				rType.Args = make([]Type, len(aT.Args))
+				for i, argA := range aT.Args {
+					t := Unify(argA, bT.Args[i])
+					var e *TypeError
+					if AsTypeError(t, &e) {
+						return e
+					}
+					rType.Args[i] = t
+				}
+				return rType
 			}
-			rType.Args = make([]Type, len(a2.Args))
-			for i, argA := range a2.Args {
-				t := Unify(argA, b2.Args[i])
-				var e *TypeError
-				if AsTypeError(t, &e) {
-					return e
-				}
-				rType.Args[i] = t
-			}
-			return rType
 		}
 	}
 	return &TypeError{ErrInternal, a, b}
@@ -441,11 +503,28 @@ func LeastUpperBound(a, b Type) Type {
 			return pair.sup
 		}
 	}
-	// TODO bogus?
 	// Patterns imply match status, which is boolean.
 	if (Equals(a1, Pattern) && Equals(b1, Bool)) ||
 		(Equals(a1, Bool) && Equals(b1, Pattern)) {
 		return Bool
+	}
+	if (Equals(a1, Bool) && Equals(b1, Int)) ||
+		(Equals(a1, Int) && Equals(b1, Bool)) {
+		return Int
+	}
+	// A Numeric can be an Int, or a Float, but not vice versa.
+	if (Equals(a1, Numeric) && Equals(b1, Int)) ||
+		(Equals(a1, Int) && Equals(b1, Numeric)) {
+		return Int
+	}
+	if (Equals(a1, Numeric) && Equals(b1, Float)) ||
+		(Equals(a1, Float) && Equals(b1, Numeric)) {
+		return Float
+	}
+	// A string can be a pattern, but not vice versa.
+	if (Equals(a1, String) && Equals(b1, Pattern)) ||
+		(Equals(a1, Pattern) && Equals(b1, String)) {
+		return Pattern
 	}
 	// A pattern and an Int are Bool
 	if (Equals(a1, Pattern) && Equals(b1, Int)) ||
