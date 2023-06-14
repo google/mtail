@@ -102,12 +102,14 @@ depclean:
 	rm -f .d/*  .*dep-stamp
 veryclean: clean depclean
 
-GOLANGCILINT_VERSION=v1.50.1
+# This version should match the one in .github/workflows/golangci-lint.yml
+GOLANGCILINT_VERSION=$(shell grep 'version: v' .github/workflows/golangci-lint.yml | cut -f2 -d: | tr -d ' ')
+#GOLANGCILINT_VERSION=v1.52
 # lint
 .PHONY: lint
 lint:  $(GOFILES) $(GOGENFILES) $(GOTESTFILES)
 	mkdir -p $(HOME)/.cache/golangci-lint/$(GOLANGCILINT_VERSION)
-	podman run --rm -v $(shell pwd):/app -v $(HOME)/.cache/golangci-lint/$(GOLANGCILINT_VERSION):/root/.cache -w /app golangci/golangci-lint:$(GOLANGCILINT_VERSION) golangci-lint run -v
+	podman run --rm -v $(shell pwd):/app -v $(HOME)/.cache/golangci-lint/$(GOLANGCILINT_VERSION):/root/.cache -w /app docker.io/golangci/golangci-lint:$(GOLANGCILINT_VERSION) golangci-lint run -v
 
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 version := $(shell git describe --tags --always --dirty)
