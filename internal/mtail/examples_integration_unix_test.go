@@ -150,7 +150,8 @@ func TestFileSocketStreamComparison(t *testing.T) {
 						testutil.FatalIfErr(t, err)
 						s, err := net.DialUnix(scheme, nil, &net.UnixAddr{sockName, scheme})
 						testutil.FatalIfErr(t, err)
-						n, err := io.Copy(s, source)
+						buf := make([]byte, 1024)
+						n, err := io.CopyBuffer(s, source, buf)
 						testutil.FatalIfErr(t, err)
 						glog.Infof("Copied %d bytes into socket", n)
 						if scheme == "unixgram" {
