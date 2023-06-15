@@ -5,17 +5,14 @@
 package main
 
 import (
-	crand "crypto/rand"
 	"flag"
 	"fmt"
-	"math/big"
-	mrand "math/rand"
+	"math/rand"
 
 	"github.com/google/mtail/internal/runtime/compiler/parser"
 )
 
 var (
-	useCryptoRand = flag.Bool("use_crypto_rand", false, "Use crypto/rand instead of math/rand")
 	randSeed      = flag.Int64("rand_seed", 1, "Seed to use for math.rand.")
 	minIterations = flag.Int64("min_iterations", 5000, "Minimum number of iterations before stopping program generation.")
 	dictionary    = flag.Bool("dictionary", false, "Generate a fuzz dictionary to stdout only.")
@@ -91,19 +88,8 @@ func emitter(c chan string) {
 	}
 }
 
-func rand(n int) (r int) {
-	if *useCryptoRand {
-		a, _ := crand.Int(crand.Reader, big.NewInt(int64(n)))
-		r = int(a.Int64())
-	} else {
-		/* #nosec G404 */
-		r = mrand.Intn(n)
-	}
-	return
-}
-
 func generateProgram() {
-	mrand.Seed(*randSeed)
+	rando := rand.New(rand.NewSource(*randSeed))
 
 	c := make(chan string, 1)
 	go emitter(c)
@@ -126,7 +112,7 @@ func generateProgram() {
 			// fmt.Println("n", n)
 			if len(n.alts) > 0 {
 				// Pick a state transition at random
-				a := rand(len(n.alts))
+				a := rando.Intn(len(n.alts))
 				// fmt.Println("a", a, n.alts[a], len(n.alts[a]))
 				// Push the states picked onto the stack (in reverse order)
 				for i := 0; i < len(n.alts[a]); i++ {
