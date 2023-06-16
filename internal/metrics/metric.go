@@ -190,7 +190,10 @@ func (m *Metric) RemoveOldestDatum() {
 	}
 	if oldestLV != nil {
 		glog.V(1).Infof("removeOldest: removing oldest LV: %v", oldestLV)
-		m.RemoveDatum(oldestLV.Labels...)
+		err := m.RemoveDatum(oldestLV.Labels...)
+		if err != nil {
+			glog.Warning(err)
+		}
 	}
 }
 
