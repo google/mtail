@@ -118,7 +118,11 @@ func (m *Server) initHTTPServer() error {
 	zpages.Handle(mux, "/")
 
 	srv := &http.Server{
-		Handler: mux,
+		ReadTimeout:       1 * time.Second,
+		WriteTimeout:      1 * time.Second,
+		IdleTimeout:       30 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
+		Handler:           mux,
 	}
 
 	var wg sync.WaitGroup
