@@ -83,7 +83,7 @@ alerting tool, like [Prometheus](http://prometheus.io).
 > you bring them down to the monitoring system?
 
 [It deals with the instrumentation so the engineers don't have
-to!](http://www.imdb.com/title/tt0151804/quotes/qt0386890)  It has the
+to!](http://www.imdb.com/title/tt0151804/quotes/?item=qt0386890)  It has the
 extraction skills!  It is good at dealing with log files!!
 
 ## Read More
