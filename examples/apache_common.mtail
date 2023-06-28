@@ -9,7 +9,7 @@ gauge apache_http_response_size by remote_host, request_method, request_uri, sta
 /(?P<remote_host>[0-9A-Za-z\.:-]+) / + # %h
 /(?P<remote_logname>[0-9A-Za-z-]+) / + # %l
 /(?P<remote_username>[0-9A-Za-z-]+) / + # %u
-/\[(?P<timestamp>\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2} (\+|-)\d{4})\] / + # %u
+/\[(?P<timestamp>\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2} (\+|-)\d{4})\] / + # %t
 /"(?P<request_method>[A-Z]+) (?P<request_uri>\S+) (?P<http_version>HTTP\/[0-9\.]+)" / + # \"%r\"
 /(?P<status_code>\d{3}) / + # %>s
 /((?P<response_size>\d+)|-) / + # %b
