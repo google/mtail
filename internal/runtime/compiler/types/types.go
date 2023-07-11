@@ -43,7 +43,7 @@ func (e *TypeError) Root() Type {
 
 func (e *TypeError) String() string {
 	if e == nil || e.error == nil {
-		return fmt.Sprintf("type error")
+		return "type error"
 	}
 	var estr, rstr string
 	if IsComplete(e.expected) {
