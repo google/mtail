@@ -444,10 +444,17 @@ program state.
     in all lowercase.
 *   `subst(old, new, val)`, a function of three arguments which returns the
     input `val` with all substrings or patterns `old` replaced by `new`.  When
-    given a string for `old`, it is a direct proxy of the Go
+    given a *string* for `old`, it is a direct proxy of the Go
     [strings.ReplaceAll](https://golang.org/pkg/strings/#ReplaceAll) function.
-    When given a regular expression pattern for `old`, it uses
+
+    `subst("old", "new", $val)`
+
+    When given a *regular expression pattern* for `old`, it uses
     [regexp.ReplaceAllLiteralString](https://golang.org/pkg/regexp/#Regexp.ReplaceAllLiteralString).
+
+    `subst(/old/, "new", $val)`
+
+    Note the different quote characters in the first argument.
 
 There are type coercion functions, useful for overriding the type inference made
 by the compiler if it chooses badly. (If the choice is egregious, please file a
