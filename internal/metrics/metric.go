@@ -180,6 +180,20 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 	return d, nil
 }
 
+// Clear the "gause" data since they're not accumulated after reporting.
+func (m *Metric) ClearGaugeData() {
+	m.Lock()
+	defer m.Unlock()
+	m.ClearGaugeDataLocked()
+}
+
+func (m *Metric) ClearGaugeDataLocked() {
+	if m.Kind == Gauge  {
+		m.labelValuesMap = make(map[string]*LabelValue)
+		m.LabelValues    = make([]*LabelValue, 0)
+	}
+}
+
 // RemoveOldestDatum scans the Metric's LabelValues for the Datum with the oldest timestamp, and removes it.
 func (m *Metric) RemoveOldestDatum() {
 	var oldestLV *LabelValue

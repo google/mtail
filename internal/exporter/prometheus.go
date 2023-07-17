@@ -34,6 +34,7 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 
 	/* #nosec G104 always retursn nil */
 	e.store.Range(func(m *metrics.Metric) error {
+		toDelete := false
 		m.RLock()
 		// We don't have a way of converting text metrics to prometheus format.
 		if m.Kind == metrics.Text {
@@ -41,6 +42,7 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 			return nil
 		}
 		metricExportTotal.Add(1)
+		glog.Infof("PYW source= %s, name= %s, kind= %s, type= %s", m.Source, m.Name, m.Kind, m.Type)
 
 		lsc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lsc)
@@ -55,6 +57,8 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 			if !e.omitProgLabel {
 				keys = append(keys, "prog")
 				vals = append(vals, m.Program)
+//				keys = append(keys, "owner")
+//				vals = append(vals, "phil")
 			}
 			for k, v := range ls.Labels {
 				keys = append(keys, k)
@@ -77,6 +81,10 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 					promTypeForKind(m.Kind),
 					promValueForDatum(ls.Datum),
 					vals...)
+				if isDatumFloat(ls.Datum) { 
+					datum.SetFloat(ls.Datum, -1.0, ls.Datum.TimeUTC())
+					toDelete = true
+				}
 			}
 			if err != nil {
 				glog.Warning(err)
@@ -92,6 +100,11 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 			} else {
 				c <- pM
 			}
+		}
+		glog.Info("PYW chan= ", len(c), ", toDelete= ", toDelete)
+		if toDelete {
+//			m.RemoveOldestDatum()
+			m.ClearGaugeDataLocked()
 		}
 		m.RUnlock()
 		return nil
@@ -139,4 +152,13 @@ func promValueForDatum(d datum.Datum) float64 {
 		return n.Get()
 	}
 	return 0.
+}
+
+func isDatumFloat(d datum.Datum) bool {
+	switch n := d.(type) {
+	case *datum.Float:
+		_ = n
+		return true
+	}
+	return false
 }

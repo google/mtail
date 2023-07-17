@@ -181,6 +181,8 @@ func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server,
 
 	// TODO(jaq): Should these move to initExporter?
 	expvarDescs := map[string]*prometheus.Desc{
+		// internal/exporter/prometheus.go
+		 "metric_export_total":    prometheus.NewDesc("metric_export_total", "number of metrics exporting", nil, nil),
 		// internal/tailer/file.go
 		"log_errors_total":    prometheus.NewDesc("log_errors_total", "number of IO errors encountered per log file", []string{"logfile"}, nil),
 		"log_rotations_total": prometheus.NewDesc("log_rotations_total", "number of log rotation events per log file", []string{"logfile"}, nil),
