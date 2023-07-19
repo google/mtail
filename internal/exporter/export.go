@@ -37,6 +37,7 @@ type Exporter struct {
 	hostname      string
 	omitProgLabel bool
 	emitTimestamp bool
+	emitGaugeArray bool
 	pushTargets   []pushOptions
 	initDone      chan struct{}
 }
@@ -64,6 +65,14 @@ func OmitProgLabel() Option {
 func EmitTimestamp() Option {
 	return func(e *Exporter) error {
 		e.emitTimestamp = true
+		return nil
+	}
+}
+
+// EmitMetricTimestamp instructs the exporter to send a gauge array when applicable.
+func EmitGaugeArray() Option {
+	return func(e *Exporter) error {
+		e.emitGaugeArray = true
 		return nil
 	}
 }

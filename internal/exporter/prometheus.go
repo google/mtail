@@ -42,13 +42,12 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 			return nil
 		}
 		metricExportTotal.Add(1)
-		glog.Infof("PYW source= %s, name= %s, kind= %s, type= %s", m.Source, m.Name, m.Kind, m.Type)
+		glog.Infof("source= %s, name= %s, kind= %s, type= %s", m.Source, m.Name, m.Kind, m.Type)
 
 		lsc := make(chan *metrics.LabelSet)
 		go m.EmitLabelSets(lsc)
 		counter := 0
 		isGaugeArray := false
-		var gvec *prometheus.GaugeVec	// optional for collection performance ?
 		for ls := range lsc {
 			if lastMetric != m.Name {
 				glog.V(2).Infof("setting source to %s", m.Source)
@@ -58,36 +57,18 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 			var keys []string
 			var vals []string
 			for k, v := range ls.Labels {
-				if k == "audit_count"  { // ignore this label
+				if m.Kind == metrics.Gauge && e.emitGaugeArray && strings.HasSuffix(k, "_gauge_index") {
+					// this label suffix is used to populate a Gauge array
 					isGaugeArray = true
 				} else {
 					keys = append(keys, k)
 					vals = append(vals, v)
 				}
 			}
-			if !e.omitProgLabel && !isGaugeArray {
+			if !e.omitProgLabel {
 				keys = append(keys, "prog")
 				vals = append(vals, m.Program)
-				// add my label
-//				keys = append(keys, "owner")
-//				vals = append(vals, "phil")
 			}
-			glog.Info("PYW gvec= ", gvec, ", isGaugeArray= ", isGaugeArray, ", counter=", counter, ", kind=", m.Kind)
-			/* create and register a gauge vector
-			if isGaugeArray && gvec == nil {
-				gvec = prometheus.NewGaugeVec(
-					prometheus.GaugeOpts{
-//						Namespace: "splunk",
-//						Subsystem: "search",
-						Name:      "splunkd_mtail_audit_log_search_runtime",
-						Help:      "defined at audit.mtail:23:11-58",
-					},
-//					prometheus.NewDesc(noHyphens(m.Name),
-//						fmt.Sprintf("defined at %s", lastSource), keys, nil),
-					keys)
-				prometheus.MustRegister(gvec)
-			}
-			*/
 			var pM prometheus.Metric
 			var err error
 			if m.Kind == metrics.Histogram {
@@ -98,36 +79,14 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 					datum.GetBucketsSum(ls.Datum),
 					datum.GetBucketsCumByMax(ls.Datum),
 					vals...)
-			/* generate a new metric from the gauge vector
-			} else if m.Kind == metrics.Gauge {
-				if isGaugeArray {
-//					pM, err = gvec.WithLabelValues(vals).Set(promValueForDatum(ls.Datum))
-					pG := gvec.WithLabelValues("123")
-//					pG := gvec.With(ls.Labels)
-					pG.Set(promValueForDatum(ls.Datum))
-					pM = pG
-				} else {
-					pM, err = prometheus.NewConstMetric(
-					prometheus.NewDesc(noHyphens(m.Name),
-						fmt.Sprintf("defined at %s", lastSource), keys, nil),
-					promTypeForKind(m.Kind),
-					promValueForDatum(ls.Datum),
-					vals...)
-				}
-			*/
 			} else {
+				glog.Info("name= ", m.Name, ", isGaugeArray= ", isGaugeArray, ", counter= ", counter, ", kind= ", m.Kind)
 				pM, err = prometheus.NewConstMetric(
 					prometheus.NewDesc(noHyphens(m.Name),
 						fmt.Sprintf("defined at %s", lastSource), keys, nil),
 					promTypeForKind(m.Kind),
 					promValueForDatum(ls.Datum),
 					vals...)
-				/* reset the gauge to -1, optional
-//				if isDatumFloat(ls.Datum) { 
-				if isGaugeArray { 
-					datum.SetFloat(ls.Datum, -1.0, ls.Datum.TimeUTC())
-				}
-				*/
 			}
 			if err != nil {
 				glog.Warning(err)
@@ -140,7 +99,7 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 			// Read more in docs/faq.md
 			if e.emitTimestamp || isGaugeArray {
 				// use a new timestamp to emit the guage array, one by one
-				duration := time.Second * time.Duration(counter)
+				duration := time.Millisecond * time.Duration(counter)
 				timeUTC := ls.Datum.TimeUTC().Add(duration)
 				c <- prometheus.NewMetricWithTimestamp(timeUTC, pM)
 			} else {
@@ -148,10 +107,9 @@ func (e *Exporter) Collect(c chan<- prometheus.Metric) {
 			}
 			counter++
 		}
-		glog.Info("PYW chan= ", len(c), ", isGaugeArray= ", isGaugeArray, ", counter=", counter)
+		glog.Info("metric= ", m.Name, ", chan= ", len(c), ", isGaugeArray= ", isGaugeArray, ", counter= ", counter)
 		// clean up the metric store
 		if isGaugeArray {
-//			m.RemoveOldestDatum()	// oldest
 			m.ClearGaugeDataLocked()
 		}
 		m.RUnlock()
@@ -201,13 +159,3 @@ func promValueForDatum(d datum.Datum) float64 {
 	}
 	return 0.
 }
-
-func isDatumFloat(d datum.Datum) bool {
-	switch n := d.(type) {
-	case *datum.Float:
-		_ = n
-		return true
-	}
-	return false
-}
-

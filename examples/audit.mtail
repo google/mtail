@@ -18,8 +18,8 @@ getfilename() !~ /audit\.log$/ {
 #
 # SEARCH PERFORMANCE SLI: runtime
 hidden gauge search_type
-hidden counter audit_count by search_type
-gauge splunkd_mtail_audit_log_search_runtime by search_type,audit_count
+hidden counter audit_gauge_index by search_type
+gauge splunkd_mtail_audit_log_search_runtime by search_type,audit_gauge_index
 histogram splunkd_mtail_audit_log_search_runtime_histogram buckets 0.5,2.0,8.0
 
 #/, action=search, info=completed, .+, fully_completed_search=true, total_run_time=(?P<runtime>[\d\.]+), .+, savedsearch_name="(?P<jobname>[^"]+), .+, provenance="scheduler"/ {
@@ -47,13 +47,13 @@ histogram splunkd_mtail_audit_log_search_runtime_histogram buckets 0.5,2.0,8.0
     search_type = 0 
 # check if metrics are exported
      splunkd_mtail_audit_log_search_runtime[search_type][0] == 0.0 {
-         audit_count[search_type] = 0
+         audit_gauge_index[search_type] = 0
 #         splunkd_mtail_audit_log_search_runtime[0][0] = -1.0
      }
-    splunkd_mtail_audit_log_search_runtime[search_type][audit_count[search_type]] = $runtime
-    audit_count[search_type]++
-    audit_count[search_type] >= 128 {
-        audit_count[search_type] = 0
+    splunkd_mtail_audit_log_search_runtime[search_type][audit_gauge_index[search_type]] = $runtime
+    audit_gauge_index[search_type]++
+    audit_gauge_index[search_type] >= 128 {
+        audit_gauge_index[search_type] = 0
     }
 }
 

@@ -250,6 +250,14 @@ var EmitMetricTimestamp = &niladicOption{
 	},
 }
 
+// EmitMetricTimestamp tells the Server to export a gauge array when applicable
+var EmitGaugeArray = &niladicOption{
+	func(m *Server) error {
+		m.eOpts = append(m.eOpts, exporter.EmitGaugeArray())
+		return nil
+	},
+}
+
 // LogRuntimeErrors instructs the VM to emit runtime errors to the log.
 var LogRuntimeErrors = &niladicOption{
 	func(m *Server) error {

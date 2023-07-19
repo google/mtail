@@ -59,6 +59,7 @@ var (
 	overrideTimezone     = flag.String("override_timezone", "", "If set, use the provided timezone in timestamp conversion, instead of UTC.")
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 	emitMetricTimestamp  = flag.Bool("emit_metric_timestamp", false, "Emit the recorded timestamp of a metric.  If disabled (the default) no explicit timestamp is sent to a collector.")
+	emitGaugeArray       = flag.Bool("emit_gauge_array", false, "Emit an array of values when one gauge has multiple metric values.  If disabled (the default), one value is emitted per gauge.")
 	logRuntimeErrors     = flag.Bool("vm_logs_runtime_errors", true, "Enables logging of runtime errors to the standard log.  Set to false to only have the errors printed to the HTTP console.")
 
 	// Ops flags.
@@ -225,6 +226,10 @@ func main() {
 	if *emitMetricTimestamp {
 		opts = append(opts, mtail.EmitMetricTimestamp)
 		eOpts = append(eOpts, exporter.EmitTimestamp())
+	}
+	if *emitGaugeArray {
+		opts = append(opts, mtail.EmitGaugeArray)
+		eOpts = append(eOpts, exporter.EmitGaugeArray())
 	}
 	if *jaegerEndpoint != "" {
 		opts = append(opts, mtail.JaegerReporter(*jaegerEndpoint))
