@@ -24,7 +24,7 @@ jobs:
         runs-on: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
@@ -58,7 +58,7 @@ jobs:
   container:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # so that we get tags
       - run: make --debug container
@@ -70,7 +70,7 @@ jobs:
     permissions:
       security-events: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: securego/gosec@master
         with:
           # we let the report trigger content trigger a failure using the GitHub Security features.
@@ -86,7 +86,7 @@ jobs:
     container:
       image: gcr.io/oss-fuzz-base/base-builder
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version: '^1.x'
