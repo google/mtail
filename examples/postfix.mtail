@@ -15,7 +15,7 @@ const QMGR_INSERT_LINE /:.*, size=(?P<size>\d+), nrcpt=(?P<nrcpt>\d+)/
 const QMGR_REMOVE_LINE /: removed$/
 
 /^(?P<date>(?P<legacy_date>\w+\s+\d+\s+\d+:\d+:\d+)|(?P<rfc3339_date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+[+-]\d{2}:\d{2}))/ +
-/\s+(?:\w+@)?(?P<hostname>[\w\.-]+)\s+postfix\/(?P<application>[\w\.-\/]+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)/ {
+/\s+(?:\w+@)?(?P<hostname>[\w\.-]+)\s+postfix\/(?P<application>[\w\.\/-]+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)/ {
   len($legacy_date) > 0 {
     strptime($2, "Jan _2 15:04:05")
   }
