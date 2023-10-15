@@ -30,15 +30,16 @@ var (
 
 // Exporter manages the export of metrics to passive and active collectors.
 type Exporter struct {
-	ctx           context.Context
-	wg            sync.WaitGroup
-	store         *metrics.Store
-	pushInterval  time.Duration
-	hostname      string
-	omitProgLabel bool
-	emitTimestamp bool
-	pushTargets   []pushOptions
-	initDone      chan struct{}
+	ctx            context.Context
+	wg             sync.WaitGroup
+	store          *metrics.Store
+	pushInterval   time.Duration
+	hostname       string
+	omitProgLabel  bool
+	emitTimestamp  bool
+	exportDisabled bool
+	pushTargets    []pushOptions
+	initDone       chan struct{}
 }
 
 // Option configures a new Exporter.
@@ -71,6 +72,13 @@ func EmitTimestamp() Option {
 func PushInterval(opt time.Duration) Option {
 	return func(e *Exporter) error {
 		e.pushInterval = opt
+		return nil
+	}
+}
+
+func DisableExport() Option {
+	return func(e *Exporter) error {
+		e.exportDisabled = true
 		return nil
 	}
 }
@@ -112,13 +120,15 @@ func New(ctx context.Context, wg *sync.WaitGroup, store *metrics.Store, options 
 	}
 	e.StartMetricPush()
 
-	// This routine manages shutdown of the Exporter.  TODO(jaq): This doesn't
-	// happen before mtail returns because of how context cancellation is set
-	// up..  How can we tie this shutdown in before mtail exits?  Should
-	// exporter be merged with httpserver?
+	wg.Add(1)
+	// This routine manages shutdown of the Exporter.
 	go func() {
+		defer wg.Done()
 		<-e.initDone
-		<-e.ctx.Done()
+		// Wait for the context to be completed before waiting for subroutines.
+		if !e.exportDisabled {
+			<-e.ctx.Done()
+		}
 		e.wg.Wait()
 	}()
 	return e, nil
@@ -213,6 +223,10 @@ func (e *Exporter) PushMetrics() {
 
 // StartMetricPush pushes metrics to the configured services each interval.
 func (e *Exporter) StartMetricPush() {
+	if e.exportDisabled {
+		glog.Info("Export loop disabled.")
+		return
+	}
 	if len(e.pushTargets) == 0 {
 		return
 	}

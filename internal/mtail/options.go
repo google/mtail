@@ -164,6 +164,7 @@ var OneShot = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.ErrorsAbort())
 		m.tOpts = append(m.tOpts, tailer.OneShot)
+		m.eOpts = append(m.eOpts, exporter.DisableExport())
 		m.oneShot = true
 		return nil
 	},
@@ -173,6 +174,7 @@ var OneShot = &niladicOption{
 var CompileOnly = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.CompileOnly())
+		m.eOpts = append(m.eOpts, exporter.DisableExport())
 		m.compileOnly = true
 		return nil
 	},
@@ -186,7 +188,7 @@ var DumpAst = &niladicOption{
 	},
 }
 
-// DumpAstTypes instructs the Server's copmiler to print the AST after type checking.
+// DumpAstTypes instructs the Server's compiler to print the AST after type checking.
 var DumpAstTypes = &niladicOption{
 	func(m *Server) error {
 		m.rOpts = append(m.rOpts, runtime.DumpAstTypes())

@@ -62,11 +62,6 @@ func (m *Server) initRuntime() (err error) {
 
 // initExporter sets up an Exporter for this Server.
 func (m *Server) initExporter() (err error) {
-	if m.oneShot {
-		// This is a hack to avoid a race in test, but assume that in oneshot
-		// mode we don't want to export anything.
-		return nil
-	}
 	m.e, err = exporter.New(m.ctx, &m.wg, m.store, m.eOpts...)
 	if err != nil {
 		return err
