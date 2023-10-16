@@ -54,6 +54,9 @@ type Server struct {
 	httpInfoEndpoints  bool   // if set, mtail will enable info endpoints for progz and varz
 }
 
+// We can only copy the build info once to the version library.  Protects tests from data races.
+var buildInfoOnce sync.Once
+
 // initRuntime constructs a new runtime and performs the initial load of program files in the program directory.
 func (m *Server) initRuntime() (err error) {
 	m.r, err = runtime.New(m.lines, &m.wg, m.programPath, m.store, m.rOpts...)
@@ -69,10 +72,13 @@ func (m *Server) initExporter() (err error) {
 	m.reg.MustRegister(m.e)
 
 	// Create mtail_build_info metric.
-	version.Branch = m.buildInfo.Branch
-	version.Version = m.buildInfo.Version
-	version.Revision = m.buildInfo.Revision
+	buildInfoOnce.Do(func() {
+		version.Branch = m.buildInfo.Branch
+		version.Version = m.buildInfo.Version
+		version.Revision = m.buildInfo.Revision
+	})
 	m.reg.MustRegister(version.NewCollector("mtail"))
+
 	return nil
 }
 
