@@ -14,7 +14,7 @@ import (
 var exportJSONErrors = expvar.NewInt("exporter_json_errors")
 
 // HandleJSON exports the metrics in JSON format via HTTP.
-func (e *Exporter) HandleJSON(w http.ResponseWriter, r *http.Request) {
+func (e *Exporter) HandleJSON(w http.ResponseWriter, _ *http.Request) {
 	b, err := json.MarshalIndent(e.store, "", "  ")
 	if err != nil {
 		exportJSONErrors.Add(1)

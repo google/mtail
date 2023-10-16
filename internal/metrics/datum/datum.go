@@ -94,7 +94,7 @@ func MakeString(v string, ts time.Time) Datum {
 
 // MakeBuckets creates a new bucket datum with the provided list of ranges and
 // timestamp.  If no +inf bucket is provided, one is created.
-func MakeBuckets(buckets []Range, ts time.Time) Datum {
+func MakeBuckets(buckets []Range, _ time.Time) Datum {
 	d := &Buckets{}
 	seenInf := false
 	highest := 0.0

@@ -53,7 +53,7 @@ func (e *Exporter) HandleGraphite(w http.ResponseWriter, r *http.Request) {
 
 // metricToGraphite encodes a metric in the graphite text protocol format.  The
 // metric lock is held before entering this function.
-func metricToGraphite(hostname string, m *metrics.Metric, l *metrics.LabelSet, _ time.Duration) string {
+func metricToGraphite(_ string, m *metrics.Metric, l *metrics.LabelSet, _ time.Duration) string {
 	var b strings.Builder
 	if m.Kind == metrics.Histogram && m.Type == metrics.Buckets {
 		d := m.LabelValues[0].Value

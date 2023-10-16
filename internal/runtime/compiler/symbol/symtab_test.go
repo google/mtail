@@ -25,7 +25,7 @@ func TestInsertLookup(t *testing.T) {
 }
 
 // Generate implements the quick.Generator interface for SymbolKind.
-func (Kind) Generate(rand *rand.Rand, size int) reflect.Value {
+func (Kind) Generate(rand *rand.Rand, _ int) reflect.Value {
 	return reflect.ValueOf(Kind(rand.Intn(int(endSymbol))))
 }
 

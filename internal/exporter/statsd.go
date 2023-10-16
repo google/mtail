@@ -24,7 +24,7 @@ var (
 
 // metricToStatsd encodes a metric in the statsd text protocol format.  The
 // metric lock is held before entering this function.
-func metricToStatsd(hostname string, m *metrics.Metric, l *metrics.LabelSet, _ time.Duration) string {
+func metricToStatsd(_ string, m *metrics.Metric, l *metrics.LabelSet, _ time.Duration) string {
 	var t string
 	switch m.Kind {
 	case metrics.Counter:

@@ -31,7 +31,7 @@ const statusTemplateEnd = `
 
 // ServeHTTP satisfies the http.Handler interface, and is used to serve the
 // root page of mtail for online status reporting.
-func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *Server) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	t, err := template.New("status").Parse(statusTemplate)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -77,7 +77,7 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // FaviconHandler is used to serve up the favicon.ico for mtail's http server.
-func FaviconHandler(w http.ResponseWriter, r *http.Request) {
+func FaviconHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "image/x-icon")
 	w.Header().Set("Cache-Control", "public, max-age=7776000")
 	if _, err := w.Write(logoFavicon); err != nil {
