@@ -139,7 +139,7 @@ The default address is `""` on the TCP protocol, which means it will bind to all
 mtail --address=127.0.0.1 --port=8080`
 ```
 
-Note that the address "0.0.0.0" is treated by Go as dual-stack: https://github.com/golang/go/issues/17615
+Depending on your version of Go, the address "0.0.0.0" is treated by Go as dual-stack; see https://github.com/golang/go/issues/17615 and https://pkg.go.dev/net#Listen
 
 ### Push based collection
 
