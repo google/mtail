@@ -12,6 +12,8 @@ The `--help` flag will print a list of flags for configuring `mtail`.
 
 (Flags may be prefixed with either `-` or `--`)
 
+## Quickstart
+
 Basic flags necessary to start `mtail`:
 
   * `--logs` is a comma separated list of filenames to extract from, but can also be used multiple times, and each filename can be a [glob pattern](http://godoc.org/path/filepath#Match).  Named pipes can be read from when passed as a filename to this flag.
@@ -126,6 +128,18 @@ inotifywait -m /etc/mtail/progs | while read event; do killall -HUP mtail; done
 Point your collection tool at `localhost:3903/json` for JSON format metrics.
 
 Prometheus can be directed to the /metrics endpoint for Prometheus text-based format.
+
+### Changing the listen address
+
+The default port is `3903`, and can be changed with the `--port` commandline flag.
+
+The default address is `""` on the TCP protocol, which means it will bind to all IP addresses on the system.  This can be changed with the `--address` commandline flag.
+
+```
+mtail --address=127.0.0.1 --port=8080`
+```
+
+Depending on your version of Go, the address "0.0.0.0" is treated by Go as dual-stack; see https://github.com/golang/go/issues/17615 and https://pkg.go.dev/net#Listen
 
 ### Push based collection
 
