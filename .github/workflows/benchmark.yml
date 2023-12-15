@@ -55,7 +55,7 @@ jobs:
           mkdir -p benchmark-comment
           cp test-results/benchstat.txt benchmark-comment
           echo ${{ github.event.number }} > benchmark-comment/pr-number
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always ()
         with:
           name: benchmark-comment
