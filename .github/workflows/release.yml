@@ -6,13 +6,12 @@ on:
     tags:
       - v*
 
-permissions:
-  # goreleaser writes to the releases api
-  contents: write
-
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
+    permissions:
+      # goreleaser writes to the releases api
+      contents: write
     env:
       flags: ""
     steps:
