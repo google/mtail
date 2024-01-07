@@ -27,6 +27,6 @@ LABEL org.opencontainers.image.ref.name="google/mtail" \
       org.opencontainers.image.version=$version \
       org.opencontainers.image.revision=$commit_hash \
       org.opencontainers.image.source=$vcs_url \
-      org.opencontainers.image.documentation="https://github.com/google/mtail/tree/main/docs" \
+      org.opencontainers.image.documentation="https://google.github.io/mtail/" \
       org.opencontainers.image.created=$build_date \
       org.opencontainers.image.url="https://github.com/google/mtail"
