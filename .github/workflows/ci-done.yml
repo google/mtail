@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         # Sync with matrix in ci.yml
-        runs-on: [ubuntu-latest, windows-latest]
+        runs-on: [ubuntu-latest]
     runs-on: ${{ matrix.runs-on }}
     permissions:
       # list and download
