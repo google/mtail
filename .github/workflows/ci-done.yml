@@ -6,7 +6,11 @@ on:
       - completed
 jobs:
   comment:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Sync with matrix in ci.yml
+        runs-on: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.runs-on }}
     permissions:
       # list and download
       actions: read
@@ -24,7 +28,7 @@ jobs:
                run_id: ${{github.event.workflow_run.id }},
             });
             var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
-              return artifact.name == "test-results"
+              return artifact.name == "test-results-${{ matrix.runs-on }}"
             })[0];
             var download = await github.rest.actions.downloadArtifact({
                owner: context.repo.owner,
