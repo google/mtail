@@ -75,7 +75,7 @@ build dependency installation, if you don't care for that.
 
 ## Deployment
 
-`mtail` works best when it paired with a timeseries-based calculator and
+`mtail` works best when paired with a timeseries-based calculator and
 alerting tool, like [Prometheus](http://prometheus.io).
 
 > So what you do is you take the metrics from the log files and
