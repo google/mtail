@@ -2,6 +2,7 @@
 # merge, which means that I need a bot to review my own work.
 name: Automatic pull request approvals
 on:
+  merge_group:
   pull_request_target:
     types:
       - opened
