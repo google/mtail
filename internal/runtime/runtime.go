@@ -246,6 +246,9 @@ func New(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, 
 	if store == nil {
 		return nil, errors.New("loader needs a store")
 	}
+	if wg == nil {
+		return nil, errors.New("loader needs a WaitGroup")
+	}
 	r := &Runtime{
 		ms:            store,
 		programPath:   programPath,

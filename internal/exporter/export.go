@@ -88,6 +88,9 @@ func New(ctx context.Context, wg *sync.WaitGroup, store *metrics.Store, options 
 	if store == nil {
 		return nil, errors.New("exporter needs a Store")
 	}
+	if wg == nil {
+		return nil, errors.New("exporter needs a WaitGroup")
+	}
 	e := &Exporter{
 		ctx:      ctx,
 		store:    store,

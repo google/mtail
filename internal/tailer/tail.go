@@ -134,6 +134,9 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	if lines == nil {
 		return nil, ErrNoLinesChannel
 	}
+	if wg == nil {
+		return nil, errors.New("tailer needs a WaitGroup")
+	}
 	t := &Tailer{
 		ctx:          ctx,
 		lines:        lines,

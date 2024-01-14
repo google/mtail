@@ -54,6 +54,9 @@ var (
 // channel.  `seekToStart` is only used for testing and only works for regular
 // files that can be seeked.
 func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine, oneShot bool) (LogStream, error) {
+	if wg == nil {
+		return nil, errors.New("logstream needs a WaitGroup")
+	}
 	u, err := url.Parse(pathname)
 	if err != nil {
 		return nil, err
