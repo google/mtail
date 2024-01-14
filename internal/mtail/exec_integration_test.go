@@ -8,6 +8,7 @@ import (
 	"errors"
 	"log"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -15,7 +16,7 @@ import (
 var mtailPath string
 
 func init() {
-	path, err := exec.LookPath("../../mtail")
+	path, err := exec.LookPath(filepath.Join("..", "..", "mtail"))
 	if errors.Is(err, exec.ErrDot) {
 		err = nil
 	}
