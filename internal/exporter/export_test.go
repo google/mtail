@@ -23,17 +23,10 @@ const prefix = "prefix"
 func TestCreateExporter(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
-	_, err := New(ctx, &wg, nil)
-	if err == nil {
-		t.Error("expecting error, got nil")
-	}
-	cancel()
-	wg.Wait()
-	ctx, cancel = context.WithCancel(context.Background())
 	store := metrics.NewStore()
-	_, err = New(ctx, &wg, store)
+	_, err := New(ctx, &wg, store)
 	if err != nil {
-		t.Errorf("unexpected error:%s", err)
+		t.Errorf("New(ctx, wg, store) unexpected error: %v", err)
 	}
 	cancel()
 	wg.Wait()
@@ -47,6 +40,20 @@ func TestCreateExporter(t *testing.T) {
 	}
 	cancel()
 	wg.Wait()
+}
+
+func TestNewErrors(t *testing.T) {
+	ctx := context.Background()
+	store := metrics.NewStore()
+	var wg sync.WaitGroup
+	_, err := New(ctx, nil, store)
+	if err == nil {
+		t.Error("New(ctx, nil, store) expecting error, received nil")
+	}
+	_, err = New(ctx, &wg, nil)
+	if err == nil {
+		t.Error("New(ctx, wg, nil) expecting error, received nil")
+	}
 }
 
 func FakeSocketWrite(f formatter, m *metrics.Metric) []string {

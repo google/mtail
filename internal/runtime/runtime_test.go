@@ -25,6 +25,20 @@ func TestNewRuntime(t *testing.T) {
 	wg.Wait()
 }
 
+func TestNewRuntimeErrors(t *testing.T) {
+	store := metrics.NewStore()
+	lines := make(chan *logline.LogLine)
+	var wg sync.WaitGroup
+	_, err := New(lines, nil, "", store)
+	if err == nil {
+		t.Error("New(..., nil) expecting error, got nil")
+	}
+	_, err = New(lines, &wg, "", nil)
+	if err == nil {
+		t.Error("New(..., nil) expecting error, got nil")
+	}
+}
+
 func TestCompileAndRun(t *testing.T) {
 	testProgram := "/$/ {}\n"
 	store := metrics.NewStore()
