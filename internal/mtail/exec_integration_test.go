@@ -6,11 +6,12 @@ package mtail_test
 import (
 	"context"
 	"errors"
-	"log"
 	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 var mtailPath string
@@ -21,7 +22,7 @@ func init() {
 		err = nil
 	}
 	if err != nil {
-		log.Fatal(err)
+		glog.Infof("exec_integration_test init(): %v", err)
 	}
 	mtailPath = path
 }
