@@ -83,13 +83,18 @@ func DisableExport() Option {
 	}
 }
 
+var (
+	ErrNeedsStore     = errors.New("exporter needs a Store")
+	ErrNeedsWaitgroup = errors.New("exporter needs a WaitGroup")
+)
+
 // New creates a new Exporter.
 func New(ctx context.Context, wg *sync.WaitGroup, store *metrics.Store, options ...Option) (*Exporter, error) {
 	if store == nil {
-		return nil, errors.New("exporter needs a Store")
+		return nil, ErrNeedsStore
 	}
 	if wg == nil {
-		return nil, errors.New("exporter needs a WaitGroup")
+		return nil, ErrNeedsWaitgroup
 	}
 	e := &Exporter{
 		ctx:      ctx,

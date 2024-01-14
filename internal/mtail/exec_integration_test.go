@@ -31,7 +31,9 @@ func TestExecMtail(t *testing.T) {
 		t.Skip()
 	}
 
-	cs := []string{"-progs", "../../examples",
+	cs := []string{
+		"-progs",
+		"../../examples",
 		"-logs", "testdata/rsyncd.log",
 		"-one_shot",
 		"-one_shot_format=prometheus",
