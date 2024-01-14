@@ -47,6 +47,21 @@ func TestTail(t *testing.T) {
 	stop()
 }
 
+func TestTailErrors(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	lines := make(chan *logline.LogLine)
+	var wg sync.WaitGroup
+	_, err := New(ctx, nil, lines)
+	if err == nil {
+		t.Error("New(ctx, nil, lines) expecting error, received nil")
+	}
+	_, err = New(ctx, &wg, nil)
+	if err == nil {
+		t.Error("New(ctx, wg, nil) expecting error, received nil")
+	}
+}
+
 func TestHandleLogUpdate(t *testing.T) {
 	ta, lines, awaken, dir, stop := makeTestTail(t)
 

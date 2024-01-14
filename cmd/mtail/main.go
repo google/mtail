@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -248,19 +249,23 @@ func main() {
 	if *oneShot {
 		switch *oneShotFormat {
 		case "prometheus":
-			e, err := exporter.New(ctx, nil, store, eOpts...)
+			var wg sync.WaitGroup
+			e, err := exporter.New(ctx, &wg, store, eOpts...)
 			if err != nil {
 				glog.Error(err)
 				cancel()
+				wg.Wait()
 				os.Exit(1) //nolint:gocritic // false positive
 			}
 			err = e.Write(os.Stdout)
 			if err != nil {
 				glog.Error(err)
 				cancel()
+				wg.Wait()
 				os.Exit(1) //nolint:gocritic // false positive
 			}
 			cancel()
+			wg.Wait()
 			os.Exit(0) //nolint:gocritic // false positive
 		case "json":
 			err = store.WriteMetrics(os.Stdout)

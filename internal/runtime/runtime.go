@@ -241,10 +241,18 @@ type Runtime struct {
 	signalQuit chan struct{} // When closed stops the signal handler goroutine.
 }
 
+var (
+	ErrNeedsStore     = errors.New("loader needs a store")
+	ErrNeedsWaitgroup = errors.New("loader needs a WaitGroup")
+)
+
 // New creates a new program loader that reads programs from programPath.
 func New(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, store *metrics.Store, options ...Option) (*Runtime, error) {
 	if store == nil {
-		return nil, errors.New("loader needs a store")
+		return nil, ErrNeedsStore
+	}
+	if wg == nil {
+		return nil, ErrNeedsWaitgroup
 	}
 	r := &Runtime{
 		ms:            store,

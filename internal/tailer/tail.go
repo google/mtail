@@ -127,12 +127,18 @@ func (opt logstreamPollWaker) apply(t *Tailer) error {
 	return nil
 }
 
-var ErrNoLinesChannel = errors.New("Tailer needs a lines channel")
+var (
+	ErrNoLinesChannel = errors.New("Tailer needs a lines channel")
+	ErrNeedsWaitgroup = errors.New("tailer needs a WaitGroup")
+)
 
 // New creates a new Tailer.
 func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine, options ...Option) (*Tailer, error) {
 	if lines == nil {
 		return nil, ErrNoLinesChannel
+	}
+	if wg == nil {
+		return nil, ErrNeedsWaitgroup
 	}
 	t := &Tailer{
 		ctx:          ctx,

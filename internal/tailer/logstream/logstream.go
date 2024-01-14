@@ -46,6 +46,7 @@ var (
 	ErrUnsupportedURLScheme = errors.New("unsupported URL scheme")
 	ErrUnsupportedFileType  = errors.New("unsupported file type")
 	ErrEmptySocketAddress   = errors.New("socket address cannot be empty, please provide a unix domain socket filename or host:port")
+	ErrNeedsWaitgroup       = errors.New("logstream needs a waitgroup")
 )
 
 // New creates a LogStream from the file object located at the absolute path
@@ -54,6 +55,9 @@ var (
 // channel.  `seekToStart` is only used for testing and only works for regular
 // files that can be seeked.
 func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine, oneShot bool) (LogStream, error) {
+	if wg == nil {
+		return nil, ErrNeedsWaitgroup
+	}
 	u, err := url.Parse(pathname)
 	if err != nil {
 		return nil, err
