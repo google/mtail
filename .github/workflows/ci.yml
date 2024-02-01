@@ -47,7 +47,7 @@ jobs:
           fi
           make --debug junit-regtest TESTCOVERPROFILE=coverprofile
         shell: bash
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
         if: always()
         with:
           file: coverprofile
