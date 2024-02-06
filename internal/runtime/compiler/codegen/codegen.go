@@ -130,17 +130,12 @@ func (c *codegen) VisitBefore(node ast.Node) (ast.Visitor, ast.Node) {
 				c.errorf(n.Pos(), "a histogram need at least two boundaries")
 				return nil, n
 			}
-			if n.Buckets[0] >= n.Buckets[1] {
-				c.errorf(n.Pos(), "buckets boundaries must be sorted")
-				return nil, n
-			}
 
 			if n.Buckets[0] > 0 {
 				m.Buckets = append(m.Buckets, datum.Range{0, n.Buckets[0]})
 			}
-			m.Buckets = append(m.Buckets, datum.Range{n.Buckets[0], n.Buckets[1]})
-			min := n.Buckets[1]
-			for _, max := range n.Buckets[2:] {
+			min := n.Buckets[0]
+			for _, max := range n.Buckets[1:] {
 				if max <= min {
 					c.errorf(n.Pos(), "buckets boundaries must be sorted")
 					return nil, n

@@ -44,7 +44,7 @@ func (d *Buckets) Observe(v float64, ts time.Time) {
 	defer d.Unlock()
 
 	for i, b := range d.Buckets {
-		if b.Range.Contains(v) {
+		if v <= b.Range.Max {
 			d.Buckets[i].Count++
 			break
 		}
