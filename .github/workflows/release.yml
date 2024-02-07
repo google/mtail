@@ -1,11 +1,19 @@
 name: release
 on:
-  # Test that it works on pull_request or merge group; goreleaser goes into snapshot mode if not a tag.
+  # Test that it works on pull_request or merge group;
+  # goreleaser goes into snapshot mode if not a tag; 
+  # docker image will be built but not pushed for pull requests or merge group events.
   pull_request:
   merge_group:
   push:
     tags:
       - v*
+
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   goreleaser:
@@ -32,3 +40,31 @@ jobs:
           args: release --rm-dist ${{ env.flags }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  docker-release:
+    runs-on: ubuntu-latest
+    permissions:
+      # docker writes packages to container registry
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git fetch --force --tags
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5.4.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Build and push Docker image (image is not pushed on pull request)
+        uses: docker/build-push-action@v5.1.0
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' && github.event_name != 'merge_group' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
