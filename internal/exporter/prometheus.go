@@ -109,7 +109,7 @@ func (e *Exporter) Write(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	enc := expfmt.NewEncoder(w, expfmt.FmtText)
+	enc := expfmt.NewEncoder(w, expfmt.NewFormat(expfmt.TypeTextPlain))
 	for _, mf := range mfs {
 		err := enc.Encode(mf)
 		if err != nil {
