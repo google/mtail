@@ -1,0 +1,46 @@
+[Unit]
+Description=mtail - extracts metrics from logs
+Documentation=https://github.com/google/mtail/tree/main/docs
+Requires=local-fs.target network.target
+Before=nss-user-lookup.target
+After=local-fs.target network.target
+
+[Service]
+User=mtail
+Group=mtail
+
+EnvironmentFile=-/etc/sysconfig/mtail
+ExecStart=/usr/sbin/mtail $ARGS
+ExecReload=/usr/bin/kill -1 $MAINPID
+Restart=always
+
+# various hardening options
+AmbientCapabilities=
+CapabilityBoundingSet=
+KeyringMode=private
+LockPersonality=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+MountFlags=private
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+PrivateUsers=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectSystem=full
+RemoveIPC=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
+SystemCallFilter=@basic-io @file-system @io-event @ipc @network-io @signal clone kill madvise setrlimit tgkill uname
+
+[Install]
+WantedBy=multi-user.target
