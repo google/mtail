@@ -22,7 +22,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/version"
+	vc "github.com/prometheus/client_golang/prometheus/collectors/version"
+	"github.com/prometheus/common/version"	
 	"go.opencensus.io/zpages"
 )
 
@@ -77,7 +78,7 @@ func (m *Server) initExporter() (err error) {
 		version.Version = m.buildInfo.Version
 		version.Revision = m.buildInfo.Revision
 	})
-	m.reg.MustRegister(version.NewCollector("mtail"))
+	m.reg.MustRegister(vc.NewCollector("mtail"))
 
 	return nil
 }
