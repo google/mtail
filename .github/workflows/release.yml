@@ -51,7 +51,7 @@ jobs:
           fetch-depth: 0
       - run: git fetch --force --tags
       - name: Log in to the Container registry
-        uses: docker/login-action@v3.0.0
+        uses: docker/login-action@v3.1.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
