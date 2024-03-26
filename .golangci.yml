@@ -8,9 +8,10 @@ run:
 
 linters-settings:
   govet:
-    check-shadowing: true
+    enable-all: true
     disable:
-      composites # same as exhaustruct below
+      - composites # same as exhaustruct below
+      - fieldalignment
   asasalint:
     exclude:
       - glog\.Infof
@@ -33,6 +34,7 @@ linters:
   disable:
     - cyclop # boo cyclomatic complexity
     - dupl # exclude test code
+    - depguard
     - errcheck # handled by gosec, lots of false posi
     - exhaustive # this false-positives for switches with a default
     - exhaustivestruct # too noisy, labelling fields is not my jam
@@ -40,6 +42,7 @@ linters:
     - forbidigo # exclude non prod tools
     - forcetypeassert # too many at the moment
     - funlen    # My tests will be as long as they need to be thanks
+    - gci
     - gochecknoglobals    # Flags are fine, as are test tables.
     - gochecknoinits    # How dare you tell me not to use inits.
     - gocognit # boo cyclomatic complexity
@@ -58,6 +61,7 @@ linters:
     - nlreturn    # Not a fan of this one, looks messy
     - nolintlint    # broken on gocritic
     - paralleltest # i had a good reason for this
+    - perfsprint
     - testpackage # need to test internal methods
     - unparam # too noisy
     - whitespace # broken by goyacc

@@ -163,7 +163,7 @@ func main() {
 	}
 
 	http.HandleFunc("/",
-		func(w http.ResponseWriter, r *http.Request) {
+		func(w http.ResponseWriter, _ *http.Request) {
 			dot := exec.Command("dot", "-Tsvg")
 			in, err := dot.StdinPipe()
 			if err != nil {
