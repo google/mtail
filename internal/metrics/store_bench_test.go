@@ -81,7 +81,7 @@ func BenchmarkStore(b *testing.B) {
 				fillMetric(b, rand, items, m, s)
 				addToStore(b, items, *m, s)
 			},
-			b: func(b *testing.B, items int, m []*Metric, s *Store) {
+			b: func(b *testing.B, _ int, _ []*Metric, s *Store) {
 				b.Helper()
 				s.Range(func(*Metric) error {
 					return nil
