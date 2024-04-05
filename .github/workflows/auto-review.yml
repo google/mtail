@@ -30,7 +30,7 @@ jobs:
       # create review
       pull-requests: write
     steps:
-      - uses: lewagon/wait-on-check-action@v1.3.3
+      - uses: lewagon/wait-on-check-action@v1.3.4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repo-token: ${{ github.token }}
