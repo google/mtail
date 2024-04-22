@@ -2,7 +2,6 @@
 // This file is available under the Apache license.
 
 //go:build gofuzz
-// +build gofuzz
 
 package runtime
 

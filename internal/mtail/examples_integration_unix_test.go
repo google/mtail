@@ -2,7 +2,6 @@
 // This file is available under the Apache license.
 
 //go:build unix
-// +build unix
 
 package mtail_test
 
