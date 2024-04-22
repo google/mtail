@@ -43,7 +43,7 @@ jobs:
           mkdir -p test-results
           unzip -d test-results test-results.zip
           echo "sha=$(cat test-results/sha-number)" >> $GITHUB_OUTPUT
-      - uses: docker://ghcr.io/enricomi/publish-unit-test-result-action:v1.6
+      - uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           commit: ${{ steps.unpack.outputs.sha }}
           check_name: Unit Test Results
