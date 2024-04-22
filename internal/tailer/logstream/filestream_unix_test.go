@@ -37,7 +37,7 @@ func TestFileStreamRotation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
 
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
+	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	// fs.Stop() is also called explicitly further down but a failed test
 	// and early return would lead to the handle staying open
 	defer fs.Stop()
@@ -88,7 +88,7 @@ func TestFileStreamURL(t *testing.T) {
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
-	fs, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, true)
+	fs, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
 	awaken(1)
 
@@ -131,7 +131,7 @@ func TestFileStreamOpenFailure(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, _ := waker.NewTest(ctx, 0)
 
-	_, err = logstream.New(ctx, &wg, waker, name, lines, true)
+	_, err = logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	if err == nil || !os.IsPermission(err) {
 		t.Errorf("Expected a permission denied error, got: %v", err)
 	}

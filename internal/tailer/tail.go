@@ -39,7 +39,7 @@ type Tailer struct {
 
 	socketPaths []string
 
-	oneShot bool
+	oneShot logstream.OneShotMode
 
 	pollMu sync.Mutex // protects Poll()
 
@@ -64,7 +64,7 @@ func (n *niladicOption) apply(t *Tailer) error {
 }
 
 // OneShot puts the tailer in one-shot mode, where sources are read once from the start and then closed.
-var OneShot = &niladicOption{func(t *Tailer) error { t.oneShot = true; return nil }}
+var OneShot = &niladicOption{func(t *Tailer) error { t.oneShot = logstream.OneShotEnabled; return nil }}
 
 // LogPatterns sets the glob patterns to use to match pathnames.
 type LogPatterns []string

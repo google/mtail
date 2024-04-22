@@ -40,7 +40,7 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 		f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 		testutil.FatalIfErr(t, err)
 
-		ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
+		ps, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
 		testutil.FatalIfErr(t, err)
 
 		testutil.WriteString(t, f, "1\n")
@@ -82,7 +82,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 		f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 		testutil.FatalIfErr(t, err)
 
-		ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
+		ps, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
 		testutil.FatalIfErr(t, err)
 
 		testutil.WriteString(t, f, "1\n")
@@ -119,7 +119,7 @@ func TestPipeStreamReadURL(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker := waker.NewTestAlways()
 
-	ps, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, false)
+	ps, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
 
 	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
@@ -162,7 +162,7 @@ func TestPipeStreamReadStdin(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
 
-	ps, err := logstream.New(ctx, &wg, waker, "-", lines, false)
+	ps, err := logstream.New(ctx, &wg, waker, "-", lines, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
 
 	awaken(0)

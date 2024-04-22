@@ -1,6 +1,6 @@
 //go:build unix
 
-package logstream
+package logstream_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/mtail/internal/tailer/logstream"
 	"github.com/google/mtail/internal/testutil"
 	"golang.org/x/sys/unix"
 )
@@ -23,7 +24,7 @@ func TestReadStdin(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 	testutil.OverrideStdin(t, f)
 
-	_, err = New(ctx, &wg, nil, "-", nil, false)
+	_, err = logstream.New(ctx, &wg, nil, "-", nil, logstream.OneShotDisabled)
 	if err != nil {
 		t.Errorf("New(.., '-') -> %v, expecting nil", err)
 	}
