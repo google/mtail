@@ -14,6 +14,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
 	"github.com/google/mtail/internal/testutil"
+	"golang.org/x/sys/unix"
 )
 
 // TestTailerOpenRetries is a unix-specific test because on Windows, it is not possible to create a file
@@ -65,6 +66,36 @@ func TestTailerOpenRetries(t *testing.T) {
 	received := testutil.LinesReceived(ta.lines)
 	expected := []*logline.LogLine{
 		{Context: context.Background(), Filename: logfile, Line: ""},
+	}
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+}
+
+func TestAddStdin(t *testing.T) {
+	ta := makeTestTail(t)
+
+	name := filepath.Join(ta.tmpDir, "fakestdin")
+	testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
+
+	oldStdin := os.Stdin
+	t.Cleanup(func() {
+		os.Stdin = oldStdin
+	})
+
+	var err error
+	os.Stdin, err = os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+	testutil.FatalIfErr(t, err)
+	testutil.WriteString(t, os.Stdin, "content\n")
+
+	if err := ta.AddPattern("-"); err != nil {
+		t.Errorf("AddPattern(-) -> %v", err)
+	}
+	testutil.FatalIfErr(t, ta.PollLogPatterns())
+
+	ta.stop()
+
+	received := testutil.LinesReceived(ta.lines)
+	expected := []*logline.LogLine{
+		{Context: context.Background(), Filename: "-", Line: "content"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
