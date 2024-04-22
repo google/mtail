@@ -39,7 +39,7 @@ type Tailer struct {
 
 	socketPaths []string
 
-	oneShot bool
+	oneShot logstream.OneShotMode
 
 	pollMu sync.Mutex // protects Poll()
 
@@ -64,7 +64,7 @@ func (n *niladicOption) apply(t *Tailer) error {
 }
 
 // OneShot puts the tailer in one-shot mode, where sources are read once from the start and then closed.
-var OneShot = &niladicOption{func(t *Tailer) error { t.oneShot = true; return nil }}
+var OneShot = &niladicOption{func(t *Tailer) error { t.oneShot = logstream.OneShotEnabled; return nil }}
 
 // LogPatterns sets the glob patterns to use to match pathnames.
 type LogPatterns []string
@@ -224,14 +224,16 @@ func (t *Tailer) AddPattern(pattern string) error {
 	case "", "file":
 		path = u.Path
 	}
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		glog.V(2).Infof("Couldn't canonicalize path %q: %s", u.Path, err)
-		return err
+	if path != "-" {
+		path, err = filepath.Abs(path)
+		if err != nil {
+			glog.V(2).Infof("Couldn't canonicalize path %q: %s", u.Path, err)
+			return err
+		}
 	}
-	glog.V(2).Infof("AddPattern: file %q", absPath)
+	glog.V(2).Infof("AddPattern: file %q", path)
 	t.globPatternsMu.Lock()
-	t.globPatterns[absPath] = struct{}{}
+	t.globPatterns[path] = struct{}{}
 	t.globPatternsMu.Unlock()
 	return nil
 }
@@ -367,6 +369,11 @@ func (t *Tailer) PollLogPatterns() error {
 	t.globPatternsMu.RLock()
 	defer t.globPatternsMu.RUnlock()
 	for pattern := range t.globPatterns {
+		if pattern == "-" {
+			if err := t.TailPath(pattern); err != nil {
+				glog.Info(err)
+			}
+		}
 		matches, err := filepath.Glob(pattern)
 		if err != nil {
 			return err

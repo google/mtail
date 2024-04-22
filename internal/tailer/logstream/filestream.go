@@ -48,7 +48,7 @@ type fileStream struct {
 }
 
 // newFileStream creates a new log stream from a regular file.
-func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine, streamFromStart bool) (LogStream, error) {
+func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine, streamFromStart OneShotMode) (LogStream, error) {
 	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
 	if err := fs.stream(ctx, wg, waker, fi, streamFromStart); err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (fs *fileStream) LastReadTime() time.Time {
 	return fs.lastReadTime
 }
 
-func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, streamFromStart bool) error {
+func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, streamFromStart OneShotMode) error {
 	fd, err := os.OpenFile(fs.pathname, os.O_RDONLY, 0o600)
 	if err != nil {
 		logErrors.Add(fs.pathname, 1)

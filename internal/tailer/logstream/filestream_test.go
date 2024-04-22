@@ -27,7 +27,7 @@ func TestFileStreamRead(t *testing.T) {
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
+	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
 	awaken(1)
 
@@ -62,7 +62,7 @@ func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
+	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
 	awaken(1)
 
@@ -103,7 +103,7 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
+	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
 	awaken(1)
 
@@ -149,7 +149,7 @@ func TestFileStreamTruncation(t *testing.T) {
 	lines := make(chan *logline.LogLine, 3)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
+	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	// fs.Stop() is also called explicitly further down but a failed test
 	// and early return would lead to the handle staying open
 	defer fs.Stop()
@@ -197,7 +197,7 @@ func TestFileStreamFinishedBecauseCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
 
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
+	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
 	awaken(1) // Synchronise past first read after seekToEnd
 
@@ -232,7 +232,7 @@ func TestFileStreamPartialRead(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1)
 
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, true)
+	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
 	awaken(1)
 

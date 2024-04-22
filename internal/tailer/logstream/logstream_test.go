@@ -1,19 +1,21 @@
-package logstream
+package logstream_test
 
 import (
 	"context"
 	"sync"
 	"testing"
+
+	"github.com/google/mtail/internal/tailer/logstream"
 )
 
 func TestNewErrors(t *testing.T) {
 	ctx := context.Background()
-	_, err := New(ctx, nil, nil, "", nil, false)
+	_, err := logstream.New(ctx, nil, nil, "", nil, logstream.OneShotDisabled)
 	if err == nil {
 		t.Errorf("New(ctx, nil) expecting error, received nil")
 	}
 	var wg sync.WaitGroup
-	_, err = New(ctx, &wg, nil, ":a/b", nil, false)
+	_, err = logstream.New(ctx, &wg, nil, ":a/b", nil, logstream.OneShotDisabled)
 	if err == nil {
 		t.Error("New(ctg, wg, ..., path) expecting error, received nil")
 	}

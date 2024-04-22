@@ -27,6 +27,8 @@ type pipeStream struct {
 	lastReadTime time.Time    // Last time a log line was read from this named pipe
 }
 
+// newPipeStream creates a new stream reader for Unix Pipes.
+// `pathname` must already be verified as clean.
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine) (LogStream, error) {
 	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), lines: lines}
 	if err := ps.stream(ctx, wg, waker, fi); err != nil {
@@ -41,9 +43,16 @@ func (ps *pipeStream) LastReadTime() time.Time {
 	return ps.lastReadTime
 }
 
-func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, _ os.FileInfo) error {
+func pipeOpen(pathname string) (*os.File, error) {
+	if pathname == "-" {
+		return os.Stdin, nil
+	}
 	// Open in nonblocking mode because the write end of the pipe may not have started yet.
-	fd, err := os.OpenFile(ps.pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0o600)
+	return os.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0o600) // #nosec G304 -- path already validated by caller
+}
+
+func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, _ os.FileInfo) error {
+	fd, err := pipeOpen(ps.pathname)
 	if err != nil {
 		logErrors.Add(ps.pathname, 1)
 		return err

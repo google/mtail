@@ -16,7 +16,23 @@ import (
 	"github.com/google/mtail/internal/waker"
 )
 
-func makeTestTail(t *testing.T, options ...Option) (*Tailer, chan *logline.LogLine, func(int), string, func()) {
+type testTail struct {
+	*Tailer
+
+	// Output lnes channel
+	lines chan *logline.LogLine
+
+	// Method to wake the waker
+	awaken func(int)
+
+	// Temporary dir for test
+	tmpDir string
+
+	// Issue a shutdown to the test tailer.
+	stop func()
+}
+
+func makeTestTail(t *testing.T, options ...Option) *testTail {
 	t.Helper()
 	tmpDir := testutil.TestTempDir(t)
 
@@ -27,13 +43,15 @@ func makeTestTail(t *testing.T, options ...Option) (*Tailer, chan *logline.LogLi
 	options = append(options, LogPatterns([]string{tmpDir}), LogstreamPollWaker(waker))
 	ta, err := New(ctx, &wg, lines, options...)
 	testutil.FatalIfErr(t, err)
-	return ta, lines, awaken, tmpDir, func() { cancel(); wg.Wait() }
+	stop := func() { cancel(); wg.Wait() }
+	t.Cleanup(stop)
+	return &testTail{Tailer: ta, lines: lines, awaken: awaken, tmpDir: tmpDir, stop: stop}
 }
 
 func TestTail(t *testing.T) {
-	ta, _, _, dir, stop := makeTestTail(t)
+	ta := makeTestTail(t)
 
-	logfile := filepath.Join(dir, "log")
+	logfile := filepath.Join(ta.tmpDir, "log")
 	f := testutil.TestOpenFile(t, logfile)
 	defer f.Close()
 
@@ -43,8 +61,6 @@ func TestTail(t *testing.T) {
 	if _, ok := ta.logstreams[logfile]; !ok {
 		t.Errorf("path not found in files map: %+#v", ta.logstreams)
 	}
-
-	stop()
 }
 
 func TestTailErrors(t *testing.T) {
@@ -63,26 +79,26 @@ func TestTailErrors(t *testing.T) {
 }
 
 func TestHandleLogUpdate(t *testing.T) {
-	ta, lines, awaken, dir, stop := makeTestTail(t)
+	ta := makeTestTail(t)
 
-	logfile := filepath.Join(dir, "log")
+	logfile := filepath.Join(ta.tmpDir, "log")
 	f := testutil.TestOpenFile(t, logfile)
 	defer f.Close()
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
-	awaken(1)
+	ta.awaken(1)
 
 	testutil.WriteString(t, f, "a\nb\nc\nd\n")
-	awaken(1)
+	ta.awaken(1)
 
-	stop()
+	ta.stop()
 
-	received := testutil.LinesReceived(lines)
+	received := testutil.LinesReceived(ta.lines)
 	expected := []*logline.LogLine{
-		{context.Background(), logfile, "a"},
-		{context.Background(), logfile, "b"},
-		{context.Background(), logfile, "c"},
-		{context.Background(), logfile, "d"},
+		{Context: context.Background(), Filename: logfile, Line: "a"},
+		{Context: context.Background(), Filename: logfile, Line: "b"},
+		{Context: context.Background(), Filename: logfile, Line: "c"},
+		{Context: context.Background(), Filename: logfile, Line: "d"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
@@ -91,18 +107,18 @@ func TestHandleLogUpdate(t *testing.T) {
 // writes to be seen, then truncates the file and writes some more.
 // At the end all lines written must be reported by the tailer.
 func TestHandleLogTruncate(t *testing.T) {
-	ta, lines, awaken, dir, stop := makeTestTail(t)
+	ta := makeTestTail(t)
 
-	logfile := filepath.Join(dir, "log")
+	logfile := filepath.Join(ta.tmpDir, "log")
 	f := testutil.OpenLogFile(t, logfile)
 	defer f.Close()
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
 	// Expect to wake 1 wakee, the logstream reading `logfile`.
-	awaken(1)
+	ta.awaken(1)
 
 	testutil.WriteString(t, f, "a\nb\nc\n")
-	awaken(1)
+	ta.awaken(1)
 
 	if err := f.Truncate(0); err != nil {
 		t.Fatal(err)
@@ -111,58 +127,58 @@ func TestHandleLogTruncate(t *testing.T) {
 	// "File.Truncate" does not change the file offset, force a seek to start.
 	_, err := f.Seek(0, 0)
 	testutil.FatalIfErr(t, err)
-	awaken(1)
+	ta.awaken(1)
 
 	testutil.WriteString(t, f, "d\ne\n")
-	awaken(1)
+	ta.awaken(1)
 
-	stop()
+	ta.stop()
 
-	received := testutil.LinesReceived(lines)
+	received := testutil.LinesReceived(ta.lines)
 	expected := []*logline.LogLine{
-		{context.Background(), logfile, "a"},
-		{context.Background(), logfile, "b"},
-		{context.Background(), logfile, "c"},
-		{context.Background(), logfile, "d"},
-		{context.Background(), logfile, "e"},
+		{Context: context.Background(), Filename: logfile, Line: "a"},
+		{Context: context.Background(), Filename: logfile, Line: "b"},
+		{Context: context.Background(), Filename: logfile, Line: "c"},
+		{Context: context.Background(), Filename: logfile, Line: "d"},
+		{Context: context.Background(), Filename: logfile, Line: "e"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestHandleLogUpdatePartialLine(t *testing.T) {
-	ta, lines, awaken, dir, stop := makeTestTail(t)
+	ta := makeTestTail(t)
 
-	logfile := filepath.Join(dir, "log")
+	logfile := filepath.Join(ta.tmpDir, "log")
 	f := testutil.TestOpenFile(t, logfile)
 	defer f.Close()
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
-	awaken(1) // ensure we've hit an EOF before writing starts
+	ta.awaken(1) // ensure we've hit an EOF before writing starts
 
 	testutil.WriteString(t, f, "a")
-	awaken(1)
+	ta.awaken(1)
 
 	testutil.WriteString(t, f, "b")
-	awaken(1)
+	ta.awaken(1)
 
 	testutil.WriteString(t, f, "\n")
-	awaken(1)
+	ta.awaken(1)
 
-	stop()
+	ta.stop()
 
-	received := testutil.LinesReceived(lines)
+	received := testutil.LinesReceived(ta.lines)
 	expected := []*logline.LogLine{
-		{context.Background(), logfile, "ab"},
+		{Context: context.Background(), Filename: logfile, Line: "ab"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
 func TestTailerUnreadableFile(t *testing.T) {
 	// Test broken files are skipped.
-	ta, lines, awaken, dir, stop := makeTestTail(t)
+	ta := makeTestTail(t)
 
-	brokenfile := filepath.Join(dir, "brokenlog")
-	logfile := filepath.Join(dir, "log")
+	brokenfile := filepath.Join(ta.tmpDir, "brokenlog")
+	logfile := filepath.Join(ta.tmpDir, "log")
 	testutil.FatalIfErr(t, ta.AddPattern(brokenfile))
 	testutil.FatalIfErr(t, ta.AddPattern(logfile))
 
@@ -176,13 +192,13 @@ func TestTailerUnreadableFile(t *testing.T) {
 
 	glog.Info("write string")
 	testutil.WriteString(t, f, "\n")
-	awaken(1)
+	ta.awaken(1)
 
-	stop()
+	ta.stop()
 
-	received := testutil.LinesReceived(lines)
+	received := testutil.LinesReceived(ta.lines)
 	expected := []*logline.LogLine{
-		{context.Background(), logfile, ""},
+		{Context: context.Background(), Filename: logfile, Line: ""},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
@@ -225,11 +241,11 @@ func TestTailerInitErrors(t *testing.T) {
 
 func TestTailExpireStaleHandles(t *testing.T) {
 	t.Skip("need to set lastRead on logstream to inject condition")
-	ta, lines, awaken, dir, stop := makeTestTail(t)
+	ta := makeTestTail(t)
 
-	log1 := filepath.Join(dir, "log1")
+	log1 := filepath.Join(ta.tmpDir, "log1")
 	f1 := testutil.TestOpenFile(t, log1)
-	log2 := filepath.Join(dir, "log2")
+	log2 := filepath.Join(ta.tmpDir, "log2")
 	f2 := testutil.TestOpenFile(t, log2)
 
 	if err := ta.TailPath(log1); err != nil {
@@ -241,14 +257,14 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	testutil.WriteString(t, f1, "1\n")
 	testutil.WriteString(t, f2, "2\n")
 
-	awaken(1)
+	ta.awaken(1)
 
-	stop()
+	ta.stop()
 
-	received := testutil.LinesReceived(lines)
+	received := testutil.LinesReceived(ta.lines)
 	expected := []*logline.LogLine{
-		{context.Background(), log1, "1"},
-		{context.Background(), log2, "2"},
+		{Context: context.Background(), Filename: log1, Line: "1"},
+		{Context: context.Background(), Filename: log2, Line: "2"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 

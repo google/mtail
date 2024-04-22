@@ -6,12 +6,14 @@ package mtail_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/mtail/internal/testutil"
 )
 
 var mtailPath string
@@ -39,6 +41,7 @@ func TestExecMtail(t *testing.T) {
 		"-logs", "testdata/rsyncd.log",
 		"-one_shot",
 		"-one_shot_format=prometheus",
+		"-port", fmt.Sprintf("%d", testutil.FreePort(t)),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()

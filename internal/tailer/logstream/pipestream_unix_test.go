@@ -2,7 +2,6 @@
 // This file is available under the Apache license.
 
 //go:build unix
-// +build unix
 
 package logstream_test
 
@@ -41,7 +40,7 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 		f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 		testutil.FatalIfErr(t, err)
 
-		ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
+		ps, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
 		testutil.FatalIfErr(t, err)
 
 		testutil.WriteString(t, f, "1\n")
@@ -83,7 +82,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 		f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 		testutil.FatalIfErr(t, err)
 
-		ps, err := logstream.New(ctx, &wg, waker, name, lines, false)
+		ps, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
 		testutil.FatalIfErr(t, err)
 
 		testutil.WriteString(t, f, "1\n")
@@ -120,7 +119,7 @@ func TestPipeStreamReadURL(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker := waker.NewTestAlways()
 
-	ps, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, false)
+	ps, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
 
 	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
@@ -144,5 +143,46 @@ func TestPipeStreamReadURL(t *testing.T) {
 
 	if !ps.IsComplete() {
 		t.Errorf("expecting pipestream to be complete because fifo closed")
+	}
+}
+
+func TestPipeStreamReadStdin(t *testing.T) {
+	var wg sync.WaitGroup
+
+	tmpDir := testutil.TestTempDir(t)
+
+	name := filepath.Join(tmpDir, "fakestdin")
+	testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
+	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+	testutil.FatalIfErr(t, err)
+	testutil.OverrideStdin(t, f)
+	testutil.WriteString(t, f, "content\n")
+
+	lines := make(chan *logline.LogLine, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	waker, awaken := waker.NewTest(ctx, 1)
+
+	ps, err := logstream.New(ctx, &wg, waker, "-", lines, logstream.OneShotDisabled)
+	testutil.FatalIfErr(t, err)
+
+	awaken(0)
+
+	testutil.FatalIfErr(t, f.Close())
+
+	cancel()
+
+	ps.Stop()
+	wg.Wait()
+	close(lines)
+
+	received := testutil.LinesReceived(lines)
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: "-", Line: "content"},
+	}
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	cancel()
+	if !ps.IsComplete() {
+		t.Errorf("expecting pipestream to be complete beacuse fifo closed")
 	}
 }

@@ -2,7 +2,6 @@
 // This file is available under the Apache license.
 
 //go:build unix
-// +build unix
 
 package logstream_test
 
@@ -44,7 +43,7 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			waker, awaken := waker.NewTest(ctx, 1)
 
 			sockName := scheme + "://" + addr
-			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
+			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
 			testutil.FatalIfErr(t, err)
 
 			s, err := net.Dial(scheme, addr)
@@ -101,7 +100,7 @@ func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
 			waker, awaken := waker.NewTest(ctx, 1)
 
 			sockName := scheme + "://" + addr
-			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, false)
+			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
 			testutil.FatalIfErr(t, err)
 
 			s, err := net.Dial(scheme, addr)

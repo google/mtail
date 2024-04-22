@@ -49,12 +49,19 @@ var (
 	ErrNeedsWaitgroup       = errors.New("logstream needs a waitgroup")
 )
 
+type OneShotMode bool
+
+const (
+	OneShotDisabled OneShotMode = false
+	OneShotEnabled  OneShotMode = true
+)
+
 // New creates a LogStream from the file object located at the absolute path
 // `pathname`.  The LogStream will watch `ctx` for a cancellation signal, and
 // notify the `wg` when it is Done.  Log lines will be sent to the `lines`
 // channel.  `seekToStart` is only used for testing and only works for regular
 // files that can be seeked.
-func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine, oneShot bool) (LogStream, error) {
+func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, lines chan<- *logline.LogLine, oneShot OneShotMode) (LogStream, error) {
 	if wg == nil {
 		return nil, ErrNeedsWaitgroup
 	}
@@ -79,10 +86,19 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	case "", "file":
 		path = u.Path
 	}
-	fi, err := os.Stat(path)
-	if err != nil {
-		logErrors.Add(path, 1)
-		return nil, err
+	var fi os.FileInfo
+	if path == "-" {
+		fi, err = os.Stdin.Stat()
+		if err != nil {
+			logErrors.Add(path, 1)
+			return nil, err
+		}
+	} else {
+		fi, err = os.Stat(path)
+		if err != nil {
+			logErrors.Add(path, 1)
+			return nil, err
+		}
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():

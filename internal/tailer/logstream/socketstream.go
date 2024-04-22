@@ -19,7 +19,7 @@ type socketStream struct {
 	ctx   context.Context
 	lines chan<- *logline.LogLine
 
-	oneShot bool
+	oneShot OneShotMode
 	scheme  string // URL Scheme to listen with, either tcp or unix
 	address string // Given name for the underlying socket path on the filesystem or host/port.
 
@@ -31,7 +31,7 @@ type socketStream struct {
 	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
-func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, lines chan<- *logline.LogLine, oneShot bool) (LogStream, error) {
+func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, lines chan<- *logline.LogLine, oneShot OneShotMode) (LogStream, error) {
 	if address == "" {
 		return nil, ErrEmptySocketAddress
 	}
