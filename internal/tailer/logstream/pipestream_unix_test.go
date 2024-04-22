@@ -145,3 +145,50 @@ func TestPipeStreamReadURL(t *testing.T) {
 		t.Errorf("expecting pipestream to be complete because fifo closed")
 	}
 }
+
+func TestPipeStreamReadStdin(t *testing.T) {
+	var wg sync.WaitGroup
+
+	tmpDir := testutil.TestTempDir(t)
+
+	name := filepath.Join(tmpDir, "fakestdin")
+	testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
+
+	oldStdin := os.Stdin
+	t.Cleanup(func() {
+		os.Stdin = oldStdin
+	})
+
+	var err error
+	os.Stdin, err = os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+	testutil.FatalIfErr(t, err)
+	testutil.WriteString(t, os.Stdin, "content\n")
+
+	lines := make(chan *logline.LogLine, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	waker, awaken := waker.NewTest(ctx, 1)
+
+	ps, err := logstream.New(ctx, &wg, waker, "-", lines, false)
+	testutil.FatalIfErr(t, err)
+
+	awaken(0)
+
+	testutil.FatalIfErr(t, os.Stdin.Close())
+
+	cancel()
+
+	ps.Stop()
+	wg.Wait()
+	close(lines)
+
+	received := testutil.LinesReceived(lines)
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: "-", Line: "content"},
+	}
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	cancel()
+	if !ps.IsComplete() {
+		t.Errorf("expecting pipestream to be complete beacuse fifo closed")
+	}
+}

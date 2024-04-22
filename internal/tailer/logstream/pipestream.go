@@ -42,11 +42,17 @@ func (ps *pipeStream) LastReadTime() time.Time {
 }
 
 func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, _ os.FileInfo) error {
-	// Open in nonblocking mode because the write end of the pipe may not have started yet.
-	fd, err := os.OpenFile(ps.pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0o600)
-	if err != nil {
-		logErrors.Add(ps.pathname, 1)
-		return err
+	var fd *os.File
+	if ps.pathname == "-" {
+		fd = os.Stdin
+	} else {
+		// Open in nonblocking mode because the write end of the pipe may not have started yet.
+		var err error
+		fd, err = os.OpenFile(ps.pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0o600)
+		if err != nil {
+			logErrors.Add(ps.pathname, 1)
+			return err
+		}
 	}
 	glog.V(2).Infof("opened new pipe %v", fd)
 	b := make([]byte, defaultReadBufferSize)

@@ -29,6 +29,9 @@ func IsEndOrCancel(err error) bool {
 	if errors.Is(err, io.EOF) {
 		return true
 	}
+	if errors.Is(err, os.ErrClosed) {
+		return true
+	}
 	if os.IsTimeout(err) {
 		return true
 	}
