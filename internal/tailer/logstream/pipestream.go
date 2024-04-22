@@ -27,6 +27,8 @@ type pipeStream struct {
 	lastReadTime time.Time    // Last time a log line was read from this named pipe
 }
 
+// newPipeStream creates a new stream reader for Unix Pipes.
+// `pathname` must already be verified as clean.
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine) (LogStream, error) {
 	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), lines: lines}
 	if err := ps.stream(ctx, wg, waker, fi); err != nil {
