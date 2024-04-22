@@ -65,7 +65,7 @@ func TestTailerOpenRetries(t *testing.T) {
 
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.Background(), logfile, ""},
+		{Context: context.Background(), Filename: logfile, Line: ""},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }

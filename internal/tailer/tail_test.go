@@ -79,10 +79,10 @@ func TestHandleLogUpdate(t *testing.T) {
 
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.Background(), logfile, "a"},
-		{context.Background(), logfile, "b"},
-		{context.Background(), logfile, "c"},
-		{context.Background(), logfile, "d"},
+		{Context: context.Background(), Filename: logfile, Line: "a"},
+		{Context: context.Background(), Filename: logfile, Line: "b"},
+		{Context: context.Background(), Filename: logfile, Line: "c"},
+		{Context: context.Background(), Filename: logfile, Line: "d"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
@@ -120,11 +120,11 @@ func TestHandleLogTruncate(t *testing.T) {
 
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.Background(), logfile, "a"},
-		{context.Background(), logfile, "b"},
-		{context.Background(), logfile, "c"},
-		{context.Background(), logfile, "d"},
-		{context.Background(), logfile, "e"},
+		{Context: context.Background(), Filename: logfile, Line: "a"},
+		{Context: context.Background(), Filename: logfile, Line: "b"},
+		{Context: context.Background(), Filename: logfile, Line: "c"},
+		{Context: context.Background(), Filename: logfile, Line: "d"},
+		{Context: context.Background(), Filename: logfile, Line: "e"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
@@ -152,7 +152,7 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.Background(), logfile, "ab"},
+		{Context: context.Background(), Filename: logfile, Line: "ab"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
@@ -182,7 +182,7 @@ func TestTailerUnreadableFile(t *testing.T) {
 
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.Background(), logfile, ""},
+		{Context: context.Background(), Filename: logfile, Line: ""},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
@@ -247,8 +247,8 @@ func TestTailExpireStaleHandles(t *testing.T) {
 
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.Background(), log1, "1"},
-		{context.Background(), log2, "2"},
+		{Context: context.Background(), Filename: log1, Line: "1"},
+		{Context: context.Background(), Filename: log2, Line: "2"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
