@@ -75,16 +75,10 @@ func TestAddStdin(t *testing.T) {
 
 	name := filepath.Join(ta.tmpDir, "fakestdin")
 	testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
-
-	oldStdin := os.Stdin
-	t.Cleanup(func() {
-		os.Stdin = oldStdin
-	})
-
-	var err error
-	os.Stdin, err = os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
+	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
-	testutil.WriteString(t, os.Stdin, "content\n")
+	testutil.OverrideStdin(t, f)
+	testutil.WriteString(t, f, "content\n")
 
 	if err := ta.AddPattern("-"); err != nil {
 		t.Errorf("AddPattern(-) -> %v", err)
