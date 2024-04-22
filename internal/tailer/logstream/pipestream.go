@@ -46,7 +46,7 @@ func pipeOpen(pathname string) (*os.File, error) {
 		return os.Stdin, nil
 	}
 	// Open in nonblocking mode because the write end of the pipe may not have started yet.
-	return os.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0o600)
+	return os.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0o600) // #nosec G304 -- path already validated by caller
 }
 
 func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, _ os.FileInfo) error {
