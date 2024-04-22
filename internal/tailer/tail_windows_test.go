@@ -12,7 +12,7 @@ import (
 )
 
 func TestWindowsPath(t *testing.T) {
-	ta, _, _, _, stop := makeTestTail(t)
+	ta := makeTestTail(t)
 
 	testutil.FatalIfErr(t, ta.AddPattern("C:\\somefile"))
 
@@ -20,5 +20,5 @@ func TestWindowsPath(t *testing.T) {
 		t.Errorf("path not found in files map: %+#v", ta.globPatterns)
 	}
 
-	stop()
+	ta.stop()
 }
