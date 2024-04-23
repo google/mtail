@@ -1,0 +1,5 @@
+FROM scratch
+COPY mtail mtail
+ENTRYPOINT ["mtail"]
+EXPOSE 3903
+WORKDIR /tmp
