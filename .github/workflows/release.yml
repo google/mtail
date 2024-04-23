@@ -85,9 +85,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -exuo pipefail
-          gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --archive tar.gz
-          gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --archive zip
+          gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --pattern '*.tar.gz'
+          gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --pattern '*.zip'
           gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --pattern "${PROVENANCE}"
+          ls -l
       - name: verify assets
         run: |
           set -euo pipefail
