@@ -222,7 +222,7 @@ func (t *Tailer) AddPattern(pattern string) error {
 		t.socketPaths = append(t.socketPaths, pattern)
 		return nil
 	case "", "file":
-		path = u.Path
+		// Leave path alone; may contain globs
 	}
 	if path != "-" {
 		path, err = filepath.Abs(path)

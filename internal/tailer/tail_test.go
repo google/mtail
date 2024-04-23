@@ -300,3 +300,21 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	ta.logstreamsMu.RUnlock()
 	glog.Info("good")
 }
+
+func TestAddGlob(t *testing.T) {
+	ta := makeTestTail(t)
+
+	pattern := "foo?.log"
+	err := ta.AddPattern(pattern)
+	if err != nil {
+		t.Errorf("AddPattern(%v) -> %v", pattern, err)
+	}
+	absPattern, err := filepath.Abs(pattern)
+	testutil.FatalIfErr(t, err)
+	ta.globPatternsMu.Lock()
+	_, ok := ta.globPatterns[absPattern]
+	if !ok {
+		t.Errorf("pattern not found in globPatterns: %v", ta.globPatterns)
+	}
+	ta.globPatternsMu.Unlock()
+}
