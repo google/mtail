@@ -25,8 +25,7 @@ snapshot:
 changelog:
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - '^ci:'
       - '^Merge'
 release:
   github:
