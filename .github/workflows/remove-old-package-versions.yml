@@ -1,0 +1,16 @@
+name: remove old package versions
+on:
+  schedule:
+  - cron: "30 2 * * 3"
+
+jobs:
+  remove-old-packages:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: mtail
+          package-type: container
+          min-versions-to-keep: 10
