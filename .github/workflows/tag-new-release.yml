@@ -1,7 +1,10 @@
 name: tag new release
 
 on:
+  pull_request:  # for testing
   workflow_dispatch:
+  schedule:
+    - cron: "30 5 * * 0"
 
 jobs:
   tag:
