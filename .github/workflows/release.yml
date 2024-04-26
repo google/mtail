@@ -66,6 +66,7 @@ jobs:
 
   binary-provenance:
     needs: [goreleaser]
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
     permissions:
       actions: read # To read the workflow path.
       id-token: write # To sign the provenance.
@@ -106,6 +107,7 @@ jobs:
 
   image-provenance:
     needs: [goreleaser]
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
     permissions:
       actions: read
       id-token: write
