@@ -13,3 +13,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           create_annotated_tag: true
           custom_release_rules: ci:none,chore:none,style:none
+          default_bump: none
