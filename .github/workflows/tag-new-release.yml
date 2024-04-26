@@ -4,11 +4,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  tag:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-      - uses: hennejg/github-tag-action@v4.1.jh1
+      - uses: actions/checkout@v4
+      - uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           create_annotated_tag: true
+          custom_release_rules: ci:none,chore:none,style:none
