@@ -14,3 +14,4 @@ jobs:
           create_annotated_tag: true
           custom_release_rules: ci:none,chore:none,style:none
           default_bump: none
+          dry_run: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'schedule' }}
