@@ -50,6 +50,8 @@ type Tailer struct {
 	initDone chan struct{}
 }
 
+const stdinPattern = "-"
+
 // Option configures a new Tailer.
 type Option interface {
 	apply(*Tailer) error
@@ -162,8 +164,8 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 			return nil, err
 		}
 	}
-	// Guarantee all existing logs get tailed before we leave.  Also necessary
-	// in case oneshot mode is active, the logs get read!
+	// Guarantee all existing remaining patterns get tailed before we leave.
+	// Also necessary in case oneshot mode is active, the logs get read!
 	if err := t.PollLogPatterns(); err != nil {
 		return nil, err
 	}
@@ -183,6 +185,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 			<-t.ctx.Done()
 		}
 		t.wg.Wait()
+		glog.V(1).InfoContextf(ctx, "tailer finished")
 		close(t.lines)
 	}()
 	return t, nil
@@ -224,7 +227,7 @@ func (t *Tailer) AddPattern(pattern string) error {
 	case "", "file":
 		// Leave path alone; may contain globs
 	}
-	if path != "-" {
+	if path != stdinPattern {
 		path, err = filepath.Abs(path)
 		if err != nil {
 			glog.V(2).Infof("Couldn't canonicalize path %q: %s", u.Path, err)
@@ -281,7 +284,7 @@ func (t *Tailer) TailPath(pathname string) error {
 			return nil
 		}
 		logCount.Add(-1) // Removing the current entry before re-adding.
-		glog.V(2).Infof("Existing logstream is finished, creating a new one.")
+		glog.V(2).Infof("%q: Existing logstream is finished, creating a new one.", pathname)
 	}
 	l, err := logstream.New(t.ctx, &t.wg, t.logstreamPollWaker, pathname, t.lines, t.oneShot)
 	if err != nil {
@@ -369,10 +372,14 @@ func (t *Tailer) PollLogPatterns() error {
 	t.globPatternsMu.RLock()
 	defer t.globPatternsMu.RUnlock()
 	for pattern := range t.globPatterns {
-		if pattern == "-" {
+		// Check for a stdin, and set up a one-pass-only tail, by removing it from the set.
+		if isStdinPattern(pattern) {
+			glog.V(2).Infof("%q is stdin", pattern)
 			if err := t.TailPath(pattern); err != nil {
 				glog.Info(err)
 			}
+			delete(t.globPatterns, pattern)
+			continue
 		}
 		matches, err := filepath.Glob(pattern)
 		if err != nil {
@@ -422,4 +429,14 @@ func (t *Tailer) Poll() error {
 		}
 	}
 	return nil
+}
+
+func isStdinPattern(pattern string) bool {
+	if pattern == stdinPattern {
+		return true
+	}
+	if pattern == "/dev/stdin" {
+		return true
+	}
+	return false
 }
