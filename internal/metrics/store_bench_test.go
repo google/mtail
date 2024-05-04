@@ -48,9 +48,9 @@ func newRandMetric(tb testing.TB, rand *rand.Rand, i int) *Metric {
 }
 
 type bench struct {
-	name  string
-	setup func(b *testing.B, rand *rand.Rand, items int, m *[]*Metric, s *Store)
-	b     func(b *testing.B, items int, m []*Metric, s *Store)
+	name      string
+	setup     func(b *testing.B, rand *rand.Rand, items int, m *[]*Metric, s *Store)
+	benchFunc func(b *testing.B, items int, m []*Metric, s *Store)
 }
 
 func fillMetric(b *testing.B, rand *rand.Rand, items int, m *[]*Metric, _ *Store) {
@@ -70,9 +70,9 @@ func addToStore(b *testing.B, items int, m []*Metric, s *Store) {
 func BenchmarkStore(b *testing.B) {
 	benches := []bench{
 		{
-			name:  "Add",
-			setup: fillMetric,
-			b:     addToStore,
+			name:      "Add",
+			setup:     fillMetric,
+			benchFunc: addToStore,
 		},
 		{
 			name: "Iterate",
@@ -81,7 +81,7 @@ func BenchmarkStore(b *testing.B) {
 				fillMetric(b, rand, items, m, s)
 				addToStore(b, items, *m, s)
 			},
-			b: func(b *testing.B, _ int, _ []*Metric, s *Store) {
+			benchFunc: func(b *testing.B, _ int, _ []*Metric, s *Store) {
 				b.Helper()
 				s.Range(func(*Metric) error {
 					return nil
@@ -117,12 +117,12 @@ func BenchmarkStore(b *testing.B) {
 						if parallel {
 							b.RunParallel(func(pb *testing.PB) {
 								for pb.Next() {
-									bench.b(b, items, m, s)
+									bench.benchFunc(b, items, m, s)
 								}
 							})
 						} else {
 							for n := 0; n < b.N; n++ {
-								bench.b(b, items, m, s)
+								bench.benchFunc(b, items, m, s)
 								if gc {
 									s.Gc()
 								}
