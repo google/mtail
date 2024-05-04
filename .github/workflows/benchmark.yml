@@ -1,0 +1,37 @@
+name: benchmark
+on:
+  # Test new changes
+  pull_request:
+  push:
+    branches:
+      # Record on merges to main
+      - main
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    permissions:
+      # For benchmark-action comment-always
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - run: make bench
+        env:
+          HEAD_REF: ${{ env.GITHUB_REF_NAME }}
+      - uses: actions/cache@v4
+        with:
+          path: ./cache
+          key: ${{ runner.os }}-benchmark
+      - uses: benchmark-action/github-action-benchmark@v1.20.1
+        with:
+          tool: 'go'
+          output-file-path: test-results/benchmark-results-${{ env.GITHUB_REF_NAME }}.txt
+          external-data-json-path: ./cache/benchmark-data.json
+          save-data-file: ${{ github.event_name != 'pull_request' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          comment-always: true
+          summary-always: true
