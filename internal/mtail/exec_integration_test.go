@@ -1,4 +1,4 @@
-// Copyright 2024 Google Inc.  ll Rights Reserved.
+// Copyright 2024 Google Inc.  All Rights Reserved.
 // This file is available under the Apache license.
 
 package mtail_test
@@ -39,6 +39,7 @@ func TestExecMtail(t *testing.T) {
 		"-progs",
 		"../../examples",
 		"-logs", "testdata/rsyncd.log",
+		"--logtostderr",
 		"-one_shot",
 		"-one_shot_format=prometheus",
 		"-port", fmt.Sprintf("%d", testutil.FreePort(t)),
