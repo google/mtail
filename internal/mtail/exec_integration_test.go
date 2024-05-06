@@ -41,6 +41,7 @@ func TestExecMtail(t *testing.T) {
 		"../../examples",
 		"-logs", "testdata/rsyncd.log",
 		"--logtostderr",
+		"--v=2",
 		"-one_shot",
 		"-one_shot_format=prometheus",
 		"-port", fmt.Sprintf("%d", testutil.FreePort(t)),
