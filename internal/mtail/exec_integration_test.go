@@ -1,4 +1,4 @@
-// Copyright 2024 Google Inc.  ll Rights Reserved.
+// Copyright 2024 Google Inc.  All Rights Reserved.
 // This file is available under the Apache license.
 
 package mtail_test
@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -39,6 +40,8 @@ func TestExecMtail(t *testing.T) {
 		"-progs",
 		"../../examples",
 		"-logs", "testdata/rsyncd.log",
+		"--logtostderr",
+		"--v=2",
 		"-one_shot",
 		"-one_shot_format=prometheus",
 		"-port", fmt.Sprintf("%d", testutil.FreePort(t)),
@@ -46,6 +49,10 @@ func TestExecMtail(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, mtailPath, cs...)
+	cmd.Cancel = func() error {
+		// Kill with abort to dump stack
+		return cmd.Process.Signal(syscall.SIGABRT)
+	}
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Logf("%s", out)
 		t.Error(err)
