@@ -141,12 +141,13 @@ func TestHandleJSON(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			var wg sync.WaitGroup
+			defer cancel()
+
 			ms := metrics.NewStore()
 			for _, metric := range tc.metrics {
 				testutil.FatalIfErr(t, ms.Add(metric))
 			}
-			e, err := New(ctx, &wg, ms, Hostname("gunstar"))
+			e, err := New(ctx, ms, Hostname("gunstar"))
 			testutil.FatalIfErr(t, err)
 			response := httptest.NewRecorder()
 			e.HandleJSON(response, &http.Request{})
@@ -158,8 +159,8 @@ func TestHandleJSON(t *testing.T) {
 				t.Errorf("failed to read response: %s", err)
 			}
 			testutil.ExpectNoDiff(t, tc.expected, string(b), testutil.IgnoreUnexported(sync.RWMutex{}))
-			cancel()
-			wg.Wait()
+
+			e.Stop()
 		})
 	}
 }

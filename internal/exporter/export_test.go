@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -22,37 +21,26 @@ const prefix = "prefix"
 
 func TestCreateExporter(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	var wg sync.WaitGroup
+	defer cancel()
 	store := metrics.NewStore()
-	_, err := New(ctx, &wg, store)
+
+	e, err := New(ctx, store)
 	if err != nil {
-		t.Errorf("New(ctx, wg, store) unexpected error: %v", err)
+		t.Errorf("New(ctx, store) unexpected error: %v", err)
 	}
-	cancel()
-	wg.Wait()
-	ctx, cancel = context.WithCancel(context.Background())
+	e.Stop()
+
 	failopt := func(*Exporter) error {
 		return errors.New("busted") // nolint:goerr113
 	}
-	_, err = New(ctx, &wg, store, failopt)
+	_, err = New(ctx, store, failopt)
 	if err == nil {
-		t.Errorf("unexpected success")
+		t.Error("New(ctx, store, fail) -> unexpected success")
 	}
-	cancel()
-	wg.Wait()
-}
 
-func TestNewErrors(t *testing.T) {
-	ctx := context.Background()
-	store := metrics.NewStore()
-	var wg sync.WaitGroup
-	_, err := New(ctx, nil, store)
+	_, err = New(ctx, nil)
 	if err == nil {
-		t.Error("New(ctx, nil, store) expecting error, received nil")
-	}
-	_, err = New(ctx, &wg, nil)
-	if err == nil {
-		t.Error("New(ctx, wg, nil) expecting error, received nil")
+		t.Error("New(ctx, nil) -> nil, expecting error")
 	}
 }
 

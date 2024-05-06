@@ -31,6 +31,7 @@ var (
 // Exporter manages the export of metrics to passive and active collectors.
 type Exporter struct {
 	ctx            context.Context
+	cancelFunc     context.CancelFunc
 	wg             sync.WaitGroup
 	store          *metrics.Store
 	pushInterval   time.Duration
@@ -40,6 +41,7 @@ type Exporter struct {
 	exportDisabled bool
 	pushTargets    []pushOptions
 	initDone       chan struct{}
+	shutdownDone   chan struct{}
 }
 
 // Option configures a new Exporter.
@@ -83,24 +85,19 @@ func DisableExport() Option {
 	}
 }
 
-var (
-	ErrNeedsStore     = errors.New("exporter needs a Store")
-	ErrNeedsWaitgroup = errors.New("exporter needs a WaitGroup")
-)
+var ErrNeedsStore = errors.New("exporter needs a Store")
 
 // New creates a new Exporter.
-func New(ctx context.Context, wg *sync.WaitGroup, store *metrics.Store, options ...Option) (*Exporter, error) {
+func New(ctx context.Context, store *metrics.Store, options ...Option) (*Exporter, error) {
 	if store == nil {
 		return nil, ErrNeedsStore
 	}
-	if wg == nil {
-		return nil, ErrNeedsWaitgroup
-	}
 	e := &Exporter{
-		ctx:      ctx,
-		store:    store,
-		initDone: make(chan struct{}),
+		store:        store,
+		initDone:     make(chan struct{}),
+		shutdownDone: make(chan struct{}),
 	}
+	e.ctx, e.cancelFunc = context.WithCancel(ctx)
 	defer close(e.initDone)
 	if err := e.SetOption(options...); err != nil {
 		return nil, err
@@ -128,18 +125,23 @@ func New(ctx context.Context, wg *sync.WaitGroup, store *metrics.Store, options 
 	}
 	e.StartMetricPush()
 
-	wg.Add(1)
 	// This routine manages shutdown of the Exporter.
 	go func() {
-		defer wg.Done()
 		<-e.initDone
 		// Wait for the context to be completed before waiting for subroutines.
 		if !e.exportDisabled {
 			<-e.ctx.Done()
 		}
 		e.wg.Wait()
+		close(e.shutdownDone)
 	}()
 	return e, nil
+}
+
+// Stop instructs the exporter to shut down.  The function returns once the exporter has finished.
+func (e *Exporter) Stop() {
+	e.cancelFunc()
+	<-e.shutdownDone
 }
 
 // SetOption takes one or more option functions and applies them in order to Exporter.

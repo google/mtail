@@ -66,7 +66,7 @@ func (m *Server) initRuntime() (err error) {
 
 // initExporter sets up an Exporter for this Server.
 func (m *Server) initExporter() (err error) {
-	m.e, err = exporter.New(m.ctx, &m.wg, m.store, m.eOpts...)
+	m.e, err = exporter.New(m.ctx, m.store, m.eOpts...)
 	if err != nil {
 		return err
 	}
@@ -234,6 +234,7 @@ func (m *Server) SetOption(options ...Option) error {
 // TODO(jaq): remove this once the test server is able to trigger polls on the components.
 func (m *Server) Run() error {
 	m.wg.Wait()
+	m.e.Stop()
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
 		return nil
