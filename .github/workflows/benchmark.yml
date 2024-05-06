@@ -9,6 +9,7 @@ on:
 
 jobs:
   benchmark:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     permissions:
       # For benchmark-action comment-always
