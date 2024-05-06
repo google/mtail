@@ -8,7 +8,6 @@ import (
 	"context"
 	"math"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -255,8 +254,9 @@ func TestHandlePrometheus(t *testing.T) {
 	for _, tc := range handlePrometheusTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			var wg sync.WaitGroup
 			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
 			ms := metrics.NewStore()
 			for _, metric := range tc.metrics {
 				testutil.FatalIfErr(t, ms.Add(metric))
@@ -267,14 +267,13 @@ func TestHandlePrometheus(t *testing.T) {
 			if !tc.progLabel {
 				opts = append(opts, OmitProgLabel())
 			}
-			e, err := New(ctx, &wg, ms, opts...)
+			e, err := New(ctx, ms, opts...)
 			testutil.FatalIfErr(t, err)
 			r := strings.NewReader(tc.expected)
 			if err = promtest.CollectAndCompare(e, r); err != nil {
 				t.Error(err)
 			}
-			cancel()
-			wg.Wait()
+			e.Stop()
 		})
 	}
 }
@@ -334,8 +333,9 @@ func TestWritePrometheus(t *testing.T) {
 	for _, tc := range writePrometheusTests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			var wg sync.WaitGroup
 			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
 			ms := metrics.NewStore()
 			for _, metric := range tc.metrics {
 				testutil.FatalIfErr(t, ms.Add(metric))
@@ -344,7 +344,7 @@ func TestWritePrometheus(t *testing.T) {
 				Hostname("gunstar"),
 				OmitProgLabel(),
 			}
-			e, err := New(ctx, &wg, ms, opts...)
+			e, err := New(ctx, ms, opts...)
 			testutil.FatalIfErr(t, err)
 
 			var buf bytes.Buffer
@@ -352,8 +352,7 @@ func TestWritePrometheus(t *testing.T) {
 			testutil.FatalIfErr(t, err)
 			testutil.ExpectNoDiff(t, tc.expected, buf.String())
 
-			cancel()
-			wg.Wait()
+			e.Stop()
 		})
 	}
 }
