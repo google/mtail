@@ -85,9 +85,7 @@ func DisableExport() Option {
 	}
 }
 
-var (
-	ErrNeedsStore = errors.New("exporter needs a Store")
-)
+var ErrNeedsStore = errors.New("exporter needs a Store")
 
 // New creates a new Exporter.
 func New(ctx context.Context, store *metrics.Store, options ...Option) (*Exporter, error) {
