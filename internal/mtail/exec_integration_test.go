@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -47,6 +48,10 @@ func TestExecMtail(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, mtailPath, cs...)
+	cmd.Cancel = func() error {
+		// Kill with abort to dump stack
+		return cmd.Process.Signal(syscall.SIGABRT)
+	}
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Logf("%s", out)
 		t.Error(err)
