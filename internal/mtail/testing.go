@@ -24,8 +24,8 @@ const defaultDoOrTimeoutDeadline = 10 * time.Second
 type TestServer struct {
 	*Server
 
-	waker  waker.Waker // for idle logstreams; others are polled explicitly in PollWatched
-	awaken func(int)
+	streamWaker   waker.Waker // for idle logstreams; others are polled explicitly in PollWatched
+	awakenStreams func(int)   // the stream awakens
 
 	tb testing.TB
 
@@ -52,13 +52,18 @@ func TestMakeServer(tb testing.TB, wakers int, options ...Option) *TestServer {
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, wakers)
+	ts := &TestServer{
+		tb:     tb,
+		cancel: cancel,
+	}
+	ts.streamWaker, ts.awakenStreams = waker.NewTest(ctx, wakers)
 	options = append(options,
-		LogstreamPollWaker(waker),
+		LogstreamPollWaker(ts.streamWaker),
 	)
-	m, err := New(ctx, metrics.NewStore(), options...)
+	var err error
+	ts.Server, err = New(ctx, metrics.NewStore(), options...)
 	testutil.FatalIfErr(tb, err)
-	return &TestServer{Server: m, waker: waker, awaken: awaken, tb: tb, cancel: cancel}
+	return ts
 }
 
 // TestStartServer creates a new TestServer and starts it running.  It
@@ -109,7 +114,7 @@ func (ts *TestServer) PollWatched(n int) {
 		glog.Info(err)
 	}
 	glog.Info("TestServer waking idle routines")
-	ts.awaken(n)
+	ts.awakenStreams(n)
 	glog.Info("Testserver finishing poll")
 }
 
