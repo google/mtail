@@ -227,7 +227,11 @@ func (t *Tailer) AddPattern(pattern string) error {
 	case "", "file":
 		// Leave path alone; may contain globs
 	}
-	if path != stdinPattern {
+	if isStdinPattern(pattern) {
+		// stdin is not really a socket, but it is handled by this codepath and should not be in the globs.
+		glog.V(2).Infof("AddPattern(%v): is stdin", pattern)
+		return t.TailPath(pattern)
+	} else {
 		path, err = filepath.Abs(path)
 		if err != nil {
 			glog.V(2).Infof("Couldn't canonicalize path %q: %s", u.Path, err)
@@ -372,15 +376,6 @@ func (t *Tailer) PollLogPatterns() error {
 	t.globPatternsMu.RLock()
 	defer t.globPatternsMu.RUnlock()
 	for pattern := range t.globPatterns {
-		// Check for a stdin, and set up a one-pass-only tail, by removing it from the set.
-		if isStdinPattern(pattern) {
-			glog.V(2).Infof("%q is stdin", pattern)
-			if err := t.TailPath(pattern); err != nil {
-				glog.Info(err)
-			}
-			delete(t.globPatterns, pattern)
-			continue
-		}
 		matches, err := filepath.Glob(pattern)
 		if err != nil {
 			return err
