@@ -33,12 +33,12 @@ type Tailer struct {
 	wg    sync.WaitGroup // Wait for our subroutines to finish
 	lines chan<- *logline.LogLine
 
+	logPatterns []string
+
 	logPatternPollWaker waker.Waker         // Used to poll for new logs
 	globPatternsMu      sync.RWMutex        // protects `globPatterns'
 	globPatterns        map[string]struct{} // glob patterns to match newly created logs in dir paths against
 	ignoreRegexPattern  *regexp.Regexp
-
-	socketPaths []string
 
 	oneShot logstream.OneShotMode
 
@@ -73,11 +73,7 @@ var OneShot = &niladicOption{func(t *Tailer) error { t.oneShot = logstream.OneSh
 type LogPatterns []string
 
 func (opt LogPatterns) apply(t *Tailer) error {
-	for _, p := range opt {
-		if err := t.AddPattern(p); err != nil {
-			return err
-		}
-	}
+	t.logPatterns = opt
 	return nil
 }
 
@@ -155,14 +151,9 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
-	if len(t.globPatterns) == 0 && len(t.socketPaths) == 0 {
-		glog.Info("No patterns or sockets to tail, tailer done.")
-		close(t.lines)
-		return t, nil
-	}
-	// Set up listeners on every socket.
-	for _, pattern := range t.socketPaths {
-		if err := t.TailPath(pattern); err != nil {
+	// After processing options, we can add patterns.  We need to ensure any Wakers were provided.
+	for _, p := range t.logPatterns {
+		if err := t.AddPattern(p); err != nil {
 			return nil, err
 		}
 	}
@@ -176,14 +167,12 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	go func() {
 		defer wg.Done()
 		<-t.initDone
-		// We need to wait for context.Done() before we wait for the subbies
-		// because we don't know how many are running at any point -- as soon
-		// as t.wg.Wait begins the number of waited-on goroutines is fixed, and
-		// we may end up leaking a LogStream goroutine and it'll try to send on
-		// a closed channel as a result.  But in tests and oneshot, we want to
-		// make sure the whole log gets read so we can't wait on context.Done
-		// here.
-		if !t.oneShot {
+		// If there are any patterns, we need to wait for an explicit context cancellation.
+		// We don't during oneshot mode though.
+		t.globPatternsMu.RLock()
+		l := len(t.globPatterns)
+		t.globPatternsMu.RUnlock()
+		if l > 0 && !t.oneShot {
 			<-t.ctx.Done()
 		}
 		t.wg.Wait()
@@ -212,6 +201,7 @@ var ErrUnsupportedURLScheme = errors.New("unsupported URL scheme")
 
 // AddPattern adds a pattern to the list of patterns to filter filenames against.
 func (t *Tailer) AddPattern(pattern string) error {
+	glog.V(2).Infof("AddPattern(%v)", pattern)
 	u, err := url.Parse(pattern)
 	if err != nil {
 		return err
@@ -225,8 +215,7 @@ func (t *Tailer) AddPattern(pattern string) error {
 	case "unix", "unixgram", "tcp", "udp":
 		// Keep the scheme.
 		glog.V(2).Infof("AddPattern(%v): is a socket", path)
-		t.socketPaths = append(t.socketPaths, path)
-		return nil
+		return t.TailPath(path)
 	case "", "file":
 		// Leave path alone; may contain globs
 	}
