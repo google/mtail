@@ -35,7 +35,7 @@ func TestFileStreamRotation(t *testing.T) {
 	lines := make(chan *logline.LogLine, 2)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	// fs.Stop() is also called explicitly further down but a failed test
@@ -87,7 +87,7 @@ func TestFileStreamURL(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 	fs, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
 	awaken(1)
@@ -129,7 +129,7 @@ func TestFileStreamOpenFailure(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, _ := waker.NewTest(ctx, 0)
+	waker, _ := waker.NewTest(ctx, 0, "stream")
 
 	_, err = logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	if err == nil || !os.IsPermission(err) {

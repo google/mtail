@@ -14,7 +14,7 @@ import (
 func TestTestWakerWakes(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	w, awaken := waker.NewTest(ctx, 1)
+	w, awaken := waker.NewTest(ctx, 1, "test")
 	c := w.Wake()
 	select {
 	case x := <-c:
@@ -33,7 +33,7 @@ func TestTestWakerWakes(t *testing.T) {
 func TestTestWakerTwoWakees(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	w, awaken := waker.NewTest(ctx, 2)
+	w, awaken := waker.NewTest(ctx, 2, "test")
 	var wg1, wg2, wg3 sync.WaitGroup
 	wg1.Add(1)
 	wg2.Add(1)
@@ -76,7 +76,7 @@ func TestTestWakerTwoWakees(t *testing.T) {
 func TestTestWakerTwoWakeups(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	w, awaken := waker.NewTest(ctx, 1)
+	w, awaken := waker.NewTest(ctx, 1, "test")
 	s := make(chan struct{})
 	begin := make(chan struct{})
 	var wg sync.WaitGroup

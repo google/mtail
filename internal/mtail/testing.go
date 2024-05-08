@@ -56,7 +56,7 @@ func TestMakeServer(tb testing.TB, wakers int, options ...Option) *TestServer {
 		tb:     tb,
 		cancel: cancel,
 	}
-	ts.streamWaker, ts.awakenStreams = waker.NewTest(ctx, wakers)
+	ts.streamWaker, ts.awakenStreams = waker.NewTest(ctx, wakers, "streams")
 	options = append(options,
 		LogstreamPollWaker(ts.streamWaker),
 	)

@@ -18,6 +18,8 @@ type testWaker struct {
 
 	n int
 
+	name string
+
 	wakeeReady chan struct{}
 	wakeeDone  chan struct{}
 	wait       chan struct{}
@@ -29,11 +31,14 @@ type testWaker struct {
 // WakeFunc describes a function used by tests to trigger a wakeup of blocked idle goroutines under test.  It takes as first parameter the number of goroutines to await before returning to the caller.
 type WakeFunc func(int)
 
-// NewTest creates a new Waker to be used in tests, returning it and a function to trigger a wakeup.  The constructor parameter says how many wakees are expected in the first pass.
-func NewTest(ctx context.Context, n int) (Waker, WakeFunc) {
+// NewTest creates a new Waker to be used in tests, returning it and a function to trigger a wakeup.
+// `n` says how many wakees are expected to be waiting before the first `wakeFunc` call.
+// `name` gives it a name for debug log messages
+func NewTest(ctx context.Context, n int, name string) (Waker, WakeFunc) {
 	t := &testWaker{
 		ctx:        ctx,
 		n:          n,
+		name:       name,
 		wakeeReady: make(chan struct{}),
 		wakeeDone:  make(chan struct{}),
 		wait:       make(chan struct{}),
@@ -42,30 +47,33 @@ func NewTest(ctx context.Context, n int) (Waker, WakeFunc) {
 	initDone := make(chan struct{})
 	go func() {
 		defer close(initDone)
+		glog.InfoDepthf(1, "TestWaker(%s) waiting for %d wakees", t.name, t.n)
 		for i := 0; i < t.n; i++ {
 			<-t.wakeeDone
 		}
 	}()
-	wakeFunc := func(after int) {
+	// awaken issues a wakeup signal to the "wakees", those clients who've used the `Wake` call.
+	awaken := func(after int) {
 		<-initDone
-		glog.InfoDepth(1, "TestWaker yielding to Wakee")
+		glog.InfoDepthf(1, "TestWaker(%s) yielding to Wakee", t.name)
 		for i := 0; i < t.n; i++ {
 			t.wait <- struct{}{}
 		}
-		glog.Infof("waiting for %d wakees to get the wake chan", t.n)
+		// First wait for `t.n` wakees to have called `Wake`, synchronising them.
+		glog.Infof("TestWaker(%s) waiting for %d wakees to get the wake chan", t.name, t.n)
 		for i := 0; i < t.n; i++ {
 			<-t.wakeeReady
 		}
 		t.broadcastWakeAndReset()
-		// Now wakeFunc blocks here
-		glog.Infof("waiting for %d wakees to return to Wake", after)
+		// Now `awaken` blocks here, as we wait for them in turn to return to another call to Wake, in their polling loops.  We wait for only a count of `after` routines this time, as some may exit.
+		glog.Infof("TestWaker(%s) waiting for %d wakees to return to Wake", t.name, after)
 		for i := 0; i < after; i++ {
 			<-t.wakeeDone
 		}
 		t.n = after
-		glog.InfoDepth(1, "Wakee yielding to TestWaker")
+		glog.InfoDepthf(1, "TestWaker(%s): Wakee yielding to TestWaker", t.name)
 	}
-	return t, wakeFunc
+	return t, awaken
 }
 
 // Wake satisfies the Waker interface.
@@ -73,7 +81,7 @@ func (t *testWaker) Wake() (w <-chan struct{}) {
 	t.mu.Lock()
 	w = t.wake
 	t.mu.Unlock()
-	glog.InfoDepth(1, "waiting for wakeup on chan ", w)
+	glog.InfoDepthf(1, "TestWaker(%s) waiting for wakeup on chan %p", t.name, w)
 	// Background this so we can return the wake channel.
 	// The wakeFunc won't close the channel until this completes.
 	go func() {
@@ -102,10 +110,10 @@ func (t *testWaker) Wake() (w <-chan struct{}) {
 func (t *testWaker) broadcastWakeAndReset() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	glog.Infof("broadcasting wake to chan %p", t.wake)
+	glog.Infof("TestWaker(%s) broadcasting wake to chan %p", t.name, t.wake)
 	close(t.wake)
 	t.wake = make(chan struct{})
-	glog.Info("wake channel reset")
+	glog.Infof("TestWaker(%s) wake channel reset", t.name)
 }
 
 // alwaysWaker never blocks the wakee.

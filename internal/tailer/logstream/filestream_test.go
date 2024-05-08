@@ -26,7 +26,7 @@ func TestFileStreamRead(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
 	awaken(1)
@@ -61,7 +61,7 @@ func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
 	awaken(1)
@@ -102,7 +102,7 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
 	awaken(1)
@@ -148,7 +148,7 @@ func TestFileStreamTruncation(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 3)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	// fs.Stop() is also called explicitly further down but a failed test
 	// and early return would lead to the handle staying open
@@ -195,7 +195,7 @@ func TestFileStreamFinishedBecauseCancel(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
@@ -230,7 +230,7 @@ func TestFileStreamPartialRead(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)

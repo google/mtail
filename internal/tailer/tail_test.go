@@ -39,7 +39,7 @@ func makeTestTail(t *testing.T, options ...Option) *testTail {
 	ctx, cancel := context.WithCancel(context.Background())
 	lines := make(chan *logline.LogLine, 5) // 5 loglines ought to be enough for any test
 	var wg sync.WaitGroup
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "streams")
 	options = append(options, LogPatterns([]string{tmpDir}), LogstreamPollWaker(waker))
 	ta, err := New(ctx, &wg, lines, options...)
 	testutil.FatalIfErr(t, err)

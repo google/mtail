@@ -38,7 +38,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			}
 			lines := make(chan *logline.LogLine, 1)
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, awaken := waker.NewTest(ctx, 1)
+			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
 			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
@@ -93,7 +93,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			}
 			lines := make(chan *logline.LogLine, 1)
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, awaken := waker.NewTest(ctx, 1)
+			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
 			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
