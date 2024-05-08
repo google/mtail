@@ -220,11 +220,12 @@ func (t *Tailer) AddPattern(pattern string) error {
 	path := pattern
 	switch u.Scheme {
 	default:
-		glog.V(2).Infof("%v: %q in path pattern %q, treating as path", ErrUnsupportedURLScheme, u.Scheme, pattern)
+		glog.V(2).Infof("AddPattern(%v): %v in path pattern %q, treating as path", pattern, ErrUnsupportedURLScheme, u.Scheme)
+		// Leave path alone per log message
 	case "unix", "unixgram", "tcp", "udp":
 		// Keep the scheme.
-		glog.V(2).Infof("AddPattern: socket %q", pattern)
-		t.socketPaths = append(t.socketPaths, pattern)
+		glog.V(2).Infof("AddPattern(%v): is a socket", path)
+		t.socketPaths = append(t.socketPaths, path)
 		return nil
 	case "", "file":
 		// Leave path alone; may contain globs
@@ -236,11 +237,11 @@ func (t *Tailer) AddPattern(pattern string) error {
 	} else {
 		path, err = filepath.Abs(path)
 		if err != nil {
-			glog.V(2).Infof("Couldn't canonicalize path %q: %s", u.Path, err)
+			glog.V(2).Infof("AddPattern(%v): couldn't canonicalize path: %v", path, err)
 			return err
 		}
 	}
-	glog.V(2).Infof("AddPattern: file %q", path)
+	glog.V(2).Infof("AddPattern(%v): is a file-like pattern", path)
 	t.globPatternsMu.Lock()
 	t.globPatterns[path] = struct{}{}
 	t.globPatternsMu.Unlock()
