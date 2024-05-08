@@ -15,7 +15,7 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
-func TestLogSoftLinkChange(t *testing.T) {
+func TestLogRotationBySoftLinkChange(t *testing.T) {
 	testutil.SkipIfShort(t)
 
 	for _, tc := range []bool{false, true} {

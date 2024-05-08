@@ -17,11 +17,12 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
-// TestLogRotation is a unix-specific test because on Windows, files cannot be removed
-// or renamed while there is an open read handle on them. Instead, log rotation would
-// have to be implemented by copying and then truncating the original file. That test
-// case is already covered by TestLogTruncation.
-func TestLogRotation(t *testing.T) {
+// TestLogRotationByRename is a unix-specific test because on Windows, files
+// cannot be removed or renamed while there is an open read handle on
+// them. Instead, log rotation would have to be implemented by copying and then
+// truncating the original file. That test case is already covered by
+// TestLogTruncation.
+func TestLogRotationByRename(t *testing.T) {
 	testutil.SkipIfShort(t)
 
 	for _, tc := range []bool{false, true} {
