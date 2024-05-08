@@ -376,24 +376,33 @@ func (t *Tailer) PollLogPatterns() error {
 	t.globPatternsMu.RLock()
 	defer t.globPatternsMu.RUnlock()
 	for pattern := range t.globPatterns {
-		matches, err := filepath.Glob(pattern)
-		if err != nil {
+		if err := t.doPatternGlob(pattern); err != nil {
 			return err
 		}
-		glog.V(1).Infof("glob matches: %v", matches)
-		for _, pathname := range matches {
-			if t.Ignore(pathname) {
-				continue
-			}
-			absPath, err := filepath.Abs(pathname)
-			if err != nil {
-				glog.V(2).Infof("Couldn't get absolute path for %q: %s", pathname, err)
-				continue
-			}
-			glog.V(2).Infof("watched path is %q", absPath)
-			if err := t.TailPath(absPath); err != nil {
-				glog.Info(err)
-			}
+	}
+	return nil
+}
+
+// doPatternGlob matches a glob-style pattern against the filesystem and issues
+// a TailPath for any files that match.
+func (t *Tailer) doPatternGlob(pattern string) error {
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+	glog.V(1).Infof("glob matches: %v", matches)
+	for _, pathname := range matches {
+		if t.Ignore(pathname) {
+			continue
+		}
+		absPath, err := filepath.Abs(pathname)
+		if err != nil {
+			glog.V(2).Infof("Couldn't get absolute path for %q: %s", pathname, err)
+			continue
+		}
+		glog.V(2).Infof("watched path is %q", absPath)
+		if err := t.TailPath(absPath); err != nil {
+			glog.Info(err)
 		}
 	}
 	return nil
