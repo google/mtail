@@ -33,9 +33,10 @@ type Tailer struct {
 	wg    sync.WaitGroup // Wait for our subroutines to finish
 	lines chan<- *logline.LogLine
 
-	globPatternsMu     sync.RWMutex        // protects `globPatterns'
-	globPatterns       map[string]struct{} // glob patterns to match newly created logs in dir paths against
-	ignoreRegexPattern *regexp.Regexp
+	logPatternPollWaker waker.Waker         // Used to poll for new logs
+	globPatternsMu      sync.RWMutex        // protects `globPatterns'
+	globPatterns        map[string]struct{} // glob patterns to match newly created logs in dir paths against
+	ignoreRegexPattern  *regexp.Regexp
 
 	socketPaths []string
 
@@ -111,7 +112,8 @@ type logPatternPollWaker struct {
 }
 
 func (opt logPatternPollWaker) apply(t *Tailer) error {
-	t.StartLogPatternPollLoop(opt.Waker)
+	t.logPatternPollWaker = opt.Waker
+	t.StartLogPatternPollLoop()
 	return nil
 }
 
@@ -345,8 +347,8 @@ func (t *Tailer) StartStaleLogstreamExpirationLoop(waker waker.Waker) {
 }
 
 // StartLogPatternPollLoop runs a permanent goroutine to poll for new log files.
-func (t *Tailer) StartLogPatternPollLoop(waker waker.Waker) {
-	if waker == nil {
+func (t *Tailer) StartLogPatternPollLoop() {
+	if t.logPatternPollWaker == nil {
 		glog.Info("Log pattern polling disabled")
 		return
 	}
@@ -363,7 +365,7 @@ func (t *Tailer) StartLogPatternPollLoop(waker waker.Waker) {
 			select {
 			case <-t.ctx.Done():
 				return
-			case <-waker.Wake():
+			case <-t.logPatternPollWaker.Wake():
 				if err := t.Poll(); err != nil {
 					glog.Info(err)
 				}
