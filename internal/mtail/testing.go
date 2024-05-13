@@ -24,8 +24,15 @@ const defaultDoOrTimeoutDeadline = 10 * time.Second
 type TestServer struct {
 	*Server
 
-	streamWaker   waker.Waker // for idle logstreams; others are polled explicitly in PollWatched
-	awakenStreams func(int)   // the stream awakens
+	streamWaker waker.Waker // for idle logstreams; others are polled explicitly in PollWatched
+	// AwakenLogStreams wakes n log streams.  This acts as a barrier method,
+	// synchronising the logstreams and the test.
+	AwakenLogStreams waker.WakeFunc
+
+	patternWaker waker.Waker // polling for new glob pattern matches
+	// AwakenPatternPollers wakes n pattern pollers.  This acts as a barrier
+	// method, synchronising the pattern poll with the test.
+	AwakenPatternPollers waker.WakeFunc // the glob awakens
 
 	tb testing.TB
 
@@ -37,7 +44,7 @@ type TestServer struct {
 
 // TestMakeServer makes a new TestServer for use in tests, but does not start
 // the server.  If an error occurs during creation, a testing.Fatal is issued.
-func TestMakeServer(tb testing.TB, wakers int, options ...Option) *TestServer {
+func TestMakeServer(tb testing.TB, patternWakers int, streamWakers int, options ...Option) *TestServer {
 	tb.Helper()
 
 	// Reset counters when running multiple tests.  Tests that use expvar
@@ -56,9 +63,11 @@ func TestMakeServer(tb testing.TB, wakers int, options ...Option) *TestServer {
 		tb:     tb,
 		cancel: cancel,
 	}
-	ts.streamWaker, ts.awakenStreams = waker.NewTest(ctx, wakers, "streams")
+	ts.streamWaker, ts.AwakenLogStreams = waker.NewTest(ctx, streamWakers, "streams")
+	ts.patternWaker, ts.AwakenPatternPollers = waker.NewTest(ctx, patternWakers, "patterns")
 	options = append(options,
 		LogstreamPollWaker(ts.streamWaker),
+		LogPatternPollWaker(ts.patternWaker),
 	)
 	var err error
 	ts.Server, err = New(ctx, metrics.NewStore(), options...)
@@ -66,11 +75,16 @@ func TestMakeServer(tb testing.TB, wakers int, options ...Option) *TestServer {
 	return ts
 }
 
-// TestStartServer creates a new TestServer and starts it running.  It
-// returns the server, and a stop function.
-func TestStartServer(tb testing.TB, wakers int, options ...Option) (*TestServer, func()) {
+// TestStartServer creates a new TestServer and starts it running.  It returns
+// the server, and a stop function.  `patternWakers` indicates the number of
+// expected pattern wakers to wait for at this moment; usually 1 because the
+// test server is started with a `LogPathPattern`.  `streamWakers` indiecates
+// the number of expected stream wakers to wait for at this moment.  The value
+// of this parameter shuld be the number of log files created in test
+// (e.g. with `testutil.TestOpenFile`) before invoking this function.
+func TestStartServer(tb testing.TB, patternWakers int, streamWakers int, options ...Option) (*TestServer, func()) {
 	tb.Helper()
-	ts := TestMakeServer(tb, wakers, options...)
+	ts := TestMakeServer(tb, patternWakers, streamWakers, options...)
 	return ts, ts.Start()
 }
 
@@ -96,18 +110,6 @@ func (ts *TestServer) Start() func() {
 			ts.tb.Fatal("timeout waiting for shutdown")
 		}
 	}
-}
-
-// Poll all watched objects for updates.  The parameter n indicates how many logstreams to wait on before waking them.
-func (ts *TestServer) PollWatched(n int) {
-	glog.Info("Testserver starting poll")
-	glog.Infof("TestServer polling filesystem patterns")
-	if err := ts.t.PollLogPatterns(); err != nil {
-		glog.Info(err)
-	}
-	glog.Info("TestServer waking idle routines")
-	ts.awakenStreams(n)
-	glog.Info("Testserver finishing poll")
 }
 
 func (ts *TestServer) LoadAllPrograms() {

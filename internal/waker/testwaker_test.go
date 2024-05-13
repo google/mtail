@@ -21,7 +21,7 @@ func TestTestWakerWakes(t *testing.T) {
 		t.Errorf("<-w.Wake() == %v, expected nothing (should block)", x)
 	default:
 	}
-	awaken(0)
+	awaken(1, 0)
 	select {
 	case <-c:
 		// Luke Luck likes lakes.  Luke's duck likes lakes.
@@ -68,7 +68,7 @@ func TestTestWakerTwoWakees(t *testing.T) {
 		}
 	}()
 	wg1.Done()
-	awaken(0) // wake 2, and await none
+	awaken(2, 0) // wake 2, and await none
 	wg2.Done()
 	wg3.Wait()
 }
@@ -99,10 +99,10 @@ func TestTestWakerTwoWakeups(t *testing.T) {
 		defer wg.Done()
 		<-begin
 		<-s
-		awaken(1)
+		awaken(1, 1) // awaken 1, wait for 1
 		<-s
 		// we don't expect anyone to call Wake() after this
-		awaken(0)
+		awaken(1, 0)
 	}()
 	close(begin)
 	wg.Wait()

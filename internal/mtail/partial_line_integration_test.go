@@ -29,19 +29,24 @@ func TestPartialLineRead(t *testing.T) {
 	f := testutil.TestOpenFile(t, logFile)
 	defer f.Close()
 
-	m, stopM := mtail.TestStartServer(t, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+	m, stopM := mtail.TestStartServer(t, 1, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
+	m.AwakenPatternPollers(1, 1)
+	m.AwakenLogStreams(1, 1) // Force read to EOF
 
 	lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 2)
 
 	testutil.WriteString(t, f, "line 1\n")
-	m.PollWatched(1)
+	m.AwakenLogStreams(1, 1)
 
 	testutil.WriteString(t, f, "line ")
-	m.PollWatched(1)
+	// TODO: These PollLogPatterns should be unnecessary, but here are load-bearing.
+	m.AwakenPatternPollers(1, 1)
+	m.AwakenLogStreams(1, 1)
 
 	testutil.WriteString(t, f, "2\n")
-	m.PollWatched(1)
+	m.AwakenPatternPollers(1, 1)
+	m.AwakenLogStreams(1, 1)
 
 	lineCountCheck()
 }

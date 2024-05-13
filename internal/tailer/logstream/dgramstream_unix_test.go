@@ -52,7 +52,7 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
 
-			awaken(0) // sync past read
+			awaken(0, 0) // sync past read
 
 			ss.Stop()
 
@@ -109,7 +109,7 @@ func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
 
-			awaken(0) // Synchronise past read.
+			awaken(0, 0) // Synchronise past read.
 
 			cancel() // This cancellation should cause the stream to shut down.
 

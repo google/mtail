@@ -22,7 +22,7 @@ func TestLogTruncation(t *testing.T) {
 	testutil.FatalIfErr(t, os.Mkdir(logDir, 0o700))
 	testutil.FatalIfErr(t, os.Mkdir(progDir, 0o700))
 
-	m, stopM := mtail.TestStartServer(t, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+	m, stopM := mtail.TestStartServer(t, 1, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
@@ -31,15 +31,16 @@ func TestLogTruncation(t *testing.T) {
 	logFile := filepath.Join(logDir, "log")
 	f := testutil.TestOpenFile(t, logFile)
 	defer f.Close()
-	m.PollWatched(1)
+	m.AwakenPatternPollers(1, 1)
+	m.AwakenLogStreams(1, 1) // Read to EOF
 
 	testutil.WriteString(t, f, "line 1\n")
-	m.PollWatched(1)
+	m.AwakenLogStreams(1, 1)
 	// After the last barrier, the filestream may not race ahead of the test
 	// here, so we need to ensure that a whole filestream loop occurs and that
 	// the file offset advances for this test to succeed, hence the second
 	// barrier here.
-	m.PollWatched(1)
+	m.AwakenLogStreams(1, 1)
 
 	err := f.Close()
 	testutil.FatalIfErr(t, err)
@@ -48,10 +49,12 @@ func TestLogTruncation(t *testing.T) {
 	f, err = os.OpenFile(logFile, os.O_TRUNC|os.O_WRONLY, 0o600)
 	testutil.FatalIfErr(t, err)
 	defer f.Close()
-	m.PollWatched(1)
+	m.AwakenPatternPollers(1, 1)
+	m.AwakenLogStreams(1, 1)
 
 	testutil.WriteString(t, f, "2\n")
-	m.PollWatched(1)
+	m.AwakenPatternPollers(1, 1)
+	m.AwakenLogStreams(1, 1)
 
 	linesCountCheck()
 	logCountCheck()

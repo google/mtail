@@ -176,7 +176,7 @@ func BenchmarkProgram(b *testing.B) {
 				count, err := io.Copy(log, l)
 				testutil.FatalIfErr(b, err)
 				total += count
-				awaken(1)
+				awaken(1, 1)
 			}
 			cancel()
 			wg.Wait()

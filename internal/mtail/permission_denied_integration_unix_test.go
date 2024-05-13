@@ -14,8 +14,9 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
-// TestPermissionDeniedOnLog is a unix-specific test because on Windows, it is not possible to create a file
-// that you yourself cannot read (minimum permissions are 0222).
+// TestPermissionDeniedOnLog is a unix-specific test because on Windows, it is
+// not possible to create a file that you yourself cannot read; there the
+// minimum permissions are 0222.
 func TestPermissionDeniedOnLog(t *testing.T) {
 	testutil.SkipIfShort(t)
 	// Can't force a permission denied error if run as root.
@@ -35,7 +36,7 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 	// Hide the error from stdout during test.
 	testutil.SetFlag(t, "stderrthreshold", "FATAL")
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+	m, stopM := mtail.TestStartServer(t, 1, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
 	errorsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("log_errors_total", logFile, 1)
@@ -46,7 +47,7 @@ func TestPermissionDeniedOnLog(t *testing.T) {
 
 	// Nothing to await on, we expect to get a Permission Denied in the
 	// synchronous logstream.New path.
-	m.PollWatched(0)
+	m.AwakenPatternPollers(1, 1)
 
 	errorsTotalCheck()
 }

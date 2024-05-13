@@ -43,11 +43,11 @@ func TestFileStreamRotation(t *testing.T) {
 	defer fs.Stop()
 
 	testutil.FatalIfErr(t, err)
-	awaken(1)
+	awaken(1, 1)
 
 	glog.Info("write 1")
 	testutil.WriteString(t, f, "1\n")
-	awaken(1)
+	awaken(1, 1)
 
 	glog.Info("rename")
 	testutil.FatalIfErr(t, os.Rename(name, name+".1"))
@@ -56,10 +56,10 @@ func TestFileStreamRotation(t *testing.T) {
 	f = testutil.TestOpenFile(t, name)
 	defer f.Close()
 
-	awaken(1)
+	awaken(1, 1)
 	glog.Info("write 2")
 	testutil.WriteString(t, f, "2\n")
-	awaken(1)
+	awaken(1, 1)
 
 	fs.Stop()
 	wg.Wait()
@@ -90,10 +90,10 @@ func TestFileStreamURL(t *testing.T) {
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
 	fs, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
-	awaken(1)
+	awaken(1, 1)
 
 	testutil.WriteString(t, f, "yo\n")
-	awaken(1)
+	awaken(1, 1)
 
 	fs.Stop()
 	wg.Wait()

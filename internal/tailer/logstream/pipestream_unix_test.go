@@ -88,7 +88,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 		testutil.WriteString(t, f, "1\n")
 
 		// Avoid a race with cancellation if we can synchronise with waker.Wake()
-		awaken(0)
+		awaken(0, 0)
 
 		cancel() // Cancellation here should cause the stream to shut down.
 
@@ -165,7 +165,7 @@ func TestPipeStreamReadStdin(t *testing.T) {
 	ps, err := logstream.New(ctx, &wg, waker, "-", lines, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
 
-	awaken(0)
+	awaken(0, 0)
 
 	testutil.FatalIfErr(t, f.Close())
 

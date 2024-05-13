@@ -50,7 +50,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
 
-			awaken(0) // Sync past read
+			awaken(0, 0) // Sync past read
 
 			// Close the socket to signal to the socketStream to shut down.
 			testutil.FatalIfErr(t, s.Close())
@@ -105,7 +105,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
 
-			awaken(0) // Sync past read to ensure we read
+			awaken(0, 0) // Sync past read to ensure we read
 
 			cancel() // This cancellation should cause the stream to shut down immediately.
 

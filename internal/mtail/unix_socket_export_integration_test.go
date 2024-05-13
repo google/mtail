@@ -18,7 +18,7 @@ func TestBasicUNIXSockets(t *testing.T) {
 	tmpDir := testutil.TestTempDir(t)
 	sockListenAddr := filepath.Join(tmpDir, "mtail_test.sock")
 
-	_, stopM := mtail.TestStartServer(t, 1, mtail.LogPathPatterns(tmpDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"), mtail.BindUnixSocket(sockListenAddr))
+	_, stopM := mtail.TestStartServer(t, 1, 1, mtail.LogPathPatterns(tmpDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"), mtail.BindUnixSocket(sockListenAddr))
 	defer stopM()
 
 	glog.Infof("check that server is listening")
