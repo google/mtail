@@ -105,10 +105,6 @@ func (ts *TestServer) PollWatched(n int) {
 	if err := ts.t.Poll(); err != nil {
 		glog.Info(err)
 	}
-	glog.Infof("TestServer reloading programs")
-	if err := ts.r.LoadAllPrograms(); err != nil {
-		glog.Info(err)
-	}
 	glog.Infof("TestServer tailer gcing")
 	if err := ts.t.ExpireStaleLogstreams(); err != nil {
 		glog.Info(err)
@@ -116,6 +112,15 @@ func (ts *TestServer) PollWatched(n int) {
 	glog.Info("TestServer waking idle routines")
 	ts.awakenStreams(n)
 	glog.Info("Testserver finishing poll")
+}
+
+func (ts *TestServer) LoadAllPrograms() {
+	ts.tb.Helper()
+	glog.Infof("TestServer reloading programs")
+	if err := ts.r.LoadAllPrograms(); err != nil {
+		glog.Info(err)
+		ts.tb.Log(err)
+	}
 }
 
 // GetExpvar is a helper function on TestServer that acts like TestGetExpvar.
