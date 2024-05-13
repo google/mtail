@@ -162,6 +162,8 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	if err := t.PollLogPatterns(); err != nil {
 		return nil, err
 	}
+	// Start the routine for checking if logstreams have completed.
+	t.startPollLogStreamsForCompletion(ctx, wg)
 	// Setup for shutdown, once all routines are finished.
 	wg.Add(1)
 	go func() {
@@ -356,7 +358,7 @@ func (t *Tailer) StartLogPatternPollLoop() {
 			case <-t.ctx.Done():
 				return
 			case <-t.logPatternPollWaker.Wake():
-				if err := t.Poll(); err != nil {
+				if err := t.PollLogPatterns(); err != nil {
 					glog.Info(err)
 				}
 			}
@@ -416,15 +418,32 @@ func (t *Tailer) PollLogStreamsForCompletion() error {
 	return nil
 }
 
-func (t *Tailer) Poll() error {
-	t.pollMu.Lock()
-	defer t.pollMu.Unlock()
-	for _, f := range []func() error{t.PollLogPatterns, t.PollLogStreamsForCompletion} {
-		if err := f(); err != nil {
-			return err
-		}
+// StartPollLogStreamsForCompletion runs a permanent goroutine to poll for
+// completed LogStreams.
+func (t *Tailer) startPollLogStreamsForCompletion(ctx context.Context, wg *sync.WaitGroup) {
+	if t.logstreamPollWaker == nil {
+		glog.Info("Log completion polling disabled by no waker")
+		return
 	}
-	return nil
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-t.initDone
+		if t.oneShot {
+			glog.Info("No logstream completion polling loop in oneshot mode.")
+			return
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.logstreamPollWaker.Wake():
+				if err := t.PollLogStreamsForCompletion(); err != nil {
+					glog.Info(err)
+				}
+			}
+		}
+	}()
 }
 
 func isStdinPattern(pattern string) bool {

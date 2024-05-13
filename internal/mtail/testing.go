@@ -102,7 +102,7 @@ func (ts *TestServer) Start() func() {
 func (ts *TestServer) PollWatched(n int) {
 	glog.Info("Testserver starting poll")
 	glog.Infof("TestServer polling filesystem patterns")
-	if err := ts.t.Poll(); err != nil {
+	if err := ts.t.PollLogPatterns(); err != nil {
 		glog.Info(err)
 	}
 	glog.Infof("TestServer tailer gcing")
