@@ -29,8 +29,11 @@ var logCount = expvar.NewInt("log_count")
 // Tailer polls the filesystem for log sources that match given
 // `LogPathPatterns` and creates `LogStream`s to tail them.
 type Tailer struct {
-	ctx   context.Context
-	wg    sync.WaitGroup // Wait for our subroutines to finish
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	wg sync.WaitGroup // Wait for our subroutines to finish
+
 	lines chan<- *logline.LogLine
 
 	logPatterns []string
@@ -46,10 +49,10 @@ type Tailer struct {
 	logstreamsMu       sync.RWMutex                   // protects `logstreams`.
 	logstreams         map[string]logstream.LogStream // Map absolte pathname to logstream reading that pathname.
 
+	staleLogGcWaker waker.Waker // Used to wake stale log GC
+
 	initDone chan struct{}
 }
-
-const stdinPattern = "-"
 
 // Option configures a new Tailer.
 type Option interface {
@@ -92,7 +95,7 @@ type staleLogGcWaker struct {
 }
 
 func (opt staleLogGcWaker) apply(t *Tailer) error {
-	t.StartStaleLogstreamExpirationLoop(opt.Waker)
+	t.staleLogGcWaker = opt.Waker
 	return nil
 }
 
@@ -138,12 +141,12 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 		return nil, ErrNeedsWaitgroup
 	}
 	t := &Tailer{
-		ctx:          ctx,
 		lines:        lines,
 		initDone:     make(chan struct{}),
 		globPatterns: make(map[string]struct{}),
 		logstreams:   make(map[string]logstream.LogStream),
 	}
+	t.ctx, t.cancel = context.WithCancel(ctx)
 	defer close(t.initDone)
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
@@ -156,6 +159,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	}
 	// Start the routine for checking if logstreams have completed.
 	t.startPollLogStreamsForCompletion(ctx, wg)
+	t.StartStaleLogstreamExpirationLoop(ctx, wg)
 	// Setup for shutdown, once all routines are finished.
 	subsDone := make(chan struct{})
 	wg.Add(1)
@@ -216,7 +220,7 @@ func (t *Tailer) AddPattern(pattern string) error {
 	case "", "file":
 		// Leave path alone; may contain globs
 	}
-	if isStdinPattern(pattern) {
+	if logstream.IsStdinPattern(pattern) {
 		// stdin is not really a socket, but it is handled by this codepath and should not be in the globs.
 		glog.V(2).Infof("AddPattern(%v): is stdin", pattern)
 		return t.TailPath(pattern)
@@ -307,25 +311,24 @@ func (t *Tailer) ExpireStaleLogstreams() error {
 }
 
 // StartStaleLogstreamExpirationLoop runs a permanent goroutine to expire stale logstreams.
-func (t *Tailer) StartStaleLogstreamExpirationLoop(waker waker.Waker) {
-	if waker == nil {
-		glog.Info("Log handle expiration disabled")
+func (t *Tailer) StartStaleLogstreamExpirationLoop(ctx context.Context, wg *sync.WaitGroup) {
+	if t.staleLogGcWaker == nil {
+		glog.InfoContext(ctx, "Log handle expiration disabled")
 		return
 	}
-	t.wg.Add(1)
+	wg.Add(1)
 	go func() {
-		defer t.wg.Done()
+		defer wg.Done()
 		<-t.initDone
 		if t.oneShot {
-			glog.Info("No gc loop in oneshot mode.")
+			glog.InfoContext(ctx, "No gc loop in oneshot mode.")
 			return
 		}
-		// glog.Infof("Starting log handle expiry loop every %s", duration.String())
 		for {
 			select {
-			case <-t.ctx.Done():
+			case <-ctx.Done():
 				return
-			case <-waker.Wake():
+			case <-t.staleLogGcWaker.Wake():
 				if err := t.ExpireStaleLogstreams(); err != nil {
 					glog.Info(err)
 				}
@@ -334,7 +337,9 @@ func (t *Tailer) StartStaleLogstreamExpirationLoop(waker waker.Waker) {
 	}()
 }
 
-// pollLogPattern runs a permanent goroutine to poll for new log files that match `pattern`.
+// pollLogPattern runs a permanent goroutine to poll for new log files that
+// match `pattern`.  It is on the subroutine waitgroup as we do not want to
+// shut down the tailer when there are outstanding patterns to poll for.
 func (t *Tailer) pollLogPattern(pattern string) {
 	if err := t.doPatternGlob(pattern); err != nil {
 		glog.Infof("pollPattern(%v): glob failed: %v", pattern, err)
@@ -407,11 +412,11 @@ func (t *Tailer) PollLogStreamsForCompletion() error {
 }
 
 // StartPollLogStreamsForCompletion runs a permanent goroutine to poll for
-// completed LogStreams.
+// completed LogStreams.  It is on the parent waitgroup as it should exit only once the tailer is shutting down.
 func (t *Tailer) startPollLogStreamsForCompletion(ctx context.Context, wg *sync.WaitGroup) {
 	// Uses the log pattern poll waker for maintenance.
 	if t.logPatternPollWaker == nil {
-		glog.Info("Log completion polling disabled by no waker")
+		glog.InfoContext(ctx, "Log completion polling disabled by no waker")
 		return
 	}
 	wg.Add(1)
@@ -419,7 +424,7 @@ func (t *Tailer) startPollLogStreamsForCompletion(ctx context.Context, wg *sync.
 		defer wg.Done()
 		<-t.initDone
 		if t.oneShot {
-			glog.Info("No logstream completion polling loop in oneshot mode.")
+			glog.InfoContext(ctx, "No logstream completion polling loop in oneshot mode.")
 			return
 		}
 		for {
@@ -433,14 +438,4 @@ func (t *Tailer) startPollLogStreamsForCompletion(ctx context.Context, wg *sync.
 			}
 		}
 	}()
-}
-
-func isStdinPattern(pattern string) bool {
-	if pattern == stdinPattern {
-		return true
-	}
-	if pattern == "/dev/stdin" {
-		return true
-	}
-	return false
 }
