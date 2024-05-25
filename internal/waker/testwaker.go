@@ -53,7 +53,7 @@ func NewTest(ctx context.Context, wait int, name string) (Waker, WakeFunc) {
 	initDone := make(chan struct{})
 	go func() {
 		defer close(initDone)
-		glog.InfoDepthf(1, "TestWaker(%s) waiting for %d wakees to call Wake()", t.name, wait)
+		glog.Infof("TestWaker(%s) init waiting for %d wakees to call Wake()", t.name, wait)
 		for i := 0; i < wait; i++ {
 			<-t.wakeeDone
 		}
@@ -68,17 +68,17 @@ func NewTest(ctx context.Context, wait int, name string) (Waker, WakeFunc) {
 			t.waiting <- struct{}{}
 		}
 		// First wait for `t.n` wakees to have called `Wake`, synchronising them.
-		glog.Infof("TestWaker(%s) waiting for %d wakees to receive from the wake chan", t.name, wake)
+		glog.InfoDepthf(1, "TestWaker(%s) waiting for %d wakees to receive from the wake chan", t.name, wake)
 		for i := 0; i < wake; i++ {
 			<-t.wakeeReady
 		}
 		t.broadcastWakeAndReset()
 		// Now `awaken` blocks here, as we wait for them in turn to return to another call to Wake, in their polling loops.  We wait for only a count of `after` routines this time, as some may exit.
-		glog.Infof("TestWaker(%s) waiting for %d wakees to call Wake()", t.name, wait)
+		glog.InfoDepthf(1, "TestWaker(%s) waiting for %d wakees to call Wake()", t.name, wait)
 		for i := 0; i < wait; i++ {
 			<-t.wakeeDone
 		}
-		glog.Infof("TestWaker(%s): Wakees returned, yielding to TestWaker", t.name)
+		glog.InfoDepthf(1, "TestWaker(%s): Wakees returned, yielding to TestWaker", t.name)
 	}
 	return t, awaken
 }

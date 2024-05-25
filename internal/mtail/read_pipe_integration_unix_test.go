@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
@@ -70,7 +69,6 @@ func TestReadFromSocket(t *testing.T) {
 			defer stopM()
 
 			lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 3)
-			time.Sleep(10 * time.Millisecond)
 
 			s, err := net.DialUnix(scheme, nil, &net.UnixAddr{Name: logFile, Net: scheme})
 			testutil.FatalIfErr(t, err)
@@ -80,9 +78,6 @@ func TestReadFromSocket(t *testing.T) {
 
 			_, err = s.Write([]byte("1\n2\n3\n"))
 			testutil.FatalIfErr(t, err)
-
-			m.AwakenPatternPollers(1, 1)
-			m.AwakenLogStreams(1, 1)
 
 			lineCountCheck()
 		})

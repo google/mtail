@@ -61,15 +61,14 @@ func TestLogRotationBySoftLinkChange(t *testing.T) {
 				// Simulate a race where we poll for a pattern and remove the
 				// existing stream.
 				m.AwakenPatternPollers(1, 1) // simulate race condition with this poll.
-				m.AwakenLogStreams(1, 1)
+				m.AwakenLogStreams(1, 0)
 				logClosedCheck() // barrier until filestream closes fd
-				m.AwakenLogStreams(1, 1)
-
+				m.AwakenPatternPollers(1, 1)
 				logCompletedCheck() // barrier until the logstream is removed from tailer
 			}
 			testutil.FatalIfErr(t, os.Symlink(logFilepath+".true2", logFilepath))
 			m.AwakenPatternPollers(1, 1)
-			m.AwakenLogStreams(1, 1)
+			m.AwakenLogStreams(0, 1)
 
 			for _, x := range inputLines {
 				testutil.WriteString(t, trueLog2, x+"\n")

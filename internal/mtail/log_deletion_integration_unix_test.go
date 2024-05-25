@@ -37,8 +37,8 @@ func TestLogDeletion(t *testing.T) {
 	glog.Info("remove")
 	testutil.FatalIfErr(t, os.Remove(logFilepath))
 
-	m.AwakenLogStreams(1, 1) // run stream to observe it's missing
+	m.AwakenLogStreams(1, 0) // run stream to observe it's missing
 	logCloseCheck()
-	m.AwakenLogStreams(1, 1)
+	m.AwakenPatternPollers(1, 1)
 	logCountCheck()
 }

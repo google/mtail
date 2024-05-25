@@ -42,8 +42,6 @@ type Tailer struct {
 
 	oneShot logstream.OneShotMode
 
-	pollMu sync.Mutex // protects Poll()
-
 	logstreamPollWaker waker.Waker                    // Used for waking idle logstreams
 	logstreamsMu       sync.RWMutex                   // protects `logstreams`.
 	logstreams         map[string]logstream.LogStream // Map absolte pathname to logstream reading that pathname.
@@ -109,7 +107,6 @@ type logPatternPollWaker struct {
 
 func (opt logPatternPollWaker) apply(t *Tailer) error {
 	t.logPatternPollWaker = opt.Waker
-	t.StartLogPatternPollLoop()
 	return nil
 }
 
@@ -157,25 +154,24 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 			return nil, err
 		}
 	}
-	// Guarantee all existing remaining patterns get tailed before we leave.
-	// Also necessary in case oneshot mode is active, the logs get read!
-	if err := t.PollLogPatterns(); err != nil {
-		return nil, err
-	}
 	// Start the routine for checking if logstreams have completed.
 	t.startPollLogStreamsForCompletion(ctx, wg)
 	// Setup for shutdown, once all routines are finished.
+	subsDone := make(chan struct{})
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		<-t.initDone
-		// If there are any patterns, we need to wait for an explicit context cancellation.
-		// We don't during oneshot mode though.
-		t.globPatternsMu.RLock()
-		l := len(t.globPatterns)
-		t.globPatternsMu.RUnlock()
-		if l > 0 && !t.oneShot {
-			<-t.ctx.Done()
+		t.wg.Wait()
+		close(subsDone)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-t.initDone
+		select {
+		case <-subsDone:
+		case <-t.ctx.Done():
 		}
 		t.wg.Wait()
 		glog.V(1).InfoContextf(ctx, "tailer finished")
@@ -203,7 +199,6 @@ var ErrUnsupportedURLScheme = errors.New("unsupported URL scheme")
 
 // AddPattern adds a pattern to the list of patterns to filter filenames against.
 func (t *Tailer) AddPattern(pattern string) error {
-	glog.V(2).Infof("AddPattern(%v)", pattern)
 	u, err := url.Parse(pattern)
 	if err != nil {
 		return err
@@ -236,22 +231,23 @@ func (t *Tailer) AddPattern(pattern string) error {
 	t.globPatternsMu.Lock()
 	t.globPatterns[path] = struct{}{}
 	t.globPatternsMu.Unlock()
+	t.pollLogPattern(path)
 	return nil
 }
 
 func (t *Tailer) Ignore(pathname string) bool {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
-		glog.V(2).Infof("Couldn't get absolute path for %q: %s", pathname, err)
+		glog.V(2).Infof("Ignore(%v): couldn't get absolute path: %v", pathname, err)
 		return true
 	}
 	fi, err := os.Stat(absPath)
 	if err != nil {
-		glog.V(2).Infof("Couldn't stat path %q: %s", pathname, err)
+		glog.V(2).Infof("Ignore(%v): couldn't stat: %v", pathname, err)
 		return true
 	}
 	if fi.Mode().IsDir() {
-		glog.V(2).Infof("ignore path %q because it is a folder", pathname)
+		glog.V(2).Infof("Ignore(%v): is a folder", pathname)
 		return true
 	}
 	return t.ignoreRegexPattern != nil && t.ignoreRegexPattern.MatchString(fi.Name())
@@ -338,10 +334,13 @@ func (t *Tailer) StartStaleLogstreamExpirationLoop(waker waker.Waker) {
 	}()
 }
 
-// StartLogPatternPollLoop runs a permanent goroutine to poll for new log files.
-func (t *Tailer) StartLogPatternPollLoop() {
+// pollLogPattern runs a permanent goroutine to poll for new log files that match `pattern`.
+func (t *Tailer) pollLogPattern(pattern string) {
+	if err := t.doPatternGlob(pattern); err != nil {
+		glog.Infof("pollPattern(%v): glob failed: %v", pattern, err)
+	}
 	if t.logPatternPollWaker == nil {
-		glog.Info("Log pattern polling disabled")
+		glog.Infof("pollPattern(%v): log pattern polling disabled by no waker", pattern)
 		return
 	}
 	t.wg.Add(1)
@@ -349,32 +348,21 @@ func (t *Tailer) StartLogPatternPollLoop() {
 		defer t.wg.Done()
 		<-t.initDone
 		if t.oneShot {
-			glog.Info("No polling loop in oneshot mode.")
+			glog.Infof("pollPattern(%v): no polling loop in oneshot mode", pattern)
 			return
 		}
-		// glog.Infof("Starting log pattern poll loop every %s", duration.String())
+		glog.V(1).Infof("pollPattern(%v): starting log pattern poll loop", pattern)
 		for {
 			select {
 			case <-t.ctx.Done():
 				return
 			case <-t.logPatternPollWaker.Wake():
-				if err := t.PollLogPatterns(); err != nil {
-					glog.Info(err)
+				if err := t.doPatternGlob(pattern); err != nil {
+					glog.Infof("pollPattern(%v): glob failed: %v", pattern, err)
 				}
 			}
 		}
 	}()
-}
-
-func (t *Tailer) PollLogPatterns() error {
-	t.globPatternsMu.RLock()
-	defer t.globPatternsMu.RUnlock()
-	for pattern := range t.globPatterns {
-		if err := t.doPatternGlob(pattern); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // doPatternGlob matches a glob-style pattern against the filesystem and issues
@@ -384,17 +372,17 @@ func (t *Tailer) doPatternGlob(pattern string) error {
 	if err != nil {
 		return err
 	}
-	glog.V(1).Infof("glob matches: %v", matches)
+	glog.V(1).Infof("doPatternGlob(%v): glob matches: %v", pattern, matches)
 	for _, pathname := range matches {
 		if t.Ignore(pathname) {
 			continue
 		}
 		absPath, err := filepath.Abs(pathname)
 		if err != nil {
-			glog.V(2).Infof("Couldn't get absolute path for %q: %s", pathname, err)
+			glog.V(2).Infof("doPatternGlob(%v): couldn't get absolute path for %q: %s", pattern, pathname, err)
 			continue
 		}
-		glog.V(2).Infof("watched path is %q", absPath)
+		glog.V(2).Infof("doPatternGlob(%v): tailable path is %q", pattern, absPath)
 		if err := t.TailPath(absPath); err != nil {
 			glog.Info(err)
 		}
@@ -421,7 +409,8 @@ func (t *Tailer) PollLogStreamsForCompletion() error {
 // StartPollLogStreamsForCompletion runs a permanent goroutine to poll for
 // completed LogStreams.
 func (t *Tailer) startPollLogStreamsForCompletion(ctx context.Context, wg *sync.WaitGroup) {
-	if t.logstreamPollWaker == nil {
+	// Uses the log pattern poll waker for maintenance.
+	if t.logPatternPollWaker == nil {
 		glog.Info("Log completion polling disabled by no waker")
 		return
 	}
@@ -437,7 +426,7 @@ func (t *Tailer) startPollLogStreamsForCompletion(ctx context.Context, wg *sync.
 			select {
 			case <-ctx.Done():
 				return
-			case <-t.logstreamPollWaker.Wake():
+			case <-t.logPatternPollWaker.Wake():
 				if err := t.PollLogStreamsForCompletion(); err != nil {
 					glog.Info(err)
 				}
