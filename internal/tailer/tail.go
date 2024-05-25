@@ -160,27 +160,28 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 	// Start the routine for checking if logstreams have completed.
 	t.startPollLogStreamsForCompletion(ctx, wg)
 	t.StartStaleLogstreamExpirationLoop(ctx, wg)
-	// Setup for shutdown, once all routines are finished.
-	subsDone := make(chan struct{})
+
+	// This goroutine cancels the Tailer if all of our dependent subroutines are done.
+	// These are any live logstreams, and any log pattern pollers.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		<-t.initDone
 		t.wg.Wait()
-		close(subsDone)
+		t.cancel()
 	}()
+
+	// This goroutine awaits cancellation, then cleans up the tailer.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		<-t.initDone
-		select {
-		case <-subsDone:
-		case <-t.ctx.Done():
-		}
+		<-t.ctx.Done()
 		t.wg.Wait()
 		glog.V(1).InfoContextf(ctx, "tailer finished")
 		close(t.lines)
 	}()
+
 	return t, nil
 }
 
