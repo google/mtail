@@ -39,6 +39,6 @@ func TestLogDeletion(t *testing.T) {
 
 	m.AwakenLogStreams(1, 0) // run stream to observe it's missing
 	logCloseCheck()
-	m.AwakenPatternPollers(1, 1)
+	m.AwakenGcPoller(1, 1)
 	logCountCheck()
 }

@@ -21,7 +21,7 @@ func TestBasicTail(t *testing.T) {
 	}
 	logDir := testutil.TestTempDir(t)
 
-	m, stopM := mtail.TestStartServer(t, 2, 1, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
+	m, stopM := mtail.TestStartServer(t, 1, 1, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
 	defer stopM()
 
 	logFile := filepath.Join(logDir, "log")
@@ -31,7 +31,7 @@ func TestBasicTail(t *testing.T) {
 
 	f := testutil.TestOpenFile(t, logFile)
 	defer f.Close()
-	m.AwakenPatternPollers(2, 2) // Find `logFile`
+	m.AwakenPatternPollers(1, 1) // Find `logFile`
 	m.AwakenLogStreams(1, 1)     // Force a sync to EOF
 
 	for i := 1; i <= 3; i++ {

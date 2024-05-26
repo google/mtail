@@ -36,26 +36,26 @@ func TestTailerOpenRetries(t *testing.T) {
 	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
+	testutil.FatalIfErr(t, ta.RemoveCompletedLogstreams())
 	ta.awakenPattern(1, 1)
 	glog.Info("remove")
 	if err := os.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
+	testutil.FatalIfErr(t, ta.RemoveCompletedLogstreams())
 	ta.awakenPattern(1, 1)
 	glog.Info("openfile")
 	f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
 	//nolint:staticcheck // test code
 	defer f.Close()
 	testutil.FatalIfErr(t, err)
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
+	testutil.FatalIfErr(t, ta.RemoveCompletedLogstreams())
 	ta.awakenPattern(1, 1)
 	glog.Info("chmod")
 	if err := os.Chmod(logfile, 0o666); err != nil {
 		t.Fatal(err)
 	}
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
+	testutil.FatalIfErr(t, ta.RemoveCompletedLogstreams())
 	ta.awakenPattern(1, 1)
 	ta.awakenStreams(1, 1) // force sync to EOF
 	glog.Info("write string")

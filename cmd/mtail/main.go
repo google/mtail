@@ -182,7 +182,7 @@ func main() {
 	}
 	if *staleLogGcTickInterval > 0 {
 		staleLogGcWaker := waker.NewTimed(ctx, *staleLogGcTickInterval)
-		opts = append(opts, mtail.StaleLogGcWaker(staleLogGcWaker))
+		opts = append(opts, mtail.GcWaker(staleLogGcWaker))
 	}
 	if *pollInterval > 0 {
 		logStreamPollWaker := waker.NewTimed(ctx, *pollInterval)
