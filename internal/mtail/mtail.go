@@ -29,9 +29,12 @@ import (
 
 // Server contains the state of the main mtail program.
 type Server struct {
-	ctx   context.Context
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	wg sync.WaitGroup // wait for main processes to shutdown
+
 	store *metrics.Store // Metrics storage
-	wg    sync.WaitGroup // wait for main processes to shutdown
 
 	tOpts []tailer.Option    // options for constructing `t`
 	t     *tailer.Tailer     // t manages log patterns and log streams, which sends lines to the VMs
@@ -172,13 +175,13 @@ func (m *Server) initHTTPServer() error {
 // block until quit, once TestServer.PollWatched is addressed.
 func New(ctx context.Context, store *metrics.Store, options ...Option) (*Server, error) {
 	m := &Server{
-		ctx:   ctx,
 		store: store,
 		lines: make(chan *logline.LogLine),
 		// Using a non-pedantic registry means we can be looser with metrics that
 		// are not fully specified at startup.
 		reg: prometheus.NewRegistry(),
 	}
+	m.ctx, m.cancel = context.WithCancel(ctx)
 	m.rOpts = append(m.rOpts, runtime.PrometheusRegisterer(m.reg))
 
 	// TODO(jaq): Should these move to initExporter?
@@ -234,7 +237,7 @@ func (m *Server) SetOption(options ...Option) error {
 // TODO(jaq): remove this once the test server is able to trigger polls on the components.
 func (m *Server) Run() error {
 	m.wg.Wait()
-	m.e.Stop()
+	m.cancel()
 	if m.compileOnly {
 		glog.Info("compile-only is set, exiting")
 		return nil
