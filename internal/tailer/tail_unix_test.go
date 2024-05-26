@@ -36,28 +36,31 @@ func TestTailerOpenRetries(t *testing.T) {
 	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
-	testutil.FatalIfErr(t, ta.RemoveCompletedLogstreams())
-	ta.awakenPattern(1, 1)
+
+	// There testTail includes a pattern poller for tmpDir.  Make sure we wait for both.
+	ta.awakenPattern(1, 2)
+
 	glog.Info("remove")
 	if err := os.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
-	testutil.FatalIfErr(t, ta.RemoveCompletedLogstreams())
-	ta.awakenPattern(1, 1)
+	ta.awakenPattern(2, 2)
+
 	glog.Info("openfile")
 	f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
+	testutil.FatalIfErr(t, err)
 	//nolint:staticcheck // test code
 	defer f.Close()
-	testutil.FatalIfErr(t, err)
-	testutil.FatalIfErr(t, ta.RemoveCompletedLogstreams())
-	ta.awakenPattern(1, 1)
+
+	ta.awakenPattern(2, 2)
 	glog.Info("chmod")
 	if err := os.Chmod(logfile, 0o666); err != nil {
 		t.Fatal(err)
 	}
-	testutil.FatalIfErr(t, ta.RemoveCompletedLogstreams())
-	ta.awakenPattern(1, 1)
+
+	ta.awakenPattern(2, 2) // discover the logfile
 	ta.awakenStreams(1, 1) // force sync to EOF
+
 	glog.Info("write string")
 	testutil.WriteString(t, f, "\n")
 	ta.awakenStreams(1, 1)
