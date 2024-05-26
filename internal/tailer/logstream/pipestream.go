@@ -50,6 +50,8 @@ func pipeOpen(pathname string) (*os.File, error) {
 	return os.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0o600) // #nosec G304 -- path already validated by caller
 }
 
+const defaultPipeReadBufferSize = 131071
+
 func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, _ os.FileInfo) error {
 	fd, err := pipeOpen(ps.pathname)
 	if err != nil {
@@ -57,7 +59,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		return err
 	}
 	glog.V(2).Infof("opened new pipe %v", fd)
-	b := make([]byte, defaultReadBufferSize)
+	b := make([]byte, defaultPipeReadBufferSize)
 	partial := bytes.NewBufferString("")
 	var total int
 	wg.Add(1)
