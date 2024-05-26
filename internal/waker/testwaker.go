@@ -20,8 +20,6 @@ type testWaker struct {
 
 	ctx context.Context
 
-	n int
-
 	name string
 
 	wakeeReady chan struct{}

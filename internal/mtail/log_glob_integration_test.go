@@ -91,7 +91,6 @@ func TestGlobAfterStart(t *testing.T) {
 		log := testutil.TestOpenFile(t, tt.name)
 		defer log.Close()
 		m.AwakenPatternPollers(1, 1)
-		//m.AwakenLogStreams(0, 1) // wait for zero, wake 1 as we're in a loop
 	}
 	logCountCheck()
 }

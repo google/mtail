@@ -88,20 +88,18 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	case "", "file":
 		path = u.Path
 	}
-	var fi os.FileInfo
 	if IsStdinPattern(path) {
-		fi, err = os.Stdin.Stat()
+		fi, err := os.Stdin.Stat()
 		if err != nil {
 			logErrors.Add(path, 1)
 			return nil, err
 		}
 		return newPipeStream(ctx, wg, waker, path, fi, lines)
-	} else {
-		fi, err = os.Stat(path)
-		if err != nil {
-			logErrors.Add(path, 1)
-			return nil, err
-		}
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		logErrors.Add(path, 1)
+		return nil, err
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():

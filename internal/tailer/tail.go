@@ -224,12 +224,11 @@ func (t *Tailer) AddPattern(pattern string) error {
 		// stdin is not really a socket, but it is handled by this codepath and should not be in the globs.
 		glog.V(2).Infof("AddPattern(%v): is stdin", pattern)
 		return t.TailPath(pattern)
-	} else {
-		path, err = filepath.Abs(path)
-		if err != nil {
-			glog.V(2).Infof("AddPattern(%v): couldn't canonicalize path: %v", path, err)
-			return err
-		}
+	}
+	path, err = filepath.Abs(path)
+	if err != nil {
+		glog.V(2).Infof("AddPattern(%v): couldn't canonicalize path: %v", path, err)
+		return err
 	}
 	glog.V(2).Infof("AddPattern(%v): is a file-like pattern", path)
 	t.globPatternsMu.Lock()
