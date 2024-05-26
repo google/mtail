@@ -54,7 +54,7 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 
 		received := testutil.LinesReceived(lines)
 		expected := []*logline.LogLine{
-			{context.TODO(), name, "1"},
+			{Context: context.TODO(), Filename: name, Line: "1"},
 		}
 		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -97,7 +97,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 
 		received := testutil.LinesReceived(lines)
 		expected := []*logline.LogLine{
-			{context.TODO(), name, "1"},
+			{Context: context.TODO(), Filename: name, Line: "1"},
 		}
 		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -135,7 +135,7 @@ func TestPipeStreamReadURL(t *testing.T) {
 
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.TODO(), name, "1"},
+		{Context: context.TODO(), Filename: name, Line: "1"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
