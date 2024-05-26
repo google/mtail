@@ -17,7 +17,6 @@ import (
 )
 
 type pipeStream struct {
-	ctx   context.Context
 	lines chan<- *logline.LogLine
 
 	pathname string // Given name for the underlying named pipe on the filesystem
@@ -30,7 +29,7 @@ type pipeStream struct {
 // newPipeStream creates a new stream reader for Unix Pipes.
 // `pathname` must already be verified as clean.
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine) (LogStream, error) {
-	ps := &pipeStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), lines: lines}
+	ps := &pipeStream{pathname: pathname, lastReadTime: time.Now(), lines: lines}
 	if err := ps.stream(ctx, wg, waker, fi); err != nil {
 		return nil, err
 	}
@@ -87,8 +86,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 			if n > 0 {
 				total += n
-				//nolint:contextcheck
-				decodeAndSend(ps.ctx, ps.lines, ps.pathname, n, b[:n], partial)
+				decodeAndSend(ctx, ps.lines, ps.pathname, n, b[:n], partial)
 				// Update the last read time if we were able to read anything.
 				ps.mu.Lock()
 				ps.lastReadTime = time.Now()
