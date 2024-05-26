@@ -45,7 +45,7 @@ func TestGlobBeforeStart(t *testing.T) {
 		testutil.WriteString(t, log, "\n")
 		log.Close()
 	}
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
 	stopM()
 
 	if r := m.GetExpvar("log_count"); r.(*expvar.Int).Value() != count {
@@ -75,10 +75,10 @@ func TestGlobAfterStart(t *testing.T) {
 			false,
 		},
 	}
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
+	m, stopM := mtail.TestStartServer(t, 1, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
 	defer stopM()
 
-	m.PollWatched(0) // Force sync to EOF
+	m.AwakenPatternPollers(1, 1)
 
 	var count int64
 	for _, tt := range globTests {
@@ -90,9 +90,8 @@ func TestGlobAfterStart(t *testing.T) {
 	for _, tt := range globTests {
 		log := testutil.TestOpenFile(t, tt.name)
 		defer log.Close()
-		m.PollWatched(0) // Force sync to EOF
+		m.AwakenPatternPollers(1, 1)
 	}
-	// m.PollWatched(2)
 	logCountCheck()
 }
 
@@ -142,7 +141,7 @@ func TestGlobIgnoreFolder(t *testing.T) {
 		testutil.WriteString(t, log, "\n")
 	}
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 
 	stopM()
 
@@ -184,7 +183,7 @@ func TestFilenameRegexIgnore(t *testing.T) {
 		testutil.WriteString(t, log, "\n")
 	}
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
 
 	stopM()
 
@@ -207,7 +206,7 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 	// Move to logdir to make relative paths
 	testutil.Chdir(t, logDir)
 
-	m, stopM := mtail.TestStartServer(t, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
+	m, stopM := mtail.TestStartServer(t, 1, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns("log.*"))
 	defer stopM()
 
 	{
@@ -217,9 +216,11 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 		f := testutil.TestOpenFile(t, logFile)
 		defer f.Close()
 
-		m.PollWatched(1) // Force sync to EOF
+		m.AwakenPatternPollers(1, 1)
+		m.AwakenLogStreams(0, 1) // Force read to EOF
+
 		testutil.WriteString(t, f, "line 1\n")
-		m.PollWatched(1)
+		m.AwakenLogStreams(1, 1)
 
 		logCountCheck()
 	}
@@ -232,9 +233,11 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 		f := testutil.TestOpenFile(t, logFile)
 		defer f.Close()
 
-		m.PollWatched(2)
+		m.AwakenPatternPollers(1, 1)
+		m.AwakenLogStreams(1, 2) // Force read to EOF
+
 		testutil.WriteString(t, f, "line 1\n")
-		m.PollWatched(2)
+		m.AwakenLogStreams(2, 2)
 
 		logCountCheck()
 	}
@@ -245,9 +248,11 @@ func TestGlobRelativeAfterStart(t *testing.T) {
 		f := testutil.TestOpenFile(t, logFile)
 		defer f.Close()
 
-		m.PollWatched(2)
+		m.AwakenPatternPollers(1, 1)
+		m.AwakenLogStreams(2, 2) // Force read to EOF
+
 		testutil.WriteString(t, f, "line 2\n")
-		m.PollWatched(2)
+		m.AwakenLogStreams(2, 2)
 
 		logCountCheck()
 	}

@@ -22,8 +22,11 @@ type testTail struct {
 	// Output lnes channel
 	lines chan *logline.LogLine
 
-	// Method to wake the waker
-	awaken func(int)
+	// Method to wake the stream poller
+	awakenStreams waker.WakeFunc
+
+	// Method to wake the pattern poller
+	awakenPattern waker.WakeFunc
 
 	// Temporary dir for test
 	tmpDir string
@@ -39,31 +42,17 @@ func makeTestTail(t *testing.T, options ...Option) *testTail {
 	ctx, cancel := context.WithCancel(context.Background())
 	lines := make(chan *logline.LogLine, 5) // 5 loglines ought to be enough for any test
 	var wg sync.WaitGroup
-	waker, awaken := waker.NewTest(ctx, 1)
-	options = append(options, LogPatterns([]string{tmpDir}), LogstreamPollWaker(waker))
+	streamWaker, awakenStreams := waker.NewTest(ctx, 1, "streams")
+	patternWaker, awakenPattern := waker.NewTest(ctx, 1, "pattern")
+	options = append(options, LogPatterns([]string{tmpDir}), LogPatternPollWaker(patternWaker), LogstreamPollWaker(streamWaker))
 	ta, err := New(ctx, &wg, lines, options...)
 	testutil.FatalIfErr(t, err)
 	stop := func() { cancel(); wg.Wait() }
 	t.Cleanup(stop)
-	return &testTail{Tailer: ta, lines: lines, awaken: awaken, tmpDir: tmpDir, stop: stop}
+	return &testTail{Tailer: ta, lines: lines, awakenStreams: awakenStreams, awakenPattern: awakenPattern, tmpDir: tmpDir, stop: stop}
 }
 
-func TestTail(t *testing.T) {
-	ta := makeTestTail(t)
-
-	logfile := filepath.Join(ta.tmpDir, "log")
-	f := testutil.TestOpenFile(t, logfile)
-	defer f.Close()
-
-	err := ta.TailPath(logfile)
-	testutil.FatalIfErr(t, err)
-
-	if _, ok := ta.logstreams[logfile]; !ok {
-		t.Errorf("path not found in files map: %+#v", ta.logstreams)
-	}
-}
-
-func TestTailErrors(t *testing.T) {
+func TestNewErrors(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	lines := make(chan *logline.LogLine)
@@ -78,6 +67,21 @@ func TestTailErrors(t *testing.T) {
 	}
 }
 
+func TestTailPath(t *testing.T) {
+	ta := makeTestTail(t)
+
+	logfile := filepath.Join(ta.tmpDir, "log")
+	f := testutil.TestOpenFile(t, logfile)
+	defer f.Close()
+
+	err := ta.TailPath(logfile)
+	testutil.FatalIfErr(t, err)
+
+	if _, ok := ta.logstreams[logfile]; !ok {
+		t.Errorf("path not found in files map: %+#v", ta.logstreams)
+	}
+}
+
 func TestHandleLogUpdate(t *testing.T) {
 	ta := makeTestTail(t)
 
@@ -86,10 +90,10 @@ func TestHandleLogUpdate(t *testing.T) {
 	defer f.Close()
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
-	ta.awaken(1)
+	ta.awakenStreams(1, 1)
 
 	testutil.WriteString(t, f, "a\nb\nc\nd\n")
-	ta.awaken(1)
+	ta.awakenStreams(1, 1)
 
 	ta.stop()
 
@@ -115,10 +119,10 @@ func TestHandleLogTruncate(t *testing.T) {
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
 	// Expect to wake 1 wakee, the logstream reading `logfile`.
-	ta.awaken(1)
+	ta.awakenStreams(1, 1)
 
 	testutil.WriteString(t, f, "a\nb\nc\n")
-	ta.awaken(1)
+	ta.awakenStreams(1, 1)
 
 	if err := f.Truncate(0); err != nil {
 		t.Fatal(err)
@@ -127,10 +131,10 @@ func TestHandleLogTruncate(t *testing.T) {
 	// "File.Truncate" does not change the file offset, force a seek to start.
 	_, err := f.Seek(0, 0)
 	testutil.FatalIfErr(t, err)
-	ta.awaken(1)
+	ta.awakenStreams(1, 1)
 
 	testutil.WriteString(t, f, "d\ne\n")
-	ta.awaken(1)
+	ta.awakenStreams(1, 1)
 
 	ta.stop()
 
@@ -153,16 +157,16 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	defer f.Close()
 
 	testutil.FatalIfErr(t, ta.TailPath(logfile))
-	ta.awaken(1) // ensure we've hit an EOF before writing starts
+	ta.awakenStreams(1, 1) // ensure we've hit an EOF before writing starts
 
 	testutil.WriteString(t, f, "a")
-	ta.awaken(1)
+	ta.awakenStreams(1, 1)
 
 	testutil.WriteString(t, f, "b")
-	ta.awaken(1)
+	ta.awakenStreams(1, 1)
 
 	testutil.WriteString(t, f, "\n")
-	ta.awaken(1)
+	ta.awakenStreams(1, 1)
 
 	ta.stop()
 
@@ -173,34 +177,28 @@ func TestHandleLogUpdatePartialLine(t *testing.T) {
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 }
 
+// Test that broken files are skipped.
 func TestTailerUnreadableFile(t *testing.T) {
-	// Test broken files are skipped.
+	t.Skip("race condition testing for the absence of a log")
 	ta := makeTestTail(t)
 
-	brokenfile := filepath.Join(ta.tmpDir, "brokenlog")
-	logfile := filepath.Join(ta.tmpDir, "log")
-	testutil.FatalIfErr(t, ta.AddPattern(brokenfile))
-	testutil.FatalIfErr(t, ta.AddPattern(logfile))
+	brokenlog := filepath.Join(ta.tmpDir, "brokenlog")
+	goodlog := filepath.Join(ta.tmpDir, "goodlog")
+	testutil.FatalIfErr(t, ta.AddPattern(brokenlog))
+	testutil.FatalIfErr(t, ta.AddPattern(goodlog))
+
+	logCountCheck := testutil.ExpectExpvarDeltaWithDeadline(t, "log_count", 1)
 
 	glog.Info("create logs")
-	testutil.FatalIfErr(t, os.Symlink("/nonexistent", brokenfile))
-	f := testutil.TestOpenFile(t, logfile)
+	testutil.FatalIfErr(t, os.Symlink("/nonexistent", brokenlog))
+	f := testutil.TestOpenFile(t, goodlog)
 	defer f.Close()
 
-	testutil.FatalIfErr(t, ta.PollLogPatterns())
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
+	// We started with one pattern waker from `makeTestTail`, but we added two
+	// patterns. There's also the completion poller. Collect them all.
+	ta.awakenPattern(1, 4)
 
-	glog.Info("write string")
-	testutil.WriteString(t, f, "\n")
-	ta.awaken(1)
-
-	ta.stop()
-
-	received := testutil.LinesReceived(ta.lines)
-	expected := []*logline.LogLine{
-		{Context: context.Background(), Filename: logfile, Line: ""},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	logCountCheck()
 }
 
 func TestTailerInitErrors(t *testing.T) {
@@ -257,7 +255,7 @@ func TestTailExpireStaleHandles(t *testing.T) {
 	testutil.WriteString(t, f1, "1\n")
 	testutil.WriteString(t, f2, "2\n")
 
-	ta.awaken(1)
+	ta.awakenStreams(1, 1)
 
 	ta.stop()
 

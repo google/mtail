@@ -26,13 +26,13 @@ func TestFileStreamRead(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
-	awaken(1)
+	awaken(1, 1)
 
 	testutil.WriteString(t, f, "yo\n")
-	awaken(1)
+	awaken(1, 1)
 
 	fs.Stop()
 	wg.Wait()
@@ -61,10 +61,10 @@ func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
-	awaken(1)
+	awaken(1, 1)
 
 	s := "a"
 	for i := 0; i < 4094; i++ {
@@ -73,7 +73,7 @@ func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 
 	s += "中"
 	testutil.WriteString(t, f, s+"\n")
-	awaken(1)
+	awaken(1, 1)
 
 	fs.Stop()
 	wg.Wait()
@@ -102,10 +102,10 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
-	awaken(1)
+	awaken(1, 1)
 
 	s := string([]byte{0xF1})
 	// 0xF1 = 11110001 , a byte signaling the start of a unicode character that
@@ -119,7 +119,7 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 	}
 
 	testutil.WriteString(t, f, s+"\n")
-	awaken(1)
+	awaken(1, 1)
 
 	fs.Stop()
 	wg.Wait()
@@ -148,24 +148,24 @@ func TestFileStreamTruncation(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 3)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	// fs.Stop() is also called explicitly further down but a failed test
 	// and early return would lead to the handle staying open
 	defer fs.Stop()
 
 	testutil.FatalIfErr(t, err)
-	awaken(1) // Synchronise past first read after seekToEnd
+	awaken(1, 1) // Synchronise past first read after seekToEnd
 
 	testutil.WriteString(t, f, "1\n2\n")
-	awaken(1)
+	awaken(1, 1)
 	testutil.FatalIfErr(t, f.Close())
-	awaken(1)
+	awaken(1, 1)
 	f = testutil.OpenLogFile(t, name)
 	defer f.Close()
 
 	testutil.WriteString(t, f, "3\n")
-	awaken(1)
+	awaken(1, 1)
 
 	fs.Stop()
 	wg.Wait()
@@ -195,14 +195,14 @@ func TestFileStreamFinishedBecauseCancel(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
-	awaken(1) // Synchronise past first read after seekToEnd
+	awaken(1, 1) // Synchronise past first read after seekToEnd
 
 	testutil.WriteString(t, f, "yo\n")
-	awaken(1)
+	awaken(1, 1)
 
 	cancel()
 	wg.Wait()
@@ -230,21 +230,21 @@ func TestFileStreamPartialRead(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
-	awaken(1)
+	awaken(1, 1)
 
 	testutil.WriteString(t, f, "yo")
-	awaken(1)
+	awaken(1, 1)
 
 	// received := testutil.LinesReceived(lines)
 	// expected := []*logline.LogLine{}
 	// testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
 	testutil.WriteString(t, f, "\n")
-	awaken(1)
+	awaken(1, 1)
 
 	fs.Stop()
 	wg.Wait()

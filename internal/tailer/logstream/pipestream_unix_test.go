@@ -54,7 +54,7 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 
 		received := testutil.LinesReceived(lines)
 		expected := []*logline.LogLine{
-			{context.TODO(), name, "1"},
+			{Context: context.TODO(), Filename: name, Line: "1"},
 		}
 		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -77,7 +77,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 
 		lines := make(chan *logline.LogLine, 1)
 		ctx, cancel := context.WithCancel(context.Background())
-		waker, awaken := waker.NewTest(ctx, 1)
+		waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 		f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 		testutil.FatalIfErr(t, err)
@@ -88,7 +88,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 		testutil.WriteString(t, f, "1\n")
 
 		// Avoid a race with cancellation if we can synchronise with waker.Wake()
-		awaken(0)
+		awaken(0, 0)
 
 		cancel() // Cancellation here should cause the stream to shut down.
 
@@ -97,7 +97,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 
 		received := testutil.LinesReceived(lines)
 		expected := []*logline.LogLine{
-			{context.TODO(), name, "1"},
+			{Context: context.TODO(), Filename: name, Line: "1"},
 		}
 		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -135,7 +135,7 @@ func TestPipeStreamReadURL(t *testing.T) {
 
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.TODO(), name, "1"},
+		{Context: context.TODO(), Filename: name, Line: "1"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -160,12 +160,12 @@ func TestPipeStreamReadStdin(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1)
+	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 	ps, err := logstream.New(ctx, &wg, waker, "-", lines, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
 
-	awaken(0)
+	awaken(0, 0)
 
 	testutil.FatalIfErr(t, f.Close())
 

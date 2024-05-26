@@ -92,7 +92,7 @@ func TestExamplePrograms(t *testing.T) {
 		t.Run(fmt.Sprintf("%s on %s", tc.programfile, tc.logfile),
 			testutil.TimeoutTest(exampleTimeout, func(t *testing.T) { //nolint:thelper
 				ctx, cancel := context.WithCancel(context.Background())
-				waker, _ := waker.NewTest(ctx, 0) // oneshot means we should never need to wake the stream
+				waker, _ := waker.NewTest(ctx, 0, "waker") // oneshot means we should never need to wake the stream
 				store := metrics.NewStore()
 				programFile := filepath.Join("../..", tc.programfile)
 				mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(tc.logfile), mtail.OneShot, mtail.OmitMetricSource, mtail.DumpAstTypes, mtail.DumpBytecode, mtail.LogPatternPollWaker(waker), mtail.LogstreamPollWaker(waker))
@@ -155,7 +155,7 @@ func BenchmarkProgram(b *testing.B) {
 			logFile := filepath.Join(logDir, "test.log")
 			log := testutil.TestOpenFile(b, logFile)
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, awaken := waker.NewTest(ctx, 1)
+			waker, awaken := waker.NewTest(ctx, 1, "streams")
 			store := metrics.NewStore()
 			programFile := filepath.Join("../..", bm.programfile)
 			mtail, err := mtail.New(ctx, store, mtail.ProgramPath(programFile), mtail.LogPathPatterns(log.Name()), mtail.LogstreamPollWaker(waker))
@@ -176,7 +176,7 @@ func BenchmarkProgram(b *testing.B) {
 				count, err := io.Copy(log, l)
 				testutil.FatalIfErr(b, err)
 				total += count
-				awaken(1)
+				awaken(1, 1)
 			}
 			cancel()
 			wg.Wait()

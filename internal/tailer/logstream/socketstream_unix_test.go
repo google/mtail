@@ -38,7 +38,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			}
 			lines := make(chan *logline.LogLine, 1)
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, awaken := waker.NewTest(ctx, 1)
+			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
 			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
@@ -50,7 +50,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
 
-			awaken(0) // Sync past read
+			awaken(0, 0) // Sync past read
 
 			// Close the socket to signal to the socketStream to shut down.
 			testutil.FatalIfErr(t, s.Close())
@@ -93,7 +93,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			}
 			lines := make(chan *logline.LogLine, 1)
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, awaken := waker.NewTest(ctx, 1)
+			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
 			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
@@ -105,7 +105,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
 
-			awaken(0) // Sync past read to ensure we read
+			awaken(0, 0) // Sync past read to ensure we read
 
 			cancel() // This cancellation should cause the stream to shut down immediately.
 

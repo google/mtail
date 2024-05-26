@@ -18,9 +18,9 @@ type ReadDeadliner interface {
 func SetReadDeadlineOnDone(ctx context.Context, d ReadDeadliner) {
 	go func() {
 		<-ctx.Done()
-		glog.Info("cancelled, setting read deadline to interrupt read")
+		glog.V(1).Info("cancelled, setting read deadline to interrupt read")
 		if err := d.SetReadDeadline(time.Now()); err != nil {
-			glog.Infof("SetReadDeadline() -> %v", err)
+			glog.V(1).Infof("SetReadDeadline() -> %v", err)
 		}
 	}()
 }

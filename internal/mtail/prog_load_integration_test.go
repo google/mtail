@@ -24,15 +24,14 @@ func TestNewProg(t *testing.T) {
 	err = os.Mkdir(progDir, 0o700)
 	testutil.FatalIfErr(t, err)
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
 	defer stopM()
 
 	progLoadsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("prog_loads_total", "nocode.mtail", 1)
 
 	f := testutil.TestOpenFile(t, progDir+"/nocode.mtail")
 	defer f.Close()
-	// No logs get watched here.
-	m.PollWatched(0)
+	m.LoadAllPrograms()
 
 	progLoadsTotalCheck()
 }
@@ -51,7 +50,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	logFile := testutil.TestOpenFile(t, logFilepath)
 	defer logFile.Close()
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
+	m, stopM := mtail.TestStartServer(t, 1, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
 	defer stopM()
 
 	progLoadsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("prog_loads_total", "program.mtail", 1)
@@ -60,14 +59,14 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	p := testutil.TestOpenFile(t, progpath)
 	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
 	testutil.FatalIfErr(t, p.Close())
-	m.PollWatched(0)
+	m.LoadAllPrograms()
 
 	progLoadsTotalCheck()
 
 	fooIncreaseCheck := m.ExpectProgMetricDeltaWithDeadline("foo", "program.mtail", 1)
 
 	testutil.WriteString(t, logFile, "foo\n")
-	m.PollWatched(1)
+	m.AwakenLogStreams(1, 1)
 
 	fooIncreaseCheck()
 	progLoadsTotalCheck = m.ExpectMapExpvarDeltaWithDeadline("prog_loads_total", "program.mtail", 1)
@@ -75,7 +74,7 @@ func TestProgramReloadNoDuplicateMetrics(t *testing.T) {
 	p = testutil.TestOpenFile(t, progpath) // opens in append mode
 	testutil.WriteString(t, p, "#\n")      // append just enough to change but still valid
 	testutil.FatalIfErr(t, p.Close())
-	m.PollWatched(1)
+	m.LoadAllPrograms()
 
 	progLoadsTotalCheck()
 
@@ -97,7 +96,7 @@ func TestProgramUnloadIfDeleted(t *testing.T) {
 	logFile := testutil.TestOpenFile(t, logFilepath)
 	defer logFile.Close()
 
-	m, stopM := mtail.TestStartServer(t, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
+	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/*"))
 	defer stopM()
 
 	progLoadsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("prog_loads_total", "program.mtail", 1)
@@ -106,15 +105,14 @@ func TestProgramUnloadIfDeleted(t *testing.T) {
 	p := testutil.TestOpenFile(t, progpath)
 	testutil.WriteString(t, p, "counter foo\n/^foo$/ {\n foo++\n }\n")
 	testutil.FatalIfErr(t, p.Close())
-	m.PollWatched(0)
+	m.LoadAllPrograms()
 
 	progLoadsTotalCheck()
 
 	progUnloadsTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("prog_unloads_total", "program.mtail", 1)
 
 	testutil.FatalIfErr(t, os.Remove(progpath))
-
-	m.PollWatched(1)
+	m.LoadAllPrograms()
 
 	progUnloadsTotalCheck()
 }

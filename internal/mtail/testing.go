@@ -24,8 +24,18 @@ const defaultDoOrTimeoutDeadline = 10 * time.Second
 type TestServer struct {
 	*Server
 
-	waker  waker.Waker // for idle logstreams; others are polled explicitly in PollWatched
-	awaken func(int)
+	streamWaker waker.Waker // for idle logstreams; others are polled explicitly in PollWatched
+	// AwakenLogStreams wakes n log streams.  This acts as a barrier method,
+	// synchronising the logstreams and the test.
+	AwakenLogStreams waker.WakeFunc
+
+	patternWaker waker.Waker // polling for new glob pattern matches
+	// AwakenPatternPollers wakes n pattern pollers.  This acts as a barrier
+	// method, synchronising the pattern poll with the test.
+	AwakenPatternPollers waker.WakeFunc // the glob awakens
+
+	gcWaker        waker.Waker // activate the cleanup routines
+	AwakenGcPoller waker.WakeFunc
 
 	tb testing.TB
 
@@ -37,7 +47,7 @@ type TestServer struct {
 
 // TestMakeServer makes a new TestServer for use in tests, but does not start
 // the server.  If an error occurs during creation, a testing.Fatal is issued.
-func TestMakeServer(tb testing.TB, wakers int, options ...Option) *TestServer {
+func TestMakeServer(tb testing.TB, patternWakers int, streamWakers int, options ...Option) *TestServer {
 	tb.Helper()
 
 	// Reset counters when running multiple tests.  Tests that use expvar
@@ -52,20 +62,34 @@ func TestMakeServer(tb testing.TB, wakers int, options ...Option) *TestServer {
 	expvar.Get("prog_loads_total").(*expvar.Map).Init()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, wakers)
+	ts := &TestServer{
+		tb:     tb,
+		cancel: cancel,
+	}
+	ts.streamWaker, ts.AwakenLogStreams = waker.NewTest(ctx, streamWakers, "streams")
+	ts.patternWaker, ts.AwakenPatternPollers = waker.NewTest(ctx, patternWakers, "patterns")
+	ts.gcWaker, ts.AwakenGcPoller = waker.NewTest(ctx, 1, "gc")
 	options = append(options,
-		LogstreamPollWaker(waker),
+		LogstreamPollWaker(ts.streamWaker),
+		LogPatternPollWaker(ts.patternWaker),
+		GcWaker(ts.gcWaker),
 	)
-	m, err := New(ctx, metrics.NewStore(), options...)
+	var err error
+	ts.Server, err = New(ctx, metrics.NewStore(), options...)
 	testutil.FatalIfErr(tb, err)
-	return &TestServer{Server: m, waker: waker, awaken: awaken, tb: tb, cancel: cancel}
+	return ts
 }
 
-// TestStartServer creates a new TestServer and starts it running.  It
-// returns the server, and a stop function.
-func TestStartServer(tb testing.TB, wakers int, options ...Option) (*TestServer, func()) {
+// TestStartServer creates a new TestServer and starts it running.  It returns
+// the server, and a stop function.  `patternWakers` indicates the number of
+// expected pattern wakers to wait for at this moment; usually 1 because the
+// test server is started with a `LogPathPattern`.  `streamWakers` indiecates
+// the number of expected stream wakers to wait for at this moment.  The value
+// of this parameter shuld be the number of log files created in test
+// (e.g. with `testutil.TestOpenFile`) before invoking this function.
+func TestStartServer(tb testing.TB, patternWakers int, streamWakers int, options ...Option) (*TestServer, func()) {
 	tb.Helper()
-	ts := TestMakeServer(tb, wakers, options...)
+	ts := TestMakeServer(tb, patternWakers, streamWakers, options...)
 	return ts, ts.Start()
 }
 
@@ -93,24 +117,13 @@ func (ts *TestServer) Start() func() {
 	}
 }
 
-// Poll all watched objects for updates.  The parameter n indicates how many logstreams to wait on before waking them.
-func (ts *TestServer) PollWatched(n int) {
-	glog.Info("Testserver starting poll")
-	glog.Infof("TestServer polling filesystem patterns")
-	if err := ts.t.Poll(); err != nil {
-		glog.Info(err)
-	}
+func (ts *TestServer) LoadAllPrograms() {
+	ts.tb.Helper()
 	glog.Infof("TestServer reloading programs")
 	if err := ts.r.LoadAllPrograms(); err != nil {
 		glog.Info(err)
+		ts.tb.Log(err)
 	}
-	glog.Infof("TestServer tailer gcing")
-	if err := ts.t.ExpireStaleLogstreams(); err != nil {
-		glog.Info(err)
-	}
-	glog.Info("TestServer waking idle routines")
-	ts.awaken(n)
-	glog.Info("Testserver finishing poll")
 }
 
 // GetExpvar is a helper function on TestServer that acts like TestGetExpvar.

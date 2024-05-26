@@ -29,23 +29,27 @@ var logCount = expvar.NewInt("log_count")
 // Tailer polls the filesystem for log sources that match given
 // `LogPathPatterns` and creates `LogStream`s to tail them.
 type Tailer struct {
-	ctx   context.Context
-	wg    sync.WaitGroup // Wait for our subroutines to finish
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	wg sync.WaitGroup // Wait for our subroutines to finish
+
 	lines chan<- *logline.LogLine
 
-	globPatternsMu     sync.RWMutex        // protects `globPatterns'
-	globPatterns       map[string]struct{} // glob patterns to match newly created logs in dir paths against
-	ignoreRegexPattern *regexp.Regexp
+	logPatterns []string
 
-	socketPaths []string
+	logPatternPollWaker waker.Waker         // Used to poll for new logs
+	globPatternsMu      sync.RWMutex        // protects `globPatterns'
+	globPatterns        map[string]struct{} // glob patterns to match newly created logs in dir paths against
+	ignoreRegexPattern  *regexp.Regexp
 
 	oneShot logstream.OneShotMode
-
-	pollMu sync.Mutex // protects Poll()
 
 	logstreamPollWaker waker.Waker                    // Used for waking idle logstreams
 	logstreamsMu       sync.RWMutex                   // protects `logstreams`.
 	logstreams         map[string]logstream.LogStream // Map absolte pathname to logstream reading that pathname.
+
+	gcWaker waker.Waker // Used to wake stale log and completion pollers
 
 	initDone chan struct{}
 }
@@ -70,11 +74,7 @@ var OneShot = &niladicOption{func(t *Tailer) error { t.oneShot = logstream.OneSh
 type LogPatterns []string
 
 func (opt LogPatterns) apply(t *Tailer) error {
-	for _, p := range opt {
-		if err := t.AddPattern(p); err != nil {
-			return err
-		}
-	}
+	t.logPatterns = opt
 	return nil
 }
 
@@ -85,8 +85,8 @@ func (opt IgnoreRegex) apply(t *Tailer) error {
 	return t.SetIgnorePattern(string(opt))
 }
 
-// StaleLogGcWaker triggers garbage collection runs for stale logs in the tailer.
-func StaleLogGcWaker(w waker.Waker) Option {
+// GcWaker triggers garbage collection runs for stale logs in the tailer.
+func GcWaker(w waker.Waker) Option {
 	return &staleLogGcWaker{w}
 }
 
@@ -95,7 +95,7 @@ type staleLogGcWaker struct {
 }
 
 func (opt staleLogGcWaker) apply(t *Tailer) error {
-	t.StartStaleLogstreamExpirationLoop(opt.Waker)
+	t.gcWaker = opt.Waker
 	return nil
 }
 
@@ -109,7 +109,7 @@ type logPatternPollWaker struct {
 }
 
 func (opt logPatternPollWaker) apply(t *Tailer) error {
-	t.StartLogPatternPollLoop(opt.Waker)
+	t.logPatternPollWaker = opt.Waker
 	return nil
 }
 
@@ -141,50 +141,46 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 		return nil, ErrNeedsWaitgroup
 	}
 	t := &Tailer{
-		ctx:          ctx,
 		lines:        lines,
 		initDone:     make(chan struct{}),
 		globPatterns: make(map[string]struct{}),
 		logstreams:   make(map[string]logstream.LogStream),
 	}
+	t.ctx, t.cancel = context.WithCancel(ctx)
 	defer close(t.initDone)
 	if err := t.SetOption(options...); err != nil {
 		return nil, err
 	}
-	if len(t.globPatterns) == 0 && len(t.socketPaths) == 0 {
-		glog.Info("No patterns or sockets to tail, tailer done.")
-		close(t.lines)
-		return t, nil
-	}
-	// Set up listeners on every socket.
-	for _, pattern := range t.socketPaths {
-		if err := t.TailPath(pattern); err != nil {
+	// After processing options, we can add patterns.  We need to ensure any Wakers were provided.
+	for _, p := range t.logPatterns {
+		if err := t.AddPattern(p); err != nil {
 			return nil, err
 		}
 	}
-	// Guarantee all existing logs get tailed before we leave.  Also necessary
-	// in case oneshot mode is active, the logs get read!
-	if err := t.PollLogPatterns(); err != nil {
-		return nil, err
-	}
-	// Setup for shutdown, once all routines are finished.
+	// Start the routine for checking if logstreams have completed.
+	t.StartGcPoller(ctx)
+
+	// This goroutine cancels the Tailer if all of our dependent subroutines are done.
+	// These are any live logstreams, and any log pattern pollers.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		<-t.initDone
-		// We need to wait for context.Done() before we wait for the subbies
-		// because we don't know how many are running at any point -- as soon
-		// as t.wg.Wait begins the number of waited-on goroutines is fixed, and
-		// we may end up leaking a LogStream goroutine and it'll try to send on
-		// a closed channel as a result.  But in tests and oneshot, we want to
-		// make sure the whole log gets read so we can't wait on context.Done
-		// here.
-		if !t.oneShot {
-			<-t.ctx.Done()
-		}
 		t.wg.Wait()
+		t.cancel()
+	}()
+
+	// This goroutine awaits cancellation, then cleans up the tailer.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-t.initDone
+		<-t.ctx.Done()
+		t.wg.Wait()
+		glog.V(1).InfoContextf(ctx, "tailer finished")
 		close(t.lines)
 	}()
+
 	return t, nil
 }
 
@@ -215,42 +211,46 @@ func (t *Tailer) AddPattern(pattern string) error {
 	path := pattern
 	switch u.Scheme {
 	default:
-		glog.V(2).Infof("%v: %q in path pattern %q, treating as path", ErrUnsupportedURLScheme, u.Scheme, pattern)
+		glog.V(2).Infof("AddPattern(%v): %v in path pattern %q, treating as path", pattern, ErrUnsupportedURLScheme, u.Scheme)
+		// Leave path alone per log message
 	case "unix", "unixgram", "tcp", "udp":
 		// Keep the scheme.
-		glog.V(2).Infof("AddPattern: socket %q", pattern)
-		t.socketPaths = append(t.socketPaths, pattern)
-		return nil
+		glog.V(2).Infof("AddPattern(%v): is a socket", path)
+		return t.TailPath(path)
 	case "", "file":
 		// Leave path alone; may contain globs
 	}
-	if path != "-" {
-		path, err = filepath.Abs(path)
-		if err != nil {
-			glog.V(2).Infof("Couldn't canonicalize path %q: %s", u.Path, err)
-			return err
-		}
+	if logstream.IsStdinPattern(pattern) {
+		// stdin is not really a socket, but it is handled by this codepath and should not be in the globs.
+		glog.V(2).Infof("AddPattern(%v): is stdin", pattern)
+		return t.TailPath(pattern)
 	}
-	glog.V(2).Infof("AddPattern: file %q", path)
+	path, err = filepath.Abs(path)
+	if err != nil {
+		glog.V(2).Infof("AddPattern(%v): couldn't canonicalize path: %v", path, err)
+		return err
+	}
+	glog.V(2).Infof("AddPattern(%v): is a file-like pattern", path)
 	t.globPatternsMu.Lock()
 	t.globPatterns[path] = struct{}{}
 	t.globPatternsMu.Unlock()
+	t.pollLogPattern(path)
 	return nil
 }
 
 func (t *Tailer) Ignore(pathname string) bool {
 	absPath, err := filepath.Abs(pathname)
 	if err != nil {
-		glog.V(2).Infof("Couldn't get absolute path for %q: %s", pathname, err)
+		glog.V(2).Infof("Ignore(%v): couldn't get absolute path: %v", pathname, err)
 		return true
 	}
 	fi, err := os.Stat(absPath)
 	if err != nil {
-		glog.V(2).Infof("Couldn't stat path %q: %s", pathname, err)
+		glog.V(2).Infof("Ignore(%v): couldn't stat: %v", pathname, err)
 		return true
 	}
 	if fi.Mode().IsDir() {
-		glog.V(2).Infof("ignore path %q because it is a folder", pathname)
+		glog.V(2).Infof("Ignore(%v): is a folder", pathname)
 		return true
 	}
 	return t.ignoreRegexPattern != nil && t.ignoreRegexPattern.MatchString(fi.Name())
@@ -281,7 +281,7 @@ func (t *Tailer) TailPath(pathname string) error {
 			return nil
 		}
 		logCount.Add(-1) // Removing the current entry before re-adding.
-		glog.V(2).Infof("Existing logstream is finished, creating a new one.")
+		glog.V(2).Infof("%q: Existing logstream is finished, creating a new one.", pathname)
 	}
 	l, err := logstream.New(t.ctx, &t.wg, t.logstreamPollWaker, pathname, t.lines, t.oneShot)
 	if err != nil {
@@ -297,22 +297,15 @@ func (t *Tailer) TailPath(pathname string) error {
 	return nil
 }
 
-// ExpireStaleLogstreams removes logstreams that have had no reads for 1h or more.
-func (t *Tailer) ExpireStaleLogstreams() error {
-	t.logstreamsMu.Lock()
-	defer t.logstreamsMu.Unlock()
-	for _, v := range t.logstreams {
-		if time.Since(v.LastReadTime()) > (time.Hour * 24) {
-			v.Stop()
-		}
+// pollLogPattern runs a permanent goroutine to poll for new log files that
+// match `pattern`.  It is on the subroutine waitgroup as we do not want to
+// shut down the tailer when there are outstanding patterns to poll for.
+func (t *Tailer) pollLogPattern(pattern string) {
+	if err := t.doPatternGlob(pattern); err != nil {
+		glog.Infof("pollPattern(%v): glob failed: %v", pattern, err)
 	}
-	return nil
-}
-
-// StartStaleLogstreamExpirationLoop runs a permanent goroutine to expire stale logstreams.
-func (t *Tailer) StartStaleLogstreamExpirationLoop(waker waker.Waker) {
-	if waker == nil {
-		glog.Info("Log handle expiration disabled")
+	if t.logPatternPollWaker == nil {
+		glog.Infof("pollPattern(%v): log pattern polling disabled by no waker", pattern)
 		return
 	}
 	t.wg.Add(1)
@@ -320,44 +313,69 @@ func (t *Tailer) StartStaleLogstreamExpirationLoop(waker waker.Waker) {
 		defer t.wg.Done()
 		<-t.initDone
 		if t.oneShot {
-			glog.Info("No gc loop in oneshot mode.")
+			glog.Infof("pollPattern(%v): no polling loop in oneshot mode", pattern)
 			return
 		}
-		// glog.Infof("Starting log handle expiry loop every %s", duration.String())
+		glog.V(1).Infof("pollPattern(%v): starting log pattern poll loop", pattern)
 		for {
 			select {
 			case <-t.ctx.Done():
 				return
-			case <-waker.Wake():
+			case <-t.logPatternPollWaker.Wake():
+				if err := t.doPatternGlob(pattern); err != nil {
+					glog.Infof("pollPattern(%v): glob failed: %v", pattern, err)
+				}
+			}
+		}
+	}()
+}
+
+// doPatternGlob matches a glob-style pattern against the filesystem and issues
+// a TailPath for any files that match.
+func (t *Tailer) doPatternGlob(pattern string) error {
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+	glog.V(1).Infof("doPatternGlob(%v): glob matches: %v", pattern, matches)
+	for _, pathname := range matches {
+		if t.Ignore(pathname) {
+			continue
+		}
+		absPath, err := filepath.Abs(pathname)
+		if err != nil {
+			glog.V(2).Infof("doPatternGlob(%v): couldn't get absolute path for %q: %s", pattern, pathname, err)
+			continue
+		}
+		glog.V(2).Infof("doPatternGlob(%v): tailable path is %q", pattern, absPath)
+		if err := t.TailPath(absPath); err != nil {
+			glog.Info(err)
+		}
+	}
+	return nil
+}
+
+// StartGcPoller runs a permanent goroutine to expire stale logstreams and clean up completed streams.  This background goroutine isn't waited for during shutdown.
+func (t *Tailer) StartGcPoller(ctx context.Context) {
+	if t.gcWaker == nil {
+		glog.InfoContext(ctx, "stream gc disabled because no waker")
+		return
+	}
+	go func() {
+		<-t.initDone
+		if t.oneShot {
+			glog.InfoContext(ctx, "No gc loop in oneshot mode.")
+			return
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.gcWaker.Wake():
 				if err := t.ExpireStaleLogstreams(); err != nil {
 					glog.Info(err)
 				}
-			}
-		}
-	}()
-}
-
-// StartLogPatternPollLoop runs a permanent goroutine to poll for new log files.
-func (t *Tailer) StartLogPatternPollLoop(waker waker.Waker) {
-	if waker == nil {
-		glog.Info("Log pattern polling disabled")
-		return
-	}
-	t.wg.Add(1)
-	go func() {
-		defer t.wg.Done()
-		<-t.initDone
-		if t.oneShot {
-			glog.Info("No polling loop in oneshot mode.")
-			return
-		}
-		// glog.Infof("Starting log pattern poll loop every %s", duration.String())
-		for {
-			select {
-			case <-t.ctx.Done():
-				return
-			case <-waker.Wake():
-				if err := t.Poll(); err != nil {
+				if err := t.RemoveCompletedLogstreams(); err != nil {
 					glog.Info(err)
 				}
 			}
@@ -365,41 +383,9 @@ func (t *Tailer) StartLogPatternPollLoop(waker waker.Waker) {
 	}()
 }
 
-func (t *Tailer) PollLogPatterns() error {
-	t.globPatternsMu.RLock()
-	defer t.globPatternsMu.RUnlock()
-	for pattern := range t.globPatterns {
-		if pattern == "-" {
-			if err := t.TailPath(pattern); err != nil {
-				glog.Info(err)
-			}
-		}
-		matches, err := filepath.Glob(pattern)
-		if err != nil {
-			return err
-		}
-		glog.V(1).Infof("glob matches: %v", matches)
-		for _, pathname := range matches {
-			if t.Ignore(pathname) {
-				continue
-			}
-			absPath, err := filepath.Abs(pathname)
-			if err != nil {
-				glog.V(2).Infof("Couldn't get absolute path for %q: %s", pathname, err)
-				continue
-			}
-			glog.V(2).Infof("watched path is %q", absPath)
-			if err := t.TailPath(absPath); err != nil {
-				glog.Info(err)
-			}
-		}
-	}
-	return nil
-}
-
-// PollLogStreamsForCompletion looks at the existing paths and checks if they're already
-// complete, removing it from the map if so.
-func (t *Tailer) PollLogStreamsForCompletion() error {
+// RemoveCompletedLogstreams checks if current logstreams have completed,
+// removing it from the map if so.
+func (t *Tailer) RemoveCompletedLogstreams() error {
 	t.logstreamsMu.Lock()
 	defer t.logstreamsMu.Unlock()
 	for name, l := range t.logstreams {
@@ -413,12 +399,13 @@ func (t *Tailer) PollLogStreamsForCompletion() error {
 	return nil
 }
 
-func (t *Tailer) Poll() error {
-	t.pollMu.Lock()
-	defer t.pollMu.Unlock()
-	for _, f := range []func() error{t.PollLogPatterns, t.PollLogStreamsForCompletion} {
-		if err := f(); err != nil {
-			return err
+// ExpireStaleLogstreams removes logstreams that have had no reads for 1h or more.
+func (t *Tailer) ExpireStaleLogstreams() error {
+	t.logstreamsMu.Lock()
+	defer t.logstreamsMu.Unlock()
+	for _, v := range t.logstreams {
+		if time.Since(v.LastReadTime()) > (time.Hour * 24) {
+			v.Stop()
 		}
 	}
 	return nil

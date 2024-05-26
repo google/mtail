@@ -109,17 +109,17 @@ func (opt overrideLocation) apply(m *Server) error {
 	return nil
 }
 
-// StaleLogGcWaker triggers garbage collection runs for stale logs in the tailer.
-func StaleLogGcWaker(w waker.Waker) Option {
-	return &staleLogGcWaker{w}
+// GcWaker triggers garbage collection runs for stale logs in the tailer.
+func GcWaker(w waker.Waker) Option {
+	return &gcWaker{w}
 }
 
-type staleLogGcWaker struct {
+type gcWaker struct {
 	waker.Waker
 }
 
-func (opt staleLogGcWaker) apply(m *Server) error {
-	m.tOpts = append(m.tOpts, tailer.StaleLogGcWaker(opt.Waker))
+func (opt gcWaker) apply(m *Server) error {
+	m.tOpts = append(m.tOpts, tailer.GcWaker(opt.Waker))
 	return nil
 }
 

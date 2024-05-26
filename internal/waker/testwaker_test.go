@@ -14,14 +14,14 @@ import (
 func TestTestWakerWakes(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	w, awaken := waker.NewTest(ctx, 1)
+	w, awaken := waker.NewTest(ctx, 1, "test")
 	c := w.Wake()
 	select {
 	case x := <-c:
 		t.Errorf("<-w.Wake() == %v, expected nothing (should block)", x)
 	default:
 	}
-	awaken(0)
+	awaken(1, 0)
 	select {
 	case <-c:
 		// Luke Luck likes lakes.  Luke's duck likes lakes.
@@ -33,7 +33,7 @@ func TestTestWakerWakes(t *testing.T) {
 func TestTestWakerTwoWakees(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	w, awaken := waker.NewTest(ctx, 2)
+	w, awaken := waker.NewTest(ctx, 2, "test")
 	var wg1, wg2, wg3 sync.WaitGroup
 	wg1.Add(1)
 	wg2.Add(1)
@@ -68,7 +68,7 @@ func TestTestWakerTwoWakees(t *testing.T) {
 		}
 	}()
 	wg1.Done()
-	awaken(0) // wake 2, and await none
+	awaken(2, 0) // wake 2, and await none
 	wg2.Done()
 	wg3.Wait()
 }
@@ -76,7 +76,7 @@ func TestTestWakerTwoWakees(t *testing.T) {
 func TestTestWakerTwoWakeups(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	w, awaken := waker.NewTest(ctx, 1)
+	w, awaken := waker.NewTest(ctx, 1, "test")
 	s := make(chan struct{})
 	begin := make(chan struct{})
 	var wg sync.WaitGroup
@@ -99,10 +99,10 @@ func TestTestWakerTwoWakeups(t *testing.T) {
 		defer wg.Done()
 		<-begin
 		<-s
-		awaken(1)
+		awaken(1, 1) // awaken 1, wait for 1
 		<-s
 		// we don't expect anyone to call Wake() after this
-		awaken(0)
+		awaken(1, 0)
 	}()
 	close(begin)
 	wg.Wait()

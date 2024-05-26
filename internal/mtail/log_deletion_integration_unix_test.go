@@ -25,18 +25,20 @@ func TestLogDeletion(t *testing.T) {
 	logFile := testutil.TestOpenFile(t, logFilepath)
 	defer logFile.Close()
 
-	m, stopM := mtail.TestStartServer(t, 1, mtail.LogPathPatterns(logFilepath))
+	m, stopM := mtail.TestStartServer(t, 1, 1, mtail.LogPathPatterns(logFilepath))
 	defer stopM()
 
 	logCloseCheck := m.ExpectMapExpvarDeltaWithDeadline("log_closes_total", logFilepath, 1)
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", -1)
 
-	m.PollWatched(1) // Force sync to EOF
+	m.AwakenPatternPollers(1, 1)
+	m.AwakenLogStreams(1, 1) // Force read to EOF
+
 	glog.Info("remove")
 	testutil.FatalIfErr(t, os.Remove(logFilepath))
 
-	m.PollWatched(0) // one pass to stop
+	m.AwakenLogStreams(1, 0) // run stream to observe it's missing
 	logCloseCheck()
-	m.PollWatched(0) // one pass to remove completed stream
+	m.AwakenGcPoller(1, 1)
 	logCountCheck()
 }

@@ -42,6 +42,8 @@ type LogStream interface {
 // defaultReadBufferSize the size of the buffer for reading bytes into.
 const defaultReadBufferSize = 4096
 
+const stdinPattern = "-"
+
 var (
 	ErrUnsupportedURLScheme = errors.New("unsupported URL scheme")
 	ErrUnsupportedFileType  = errors.New("unsupported file type")
@@ -86,19 +88,18 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	case "", "file":
 		path = u.Path
 	}
-	var fi os.FileInfo
-	if path == "-" {
-		fi, err = os.Stdin.Stat()
+	if IsStdinPattern(path) {
+		fi, err := os.Stdin.Stat()
 		if err != nil {
 			logErrors.Add(path, 1)
 			return nil, err
 		}
-	} else {
-		fi, err = os.Stat(path)
-		if err != nil {
-			logErrors.Add(path, 1)
-			return nil, err
-		}
+		return newPipeStream(ctx, wg, waker, path, fi, lines)
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		logErrors.Add(path, 1)
+		return nil, err
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():
@@ -111,4 +112,14 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	default:
 		return nil, fmt.Errorf("%w: %q", ErrUnsupportedFileType, pathname)
 	}
+}
+
+func IsStdinPattern(pattern string) bool {
+	if pattern == stdinPattern {
+		return true
+	}
+	if pattern == "/dev/stdin" {
+		return true
+	}
+	return false
 }

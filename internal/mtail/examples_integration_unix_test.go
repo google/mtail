@@ -149,7 +149,7 @@ func TestFileSocketStreamComparison(t *testing.T) {
 						defer wg.Done()
 						source, err := os.OpenFile(tc.logfile, os.O_RDONLY, 0)
 						testutil.FatalIfErr(t, err)
-						s, err := net.DialUnix(scheme, nil, &net.UnixAddr{sockName, scheme})
+						s, err := net.DialUnix(scheme, nil, &net.UnixAddr{Name: sockName, Net: scheme})
 						testutil.FatalIfErr(t, err)
 						n, err := io.Copy(s, source)
 						testutil.FatalIfErr(t, err)

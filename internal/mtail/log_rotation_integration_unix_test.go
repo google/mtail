@@ -17,11 +17,12 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
-// TestLogRotation is a unix-specific test because on Windows, files cannot be removed
-// or renamed while there is an open read handle on them. Instead, log rotation would
-// have to be implemented by copying and then truncating the original file. That test
-// case is already covered by TestLogTruncation.
-func TestLogRotation(t *testing.T) {
+// TestLogRotationByRename is a unix-specific test because on Windows, files
+// cannot be removed or renamed while there is an open read handle on
+// them. Instead, log rotation would have to be implemented by copying and then
+// truncating the original file. That test case is already covered by
+// TestLogTruncation.
+func TestLogRotationByRename(t *testing.T) {
 	testutil.SkipIfShort(t)
 
 	for _, tc := range []bool{false, true} {
@@ -45,17 +46,17 @@ func TestLogRotation(t *testing.T) {
 			f := testutil.TestOpenFile(t, logFile)
 			defer f.Close()
 
-			m, stopM := mtail.TestStartServer(t, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+			m, stopM := mtail.TestStartServer(t, 1, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 			defer stopM()
 
 			logOpensTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("log_opens_total", logFile, 1)
 			logLinesTotalCheck := m.ExpectMapExpvarDeltaWithDeadline("log_lines_total", logFile, 3)
 
 			testutil.WriteString(t, f, "line 1\n")
-			m.PollWatched(1)
+			m.AwakenLogStreams(1, 1)
 
 			testutil.WriteString(t, f, "line 2\n")
-			m.PollWatched(1)
+			m.AwakenLogStreams(1, 1)
 
 			logClosedCheck := m.ExpectMapExpvarDeltaWithDeadline("log_closes_total", logFile, 1)
 			logCompletedCheck := m.ExpectExpvarDeltaWithDeadline("log_count", -1)
@@ -63,16 +64,20 @@ func TestLogRotation(t *testing.T) {
 			err = os.Rename(logFile, logFile+".1")
 			testutil.FatalIfErr(t, err)
 			if tc {
-				m.PollWatched(0)    // simulate race condition with this poll.
-				logClosedCheck()    // sync when filestream closes fd
-				m.PollWatched(0)    // invoke the GC
-				logCompletedCheck() // sync to when the logstream is removed from tailer
+				// Simulate a race where we poll for a pattern and remove the
+				// existing stream.
+				m.AwakenPatternPollers(1, 1) // simulate race condition with this poll.
+				m.AwakenLogStreams(1, 0)
+				logClosedCheck() // barrier until filestream closes fd
+				m.AwakenGcPoller(1, 1)
+				logCompletedCheck() // barrier until the logstream is removed from tailer
 			}
 			glog.Info("create")
 			f = testutil.TestOpenFile(t, logFile)
-			m.PollWatched(1)
+			m.AwakenPatternPollers(1, 1)
+			m.AwakenLogStreams(0, 1)
 			testutil.WriteString(t, f, "line 1\n")
-			m.PollWatched(1)
+			m.AwakenLogStreams(1, 1)
 
 			var wg sync.WaitGroup
 			wg.Add(2)

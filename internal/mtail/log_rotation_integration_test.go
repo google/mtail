@@ -15,7 +15,7 @@ import (
 	"github.com/google/mtail/internal/testutil"
 )
 
-func TestLogSoftLinkChange(t *testing.T) {
+func TestLogRotationBySoftLinkChange(t *testing.T) {
 	testutil.SkipIfShort(t)
 
 	for _, tc := range []bool{false, true} {
@@ -29,7 +29,7 @@ func TestLogSoftLinkChange(t *testing.T) {
 
 			logFilepath := filepath.Join(workdir, "log")
 
-			m, stopM := mtail.TestStartServer(t, 1, mtail.LogPathPatterns(logFilepath))
+			m, stopM := mtail.TestStartServer(t, 1, 1, mtail.LogPathPatterns(logFilepath))
 			defer stopM()
 
 			logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 1)
@@ -40,33 +40,42 @@ func TestLogSoftLinkChange(t *testing.T) {
 
 			testutil.FatalIfErr(t, os.Symlink(logFilepath+".true1", logFilepath))
 			glog.Info("symlinked")
-			m.PollWatched(1)
+			m.AwakenPatternPollers(1, 1)
+			m.AwakenLogStreams(1, 1)
 
 			inputLines := []string{"hi1", "hi2", "hi3"}
 			for _, x := range inputLines {
 				testutil.WriteString(t, trueLog1, x+"\n")
 			}
-			m.PollWatched(1)
+			m.AwakenPatternPollers(1, 1)
+			m.AwakenLogStreams(1, 1)
 
 			trueLog2 := testutil.TestOpenFile(t, logFilepath+".true2")
 			defer trueLog2.Close()
-			m.PollWatched(1)
+			m.AwakenPatternPollers(1, 1)
+			m.AwakenLogStreams(1, 1)
+			m.AwakenGcPoller(1, 1)
 			logClosedCheck := m.ExpectMapExpvarDeltaWithDeadline("log_closes_total", logFilepath, 1)
 			logCompletedCheck := m.ExpectExpvarDeltaWithDeadline("log_count", -1)
 			testutil.FatalIfErr(t, os.Remove(logFilepath))
 			if tc {
-				m.PollWatched(0)    // simulate race condition with this poll.
-				logClosedCheck()    // sync when filestream closes fd
-				m.PollWatched(0)    // invoke the GC
-				logCompletedCheck() // sync to when the logstream is removed from tailer
+				// Simulate a race where we poll for a pattern and remove the
+				// existing stream.
+				m.AwakenPatternPollers(1, 1) // simulate race condition with this poll.
+				m.AwakenLogStreams(1, 0)
+				logClosedCheck() // barrier until filestream closes fd
+				m.AwakenGcPoller(1, 1)
+				logCompletedCheck() // barrier until the logstream is removed from tailer
 			}
 			testutil.FatalIfErr(t, os.Symlink(logFilepath+".true2", logFilepath))
-			m.PollWatched(1)
+			m.AwakenPatternPollers(1, 1)
+			m.AwakenLogStreams(0, 1)
 
 			for _, x := range inputLines {
 				testutil.WriteString(t, trueLog2, x+"\n")
 			}
-			m.PollWatched(1)
+			m.AwakenPatternPollers(1, 1)
+			m.AwakenLogStreams(1, 1)
 
 			var wg sync.WaitGroup
 			wg.Add(2)

@@ -17,11 +17,11 @@ import (
 func TestBasicTail(t *testing.T) {
 	testutil.SkipIfShort(t)
 	if testing.Verbose() {
-		testutil.SetFlag(t, "vmodule", "tail=2,log_watcher=2")
+		testutil.SetFlag(t, "vmodule", "tail=2,filestream=2")
 	}
 	logDir := testutil.TestTempDir(t)
 
-	m, stopM := mtail.TestStartServer(t, 1, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
+	m, stopM := mtail.TestStartServer(t, 1, 1, mtail.LogPathPatterns(logDir+"/*"), mtail.ProgramPath("../../examples/linecount.mtail"))
 	defer stopM()
 
 	logFile := filepath.Join(logDir, "log")
@@ -31,12 +31,13 @@ func TestBasicTail(t *testing.T) {
 
 	f := testutil.TestOpenFile(t, logFile)
 	defer f.Close()
-	m.PollWatched(1) // Force sync to EOF
+	m.AwakenPatternPollers(1, 1) // Find `logFile`
+	m.AwakenLogStreams(1, 1)     // Force a sync to EOF
 
 	for i := 1; i <= 3; i++ {
 		testutil.WriteString(t, f, fmt.Sprintf("%d\n", i))
 	}
-	m.PollWatched(1) // Expect to read 3 lines here.
+	m.AwakenLogStreams(1, 1) // Expect to read 3 lines here.
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -57,7 +58,7 @@ func TestNewLogDoesNotMatchIsIgnored(t *testing.T) {
 
 	// Start mtail
 	logFilepath := filepath.Join(workdir, "log")
-	m, stopM := mtail.TestStartServer(t, 0, mtail.LogPathPatterns(logFilepath))
+	m, stopM := mtail.TestStartServer(t, 1, 0, mtail.LogPathPatterns(logFilepath))
 	defer stopM()
 
 	logCountCheck := m.ExpectExpvarDeltaWithDeadline("log_count", 0)
@@ -68,7 +69,7 @@ func TestNewLogDoesNotMatchIsIgnored(t *testing.T) {
 	logFile, err := os.Create(newLogFilepath)
 	testutil.FatalIfErr(t, err)
 	defer logFile.Close()
-	m.PollWatched(0) // No streams so don't wait for any.
+	// No streams so don't wait for any.
 
 	logCountCheck()
 }

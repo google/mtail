@@ -17,8 +17,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// TestTailerOpenRetries is a unix-specific test because on Windows, it is not possible to create a file
-// that you yourself cannot read (minimum permissions are 0222).
+// TestTailerOpenRetries is a unix-specific test because on Windows, it is not
+// possible to create a file that you yourself cannot read; the minimum permissions
+// there are 0222.
 func TestTailerOpenRetries(t *testing.T) {
 	// Can't force a permission denied error if run as root.
 	testutil.SkipIfRoot(t)
@@ -35,31 +36,34 @@ func TestTailerOpenRetries(t *testing.T) {
 	if err := ta.TailPath(logfile); err == nil || !os.IsPermission(err) {
 		t.Fatalf("Expected a permission denied error here: %s", err)
 	}
-	testutil.FatalIfErr(t, ta.PollLogPatterns())
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
+
+	// There testTail includes a pattern poller for tmpDir.  Make sure we wait for both.
+	ta.awakenPattern(1, 2)
+
 	glog.Info("remove")
 	if err := os.Remove(logfile); err != nil {
 		t.Fatal(err)
 	}
-	testutil.FatalIfErr(t, ta.PollLogPatterns())
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
+	ta.awakenPattern(2, 2)
+
 	glog.Info("openfile")
 	f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0)
+	testutil.FatalIfErr(t, err)
 	//nolint:staticcheck // test code
 	defer f.Close()
-	testutil.FatalIfErr(t, err)
-	testutil.FatalIfErr(t, ta.PollLogPatterns())
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
+
+	ta.awakenPattern(2, 2)
 	glog.Info("chmod")
 	if err := os.Chmod(logfile, 0o666); err != nil {
 		t.Fatal(err)
 	}
-	testutil.FatalIfErr(t, ta.PollLogPatterns())
-	testutil.FatalIfErr(t, ta.PollLogStreamsForCompletion())
-	ta.awaken(1) // force sync to EOF
+
+	ta.awakenPattern(2, 2) // discover the logfile
+	ta.awakenStreams(1, 1) // force sync to EOF
+
 	glog.Info("write string")
 	testutil.WriteString(t, f, "\n")
-	ta.awaken(1)
+	ta.awakenStreams(1, 1)
 
 	ta.stop()
 
@@ -83,7 +87,6 @@ func TestAddStdin(t *testing.T) {
 	if err := ta.AddPattern("-"); err != nil {
 		t.Errorf("AddPattern(-) -> %v", err)
 	}
-	testutil.FatalIfErr(t, ta.PollLogPatterns())
 
 	ta.stop()
 

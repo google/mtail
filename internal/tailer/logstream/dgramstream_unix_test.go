@@ -40,7 +40,7 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			}
 			lines := make(chan *logline.LogLine, 1)
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, awaken := waker.NewTest(ctx, 1)
+			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
 			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
@@ -52,7 +52,7 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
 
-			awaken(0) // sync past read
+			awaken(0, 0) // sync past read
 
 			ss.Stop()
 
@@ -97,7 +97,7 @@ func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
 			}
 			lines := make(chan *logline.LogLine, 1)
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, awaken := waker.NewTest(ctx, 1)
+			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
 			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
@@ -109,7 +109,7 @@ func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
 
-			awaken(0) // Synchronise past read.
+			awaken(0, 0) // Synchronise past read.
 
 			cancel() // This cancellation should cause the stream to shut down.
 

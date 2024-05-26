@@ -29,17 +29,18 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 	f := testutil.TestOpenFile(t, logFile)
 	defer f.Close()
 
-	m, stopM := mtail.TestStartServer(t, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
+	m, stopM := mtail.TestStartServer(t, 1, 1, mtail.ProgramPath(progDir), mtail.LogPathPatterns(logDir+"/log"))
 	defer stopM()
 
-	m.PollWatched(1) // Force sync to EOF
+	m.AwakenPatternPollers(1, 1)
+	m.AwakenLogStreams(1, 1) // Force read to EOF
 
 	{
 		lineCountCheck := m.ExpectExpvarDeltaWithDeadline("lines_total", 1)
 		n, err := f.WriteString("line 1\n")
 		testutil.FatalIfErr(t, err)
 		glog.Infof("Wrote %d bytes", n)
-		m.PollWatched(1)
+		m.AwakenLogStreams(1, 1)
 		lineCountCheck()
 	}
 
@@ -48,7 +49,7 @@ func TestMultipleLinesInOneWrite(t *testing.T) {
 		n, err := f.WriteString("line 2\nline 3\n")
 		testutil.FatalIfErr(t, err)
 		glog.Infof("Wrote %d bytes", n)
-		m.PollWatched(1)
+		m.AwakenLogStreams(1, 1)
 		lineCountCheck()
 	}
 }
