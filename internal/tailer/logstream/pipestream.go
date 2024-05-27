@@ -43,7 +43,7 @@ func (ps *pipeStream) LastReadTime() time.Time {
 }
 
 func pipeOpen(pathname string) (*os.File, error) {
-	if pathname == "-" {
+	if IsStdinPattern(pathname) {
 		return os.Stdin, nil
 	}
 	// Open in nonblocking mode because the write end of the pipe may not have started yet.
