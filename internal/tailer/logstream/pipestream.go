@@ -43,12 +43,25 @@ func (ps *pipeStream) LastReadTime() time.Time {
 }
 
 func pipeOpen(pathname string) (*os.File, error) {
-	if pathname == "-" {
+	if IsStdinPattern(pathname) {
 		return os.Stdin, nil
 	}
 	// Open in nonblocking mode because the write end of the pipe may not have started yet.
 	return os.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0o600) // #nosec G304 -- path already validated by caller
 }
+
+// The read buffer size for pipes.
+//
+// Before Linux 2.6.11, the capacity of a pipe was the same as the
+// system page size (e.g., 4096 bytes on i386).  Since Linux 2.6.11,
+// the pipe capacity is 16 pages (i.e., 65,536 bytes in a system
+// with a page size of 4096 bytes).  Since Linux 2.6.35, the default
+// pipe capacity is 16 pages, but the capacity can be queried and
+// set using the fcntl(2) F_GETPIPE_SZ and F_SETPIPE_SZ operations.
+// See fcntl(2) for more information.
+//
+// https://man7.org/linux/man-pages/man7/pipe.7.html
+const defaultPipeReadBufferSize = 131072
 
 func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, _ os.FileInfo) error {
 	fd, err := pipeOpen(ps.pathname)
@@ -57,7 +70,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		return err
 	}
 	glog.V(2).Infof("opened new pipe %v", fd)
-	b := make([]byte, defaultReadBufferSize)
+	b := make([]byte, defaultPipeReadBufferSize)
 	partial := bytes.NewBufferString("")
 	var total int
 	wg.Add(1)

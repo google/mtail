@@ -39,8 +39,10 @@ type LogStream interface {
 	IsComplete() bool        // True if the logstream has completed work and cannot recover.  The caller should clean up this logstream, creating a new logstream on a pathname if necessary.
 }
 
-// defaultReadBufferSize the size of the buffer for reading bytes into.
-const defaultReadBufferSize = 4096
+// defaultReadBufferSize the size of the buffer for reading bytes for files.
+//
+// Anecdotally the maximum file read buffer is 4GiB, but thats way too massive.
+const defaultReadBufferSize = 131072
 
 const stdinPattern = "-"
 
