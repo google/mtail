@@ -47,7 +47,8 @@ func (ss *dgramStream) LastReadTime() time.Time {
 	return ss.lastReadTime
 }
 
-const datagramReadBufferSize = 131071
+// The read buffer size for datagrams.
+const datagramReadBufferSize = 131072
 
 func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker) error {
 	c, err := net.ListenPacket(ss.scheme, ss.address)
