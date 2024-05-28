@@ -35,7 +35,7 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      - uses: docker/login-action@v3.1.0
+      - uses: docker/login-action@v3.2.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -131,7 +131,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.goreleaser.outputs.image_subjects) }}
     steps:
-      - uses: docker/login-action@v3.1.0
+      - uses: docker/login-action@v3.2.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
