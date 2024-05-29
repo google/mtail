@@ -4,7 +4,11 @@ on:
   # goreleaser is put into snapshot mode when not on a tag
   pull_request:
   merge_group:
-  # Run when a tag is created, i.e. after the tag-release workflow.
+  # Run when a tag is pushed.
+  push:
+    tags:
+      - v*
+  # Run when a ref is created, i.e. after the tag-release workflow.
   # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#create
   create:
 
