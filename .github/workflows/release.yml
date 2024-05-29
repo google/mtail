@@ -8,9 +8,6 @@ on:
   push:
     tags:
       - v*
-  # Run when a ref is created, i.e. after the tag-release workflow.
-  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#create
-  create:
 
 env:
   REGISTRY: ghcr.io
