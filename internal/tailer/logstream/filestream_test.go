@@ -39,7 +39,7 @@ func TestFileStreamRead(t *testing.T) {
 	close(lines)
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.TODO(), name, "yo"},
+		{Context: context.TODO(), Filename: name, Line: "yo"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -80,7 +80,7 @@ func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 	close(lines)
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.TODO(), name, s},
+		{Context: context.TODO(), Filename: name, Line: s},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -126,7 +126,7 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 	close(lines)
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.TODO(), name, s[1:]},
+		{Context: context.TODO(), Filename: name, Line: s[1:]},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -174,9 +174,9 @@ func TestFileStreamTruncation(t *testing.T) {
 	received := testutil.LinesReceived(lines)
 
 	expected := []*logline.LogLine{
-		{context.TODO(), name, "1"},
-		{context.TODO(), name, "2"},
-		{context.TODO(), name, "3"},
+		{Context: context.TODO(), Filename: name, Line: "1"},
+		{Context: context.TODO(), Filename: name, Line: "2"},
+		{Context: context.TODO(), Filename: name, Line: "3"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -210,7 +210,7 @@ func TestFileStreamFinishedBecauseCancel(t *testing.T) {
 
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.TODO(), name, "yo"},
+		{Context: context.TODO(), Filename: name, Line: "yo"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -251,7 +251,7 @@ func TestFileStreamPartialRead(t *testing.T) {
 	close(lines)
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.TODO(), name, "yo"},
+		{Context: context.TODO(), Filename: name, Line: "yo"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 

@@ -62,7 +62,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 
 			received := testutil.LinesReceived(lines)
 			expected := []*logline.LogLine{
-				{context.TODO(), addr, "1"},
+				{Context: context.TODO(), Filename: addr, Line: "1"},
 			}
 			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -114,7 +114,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 
 			received := testutil.LinesReceived(lines)
 			expected := []*logline.LogLine{
-				{context.TODO(), addr, "1"},
+				{Context: context.TODO(), Filename: addr, Line: "1"},
 			}
 			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
