@@ -50,6 +50,37 @@ func TestFileStreamRead(t *testing.T) {
 	wg.Wait()
 }
 
+func TestFileStreamReadOneShot(t *testing.T) {
+	var wg sync.WaitGroup
+
+	tmpDir := testutil.TestTempDir(t)
+
+	name := filepath.Join(tmpDir, "log")
+	f := testutil.TestOpenFile(t, name)
+	defer f.Close()
+	testutil.WriteString(t, f, "yo\n")
+
+	lines := make(chan *logline.LogLine, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	waker := waker.NewTestAlways()
+	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
+	testutil.FatalIfErr(t, err)
+
+	wg.Wait()
+	close(lines)
+	received := testutil.LinesReceived(lines)
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: name, Line: "yo"},
+	}
+	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	if !fs.IsComplete() {
+		t.Errorf("expecting filestream to be complete because stopped")
+	}
+	cancel()
+	wg.Wait()
+}
+
 func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 	var wg sync.WaitGroup
 

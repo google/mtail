@@ -48,9 +48,11 @@ type fileStream struct {
 }
 
 // newFileStream creates a new log stream from a regular file.
-func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine, streamFromStart OneShotMode) (LogStream, error) {
+func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine, oneShot OneShotMode) (LogStream, error) {
 	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
-	if err := fs.stream(ctx, wg, waker, fi, streamFromStart); err != nil {
+	// Stream from the start of the file when in one shot mode.
+	streamFromStart := oneShot == OneShotEnabled
+	if err := fs.stream(ctx, wg, waker, fi, oneShot, streamFromStart); err != nil {
 		return nil, err
 	}
 	return fs, nil
@@ -62,15 +64,17 @@ func (fs *fileStream) LastReadTime() time.Time {
 	return fs.lastReadTime
 }
 
-func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, streamFromStart OneShotMode) error {
+func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, oneShot OneShotMode, streamFromStart bool) error {
 	fd, err := os.OpenFile(fs.pathname, os.O_RDONLY, 0o600)
 	if err != nil {
 		logErrors.Add(fs.pathname, 1)
 		return err
 	}
 	logOpens.Add(fs.pathname, 1)
-	if !streamFromStart {
 	glog.V(2).Infof("stream(%s): opened new file", fs.pathname)
+	if !streamFromStart {
+		// Normal operation for first stream is to ignore the past, and seek to
+		// EOF immediately to start tailing.
 		if _, err := fd.Seek(0, io.SeekEnd); err != nil {
 			logErrors.Add(fs.pathname, 1)
 			if err := fd.Close(); err != nil {
@@ -127,7 +131,8 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				// retryable.
 				if errors.Is(err, syscall.ESTALE) {
 					glog.Infof("stream(%s): reopening stream due to %s", fs.pathname, err)
-					if nerr := fs.stream(ctx, wg, waker, fi, true); nerr != nil {
+					// streamFromStart always true on a stream reopen
+					if nerr := fs.stream(ctx, wg, waker, fi, oneShot, true); nerr != nil {
 						glog.Infof("stream(%s): new stream: %v", fs.pathname, nerr)
 					}
 					// Close this stream.
@@ -167,7 +172,8 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				}
 				if !os.SameFile(fi, newfi) {
 					glog.V(2).Infof("stream(%s): adding a new file routine", fs.pathname)
-					if err := fs.stream(ctx, wg, waker, newfi, true); err != nil {
+					// Stream from start always true on a stream reopen
+					if err := fs.stream(ctx, wg, waker, newfi, oneShot, true); err != nil {
 						glog.Info("stream(%s): new stream: %v", fs.pathname, err)
 					}
 					// We're at EOF so there's nothing left to read here.
@@ -213,7 +219,18 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		Sleep:
 			// If we get here it's because we've stalled.  First test to see if it's
 			// time to exit.
-			if err == io.EOF || ctx.Err() != nil {
+			if err == io.EOF {
+				if oneShot == OneShotEnabled {
+					// Exit now, because oneShot means read only to EOF.
+					glog.V(2).Infof("stream(%s): EOF in one shot mode, exiting", fs.pathname)
+					if partial.Len() > 0 {
+						sendLine(ctx, fs.pathname, partial, fs.lines)
+					}
+					fs.mu.Lock()
+					fs.completed = true
+					fs.mu.Unlock()
+					return
+				}
 				select {
 				case <-fs.stopChan:
 					glog.V(2).Infof("stream(%s): stream has been sopped, exiting", fs.pathname)
