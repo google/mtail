@@ -55,7 +55,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 		logErrors.Add(ss.address, 1)
 		return err
 	}
-	glog.V(2).Infof("opened new socket listener %v", l)
+	glog.V(2).Infof("stream(%s:%s): opened new socket listener %v", ss.scheme, ss.address, l)
 
 	initDone := make(chan struct{})
 	// Set up for shutdown
@@ -70,7 +70,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 			case <-ss.stopChan:
 			}
 		}
-		glog.V(2).Infof("%v: closing listener", l)
+		glog.V(2).Infof("stream(%s:%s): closing listener", ss.scheme, ss.address, l)
 		err := l.Close()
 		if err != nil {
 			glog.Info(err)
@@ -86,7 +86,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 			glog.Info(err)
 			return err
 		}
-		glog.V(2).Infof("%v: got new conn %v", l, c)
+		glog.V(2).Infof("stream(%s:%s): got new conn %v", ss.scheme, ss.address, c)
 		wg.Add(1)
 		go ss.handleConn(ctx, wg, waker, c)
 		return nil
@@ -99,7 +99,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 			if err := acceptConn(); err != nil {
 				glog.Info(err)
 			}
-			glog.Info("oneshot mode, retuning")
+			glog.Info("stream(%s:%s): oneshot mode, returning", ss.scheme, ss.address)
 			close(initDone)
 		}()
 		return nil
@@ -124,8 +124,8 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 	partial := bytes.NewBufferString("")
 	var total int
 	defer func() {
-		glog.V(2).Infof("%v: read total %d bytes from %s", c, total, ss.address)
-		glog.V(2).Infof("%v: closing connection", c)
+		glog.V(2).Infof("stream(%s:%s): read total %d bytes from %s", ss.scheme, ss.address, c, total)
+		glog.V(2).Infof("stream(%s:%s): closing connection, %v", ss.scheme, ss.address, c)
 		err := c.Close()
 		if err != nil {
 			logErrors.Add(ss.address, 1)
@@ -139,7 +139,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 
 	for {
 		n, err := c.Read(b)
-		glog.V(2).Infof("%v: read %d bytes, err is %v", c, n, err)
+		glog.V(2).Infof("stream(%s:%s): read %d bytes, err is %v", ss.scheme, ss.address, n, err)
 
 		if n > 0 {
 			total += n
@@ -154,23 +154,23 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			if partial.Len() > 0 {
 				sendLine(ctx, ss.address, partial, ss.lines)
 			}
-			glog.V(2).Infof("%v: exiting, conn has error %s", c, err)
+			glog.V(2).Infof("stream(%s:%s): exiting, conn has error %s", ss.scheme, ss.address, err)
 
 			return
 		}
 
 		// Yield and wait
-		glog.V(2).Infof("%v: waiting", c)
+		glog.V(2).Infof("stream(%s:%s): waiting", ss.scheme, ss.address)
 		select {
 		case <-ctx.Done():
 			// Exit immediately; cancelled context will cause the next read to be interrupted and exit anyway, so no point waiting to loop.
 			return
 		case <-ss.stopChan:
 			// Stop after connection is closed.
-			glog.V(2).Infof("%v: stopchan closed, exiting after next read timeout", c)
+			glog.V(2).Infof("stream(%s:%s): stopchan closed, exiting after next read timeout", ss.scheme, ss.address)
 		case <-waker.Wake():
 			// sleep until next Wake()
-			glog.V(2).Infof("%v: Wake received", c)
+			glog.V(2).Infof("stream(%s:%s): Wake received", ss.scheme, ss.address)
 		}
 	}
 }
@@ -185,7 +185,7 @@ func (ss *socketStream) IsComplete() bool {
 // Stop will close the listener so no new connections will be accepted, and close all current connections once they have been closed by their peers.
 func (ss *socketStream) Stop() {
 	ss.stopOnce.Do(func() {
-		glog.Info("signalling stop at next EOF")
+		glog.Infof("stream(%s:%s): signalling stop at next EOF", ss.scheme, ss.address)
 		close(ss.stopChan)
 	})
 }

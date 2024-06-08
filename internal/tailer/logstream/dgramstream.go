@@ -56,7 +56,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		logErrors.Add(ss.address, 1)
 		return err
 	}
-	glog.V(2).Infof("opened new datagram socket %v", c)
+	glog.V(2).Infof("stream(%s:%s): opened new datagram socket %v", ss.scheme, ss.address, c)
 	b := make([]byte, datagramReadBufferSize)
 	partial := bytes.NewBufferString("")
 	var total int
@@ -64,8 +64,8 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 	go func() {
 		defer wg.Done()
 		defer func() {
-			glog.V(2).Infof("%v: read total %d bytes from %s", c, total, ss.address)
-			glog.V(2).Infof("%v: closing connection", c)
+			glog.V(2).Infof("stream(%s:%s): read total %d bytes", ss.scheme, ss.address, total)
+			glog.V(2).Infof("stream(%s:%s): closing connection", ss.scheme, ss.address)
 			err := c.Close()
 			if err != nil {
 				logErrors.Add(ss.address, 1)
@@ -83,7 +83,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 
 		for {
 			n, _, err := c.ReadFrom(b)
-			glog.V(2).Infof("%v: read %d bytes, err is %v", c, n, err)
+			glog.V(2).Infof("stream(%s:%s): read %d bytes, err is %v", ss.scheme, ss.address, n, err)
 
 			// This is a test-only trick that says if we've already put this
 			// logstream in graceful shutdown, then a zero-byte read is
@@ -98,7 +98,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				}
 				select {
 				case <-ss.stopChan:
-					glog.V(2).Infof("%v: exiting because zero byte read after Stop", c)
+					glog.V(2).Infof("stream(%s:%s): exiting because zero byte read after Stop", ss.scheme, ss.address)
 					return
 				default:
 				}
@@ -117,12 +117,12 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				if partial.Len() > 0 {
 					sendLine(ctx, ss.address, partial, ss.lines)
 				}
-				glog.V(2).Infof("%v: exiting, stream has error %s", c, err)
+				glog.V(2).Infof("stream(%s:%s): exiting, stream has error %s", ss.scheme, ss.address, err)
 				return
 			}
 
 			// Yield and wait
-			glog.V(2).Infof("%v: waiting", c)
+			glog.V(2).Infof("stream(%s:%s): waiting", ss.scheme, ss.address)
 			select {
 			case <-ss.stopChan:
 				// We may have started waiting here when the stop signal
@@ -130,7 +130,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				// written to.  The file is not technically yet at EOF so
 				// we need to go back and try one more read.  We'll exit
 				// the stream in the zero byte handler above.
-				glog.V(2).Infof("%v: Stopping after next zero byte read", c)
+				glog.V(2).Infof("stream(%s:%s): Stopping after next zero byte read", ss.scheme, ss.address)
 			case <-ctx.Done():
 				// Exit immediately; a cancelled context will set an immediate
 				// deadline on the next read which will cause us to exit then,
@@ -138,7 +138,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				return
 			case <-waker.Wake():
 				// sleep until next Wake()
-				glog.V(2).Infof("%v: Wake received", c)
+				glog.V(2).Infof("stream(%s:%s): Wake received", ss.scheme, ss.address)
 			}
 		}
 	}()
@@ -152,7 +152,7 @@ func (ss *dgramStream) IsComplete() bool {
 }
 
 func (ss *dgramStream) Stop() {
-	glog.V(2).Infof("Stop received on datagram stream.")
+	glog.V(2).Infof("stream(%s:%s): Stop received on datagram stream.", ss.scheme, ss.address)
 	ss.stopOnce.Do(func() {
 		close(ss.stopChan)
 	})

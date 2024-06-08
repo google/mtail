@@ -69,7 +69,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		logErrors.Add(ps.pathname, 1)
 		return err
 	}
-	glog.V(2).Infof("opened new pipe %v", fd)
+	glog.V(2).Infof("stream(%s): opened new pipe %v", ps.pathname, fd)
 	b := make([]byte, defaultPipeReadBufferSize)
 	partial := bytes.NewBufferString("")
 	var total int
@@ -77,8 +77,8 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	go func() {
 		defer wg.Done()
 		defer func() {
-			glog.V(2).Infof("%v: read total %d bytes from %s", fd, total, ps.pathname)
-			glog.V(2).Infof("%v: closing file descriptor", fd)
+			glog.V(2).Infof("stream(%s): read total %d bytes", ps.pathname, fd, total)
+			glog.V(2).Infof("stream(%s): closing file descriptor %v", ps.pathname, fd)
 			err := fd.Close()
 			if err != nil {
 				logErrors.Add(ps.pathname, 1)
@@ -95,7 +95,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 		for {
 			n, err := fd.Read(b)
-			glog.V(2).Infof("%v: read %d bytes, err is %v", fd, n, err)
+			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", ps.pathname, n, err)
 
 			if n > 0 {
 				total += n
@@ -111,12 +111,12 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				if partial.Len() > 0 {
 					sendLine(ctx, ps.pathname, partial, ps.lines)
 				}
-				glog.V(2).Infof("%v: exiting, stream has error %s", fd, err)
+				glog.V(2).Infof("stream(%s): exiting, stream has error %s", ps.pathname, err)
 				return
 			}
 
 			// Wait for wakeup or termination.
-			glog.V(2).Infof("%v: waiting", fd)
+			glog.V(2).Infof("stream(%s): waiting", ps.pathname)
 			select {
 			case <-ctx.Done():
 				// Exit immediately; cancelled context is going to cause the
@@ -125,7 +125,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				return
 			case <-waker.Wake():
 				// sleep until next Wake()
-				glog.V(2).Infof("%v: Wake received", fd)
+				glog.V(2).Infof("stream(%s): Wake received", ps.pathname)
 			}
 		}
 	}()
