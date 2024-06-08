@@ -30,12 +30,12 @@ type dgramStream struct {
 	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
-func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, lines chan<- *logline.LogLine) (LogStream, error) {
+func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, lines chan<- *logline.LogLine, oneShot OneShotMode) (LogStream, error) {
 	if address == "" {
 		return nil, ErrEmptySocketAddress
 	}
 	ss := &dgramStream{ctx: ctx, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
-	if err := ss.stream(ctx, wg, waker); err != nil {
+	if err := ss.stream(ctx, wg, waker, oneShot); err != nil {
 		return nil, err
 	}
 	return ss, nil
@@ -50,7 +50,7 @@ func (ss *dgramStream) LastReadTime() time.Time {
 // The read buffer size for datagrams.
 const datagramReadBufferSize = 131072
 
-func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker) error {
+func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, oneShot OneShotMode) error {
 	c, err := net.ListenPacket(ss.scheme, ss.address)
 	if err != nil {
 		logErrors.Add(ss.address, 1)
@@ -89,6 +89,13 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			// logstream in graceful shutdown, then a zero-byte read is
 			// equivalent to an "EOF" in connection and file oriented streams.
 			if n == 0 {
+				if oneShot {
+					glog.V(2).Infof("stream(%s:%s): exiting because zero byte read and one shot", ss.scheme, ss.address)
+					if partial.Len() > 0 {
+						sendLine(ctx, ss.address, partial, ss.lines)
+					}
+					return
+				}
 				select {
 				case <-ss.stopChan:
 					glog.V(2).Infof("%v: exiting because zero byte read after Stop", c)

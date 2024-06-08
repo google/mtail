@@ -80,13 +80,13 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	default:
 		glog.V(2).Infof("%v: %q in path pattern %q, treating as path", ErrUnsupportedURLScheme, u.Scheme, pathname)
 	case "unixgram":
-		return newDgramStream(ctx, wg, waker, u.Scheme, u.Path, lines)
+		return newDgramStream(ctx, wg, waker, u.Scheme, u.Path, lines, oneShot)
 	case "unix":
 		return newSocketStream(ctx, wg, waker, u.Scheme, u.Path, lines, oneShot)
 	case "tcp":
 		return newSocketStream(ctx, wg, waker, u.Scheme, u.Host, lines, oneShot)
 	case "udp":
-		return newDgramStream(ctx, wg, waker, u.Scheme, u.Host, lines)
+		return newDgramStream(ctx, wg, waker, u.Scheme, u.Host, lines, oneShot)
 	case "", "file":
 		path = u.Path
 	}
