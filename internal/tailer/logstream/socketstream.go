@@ -16,8 +16,9 @@ import (
 )
 
 type socketStream struct {
-	ctx   context.Context
-	lines chan<- *logline.LogLine
+	ctx    context.Context
+	cancel context.CancelFunc
+	lines  chan<- *logline.LogLine
 
 	oneShot OneShotMode
 	scheme  string // URL Scheme to listen with, either tcp or unix
@@ -26,17 +27,15 @@ type socketStream struct {
 	mu           sync.RWMutex // protects following fields
 	completed    bool         // This socketStream is completed and can no longer be used.
 	lastReadTime time.Time    // Last time a log line was read from this socket
-
-	stopOnce sync.Once     // Ensure stopChan only closed once.
-	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, lines chan<- *logline.LogLine, oneShot OneShotMode) (LogStream, error) {
 	if address == "" {
 		return nil, ErrEmptySocketAddress
 	}
-	ss := &socketStream{ctx: ctx, oneShot: oneShot, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
-	if err := ss.stream(ctx, wg, waker); err != nil {
+	ss := &socketStream{ctx: ctx, oneShot: oneShot, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines}
+	ss.ctx, ss.cancel = context.WithCancel(ctx)
+	if err := ss.stream(ss.ctx, wg, waker); err != nil {
 		return nil, err
 	}
 	return ss, nil
@@ -67,7 +66,6 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 		if !ss.oneShot {
 			select {
 			case <-ctx.Done():
-			case <-ss.stopChan:
 			}
 		}
 		glog.V(2).Infof("stream(%s:%s): closing listener", ss.scheme, ss.address, l)
@@ -163,11 +161,8 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 		glog.V(2).Infof("stream(%s:%s): waiting", ss.scheme, ss.address)
 		select {
 		case <-ctx.Done():
-			// Exit immediately; cancelled context will cause the next read to be interrupted and exit anyway, so no point waiting to loop.
-			return
-		case <-ss.stopChan:
-			// Stop after connection is closed.
-			glog.V(2).Infof("stream(%s:%s): stopchan closed, exiting after next read timeout", ss.scheme, ss.address)
+			// Cancelled context will cause the next read to be interrupted and exit.
+			glog.V(2).Infof("stream(%s:%s): context cancelled, exiting after next read timeout", ss.scheme, ss.address)
 		case <-waker.Wake():
 			// sleep until next Wake()
 			glog.V(2).Infof("stream(%s:%s): Wake received", ss.scheme, ss.address)
@@ -184,8 +179,5 @@ func (ss *socketStream) IsComplete() bool {
 // Stop implements the Logstream interface.
 // Stop will close the listener so no new connections will be accepted, and close all current connections once they have been closed by their peers.
 func (ss *socketStream) Stop() {
-	ss.stopOnce.Do(func() {
-		glog.Infof("stream(%s:%s): signalling stop at next EOF", ss.scheme, ss.address)
-		close(ss.stopChan)
-	})
+	ss.cancel()
 }

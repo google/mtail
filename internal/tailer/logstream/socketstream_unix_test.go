@@ -41,7 +41,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
-			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
+			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotEnabled)
 			testutil.FatalIfErr(t, err)
 
 			s, err := net.Dial(scheme, addr)
@@ -55,9 +55,8 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			// Close the socket to signal to the socketStream to shut down.
 			testutil.FatalIfErr(t, s.Close())
 
-			ss.Stop() // stop after connection closes
-
 			wg.Wait()
+
 			close(lines)
 
 			received := testutil.LinesReceived(lines)
@@ -66,11 +65,12 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			}
 			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
-			cancel()
-
 			if !ss.IsComplete() {
 				t.Errorf("expecting socketstream to be complete because socket closed")
 			}
+
+			cancel() // stop after connection closes
+
 		}))
 	}
 }
@@ -108,8 +108,8 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			awaken(0, 0) // Sync past read to ensure we read
 
 			cancel() // This cancellation should cause the stream to shut down immediately.
-
 			wg.Wait()
+
 			close(lines)
 
 			received := testutil.LinesReceived(lines)
