@@ -77,7 +77,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 
 		lines := make(chan *logline.LogLine, 1)
 		ctx, cancel := context.WithCancel(context.Background())
-		waker, awaken := waker.NewTest(ctx, 1, "stream")
+		waker, awaken := waker.NewTest(ctx, 0, "stream")
 
 		f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 		testutil.FatalIfErr(t, err)
@@ -160,7 +160,7 @@ func TestPipeStreamReadStdin(t *testing.T) {
 
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, awaken := waker.NewTest(ctx, 1, "stream")
+	waker, awaken := waker.NewTest(ctx, 0, "stream")
 
 	ps, err := logstream.New(ctx, &wg, waker, "-", lines, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)

@@ -104,6 +104,12 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				ps.mu.Lock()
 				ps.lastReadTime = time.Now()
 				ps.mu.Unlock()
+
+				// No error implies there is more to read in this pipe so go
+				// straight back to read unless it looks like context is Done.
+				if err == nil && ctx.Err() == nil {
+					continue
+				}
 			}
 
 			// Test to see if we should exit.
