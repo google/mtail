@@ -16,7 +16,9 @@ import (
 )
 
 type dgramStream struct {
-	ctx   context.Context
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	lines chan<- *logline.LogLine
 
 	scheme  string // Datagram scheme, either "unixgram" or "udp".
@@ -25,17 +27,15 @@ type dgramStream struct {
 	mu           sync.RWMutex // protects following fields
 	completed    bool         // This pipestream is completed and can no longer be used.
 	lastReadTime time.Time    // Last time a log line was read from this named pipe
-
-	stopOnce sync.Once     // Ensure stopChan only closed once.
-	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
 func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, lines chan<- *logline.LogLine, oneShot OneShotMode) (LogStream, error) {
 	if address == "" {
 		return nil, ErrEmptySocketAddress
 	}
-	ss := &dgramStream{ctx: ctx, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
-	if err := ss.stream(ctx, wg, waker, oneShot); err != nil {
+	ss := &dgramStream{scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines}
+	ss.ctx, ss.cancel = context.WithCancel(ctx)
+	if err := ss.stream(ss.ctx, wg, waker, oneShot); err != nil {
 		return nil, err
 	}
 	return ss, nil
@@ -97,8 +97,11 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 					return
 				}
 				select {
-				case <-ss.stopChan:
-					glog.V(2).Infof("stream(%s:%s): exiting because zero byte read after Stop", ss.scheme, ss.address)
+				case <-ctx.Done():
+					glog.V(2).Infof("stream(%s:%s): exiting because zero byte read after cancellation", ss.scheme, ss.address)
+					if partial.Len() > 0 {
+						sendLine(ctx, ss.address, partial, ss.lines)
+					}
 					return
 				default:
 				}
@@ -124,18 +127,13 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			// Yield and wait
 			glog.V(2).Infof("stream(%s:%s): waiting", ss.scheme, ss.address)
 			select {
-			case <-ss.stopChan:
+			case <-ctx.Done():
 				// We may have started waiting here when the stop signal
 				// arrives, but since that wait the file may have been
 				// written to.  The file is not technically yet at EOF so
 				// we need to go back and try one more read.  We'll exit
 				// the stream in the zero byte handler above.
 				glog.V(2).Infof("stream(%s:%s): Stopping after next zero byte read", ss.scheme, ss.address)
-			case <-ctx.Done():
-				// Exit immediately; a cancelled context will set an immediate
-				// deadline on the next read which will cause us to exit then,
-				// so don't bother going around the loop again.
-				return
 			case <-waker.Wake():
 				// sleep until next Wake()
 				glog.V(2).Infof("stream(%s:%s): Wake received", ss.scheme, ss.address)
@@ -153,7 +151,5 @@ func (ss *dgramStream) IsComplete() bool {
 
 func (ss *dgramStream) Stop() {
 	glog.V(2).Infof("stream(%s:%s): Stop received on datagram stream.", ss.scheme, ss.address)
-	ss.stopOnce.Do(func() {
-		close(ss.stopChan)
-	})
+	ss.cancel()
 }
