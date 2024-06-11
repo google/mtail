@@ -16,7 +16,6 @@ import (
 )
 
 type dgramStream struct {
-	ctx    context.Context
 	cancel context.CancelFunc
 
 	lines chan<- *logline.LogLine
@@ -33,9 +32,9 @@ func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, 
 	if address == "" {
 		return nil, ErrEmptySocketAddress
 	}
-	ss := &dgramStream{scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines}
-	ss.ctx, ss.cancel = context.WithCancel(ctx)
-	if err := ss.stream(ss.ctx, wg, waker, oneShot); err != nil {
+	ctx, cancel := context.WithCancel(ctx)
+	ss := &dgramStream{cancel: cancel, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines}
+	if err := ss.stream(ctx, wg, waker, oneShot); err != nil {
 		return nil, err
 	}
 	return ss, nil
@@ -110,7 +109,7 @@ func (ss *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			if n > 0 {
 				total += n
 				//nolint:contextcheck
-				decodeAndSend(ss.ctx, ss.lines, ss.address, n, b[:n], partial)
+				decodeAndSend(ctx, ss.lines, ss.address, n, b[:n], partial)
 				ss.mu.Lock()
 				ss.lastReadTime = time.Now()
 				ss.mu.Unlock()

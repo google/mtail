@@ -16,9 +16,9 @@ import (
 )
 
 type socketStream struct {
-	ctx    context.Context
 	cancel context.CancelFunc
-	lines  chan<- *logline.LogLine
+
+	lines chan<- *logline.LogLine
 
 	oneShot OneShotMode
 	scheme  string // URL Scheme to listen with, either tcp or unix
@@ -33,9 +33,9 @@ func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker,
 	if address == "" {
 		return nil, ErrEmptySocketAddress
 	}
-	ss := &socketStream{ctx: ctx, oneShot: oneShot, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines}
-	ss.ctx, ss.cancel = context.WithCancel(ctx)
-	if err := ss.stream(ss.ctx, wg, waker); err != nil {
+	ctx, cancel := context.WithCancel(ctx)
+	ss := &socketStream{cancel: cancel, oneShot: oneShot, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines}
+	if err := ss.stream(ctx, wg, waker); err != nil {
 		return nil, err
 	}
 	return ss, nil
@@ -142,7 +142,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 		if n > 0 {
 			total += n
 			//nolint:contextcheck
-			decodeAndSend(ss.ctx, ss.lines, ss.address, n, b[:n], partial)
+			decodeAndSend(ctx, ss.lines, ss.address, n, b[:n], partial)
 			ss.mu.Lock()
 			ss.lastReadTime = time.Now()
 			ss.mu.Unlock()

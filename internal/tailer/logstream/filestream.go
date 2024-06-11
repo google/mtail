@@ -34,9 +34,9 @@ var fileTruncates = expvar.NewMap("file_truncates_total")
 // a new goroutine and closes itself down.  The shared context is used for
 // cancellation.
 type fileStream struct {
-	ctx    context.Context
 	cancel context.CancelFunc
-	lines  chan<- *logline.LogLine
+
+	lines chan<- *logline.LogLine
 
 	pathname string // Given name for the underlying file on the filesystem
 
@@ -47,11 +47,11 @@ type fileStream struct {
 
 // newFileStream creates a new log stream from a regular file.
 func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine, oneShot OneShotMode) (LogStream, error) {
-	fs := &fileStream{pathname: pathname, lastReadTime: time.Now(), lines: lines}
-	fs.ctx, fs.cancel = context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx)
+	fs := &fileStream{cancel: cancel, pathname: pathname, lastReadTime: time.Now(), lines: lines}
 	// Stream from the start of the file when in one shot mode.
 	streamFromStart := oneShot == OneShotEnabled
-	if err := fs.stream(fs.ctx, wg, waker, fi, oneShot, streamFromStart); err != nil {
+	if err := fs.stream(ctx, wg, waker, fi, oneShot, streamFromStart); err != nil {
 		return nil, err
 	}
 	return fs, nil
