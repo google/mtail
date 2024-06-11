@@ -43,7 +43,7 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
-			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
+			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotEnabled)
 			testutil.FatalIfErr(t, err)
 
 			s, err := net.Dial(scheme, addr)
@@ -54,9 +54,7 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 
 			awaken(0, 0) // sync past read
 
-			ss.Stop()
-
-			// "Close" the socket by sending zero bytes, which after Stop tells the stream to act as if we're done.
+			// "Close" the socket by sending zero bytes, which in oneshot mode tells the stream to act as if we're done.
 			_, err = s.Write([]byte{})
 			testutil.FatalIfErr(t, err)
 
@@ -65,7 +63,7 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 
 			received := testutil.LinesReceived(lines)
 			expected := []*logline.LogLine{
-				{context.TODO(), addr, "1"},
+				{Context: context.TODO(), Filename: addr, Line: "1"},
 			}
 			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
@@ -118,7 +116,7 @@ func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
 
 			received := testutil.LinesReceived(lines)
 			expected := []*logline.LogLine{
-				{context.TODO(), addr, "1"},
+				{Context: context.TODO(), Filename: addr, Line: "1"},
 			}
 			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 

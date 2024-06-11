@@ -37,13 +37,11 @@ func TestFileStreamRotation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
-	// fs.Stop() is also called explicitly further down but a failed test
-	// and early return would lead to the handle staying open
-	defer fs.Stop()
+	// OneShotDisabled because we hit EOF and need to wait.
+	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
 
 	testutil.FatalIfErr(t, err)
-	awaken(1, 1)
+	awaken(1, 1) // sync to eof
 
 	glog.Info("write 1")
 	testutil.WriteString(t, f, "1\n")
@@ -61,19 +59,20 @@ func TestFileStreamRotation(t *testing.T) {
 	testutil.WriteString(t, f, "2\n")
 	awaken(1, 1)
 
-	fs.Stop()
+	cancel()
 	wg.Wait()
-	close(lines)
 
+	close(lines)
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.TODO(), name, "1"},
-		{context.TODO(), name, "2"},
+		{Context: context.TODO(), Filename: name, Line: "1"},
+		{Context: context.TODO(), Filename: name, Line: "2"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
-	cancel()
-	wg.Wait()
+	if !fs.IsComplete() {
+		t.Errorf("expecting filestream to be complete because stopped")
+	}
 }
 
 func TestFileStreamURL(t *testing.T) {
@@ -88,27 +87,26 @@ func TestFileStreamURL(t *testing.T) {
 	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
-	fs, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, logstream.OneShotEnabled)
+	fs, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
 	awaken(1, 1)
 
 	testutil.WriteString(t, f, "yo\n")
 	awaken(1, 1)
 
-	fs.Stop()
+	cancel()
 	wg.Wait()
+
 	close(lines)
 	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
-		{context.TODO(), name, "yo"},
+		{Context: context.TODO(), Filename: name, Line: "yo"},
 	}
 	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
 
 	if !fs.IsComplete() {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
-	cancel()
-	wg.Wait()
 }
 
 // TestFileStreamOpenFailure is a unix-specific test because on Windows, it is not possible to create a file

@@ -287,10 +287,6 @@ func (t *Tailer) TailPath(pathname string) error {
 	if err != nil {
 		return err
 	}
-	if t.oneShot {
-		glog.V(2).Infof("Starting oneshot read at startup of %q", pathname)
-		l.Stop()
-	}
 	t.logstreams[pathname] = l
 	glog.Infof("Tailing %s", pathname)
 	logCount.Add(1)
