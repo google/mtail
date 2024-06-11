@@ -70,7 +70,6 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			}
 
 			cancel() // stop after connection closes
-
 		}))
 	}
 }
