@@ -34,25 +34,24 @@ var fileTruncates = expvar.NewMap("file_truncates_total")
 // a new goroutine and closes itself down.  The shared context is used for
 // cancellation.
 type fileStream struct {
-	ctx   context.Context
-	lines chan<- *logline.LogLine
+	ctx    context.Context
+	cancel context.CancelFunc
+	lines  chan<- *logline.LogLine
 
 	pathname string // Given name for the underlying file on the filesystem
 
 	mu           sync.RWMutex // protects following fields.
 	lastReadTime time.Time    // Last time a log line was read from this file
 	completed    bool         // The filestream is completed and can no longer be used.
-
-	stopOnce sync.Once     // Ensure stopChan only closed once.
-	stopChan chan struct{} // Close to start graceful shutdown.
 }
 
 // newFileStream creates a new log stream from a regular file.
 func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine, oneShot OneShotMode) (LogStream, error) {
-	fs := &fileStream{ctx: ctx, pathname: pathname, lastReadTime: time.Now(), lines: lines, stopChan: make(chan struct{})}
+	fs := &fileStream{pathname: pathname, lastReadTime: time.Now(), lines: lines}
+	fs.ctx, fs.cancel = context.WithCancel(ctx)
 	// Stream from the start of the file when in one shot mode.
 	streamFromStart := oneShot == OneShotEnabled
-	if err := fs.stream(ctx, wg, waker, fi, oneShot, streamFromStart); err != nil {
+	if err := fs.stream(fs.ctx, wg, waker, fi, oneShot, streamFromStart); err != nil {
 		return nil, err
 	}
 	return fs, nil
@@ -155,7 +154,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					// file is in the middle of a rotation and gets recreated
 					// in the next moment.  We can't rely on the Tailer to tell
 					// us we're deleted because the tailer can only tell us to
-					// Stop, which ends up causing us to race here against
+					// cancel, which ends up causing us to race here against
 					// detection of IsCompleted.
 					if os.IsNotExist(serr) {
 						glog.V(2).Infof("stream(%s): source no longer exists, exiting", fs.pathname)
@@ -232,17 +231,8 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					return
 				}
 				select {
-				case <-fs.stopChan:
-					glog.V(2).Infof("stream(%s): stream has been sopped, exiting", fs.pathname)
-					if partial.Len() > 0 {
-						sendLine(ctx, fs.pathname, partial, fs.lines)
-					}
-					fs.mu.Lock()
-					fs.completed = true
-					fs.mu.Unlock()
-					return
 				case <-ctx.Done():
-					glog.V(2).Infof("stream(%s): stream has been cancelled, exiting", fs.pathname)
+					glog.V(2).Infof("stream(%s): context has been cancelled, exiting", fs.pathname)
 					if partial.Len() > 0 {
 						sendLine(ctx, fs.pathname, partial, fs.lines)
 					}
@@ -259,15 +249,12 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			// wakeup.
 			glog.V(2).Infof("stream(%s): waiting", fs.pathname)
 			select {
-			case <-fs.stopChan:
-				// We may have started waiting here when the stop signal
+			case <-ctx.Done():
+				// We may have started waiting here when the cancellation
 				// arrives, but since that wait the file may have been
 				// written to.  The file is not technically yet at EOF so
 				// we need to go back and try one more read.  We'll exit
-				// the stream in the select stanza above.
-				glog.V(2).Infof("stream(%s): Stopping after next read", fs.pathname)
-			case <-ctx.Done():
-				// Same for cancellation; this makes tests stable, but
+				// the stream in the select stanza above. This makes tests stable, but
 				// could argue exiting immediately is less surprising.
 				// Assumption is that this doesn't make a difference in
 				// production.
@@ -291,8 +278,5 @@ func (fs *fileStream) IsComplete() bool {
 
 // Stop implements the LogStream interface.
 func (fs *fileStream) Stop() {
-	fs.stopOnce.Do(func() {
-		glog.Infof("stream(%s): signalling stop at next EOF", fs.pathname)
-		close(fs.stopChan)
-	})
+	fs.cancel()
 }
