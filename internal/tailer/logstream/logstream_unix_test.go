@@ -24,7 +24,7 @@ func TestReadStdin(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 	testutil.OverrideStdin(t, f)
 
-	_, err = logstream.New(ctx, &wg, nil, "-", nil, logstream.OneShotDisabled)
+	_, err = logstream.New(ctx, &wg, nil, "-", logstream.OneShotDisabled)
 	if err != nil {
 		t.Errorf("New(.., '-') -> %v, expecting nil", err)
 	}

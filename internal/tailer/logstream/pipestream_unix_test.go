@@ -29,7 +29,6 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 		name := filepath.Join(tmpDir, "fifo")
 		testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
 
-		lines := make(chan *logline.LogLine, 1)
 		ctx, cancel := context.WithCancel(context.Background())
 		waker := waker.NewTestAlways()
 
@@ -40,8 +39,13 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 		f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 		testutil.FatalIfErr(t, err)
 
-		ps, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
+		ps, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotDisabled)
 		testutil.FatalIfErr(t, err)
+
+		expected := []*logline.LogLine{
+			{Context: context.TODO(), Filename: name, Line: "1"},
+		}
+		checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ps.Lines())
 
 		testutil.WriteString(t, f, "1\n")
 
@@ -50,13 +54,8 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 
 		ps.Stop() // no-op for pipes
 		wg.Wait()
-		close(lines)
 
-		received := testutil.LinesReceived(lines)
-		expected := []*logline.LogLine{
-			{Context: context.TODO(), Filename: name, Line: "1"},
-		}
-		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+		checkLineDiff()
 
 		cancel()
 
@@ -75,15 +74,18 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 		name := filepath.Join(tmpDir, "fifo")
 		testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
 
-		lines := make(chan *logline.LogLine, 1)
 		ctx, cancel := context.WithCancel(context.Background())
 		waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 		f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 		testutil.FatalIfErr(t, err)
 
-		ps, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
+		ps, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotDisabled)
 		testutil.FatalIfErr(t, err)
+		expected := []*logline.LogLine{
+			{Context: context.TODO(), Filename: name, Line: "1"},
+		}
+		checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ps.Lines())
 
 		testutil.WriteString(t, f, "1\n")
 
@@ -93,13 +95,8 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 		cancel() // Cancellation here should cause the stream to shut down.
 
 		wg.Wait()
-		close(lines)
 
-		received := testutil.LinesReceived(lines)
-		expected := []*logline.LogLine{
-			{Context: context.TODO(), Filename: name, Line: "1"},
-		}
-		testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+		checkLineDiff()
 
 		if !ps.IsComplete() {
 			t.Errorf("expecting pipestream to be complete because cancelled")
@@ -115,12 +112,16 @@ func TestPipeStreamReadURL(t *testing.T) {
 	name := filepath.Join(tmpDir, "fifo")
 	testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
 
-	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker := waker.NewTestAlways()
 
-	ps, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, logstream.OneShotDisabled)
+	ps, err := logstream.New(ctx, &wg, waker, "file://"+name, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
+
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: name, Line: "1"},
+	}
+	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ps.Lines())
 
 	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
@@ -131,13 +132,8 @@ func TestPipeStreamReadURL(t *testing.T) {
 
 	ps.Stop() // no-op for pipes
 	wg.Wait()
-	close(lines)
 
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{Context: context.TODO(), Filename: name, Line: "1"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	checkLineDiff()
 
 	cancel()
 
@@ -158,12 +154,16 @@ func TestPipeStreamReadStdin(t *testing.T) {
 	testutil.OverrideStdin(t, f)
 	testutil.WriteString(t, f, "content\n")
 
-	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
-	ps, err := logstream.New(ctx, &wg, waker, "-", lines, logstream.OneShotDisabled)
+	ps, err := logstream.New(ctx, &wg, waker, "-", logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
+
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: "-", Line: "content"},
+	}
+	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ps.Lines())
 
 	awaken(0, 0)
 
@@ -173,13 +173,8 @@ func TestPipeStreamReadStdin(t *testing.T) {
 
 	ps.Stop()
 	wg.Wait()
-	close(lines)
 
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{Context: context.TODO(), Filename: "-", Line: "content"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	checkLineDiff()
 
 	cancel()
 	if !ps.IsComplete() {

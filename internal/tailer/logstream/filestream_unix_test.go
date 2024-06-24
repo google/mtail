@@ -32,15 +32,19 @@ func TestFileStreamRotation(t *testing.T) {
 	f := testutil.TestOpenFile(t, name)
 	defer f.Close()
 
-	lines := make(chan *logline.LogLine, 2)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 	// OneShotDisabled because we hit EOF and need to wait.
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
-
+	fs, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
+
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: name, Line: "1"},
+		{Context: context.TODO(), Filename: name, Line: "2"},
+	}
+	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, fs.Lines())
+
 	awaken(1, 1) // sync to eof
 
 	glog.Info("write 1")
@@ -62,13 +66,7 @@ func TestFileStreamRotation(t *testing.T) {
 	cancel()
 	wg.Wait()
 
-	close(lines)
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{Context: context.TODO(), Filename: name, Line: "1"},
-		{Context: context.TODO(), Filename: name, Line: "2"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	checkLineDiff()
 
 	if !fs.IsComplete() {
 		t.Errorf("expecting filestream to be complete because stopped")
@@ -84,11 +82,17 @@ func TestFileStreamURL(t *testing.T) {
 	f := testutil.TestOpenFile(t, name)
 	defer f.Close()
 
-	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
-	fs, err := logstream.New(ctx, &wg, waker, "file://"+name, lines, logstream.OneShotDisabled)
+
+	fs, err := logstream.New(ctx, &wg, waker, "file://"+name, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
+
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: name, Line: "yo"},
+	}
+	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, fs.Lines())
+
 	awaken(1, 1)
 
 	testutil.WriteString(t, f, "yo\n")
@@ -97,12 +101,7 @@ func TestFileStreamURL(t *testing.T) {
 	cancel()
 	wg.Wait()
 
-	close(lines)
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{Context: context.TODO(), Filename: name, Line: "yo"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	checkLineDiff()
 
 	if !fs.IsComplete() {
 		t.Errorf("expecting filestream to be complete because stopped")
@@ -125,11 +124,10 @@ func TestFileStreamOpenFailure(t *testing.T) {
 
 	testutil.FatalIfErr(t, err)
 
-	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, _ := waker.NewTest(ctx, 0, "stream")
 
-	_, err = logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
+	_, err = logstream.New(ctx, &wg, waker, name, logstream.OneShotEnabled)
 	if err == nil || !os.IsPermission(err) {
 		t.Errorf("Expected a permission denied error, got: %v", err)
 	}

@@ -24,11 +24,16 @@ func TestFileStreamRead(t *testing.T) {
 	f := testutil.TestOpenFile(t, name)
 	defer f.Close()
 
-	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
+	fs, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
+
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: name, Line: "yo"},
+	}
+	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, fs.Lines())
+
 	awaken(1, 1) // synchronise past first read
 
 	testutil.WriteString(t, f, "yo\n")
@@ -36,12 +41,8 @@ func TestFileStreamRead(t *testing.T) {
 
 	cancel()
 	wg.Wait()
-	close(lines)
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{Context: context.TODO(), Filename: name, Line: "yo"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	checkLineDiff()
 
 	if !fs.IsComplete() {
 		t.Errorf("expecting filestream to be complete because stopped")
@@ -58,19 +59,20 @@ func TestFileStreamReadOneShot(t *testing.T) {
 	defer f.Close()
 	testutil.WriteString(t, f, "yo\n")
 
-	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker := waker.NewTestAlways()
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotEnabled)
+
+	fs, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotEnabled)
 	testutil.FatalIfErr(t, err)
 
-	wg.Wait()
-	close(lines)
-	received := testutil.LinesReceived(lines)
 	expected := []*logline.LogLine{
 		{Context: context.TODO(), Filename: name, Line: "yo"},
 	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, fs.Lines())
+
+	wg.Wait()
+
+	checkLineDiff()
 
 	if !fs.IsComplete() {
 		t.Errorf("expecting filestream to be complete because stopped")
@@ -88,30 +90,31 @@ func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 	f := testutil.TestOpenFile(t, name)
 	defer f.Close()
 
-	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
+	fs, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
-	awaken(1, 1)
 
 	s := "a"
 	for i := 0; i < 4094; i++ {
 		s += "a"
 	}
-
 	s += "中"
+
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: name, Line: s},
+	}
+	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, fs.Lines())
+
+	awaken(1, 1)
+
 	testutil.WriteString(t, f, s+"\n")
 	awaken(1, 1)
 
 	fs.Stop()
 	wg.Wait()
-	close(lines)
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{Context: context.TODO(), Filename: name, Line: s},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	checkLineDiff()
 
 	if !fs.IsComplete() {
 		t.Errorf("expecting filestream to be complete because stopped")
@@ -129,12 +132,11 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 	f := testutil.TestOpenFile(t, name)
 	defer f.Close()
 
-	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
+
+	fs, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
-	awaken(1, 1)
 
 	s := string([]byte{0xF1})
 	// 0xF1 = 11110001 , a byte signaling the start of a unicode character that
@@ -146,18 +148,20 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		s += "a"
 	}
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: name, Line: s[1:]},
+	}
+	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, fs.Lines())
+
+	awaken(1, 1)
 
 	testutil.WriteString(t, f, s+"\n")
 	awaken(1, 1)
 
 	fs.Stop()
 	wg.Wait()
-	close(lines)
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{Context: context.TODO(), Filename: name, Line: s[1:]},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+
+	checkLineDiff()
 
 	if !fs.IsComplete() {
 		t.Errorf("expecting filestream to be complete because stopped")
@@ -175,15 +179,21 @@ func TestFileStreamTruncation(t *testing.T) {
 	f := testutil.OpenLogFile(t, name)
 	defer f.Close()
 
-	lines := make(chan *logline.LogLine, 3)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
+	fs, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotDisabled)
 	// fs.Stop() is also called explicitly further down but a failed test
 	// and early return would lead to the handle staying open
 	defer fs.Stop()
-
 	testutil.FatalIfErr(t, err)
+
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: name, Line: "1"},
+		{Context: context.TODO(), Filename: name, Line: "2"},
+		{Context: context.TODO(), Filename: name, Line: "3"},
+	}
+	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, fs.Lines())
+
 	awaken(1, 1) // Synchronise past first read after seekToEnd
 
 	testutil.WriteString(t, f, "1\n2\n")
@@ -198,16 +208,8 @@ func TestFileStreamTruncation(t *testing.T) {
 
 	fs.Stop()
 	wg.Wait()
-	close(lines)
 
-	received := testutil.LinesReceived(lines)
-
-	expected := []*logline.LogLine{
-		{Context: context.TODO(), Filename: name, Line: "1"},
-		{Context: context.TODO(), Filename: name, Line: "2"},
-		{Context: context.TODO(), Filename: name, Line: "3"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	checkLineDiff()
 
 	cancel()
 	wg.Wait()
@@ -222,12 +224,17 @@ func TestFileStreamPartialRead(t *testing.T) {
 	f := testutil.TestOpenFile(t, name)
 	defer f.Close()
 
-	lines := make(chan *logline.LogLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
+	fs, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
+
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: name, Line: "yo"},
+	}
+	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, fs.Lines())
+
 	awaken(1, 1)
 
 	testutil.WriteString(t, f, "yo")
@@ -239,12 +246,7 @@ func TestFileStreamPartialRead(t *testing.T) {
 	cancel()
 	wg.Wait()
 
-	close(lines)
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{Context: context.TODO(), Filename: name, Line: "yo"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	checkLineDiff()
 
 	if !fs.IsComplete() {
 		t.Errorf("expecting filestream to be complete because cancellation")
@@ -261,11 +263,17 @@ func TestFileStreamReadToEOFOnCancel(t *testing.T) {
 	f := testutil.TestOpenFile(t, name)
 	defer f.Close()
 
-	lines := make(chan *logline.LogLine, 2)
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
-	fs, err := logstream.New(ctx, &wg, waker, name, lines, logstream.OneShotDisabled)
+	fs, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
+
+	expected := []*logline.LogLine{
+		{Context: context.TODO(), Filename: name, Line: "line 1"},
+		{Context: context.TODO(), Filename: name, Line: "line 2"},
+	}
+	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, fs.Lines())
+
 	awaken(1, 1)
 
 	testutil.WriteString(t, f, "line 1\n")
@@ -276,13 +284,7 @@ func TestFileStreamReadToEOFOnCancel(t *testing.T) {
 
 	wg.Wait()
 
-	close(lines) // Signal it's time to go.
-	received := testutil.LinesReceived(lines)
-	expected := []*logline.LogLine{
-		{Context: context.TODO(), Filename: name, Line: "line 1"},
-		{Context: context.TODO(), Filename: name, Line: "line 2"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+	checkLineDiff()
 
 	if !fs.IsComplete() {
 		t.Errorf("expecting filestream to be complete because cancellation")

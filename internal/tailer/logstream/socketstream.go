@@ -18,7 +18,7 @@ import (
 type socketStream struct {
 	cancel context.CancelFunc
 
-	lines chan<- *logline.LogLine
+	lines chan *logline.LogLine
 
 	oneShot OneShotMode
 	scheme  string // URL Scheme to listen with, either tcp or unix
@@ -29,12 +29,12 @@ type socketStream struct {
 	lastReadTime time.Time    // Last time a log line was read from this socket
 }
 
-func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, lines chan<- *logline.LogLine, oneShot OneShotMode) (LogStream, error) {
+func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, oneShot OneShotMode) (LogStream, error) {
 	if address == "" {
 		return nil, ErrEmptySocketAddress
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	ss := &socketStream{cancel: cancel, oneShot: oneShot, scheme: scheme, address: address, lastReadTime: time.Now(), lines: lines}
+	ss := &socketStream{cancel: cancel, oneShot: oneShot, scheme: scheme, address: address, lastReadTime: time.Now(), lines: make(chan *logline.LogLine)}
 	if err := ss.stream(ctx, wg, waker); err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 		logErrors.Add(ss.address, 1)
 		return err
 	}
-	glog.V(2).Infof("stream(%s:%s): opened new socket listener %v", ss.scheme, ss.address, l)
+	glog.V(2).Infof("stream(%s:%s): opened new socket listener %+v", ss.scheme, ss.address, l)
 
 	initDone := make(chan struct{})
 	// Set up for shutdown
@@ -68,13 +68,16 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 			case <-ctx.Done():
 			}
 		}
-		glog.V(2).Infof("stream(%s:%s): closing listener", ss.scheme, ss.address, l)
+		glog.V(2).Infof("stream(%s:%s): closing listener", ss.scheme, ss.address)
 		err := l.Close()
 		if err != nil {
 			glog.Info(err)
 		}
 		ss.mu.Lock()
 		ss.completed = true
+		if !ss.oneShot {
+			close(ss.lines)
+		}
 		ss.mu.Unlock()
 	}()
 
@@ -97,7 +100,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 			if err := acceptConn(); err != nil {
 				glog.Info(err)
 			}
-			glog.Info("stream(%s:%s): oneshot mode, returning", ss.scheme, ss.address)
+			glog.Infof("stream(%s:%s): oneshot mode, returning", ss.scheme, ss.address)
 			close(initDone)
 		}()
 		return nil
@@ -130,6 +133,9 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			glog.Info(err)
 		}
 		logCloses.Add(ss.address, 1)
+		if ss.oneShot {
+			close(ss.lines)
+		}
 	}()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -180,4 +186,9 @@ func (ss *socketStream) IsComplete() bool {
 // Stop will close the listener so no new connections will be accepted, and close all current connections once they have been closed by their peers.
 func (ss *socketStream) Stop() {
 	ss.cancel()
+}
+
+// Lines implements the LogStream interface, returning the output lines channel.
+func (ss *socketStream) Lines() <-chan *logline.LogLine {
+	return ss.lines
 }
