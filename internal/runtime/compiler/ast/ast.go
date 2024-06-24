@@ -435,14 +435,15 @@ func (n *StopStmt) Type() types.Type {
 
 // mergepositionlist is a helper that merges the positions of all the nodes in a list.
 func mergepositionlist(l []Node) *position.Position {
-	if len(l) == 0 {
+	switch len(l) {
+	case 0:
 		return nil
-	}
-	if len(l) == 1 {
-		if l[0] != nil {
-			return l[0].Pos()
+	case 1:
+		if l[0] == nil {
+			return nil
 		}
-		return nil
+		return l[0].Pos()
+	default:
+		return position.Merge(l[0].Pos(), mergepositionlist(l[1:]))
 	}
-	return position.Merge(l[0].Pos(), mergepositionlist(l[1:]))
 }
