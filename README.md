@@ -110,4 +110,11 @@ Read more about deploying `mtail` and your programs in a monitoring environment
 * [Troubleshooting](docs/Troubleshooting.md)
 * [FAQ](docs/faq.md)
 
-After that, if you have any questions, please email (and optionally join) the mailing list: https://groups.google.com/forum/#!forum/mtail-users or [file a new issue](https://github.com/google/mtail/issues/new).
+
+## Getting more help and reporting defects
+
+If you have any questions, please use the [GitHub Discussions Q&A](https://github.com/google/mtail/discussions/new?category=q-a).
+
+We also have an email list : https://groups.google.com/forum/#!forum/mtail-users
+
+For any defects please [file a new issue](https://github.com/google/mtail/issues/new).
