@@ -17,7 +17,7 @@ import (
 )
 
 type pipeStream struct {
-	lines chan<- *logline.LogLine
+	lines chan *logline.LogLine
 
 	pathname string // Given name for the underlying named pipe on the filesystem
 
@@ -28,8 +28,8 @@ type pipeStream struct {
 
 // newPipeStream creates a new stream reader for Unix Pipes.
 // `pathname` must already be verified as clean.
-func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, lines chan<- *logline.LogLine) (LogStream, error) {
-	ps := &pipeStream{pathname: pathname, lastReadTime: time.Now(), lines: lines}
+func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo) (LogStream, error) {
+	ps := &pipeStream{pathname: pathname, lastReadTime: time.Now(), lines: make(chan *logline.LogLine)}
 	if err := ps.stream(ctx, wg, waker, fi); err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	go func() {
 		defer wg.Done()
 		defer func() {
-			glog.V(2).Infof("stream(%s): read total %d bytes", ps.pathname, fd, total)
+			glog.V(2).Infof("stream(%s): read total %d bytes", ps.pathname, total)
 			glog.V(2).Infof("stream(%s): closing file descriptor %v", ps.pathname, fd)
 			err := fd.Close()
 			if err != nil {
@@ -87,6 +87,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			logCloses.Add(ps.pathname, 1)
 			ps.mu.Lock()
 			ps.completed = true
+			close(ps.lines)
 			ps.mu.Unlock()
 		}()
 		ctx, cancel := context.WithCancel(ctx)
@@ -139,6 +140,11 @@ func (ps *pipeStream) IsComplete() bool {
 }
 
 // Stop implements the Logstream interface.
-// Calling Stop on a PipeStream is a no-op; PipeStreams always read until the pipe is closed, which is what calling Stop means on a Logstream.
+// Calling Stop on a PipeStream is a no-op; PipeStreams always read until the input pipe is closed, which is what calling Stop means on a Logstream.
 func (ps *pipeStream) Stop() {
+}
+
+// Lines implements the LogStream interface, returning the output lines channel.
+func (ps *pipeStream) Lines() <-chan *logline.LogLine {
+	return ps.lines
 }

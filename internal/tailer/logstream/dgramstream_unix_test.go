@@ -38,13 +38,18 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			default:
 				t.Fatalf("bad scheme %s", scheme)
 			}
-			lines := make(chan *logline.LogLine, 1)
+
 			ctx, cancel := context.WithCancel(context.Background())
 			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
-			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotEnabled)
+			ds, err := logstream.New(ctx, &wg, waker, sockName, logstream.OneShotEnabled)
 			testutil.FatalIfErr(t, err)
+
+			expected := []*logline.LogLine{
+				{Context: context.TODO(), Filename: addr, Line: "1"},
+			}
+			checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ds.Lines())
 
 			s, err := net.Dial(scheme, addr)
 			testutil.FatalIfErr(t, err)
@@ -59,18 +64,13 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			testutil.FatalIfErr(t, err)
 
 			wg.Wait()
-			close(lines)
 
-			received := testutil.LinesReceived(lines)
-			expected := []*logline.LogLine{
-				{Context: context.TODO(), Filename: addr, Line: "1"},
-			}
-			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+			checkLineDiff()
 
 			cancel()
 			wg.Wait()
 
-			if !ss.IsComplete() {
+			if !ds.IsComplete() {
 				t.Errorf("expecting dgramstream to be complete because socket closed")
 			}
 		}))
@@ -93,13 +93,18 @@ func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
 			default:
 				t.Fatalf("bad scheme %s", scheme)
 			}
-			lines := make(chan *logline.LogLine, 1)
+
 			ctx, cancel := context.WithCancel(context.Background())
 			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
-			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
+			ds, err := logstream.New(ctx, &wg, waker, sockName, logstream.OneShotDisabled)
 			testutil.FatalIfErr(t, err)
+
+			expected := []*logline.LogLine{
+				{Context: context.TODO(), Filename: addr, Line: "1"},
+			}
+			checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ds.Lines())
 
 			s, err := net.Dial(scheme, addr)
 			testutil.FatalIfErr(t, err)
@@ -112,15 +117,10 @@ func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
 			cancel() // This cancellation should cause the stream to shut down.
 
 			wg.Wait()
-			close(lines)
 
-			received := testutil.LinesReceived(lines)
-			expected := []*logline.LogLine{
-				{Context: context.TODO(), Filename: addr, Line: "1"},
-			}
-			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+			checkLineDiff()
 
-			if !ss.IsComplete() {
+			if !ds.IsComplete() {
 				t.Errorf("expecting dgramstream to be complete because cancel")
 			}
 		}))

@@ -36,13 +36,18 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			default:
 				t.Fatalf("bad scheme %s", scheme)
 			}
-			lines := make(chan *logline.LogLine, 1)
+
 			ctx, cancel := context.WithCancel(context.Background())
 			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
-			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotEnabled)
+			ss, err := logstream.New(ctx, &wg, waker, sockName, logstream.OneShotEnabled)
 			testutil.FatalIfErr(t, err)
+
+			expected := []*logline.LogLine{
+				{Context: context.TODO(), Filename: addr, Line: "1"},
+			}
+			checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ss.Lines())
 
 			s, err := net.Dial(scheme, addr)
 			testutil.FatalIfErr(t, err)
@@ -57,13 +62,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 
 			wg.Wait()
 
-			close(lines)
-
-			received := testutil.LinesReceived(lines)
-			expected := []*logline.LogLine{
-				{Context: context.TODO(), Filename: addr, Line: "1"},
-			}
-			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+			checkLineDiff()
 
 			if !ss.IsComplete() {
 				t.Errorf("expecting socketstream to be complete because socket closed")
@@ -90,13 +89,18 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			default:
 				t.Fatalf("bad scheme %s", scheme)
 			}
-			lines := make(chan *logline.LogLine, 1)
+
 			ctx, cancel := context.WithCancel(context.Background())
 			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
-			ss, err := logstream.New(ctx, &wg, waker, sockName, lines, logstream.OneShotDisabled)
+			ss, err := logstream.New(ctx, &wg, waker, sockName, logstream.OneShotDisabled)
 			testutil.FatalIfErr(t, err)
+
+			expected := []*logline.LogLine{
+				{Context: context.TODO(), Filename: addr, Line: "1"},
+			}
+			checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ss.Lines())
 
 			s, err := net.Dial(scheme, addr)
 			testutil.FatalIfErr(t, err)
@@ -109,13 +113,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			cancel() // This cancellation should cause the stream to shut down immediately.
 			wg.Wait()
 
-			close(lines)
-
-			received := testutil.LinesReceived(lines)
-			expected := []*logline.LogLine{
-				{Context: context.TODO(), Filename: addr, Line: "1"},
-			}
-			testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
+			checkLineDiff()
 
 			if !ss.IsComplete() {
 				t.Errorf("expecting socketstream to be complete because cancel")

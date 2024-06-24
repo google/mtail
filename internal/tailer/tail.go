@@ -283,11 +283,19 @@ func (t *Tailer) TailPath(pathname string) error {
 		logCount.Add(-1) // Removing the current entry before re-adding.
 		glog.V(2).Infof("%q: Existing logstream is finished, creating a new one.", pathname)
 	}
-	l, err := logstream.New(t.ctx, &t.wg, t.logstreamPollWaker, pathname, t.lines, t.oneShot)
+	l, err := logstream.New(t.ctx, &t.wg, t.logstreamPollWaker, pathname, t.oneShot)
 	if err != nil {
 		return err
 	}
 	t.logstreams[pathname] = l
+	t.wg.Add(1)
+	// Start a goroutine to move lines from the logstream to the main tailer output.
+	go func() {
+		defer t.wg.Done()
+		for line := range l.Lines() {
+			t.lines <- line
+		}
+	}()
 	glog.Infof("Tailing %s", pathname)
 	logCount.Add(1)
 	return nil
