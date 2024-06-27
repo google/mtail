@@ -111,7 +111,7 @@ func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 	testutil.WriteString(t, f, s+"\n")
 	awaken(1, 1)
 
-	fs.Stop()
+	cancel()
 	wg.Wait()
 
 	checkLineDiff()
@@ -158,7 +158,7 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 	testutil.WriteString(t, f, s+"\n")
 	awaken(1, 1)
 
-	fs.Stop()
+	cancel()
 	wg.Wait()
 
 	checkLineDiff()
@@ -184,7 +184,7 @@ func TestFileStreamTruncation(t *testing.T) {
 	fs, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotDisabled)
 	// fs.Stop() is also called explicitly further down but a failed test
 	// and early return would lead to the handle staying open
-	defer fs.Stop()
+	defer cancel()
 	testutil.FatalIfErr(t, err)
 
 	expected := []*logline.LogLine{
@@ -206,7 +206,7 @@ func TestFileStreamTruncation(t *testing.T) {
 	testutil.WriteString(t, f, "3\n")
 	awaken(1, 1)
 
-	fs.Stop()
+	cancel()
 	wg.Wait()
 
 	checkLineDiff()

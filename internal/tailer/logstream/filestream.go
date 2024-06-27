@@ -286,11 +286,6 @@ func (fs *fileStream) IsComplete() bool {
 	return fs.completed
 }
 
-// Stop implements the LogStream interface.
-func (fs *fileStream) Stop() {
-	fs.cancel()
-}
-
 // Lines implements the LogStream interface, returning the output lines channel.
 func (fs *fileStream) Lines() <-chan *logline.LogLine {
 	return fs.lines

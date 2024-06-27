@@ -52,7 +52,7 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 		// Pipes need to be closed to signal to the pipeStream to finish up.
 		testutil.FatalIfErr(t, f.Close())
 
-		ps.Stop() // no-op for pipes
+		cancel() // no-op for pipes
 		wg.Wait()
 
 		checkLineDiff()
@@ -130,7 +130,7 @@ func TestPipeStreamReadURL(t *testing.T) {
 	// Pipes need to be closed to signal to the pipeStream to finish up.
 	testutil.FatalIfErr(t, f.Close())
 
-	ps.Stop() // no-op for pipes
+	cancel() // no-op for pipes
 	wg.Wait()
 
 	checkLineDiff()
@@ -171,7 +171,7 @@ func TestPipeStreamReadStdin(t *testing.T) {
 
 	cancel()
 
-	ps.Stop()
+	cancel()
 	wg.Wait()
 
 	checkLineDiff()

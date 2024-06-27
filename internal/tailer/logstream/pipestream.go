@@ -149,11 +149,6 @@ func (ps *pipeStream) IsComplete() bool {
 	return ps.completed
 }
 
-// Stop implements the Logstream interface.
-// Calling Stop on a PipeStream is a no-op; PipeStreams always read until the input pipe is closed, which is what calling Stop means on a Logstream.
-func (ps *pipeStream) Stop() {
-}
-
 // Lines implements the LogStream interface, returning the output lines channel.
 func (ps *pipeStream) Lines() <-chan *logline.LogLine {
 	return ps.lines

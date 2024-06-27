@@ -77,7 +77,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			ds.completed = true
 			close(ds.lines)
 			ds.mu.Unlock()
-			ds.Stop()
+			ds.cancel()
 		}()
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -154,11 +154,6 @@ func (ds *dgramStream) IsComplete() bool {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 	return ds.completed
-}
-
-func (ds *dgramStream) Stop() {
-	glog.V(2).Infof("stream(%s:%s): Stop received on datagram stream.", ds.scheme, ds.address)
-	ds.cancel()
 }
 
 // Lines implements the LogStream interface, returning the output lines channel.

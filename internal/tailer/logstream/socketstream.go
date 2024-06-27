@@ -190,12 +190,6 @@ func (ss *socketStream) IsComplete() bool {
 	return ss.completed
 }
 
-// Stop implements the Logstream interface.
-// Stop will close the listener so no new connections will be accepted, and close all current connections once they have been closed by their peers.
-func (ss *socketStream) Stop() {
-	ss.cancel()
-}
-
 // Lines implements the LogStream interface, returning the output lines channel.
 func (ss *socketStream) Lines() <-chan *logline.LogLine {
 	return ss.lines
