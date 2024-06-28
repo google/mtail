@@ -41,12 +41,6 @@ func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, p
 	return ps, nil
 }
 
-func (ps *pipeStream) LastReadTime() time.Time {
-	ps.mu.RLock()
-	defer ps.mu.RUnlock()
-	return ps.lastReadTime
-}
-
 func pipeOpen(pathname string) (*os.File, error) {
 	if IsStdinPattern(pathname) {
 		return os.Stdin, nil

@@ -59,12 +59,6 @@ func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, p
 	return fs, nil
 }
 
-func (fs *fileStream) LastReadTime() time.Time {
-	fs.mu.RLock()
-	defer fs.mu.RUnlock()
-	return fs.lastReadTime
-}
-
 func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, oneShot OneShotMode, streamFromStart bool) error {
 	fd, err := os.OpenFile(fs.pathname, os.O_RDONLY, 0o600)
 	if err != nil {

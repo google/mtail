@@ -42,12 +42,6 @@ func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, 
 	return ss, nil
 }
 
-func (ds *dgramStream) LastReadTime() time.Time {
-	ds.mu.RLock()
-	defer ds.mu.RUnlock()
-	return ds.lastReadTime
-}
-
 // The read buffer size for datagrams.
 const datagramReadBufferSize = 131072
 

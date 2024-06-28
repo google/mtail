@@ -44,12 +44,6 @@ func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker,
 	return ss, nil
 }
 
-func (ss *socketStream) LastReadTime() time.Time {
-	ss.mu.RLock()
-	defer ss.mu.RUnlock()
-	return ss.lastReadTime
-}
-
 // stream starts goroutines to read data from the stream socket, until Stop is called or the context is cancelled.
 func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker) error {
 	l, err := net.Listen(ss.scheme, ss.address)
