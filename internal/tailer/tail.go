@@ -48,8 +48,6 @@ type Tailer struct {
 	logstreamsMu       sync.RWMutex                   // protects `logstreams`.
 	logstreams         map[string]logstream.LogStream // Map absolte pathname to logstream reading that pathname.
 
-	gcWaker waker.Waker // Used to wake stale log and completion pollers
-
 	initDone chan struct{}
 }
 
@@ -82,20 +80,6 @@ type IgnoreRegex string
 
 func (opt IgnoreRegex) apply(t *Tailer) error {
 	return t.SetIgnorePattern(string(opt))
-}
-
-// GcWaker triggers garbage collection runs for stale logs in the tailer.
-func GcWaker(w waker.Waker) Option {
-	return &staleLogGcWaker{w}
-}
-
-type staleLogGcWaker struct {
-	waker.Waker
-}
-
-func (opt staleLogGcWaker) apply(t *Tailer) error {
-	t.gcWaker = opt.Waker
-	return nil
 }
 
 // LogPatternPollWaker triggers polls on the filesystem for new logs that match the log glob patterns.
@@ -156,8 +140,6 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 			return nil, err
 		}
 	}
-	// Start the routine for checking if logstreams have completed.
-	t.StartGcPoller(ctx)
 
 	// This goroutine cancels the Tailer if all of our dependent subroutines are done.
 	// These are any live logstreams, and any log pattern pollers.
@@ -357,26 +339,4 @@ func (t *Tailer) doPatternGlob(pattern string) error {
 		}
 	}
 	return nil
-}
-
-// StartGcPoller runs a permanent goroutine to expire stale logstreams and clean up completed streams.  This background goroutine isn't waited for during shutdown.
-func (t *Tailer) StartGcPoller(ctx context.Context) {
-	if t.gcWaker == nil {
-		glog.InfoContext(ctx, "stream gc disabled because no waker")
-		return
-	}
-	go func() {
-		<-t.initDone
-		if t.oneShot {
-			glog.InfoContext(ctx, "No gc loop in oneshot mode.")
-			return
-		}
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.gcWaker.Wake():
-			}
-		}
-	}()
 }

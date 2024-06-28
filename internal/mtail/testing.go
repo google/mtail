@@ -34,9 +34,6 @@ type TestServer struct {
 	// method, synchronising the pattern poll with the test.
 	AwakenPatternPollers waker.WakeFunc // the glob awakens
 
-	gcWaker        waker.Waker // activate the cleanup routines
-	AwakenGcPoller waker.WakeFunc
-
 	tb testing.TB
 
 	cancel context.CancelFunc
@@ -68,11 +65,9 @@ func TestMakeServer(tb testing.TB, patternWakers int, streamWakers int, options 
 	}
 	ts.streamWaker, ts.AwakenLogStreams = waker.NewTest(ctx, streamWakers, "streams")
 	ts.patternWaker, ts.AwakenPatternPollers = waker.NewTest(ctx, patternWakers, "patterns")
-	ts.gcWaker, ts.AwakenGcPoller = waker.NewTest(ctx, 1, "gc")
 	options = append(options,
 		LogstreamPollWaker(ts.streamWaker),
 		LogPatternPollWaker(ts.patternWaker),
-		GcWaker(ts.gcWaker),
 	)
 	var err error
 	ts.Server, err = New(ctx, metrics.NewStore(), options...)

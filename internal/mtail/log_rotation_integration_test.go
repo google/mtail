@@ -54,7 +54,6 @@ func TestLogRotationBySoftLinkChange(t *testing.T) {
 			defer trueLog2.Close()
 			m.AwakenPatternPollers(1, 1)
 			m.AwakenLogStreams(1, 1)
-			m.AwakenGcPoller(1, 1)
 			logClosedCheck := m.ExpectMapExpvarDeltaWithDeadline("log_closes_total", logFilepath, 1)
 			logCompletedCheck := m.ExpectExpvarDeltaWithDeadline("log_count", -1)
 			testutil.FatalIfErr(t, os.Remove(logFilepath))
@@ -63,8 +62,7 @@ func TestLogRotationBySoftLinkChange(t *testing.T) {
 				// existing stream.
 				m.AwakenPatternPollers(1, 1) // simulate race condition with this poll.
 				m.AwakenLogStreams(1, 0)
-				logClosedCheck() // barrier until filestream closes fd
-				m.AwakenGcPoller(1, 1)
+				logClosedCheck()    // barrier until filestream closes fd
 				logCompletedCheck() // barrier until the logstream is removed from tailer
 			}
 			testutil.FatalIfErr(t, os.Symlink(logFilepath+".true2", logFilepath))
