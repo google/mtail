@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
@@ -376,9 +375,6 @@ func (t *Tailer) StartGcPoller(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-t.gcWaker.Wake():
-				if err := t.ExpireStaleLogstreams(); err != nil {
-					glog.Info(err)
-				}
 				if err := t.RemoveCompletedLogstreams(); err != nil {
 					glog.Info(err)
 				}
@@ -398,18 +394,6 @@ func (t *Tailer) RemoveCompletedLogstreams() error {
 			delete(t.logstreams, name)
 			logCount.Add(-1)
 			continue
-		}
-	}
-	return nil
-}
-
-// ExpireStaleLogstreams removes logstreams that have had no reads for 1h or more.
-func (t *Tailer) ExpireStaleLogstreams() error {
-	t.logstreamsMu.Lock()
-	defer t.logstreamsMu.Unlock()
-	for _, v := range t.logstreams {
-		if time.Since(v.LastReadTime()) > (time.Hour * 24) {
-			v.Stop()
 		}
 	}
 	return nil

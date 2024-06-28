@@ -40,9 +40,11 @@ type fileStream struct {
 
 	pathname string // Given name for the underlying file on the filesystem
 
-	mu           sync.RWMutex // protects following fields.
-	lastReadTime time.Time    // Last time a log line was read from this file
-	completed    bool         // The filestream is completed and can no longer be used.
+	mu        sync.RWMutex // protects following fields.
+	completed bool         // The filestream is completed and can no longer be used.
+
+	lastReadTime time.Time   // Last time a log line was read from this file
+	staleTimer   *time.Timer // Expire the stream if no read in 24h
 }
 
 // newFileStream creates a new log stream from a regular file.
@@ -107,6 +109,10 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			count, err := fd.Read(b)
 			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", fs.pathname, count, err)
 
+			if fs.staleTimer != nil {
+				fs.staleTimer.Stop()
+			}
+
 			if count > 0 {
 				total += count
 				glog.V(2).Infof("stream(%s): decode and send", fs.pathname)
@@ -121,6 +127,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				fs.mu.Lock()
 				fs.lastReadTime = time.Now()
 				fs.mu.Unlock()
+				fs.staleTimer = time.AfterFunc(time.Hour*24, fs.cancel)
 			}
 
 			if err != nil && err != io.EOF {

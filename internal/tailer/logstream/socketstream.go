@@ -24,9 +24,12 @@ type socketStream struct {
 	scheme  string // URL Scheme to listen with, either tcp or unix
 	address string // Given name for the underlying socket path on the filesystem or host/port.
 
-	mu           sync.RWMutex // protects following fields
-	completed    bool         // This socketStream is completed and can no longer be used.
-	lastReadTime time.Time    // Last time a log line was read from this socket
+	mu        sync.RWMutex // protects following fields
+	completed bool         // This socketStream is completed and can no longer be used.
+
+	lastReadTime time.Time   // Last time a log line was read from this socket
+	staleTimer   *time.Timer // Expire the stream if no read in 24h
+
 }
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, oneShot OneShotMode) (LogStream, error) {
@@ -145,6 +148,10 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 		n, err := c.Read(b)
 		glog.V(2).Infof("stream(%s:%s): read %d bytes, err is %v", ss.scheme, ss.address, n, err)
 
+		if ss.staleTimer != nil {
+			ss.staleTimer.Stop()
+		}
+
 		if n > 0 {
 			total += n
 			//nolint:contextcheck
@@ -152,6 +159,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			ss.mu.Lock()
 			ss.lastReadTime = time.Now()
 			ss.mu.Unlock()
+			ss.staleTimer = time.AfterFunc(time.Hour*24, ss.cancel)
 		}
 
 		if err != nil && IsEndOrCancel(err) {

@@ -23,9 +23,11 @@ type dgramStream struct {
 	scheme  string // Datagram scheme, either "unixgram" or "udp".
 	address string // Given name for the underlying socket path on the filesystem or hostport.
 
-	mu           sync.RWMutex // protects following fields
-	completed    bool         // This pipestream is completed and can no longer be used.
-	lastReadTime time.Time    // Last time a log line was read from this named pipe
+	mu        sync.RWMutex // protects following fields
+	completed bool         // This pipestream is completed and can no longer be used.
+
+	lastReadTime time.Time   // Last time a log line was read from this named pipe
+	staleTimer   *time.Timer // Expire the stream if no read in 24h
 }
 
 func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, oneShot OneShotMode) (LogStream, error) {
@@ -85,6 +87,10 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			n, _, err := c.ReadFrom(b)
 			glog.V(2).Infof("stream(%s:%s): read %d bytes, err is %v", ds.scheme, ds.address, n, err)
 
+			if ds.staleTimer != nil {
+				ds.staleTimer.Stop()
+			}
+
 			// This is a test-only trick that says if we've already put this
 			// logstream in graceful shutdown, then a zero-byte read is
 			// equivalent to an "EOF" in connection and file oriented streams.
@@ -114,6 +120,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				ds.mu.Lock()
 				ds.lastReadTime = time.Now()
 				ds.mu.Unlock()
+				ds.staleTimer = time.AfterFunc(time.Hour*24, ds.cancel)
 			}
 
 			if err != nil && IsEndOrCancel(err) {
