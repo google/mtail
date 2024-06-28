@@ -70,7 +70,7 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			cancel()
 			wg.Wait()
 
-			if !ds.IsComplete() {
+			if v := <-ds.Lines(); v != nil {
 				t.Errorf("expecting dgramstream to be complete because socket closed")
 			}
 		}))
@@ -120,7 +120,7 @@ func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
 
 			checkLineDiff()
 
-			if !ds.IsComplete() {
+			if v := <-ds.Lines(); v != nil {
 				t.Errorf("expecting dgramstream to be complete because cancel")
 			}
 		}))

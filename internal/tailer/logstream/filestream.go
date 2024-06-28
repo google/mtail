@@ -274,12 +274,6 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	return nil
 }
 
-func (fs *fileStream) IsComplete() bool {
-	fs.mu.RLock()
-	defer fs.mu.RUnlock()
-	return fs.completed
-}
-
 // Lines implements the LogStream interface, returning the output lines channel.
 func (fs *fileStream) Lines() <-chan *logline.LogLine {
 	return fs.lines

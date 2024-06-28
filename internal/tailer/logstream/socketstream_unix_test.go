@@ -64,7 +64,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 
 			checkLineDiff()
 
-			if !ss.IsComplete() {
+			if v := <-ss.Lines(); v != nil {
 				t.Errorf("expecting socketstream to be complete because socket closed")
 			}
 
@@ -115,7 +115,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 
 			checkLineDiff()
 
-			if !ss.IsComplete() {
+			if v := <-ss.Lines(); v != nil {
 				t.Errorf("expecting socketstream to be complete because cancel")
 			}
 		}))

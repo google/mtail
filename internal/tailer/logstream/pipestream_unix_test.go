@@ -59,7 +59,7 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 
 		cancel()
 
-		if !ps.IsComplete() {
+		if v := <-ps.Lines(); v != nil {
 			t.Errorf("expecting pipestream to be complete because fifo closed")
 		}
 	})(t)
@@ -98,7 +98,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 
 		checkLineDiff()
 
-		if !ps.IsComplete() {
+		if v := <-ps.Lines(); v != nil {
 			t.Errorf("expecting pipestream to be complete because cancelled")
 		}
 	})(t)
@@ -137,7 +137,7 @@ func TestPipeStreamReadURL(t *testing.T) {
 
 	cancel()
 
-	if !ps.IsComplete() {
+	if v := <-ps.Lines(); v != nil {
 		t.Errorf("expecting pipestream to be complete because fifo closed")
 	}
 }
@@ -177,7 +177,7 @@ func TestPipeStreamReadStdin(t *testing.T) {
 	checkLineDiff()
 
 	cancel()
-	if !ps.IsComplete() {
+	if v := <-ps.Lines(); v != nil {
 		t.Errorf("expecting pipestream to be complete beacuse fifo closed")
 	}
 }

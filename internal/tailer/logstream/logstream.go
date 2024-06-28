@@ -33,7 +33,6 @@ var (
 
 // LogStream.
 type LogStream interface {
-	IsComplete() bool               // True if the logstream has completed work and cannot recover.  The caller should clean up this logstream, creating a new logstream on a pathname if necessary.
 	Lines() <-chan *logline.LogLine // Returns the output channel of this LogStream.
 }
 

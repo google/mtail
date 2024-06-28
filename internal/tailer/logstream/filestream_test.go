@@ -44,7 +44,7 @@ func TestFileStreamRead(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
 }
@@ -74,7 +74,7 @@ func TestFileStreamReadOneShot(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
 	cancel()
@@ -116,7 +116,7 @@ func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
 	cancel()
@@ -163,7 +163,7 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
 	cancel()
@@ -248,7 +248,7 @@ func TestFileStreamPartialRead(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because cancellation")
 	}
 }
@@ -286,7 +286,7 @@ func TestFileStreamReadToEOFOnCancel(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because cancellation")
 	}
 }

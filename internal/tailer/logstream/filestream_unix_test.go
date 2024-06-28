@@ -68,7 +68,7 @@ func TestFileStreamRotation(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
 }
@@ -103,7 +103,7 @@ func TestFileStreamURL(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
 }

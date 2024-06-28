@@ -376,26 +376,7 @@ func (t *Tailer) StartGcPoller(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-t.gcWaker.Wake():
-				if err := t.RemoveCompletedLogstreams(); err != nil {
-					glog.Info(err)
-				}
 			}
 		}
 	}()
-}
-
-// RemoveCompletedLogstreams checks if current logstreams have completed,
-// removing it from the map if so.
-func (t *Tailer) RemoveCompletedLogstreams() error {
-	t.logstreamsMu.Lock()
-	defer t.logstreamsMu.Unlock()
-	for name, l := range t.logstreams {
-		if l.IsComplete() {
-			glog.Infof("%s is complete", name)
-			delete(t.logstreams, name)
-			logCount.Add(-1)
-			continue
-		}
-	}
-	return nil
 }
