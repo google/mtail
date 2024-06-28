@@ -274,13 +274,9 @@ func (t *Tailer) SetIgnorePattern(pattern string) error {
 func (t *Tailer) TailPath(pathname string) error {
 	t.logstreamsMu.Lock()
 	defer t.logstreamsMu.Unlock()
-	if l, ok := t.logstreams[pathname]; ok {
-		if !l.IsComplete() {
-			glog.V(2).Infof("already got a logstream on %q", pathname)
-			return nil
-		}
-		logCount.Add(-1) // Removing the current entry before re-adding.
-		glog.V(2).Infof("%q: Existing logstream is finished, creating a new one.", pathname)
+	if _, ok := t.logstreams[pathname]; ok {
+		glog.V(2).Infof("already got a logstream on %q", pathname)
+		return nil
 	}
 	l, err := logstream.New(t.ctx, &t.wg, t.logstreamPollWaker, pathname, t.oneShot)
 	if err != nil {
@@ -288,12 +284,17 @@ func (t *Tailer) TailPath(pathname string) error {
 	}
 	t.logstreams[pathname] = l
 	t.wg.Add(1)
-	// Start a goroutine to move lines from the logstream to the main tailer output.
+	// Start a goroutine to move lines from the logstream to the main Tailer
+	// output and remove the stream from the map when the channel closes.
 	go func() {
 		defer t.wg.Done()
 		for line := range l.Lines() {
 			t.lines <- line
 		}
+		t.logstreamsMu.Lock()
+		delete(t.logstreams, pathname)
+		logCount.Add(-1)
+		t.logstreamsMu.Unlock()
 	}()
 	glog.Infof("Tailing %s", pathname)
 	logCount.Add(1)
