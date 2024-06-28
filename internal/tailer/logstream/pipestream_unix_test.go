@@ -57,8 +57,6 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 
 		checkLineDiff()
 
-		cancel()
-
 		if v := <-ps.Lines(); v != nil {
 			t.Errorf("expecting pipestream to be complete because fifo closed")
 		}
@@ -93,7 +91,6 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 		awaken(0, 0)
 
 		cancel() // Cancellation here should cause the stream to shut down.
-
 		wg.Wait()
 
 		checkLineDiff()
@@ -113,6 +110,8 @@ func TestPipeStreamReadURL(t *testing.T) {
 	testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
 
 	ctx, cancel := context.WithCancel(context.Background())
+	// The stream is not shut down by cancel in this test.
+	defer cancel()
 	waker := waker.NewTestAlways()
 
 	ps, err := logstream.New(ctx, &wg, waker, "file://"+name, logstream.OneShotDisabled)
@@ -130,16 +129,15 @@ func TestPipeStreamReadURL(t *testing.T) {
 	// Pipes need to be closed to signal to the pipeStream to finish up.
 	testutil.FatalIfErr(t, f.Close())
 
-	cancel() // no-op for pipes
 	wg.Wait()
 
 	checkLineDiff()
 
-	cancel()
-
 	if v := <-ps.Lines(); v != nil {
 		t.Errorf("expecting pipestream to be complete because fifo closed")
 	}
+
+	cancel() // no-op for pipes
 }
 
 func TestPipeStreamReadStdin(t *testing.T) {
@@ -155,6 +153,8 @@ func TestPipeStreamReadStdin(t *testing.T) {
 	testutil.WriteString(t, f, "content\n")
 
 	ctx, cancel := context.WithCancel(context.Background())
+	// The stream is not shut down by cancel in this test.
+	defer cancel()
 	waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 	ps, err := logstream.New(ctx, &wg, waker, "-", logstream.OneShotDisabled)
@@ -169,14 +169,10 @@ func TestPipeStreamReadStdin(t *testing.T) {
 
 	testutil.FatalIfErr(t, f.Close())
 
-	cancel()
-
-	cancel()
 	wg.Wait()
 
 	checkLineDiff()
 
-	cancel()
 	if v := <-ps.Lines(); v != nil {
 		t.Errorf("expecting pipestream to be complete beacuse fifo closed")
 	}

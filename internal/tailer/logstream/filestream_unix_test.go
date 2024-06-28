@@ -125,7 +125,7 @@ func TestFileStreamOpenFailure(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, _ := waker.NewTest(ctx, 0, "stream")
+	waker := waker.NewTestAlways()
 
 	_, err = logstream.New(ctx, &wg, waker, name, logstream.OneShotEnabled)
 	if err == nil || !os.IsPermission(err) {

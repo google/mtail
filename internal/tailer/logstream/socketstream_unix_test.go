@@ -38,6 +38,8 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
+			// The stream is not shut down with cancel in this test.
+			defer cancel()
 			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
@@ -67,8 +69,6 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			if v := <-ss.Lines(); v != nil {
 				t.Errorf("expecting socketstream to be complete because socket closed")
 			}
-
-			cancel() // stop after connection closes
 		}))
 	}
 }

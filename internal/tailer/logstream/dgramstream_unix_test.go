@@ -40,6 +40,8 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
+			// Stream is not shut down with cancel in this test
+			defer cancel()
 			waker, awaken := waker.NewTest(ctx, 1, "stream")
 
 			sockName := scheme + "://" + addr
@@ -66,9 +68,6 @@ func TestDgramStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			wg.Wait()
 
 			checkLineDiff()
-
-			cancel()
-			wg.Wait()
 
 			if v := <-ds.Lines(); v != nil {
 				t.Errorf("expecting dgramstream to be complete because socket closed")
@@ -115,7 +114,6 @@ func TestDgramStreamReadCompletedBecauseCancel(t *testing.T) {
 			awaken(0, 0) // Synchronise past read.
 
 			cancel() // This cancellation should cause the stream to shut down.
-
 			wg.Wait()
 
 			checkLineDiff()

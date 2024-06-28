@@ -70,6 +70,7 @@ func TestFileStreamReadOneShot(t *testing.T) {
 	}
 	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, fs.Lines())
 
+	// The stream should end at EOF in oneshot, no need to cancel
 	wg.Wait()
 
 	checkLineDiff()
@@ -166,8 +167,6 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
-	cancel()
-	wg.Wait()
 }
 
 func TestFileStreamTruncation(t *testing.T) {
@@ -280,8 +279,8 @@ func TestFileStreamReadToEOFOnCancel(t *testing.T) {
 	awaken(1, 1)
 
 	testutil.WriteString(t, f, "line 2\n")
-	cancel() // cancel wakes the stream
 
+	cancel() // cancel wakes the stream
 	wg.Wait()
 
 	checkLineDiff()
