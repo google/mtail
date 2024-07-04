@@ -98,7 +98,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 			if n > 0 {
 				total += n
-				ps.decodeAndSend(ctx, ps.lines, ps.pathname, n, b[:n], partial)
+				ps.decodeAndSend(ctx, ps.pathname, n, b[:n], partial)
 				// Update the last read time if we were able to read anything.
 				ps.mu.Lock()
 				ps.lastReadTime = time.Now()
@@ -114,7 +114,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			// Test to see if we should exit.
 			if err != nil && IsEndOrCancel(err) {
 				if partial.Len() > 0 {
-					ps.sendLine(ctx, ps.pathname, partial, ps.lines)
+					ps.sendLine(ctx, ps.pathname, partial)
 				}
 				glog.V(2).Infof("stream(%s): exiting, stream has error %s", ps.pathname, err)
 				return

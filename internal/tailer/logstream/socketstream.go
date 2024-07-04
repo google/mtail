@@ -130,7 +130,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 		if n > 0 {
 			total += n
 			//nolint:contextcheck
-			ss.decodeAndSend(ctx, ss.lines, ss.address, n, b[:n], partial)
+			ss.decodeAndSend(ctx, ss.address, n, b[:n], partial)
 			ss.mu.Lock()
 			ss.lastReadTime = time.Now()
 			ss.mu.Unlock()
@@ -144,7 +144,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 
 		if err != nil && IsEndOrCancel(err) {
 			if partial.Len() > 0 {
-				ss.sendLine(ctx, ss.address, partial, ss.lines)
+				ss.sendLine(ctx, ss.address, partial)
 			}
 			glog.V(2).Infof("stream(%s:%s): exiting, conn has error %s", ss.scheme, ss.address, err)
 
