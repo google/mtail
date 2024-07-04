@@ -28,7 +28,6 @@ type socketStream struct {
 	lastReadTime time.Time    // Last time a log line was read from this socket
 
 	staleTimer *time.Timer // Expire the stream if no read in 24h
-
 }
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, oneShot OneShotMode) (LogStream, error) {
@@ -73,9 +72,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 			glog.Info(err)
 		}
 		connWg.Wait()
-		if !ss.oneShot {
-			close(ss.lines)
-		}
+		close(ss.lines)
 	}()
 
 	var connOnce sync.Once
@@ -117,9 +114,6 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			glog.Info(err)
 		}
 		logCloses.Add(ss.address, 1)
-		if ss.oneShot {
-			close(ss.lines)
-		}
 	}()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
