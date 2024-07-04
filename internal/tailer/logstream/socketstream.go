@@ -60,9 +60,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 		// If oneshot, wait only for the one conn handler to start, otherwise wait for context Done or stopChan.
 		<-initDone
 		if !ss.oneShot {
-			select {
-			case <-ctx.Done():
-			}
+			<-ctx.Done()
 		}
 		glog.V(2).Infof("stream(%s:%s): closing listener", ss.scheme, ss.address)
 		err := l.Close()
