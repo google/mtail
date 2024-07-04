@@ -23,11 +23,10 @@ type pipeStream struct {
 
 	pathname string // Given name for the underlying named pipe on the filesystem
 
-	mu        sync.RWMutex // protects following fields
-	completed bool         // This pipestream is completed and can no longer be used.
+	mu           sync.RWMutex // protects following fields
+	lastReadTime time.Time    // Last time a log line was read from this named pipe
 
-	lastReadTime time.Time   // Last time a log line was read from this named pipe
-	staleTimer   *time.Timer // Expire the stream if no read in 24h
+	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 // newPipeStream creates a new stream reader for Unix Pipes.
@@ -84,10 +83,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				glog.Info(err)
 			}
 			logCloses.Add(ps.pathname, 1)
-			ps.mu.Lock()
-			ps.completed = true
 			close(ps.lines)
-			ps.mu.Unlock()
 		}()
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -135,12 +131,6 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		}
 	}()
 	return nil
-}
-
-func (ps *pipeStream) IsComplete() bool {
-	ps.mu.RLock()
-	defer ps.mu.RUnlock()
-	return ps.completed
 }
 
 // Lines implements the LogStream interface, returning the output lines channel.

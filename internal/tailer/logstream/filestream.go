@@ -40,11 +40,10 @@ type fileStream struct {
 
 	pathname string // Given name for the underlying file on the filesystem
 
-	mu        sync.RWMutex // protects following fields.
-	completed bool         // The filestream is completed and can no longer be used.
+	mu           sync.RWMutex // protects following fields.
+	lastReadTime time.Time    // Last time a log line was read from this file
 
-	lastReadTime time.Time   // Last time a log line was read from this file
-	staleTimer   *time.Timer // Expire the stream if no read in 24h
+	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 // newFileStream creates a new log stream from a regular file.
@@ -155,17 +154,13 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					// file is in the middle of a rotation and gets recreated
 					// in the next moment.  We can't rely on the Tailer to tell
 					// us we're deleted because the tailer can only tell us to
-					// cancel, which ends up causing us to race here against
-					// detection of IsCompleted.
+					// cancel.
 					if os.IsNotExist(serr) {
 						glog.V(2).Infof("stream(%s): source no longer exists, exiting", fs.pathname)
 						if partial.Len() > 0 {
 							sendLine(ctx, fs.pathname, partial, fs.lines)
 						}
-						fs.mu.Lock()
-						fs.completed = true
 						close(fs.lines)
-						fs.mu.Unlock()
 						return
 					}
 					logErrors.Add(fs.pathname, 1)
@@ -227,10 +222,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					if partial.Len() > 0 {
 						sendLine(ctx, fs.pathname, partial, fs.lines)
 					}
-					fs.mu.Lock()
-					fs.completed = true
 					close(fs.lines)
-					fs.mu.Unlock()
 					return
 				}
 				select {
@@ -239,10 +231,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					if partial.Len() > 0 {
 						sendLine(ctx, fs.pathname, partial, fs.lines)
 					}
-					fs.mu.Lock()
-					fs.completed = true
 					close(fs.lines)
-					fs.mu.Unlock()
 					return
 				default:
 					// keep going

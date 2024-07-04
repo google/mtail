@@ -23,11 +23,10 @@ type dgramStream struct {
 	scheme  string // Datagram scheme, either "unixgram" or "udp".
 	address string // Given name for the underlying socket path on the filesystem or hostport.
 
-	mu        sync.RWMutex // protects following fields
-	completed bool         // This pipestream is completed and can no longer be used.
+	mu           sync.RWMutex // protects following fields
+	lastReadTime time.Time    // Last time a log line was read from this named pipe
 
-	lastReadTime time.Time   // Last time a log line was read from this named pipe
-	staleTimer   *time.Timer // Expire the stream if no read in 24h
+	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, oneShot OneShotMode) (LogStream, error) {
@@ -67,10 +66,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				glog.Info(err)
 			}
 			logCloses.Add(ds.address, 1)
-			ds.mu.Lock()
-			ds.completed = true
 			close(ds.lines)
-			ds.mu.Unlock()
 			ds.cancel()
 		}()
 		ctx, cancel := context.WithCancel(ctx)
@@ -142,12 +138,6 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		}
 	}()
 	return nil
-}
-
-func (ds *dgramStream) IsComplete() bool {
-	ds.mu.RLock()
-	defer ds.mu.RUnlock()
-	return ds.completed
 }
 
 // Lines implements the LogStream interface, returning the output lines channel.

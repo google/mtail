@@ -24,11 +24,10 @@ type socketStream struct {
 	scheme  string // URL Scheme to listen with, either tcp or unix
 	address string // Given name for the underlying socket path on the filesystem or host/port.
 
-	mu        sync.RWMutex // protects following fields
-	completed bool         // This socketStream is completed and can no longer be used.
+	mu           sync.RWMutex // protects following fields
+	lastReadTime time.Time    // Last time a log line was read from this socket
 
-	lastReadTime time.Time   // Last time a log line was read from this socket
-	staleTimer   *time.Timer // Expire the stream if no read in 24h
+	staleTimer *time.Timer // Expire the stream if no read in 24h
 
 }
 
@@ -70,12 +69,9 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 		if err != nil {
 			glog.Info(err)
 		}
-		ss.mu.Lock()
-		ss.completed = true
 		if !ss.oneShot {
 			close(ss.lines)
 		}
-		ss.mu.Unlock()
 	}()
 
 	acceptConn := func() error {
@@ -176,12 +172,6 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			glog.V(2).Infof("stream(%s:%s): Wake received", ss.scheme, ss.address)
 		}
 	}
-}
-
-func (ss *socketStream) IsComplete() bool {
-	ss.mu.RLock()
-	defer ss.mu.RUnlock()
-	return ss.completed
 }
 
 // Lines implements the LogStream interface, returning the output lines channel.
