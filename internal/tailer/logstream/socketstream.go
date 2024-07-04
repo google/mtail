@@ -16,9 +16,9 @@ import (
 )
 
 type socketStream struct {
-	cancel context.CancelFunc
+	streamBase
 
-	lines chan *logline.LogLine
+	cancel context.CancelFunc
 
 	oneShot OneShotMode
 	scheme  string // URL Scheme to listen with, either tcp or unix
@@ -35,7 +35,7 @@ func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker,
 		return nil, ErrEmptySocketAddress
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	ss := &socketStream{cancel: cancel, oneShot: oneShot, scheme: scheme, address: address, lastReadTime: time.Now(), lines: make(chan *logline.LogLine)}
+	ss := &socketStream{cancel: cancel, oneShot: oneShot, scheme: scheme, address: address, lastReadTime: time.Now(), streamBase: streamBase{lines: make(chan *logline.LogLine)}}
 	if err := ss.stream(ctx, wg, waker); err != nil {
 		return nil, err
 	}
@@ -162,9 +162,4 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			glog.V(2).Infof("stream(%s:%s): Wake received", ss.scheme, ss.address)
 		}
 	}
-}
-
-// Lines implements the LogStream interface, returning the output lines channel.
-func (ss *socketStream) Lines() <-chan *logline.LogLine {
-	return ss.lines
 }

@@ -16,9 +16,9 @@ import (
 )
 
 type dgramStream struct {
-	cancel context.CancelFunc
+	streamBase
 
-	lines chan *logline.LogLine
+	cancel context.CancelFunc
 
 	scheme  string // Datagram scheme, either "unixgram" or "udp".
 	address string // Given name for the underlying socket path on the filesystem or hostport.
@@ -34,7 +34,7 @@ func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, 
 		return nil, ErrEmptySocketAddress
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	ss := &dgramStream{cancel: cancel, scheme: scheme, address: address, lastReadTime: time.Now(), lines: make(chan *logline.LogLine)}
+	ss := &dgramStream{cancel: cancel, scheme: scheme, address: address, lastReadTime: time.Now(), streamBase: streamBase{lines: make(chan *logline.LogLine)}}
 	if err := ss.stream(ctx, wg, waker, oneShot); err != nil {
 		return nil, err
 	}
@@ -144,9 +144,4 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		}
 	}()
 	return nil
-}
-
-// Lines implements the LogStream interface, returning the output lines channel.
-func (ds *dgramStream) Lines() <-chan *logline.LogLine {
-	return ds.lines
 }

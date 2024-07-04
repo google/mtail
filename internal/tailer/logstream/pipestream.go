@@ -17,9 +17,9 @@ import (
 )
 
 type pipeStream struct {
-	cancel context.CancelFunc
+	streamBase
 
-	lines chan *logline.LogLine
+	cancel context.CancelFunc
 
 	pathname string // Given name for the underlying named pipe on the filesystem
 
@@ -33,7 +33,7 @@ type pipeStream struct {
 // `pathname` must already be verified as clean.
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo) (LogStream, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	ps := &pipeStream{cancel: cancel, pathname: pathname, lastReadTime: time.Now(), lines: make(chan *logline.LogLine)}
+	ps := &pipeStream{cancel: cancel, pathname: pathname, lastReadTime: time.Now(), streamBase: streamBase{lines: make(chan *logline.LogLine)}}
 	if err := ps.stream(ctx, wg, waker, fi); err != nil {
 		return nil, err
 	}
@@ -133,9 +133,4 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		}
 	}()
 	return nil
-}
-
-// Lines implements the LogStream interface, returning the output lines channel.
-func (ps *pipeStream) Lines() <-chan *logline.LogLine {
-	return ps.lines
 }
