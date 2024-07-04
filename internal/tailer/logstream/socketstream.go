@@ -52,13 +52,18 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 	}
 	glog.V(2).Infof("stream(%s:%s): opened new socket listener %+v", ss.scheme, ss.address, l)
 
-	initDone := make(chan struct{})
+	// signals when a connection has been opened
+	started := make(chan struct{})
+	// tracks connection handling routines
+	var connWg sync.WaitGroup
+
 	// Set up for shutdown
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// If oneshot, wait only for the one conn handler to start, otherwise wait for context Done or stopChan.
-		<-initDone
+		// If oneshot, wait only for the one conn handler to start, otherwise
+		// wait for context Done or stopChan.
+		<-started
 		if !ss.oneShot {
 			<-ctx.Done()
 		}
@@ -67,46 +72,34 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 		if err != nil {
 			glog.Info(err)
 		}
+		connWg.Wait()
 		if !ss.oneShot {
 			close(ss.lines)
 		}
 	}()
 
-	acceptConn := func() error {
-		c, err := l.Accept()
-		if err != nil {
-			glog.Info(err)
-			return err
-		}
-		glog.V(2).Infof("stream(%s:%s): got new conn %v", ss.scheme, ss.address, c)
-		wg.Add(1)
-		go ss.handleConn(ctx, wg, waker, c)
-		return nil
-	}
-
-	if ss.oneShot {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := acceptConn(); err != nil {
-				glog.Info(err)
-			}
-			glog.Infof("stream(%s:%s): oneshot mode, returning", ss.scheme, ss.address)
-			close(initDone)
-		}()
-		return nil
-	}
+	var connOnce sync.Once
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		for {
-			if err := acceptConn(); err != nil {
+			c, err := l.Accept()
+			if err != nil {
+				glog.Info(err)
+				return
+			}
+			glog.V(2).Infof("stream(%s:%s): got new conn %v", ss.scheme, ss.address, c)
+			connWg.Add(1)
+			go ss.handleConn(ctx, &connWg, waker, c)
+			connOnce.Do(func() { close(started) })
+			if ss.oneShot {
+				glog.Infof("stream(%s:%s): oneshot mode, exiting accept loop", ss.scheme, ss.address)
 				return
 			}
 		}
 	}()
-	close(initDone)
+
 	return nil
 }
 
