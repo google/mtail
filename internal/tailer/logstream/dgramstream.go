@@ -88,7 +88,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				if oneShot {
 					glog.V(2).Infof("stream(%s:%s): exiting because zero byte read and one shot", ds.scheme, ds.address)
 					if partial.Len() > 0 {
-						sendLine(ctx, ds.address, partial, ds.lines)
+						ds.sendLine(ctx, ds.address, partial, ds.lines)
 					}
 					return
 				}
@@ -96,7 +96,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				case <-ctx.Done():
 					glog.V(2).Infof("stream(%s:%s): exiting because zero byte read after cancellation", ds.scheme, ds.address)
 					if partial.Len() > 0 {
-						sendLine(ctx, ds.address, partial, ds.lines)
+						ds.sendLine(ctx, ds.address, partial, ds.lines)
 					}
 					return
 				default:
@@ -106,7 +106,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			if n > 0 {
 				total += n
 				//nolint:contextcheck
-				decodeAndSend(ctx, ds.lines, ds.address, n, b[:n], partial)
+				ds.decodeAndSend(ctx, ds.lines, ds.address, n, b[:n], partial)
 				ds.mu.Lock()
 				ds.lastReadTime = time.Now()
 				ds.mu.Unlock()
@@ -120,7 +120,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 
 			if err != nil && IsEndOrCancel(err) {
 				if partial.Len() > 0 {
-					sendLine(ctx, ds.address, partial, ds.lines)
+					ds.sendLine(ctx, ds.address, partial, ds.lines)
 				}
 				glog.V(2).Infof("stream(%s:%s): exiting, stream has error %s", ds.scheme, ds.address, err)
 				return

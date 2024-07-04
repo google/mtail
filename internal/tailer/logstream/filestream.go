@@ -111,7 +111,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				glog.V(2).Infof("stream(%s): decode and send", fs.pathname)
 				needSend := lastBytes
 				needSend = append(needSend, b[:count]...)
-				sendCount := decodeAndSend(ctx, fs.lines, fs.pathname, len(needSend), needSend, partial)
+				sendCount := fs.decodeAndSend(ctx, fs.lines, fs.pathname, len(needSend), needSend, partial)
 				if sendCount < len(needSend) {
 					lastBytes = append([]byte{}, needSend[sendCount:]...)
 				} else {
@@ -163,7 +163,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					if os.IsNotExist(serr) {
 						glog.V(2).Infof("stream(%s): source no longer exists, exiting", fs.pathname)
 						if partial.Len() > 0 {
-							sendLine(ctx, fs.pathname, partial, fs.lines)
+							fs.sendLine(ctx, fs.pathname, partial, fs.lines)
 						}
 						close(fs.lines)
 						return
@@ -198,7 +198,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					glog.V(2).Infof("stream(%s): truncate? currentoffset is %d and size is %d", fs.pathname, currentOffset, newfi.Size())
 					// About to lose all remaining data because of the truncate so flush the accumulator.
 					if partial.Len() > 0 {
-						sendLine(ctx, fs.pathname, partial, fs.lines)
+						fs.sendLine(ctx, fs.pathname, partial, fs.lines)
 					}
 					p, serr := fd.Seek(0, io.SeekStart)
 					if serr != nil {
@@ -219,7 +219,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					// Exit now, because oneShot means read only to EOF.
 					glog.V(2).Infof("stream(%s): EOF in one shot mode, exiting", fs.pathname)
 					if partial.Len() > 0 {
-						sendLine(ctx, fs.pathname, partial, fs.lines)
+						fs.sendLine(ctx, fs.pathname, partial, fs.lines)
 					}
 					close(fs.lines)
 					return
@@ -228,7 +228,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				case <-ctx.Done():
 					glog.V(2).Infof("stream(%s): context has been cancelled, exiting", fs.pathname)
 					if partial.Len() > 0 {
-						sendLine(ctx, fs.pathname, partial, fs.lines)
+						fs.sendLine(ctx, fs.pathname, partial, fs.lines)
 					}
 					close(fs.lines)
 					return
