@@ -17,29 +17,27 @@ import (
 )
 
 type pipeStream struct {
+	cancel context.CancelFunc
+
 	lines chan *logline.LogLine
 
 	pathname string // Given name for the underlying named pipe on the filesystem
 
 	mu           sync.RWMutex // protects following fields
-	completed    bool         // This pipestream is completed and can no longer be used.
 	lastReadTime time.Time    // Last time a log line was read from this named pipe
+
+	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 // newPipeStream creates a new stream reader for Unix Pipes.
 // `pathname` must already be verified as clean.
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo) (LogStream, error) {
-	ps := &pipeStream{pathname: pathname, lastReadTime: time.Now(), lines: make(chan *logline.LogLine)}
+	ctx, cancel := context.WithCancel(ctx)
+	ps := &pipeStream{cancel: cancel, pathname: pathname, lastReadTime: time.Now(), lines: make(chan *logline.LogLine)}
 	if err := ps.stream(ctx, wg, waker, fi); err != nil {
 		return nil, err
 	}
 	return ps, nil
-}
-
-func (ps *pipeStream) LastReadTime() time.Time {
-	ps.mu.RLock()
-	defer ps.mu.RUnlock()
-	return ps.lastReadTime
 }
 
 func pipeOpen(pathname string) (*os.File, error) {
@@ -85,10 +83,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				glog.Info(err)
 			}
 			logCloses.Add(ps.pathname, 1)
-			ps.mu.Lock()
-			ps.completed = true
 			close(ps.lines)
-			ps.mu.Unlock()
 		}()
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -98,6 +93,10 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			n, err := fd.Read(b)
 			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", ps.pathname, n, err)
 
+			if ps.staleTimer != nil {
+				ps.staleTimer.Stop()
+			}
+
 			if n > 0 {
 				total += n
 				decodeAndSend(ctx, ps.lines, ps.pathname, n, b[:n], partial)
@@ -105,6 +104,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				ps.mu.Lock()
 				ps.lastReadTime = time.Now()
 				ps.mu.Unlock()
+				ps.staleTimer = time.AfterFunc(time.Hour*24, ps.cancel)
 			}
 
 			// Test to see if we should exit.
@@ -131,17 +131,6 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		}
 	}()
 	return nil
-}
-
-func (ps *pipeStream) IsComplete() bool {
-	ps.mu.RLock()
-	defer ps.mu.RUnlock()
-	return ps.completed
-}
-
-// Stop implements the Logstream interface.
-// Calling Stop on a PipeStream is a no-op; PipeStreams always read until the input pipe is closed, which is what calling Stop means on a Logstream.
-func (ps *pipeStream) Stop() {
 }
 
 // Lines implements the LogStream interface, returning the output lines channel.

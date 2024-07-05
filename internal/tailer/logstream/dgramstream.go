@@ -24,8 +24,9 @@ type dgramStream struct {
 	address string // Given name for the underlying socket path on the filesystem or hostport.
 
 	mu           sync.RWMutex // protects following fields
-	completed    bool         // This pipestream is completed and can no longer be used.
 	lastReadTime time.Time    // Last time a log line was read from this named pipe
+
+	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, oneShot OneShotMode) (LogStream, error) {
@@ -38,12 +39,6 @@ func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, 
 		return nil, err
 	}
 	return ss, nil
-}
-
-func (ds *dgramStream) LastReadTime() time.Time {
-	ds.mu.RLock()
-	defer ds.mu.RUnlock()
-	return ds.lastReadTime
 }
 
 // The read buffer size for datagrams.
@@ -71,11 +66,8 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				glog.Info(err)
 			}
 			logCloses.Add(ds.address, 1)
-			ds.mu.Lock()
-			ds.completed = true
 			close(ds.lines)
-			ds.mu.Unlock()
-			ds.Stop()
+			ds.cancel()
 		}()
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -84,6 +76,10 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		for {
 			n, _, err := c.ReadFrom(b)
 			glog.V(2).Infof("stream(%s:%s): read %d bytes, err is %v", ds.scheme, ds.address, n, err)
+
+			if ds.staleTimer != nil {
+				ds.staleTimer.Stop()
+			}
 
 			// This is a test-only trick that says if we've already put this
 			// logstream in graceful shutdown, then a zero-byte read is
@@ -114,6 +110,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				ds.mu.Lock()
 				ds.lastReadTime = time.Now()
 				ds.mu.Unlock()
+				ds.staleTimer = time.AfterFunc(time.Hour*24, ds.cancel)
 			}
 
 			if err != nil && IsEndOrCancel(err) {
@@ -141,17 +138,6 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		}
 	}()
 	return nil
-}
-
-func (ds *dgramStream) IsComplete() bool {
-	ds.mu.RLock()
-	defer ds.mu.RUnlock()
-	return ds.completed
-}
-
-func (ds *dgramStream) Stop() {
-	glog.V(2).Infof("stream(%s:%s): Stop received on datagram stream.", ds.scheme, ds.address)
-	ds.cancel()
 }
 
 // Lines implements the LogStream interface, returning the output lines channel.

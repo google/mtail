@@ -68,8 +68,7 @@ func TestLogRotationByRename(t *testing.T) {
 				// existing stream.
 				m.AwakenPatternPollers(1, 1) // simulate race condition with this poll.
 				m.AwakenLogStreams(1, 0)
-				logClosedCheck() // barrier until filestream closes fd
-				m.AwakenGcPoller(1, 1)
+				logClosedCheck()    // barrier until filestream closes fd
 				logCompletedCheck() // barrier until the logstream is removed from tailer
 			}
 			glog.Info("create")

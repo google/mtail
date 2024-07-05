@@ -25,8 +25,9 @@ type socketStream struct {
 	address string // Given name for the underlying socket path on the filesystem or host/port.
 
 	mu           sync.RWMutex // protects following fields
-	completed    bool         // This socketStream is completed and can no longer be used.
 	lastReadTime time.Time    // Last time a log line was read from this socket
+
+	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, oneShot OneShotMode) (LogStream, error) {
@@ -41,12 +42,6 @@ func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker,
 	return ss, nil
 }
 
-func (ss *socketStream) LastReadTime() time.Time {
-	ss.mu.RLock()
-	defer ss.mu.RUnlock()
-	return ss.lastReadTime
-}
-
 // stream starts goroutines to read data from the stream socket, until Stop is called or the context is cancelled.
 func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker) error {
 	l, err := net.Listen(ss.scheme, ss.address)
@@ -56,66 +51,52 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 	}
 	glog.V(2).Infof("stream(%s:%s): opened new socket listener %+v", ss.scheme, ss.address, l)
 
-	initDone := make(chan struct{})
+	// signals when a connection has been opened
+	started := make(chan struct{})
+	// tracks connection handling routines
+	var connWg sync.WaitGroup
+
 	// Set up for shutdown
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// If oneshot, wait only for the one conn handler to start, otherwise wait for context Done or stopChan.
-		<-initDone
+		// If oneshot, wait only for the one conn handler to start, otherwise
+		// wait for context Done or stopChan.
+		<-started
 		if !ss.oneShot {
-			select {
-			case <-ctx.Done():
-			}
+			<-ctx.Done()
 		}
 		glog.V(2).Infof("stream(%s:%s): closing listener", ss.scheme, ss.address)
 		err := l.Close()
 		if err != nil {
 			glog.Info(err)
 		}
-		ss.mu.Lock()
-		ss.completed = true
-		if !ss.oneShot {
-			close(ss.lines)
-		}
-		ss.mu.Unlock()
+		connWg.Wait()
+		close(ss.lines)
 	}()
 
-	acceptConn := func() error {
-		c, err := l.Accept()
-		if err != nil {
-			glog.Info(err)
-			return err
-		}
-		glog.V(2).Infof("stream(%s:%s): got new conn %v", ss.scheme, ss.address, c)
-		wg.Add(1)
-		go ss.handleConn(ctx, wg, waker, c)
-		return nil
-	}
-
-	if ss.oneShot {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := acceptConn(); err != nil {
-				glog.Info(err)
-			}
-			glog.Infof("stream(%s:%s): oneshot mode, returning", ss.scheme, ss.address)
-			close(initDone)
-		}()
-		return nil
-	}
+	var connOnce sync.Once
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		for {
-			if err := acceptConn(); err != nil {
+			c, err := l.Accept()
+			if err != nil {
+				glog.Info(err)
+				return
+			}
+			glog.V(2).Infof("stream(%s:%s): got new conn %v", ss.scheme, ss.address, c)
+			connWg.Add(1)
+			go ss.handleConn(ctx, &connWg, waker, c)
+			connOnce.Do(func() { close(started) })
+			if ss.oneShot {
+				glog.Infof("stream(%s:%s): oneshot mode, exiting accept loop", ss.scheme, ss.address)
 				return
 			}
 		}
 	}()
-	close(initDone)
+
 	return nil
 }
 
@@ -133,9 +114,6 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			glog.Info(err)
 		}
 		logCloses.Add(ss.address, 1)
-		if ss.oneShot {
-			close(ss.lines)
-		}
 	}()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -145,6 +123,10 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 		n, err := c.Read(b)
 		glog.V(2).Infof("stream(%s:%s): read %d bytes, err is %v", ss.scheme, ss.address, n, err)
 
+		if ss.staleTimer != nil {
+			ss.staleTimer.Stop()
+		}
+
 		if n > 0 {
 			total += n
 			//nolint:contextcheck
@@ -152,6 +134,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			ss.mu.Lock()
 			ss.lastReadTime = time.Now()
 			ss.mu.Unlock()
+			ss.staleTimer = time.AfterFunc(time.Hour*24, ss.cancel)
 		}
 
 		if err != nil && IsEndOrCancel(err) {
@@ -174,18 +157,6 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			glog.V(2).Infof("stream(%s:%s): Wake received", ss.scheme, ss.address)
 		}
 	}
-}
-
-func (ss *socketStream) IsComplete() bool {
-	ss.mu.RLock()
-	defer ss.mu.RUnlock()
-	return ss.completed
-}
-
-// Stop implements the Logstream interface.
-// Stop will close the listener so no new connections will be accepted, and close all current connections once they have been closed by their peers.
-func (ss *socketStream) Stop() {
-	ss.cancel()
 }
 
 // Lines implements the LogStream interface, returning the output lines channel.

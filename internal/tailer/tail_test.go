@@ -237,68 +237,6 @@ func TestTailerInitErrors(t *testing.T) {
 	wg.Wait()
 }
 
-func TestTailExpireStaleHandles(t *testing.T) {
-	t.Skip("need to set lastRead on logstream to inject condition")
-	ta := makeTestTail(t)
-
-	log1 := filepath.Join(ta.tmpDir, "log1")
-	f1 := testutil.TestOpenFile(t, log1)
-	log2 := filepath.Join(ta.tmpDir, "log2")
-	f2 := testutil.TestOpenFile(t, log2)
-
-	if err := ta.TailPath(log1); err != nil {
-		t.Fatal(err)
-	}
-	if err := ta.TailPath(log2); err != nil {
-		t.Fatal(err)
-	}
-	testutil.WriteString(t, f1, "1\n")
-	testutil.WriteString(t, f2, "2\n")
-
-	ta.awakenStreams(1, 1)
-
-	ta.stop()
-
-	received := testutil.LinesReceived(ta.lines)
-	expected := []*logline.LogLine{
-		{Context: context.Background(), Filename: log1, Line: "1"},
-		{Context: context.Background(), Filename: log2, Line: "2"},
-	}
-	testutil.ExpectNoDiff(t, expected, received, testutil.IgnoreFields(logline.LogLine{}, "Context"))
-
-	if err := ta.ExpireStaleLogstreams(); err != nil {
-		t.Fatal(err)
-	}
-	ta.logstreamsMu.RLock()
-	if len(ta.logstreams) != 2 {
-		t.Errorf("expecting 2 handles, got %v", ta.logstreams)
-	}
-	ta.logstreamsMu.RUnlock()
-	// ta.logstreamsMu.Lock()
-	// ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 + time.Minute)
-	// ta.logstreamsMu.Unlock()
-	if err := ta.ExpireStaleLogstreams(); err != nil {
-		t.Fatal(err)
-	}
-	ta.logstreamsMu.RLock()
-	if len(ta.logstreams) != 2 {
-		t.Errorf("expecting 2 handles, got %v", ta.logstreams)
-	}
-	ta.logstreamsMu.RUnlock()
-	// ta.logstreamsMu.Lock()
-	// ta.logstreams[log1].(*File).lastRead = time.Now().Add(-time.Hour*24 - time.Minute)
-	// ta.logstreamsMu.Unlock()
-	if err := ta.ExpireStaleLogstreams(); err != nil {
-		t.Fatal(err)
-	}
-	ta.logstreamsMu.RLock()
-	if len(ta.logstreams) != 1 {
-		t.Errorf("expecting 1 logstreams, got %v", ta.logstreams)
-	}
-	ta.logstreamsMu.RUnlock()
-	glog.Info("good")
-}
-
 func TestAddGlob(t *testing.T) {
 	ta := makeTestTail(t)
 

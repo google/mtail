@@ -68,7 +68,7 @@ func TestFileStreamRotation(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
 }
@@ -103,7 +103,7 @@ func TestFileStreamURL(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
 }
@@ -125,7 +125,7 @@ func TestFileStreamOpenFailure(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	waker, _ := waker.NewTest(ctx, 0, "stream")
+	waker := waker.NewTestAlways()
 
 	_, err = logstream.New(ctx, &wg, waker, name, logstream.OneShotEnabled)
 	if err == nil || !os.IsPermission(err) {

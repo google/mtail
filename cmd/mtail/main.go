@@ -65,7 +65,6 @@ var (
 	pollInterval                = flag.Duration("poll_interval", 250*time.Millisecond, "Set the interval to poll each log file for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
 	pollLogInterval             = flag.Duration("poll_log_interval", 250*time.Millisecond, "Set the interval to find all matched log files for polling; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
 	expiredMetricGcTickInterval = flag.Duration("expired_metrics_gc_interval", time.Hour, "interval between expired metric garbage collection runs")
-	staleLogGcTickInterval      = flag.Duration("stale_log_gc_interval", time.Hour, "interval between stale log garbage collection runs")
 	metricPushInterval          = flag.Duration("metric_push_interval", time.Minute, "interval between metric pushes to passive collectors")
 	maxRegexpLength             = flag.Int("max_regexp_length", 1024, "The maximum length a mtail regexp expression can have. Excessively long patterns are likely to cause compilation and runtime performance problems.")
 	maxRecursionDepth           = flag.Int("max_recursion_depth", 100, "The maximum length a mtail statement can be, as measured by parsed tokens. Excessively long mtail expressions are likely to cause compilation and runtime performance problems.")
@@ -83,6 +82,7 @@ var (
 	// Deprecated.
 	_ = flag.Bool("disable_fsnotify", true, "DEPRECATED: this flag is no longer in use.")
 	_ = flag.Int("metric_push_interval_seconds", 0, "DEPRECATED: use --metric_push_interval instead")
+	_ = flag.Duration("stale_log_gc_interval", time.Hour, "DEPRECATED: this flag is no longer in use")
 )
 
 func init() {
@@ -179,10 +179,6 @@ func main() {
 	eOpts := []exporter.Option{}
 	if *logRuntimeErrors {
 		opts = append(opts, mtail.LogRuntimeErrors)
-	}
-	if *staleLogGcTickInterval > 0 {
-		staleLogGcWaker := waker.NewTimed(ctx, *staleLogGcTickInterval)
-		opts = append(opts, mtail.GcWaker(staleLogGcWaker))
 	}
 	if *pollInterval > 0 {
 		logStreamPollWaker := waker.NewTimed(ctx, *pollInterval)

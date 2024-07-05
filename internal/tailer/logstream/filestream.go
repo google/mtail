@@ -42,7 +42,8 @@ type fileStream struct {
 
 	mu           sync.RWMutex // protects following fields.
 	lastReadTime time.Time    // Last time a log line was read from this file
-	completed    bool         // The filestream is completed and can no longer be used.
+
+	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 // newFileStream creates a new log stream from a regular file.
@@ -55,12 +56,6 @@ func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, p
 		return nil, err
 	}
 	return fs, nil
-}
-
-func (fs *fileStream) LastReadTime() time.Time {
-	fs.mu.RLock()
-	defer fs.mu.RUnlock()
-	return fs.lastReadTime
 }
 
 func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, oneShot OneShotMode, streamFromStart bool) error {
@@ -107,6 +102,10 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			count, err := fd.Read(b)
 			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", fs.pathname, count, err)
 
+			if fs.staleTimer != nil {
+				fs.staleTimer.Stop()
+			}
+
 			if count > 0 {
 				total += count
 				glog.V(2).Infof("stream(%s): decode and send", fs.pathname)
@@ -121,6 +120,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				fs.mu.Lock()
 				fs.lastReadTime = time.Now()
 				fs.mu.Unlock()
+				fs.staleTimer = time.AfterFunc(time.Hour*24, fs.cancel)
 			}
 
 			if err != nil && err != io.EOF {
@@ -154,17 +154,13 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					// file is in the middle of a rotation and gets recreated
 					// in the next moment.  We can't rely on the Tailer to tell
 					// us we're deleted because the tailer can only tell us to
-					// cancel, which ends up causing us to race here against
-					// detection of IsCompleted.
+					// cancel.
 					if os.IsNotExist(serr) {
 						glog.V(2).Infof("stream(%s): source no longer exists, exiting", fs.pathname)
 						if partial.Len() > 0 {
 							sendLine(ctx, fs.pathname, partial, fs.lines)
 						}
-						fs.mu.Lock()
-						fs.completed = true
 						close(fs.lines)
-						fs.mu.Unlock()
 						return
 					}
 					logErrors.Add(fs.pathname, 1)
@@ -226,10 +222,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					if partial.Len() > 0 {
 						sendLine(ctx, fs.pathname, partial, fs.lines)
 					}
-					fs.mu.Lock()
-					fs.completed = true
 					close(fs.lines)
-					fs.mu.Unlock()
 					return
 				}
 				select {
@@ -238,10 +231,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					if partial.Len() > 0 {
 						sendLine(ctx, fs.pathname, partial, fs.lines)
 					}
-					fs.mu.Lock()
-					fs.completed = true
 					close(fs.lines)
-					fs.mu.Unlock()
 					return
 				default:
 					// keep going
@@ -271,17 +261,6 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 	<-started
 	return nil
-}
-
-func (fs *fileStream) IsComplete() bool {
-	fs.mu.RLock()
-	defer fs.mu.RUnlock()
-	return fs.completed
-}
-
-// Stop implements the LogStream interface.
-func (fs *fileStream) Stop() {
-	fs.cancel()
 }
 
 // Lines implements the LogStream interface, returning the output lines channel.

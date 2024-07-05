@@ -44,7 +44,7 @@ func TestFileStreamRead(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
 }
@@ -70,11 +70,12 @@ func TestFileStreamReadOneShot(t *testing.T) {
 	}
 	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, fs.Lines())
 
+	// The stream should end at EOF in oneshot, no need to cancel
 	wg.Wait()
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
 	cancel()
@@ -111,12 +112,12 @@ func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 	testutil.WriteString(t, f, s+"\n")
 	awaken(1, 1)
 
-	fs.Stop()
+	cancel()
 	wg.Wait()
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
 	cancel()
@@ -158,16 +159,14 @@ func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
 	testutil.WriteString(t, f, s+"\n")
 	awaken(1, 1)
 
-	fs.Stop()
+	cancel()
 	wg.Wait()
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because stopped")
 	}
-	cancel()
-	wg.Wait()
 }
 
 func TestFileStreamTruncation(t *testing.T) {
@@ -184,7 +183,7 @@ func TestFileStreamTruncation(t *testing.T) {
 	fs, err := logstream.New(ctx, &wg, waker, name, logstream.OneShotDisabled)
 	// fs.Stop() is also called explicitly further down but a failed test
 	// and early return would lead to the handle staying open
-	defer fs.Stop()
+	defer cancel()
 	testutil.FatalIfErr(t, err)
 
 	expected := []*logline.LogLine{
@@ -206,7 +205,7 @@ func TestFileStreamTruncation(t *testing.T) {
 	testutil.WriteString(t, f, "3\n")
 	awaken(1, 1)
 
-	fs.Stop()
+	cancel()
 	wg.Wait()
 
 	checkLineDiff()
@@ -248,7 +247,7 @@ func TestFileStreamPartialRead(t *testing.T) {
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because cancellation")
 	}
 }
@@ -280,13 +279,13 @@ func TestFileStreamReadToEOFOnCancel(t *testing.T) {
 	awaken(1, 1)
 
 	testutil.WriteString(t, f, "line 2\n")
-	cancel() // cancel wakes the stream
 
+	cancel() // cancel wakes the stream
 	wg.Wait()
 
 	checkLineDiff()
 
-	if !fs.IsComplete() {
+	if v := <-fs.Lines(); v != nil {
 		t.Errorf("expecting filestream to be complete because cancellation")
 	}
 }

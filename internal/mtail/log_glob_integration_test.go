@@ -46,7 +46,7 @@ func TestGlobBeforeStart(t *testing.T) {
 		log.Close()
 	}
 	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")))
-	stopM()
+	defer stopM()
 
 	if r := m.GetExpvar("log_count"); r.(*expvar.Int).Value() != count {
 		t.Errorf("Expecting log count of %d, received %d", count, r)
@@ -142,8 +142,7 @@ func TestGlobIgnoreFolder(t *testing.T) {
 	}
 
 	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
-
-	stopM()
+	defer stopM()
 
 	if r := m.GetExpvar("log_count"); r.(*expvar.Int).Value() != count {
 		t.Errorf("Expecting log count of %d, received %v", count, r)
@@ -184,8 +183,7 @@ func TestFilenameRegexIgnore(t *testing.T) {
 	}
 
 	m, stopM := mtail.TestStartServer(t, 0, 0, mtail.LogPathPatterns(filepath.Join(workdir, "log*")), mtail.IgnoreRegexPattern("\\.gz"))
-
-	stopM()
+	defer stopM()
 
 	if r := m.GetExpvar("log_count"); r.(*expvar.Int).Value() != count {
 		t.Errorf("Log count not matching, expected: %d received: %v", count, r)

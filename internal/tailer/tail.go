@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
@@ -49,8 +48,6 @@ type Tailer struct {
 	logstreamsMu       sync.RWMutex                   // protects `logstreams`.
 	logstreams         map[string]logstream.LogStream // Map absolte pathname to logstream reading that pathname.
 
-	gcWaker waker.Waker // Used to wake stale log and completion pollers
-
 	initDone chan struct{}
 }
 
@@ -83,20 +80,6 @@ type IgnoreRegex string
 
 func (opt IgnoreRegex) apply(t *Tailer) error {
 	return t.SetIgnorePattern(string(opt))
-}
-
-// GcWaker triggers garbage collection runs for stale logs in the tailer.
-func GcWaker(w waker.Waker) Option {
-	return &staleLogGcWaker{w}
-}
-
-type staleLogGcWaker struct {
-	waker.Waker
-}
-
-func (opt staleLogGcWaker) apply(t *Tailer) error {
-	t.gcWaker = opt.Waker
-	return nil
 }
 
 // LogPatternPollWaker triggers polls on the filesystem for new logs that match the log glob patterns.
@@ -157,8 +140,6 @@ func New(ctx context.Context, wg *sync.WaitGroup, lines chan<- *logline.LogLine,
 			return nil, err
 		}
 	}
-	// Start the routine for checking if logstreams have completed.
-	t.StartGcPoller(ctx)
 
 	// This goroutine cancels the Tailer if all of our dependent subroutines are done.
 	// These are any live logstreams, and any log pattern pollers.
@@ -275,13 +256,9 @@ func (t *Tailer) SetIgnorePattern(pattern string) error {
 func (t *Tailer) TailPath(pathname string) error {
 	t.logstreamsMu.Lock()
 	defer t.logstreamsMu.Unlock()
-	if l, ok := t.logstreams[pathname]; ok {
-		if !l.IsComplete() {
-			glog.V(2).Infof("already got a logstream on %q", pathname)
-			return nil
-		}
-		logCount.Add(-1) // Removing the current entry before re-adding.
-		glog.V(2).Infof("%q: Existing logstream is finished, creating a new one.", pathname)
+	if _, ok := t.logstreams[pathname]; ok {
+		glog.V(2).Infof("already got a logstream on %q", pathname)
+		return nil
 	}
 	l, err := logstream.New(t.ctx, &t.wg, t.logstreamPollWaker, pathname, t.oneShot)
 	if err != nil {
@@ -289,12 +266,17 @@ func (t *Tailer) TailPath(pathname string) error {
 	}
 	t.logstreams[pathname] = l
 	t.wg.Add(1)
-	// Start a goroutine to move lines from the logstream to the main tailer output.
+	// Start a goroutine to move lines from the logstream to the main Tailer
+	// output and remove the stream from the map when the channel closes.
 	go func() {
 		defer t.wg.Done()
 		for line := range l.Lines() {
 			t.lines <- line
 		}
+		t.logstreamsMu.Lock()
+		delete(t.logstreams, pathname)
+		logCount.Add(-1)
+		t.logstreamsMu.Unlock()
 	}()
 	glog.Infof("Tailing %s", pathname)
 	logCount.Add(1)
@@ -354,62 +336,6 @@ func (t *Tailer) doPatternGlob(pattern string) error {
 		glog.V(2).Infof("doPatternGlob(%v): tailable path is %q", pattern, absPath)
 		if err := t.TailPath(absPath); err != nil {
 			glog.Info(err)
-		}
-	}
-	return nil
-}
-
-// StartGcPoller runs a permanent goroutine to expire stale logstreams and clean up completed streams.  This background goroutine isn't waited for during shutdown.
-func (t *Tailer) StartGcPoller(ctx context.Context) {
-	if t.gcWaker == nil {
-		glog.InfoContext(ctx, "stream gc disabled because no waker")
-		return
-	}
-	go func() {
-		<-t.initDone
-		if t.oneShot {
-			glog.InfoContext(ctx, "No gc loop in oneshot mode.")
-			return
-		}
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.gcWaker.Wake():
-				if err := t.ExpireStaleLogstreams(); err != nil {
-					glog.Info(err)
-				}
-				if err := t.RemoveCompletedLogstreams(); err != nil {
-					glog.Info(err)
-				}
-			}
-		}
-	}()
-}
-
-// RemoveCompletedLogstreams checks if current logstreams have completed,
-// removing it from the map if so.
-func (t *Tailer) RemoveCompletedLogstreams() error {
-	t.logstreamsMu.Lock()
-	defer t.logstreamsMu.Unlock()
-	for name, l := range t.logstreams {
-		if l.IsComplete() {
-			glog.Infof("%s is complete", name)
-			delete(t.logstreams, name)
-			logCount.Add(-1)
-			continue
-		}
-	}
-	return nil
-}
-
-// ExpireStaleLogstreams removes logstreams that have had no reads for 1h or more.
-func (t *Tailer) ExpireStaleLogstreams() error {
-	t.logstreamsMu.Lock()
-	defer t.logstreamsMu.Unlock()
-	for _, v := range t.logstreams {
-		if time.Since(v.LastReadTime()) > (time.Hour * 24) {
-			v.Stop()
 		}
 	}
 	return nil
