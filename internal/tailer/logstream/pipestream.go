@@ -84,9 +84,8 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 			logCloses.Add(ps.pathname, 1)
 			close(ps.lines)
+			ps.cancel()
 		}()
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
 		SetReadDeadlineOnDone(ctx, fd)
 
 		for {
@@ -105,6 +104,11 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				ps.lastReadTime = time.Now()
 				ps.mu.Unlock()
 				ps.staleTimer = time.AfterFunc(time.Hour*24, ps.cancel)
+
+				// No error implies there is more to read so restart the loop.
+				if err == nil && ctx.Err() == nil {
+					continue
+				}
 			}
 
 			// Test to see if we should exit.
@@ -120,10 +124,8 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			glog.V(2).Infof("stream(%s): waiting", ps.pathname)
 			select {
 			case <-ctx.Done():
-				// Exit immediately; cancelled context is going to cause the
-				// next read to be interrupted and exit, so don't bother going
-				// around the loop again.
-				return
+				// Exit after next read attempt.
+				glog.V(2).Infof("stream(%s): context cancelled, exiting after next read timeout", ps.pathname)
 			case <-waker.Wake():
 				// sleep until next Wake()
 				glog.V(2).Infof("stream(%s): Wake received", ps.pathname)

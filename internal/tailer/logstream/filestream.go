@@ -121,6 +121,11 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				fs.lastReadTime = time.Now()
 				fs.mu.Unlock()
 				fs.staleTimer = time.AfterFunc(time.Hour*24, fs.cancel)
+
+				// No error implies there is more to read so restart the loop.
+				if err == nil && ctx.Err() == nil {
+					continue
+				}
 			}
 
 			if err != nil && err != io.EOF {
@@ -206,12 +211,6 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				}
 			}
 
-			// No error implies there is more to read in this file so go
-			// straight back to read unless it looks like context is Done.
-			if err == nil && ctx.Err() == nil {
-				continue
-			}
-
 		Sleep:
 			// If we get here it's because we've stalled.  First test to see if it's
 			// time to exit.
@@ -243,6 +242,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			glog.V(2).Infof("stream(%s): waiting", fs.pathname)
 			select {
 			case <-ctx.Done():
+				// Exit after next read attempt.
 				// We may have started waiting here when the cancellation
 				// arrives, but since that wait the file may have been
 				// written to.  The file is not technically yet at EOF so
@@ -251,7 +251,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				// could argue exiting immediately is less surprising.
 				// Assumption is that this doesn't make a difference in
 				// production.
-				glog.V(2).Infof("stream(%s): Cancelled after next read", fs.pathname)
+				glog.V(2).Infof("stream(%s): context cancelled, exiting after next read timeout", fs.pathname)
 			case <-waker.Wake():
 				// sleep until next Wake()
 				glog.V(2).Infof("stream(%s): Wake received", fs.pathname)

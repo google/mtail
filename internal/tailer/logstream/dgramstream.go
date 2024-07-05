@@ -111,6 +111,11 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				ds.lastReadTime = time.Now()
 				ds.mu.Unlock()
 				ds.staleTimer = time.AfterFunc(time.Hour*24, ds.cancel)
+
+				// No error implies more to read, so restart the loop.
+				if err == nil && ctx.Err() == nil {
+					continue
+				}
 			}
 
 			if err != nil && IsEndOrCancel(err) {
@@ -125,12 +130,13 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			glog.V(2).Infof("stream(%s:%s): waiting", ds.scheme, ds.address)
 			select {
 			case <-ctx.Done():
+				// Exit after next read attempt.
 				// We may have started waiting here when the stop signal
 				// arrives, but since that wait the file may have been
 				// written to.  The file is not technically yet at EOF so
 				// we need to go back and try one more read.  We'll exit
 				// the stream in the zero byte handler above.
-				glog.V(2).Infof("stream(%s:%s): Stopping after next zero byte read", ds.scheme, ds.address)
+				glog.V(2).Infof("stream(%s): context cancelled, exiting after next zero byte read", ds.scheme, ds.address)
 			case <-waker.Wake():
 				// sleep until next Wake()
 				glog.V(2).Infof("stream(%s:%s): Wake received", ds.scheme, ds.address)

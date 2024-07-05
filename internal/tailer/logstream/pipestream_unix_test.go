@@ -73,7 +73,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 		testutil.FatalIfErr(t, unix.Mkfifo(name, 0o666))
 
 		ctx, cancel := context.WithCancel(context.Background())
-		waker, awaken := waker.NewTest(ctx, 1, "stream")
+		waker := waker.NewTestAlways()
 
 		f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 		testutil.FatalIfErr(t, err)
@@ -86,9 +86,6 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 		checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ps.Lines())
 
 		testutil.WriteString(t, f, "1\n")
-
-		// Avoid a race with cancellation if we can synchronise with waker.Wake()
-		awaken(0, 0)
 
 		cancel() // Cancellation here should cause the stream to shut down.
 		wg.Wait()
@@ -155,7 +152,7 @@ func TestPipeStreamReadStdin(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	// The stream is not shut down by cancel in this test.
 	defer cancel()
-	waker, awaken := waker.NewTest(ctx, 1, "stream")
+	waker := waker.NewTestAlways()
 
 	ps, err := logstream.New(ctx, &wg, waker, "-", logstream.OneShotDisabled)
 	testutil.FatalIfErr(t, err)
@@ -165,7 +162,8 @@ func TestPipeStreamReadStdin(t *testing.T) {
 	}
 	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ps.Lines())
 
-	awaken(0, 0)
+	// Give the stream a chance to wake and read
+	time.Sleep(10 * time.Millisecond)
 
 	testutil.FatalIfErr(t, f.Close())
 

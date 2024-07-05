@@ -40,7 +40,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			// The stream is not shut down with cancel in this test.
 			defer cancel()
-			waker, awaken := waker.NewTest(ctx, 1, "stream")
+			waker := waker.NewTestAlways()
 
 			sockName := scheme + "://" + addr
 			ss, err := logstream.New(ctx, &wg, waker, sockName, logstream.OneShotEnabled)
@@ -56,8 +56,6 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
-
-			awaken(0, 0) // Sync past read
 
 			// Close the socket to signal to the socketStream to shut down.
 			testutil.FatalIfErr(t, s.Close())
@@ -91,7 +89,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
-			waker, awaken := waker.NewTest(ctx, 1, "stream")
+			waker := waker.NewTestAlways()
 
 			sockName := scheme + "://" + addr
 			ss, err := logstream.New(ctx, &wg, waker, sockName, logstream.OneShotDisabled)
@@ -108,7 +106,8 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			_, err = s.Write([]byte("1\n"))
 			testutil.FatalIfErr(t, err)
 
-			awaken(0, 0) // Sync past read to ensure we read
+			// Yield to give the stream a chance to read.
+			time.Sleep(10 * time.Millisecond)
 
 			cancel() // This cancellation should cause the stream to shut down immediately.
 			wg.Wait()

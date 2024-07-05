@@ -135,6 +135,11 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			ss.lastReadTime = time.Now()
 			ss.mu.Unlock()
 			ss.staleTimer = time.AfterFunc(time.Hour*24, ss.cancel)
+
+			// No error implies more to read, so restart the loop.
+			if err == nil && ctx.Err() == nil {
+				continue
+			}
 		}
 
 		if err != nil && IsEndOrCancel(err) {
@@ -150,7 +155,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 		glog.V(2).Infof("stream(%s:%s): waiting", ss.scheme, ss.address)
 		select {
 		case <-ctx.Done():
-			// Cancelled context will cause the next read to be interrupted and exit.
+			// Exit after next read attempt.
 			glog.V(2).Infof("stream(%s:%s): context cancelled, exiting after next read timeout", ss.scheme, ss.address)
 		case <-waker.Wake():
 			// sleep until next Wake()
