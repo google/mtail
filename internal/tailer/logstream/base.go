@@ -8,6 +8,8 @@ import (
 )
 
 type streamBase struct {
+	sourcename string // human readable name of the logstream source
+
 	lines chan *logline.LogLine // outbound channel for lines
 }
 

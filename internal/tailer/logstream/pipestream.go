@@ -33,7 +33,15 @@ type pipeStream struct {
 // `pathname` must already be verified as clean.
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo) (LogStream, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	ps := &pipeStream{cancel: cancel, pathname: pathname, lastReadTime: time.Now(), streamBase: streamBase{lines: make(chan *logline.LogLine)}}
+	ps := &pipeStream{
+		cancel:       cancel,
+		pathname:     pathname,
+		lastReadTime: time.Now(),
+		streamBase: streamBase{
+			sourcename: pathname,
+			lines:      make(chan *logline.LogLine),
+		},
+	}
 	if err := ps.stream(ctx, wg, waker, fi); err != nil {
 		return nil, err
 	}
@@ -67,7 +75,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		logErrors.Add(ps.pathname, 1)
 		return err
 	}
-	glog.V(2).Infof("stream(%s): opened new pipe %v", ps.pathname, fd)
+	glog.V(2).Infof("stream(%s): opened new pipe %v", ps.sourcename, fd)
 	b := make([]byte, defaultPipeReadBufferSize)
 	partial := bytes.NewBufferString("")
 	var total int
@@ -75,8 +83,8 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	go func() {
 		defer wg.Done()
 		defer func() {
-			glog.V(2).Infof("stream(%s): read total %d bytes", ps.pathname, total)
-			glog.V(2).Infof("stream(%s): closing file descriptor %v", ps.pathname, fd)
+			glog.V(2).Infof("stream(%s): read total %d bytes", ps.sourcename, total)
+			glog.V(2).Infof("stream(%s): closing file descriptor %v", ps.sourcename, fd)
 			err := fd.Close()
 			if err != nil {
 				logErrors.Add(ps.pathname, 1)
@@ -90,7 +98,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 		for {
 			n, err := fd.Read(b)
-			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", ps.pathname, n, err)
+			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", ps.sourcename, n, err)
 
 			if ps.staleTimer != nil {
 				ps.staleTimer.Stop()
@@ -98,7 +106,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 			if n > 0 {
 				total += n
-				ps.decodeAndSend(ctx, ps.pathname, n, b[:n], partial)
+				ps.decodeAndSend(ctx, n, b[:n], partial)
 				// Update the last read time if we were able to read anything.
 				ps.mu.Lock()
 				ps.lastReadTime = time.Now()
@@ -114,21 +122,21 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			// Test to see if we should exit.
 			if err != nil && IsEndOrCancel(err) {
 				if partial.Len() > 0 {
-					ps.sendLine(ctx, ps.pathname, partial)
+					ps.sendLine(ctx, partial)
 				}
-				glog.V(2).Infof("stream(%s): exiting, stream has error %s", ps.pathname, err)
+				glog.V(2).Infof("stream(%s): exiting, stream has error %s", ps.sourcename, err)
 				return
 			}
 
 			// Wait for wakeup or termination.
-			glog.V(2).Infof("stream(%s): waiting", ps.pathname)
+			glog.V(2).Infof("stream(%s): waiting", ps.sourcename)
 			select {
 			case <-ctx.Done():
 				// Exit after next read attempt.
 				glog.V(2).Infof("stream(%s): context cancelled, exiting after next read timeout", ps.pathname)
 			case <-waker.Wake():
 				// sleep until next Wake()
-				glog.V(2).Infof("stream(%s): Wake received", ps.pathname)
+				glog.V(2).Infof("stream(%s): Wake received", ps.sourcename)
 			}
 		}
 	}()

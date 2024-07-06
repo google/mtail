@@ -17,7 +17,7 @@ import (
 var logLines = expvar.NewMap("log_lines_total")
 
 // decodeAndSend transforms the byte array `b` into unicode in `partial`, sending to the llp as each newline is decoded.
-func (s *streamBase) decodeAndSend(ctx context.Context, pathname string, n int, b []byte, partial *bytes.Buffer) int {
+func (s *streamBase) decodeAndSend(ctx context.Context, n int, b []byte, partial *bytes.Buffer) int {
 	var (
 		r     rune
 		width int
@@ -50,7 +50,7 @@ func (s *streamBase) decodeAndSend(ctx context.Context, pathname string, n int, 
 		case r == '\r':
 			// nom
 		case r == '\n':
-			s.sendLine(ctx, pathname, partial)
+			s.sendLine(ctx, partial)
 		default:
 			partial.WriteRune(r)
 		}
@@ -60,9 +60,9 @@ func (s *streamBase) decodeAndSend(ctx context.Context, pathname string, n int, 
 	return count
 }
 
-func (s *streamBase) sendLine(ctx context.Context, pathname string, partial *bytes.Buffer) {
+func (s *streamBase) sendLine(ctx context.Context, partial *bytes.Buffer) {
 	glog.V(2).Infof("sendline")
-	logLines.Add(pathname, 1)
-	s.lines <- logline.New(ctx, pathname, partial.String())
+	logLines.Add(s.sourcename, 1)
+	s.lines <- logline.New(ctx, s.sourcename, partial.String())
 	partial.Reset()
 }
