@@ -22,11 +22,6 @@ type pipeStream struct {
 	cancel context.CancelFunc
 
 	pathname string // Given name for the underlying named pipe on the filesystem
-
-	mu           sync.RWMutex // protects following fields
-	lastReadTime time.Time    // Last time a log line was read from this named pipe
-
-	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 // newPipeStream creates a new stream reader for Unix Pipes.
@@ -34,9 +29,8 @@ type pipeStream struct {
 func newPipeStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo) (LogStream, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	ps := &pipeStream{
-		cancel:       cancel,
-		pathname:     pathname,
-		lastReadTime: time.Now(),
+		cancel:   cancel,
+		pathname: pathname,
 		streamBase: streamBase{
 			sourcename: pathname,
 			lines:      make(chan *logline.LogLine),
@@ -107,10 +101,6 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			if n > 0 {
 				total += n
 				ps.decodeAndSend(ctx, n, b[:n], partial)
-				// Update the last read time if we were able to read anything.
-				ps.mu.Lock()
-				ps.lastReadTime = time.Now()
-				ps.mu.Unlock()
 				ps.staleTimer = time.AfterFunc(time.Hour*24, ps.cancel)
 
 				// No error implies there is more to read so restart the loop.

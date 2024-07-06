@@ -24,11 +24,6 @@ type socketStream struct {
 	oneShot OneShotMode
 	scheme  string // URL Scheme to listen with, either tcp or unix
 	address string // Given name for the underlying socket path on the filesystem or host/port.
-
-	mu           sync.RWMutex // protects following fields
-	lastReadTime time.Time    // Last time a log line was read from this socket
-
-	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, oneShot OneShotMode) (LogStream, error) {
@@ -37,11 +32,10 @@ func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker,
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	ss := &socketStream{
-		cancel:       cancel,
-		oneShot:      oneShot,
-		scheme:       scheme,
-		address:      address,
-		lastReadTime: time.Now(),
+		cancel:  cancel,
+		oneShot: oneShot,
+		scheme:  scheme,
+		address: address,
 		streamBase: streamBase{
 			sourcename: fmt.Sprintf("%s://%s", scheme, address),
 			lines:      make(chan *logline.LogLine),
@@ -143,9 +137,6 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			total += n
 			//nolint:contextcheck
 			ss.decodeAndSend(ctx, n, b[:n], partial)
-			ss.mu.Lock()
-			ss.lastReadTime = time.Now()
-			ss.mu.Unlock()
 			ss.staleTimer = time.AfterFunc(time.Hour*24, ss.cancel)
 
 			// No error implies more to read, so restart the loop.

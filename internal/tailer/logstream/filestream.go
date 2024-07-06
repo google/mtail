@@ -39,20 +39,14 @@ type fileStream struct {
 	cancel context.CancelFunc
 
 	pathname string // Given name for the underlying file on the filesystem
-
-	mu           sync.RWMutex // protects following fields.
-	lastReadTime time.Time    // Last time a log line was read from this file
-
-	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 // newFileStream creates a new log stream from a regular file.
 func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, oneShot OneShotMode) (LogStream, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	fs := &fileStream{
-		cancel:       cancel,
-		pathname:     pathname,
-		lastReadTime: time.Now(),
+		cancel:   cancel,
+		pathname: pathname,
 		streamBase: streamBase{
 			sourcename: pathname,
 			lines:      make(chan *logline.LogLine),
@@ -125,9 +119,6 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				} else {
 					lastBytes = []byte{}
 				}
-				fs.mu.Lock()
-				fs.lastReadTime = time.Now()
-				fs.mu.Unlock()
 				fs.staleTimer = time.AfterFunc(time.Hour*24, fs.cancel)
 
 				// No error implies there is more to read so restart the loop.

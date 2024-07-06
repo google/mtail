@@ -23,11 +23,6 @@ type dgramStream struct {
 
 	scheme  string // Datagram scheme, either "unixgram" or "udp".
 	address string // Given name for the underlying socket path on the filesystem or hostport.
-
-	mu           sync.RWMutex // protects following fields
-	lastReadTime time.Time    // Last time a log line was read from this named pipe
-
-	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, oneShot OneShotMode) (LogStream, error) {
@@ -35,10 +30,10 @@ func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, 
 		return nil, ErrEmptySocketAddress
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	ss := &dgramStream{cancel: cancel,
-		scheme:       scheme,
-		address:      address,
-		lastReadTime: time.Now(),
+	ss := &dgramStream{
+		cancel:  cancel,
+		scheme:  scheme,
+		address: address,
 		streamBase: streamBase{
 			sourcename: fmt.Sprintf("%s://%s", scheme, address),
 			lines:      make(chan *logline.LogLine),
@@ -116,9 +111,6 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				total += n
 				//nolint:contextcheck
 				ds.decodeAndSend(ctx, n, b[:n], partial)
-				ds.mu.Lock()
-				ds.lastReadTime = time.Now()
-				ds.mu.Unlock()
 				ds.staleTimer = time.AfterFunc(time.Hour*24, ds.cancel)
 
 				// No error implies more to read, so restart the loop.

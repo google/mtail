@@ -4,6 +4,8 @@
 package logstream
 
 import (
+	"time"
+
 	"github.com/google/mtail/internal/logline"
 )
 
@@ -11,6 +13,8 @@ type streamBase struct {
 	sourcename string // human readable name of the logstream source
 
 	lines chan *logline.LogLine // outbound channel for lines
+
+	staleTimer *time.Timer // Expire the stream if no read in 24h.
 }
 
 // Lines returns the output log line channel for this stream.  The stream is
