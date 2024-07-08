@@ -33,6 +33,9 @@ func ExpectLinesReceivedNoDiff(tb testing.TB, wantLines []*logline.LogLine, gotL
 	return func() {
 		tb.Helper()
 		wg.Wait()
+		if len(received) != len(wantLines) {
+			tb.Errorf("unexpected line count, want %d got %d", len(wantLines), len(received))
+		}
 		ExpectNoDiff(tb, wantLines, received, IgnoreFields(logline.LogLine{}, "Context"))
 	}
 }
