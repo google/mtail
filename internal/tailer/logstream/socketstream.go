@@ -145,7 +145,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			}
 		}
 
-		if err != nil && IsEndOrCancel(err) {
+		if IsExitableError(err) {
 			if partial.Len() > 0 {
 				ss.sendLine(ctx, partial)
 			}

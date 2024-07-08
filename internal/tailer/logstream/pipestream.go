@@ -110,7 +110,7 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 
 			// Test to see if we should exit.
-			if err != nil && IsEndOrCancel(err) {
+			if IsExitableError(err) {
 				if partial.Len() > 0 {
 					ps.sendLine(ctx, partial)
 				}
