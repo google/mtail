@@ -85,6 +85,9 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				glog.Info(err)
 			}
 			logCloses.Add(ps.pathname, 1)
+			if partial.Len() > 0 {
+				ps.sendLine(ctx, partial)
+			}
 			close(ps.lines)
 			ps.cancel()
 		}()
@@ -107,13 +110,17 @@ func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				if err == nil && ctx.Err() == nil {
 					continue
 				}
+			} else if n == 0 {
+				// `pipe(7)` tells us "If all file descriptors referring to the
+				// write end of a pipe have been closed, then an attempt to
+				// read(2) from the pipe will see end-of-file (read(2) will
+				// return 0)."
+				glog.V(2).Infof("stream(%s): exiting, 0 bytes read", ps.sourcename)
+				return
 			}
 
 			// Test to see if we should exit.
 			if IsExitableError(err) {
-				if partial.Len() > 0 {
-					ps.sendLine(ctx, partial)
-				}
 				glog.V(2).Infof("stream(%s): exiting, stream has error %s", ps.sourcename, err)
 				return
 			}
