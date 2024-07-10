@@ -63,7 +63,12 @@ func TestMakeServer(tb testing.TB, patternWakers int, streamWakers int, options 
 		tb:     tb,
 		cancel: cancel,
 	}
-	ts.streamWaker, ts.AwakenLogStreams = waker.NewTest(ctx, streamWakers, "streams")
+	if streamWakers == 0 {
+		ts.streamWaker = waker.NewTestAlways()
+		ts.AwakenLogStreams = func(int, int) {}
+	} else {
+		ts.streamWaker, ts.AwakenLogStreams = waker.NewTest(ctx, streamWakers, "streams")
+	}
 	ts.patternWaker, ts.AwakenPatternPollers = waker.NewTest(ctx, patternWakers, "patterns")
 	options = append(options,
 		LogstreamPollWaker(ts.streamWaker),
