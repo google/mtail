@@ -47,7 +47,14 @@ func pipeOpen(pathname string) (*os.File, error) {
 		return os.Stdin, nil
 	}
 	// Open in nonblocking mode because the write end of the pipe may not have started yet.
-	return os.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0o600) // #nosec G304 -- path already validated by caller
+	fd, err := os.OpenFile(pathname, os.O_RDONLY|syscall.O_NONBLOCK, 0o600) // #nosec G304 -- path already validated by caller
+	if err != nil {
+		glog.Warningf("pipeOpen(%s): open failed: %v", pathname, err)
+		logErrors.Add(pathname, 1)
+		return nil, err
+	}
+	glog.V(2).Infof("pipeOpen(%s): opened new pipe %v", pathname, fd)
+	return fd, nil
 }
 
 // The read buffer size for pipes.
@@ -66,10 +73,8 @@ const defaultPipeReadBufferSize = 131072
 func (ps *pipeStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, _ os.FileInfo) error {
 	fd, err := pipeOpen(ps.pathname)
 	if err != nil {
-		logErrors.Add(ps.pathname, 1)
 		return err
 	}
-	glog.V(2).Infof("stream(%s): opened new pipe %v", ps.sourcename, fd)
 	b := make([]byte, defaultPipeReadBufferSize)
 	partial := bytes.NewBufferString("")
 	var total int
