@@ -92,7 +92,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 			logErrors.Add(path, 1)
 			return nil, err
 		}
-		return newPipeStream(ctx, wg, waker, path, fi)
+		return newFifoStream(ctx, wg, waker, path, fi)
 	}
 	fi, err := os.Stat(path)
 	if err != nil {
@@ -103,7 +103,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	case m.IsRegular():
 		return newFileStream(ctx, wg, waker, path, fi, oneShot)
 	case m&os.ModeType == os.ModeNamedPipe:
-		return newPipeStream(ctx, wg, waker, path, fi)
+		return newFifoStream(ctx, wg, waker, path, fi)
 	// TODO(jaq): in order to listen on an existing socket filepath, we must unlink and recreate it
 	// case m&os.ModeType == os.ModeSocket:
 	// 	return newSocketStream(ctx, wg, waker, pathname)

@@ -17,7 +17,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func TestReadFromPipe(t *testing.T) {
+func TestReadFromFifo(t *testing.T) {
 	testutil.SkipIfShort(t)
 	tmpDir := testutil.TestTempDir(t)
 
