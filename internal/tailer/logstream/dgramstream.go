@@ -6,6 +6,7 @@ package logstream
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -16,17 +17,12 @@ import (
 )
 
 type dgramStream struct {
-	cancel context.CancelFunc
+	streamBase
 
-	lines chan *logline.LogLine
+	cancel context.CancelFunc
 
 	scheme  string // Datagram scheme, either "unixgram" or "udp".
 	address string // Given name for the underlying socket path on the filesystem or hostport.
-
-	mu           sync.RWMutex // protects following fields
-	lastReadTime time.Time    // Last time a log line was read from this named pipe
-
-	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, oneShot OneShotMode) (LogStream, error) {
@@ -34,7 +30,15 @@ func newDgramStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, 
 		return nil, ErrEmptySocketAddress
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	ss := &dgramStream{cancel: cancel, scheme: scheme, address: address, lastReadTime: time.Now(), lines: make(chan *logline.LogLine)}
+	ss := &dgramStream{
+		cancel:  cancel,
+		scheme:  scheme,
+		address: address,
+		streamBase: streamBase{
+			sourcename: fmt.Sprintf("%s://%s", scheme, address),
+			lines:      make(chan *logline.LogLine),
+		},
+	}
 	if err := ss.stream(ctx, wg, waker, oneShot); err != nil {
 		return nil, err
 	}
@@ -50,7 +54,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		logErrors.Add(ds.address, 1)
 		return err
 	}
-	glog.V(2).Infof("stream(%s:%s): opened new datagram socket %v", ds.scheme, ds.address, c)
+	glog.V(2).Infof("stream(%s): opened new datagram socket %v", ds.sourcename, c)
 	b := make([]byte, datagramReadBufferSize)
 	partial := bytes.NewBufferString("")
 	var total int
@@ -58,8 +62,8 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 	go func() {
 		defer wg.Done()
 		defer func() {
-			glog.V(2).Infof("stream(%s:%s): read total %d bytes", ds.scheme, ds.address, total)
-			glog.V(2).Infof("stream(%s:%s): closing connection", ds.scheme, ds.address)
+			glog.V(2).Infof("stream(%s): read total %d bytes", ds.sourcename, total)
+			glog.V(2).Infof("stream(%s): closing connection", ds.sourcename)
 			err := c.Close()
 			if err != nil {
 				logErrors.Add(ds.address, 1)
@@ -75,7 +79,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 
 		for {
 			n, _, err := c.ReadFrom(b)
-			glog.V(2).Infof("stream(%s:%s): read %d bytes, err is %v", ds.scheme, ds.address, n, err)
+			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", ds.sourcename, n, err)
 
 			if ds.staleTimer != nil {
 				ds.staleTimer.Stop()
@@ -86,17 +90,17 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			// equivalent to an "EOF" in connection and file oriented streams.
 			if n == 0 {
 				if oneShot {
-					glog.V(2).Infof("stream(%s:%s): exiting because zero byte read and one shot", ds.scheme, ds.address)
+					glog.V(2).Infof("stream(%s): exiting because zero byte read and one shot", ds.sourcename)
 					if partial.Len() > 0 {
-						sendLine(ctx, ds.address, partial, ds.lines)
+						ds.sendLine(ctx, partial)
 					}
 					return
 				}
 				select {
 				case <-ctx.Done():
-					glog.V(2).Infof("stream(%s:%s): exiting because zero byte read after cancellation", ds.scheme, ds.address)
+					glog.V(2).Infof("stream(%s): exiting because zero byte read after cancellation", ds.sourcename)
 					if partial.Len() > 0 {
-						sendLine(ctx, ds.address, partial, ds.lines)
+						ds.sendLine(ctx, partial)
 					}
 					return
 				default:
@@ -106,10 +110,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			if n > 0 {
 				total += n
 				//nolint:contextcheck
-				decodeAndSend(ctx, ds.lines, ds.address, n, b[:n], partial)
-				ds.mu.Lock()
-				ds.lastReadTime = time.Now()
-				ds.mu.Unlock()
+				ds.decodeAndSend(ctx, n, b[:n], partial)
 				ds.staleTimer = time.AfterFunc(time.Hour*24, ds.cancel)
 
 				// No error implies more to read, so restart the loop.
@@ -118,16 +119,16 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				}
 			}
 
-			if err != nil && IsEndOrCancel(err) {
+			if IsExitableError(err) {
 				if partial.Len() > 0 {
-					sendLine(ctx, ds.address, partial, ds.lines)
+					ds.sendLine(ctx, partial)
 				}
-				glog.V(2).Infof("stream(%s:%s): exiting, stream has error %s", ds.scheme, ds.address, err)
+				glog.V(2).Infof("stream(%s): exiting, stream has error %s", ds.sourcename, err)
 				return
 			}
 
 			// Yield and wait
-			glog.V(2).Infof("stream(%s:%s): waiting", ds.scheme, ds.address)
+			glog.V(2).Infof("stream(%s): waiting", ds.sourcename)
 			select {
 			case <-ctx.Done():
 				// Exit after next read attempt.
@@ -139,14 +140,9 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				glog.V(2).Infof("stream(%s): context cancelled, exiting after next zero byte read", ds.scheme, ds.address)
 			case <-waker.Wake():
 				// sleep until next Wake()
-				glog.V(2).Infof("stream(%s:%s): Wake received", ds.scheme, ds.address)
+				glog.V(2).Infof("stream(%s): Wake received", ds.sourcename)
 			}
 		}
 	}()
 	return nil
-}
-
-// Lines implements the LogStream interface, returning the output lines channel.
-func (ds *dgramStream) Lines() <-chan *logline.LogLine {
-	return ds.lines
 }

@@ -6,6 +6,7 @@ package logstream
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -16,18 +17,13 @@ import (
 )
 
 type socketStream struct {
-	cancel context.CancelFunc
+	streamBase
 
-	lines chan *logline.LogLine
+	cancel context.CancelFunc
 
 	oneShot OneShotMode
 	scheme  string // URL Scheme to listen with, either tcp or unix
 	address string // Given name for the underlying socket path on the filesystem or host/port.
-
-	mu           sync.RWMutex // protects following fields
-	lastReadTime time.Time    // Last time a log line was read from this socket
-
-	staleTimer *time.Timer // Expire the stream if no read in 24h
 }
 
 func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, scheme, address string, oneShot OneShotMode) (LogStream, error) {
@@ -35,7 +31,17 @@ func newSocketStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker,
 		return nil, ErrEmptySocketAddress
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	ss := &socketStream{cancel: cancel, oneShot: oneShot, scheme: scheme, address: address, lastReadTime: time.Now(), lines: make(chan *logline.LogLine)}
+	ss := &socketStream{
+		cancel:  cancel,
+		oneShot: oneShot,
+		scheme:  scheme,
+		address: address,
+		streamBase: streamBase{
+			sourcename: fmt.Sprintf("%s://%s", scheme, address),
+			lines:      make(chan *logline.LogLine),
+		},
+	}
+
 	if err := ss.stream(ctx, wg, waker); err != nil {
 		return nil, err
 	}
@@ -49,7 +55,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 		logErrors.Add(ss.address, 1)
 		return err
 	}
-	glog.V(2).Infof("stream(%s:%s): opened new socket listener %+v", ss.scheme, ss.address, l)
+	glog.V(2).Infof("stream(%s): opened new socket listener %+v", ss.sourcename, l)
 
 	// signals when a connection has been opened
 	started := make(chan struct{})
@@ -66,7 +72,7 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 		if !ss.oneShot {
 			<-ctx.Done()
 		}
-		glog.V(2).Infof("stream(%s:%s): closing listener", ss.scheme, ss.address)
+		glog.V(2).Infof("stream(%s): closing listener", ss.sourcename)
 		err := l.Close()
 		if err != nil {
 			glog.Info(err)
@@ -86,12 +92,12 @@ func (ss *socketStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wa
 				glog.Info(err)
 				return
 			}
-			glog.V(2).Infof("stream(%s:%s): got new conn %v", ss.scheme, ss.address, c)
+			glog.V(2).Infof("stream(%s): got new conn %v", ss.sourcename, c)
 			connWg.Add(1)
 			go ss.handleConn(ctx, &connWg, waker, c)
 			connOnce.Do(func() { close(started) })
 			if ss.oneShot {
-				glog.Infof("stream(%s:%s): oneshot mode, exiting accept loop", ss.scheme, ss.address)
+				glog.Infof("stream(%s): oneshot mode, exiting accept loop", ss.sourcename)
 				return
 			}
 		}
@@ -106,8 +112,8 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 	partial := bytes.NewBufferString("")
 	var total int
 	defer func() {
-		glog.V(2).Infof("stream(%s:%s): read total %d bytes from %s", ss.scheme, ss.address, c, total)
-		glog.V(2).Infof("stream(%s:%s): closing connection, %v", ss.scheme, ss.address, c)
+		glog.V(2).Infof("stream(%s): read total %d bytes from %s", ss.sourcename, c, total)
+		glog.V(2).Infof("stream(%s): closing connection, %v", ss.sourcename, c)
 		err := c.Close()
 		if err != nil {
 			logErrors.Add(ss.address, 1)
@@ -121,7 +127,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 
 	for {
 		n, err := c.Read(b)
-		glog.V(2).Infof("stream(%s:%s): read %d bytes, err is %v", ss.scheme, ss.address, n, err)
+		glog.V(2).Infof("stream(%s): read %d bytes, err is %v", ss.sourcename, n, err)
 
 		if ss.staleTimer != nil {
 			ss.staleTimer.Stop()
@@ -130,10 +136,7 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 		if n > 0 {
 			total += n
 			//nolint:contextcheck
-			decodeAndSend(ctx, ss.lines, ss.address, n, b[:n], partial)
-			ss.mu.Lock()
-			ss.lastReadTime = time.Now()
-			ss.mu.Unlock()
+			ss.decodeAndSend(ctx, n, b[:n], partial)
 			ss.staleTimer = time.AfterFunc(time.Hour*24, ss.cancel)
 
 			// No error implies more to read, so restart the loop.
@@ -142,29 +145,24 @@ func (ss *socketStream) handleConn(ctx context.Context, wg *sync.WaitGroup, wake
 			}
 		}
 
-		if err != nil && IsEndOrCancel(err) {
+		if IsExitableError(err) {
 			if partial.Len() > 0 {
-				sendLine(ctx, ss.address, partial, ss.lines)
+				ss.sendLine(ctx, partial)
 			}
-			glog.V(2).Infof("stream(%s:%s): exiting, conn has error %s", ss.scheme, ss.address, err)
+			glog.V(2).Infof("stream(%s): exiting, conn has error %s", ss.sourcename, err)
 
 			return
 		}
 
 		// Yield and wait
-		glog.V(2).Infof("stream(%s:%s): waiting", ss.scheme, ss.address)
+		glog.V(2).Infof("stream(%s): waiting", ss.sourcename)
 		select {
 		case <-ctx.Done():
 			// Exit after next read attempt.
 			glog.V(2).Infof("stream(%s:%s): context cancelled, exiting after next read timeout", ss.scheme, ss.address)
 		case <-waker.Wake():
 			// sleep until next Wake()
-			glog.V(2).Infof("stream(%s:%s): Wake received", ss.scheme, ss.address)
+			glog.V(2).Infof("stream(%s): Wake received", ss.sourcename)
 		}
 	}
-}
-
-// Lines implements the LogStream interface, returning the output lines channel.
-func (ss *socketStream) Lines() <-chan *logline.LogLine {
-	return ss.lines
 }

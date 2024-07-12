@@ -47,7 +47,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 			testutil.FatalIfErr(t, err)
 
 			expected := []*logline.LogLine{
-				{Context: context.TODO(), Filename: addr, Line: "1"},
+				{Context: context.TODO(), Filename: sockName, Line: "1"},
 			}
 			checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ss.Lines())
 
@@ -96,7 +96,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 			testutil.FatalIfErr(t, err)
 
 			expected := []*logline.LogLine{
-				{Context: context.TODO(), Filename: addr, Line: "1"},
+				{Context: context.TODO(), Filename: sockName, Line: "1"},
 			}
 			checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ss.Lines())
 

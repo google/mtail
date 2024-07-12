@@ -116,12 +116,18 @@ func TestPipeStreamReadURL(t *testing.T) {
 
 	expected := []*logline.LogLine{
 		{Context: context.TODO(), Filename: name, Line: "1"},
+		{Context: context.TODO(), Filename: name, Line: "2"},
 	}
 	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ps.Lines())
 
 	f, err := os.OpenFile(name, os.O_WRONLY, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 	testutil.WriteString(t, f, "1\n")
+
+	// Give the stream a chance to wake and read
+	time.Sleep(10 * time.Millisecond)
+
+	testutil.WriteString(t, f, "2\n")
 
 	// Pipes need to be closed to signal to the pipeStream to finish up.
 	testutil.FatalIfErr(t, f.Close())
@@ -147,7 +153,7 @@ func TestPipeStreamReadStdin(t *testing.T) {
 	f, err := os.OpenFile(name, os.O_RDWR, os.ModeNamedPipe)
 	testutil.FatalIfErr(t, err)
 	testutil.OverrideStdin(t, f)
-	testutil.WriteString(t, f, "content\n")
+	testutil.WriteString(t, f, "1\n")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	// The stream is not shut down by cancel in this test.
@@ -158,9 +164,12 @@ func TestPipeStreamReadStdin(t *testing.T) {
 	testutil.FatalIfErr(t, err)
 
 	expected := []*logline.LogLine{
-		{Context: context.TODO(), Filename: "-", Line: "content"},
+		{Context: context.TODO(), Filename: "-", Line: "1"},
+		{Context: context.TODO(), Filename: "-", Line: "2"},
 	}
 	checkLineDiff := testutil.ExpectLinesReceivedNoDiff(t, expected, ps.Lines())
+
+	testutil.WriteString(t, f, "2\n")
 
 	// Give the stream a chance to wake and read
 	time.Sleep(10 * time.Millisecond)
