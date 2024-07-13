@@ -19,8 +19,6 @@ jobs:
         github.event.action == 'opened' ||
         github.event.action == 'reopened' ||
         github.event.action == 'synchronize'
-      ) && (
-        github.actor == 'jaqx0r'
       )
     permissions:
       # wait on check
