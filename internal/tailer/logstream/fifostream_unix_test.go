@@ -20,7 +20,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
+func TestFifoStreamReadCompletedBecauseClosed(t *testing.T) {
 	testutil.TimeoutTest(1*time.Second, func(t *testing.T) { //nolint:thelper
 		var wg sync.WaitGroup
 
@@ -63,7 +63,7 @@ func TestPipeStreamReadCompletedBecauseClosed(t *testing.T) {
 	})(t)
 }
 
-func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
+func TestFifoStreamReadCompletedBecauseCancel(t *testing.T) {
 	testutil.TimeoutTest(1*time.Second, func(t *testing.T) { // nolint:thelper
 		var wg sync.WaitGroup
 
@@ -98,7 +98,7 @@ func TestPipeStreamReadCompletedBecauseCancel(t *testing.T) {
 	})(t)
 }
 
-func TestPipeStreamReadURL(t *testing.T) {
+func TestFifoStreamReadURL(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir := testutil.TestTempDir(t)
@@ -143,7 +143,7 @@ func TestPipeStreamReadURL(t *testing.T) {
 	cancel() // no-op for pipes
 }
 
-func TestPipeStreamReadStdin(t *testing.T) {
+func TestFifoStreamReadStdin(t *testing.T) {
 	var wg sync.WaitGroup
 
 	tmpDir := testutil.TestTempDir(t)
