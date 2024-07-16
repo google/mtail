@@ -4,7 +4,6 @@
 package logstream
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -55,8 +54,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		return err
 	}
 	glog.V(2).Infof("stream(%s): opened new datagram socket %v", ds.sourcename, c)
-	b := make([]byte, datagramReadBufferSize)
-	partial := bytes.NewBufferString("")
+	lr := NewLineReader(ds.sourcename, ds.lines, &dgramConn{c}, datagramReadBufferSize)
 	var total int
 	wg.Add(1)
 	go func() {
@@ -70,6 +68,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 				glog.Info(err)
 			}
 			logCloses.Add(ds.address, 1)
+			lr.Finish(ctx)
 			close(ds.lines)
 			ds.cancel()
 		}()
@@ -78,7 +77,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		SetReadDeadlineOnDone(ctx, c)
 
 		for {
-			n, _, err := c.ReadFrom(b)
+			n, err := lr.ReadAndSend(ctx)
 			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", ds.sourcename, n, err)
 
 			if ds.staleTimer != nil {
@@ -91,17 +90,11 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			if n == 0 {
 				if oneShot {
 					glog.V(2).Infof("stream(%s): exiting because zero byte read and one shot", ds.sourcename)
-					if partial.Len() > 0 {
-						ds.sendLine(ctx, partial)
-					}
 					return
 				}
 				select {
 				case <-ctx.Done():
 					glog.V(2).Infof("stream(%s): exiting because zero byte read after cancellation", ds.sourcename)
-					if partial.Len() > 0 {
-						ds.sendLine(ctx, partial)
-					}
 					return
 				default:
 				}
@@ -109,8 +102,6 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 
 			if n > 0 {
 				total += n
-				//nolint:contextcheck
-				ds.decodeAndSend(ctx, n, b[:n], partial)
 				ds.staleTimer = time.AfterFunc(time.Hour*24, ds.cancel)
 
 				// No error implies more to read, so restart the loop.
@@ -120,9 +111,6 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			}
 
 			if IsExitableError(err) {
-				if partial.Len() > 0 {
-					ds.sendLine(ctx, partial)
-				}
 				glog.V(2).Infof("stream(%s): exiting, stream has error %s", ds.sourcename, err)
 				return
 			}
@@ -145,4 +133,15 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		}
 	}()
 	return nil
+}
+
+// dgramConn wraps a PacketConn to add a Read method.
+type dgramConn struct {
+	net.PacketConn
+}
+
+// Read satisfies io.Reader
+func (d *dgramConn) Read(p []byte) (count int, err error) {
+	count, _, err = d.ReadFrom(p)
+	return
 }
