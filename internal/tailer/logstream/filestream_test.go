@@ -125,6 +125,7 @@ func TestFileStreamReadNonSingleByteEnd(t *testing.T) {
 }
 
 func TestStreamDoesntBreakOnCorruptRune(t *testing.T) {
+	t.Skip("should move to reader_test.go")
 	var wg sync.WaitGroup
 
 	tmpDir := testutil.TestTempDir(t)

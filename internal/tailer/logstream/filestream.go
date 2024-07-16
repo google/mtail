@@ -4,7 +4,6 @@
 package logstream
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"expvar"
@@ -81,9 +80,9 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		}
 		glog.V(2).Infof("stream(%s): seeked to end", fs.sourcename)
 	}
-	b := make([]byte, defaultReadBufferSize)
-	var lastBytes []byte
-	partial := bytes.NewBufferString("")
+
+	lr := NewLineReader(fs.sourcename, fs.lines, fd, defaultReadBufferSize)
+
 	started := make(chan struct{})
 	var total int
 	wg.Add(1)
@@ -101,7 +100,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		close(started)
 		for {
 			// Blocking read but regular files will return EOF straight away.
-			count, err := fd.Read(b)
+			count, err := lr.ReadAndSend(ctx)
 			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", fs.sourcename, count, err)
 
 			if fs.staleTimer != nil {
@@ -110,15 +109,6 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 			if count > 0 {
 				total += count
-				glog.V(2).Infof("stream(%s): decode and send", fs.sourcename)
-				needSend := lastBytes
-				needSend = append(needSend, b[:count]...)
-				sendCount := fs.decodeAndSend(ctx, len(needSend), needSend, partial)
-				if sendCount < len(needSend) {
-					lastBytes = append([]byte{}, needSend[sendCount:]...)
-				} else {
-					lastBytes = []byte{}
-				}
 				fs.staleTimer = time.AfterFunc(time.Hour*24, fs.cancel)
 
 				// No error implies there is more to read so restart the loop.
@@ -161,9 +151,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					// cancel.
 					if os.IsNotExist(serr) {
 						glog.V(2).Infof("stream(%s): source no longer exists, exiting", fs.sourcename)
-						if partial.Len() > 0 {
-							fs.sendLine(ctx, partial)
-						}
+						lr.Finish(ctx)
 						close(fs.lines)
 						return
 					}
@@ -196,9 +184,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				if newfi.Size() < currentOffset {
 					glog.V(2).Infof("stream(%s): truncate? currentoffset is %d and size is %d", fs.sourcename, currentOffset, newfi.Size())
 					// About to lose all remaining data because of the truncate so flush the accumulator.
-					if partial.Len() > 0 {
-						fs.sendLine(ctx, partial)
-					}
+					lr.Finish(ctx)
 					p, serr := fd.Seek(0, io.SeekStart)
 					if serr != nil {
 						logErrors.Add(fs.sourcename, 1)
@@ -217,18 +203,14 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				if oneShot == OneShotEnabled {
 					// Exit now, because oneShot means read only to EOF.
 					glog.V(2).Infof("stream(%s): EOF in one shot mode, exiting", fs.sourcename)
-					if partial.Len() > 0 {
-						fs.sendLine(ctx, partial)
-					}
+					lr.Finish(ctx)
 					close(fs.lines)
 					return
 				}
 				select {
 				case <-ctx.Done():
 					glog.V(2).Infof("stream(%s): context has been cancelled, exiting", fs.sourcename)
-					if partial.Len() > 0 {
-						fs.sendLine(ctx, partial)
-					}
+					lr.Finish(ctx)
 					close(fs.lines)
 					return
 				default:
