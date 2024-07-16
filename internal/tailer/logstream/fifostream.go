@@ -4,7 +4,6 @@
 package logstream
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -77,8 +76,7 @@ func (ps *fifoStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	if err != nil {
 		return err
 	}
-	b := make([]byte, defaultFifoReadBufferSize)
-	partial := bytes.NewBufferString("")
+	lr := NewLineReader(ps.sourcename, ps.lines, fd, defaultFifoReadBufferSize)
 	var total int
 	wg.Add(1)
 	go func() {
@@ -92,29 +90,20 @@ func (ps *fifoStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				glog.Info(err)
 			}
 			logCloses.Add(ps.pathname, 1)
-			if partial.Len() > 0 {
-				ps.sendLine(ctx, partial)
-			}
+			lr.Finish(ctx)
 			close(ps.lines)
 			ps.cancel()
 		}()
 		SetReadDeadlineOnDone(ctx, fd)
 
 		for {
-			// Because we've opened in nonblocking mode, this Read can return
-			// straight away.  If there are no writers, it'll return EOF (per
-			// `pipe(7)` and `read(2)`.)  This is expected when `mtail` is
-			// starting at system init as the writer may not be ready yet.
-			n, err := fd.Read(b)
-			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", ps.sourcename, n, err)
-
+			n, err := lr.ReadAndSend(ctx)
 			if ps.staleTimer != nil {
 				ps.staleTimer.Stop()
 			}
 
 			if n > 0 {
 				total += n
-				ps.decodeAndSend(ctx, n, b[:n], partial)
 				ps.staleTimer = time.AfterFunc(time.Hour*24, ps.cancel)
 
 				// No error implies there is more to read so restart the loop.
@@ -134,6 +123,10 @@ func (ps *fifoStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 			// Test to see if we should exit.
 			if IsExitableError(err) {
+				// Because we've opened in nonblocking mode, this Read can return
+				// straight away.  If there are no writers, it'll return EOF (per
+				// `pipe(7)` and `read(2)`.)  This is expected when `mtail` is
+				// starting at system init as the writer may not be ready yet.
 				if !(errors.Is(err, io.EOF) && total == 0) {
 					glog.V(2).Infof("stream(%s): exiting, stream has error %s", ps.sourcename, err)
 					return

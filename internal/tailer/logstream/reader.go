@@ -67,3 +67,12 @@ func (lr *LineReader) send(ctx context.Context) bool {
 	lr.off = end + 1 // set past delim
 	return true
 }
+
+func (lr *LineReader) Finish(ctx context.Context) {
+	line := string(lr.buf[lr.off:])
+	if len(line) == 0 {
+		return
+	}
+	logLines.Add(lr.sourcename, 1)
+	lr.lines <- logline.New(ctx, lr.sourcename, line)
+}
