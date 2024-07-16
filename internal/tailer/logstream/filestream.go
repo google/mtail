@@ -11,7 +11,6 @@ import (
 	"os"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
@@ -81,7 +80,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		glog.V(2).Infof("stream(%s): seeked to end", fs.sourcename)
 	}
 
-	lr := NewLineReader(fs.sourcename, fs.lines, fd, defaultReadBufferSize)
+	lr := NewLineReader(fs.sourcename, fs.lines, fd, defaultReadBufferSize, fs.cancel)
 
 	started := make(chan struct{})
 	var total int
@@ -103,13 +102,8 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			count, err := lr.ReadAndSend(ctx)
 			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", fs.sourcename, count, err)
 
-			if fs.staleTimer != nil {
-				fs.staleTimer.Stop()
-			}
-
 			if count > 0 {
 				total += count
-				fs.staleTimer = time.AfterFunc(time.Hour*24, fs.cancel)
 
 				// No error implies there is more to read so restart the loop.
 				if err == nil && ctx.Err() == nil {

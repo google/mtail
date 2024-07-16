@@ -10,7 +10,6 @@ import (
 	"os"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
@@ -76,7 +75,7 @@ func (ps *fifoStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	if err != nil {
 		return err
 	}
-	lr := NewLineReader(ps.sourcename, ps.lines, fd, defaultFifoReadBufferSize)
+	lr := NewLineReader(ps.sourcename, ps.lines, fd, defaultFifoReadBufferSize, ps.cancel)
 	var total int
 	wg.Add(1)
 	go func() {
@@ -98,13 +97,9 @@ func (ps *fifoStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 
 		for {
 			n, err := lr.ReadAndSend(ctx)
-			if ps.staleTimer != nil {
-				ps.staleTimer.Stop()
-			}
 
 			if n > 0 {
 				total += n
-				ps.staleTimer = time.AfterFunc(time.Hour*24, ps.cancel)
 
 				// No error implies there is more to read so restart the loop.
 				if err == nil && ctx.Err() == nil {

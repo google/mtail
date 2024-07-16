@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
@@ -54,7 +53,7 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 		return err
 	}
 	glog.V(2).Infof("stream(%s): opened new datagram socket %v", ds.sourcename, c)
-	lr := NewLineReader(ds.sourcename, ds.lines, &dgramConn{c}, datagramReadBufferSize)
+	lr := NewLineReader(ds.sourcename, ds.lines, &dgramConn{c}, datagramReadBufferSize, ds.cancel)
 	var total int
 	wg.Add(1)
 	go func() {
@@ -80,10 +79,6 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 			n, err := lr.ReadAndSend(ctx)
 			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", ds.sourcename, n, err)
 
-			if ds.staleTimer != nil {
-				ds.staleTimer.Stop()
-			}
-
 			// This is a test-only trick that says if we've already put this
 			// logstream in graceful shutdown, then a zero-byte read is
 			// equivalent to an "EOF" in connection and file oriented streams.
@@ -102,7 +97,6 @@ func (ds *dgramStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wak
 
 			if n > 0 {
 				total += n
-				ds.staleTimer = time.AfterFunc(time.Hour*24, ds.cancel)
 
 				// No error implies more to read, so restart the loop.
 				if err == nil && ctx.Err() == nil {

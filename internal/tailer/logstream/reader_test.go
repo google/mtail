@@ -52,7 +52,7 @@ func TestReadAndSend(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			lines := make(chan *logline.LogLine, 5)
 
-			lr := NewLineReader("testPath", lines, bytes.NewReader(tc.input), 4096)
+			lr := NewLineReader("testPath", lines, bytes.NewReader(tc.input), 4096, nil)
 
 			_, err := lr.ReadAndSend(context.Background())
 			if err != nil {
@@ -85,7 +85,7 @@ func TestReadAndSendSplitBytes(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", chunkSize), func(t *testing.T) {
 			lines := make(chan *logline.LogLine, 20)
 
-			lr := NewLineReader("testPath", lines, bytes.NewReader(origBytes), chunkSize)
+			lr := NewLineReader("testPath", lines, bytes.NewReader(origBytes), chunkSize, nil)
 
 			byteCount := 0
 			for chunkOffset := 0; chunkOffset < len(origBytes); chunkOffset += chunkSize {
