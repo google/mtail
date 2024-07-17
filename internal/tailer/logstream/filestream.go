@@ -111,7 +111,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				}
 			}
 
-			if err != nil && err != io.EOF {
+			if err != nil && !errors.Is(err, io.EOF) {
 				logErrors.Add(fs.sourcename, 1)
 				// TODO: This could be generalised to check for any retryable
 				// errors, and end on unretriables; e.g. ESTALE looks
@@ -129,7 +129,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 
 			// If we have read no bytes and are at EOF, check for truncation and rotation.
-			if err == io.EOF && count == 0 {
+			if errors.Is(err, io.EOF) && count == 0 {
 				glog.V(2).Infof("stream(%s): eof an no bytes", fs.sourcename)
 				// Both rotation and truncation need to stat, so check for
 				// rotation first.  It is assumed that rotation is the more
@@ -193,7 +193,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		Sleep:
 			// If we get here it's because we've stalled.  First test to see if it's
 			// time to exit.
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				if oneShot == OneShotEnabled {
 					// Exit now, because oneShot means read only to EOF.
 					glog.V(2).Infof("stream(%s): EOF in one shot mode, exiting", fs.sourcename)

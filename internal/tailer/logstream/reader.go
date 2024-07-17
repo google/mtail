@@ -6,6 +6,7 @@ package logstream
 import (
 	"bytes"
 	"context"
+	"expvar"
 	"io"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 )
 
 // logLines counts the number of lines read per log file.
-// var logLines = expvar.NewMap("log_lines_total")
+var logLines = expvar.NewMap("log_lines_total")
 
 // LineReader reads lines from input and sends lines through the channel
 type LineReader struct {
@@ -26,7 +27,6 @@ type LineReader struct {
 	size int
 	buf  []byte
 	off  int // tracks the start of the next line in buf
-	end  int // tracks the end of the next line in buf
 }
 
 // NewLineReader creates a new LineReader
@@ -44,9 +44,7 @@ func NewLineReader(sourcename string, lines chan<- *logline.LogLine, f io.Reader
 // ReadAndSend reads bytes from f, attempts to find line endings in the bytes read, and sends them to the lines channel.  It manages the read buffer size to make sure we can always read size bytes.
 func (lr *LineReader) ReadAndSend(ctx context.Context) (count int, err error) {
 	if cap(lr.buf)-len(lr.buf) < lr.size {
-		len := len(lr.buf)
-		lr.buf = append(make([]byte, 0, len+lr.size), lr.buf...)
-
+		lr.buf = append(make([]byte, 0, len(lr.buf)+lr.size), lr.buf...)
 	}
 	count, err = lr.f.Read(lr.buf[len(lr.buf):cap(lr.buf)])
 	if lr.staleTimer != nil {
@@ -55,7 +53,9 @@ func (lr *LineReader) ReadAndSend(ctx context.Context) (count int, err error) {
 	lr.buf = lr.buf[:len(lr.buf)+count] // reslice to set len
 	if count > 0 {
 		lr.staleTimer = time.AfterFunc(time.Hour*24, lr.cancel)
-		for ok := true; ok; ok = lr.send(ctx) {
+		ok := true
+		for ok {
+			ok = lr.send(ctx)
 		}
 		// reslice to drop earlier bytes
 		lr.buf = lr.buf[lr.off:len(lr.buf)]

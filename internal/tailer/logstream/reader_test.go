@@ -6,6 +6,7 @@ package logstream
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"testing"
@@ -95,7 +96,7 @@ func TestReadAndSendSplitBytes(t *testing.T) {
 				}
 
 				count, err := lr.ReadAndSend(context.Background())
-				if err != nil && err != io.EOF {
+				if err != nil && !errors.Is(err, io.EOF) {
 					t.Errorf("ReadAndSend(%v) -> %v", origBytes[chunkOffset:chunkEnd], err)
 				}
 				byteCount += count
