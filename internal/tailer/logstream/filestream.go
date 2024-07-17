@@ -4,7 +4,6 @@
 package logstream
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"expvar"
@@ -12,7 +11,6 @@ import (
 	"os"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/logline"
@@ -81,9 +79,9 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		}
 		glog.V(2).Infof("stream(%s): seeked to end", fs.sourcename)
 	}
-	b := make([]byte, defaultReadBufferSize)
-	var lastBytes []byte
-	partial := bytes.NewBufferString("")
+
+	lr := NewLineReader(fs.sourcename, fs.lines, fd, defaultReadBufferSize, fs.cancel)
+
 	started := make(chan struct{})
 	var total int
 	wg.Add(1)
@@ -101,25 +99,11 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		close(started)
 		for {
 			// Blocking read but regular files will return EOF straight away.
-			count, err := fd.Read(b)
+			count, err := lr.ReadAndSend(ctx)
 			glog.V(2).Infof("stream(%s): read %d bytes, err is %v", fs.sourcename, count, err)
-
-			if fs.staleTimer != nil {
-				fs.staleTimer.Stop()
-			}
 
 			if count > 0 {
 				total += count
-				glog.V(2).Infof("stream(%s): decode and send", fs.sourcename)
-				needSend := lastBytes
-				needSend = append(needSend, b[:count]...)
-				sendCount := fs.decodeAndSend(ctx, len(needSend), needSend, partial)
-				if sendCount < len(needSend) {
-					lastBytes = append([]byte{}, needSend[sendCount:]...)
-				} else {
-					lastBytes = []byte{}
-				}
-				fs.staleTimer = time.AfterFunc(time.Hour*24, fs.cancel)
 
 				// No error implies there is more to read so restart the loop.
 				if err == nil && ctx.Err() == nil {
@@ -127,7 +111,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				}
 			}
 
-			if err != nil && err != io.EOF {
+			if err != nil && !errors.Is(err, io.EOF) {
 				logErrors.Add(fs.sourcename, 1)
 				// TODO: This could be generalised to check for any retryable
 				// errors, and end on unretriables; e.g. ESTALE looks
@@ -145,7 +129,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 			}
 
 			// If we have read no bytes and are at EOF, check for truncation and rotation.
-			if err == io.EOF && count == 0 {
+			if errors.Is(err, io.EOF) && count == 0 {
 				glog.V(2).Infof("stream(%s): eof an no bytes", fs.sourcename)
 				// Both rotation and truncation need to stat, so check for
 				// rotation first.  It is assumed that rotation is the more
@@ -161,9 +145,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					// cancel.
 					if os.IsNotExist(serr) {
 						glog.V(2).Infof("stream(%s): source no longer exists, exiting", fs.sourcename)
-						if partial.Len() > 0 {
-							fs.sendLine(ctx, partial)
-						}
+						lr.Finish(ctx)
 						close(fs.lines)
 						return
 					}
@@ -196,9 +178,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				if newfi.Size() < currentOffset {
 					glog.V(2).Infof("stream(%s): truncate? currentoffset is %d and size is %d", fs.sourcename, currentOffset, newfi.Size())
 					// About to lose all remaining data because of the truncate so flush the accumulator.
-					if partial.Len() > 0 {
-						fs.sendLine(ctx, partial)
-					}
+					lr.Finish(ctx)
 					p, serr := fd.Seek(0, io.SeekStart)
 					if serr != nil {
 						logErrors.Add(fs.sourcename, 1)
@@ -213,22 +193,18 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		Sleep:
 			// If we get here it's because we've stalled.  First test to see if it's
 			// time to exit.
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				if oneShot == OneShotEnabled {
 					// Exit now, because oneShot means read only to EOF.
 					glog.V(2).Infof("stream(%s): EOF in one shot mode, exiting", fs.sourcename)
-					if partial.Len() > 0 {
-						fs.sendLine(ctx, partial)
-					}
+					lr.Finish(ctx)
 					close(fs.lines)
 					return
 				}
 				select {
 				case <-ctx.Done():
 					glog.V(2).Infof("stream(%s): context has been cancelled, exiting", fs.sourcename)
-					if partial.Len() > 0 {
-						fs.sendLine(ctx, partial)
-					}
+					lr.Finish(ctx)
 					close(fs.lines)
 					return
 				default:
