@@ -49,6 +49,11 @@ func TestReadAndSend(t *testing.T) {
 			input:   []byte("line 1\nline 2\n"),
 			wantOut: []string{"line 1", "line 2"},
 		},
+		{
+			name:    "windows line ending",
+			input:   []byte("line 1\r\nline \r2\n"),
+			wantOut: []string{"line 1", "line \r2"},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			lines := make(chan *logline.LogLine, 5)

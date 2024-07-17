@@ -72,12 +72,25 @@ func (lr *LineReader) send(ctx context.Context) bool {
 	if i < 0 {
 		return false
 	}
-	// TODO: Skip a previous \r
 	end := lr.off + i // excluding delim
+	skip := 1         // len of delim char
+
+	// Most file-based log sources will end with \n on Unixlike systems.  On
+	// Windows they appear to be both \r\n.  syslog disallows \r (and \t and
+	// others) and writes them escaped, per syslog(7).  [RFC
+	// 3164](https://www.ietf.org/rfc/rfc3164.txt) disallows newlines in the
+	// message: "The MSG part of the syslog packet MUST contain visible
+	// (printing) characters."  Thus if the previous char was a \r then ignore
+	// it as well.
+	if end > 0 && lr.buf[end-1] == '\r' {
+		end--
+		skip = 2
+	}
+
 	line := string(lr.buf[lr.off:end])
 	logLines.Add(lr.sourcename, 1)
 	lr.lines <- logline.New(ctx, lr.sourcename, line)
-	lr.off = end + 1 // set past delim
+	lr.off = end + skip // move past delim
 	return true
 }
 
