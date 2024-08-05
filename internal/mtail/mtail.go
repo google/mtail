@@ -124,7 +124,7 @@ func (m *Server) initHTTPServer() error {
 
 	srv := &http.Server{
 		ReadTimeout:       1 * time.Second,
-		WriteTimeout:      1 * time.Second,
+		WriteTimeout:      5 * time.Second,
 		IdleTimeout:       30 * time.Second,
 		ReadHeaderTimeout: 2 * time.Second,
 		Handler:           mux,
