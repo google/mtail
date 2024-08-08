@@ -68,6 +68,13 @@ var checkerInvalidPrograms = []struct {
 	},
 
 	{
+		"subst invalid regex",
+		`subst(/foo(/, "", "")
+`,
+		[]string{"subst invalid regex:1:7-12: error parsing regexp: missing closing ): `foo(`"},
+	},
+
+	{
 		"duplicate declaration",
 		"counter foo\ncounter foo\n",
 		[]string{
@@ -273,6 +280,13 @@ m`,
 		"regexp too long",
 		"/" + strings.Repeat("c", 1025) + "/ {}",
 		[]string{"regexp too long:1:1-1027: Exceeded maximum regular expression pattern length of 1024 bytes with 1025.", "\tExcessively long patterns are likely to cause compilation and runtime performance problems."},
+	},
+
+	{
+		"subst regexp too long",
+		"subst(/" + strings.Repeat("c", 1025) + `/, "", "")
+`,
+		[]string{"subst regexp too long:1:7-1033: Exceeded maximum regular expression pattern length of 1024 bytes with 1025.", "\tExcessively long patterns are likely to cause compilation and runtime performance problems."},
 	},
 
 	{
@@ -576,6 +590,11 @@ foo = subst(",", "", $1)
 }`},
 	{"regexp subst", `
 subst(/\d+/, "d", "1234")
+`},
+	{"regexp subst twice", `
+text value
+value = subst(/[a-zA-Z]+/, "a", "1234abcd")
+value = subst(/\d+/, "d", value)
 `},
 }
 
