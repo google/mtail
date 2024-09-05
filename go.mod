@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.20.2
 	github.com/prometheus/common v0.58.0
 	go.opencensus.io v0.24.0
-	golang.org/x/sys v0.24.0
+	golang.org/x/sys v0.25.0
 )
 
 require (
