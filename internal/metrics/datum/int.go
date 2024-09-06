@@ -28,7 +28,7 @@ func (d *Int) IncBy(delta int64, timestamp time.Time) {
 	d.stamp(timestamp)
 }
 
-// DecBy increments the Int's value by the value provided, at timestamp.
+// DecBy decrements the Int's value by the value provided, at timestamp.
 func (d *Int) DecBy(delta int64, timestamp time.Time) {
 	atomic.AddInt64(&d.Value, -delta)
 	d.stamp(timestamp)
