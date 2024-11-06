@@ -4,7 +4,7 @@ go 1.21.1
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
-	github.com/golang/glog v1.2.2
+	github.com/golang/glog v1.2.3
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/google/go-cmp v0.6.0
 	github.com/pkg/errors v0.9.1
