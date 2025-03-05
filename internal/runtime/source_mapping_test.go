@@ -228,22 +228,43 @@ func TestLineDistributionWithMapping(t *testing.T) {
 	r.AddSourceMapping("/var/log/test1.log", []string{"prog1.mtail", "prog2.mtail"})
 	r.AddSourceMapping("/var/log/test2.log", []string{"prog3.mtail"})
 
-	// Consumer goroutines to prevent blocking
-	done := make(chan struct{})
-	defer close(done)
+	// Use synchronized channels to track lines received
+	lineCount1 := make(chan int, 1)
+	lineCount2 := make(chan int, 1)
+	lineCount3 := make(chan int, 1)
 	
-	for _, ch := range []chan *logline.LogLine{prog1Lines, prog2Lines, prog3Lines} {
-		go func(c chan *logline.LogLine) {
-			for {
-				select {
-				case <-c:
-					// Consume the line
-				case <-done:
-					return
-				}
-			}
-		}(ch)
+	// Start counters at 0
+	lineCount1 <- 0
+	lineCount2 <- 0
+	lineCount3 <- 0
+	
+	// Safely increment counters
+	increment := func(ch chan int) {
+		ch <- (<-ch + 1)
 	}
+	
+	// Setup consumer goroutines with proper synchronization
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		for range prog1Lines {
+			increment(lineCount1)
+		}
+	}()
+	
+	go func() {
+		defer wg.Done()
+		for range prog2Lines {
+			increment(lineCount2)
+		}
+	}()
+	
+	go func() {
+		defer wg.Done()
+		for range prog3Lines {
+			increment(lineCount3)
+		}
+	}()
 
 	// Test line distribution - test1.log should go to prog1 and prog2
 	lines <- &logline.LogLine{Filename: "/var/log/test1.log", Line: "test line 1"}
@@ -255,16 +276,18 @@ func TestLineDistributionWithMapping(t *testing.T) {
 	r.unmappedBehavior = "all" // Ensure unmapped behavior is "all"
 	lines <- &logline.LogLine{Filename: "/var/log/unmapped.log", Line: "test line 3"}
 	
-	// Close and drain channels
+	// Close the input channel to signal no more input
 	close(lines)
 	
-	// Close the done channel to exit the consumer goroutines
-	close(done)
+	// Wait for all consumer goroutines to finish
 	wg.Wait()
+	
+	// Close the count channels (just for cleanup)
+	close(lineCount1)
+	close(lineCount2)
+	close(lineCount3)
 
-	// We can't reliably check channel sizes here as the delivery happens asynchronously
-	// This test mainly verifies that the code compiles and runs without panicking
-	// Real behavior is more thoroughly tested with integration tests
+	// Log the completion
 	glog.Info("Line distribution test completed")
 }
 
