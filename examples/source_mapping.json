@@ -1,0 +1,30 @@
+{
+  "unmapped_behavior": "all",
+  "mappings": [
+    {
+      "source": "/var/log/apache2/access.log",
+      "programs": [
+        "apache_common.mtail",
+        "apache_combined.mtail"
+      ]
+    },
+    {
+      "source": "/var/log/mysql/slow-query.log",
+      "programs": [
+        "mysql_slowqueries.mtail"
+      ]
+    },
+    {
+      "source": "/var/log/syslog",
+      "programs": [
+        "linecount.mtail"
+      ]
+    },
+    {
+      "source": "/var/log/nginx/*.log",
+      "programs": [
+        "nginx.mtail"
+      ]
+    }
+  ]
+}

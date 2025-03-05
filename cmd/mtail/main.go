@@ -60,6 +60,8 @@ var (
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 	emitMetricTimestamp  = flag.Bool("emit_metric_timestamp", false, "Emit the recorded timestamp of a metric.  If disabled (the default) no explicit timestamp is sent to a collector.")
 	logRuntimeErrors     = flag.Bool("vm_logs_runtime_errors", true, "Enables logging of runtime errors to the standard log.  Set to false to only have the errors printed to the HTTP console.")
+	sourceMappingFile    = flag.String("source_mapping_file", "", "Path to YAML or JSON file defining mappings from log sources to programs.")
+	unmappedBehavior     = flag.String("unmapped_behavior", "all", "How to handle log lines from sources with no mapping. Valid values: 'all' (process with all programs) or 'none' (ignore).")
 
 	// Ops flags.
 	pollInterval                = flag.Duration("poll_interval", 250*time.Millisecond, "Set the interval to poll each log file for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
@@ -179,6 +181,12 @@ func main() {
 	eOpts := []exporter.Option{}
 	if *logRuntimeErrors {
 		opts = append(opts, mtail.LogRuntimeErrors)
+	}
+	if *sourceMappingFile != "" {
+		opts = append(opts, mtail.SourceMappingFile(*sourceMappingFile))
+	}
+	if *unmappedBehavior != "all" {
+		opts = append(opts, mtail.UnmappedSourceBehavior(*unmappedBehavior))
 	}
 	if *pollInterval > 0 {
 		logStreamPollWaker := waker.NewTimed(ctx, *pollInterval)
