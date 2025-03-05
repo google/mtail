@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
 )
