@@ -1,0 +1,26 @@
+# Example source-to-program mapping configuration
+# Maps log sources to specific mtail programs
+
+# How to handle log sources with no explicit mapping
+# Valid values: "all" (process with all programs) or "none" (ignore)
+unmapped_behavior: "all"
+
+# Mappings from log sources to program names
+mappings:
+  - source: "/var/log/apache2/access.log"
+    programs:
+      - "apache_common.mtail"
+      - "apache_combined.mtail"
+  
+  - source: "/var/log/mysql/slow-query.log"
+    programs:
+      - "mysql_slowqueries.mtail"
+  
+  - source: "/var/log/syslog"
+    programs:
+      - "linecount.mtail"
+
+  # You can use glob patterns as sources
+  - source: "/var/log/nginx/*.log"
+    programs:
+      - "nginx.mtail"

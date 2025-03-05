@@ -9,6 +9,7 @@ package runtime
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"expvar"
 	"io"
 	"os"
@@ -26,6 +27,7 @@ import (
 	"github.com/google/mtail/internal/runtime/vm"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -229,6 +231,11 @@ type Runtime struct {
 	programErrorMu sync.RWMutex     // guards access to programErrors
 	programErrors  map[string]error // errors from the last compile attempt of the program
 
+	// Source to program mapping
+	sourceToProgramsMu sync.RWMutex         // guards access to sourceToPrograms
+	sourceToPrograms   map[string][]string  // Maps log sources to programs that should process them
+	unmappedBehavior   string               // "all" (default) or "none" - what to do with unmapped sources
+
 	overrideLocation     *time.Location // Instructs the vm to override the timezone with the specified zone.
 	compileOnly          bool           // Only compile programs and report errors, do not load VMs.
 	errorsAbort          bool           // Compiler errors abort the loader.
@@ -255,11 +262,13 @@ func New(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, 
 		return nil, ErrNeedsWaitgroup
 	}
 	r := &Runtime{
-		ms:            store,
-		programPath:   programPath,
-		handles:       make(map[string]*vmHandle),
-		programErrors: make(map[string]error),
-		signalQuit:    make(chan struct{}),
+		ms:              store,
+		programPath:     programPath,
+		handles:         make(map[string]*vmHandle),
+		programErrors:   make(map[string]error),
+		sourceToPrograms: make(map[string][]string),
+		unmappedBehavior: "all", // Default: process unmapped sources with all programs
+		signalQuit:      make(chan struct{}),
 	}
 	initDone := make(chan struct{})
 	defer close(initDone)
@@ -286,10 +295,30 @@ func New(lines <-chan *logline.LogLine, wg *sync.WaitGroup, programPath string, 
 		<-initDone
 		for line := range lines {
 			LineCount.Add(1)
+			
+			// Check if we have mapping for this source
 			r.handleMu.RLock()
-			for prog := range r.handles {
-				r.handles[prog].lines <- line
+			r.sourceToProgramsMu.RLock()
+			
+			// Get the log filename
+			filename := line.Filename
+			
+			if programs, ok := r.sourceToPrograms[filename]; ok {
+				// Send only to mapped programs
+				for _, progName := range programs {
+					if handle, ok := r.handles[progName]; ok {
+						handle.lines <- line
+					}
+				}
+			} else if r.unmappedBehavior == "all" {
+				// Default behavior (all programs)
+				for prog := range r.handles {
+					r.handles[prog].lines <- line
+				}
 			}
+			// If unmappedBehavior is "none", we don't send the line to any program
+			
+			r.sourceToProgramsMu.RUnlock()
 			r.handleMu.RUnlock()
 		}
 		glog.Info("END OF LINE")
@@ -355,4 +384,92 @@ func (r *Runtime) UnloadProgram(pathname string) {
 	close(r.handles[name].lines)
 	delete(r.handles, name)
 	ProgUnloads.Add(name, 1)
+}
+
+// AddSourceMapping adds a mapping from a log source to a list of programs.
+// If the source already has a mapping, it will be replaced.
+func (r *Runtime) AddSourceMapping(source string, programs []string) {
+	r.sourceToProgramsMu.Lock()
+	defer r.sourceToProgramsMu.Unlock()
+	r.sourceToPrograms[source] = programs
+	glog.Infof("Added source mapping: %s -> %v", source, programs)
+}
+
+// RemoveSourceMapping removes a mapping for a log source.
+func (r *Runtime) RemoveSourceMapping(source string) {
+	r.sourceToProgramsMu.Lock()
+	defer r.sourceToProgramsMu.Unlock()
+	delete(r.sourceToPrograms, source)
+	glog.Infof("Removed source mapping for: %s", source)
+}
+
+// GetSourceMappings returns a copy of the current source-to-program mappings.
+func (r *Runtime) GetSourceMappings() map[string][]string {
+	r.sourceToProgramsMu.RLock()
+	defer r.sourceToProgramsMu.RUnlock()
+	
+	mappings := make(map[string][]string)
+	for source, programs := range r.sourceToPrograms {
+		progsCopy := make([]string, len(programs))
+		copy(progsCopy, programs)
+		mappings[source] = progsCopy
+	}
+	return mappings
+}
+
+// LoadSourceMappingsFromFile loads source-to-program mappings from a YAML or JSON file.
+func (r *Runtime) LoadSourceMappingsFromFile(filename string) error {
+	f, err := os.Open(filename)
+	if err != nil {
+		return errors.Wrapf(err, "failed to open source mapping file %q", filename)
+	}
+	defer f.Close()
+	
+	var config SourceMappingConfig
+	
+	// Determine the file format based on extension
+	ext := filepath.Ext(filename)
+	if ext == ".yaml" || ext == ".yml" {
+		decoder := yaml.NewDecoder(f)
+		if err := decoder.Decode(&config); err != nil {
+			return errors.Wrapf(err, "failed to decode YAML in %q", filename)
+		}
+	} else if ext == ".json" {
+		decoder := json.NewDecoder(f)
+		if err := decoder.Decode(&config); err != nil {
+			return errors.Wrapf(err, "failed to decode JSON in %q", filename)
+		}
+	} else {
+		return errors.Errorf("unsupported file extension %q for source mapping file", ext)
+	}
+	
+	// Apply unmapped behavior setting if specified
+	if config.UnmappedBehavior != "" {
+		if config.UnmappedBehavior != "all" && config.UnmappedBehavior != "none" {
+			return errors.Errorf("invalid unmapped_behavior value: %s (must be 'all' or 'none')", config.UnmappedBehavior)
+		}
+		r.unmappedBehavior = config.UnmappedBehavior
+	}
+	
+	// Apply mappings
+	r.sourceToProgramsMu.Lock()
+	defer r.sourceToProgramsMu.Unlock()
+	
+	// Clear existing mappings if we're loading a new configuration
+	r.sourceToPrograms = make(map[string][]string)
+	
+	for _, mapping := range config.Mappings {
+		if mapping.Source == "" {
+			glog.Warning("Skipping mapping with empty source")
+			continue
+		}
+		if len(mapping.Programs) == 0 {
+			glog.Warningf("Skipping mapping for source %q with no programs", mapping.Source)
+			continue
+		}
+		r.sourceToPrograms[mapping.Source] = mapping.Programs
+		glog.Infof("Added source mapping: %s -> %v", mapping.Source, mapping.Programs)
+	}
+	
+	return nil
 }

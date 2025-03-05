@@ -12,6 +12,7 @@ require (
 	github.com/prometheus/common v0.60.0
 	go.opencensus.io v0.24.0
 	golang.org/x/sys v0.26.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
