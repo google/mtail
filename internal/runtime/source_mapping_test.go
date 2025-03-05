@@ -19,8 +19,6 @@ func TestAddSourceMapping(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// Create a new runtime
 	r, err := New(lines, &wg, "", store)
@@ -54,8 +52,6 @@ func TestRemoveSourceMapping(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// Create a new runtime
 	r, err := New(lines, &wg, "", store)
@@ -77,8 +73,6 @@ func TestLoadSourceMappingsFromYAML(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// Create a new runtime
 	r, err := New(lines, &wg, "", store)
@@ -144,8 +138,6 @@ func TestLoadSourceMappingsFromJSON(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// Create a new runtime
 	r, err := New(lines, &wg, "", store)
@@ -213,8 +205,6 @@ func TestLineDistributionWithMapping(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// Create a new runtime
 	r, err := New(lines, &wg, "", store)
@@ -269,8 +259,8 @@ func TestLineDistributionWithMapping(t *testing.T) {
 	// Close and drain channels
 	close(lines)
 	
-	// Wait for goroutines to finish
-	cancel()
+	// Close the done channel to exit the consumer goroutines
+	close(done)
 	wg.Wait()
 
 	// We can't reliably check channel sizes here as the delivery happens asynchronously
@@ -283,8 +273,6 @@ func TestUnmappedBehaviorNone(t *testing.T) {
 	store := metrics.NewStore()
 	lines := make(chan *logline.LogLine)
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// Create a new runtime
 	r, err := New(lines, &wg, "", store)

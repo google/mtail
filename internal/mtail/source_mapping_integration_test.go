@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/mtail/internal/metrics"
+	"github.com/google/mtail/internal/metrics/datum"
 	"github.com/google/mtail/internal/mtail"
 	"github.com/google/mtail/internal/testutil"
 )
@@ -90,16 +92,13 @@ mappings:
 		t.Fatal(err)
 	}
 	
-	// Start mtail
-	m, err := mtail.TestStartServer(t, 
+	// Start mtail - using 1 pattern waker for the log directory glob pattern
+	ts, stopFunc := mtail.TestStartServer(t, 1, 0, 
 		mtail.ProgramPath(progdir), 
 		mtail.LogPathPatterns(logdir+"/*"),
 		mtail.SourceMappingFile(mappingFile),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer m.Close()
+	defer stopFunc()
 	
 	// Write to log files and check metrics
 	// Log A should trigger counter_a but not counter_b
@@ -123,9 +122,30 @@ mappings:
 	// Wait for mtail to process the logs
 	time.Sleep(1 * time.Second)
 	
-	// Check metrics
-	counterA := m.ExpectMetricDeltaWithDeadline("counter_a", 2.0) // 1 from log A + 1 from unmapped
-	counterB := m.ExpectMetricDeltaWithDeadline("counter_b", 2.0) // 1 from log B + 1 from unmapped
+	// Get the metrics store
+	store := ts.Server.GetMetrics()
+	
+	// Check if counter_a and counter_b were incremented
+	counterA := false
+	counterB := false
+	
+	store.Range(func(m *metrics.Metric) error {
+		if m.Name == "counter_a" {
+			// We expect 2 increments: 1 from log A + 1 from unmapped log
+			v := datum.GetInt(m.LabelValues[0].Value)
+			if v == 2 {
+				counterA = true
+			}
+		}
+		if m.Name == "counter_b" {
+			// We expect 2 increments: 1 from log B + 1 from unmapped log
+			v := datum.GetInt(m.LabelValues[0].Value)
+			if v == 2 {
+				counterB = true
+			}
+		}
+		return nil
+	})
 	
 	if !counterA || !counterB {
 		t.Error("Did not receive expected metrics")
@@ -150,16 +170,13 @@ mappings:
 	}
 	
 	// Restart mtail with new mapping
-	m.Close()
-	m, err = mtail.TestStartServer(t, 
+	stopFunc()
+	ts, stopFunc = mtail.TestStartServer(t, 1, 0, 
 		mtail.ProgramPath(progdir), 
 		mtail.LogPathPatterns(logdir+"/*"),
 		mtail.SourceMappingFile(mappingFileNone),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer m.Close()
+	defer stopFunc()
 	
 	// Reset log files
 	err = os.WriteFile(logfileA, []byte(""), 0o644)
@@ -192,9 +209,30 @@ mappings:
 	// Wait for mtail to process the logs
 	time.Sleep(1 * time.Second)
 	
-	// Check metrics - unmapped log should not trigger any counters now
-	counterA = m.ExpectMetricDeltaWithDeadline("counter_a", 1.0) // Only from log A
-	counterB = m.ExpectMetricDeltaWithDeadline("counter_b", 1.0) // Only from log B
+	// Get the metrics store
+	store = ts.Server.GetMetrics()
+	
+	// Check if counter_a and counter_b were incremented correctly
+	counterA = false
+	counterB = false
+	
+	store.Range(func(m *metrics.Metric) error {
+		if m.Name == "counter_a" {
+			// We expect 1 increment, only from log A (unmapped log ignored)
+			v := datum.GetInt(m.LabelValues[0].Value)
+			if v == 1 {
+				counterA = true
+			}
+		}
+		if m.Name == "counter_b" {
+			// We expect 1 increment, only from log B (unmapped log ignored)
+			v := datum.GetInt(m.LabelValues[0].Value)
+			if v == 1 {
+				counterB = true
+			}
+		}
+		return nil
+	})
 	
 	if !counterA || !counterB {
 		t.Error("Did not receive expected metrics with unmapped_behavior=none")
