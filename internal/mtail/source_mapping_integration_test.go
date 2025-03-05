@@ -122,34 +122,13 @@ mappings:
 	// Wait for mtail to process the logs
 	time.Sleep(1 * time.Second)
 	
-	// Get the metrics from the store field
-	store := ts.store
+	// Use the test helpers to check the metrics
+	counterACheck := ts.ExpectProgMetricDeltaWithDeadline("counter_a", "counter_a.mtail", 2) // 1 from log A + 1 from unmapped
+	counterBCheck := ts.ExpectProgMetricDeltaWithDeadline("counter_b", "counter_b.mtail", 2) // 1 from log B + 1 from unmapped
 	
-	// Check if counter_a and counter_b were incremented
-	counterA := false
-	counterB := false
-	
-	store.Range(func(m *metrics.Metric) error {
-		if m.Name == "counter_a" {
-			// We expect 2 increments: 1 from log A + 1 from unmapped log
-			v := datum.GetInt(m.LabelValues[0].Value)
-			if v == 2 {
-				counterA = true
-			}
-		}
-		if m.Name == "counter_b" {
-			// We expect 2 increments: 1 from log B + 1 from unmapped log
-			v := datum.GetInt(m.LabelValues[0].Value)
-			if v == 2 {
-				counterB = true
-			}
-		}
-		return nil
-	})
-	
-	if !counterA || !counterB {
-		t.Error("Did not receive expected metrics")
-	}
+	// Run the checks
+	counterACheck()
+	counterBCheck()
 	
 	// Now test with unmapped_behavior set to "none"
 	// Create new mapping file
@@ -209,32 +188,12 @@ mappings:
 	// Wait for mtail to process the logs
 	time.Sleep(1 * time.Second)
 	
-	// Get the metrics from the store field
-	store = ts.store
+	// Use the test helpers to check the metrics
+	// We expect 1 increment each, only from their specific logs (unmapped log ignored)
+	counterACheck = ts.ExpectProgMetricDeltaWithDeadline("counter_a", "counter_a.mtail", 1)
+	counterBCheck = ts.ExpectProgMetricDeltaWithDeadline("counter_b", "counter_b.mtail", 1)
 	
-	// Check if counter_a and counter_b were incremented correctly
-	counterA = false
-	counterB = false
-	
-	store.Range(func(m *metrics.Metric) error {
-		if m.Name == "counter_a" {
-			// We expect 1 increment, only from log A (unmapped log ignored)
-			v := datum.GetInt(m.LabelValues[0].Value)
-			if v == 1 {
-				counterA = true
-			}
-		}
-		if m.Name == "counter_b" {
-			// We expect 1 increment, only from log B (unmapped log ignored)
-			v := datum.GetInt(m.LabelValues[0].Value)
-			if v == 1 {
-				counterB = true
-			}
-		}
-		return nil
-	})
-	
-	if !counterA || !counterB {
-		t.Error("Did not receive expected metrics with unmapped_behavior=none")
-	}
+	// Run the checks
+	counterACheck()
+	counterBCheck()
 }
