@@ -122,8 +122,8 @@ mappings:
 	// Wait for mtail to process the logs
 	time.Sleep(1 * time.Second)
 	
-	// Get the metrics store
-	store := ts.Server.GetMetrics()
+	// Access metrics directly from the store in the Server
+	store := ts.Server.store
 	
 	// Check if counter_a and counter_b were incremented
 	counterA := false
@@ -209,8 +209,8 @@ mappings:
 	// Wait for mtail to process the logs
 	time.Sleep(1 * time.Second)
 	
-	// Get the metrics store
-	store = ts.Server.GetMetrics()
+	// Access metrics directly from the store in the Server
+	store = ts.Server.store
 	
 	// Check if counter_a and counter_b were incremented correctly
 	counterA = false
