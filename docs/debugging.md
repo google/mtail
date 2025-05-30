@@ -32,9 +32,9 @@ error recovery pops state 2
 error recovery pops state 0
 ```
 
-This log says the lexer sent a LSQUARE token, and the parser was in state 14 when it saw it.  The snippet below from `y.output` indicates state 14 is never expecting a LSQUARE, and the following lnies in the log above show the state stack being popped -- 0, 2, 14, 49, 102, 14.
+This log says the lexer sent a LSQUARE token, and the parser was in state 14 when it saw it.  The snippet below from `y.output` indicates state 14 is never expecting a LSQUARE, and the following lines in the log above show the state stack being popped -- 0, 2, 14, 49, 102, 14.
 
-Walking backwards from state 0 (`$start`), we can get a list of nonterminal names to put in the state machine match expression used in the `%error` directive, and fill in the gaps with our knowledge of the intermediate states in our parose tree.
+Walking backwards from state 0 (`$start`), we can get a list of nonterminal names to put in the state machine match expression used in the `%error` directive, and fill in the gaps with our knowledge of the intermediate states in our parse tree.
 
 `y.output`:
 ```
@@ -99,7 +99,7 @@ The formatted mtail program should help make it obvious what's happening and let
 
 Once we have the smallest program we can add it to the crash corpus in [`internal/runtime/fuzz/`](../internal/runtime/fuzz/) and running `make fuzz` should run and fail on it straight away.
 
-Or, variants of the program can be added to the various `*Invalid` tests in parts of the `vm` module, e.g. [`parser_test.go`](../internal/runtime/compiler/parser/parser_test.go) or [`checker_test.go`](../internal/runtime/compiler/checker/checker_test.go) depending on where in the compiler the defect is occuring.
+Or, variants of the program can be added to the various `*Invalid` tests in parts of the `vm` module, e.g. [`parser_test.go`](../internal/runtime/compiler/parser/parser_test.go) or [`checker_test.go`](../internal/runtime/compiler/checker/checker_test.go) depending on where in the compiler the defect is occurring.
 
 If the crash is in `vm.go` then we can dump the program to see what AST and types, and bytecode it generates.
 

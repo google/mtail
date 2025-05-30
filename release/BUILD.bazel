@@ -1,0 +1,136 @@
+load("@aspect_bazel_lib//lib:expand_template.bzl", "expand_template")
+load("@aspect_bazel_lib//lib:tar.bzl", "mtree_mutate", "mtree_spec", "tar")
+load("@aspect_bazel_lib//lib:transitions.bzl", "platform_transition_filegroup")
+load("@rules_go//go:def.bzl", "go_cross_binary")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_load", "oci_push")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+
+# Build an mtail binary for supported platforms.
+PLATFORMS = [
+    "linux_386",
+    "linux_amd64",
+    "linux_arm64",
+    "windows_386",
+    "windows_amd64",
+    "windows_arm64",
+    "darwin_amd64",
+    "darwin_arm64",
+]
+
+[
+    go_cross_binary(
+        name = "mtail_" + platform,
+        platform = "@rules_go//go/toolchain:" + platform,
+        target = "//cmd/mtail",
+    )
+    for platform in PLATFORMS
+]
+
+filegroup(
+    name = "cross_build",
+    srcs = [":mtail_" + platform for platform in PLATFORMS],
+)
+
+[
+    pkg_tar(
+        name = "tarball_" + platform,
+        srcs = [
+            ":mtail_" + platform,
+            "//:docs",
+        ],
+        out = "mtail_" + platform + ".tar.gz",
+        extension = "tar.gz",
+        stamp = -1,
+    )
+    for platform in PLATFORMS
+]
+
+tar(
+    name = "mtail_layer",
+    srcs = ["//cmd/mtail"],
+)
+
+platform_transition_filegroup(
+    name = "transitioned_layer",
+    srcs = [":mtail_layer"],
+    target_platform = select({
+        "@platforms//cpu:arm64": "@rules_go//go/toolchain:linux_arm64",
+        "@platforms//cpu:x86_64": "@rules_go//go/toolchain:linux_amd64",
+    }),
+)
+
+_TIMESTAMP_STRING = "2006-01-02T15:04:05Z"
+
+expand_template(
+    name = "labels",
+    out = "labels.txt",
+    stamp_substitutions = {
+        "0.0.0": "{{STABLE_GIT_SEMVER}}",
+        "deadbeef": "{{STABLE_GIT_REVISION}}",
+        _TIMESTAMP_STRING: "{{BUILD_TIMESTAMP}}",
+    },
+    template = [
+        "org.opencontainers.image.ref.name=jaqx0r/mtail",
+        "org.opencontainers.image.title=mtail",
+        "org.opencontainers.image.description=extract internal monitoring data from application logs for collection in a timeseries database",
+        "org.opencontainers.image.authors=Jamie Wilkinson (@jaqx0r)",
+        "org.opencontainers.image.licenses=Apache-2.0",
+        "org.opencontainers.image.version=0.0.0",
+        "org.opencontainers.image.revision=deadbeef",
+        "org.opencontainers.image.source=https://github.com/jaqx0r/mtail/",
+        "org.opencontainers.image.documentation=https://jaqx0r.github.io/mtail/",
+        "org.opencontainers.image.created=" + _TIMESTAMP_STRING,
+        "org.opencontainers.image.url=https://github.com/jaqx0r/mtail",
+    ],
+)
+
+expand_template(
+    name = "timestamp",
+    out = "timestamp.txt",
+    stamp_substitutions = {
+        _TIMESTAMP_STRING: "{{BUILD_TIMESTAMP_ISO8601}}",
+    },
+    template = [_TIMESTAMP_STRING],
+)
+
+oci_image(
+    name = "oci_image",
+    base = "@distroless_base",
+    created = ":timestamp",
+    entrypoint = ["cmd/mtail/mtail_/mtail"],
+    exposed_ports = ["3903/tcp"],
+    labels = ":labels",
+    tars = [":mtail_layer"],
+    visibility = ["//visibility:public"],
+)
+
+platform(
+    name = "linux_amd64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+platform(
+    name = "linux_arm64v8",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:aarch64",
+    ],
+)
+
+oci_image_index(
+    name = "multi_image",
+    images = [":oci_image"],
+    platforms = [
+        ":linux_amd64",
+        ":linux_arm64v8",
+    ],
+)
+
+oci_load(
+    name = "load_image",
+    image = ":oci_image",
+    repo_tags = ["mtail:latest"],
+)

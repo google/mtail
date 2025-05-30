@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/exporter"
-	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/mtail"
-	"github.com/google/mtail/internal/waker"
+	"github.com/jaqx0r/mtail/internal/exporter"
+	"github.com/jaqx0r/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/mtail"
+	"github.com/jaqx0r/mtail/internal/waker"
 	"go.opencensus.io/trace"
 )
 
@@ -60,6 +60,8 @@ var (
 	emitProgLabel        = flag.Bool("emit_prog_label", true, "Emit the 'prog' label in variable exports.")
 	emitMetricTimestamp  = flag.Bool("emit_metric_timestamp", false, "Emit the recorded timestamp of a metric.  If disabled (the default) no explicit timestamp is sent to a collector.")
 	logRuntimeErrors     = flag.Bool("vm_logs_runtime_errors", true, "Enables logging of runtime errors to the standard log.  Set to false to only have the errors printed to the HTTP console.")
+	sourceMappingFile    = flag.String("source_mapping_file", "", "Path to YAML or JSON file defining mappings from log sources to programs.")
+	unmappedBehavior     = flag.String("unmapped_behavior", "all", "How to handle log lines from sources with no mapping. Valid values: 'all' (process with all programs) or 'none' (ignore).")
 
 	// Ops flags.
 	pollInterval                = flag.Duration("poll_interval", 250*time.Millisecond, "Set the interval to poll each log file for data; must be positive, or zero to disable polling.  With polling mode, only the files found at mtail startup will be polled.")
@@ -90,13 +92,17 @@ func init() {
 }
 
 var (
-	// Branch as well as Version and Revision identifies where in the git
-	// history the build came from, as supplied by the linker when copmiled
-	// with `make'.  The defaults here indicate that the user did not use
-	// `make' as instructed.
-	Branch   = "invalid:-use-make-to-build"
-	Version  = "invalid:-use-make-to-build"
-	Revision = "invalid:-use-make-to-build"
+	// Branch, Version and Revision identifies where in the git history the
+	// build came from, as supplied by the linker when compiled with `bazel`.
+	// The defaults here indicate that the user did not use `bazel` as
+	// instructed.
+	Branch   = "invalid:-use-bazel-to-build"
+	Version  = "invalid:-use-bazel-to-build"
+	Revision = "invalid:-use-bazel-to-build"
+	// EmbedLabel can be set on the bazel command line with `--embed_label` and
+	// is used during releases to inject the release version name into the
+	// build.
+	EmbedLabel = ""
 )
 
 func main() {
@@ -104,6 +110,7 @@ func main() {
 		Branch:   Branch,
 		Version:  Version,
 		Revision: Revision,
+		EmbedLabel: EmbedLabel,
 	}
 
 	flag.Usage = func() {
@@ -179,6 +186,12 @@ func main() {
 	eOpts := []exporter.Option{}
 	if *logRuntimeErrors {
 		opts = append(opts, mtail.LogRuntimeErrors)
+	}
+	if *sourceMappingFile != "" {
+		opts = append(opts, mtail.SourceMappingFile(*sourceMappingFile))
+	}
+	if *unmappedBehavior != "all" {
+		opts = append(opts, mtail.UnmappedSourceBehavior(*unmappedBehavior))
 	}
 	if *pollInterval > 0 {
 		logStreamPollWaker := waker.NewTimed(ctx, *pollInterval)

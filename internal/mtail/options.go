@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"contrib.go.opencensus.io/exporter/jaeger"
-	"github.com/google/mtail/internal/exporter"
-	"github.com/google/mtail/internal/runtime"
-	"github.com/google/mtail/internal/tailer"
-	"github.com/google/mtail/internal/waker"
+	"github.com/jaqx0r/mtail/internal/exporter"
+	"github.com/jaqx0r/mtail/internal/runtime"
+	"github.com/jaqx0r/mtail/internal/tailer"
+	"github.com/jaqx0r/mtail/internal/waker"
 	"go.opencensus.io/trace"
 )
 
@@ -284,5 +284,24 @@ type MaxRecursionDepth int
 
 func (opt MaxRecursionDepth) apply(m *Server) error {
 	m.rOpts = append(m.rOpts, runtime.MaxRecursionDepth(int(opt)))
+	return nil
+}
+
+// SourceMappingFile sets the path to a YAML or JSON file that defines mappings from log sources to programs.
+type SourceMappingFile string
+
+func (opt SourceMappingFile) apply(m *Server) error {
+	m.sourceMappingFile = string(opt)
+	return nil
+}
+
+// UnmappedSourceBehavior sets how to handle log lines from sources that have no mapping.
+type UnmappedSourceBehavior string
+
+func (opt UnmappedSourceBehavior) apply(m *Server) error {
+	if string(opt) != "all" && string(opt) != "none" {
+		return errors.New("invalid unmapped_behavior value: must be 'all' or 'none'")
+	}
+	m.rOpts = append(m.rOpts, runtime.UnmappedSourceBehavior(string(opt)))
 	return nil
 }

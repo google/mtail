@@ -27,7 +27,7 @@ jobs:
         with:
           path: ./cache
           key: ${{ runner.os }}-benchmark
-      - uses: benchmark-action/github-action-benchmark@v1.20.3
+      - uses: benchmark-action/github-action-benchmark@v1.20.4
         with:
           tool: 'go'
           output-file-path: test-results/benchmark-results-${{ env.GITHUB_REF_NAME }}.txt

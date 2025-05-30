@@ -1,0 +1,27 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "compiler",
+    srcs = ["compiler.go"],
+    importpath = "github.com/jaqx0r/mtail/internal/runtime/compiler",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/runtime/code",
+        "//internal/runtime/compiler/ast",
+        "//internal/runtime/compiler/checker",
+        "//internal/runtime/compiler/codegen",
+        "//internal/runtime/compiler/opt",
+        "//internal/runtime/compiler/parser",
+        "@com_github_golang_glog//:glog",
+    ],
+)
+
+go_test(
+    name = "compiler_test",
+    size = "small",
+    srcs = ["compiler_test.go"],
+    deps = [
+        ":compiler",
+        "//internal/testutil",
+    ],
+)

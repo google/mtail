@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/google/mtail/internal/logline"
+	"github.com/jaqx0r/mtail/internal/logline"
 )
 
 func LinesReceived(lines <-chan *logline.LogLine) (r []*logline.LogLine) {

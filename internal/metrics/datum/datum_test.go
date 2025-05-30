@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 func TestDatumSetAndValue(t *testing.T) {

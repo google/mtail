@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/mtail/internal/runtime/compiler/position"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/position"
 	"github.com/pkg/errors"
 )
 
@@ -37,15 +37,15 @@ func (p *ErrorList) Append(l ErrorList) {
 }
 
 // ErrorList implements the error interface.
-func (p ErrorList) Error() string {
-	switch len(p) {
+func (p *ErrorList) Error() string {
+	switch len(*p) {
 	case 0:
 		return "no errors"
 	case 1:
-		return p[0].Error()
+		return (*p)[0].Error()
 	}
 	var r strings.Builder
-	for _, e := range p {
+	for _, e := range *p {
 		r.WriteString(fmt.Sprintf("%s\n", e))
 	}
 	return r.String()[:r.Len()-1]

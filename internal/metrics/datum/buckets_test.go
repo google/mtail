@@ -9,13 +9,14 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/jaqx0r/mtail/internal/metrics/datum"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
-func TestBucketContains(t *testing.T) {
-	if err := quick.Check(func(min, max, val float64) bool {
-		r := &datum.Range{Min: min, Max: max}
-		truth := val < max && val >= min
+func TestRangeContains(t *testing.T) {
+	if err := quick.Check(func(lo, hi, val float64) bool {
+		r := &datum.Range{Min: lo, Max: hi}
+		truth := val < hi && val >= lo
 		return truth == r.Contains(val)
 	}, nil); err != nil {
 		t.Error(err)
@@ -38,10 +39,11 @@ func TestMakeBucket(t *testing.T) {
 		t.Errorf("count not 1, got %v", r)
 	}
 	bs := datum.GetBucketsCumByMax(b)
-	if r := datum.GetBucketsCount(b); r != bs[math.Inf(+1)] {
-		t.Errorf("Inf bucket des not equal total observation count: %v vs %v", bs[math.Inf(+1)], r)
+	expected := map[float64]uint64{
+		1:            0,
+		2:            1,
+		4:            1,
+		math.Inf(+1): 1,
 	}
-	if len(bs) != len(r)+1 {
-		t.Errorf("missing buckets from BucketsByMax: expected %d, got %v", len(r)+1, len(bs))
-	}
+	testutil.ExpectNoDiff(t, expected, bs)
 }

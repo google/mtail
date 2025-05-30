@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "mgen_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/jaqx0r/mtail/cmd/mgen",
+    visibility = ["//visibility:private"],
+    deps = ["//internal/runtime/compiler/parser"],
+)
+
+go_binary(
+    name = "mgen",
+    embed = [":mgen_lib"],
+    visibility = ["//visibility:public"],
+)

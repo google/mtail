@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/mtail/internal/mtail"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/mtail"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 // TestPermissionDeniedOnLog is a unix-specific test because on Windows, it is

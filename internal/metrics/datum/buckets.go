@@ -39,6 +39,7 @@ func (d *Buckets) ValueString() string {
 	return fmt.Sprintf("%g", d.GetSum())
 }
 
+// Observe records a value in the buckets.  The buckets contain the number of samples between (min,max]
 func (d *Buckets) Observe(v float64, ts time.Time) {
 	d.Lock()
 	defer d.Unlock()

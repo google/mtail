@@ -1,0 +1,47 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("//build:goyacc.bzl", "go_yacc")
+
+go_yacc(
+    name = "parser_go_gen",
+    src = "parser.y",
+    out = "parser.go",
+    prefix = "mtail",
+)
+
+go_library(
+    name = "parser",
+    srcs = [
+        "driver.go",
+        "lexer.go",
+        "parser.go",  # keep
+        "sexp.go",
+        "tokens.go",
+        "unparser.go",
+    ],
+    importpath = "github.com/jaqx0r/mtail/internal/runtime/compiler/parser",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/metrics",
+        "//internal/runtime/compiler/ast",
+        "//internal/runtime/compiler/errors",
+        "//internal/runtime/compiler/position",
+        "//internal/runtime/compiler/symbol",
+        "@com_github_golang_glog//:glog",
+    ],
+)
+
+go_test(
+    name = "parser_test",
+    size = "small",
+    srcs = [
+        "lexer_test.go",
+        "parser_test.go",
+        "tokens_test.go",
+    ],
+    embed = [":parser"],
+    deps = [
+        "//internal/runtime/compiler/ast",
+        "//internal/runtime/compiler/position",
+        "//internal/testutil",
+    ],
+)

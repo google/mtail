@@ -42,7 +42,7 @@ TODO(jaq): Instead, mtail will export a histogram of the runtime per line of eac
 
 # Log Collection, Distribution, and Filtering {: #syslog}
 
-`mtail` is not intended to be used as a replacement for `syslogd`.  `mtail` can read from named pipes and unix domain sockets on systems that support them, but the intent is that a proper `syslogd` can manage the collection of those logs, filter out interestnig ones if necessary, and forward them to `mtail` via a named pipe.
+`mtail` is not intended to be used as a replacement for `syslogd`.  `mtail` can read from named pipes and unix domain sockets on systems that support them, but the intent is that a proper `syslogd` can manage the collection of those logs, filter out interesting ones if necessary, and forward them to `mtail` via a named pipe.
 
 Both `rsyslogd` and `syslog-ng` are possible choices here.
 

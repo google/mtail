@@ -1,0 +1,69 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "tailer",
+    srcs = [
+        "httpstatus.go",
+        "tail.go",
+    ],
+    importpath = "github.com/jaqx0r/mtail/internal/tailer",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/logline",
+        "//internal/tailer/logstream",
+        "//internal/waker",
+        "@com_github_golang_glog//:glog",
+    ],
+)
+
+go_test(
+    name = "tailer_test",
+    size = "small",
+    srcs = [
+        "tail_test.go",
+        "tail_unix_test.go",
+        "tail_windows_test.go",
+    ],
+    embed = [":tailer"],
+    deps = [
+        "//internal/logline",
+        "//internal/testutil",
+        "//internal/waker",
+        "@com_github_golang_glog//:glog",
+    ] + select({
+        "@rules_go//go/platform:aix": [
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:android": [
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:darwin": [
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:dragonfly": [
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:freebsd": [
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:illumos": [
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:ios": [
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:linux": [
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:netbsd": [
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:openbsd": [
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:solaris": [
+            "@org_golang_x_sys//unix",
+        ],
+        "//conditions:default": [],
+    }),
+)

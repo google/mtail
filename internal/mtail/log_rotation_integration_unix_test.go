@@ -13,8 +13,8 @@ import (
 	"testing"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/mtail"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/mtail"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 // TestLogRotationByRename is a unix-specific test because on Windows, files

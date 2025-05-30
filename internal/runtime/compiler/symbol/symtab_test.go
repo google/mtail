@@ -9,7 +9,7 @@ import (
 	"testing"
 	"testing/quick"
 
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 func TestInsertLookup(t *testing.T) {

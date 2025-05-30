@@ -60,7 +60,7 @@ func (e *TypeError) String() string {
 	return fmt.Sprintf("%s; expected %s received %s", e.error, estr, rstr)
 }
 
-func (e TypeError) Error() string {
+func (e *TypeError) Error() string {
 	return e.String()
 }
 

@@ -27,8 +27,6 @@ linters:
     - test
     - unused
     - metalinter
-  enable:
-    - exportloopref
   # A general rule is if the lint author can't be bothered supplying automated
   # fixes for obvious lint warnings, I'm not bothered using their tool.
   disable:
@@ -47,7 +45,6 @@ linters:
     - gocognit # boo cyclomatic complexity
     - gocyclo  # boo cyclomatic complexity
     - godox # TODOs are fine
-    - gomnd    # magic numbers in test tables are fine actually
     - gosec # run independently
     - lll # go says long lines are ok, and this is trivially automatable
     - musttag # don't agree with the premise

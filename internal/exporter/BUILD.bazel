@@ -1,0 +1,56 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "exporter",
+    srcs = [
+        "collectd.go",
+        "export.go",
+        "graphite.go",
+        "json.go",
+        "otel.go",
+        "prometheus.go",
+        "statsd.go",
+        "varz.go",
+    ],
+    importpath = "github.com/jaqx0r/mtail/internal/exporter",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/metrics",
+        "//internal/metrics/datum",
+        "@com_github_golang_glog//:glog",
+        "@com_github_pkg_errors//:errors",
+        "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_common//expfmt",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel//attribute",
+        "@io_opentelemetry_go_otel_exporters_otlp_otlpmetric_otlpmetricgrpc//:otlpmetricgrpc",
+        "@io_opentelemetry_go_otel_sdk//instrumentation",
+        "@io_opentelemetry_go_otel_sdk//resource",
+        "@io_opentelemetry_go_otel_sdk_metric//:metric",
+        "@io_opentelemetry_go_otel_sdk_metric//metricdata",
+    ],
+)
+
+go_test(
+    name = "exporter_test",
+    size = "small",
+    srcs = [
+        "export_test.go",
+        "graphite_test.go",
+        "json_test.go",
+        "otel_test.go",
+        "prometheus_test.go",
+        "varz_test.go",
+    ],
+    embed = [":exporter"],
+    deps = [
+        "//internal/metrics",
+        "//internal/metrics/datum",
+        "//internal/testutil",
+        "@com_github_prometheus_client_golang//prometheus/testutil",
+        "@io_opentelemetry_go_otel//attribute",
+        "@io_opentelemetry_go_otel_sdk//instrumentation",
+        "@io_opentelemetry_go_otel_sdk_metric//metricdata",
+        "@io_opentelemetry_go_otel_sdk_metric//metricdata/metricdatatest",
+    ],
+)

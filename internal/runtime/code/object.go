@@ -6,7 +6,7 @@ package code
 import (
 	"regexp"
 
-	"github.com/google/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/metrics"
 )
 
 // Object is the data and bytecode resulting from compiled program source.

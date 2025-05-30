@@ -1,21 +1,24 @@
 name: tag new release
 
 on:
+  push: # for testing
   pull_request:  # for testing
-  workflow_dispatch:
+  workflow_dispatch:  # manual invocation
   schedule:
     - cron: "30 5 * * 0"
 
 jobs:
   tag:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: mathieudutour/github-tag-action@v6.2
         continue-on-error: true  # ok to not make a new tag
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Special PAT so that we trigger new workflows, that has contents:write only
+          github_token: ${{ secrets.TAG_TOKEN }}
           create_annotated_tag: true
           custom_release_rules: ci:none,chore:none,style:none
-          default_bump: none
           dry_run: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'schedule' }}

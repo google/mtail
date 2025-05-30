@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/internal/tailer/logstream"
-	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/waker"
+	"github.com/jaqx0r/mtail/internal/logline"
+	"github.com/jaqx0r/mtail/internal/tailer/logstream"
+	"github.com/jaqx0r/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/waker"
 )
 
 func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {

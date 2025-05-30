@@ -6,8 +6,8 @@ package code_test
 import (
 	"testing"
 
-	"github.com/google/mtail/internal/runtime/code"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/runtime/code"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 func TestInstrString(t *testing.T) {

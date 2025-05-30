@@ -1,0 +1,34 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "codegen",
+    srcs = ["codegen.go"],
+    importpath = "github.com/jaqx0r/mtail/internal/runtime/compiler/codegen",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/metrics",
+        "//internal/metrics/datum",
+        "//internal/runtime/code",
+        "//internal/runtime/compiler/ast",
+        "//internal/runtime/compiler/errors",
+        "//internal/runtime/compiler/parser",
+        "//internal/runtime/compiler/position",
+        "//internal/runtime/compiler/symbol",
+        "//internal/runtime/compiler/types",
+        "@com_github_golang_glog//:glog",
+    ],
+)
+
+go_test(
+    name = "codegen_test",
+    size = "small",
+    srcs = ["codegen_test.go"],
+    deps = [
+        ":codegen",
+        "//internal/runtime/code",
+        "//internal/runtime/compiler/ast",
+        "//internal/runtime/compiler/checker",
+        "//internal/runtime/compiler/parser",
+        "//internal/testutil",
+    ],
+)

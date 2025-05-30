@@ -19,13 +19,14 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/metrics"
 	"github.com/pkg/errors"
 )
 
 // Commandline Flags.
 var (
 	writeDeadline = flag.Duration("metric_push_write_deadline", 10*time.Second, "Time to wait for a push to succeed before exiting with an error.")
+	enableOpenTelemetry = flag.Bool("experimental_enable_opentelemetry", false, "Enable the experimental Open Telemetry metric pusher.")
 )
 
 // Exporter manages the export of metrics to passive and active collectors.
@@ -36,6 +37,7 @@ type Exporter struct {
 	store          *metrics.Store
 	pushInterval   time.Duration
 	hostname       string
+	version string
 	omitProgLabel  bool
 	emitTimestamp  bool
 	exportDisabled bool
@@ -51,6 +53,14 @@ type Option func(*Exporter) error
 func Hostname(hostname string) Option {
 	return func(e *Exporter) error {
 		e.hostname = hostname
+		return nil
+	}
+}
+
+// Version specifies the mtail version to use in exported metrics.
+func Version(version string) Option {
+	return func (e *Exporter) error {
+		e.version = version
 		return nil
 	}
 }
@@ -122,6 +132,12 @@ func New(ctx context.Context, store *metrics.Store, options ...Option) (*Exporte
 	if *statsdHostPort != "" {
 		o := pushOptions{"udp", *statsdHostPort, metricToStatsd, statsdExportTotal, statsdExportSuccess}
 		e.RegisterPushExport(o)
+	}
+	if *enableOpenTelemetry {
+		err := e.InitOtel(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 	e.StartMetricPush()
 

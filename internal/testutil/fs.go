@@ -10,8 +10,14 @@ import (
 )
 
 // TestTempDir creates a temporary directory for use during tests, returning the pathname.
+//
+// We don't use tb.TempDir() beacuse generates temp directories based on the
+// test name, which is often longer than 108 characters, which then breaks the
+// unix socket tests because elsewhere in Go only 108 character socket
+// pathnames are supported!.  https://github.com/golang/go/issues/6895
 func TestTempDir(tb testing.TB) string {
 	tb.Helper()
+	//nolint:usetesting
 	name, err := os.MkdirTemp("", "mtail-test")
 	if err != nil {
 		tb.Fatal(err)

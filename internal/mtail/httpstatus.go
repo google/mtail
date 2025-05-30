@@ -4,6 +4,7 @@
 package mtail
 
 import (
+	_ "embed"
 	"html/template"
 	"net/http"
 
@@ -75,6 +76,9 @@ func (m *Server) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
+
+//go:embed logo.ico
+var logoFavicon []byte
 
 // FaviconHandler is used to serve up the favicon.ico for mtail's http server.
 func FaviconHandler(w http.ResponseWriter, _ *http.Request) {

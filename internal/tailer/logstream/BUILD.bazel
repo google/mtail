@@ -1,0 +1,91 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "logstream",
+    srcs = [
+        "base.go",
+        "cancel.go",
+        "dgramstream.go",
+        "fifostream.go",
+        "filestream.go",
+        "logstream.go",
+        "reader.go",
+        "socketstream.go",
+    ],
+    importpath = "github.com/jaqx0r/mtail/internal/tailer/logstream",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/logline",
+        "//internal/waker",
+        "@com_github_golang_glog//:glog",
+    ],
+)
+
+go_test(
+    name = "logstream_test",
+    size = "small",
+    srcs = [
+        "dgramstream_unix_test.go",
+        "fifostream_unix_test.go",
+        "filestream_test.go",
+        "filestream_unix_test.go",
+        "logstream_test.go",
+        "logstream_unix_test.go",
+        "reader_test.go",
+        "socketstream_unix_test.go",
+    ],
+    embed = [":logstream"],
+    deps = [
+        "//internal/logline",
+        "//internal/testutil",
+        "//internal/waker",
+        "@com_github_google_go_cmp//cmp",
+        "@com_github_google_go_cmp//cmp/cmpopts",
+    ] + select({
+        "@rules_go//go/platform:aix": [
+            "@com_github_golang_glog//:glog",
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:android": [
+            "@com_github_golang_glog//:glog",
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:darwin": [
+            "@com_github_golang_glog//:glog",
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:dragonfly": [
+            "@com_github_golang_glog//:glog",
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:freebsd": [
+            "@com_github_golang_glog//:glog",
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:illumos": [
+            "@com_github_golang_glog//:glog",
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:ios": [
+            "@com_github_golang_glog//:glog",
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:linux": [
+            "@com_github_golang_glog//:glog",
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:netbsd": [
+            "@com_github_golang_glog//:glog",
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:openbsd": [
+            "@com_github_golang_glog//:glog",
+            "@org_golang_x_sys//unix",
+        ],
+        "@rules_go//go/platform:solaris": [
+            "@com_github_golang_glog//:glog",
+            "@org_golang_x_sys//unix",
+        ],
+        "//conditions:default": [],
+    }),
+)

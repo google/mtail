@@ -1,6 +1,9 @@
+version: 2
 before:
   hooks:
     - go mod download
+    - go install golang.org/x/tools/cmd/goyacc
+    - go generate ./...
 builds:
   - id: mtail
     main: ./cmd/mtail/main.go
@@ -21,7 +24,7 @@ builds:
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 changelog:
   filters:
     exclude:
@@ -31,47 +34,45 @@ release:
   github:
   name_template: v{{.Version}}
 dockers:
-- image_templates: ["ghcr.io/google/{{ .ProjectName }}:{{ .Version }}-amd64"]
+- image_templates: ["ghcr.io/jaqx0r/{{ .ProjectName }}:{{ .Version }}-amd64"]
   dockerfile: Dockerfile.goreleaser
   use: buildx
   build_flag_templates:
     - --platform=linux/amd64
-    - --label=org.opencontainers.image.ref.name="google/mtail"
+    - --label=org.opencontainers.image.ref.name="jaqx0r/mtail"
     - --label=org.opencontainers.image.authors="Jamie Wilkinson (@jaqx0r)"
     - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
     - --label=org.opencontainers.image.description="extract internal monitoring data from application logs for collection in a timeseries database"
-    - --label=org.opencontainers.image.documentation="https://google.github.io/mtail/"
+    - --label=org.opencontainers.image.documentation="https://jaqx0r.github.io/mtail/"
     - --label=org.opencontainers.image.licenses="Apache-2.0"
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
-    - --label=org.opencontainers.image.source=https://github.com/google/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/jaqx0r/{{ .ProjectName }}
     - --label=org.opencontainers.image.title={{ .ProjectName }}
-    - --label=org.opencontainers.image.url=https://github.com/google/{{ .ProjectName }}
-    - --label=org.opencontainers.image.vendor="Google"
+    - --label=org.opencontainers.image.url=https://github.com/jaqx0r/{{ .ProjectName }}
     - --label=org.opencontainers.image.version={{ .Version }}
-- image_templates: ["ghcr.io/google/{{ .ProjectName }}:{{ .Version }}-arm64v8"]
+- image_templates: ["ghcr.io/jaqx0r/{{ .ProjectName }}:{{ .Version }}-arm64v8"]
   goarch: arm64
   dockerfile: Dockerfile.goreleaser
   use: buildx
   build_flag_templates:
     - --platform=linux/arm64/v8
-    - --label=org.opencontainers.image.ref.name="google/mtail"
+    - --label=org.opencontainers.image.ref.name="jaqx0r/mtail"
     - --label=org.opencontainers.image.authors="Jamie Wilkinson (@jaqx0r)"
     - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
     - --label=org.opencontainers.image.description="extract internal monitoring data from application logs for collection in a timeseries database"
-    - --label=org.opencontainers.image.documentation="https://google.github.io/mtail/"
+    - --label=org.opencontainers.image.documentation="https://jaqx0r.github.io/mtail/"
     - --label=org.opencontainers.image.licenses="Apache-2.0"
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
-    - --label=org.opencontainers.image.source=https://github.com/google/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/jaqx0r/{{ .ProjectName }}
     - --label=org.opencontainers.image.title={{ .ProjectName }}
-    - --label=org.opencontainers.image.url=https://github.com/google/{{ .ProjectName }}
-    - --label=org.opencontainers.image.vendor="Google"
+    - --label=org.opencontainers.image.url=https://github.com/jaqx0r/{{ .ProjectName }}
     - --label=org.opencontainers.image.version={{ .Version }}
 docker_manifests:
-  - name_template: ghcr.io/google/{{ .ProjectName }}:{{ .Version }}
+  - name_template: ghcr.io/jaqx0r/{{ .ProjectName }}:{{ .Version }}
     image_templates:
-      - ghcr.io/google/{{ .ProjectName }}:{{ .Version }}-amd64
-      - ghcr.io/google/{{ .ProjectName }}:{{ .Version }}-arm64v8
-  - name_template: ghcr.io/google/{{ .ProjectName }}:latest
+      - ghcr.io/jaqx0r/{{ .ProjectName }}:{{ .Version }}-amd64
+      - ghcr.io/jaqx0r/{{ .ProjectName }}:{{ .Version }}-arm64v8
+  - name_template: ghcr.io/jaqx0r/{{ .ProjectName }}:latest
     image_templates:
-      - ghcr.io/google/{{ .ProjectName }}:{{ .Version }}-amd64
-      - ghcr.io/google/{{ .ProjectName }}:{{ .Version }}-arm64v8
+      - ghcr.io/jaqx0r/{{ .ProjectName }}:{{ .Version }}-amd64
+      - ghcr.io/jaqx0r/{{ .ProjectName }}:{{ .Version }}-arm64v8

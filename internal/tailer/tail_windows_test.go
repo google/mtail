@@ -8,7 +8,7 @@ package tailer
 import (
 	"testing"
 
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 func TestWindowsPath(t *testing.T) {

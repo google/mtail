@@ -1,0 +1,5 @@
+filegroup(
+    name = "examples",
+    srcs = glob(["*.mtail"]),
+    visibility = ["//internal/mtail:__subpackages__"],
+)

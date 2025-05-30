@@ -12,10 +12,10 @@ import (
 	"testing/quick"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/mtail/internal/runtime/compiler/ast"
-	"github.com/google/mtail/internal/runtime/compiler/opt"
-	"github.com/google/mtail/internal/runtime/compiler/parser"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/ast"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/opt"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/parser"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 var optimiserTests = []struct {

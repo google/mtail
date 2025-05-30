@@ -9,16 +9,16 @@ You will need to install a recent Go.
 
 Fetch, build, and install the binary directly with `go get`
 
-`go install github.com/google/mtail/cmd/mtail`
+`go install github.com/jaqx0r/mtail/cmd/mtail`
 
 NOTE: If you do it this way, you won't have a supported version of `mtail`.
 
 ## The "Right Way"
 
-[Clone](http://github.com/google/mtail) the source from GitHub into your `$GOPATH`.  If you don't have a `$GOPATH`, see the next section.
+[Clone](http://github.com/jaqx0r/mtail) the source from GitHub into your `$GOPATH`.  If you don't have a `$GOPATH`, see the next section.
 
 ```
-git clone https://github.com/google/mtail
+git clone https://github.com/jaqx0r/mtail
 cd mtail
 make test install
 ```
@@ -35,7 +35,7 @@ The unit tests can be run with `make test`, which invokes `go test`.  The slower
 
 ### Cross-compilation
 
-`goreleaser` is used to build the binaries available for download on the Releases page.  If yuo want to build your own locally, fetch goreleaser and update the config file locally if necessary.
+`goreleaser` is used to build the binaries available for download on the Releases page.  If you want to build your own locally, fetch goreleaser and update the config file locally if necessary.
 
 ## No Go
 

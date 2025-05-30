@@ -1,7 +1,7 @@
 FROM golang:alpine AS builder
 RUN apk add --update git make
-WORKDIR /go/src/github.com/google/mtail
-COPY . /go/src/github.com/google/mtail
+WORKDIR /go/src/github.com/jaqx0r/mtail
+COPY . /go/src/github.com/jaqx0r/mtail
 RUN  make depclean && make install_deps && PREFIX=/go make STATIC=y -B install
 
 
@@ -18,8 +18,7 @@ ARG commit_hash=unknown
 ARG vcs_url=unknown
 ARG vcs_branch=unknown
 
-LABEL org.opencontainers.image.ref.name="google/mtail" \
-      org.opencontainers.image.vendor="Google" \
+LABEL org.opencontainers.image.ref.name="jaqx0r/mtail" \
       org.opencontainers.image.title="mtail" \
       org.opencontainers.image.description="extract internal monitoring data from application logs for collection in a timeseries database" \
       org.opencontainers.image.authors="Jamie Wilkinson (@jaqx0r)" \
@@ -29,4 +28,4 @@ LABEL org.opencontainers.image.ref.name="google/mtail" \
       org.opencontainers.image.source=$vcs_url \
       org.opencontainers.image.documentation="https://google.github.io/mtail/" \
       org.opencontainers.image.created=$build_date \
-      org.opencontainers.image.url="https://github.com/google/mtail"
+      org.opencontainers.image.url="https://github.com/jaqx0r/mtail"

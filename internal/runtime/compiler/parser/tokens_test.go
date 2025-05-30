@@ -8,7 +8,7 @@ import (
 	"testing"
 	"testing/quick"
 
-	"github.com/google/mtail/internal/runtime/compiler/position"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/position"
 )
 
 func TestKindHasString(t *testing.T) {

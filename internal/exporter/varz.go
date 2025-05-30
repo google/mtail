@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/metrics"
 )
 
 var exportVarzTotal = expvar.NewInt("exporter_varz_total")

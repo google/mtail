@@ -13,9 +13,14 @@ type BuildInfo struct {
 	Branch   string
 	Version  string
 	Revision string
+	EmbedLabel string
 }
 
 func (b BuildInfo) String() string {
+	label := ""
+	if b.EmbedLabel != "" {
+		label = fmt.Sprintf(" label %s", b.EmbedLabel)
+	}
 	return fmt.Sprintf(
 		"mtail version %s git revision %s go version %s go arch %s go os %s",
 		b.Version,
@@ -23,5 +28,5 @@ func (b BuildInfo) String() string {
 		runtime.Version(),
 		runtime.GOARCH,
 		runtime.GOOS,
-	)
+	) + label
 }

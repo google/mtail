@@ -9,7 +9,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/google/mtail/internal/runtime/vm"
+	"github.com/jaqx0r/mtail/internal/runtime/vm"
 )
 
 const loaderTemplate = `

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/mtail/internal/runtime/compiler/ast"
-	"github.com/google/mtail/internal/runtime/compiler/position"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/ast"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/position"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 var parserTestDebug = flag.Bool("parser_test_debug", false, "Turn on parser debug output if set.")

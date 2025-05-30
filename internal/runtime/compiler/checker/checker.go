@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/runtime/compiler/ast"
-	"github.com/google/mtail/internal/runtime/compiler/errors"
-	"github.com/google/mtail/internal/runtime/compiler/parser"
-	"github.com/google/mtail/internal/runtime/compiler/symbol"
-	"github.com/google/mtail/internal/runtime/compiler/types"
+	"github.com/jaqx0r/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/ast"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/errors"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/parser"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/symbol"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/types"
 )
 
 const (
@@ -54,7 +54,7 @@ func Check(node ast.Node, maxRegexpLength int, maxRecursionDepth int) (ast.Node,
 	c := &checker{maxRegexLength: maxRegexpLength, maxRecursionDepth: maxRecursionDepth}
 	node = ast.Walk(c, node)
 	if len(c.errors) > 0 {
-		return node, c.errors
+		return node, &c.errors
 	}
 	return node, nil
 }

@@ -6,11 +6,11 @@ Command mdot turns an mtail program AST into a graphviz graph on standard output
 
 To use, run it like (assuming your shell is in the same directory as this file)
 
-	go run github.com/google/mtail/cmd/mdot --prog ../../examples/dhcpd.mtail | xdot -
+	go run github.com/jaqx0r/mtail/cmd/mdot --prog ../../examples/dhcpd.mtail | xdot -
 
 or
 
-	go run github.com/google/mtail/cmd/mdot --prog ../../examples/dhcpd.mtail --http_port 8080
+	go run github.com/jaqx0r/mtail/cmd/mdot --prog ../../examples/dhcpd.mtail --http_port 8080
 
 to view the dot output visit http://localhost:8080
 
@@ -29,10 +29,10 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/mtail"
-	"github.com/google/mtail/internal/runtime/compiler/ast"
-	"github.com/google/mtail/internal/runtime/compiler/checker"
-	"github.com/google/mtail/internal/runtime/compiler/parser"
+	"github.com/jaqx0r/mtail/internal/mtail"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/ast"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/checker"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/parser"
 )
 
 var (

@@ -1,0 +1,32 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "vm",
+    srcs = ["vm.go"],
+    importpath = "github.com/jaqx0r/mtail/internal/runtime/vm",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/logline",
+        "//internal/metrics",
+        "//internal/metrics/datum",
+        "//internal/runtime/code",
+        "@com_github_golang_glog//:glog",
+        "@com_github_golang_groupcache//lru",
+        "@com_github_pkg_errors//:errors",
+        "@com_github_prometheus_client_golang//prometheus",
+    ],
+)
+
+go_test(
+    name = "vm_test",
+    size = "small",
+    srcs = ["vm_test.go"],
+    embed = [":vm"],
+    deps = [
+        "//internal/logline",
+        "//internal/metrics",
+        "//internal/metrics/datum",
+        "//internal/runtime/code",
+        "//internal/testutil",
+    ],
+)

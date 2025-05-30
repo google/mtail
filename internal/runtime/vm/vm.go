@@ -21,10 +21,10 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/golang/groupcache/lru"
-	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/metrics/datum"
-	"github.com/google/mtail/internal/runtime/code"
+	"github.com/jaqx0r/mtail/internal/logline"
+	"github.com/jaqx0r/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/metrics/datum"
+	"github.com/jaqx0r/mtail/internal/runtime/code"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 )

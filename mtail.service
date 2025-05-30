@@ -1,6 +1,6 @@
 [Unit]
-Description=mtail - extracts metrics from logs
-Documentation=https://github.com/google/mtail/tree/main/docs
+Description=mtail - extract internal monitoring data from application logs for collection in a timeseries database
+Documentation=https://jaqx0r.github.io/
 Requires=local-fs.target network.target
 Before=nss-user-lookup.target
 After=local-fs.target network.target

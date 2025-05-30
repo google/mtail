@@ -15,7 +15,7 @@ If your problem is with the way an `mtail` program is behaving, please attach or
 
 If your problem is with `mtail`, please include the commandline you started it with, and the INFO log.
 
-See also [Reporting a problem](https://github.com/google/mtail/blob/main/docs/Troubleshooting.md#reporting-a-problem).
+See also [Reporting a problem](https://github.com/jaqx0r/mtail/blob/main/docs/Troubleshooting.md#reporting-a-problem).
 
 
 Thanks!

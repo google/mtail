@@ -1,0 +1,31 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "ast",
+    srcs = [
+        "ast.go",
+        "walk.go",
+    ],
+    importpath = "github.com/jaqx0r/mtail/internal/runtime/compiler/ast",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/metrics",
+        "//internal/runtime/compiler/position",
+        "//internal/runtime/compiler/symbol",
+        "//internal/runtime/compiler/types",
+        "@com_github_golang_glog//:glog",
+    ],
+)
+
+go_test(
+    name = "ast_test",
+    size = "small",
+    srcs = ["walk_test.go"],
+    deps = [
+        ":ast",
+        "//internal/runtime/compiler/parser",
+        "//internal/runtime/compiler/position",
+        "//internal/runtime/compiler/types",
+        "//internal/testutil",
+    ],
+)

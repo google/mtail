@@ -1,0 +1,36 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "testutil",
+    srcs = [
+        "diff.go",
+        "err.go",
+        "expvar.go",
+        "file.go",
+        "flag.go",
+        "fs.go",
+        "lines.go",
+        "norace.go",
+        "port.go",
+        "race.go",
+        "root.go",
+        "short.go",
+        "stdin.go",
+        "timeout.go",
+    ],
+    importpath = "github.com/jaqx0r/mtail/internal/testutil",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/logline",
+        "@com_github_golang_glog//:glog",
+        "@com_github_google_go_cmp//cmp",
+        "@com_github_google_go_cmp//cmp/cmpopts",
+    ],
+)
+
+go_test(
+    name = "testutil_test",
+    size = "small",
+    srcs = ["timeout_test.go"],
+    embed = [":testutil"],
+)

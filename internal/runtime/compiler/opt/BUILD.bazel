@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "opt",
+    srcs = ["opt.go"],
+    importpath = "github.com/jaqx0r/mtail/internal/runtime/compiler/opt",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/runtime/compiler/ast",
+        "//internal/runtime/compiler/errors",
+        "//internal/runtime/compiler/parser",
+        "//internal/runtime/compiler/position",
+        "//internal/runtime/compiler/types",
+    ],
+)
+
+go_test(
+    name = "opt_test",
+    size = "small",
+    srcs = ["opt_test.go"],
+    deps = [
+        ":opt",
+        "//internal/runtime/compiler/ast",
+        "//internal/runtime/compiler/parser",
+        "//internal/testutil",
+        "@com_github_google_go_cmp//cmp",
+    ],
+)

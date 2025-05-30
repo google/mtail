@@ -13,8 +13,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/logline"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 func TestReadAndSend(t *testing.T) {

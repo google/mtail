@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/runtime/compiler/ast"
-	"github.com/google/mtail/internal/runtime/compiler/symbol"
+	"github.com/jaqx0r/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/ast"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/symbol"
 )
 
 // Sexp is for converting program syntax trees into typed s-expression for printing.

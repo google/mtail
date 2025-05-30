@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/metrics/datum"
-	"github.com/google/mtail/internal/runtime/code"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/logline"
+	"github.com/jaqx0r/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/metrics/datum"
+	"github.com/jaqx0r/mtail/internal/runtime/code"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 var instructions = []struct {

@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "symbol",
+    srcs = ["symtab.go"],
+    importpath = "github.com/jaqx0r/mtail/internal/runtime/compiler/symbol",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/runtime/compiler/position",
+        "//internal/runtime/compiler/types",
+    ],
+)
+
+go_test(
+    name = "symbol_test",
+    size = "small",
+    srcs = ["symtab_test.go"],
+    embed = [":symbol"],
+    deps = ["//internal/testutil"],
+)

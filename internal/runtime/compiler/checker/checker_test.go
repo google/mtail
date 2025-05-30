@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/mtail/internal/runtime/compiler/ast"
-	"github.com/google/mtail/internal/runtime/compiler/checker"
-	"github.com/google/mtail/internal/runtime/compiler/parser"
-	"github.com/google/mtail/internal/runtime/compiler/symbol"
-	"github.com/google/mtail/internal/runtime/compiler/types"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/ast"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/checker"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/parser"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/symbol"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/types"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 var checkerTestDebug = flag.Bool("checker_test_debug", false, "Turn on to log AST in tests")

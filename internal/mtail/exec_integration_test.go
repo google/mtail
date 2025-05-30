@@ -5,37 +5,21 @@ package mtail_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
-var mtailPath string
-
-func init() {
-	path, err := exec.LookPath(filepath.Join("..", "..", "mtail"))
-	if errors.Is(err, exec.ErrDot) {
-		err = nil
-	}
-	if err != nil {
-		glog.Infof("exec_integration_test init(): %v", err)
-	}
-	mtailPath = path
-}
-
 func TestExecMtail(t *testing.T) {
-	if mtailPath == "" {
-		t.Log("mtail binary not found, skipping")
-		t.Skip()
+	mtailPath, ok := bazel.FindBinary("cmd/mtail", "mtail")
+	if !ok {
+		t.Fatal("`mtail` not found in runfiles")
 	}
-
 	cs := []string{
 		"-progs",
 		"../../examples",

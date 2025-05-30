@@ -7,8 +7,8 @@ stages:
 before_script:
   - mkdir ${CI_PROJECT_DIR}/build
   - mkdir -p ${GOPATH}/src/github.com/google/
-  - ln -s $(pwd) ${GOPATH}/src/github.com/google/mtail
-  - cd ${GOPATH}/src/github.com/google/mtail
+  - ln -s $(pwd) ${GOPATH}/src/github.com/jaqx0r/mtail
+  - cd ${GOPATH}/src/github.com/jaqx0r/mtail
 
 test:
   stage: test

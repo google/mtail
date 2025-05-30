@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "waker",
+    srcs = [
+        "testwaker.go",
+        "timedwaker.go",
+        "waker.go",
+    ],
+    importpath = "github.com/jaqx0r/mtail/internal/waker",
+    visibility = ["//:__subpackages__"],
+    deps = ["@com_github_golang_glog//:glog"],
+)
+
+go_test(
+    name = "waker_test",
+    size = "small",
+    srcs = [
+        "testwaker_test.go",
+        "timedwaker_test.go",
+    ],
+    deps = [":waker"],
+)

@@ -4,10 +4,7 @@ on:
   # goreleaser is put into snapshot mode when not on a tag
   pull_request:
   merge_group:
-  # Run when a tag is pushed.
-  push:
-    tags:
-      - v*
+  push: # testing, unless there's a tag (steps.0.if below)
 
 env:
   REGISTRY: ghcr.io
@@ -26,6 +23,10 @@ jobs:
       binary_hashes: ${{ steps.binary.outputs.hashes }}
       image_subjects: ${{ steps.image.outputs.subjects }}
     steps:
+      - name: print github context
+        env:
+          GITHUB_CONTEXT: ${{ toJSON(github) }}
+        run: echo $GITHUB_CONTEXT
       - if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         run: echo "flags=--snapshot" >> $GITHUB_ENV
       - uses: actions/checkout@v4
@@ -36,7 +37,7 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      - uses: docker/login-action@v3.3.0
+      - uses: docker/login-action@v3.4.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -72,7 +73,7 @@ jobs:
       actions: read # To read the workflow path.
       id-token: write # To sign the provenance.
       contents: write # To add assets to a release.
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
     with:
       base64-subjects: "${{ needs.goreleaser.outputs.binary_hashes }}"
       upload-assets: true # upload to a new release
@@ -84,7 +85,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: slsa-framework/slsa-verifier/actions/installer@v2.6.0
+      - uses: slsa-framework/slsa-verifier/actions/installer@v2.7.0
       - name: download assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -115,7 +116,7 @@ jobs:
       packages: write
     strategy:
       matrix: ${{ fromJSON(needs.goreleaser.outputs.image_subjects) }}
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.0.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
     with:
       image: ghcr.io/${{ matrix.image }}
       digest: ${{ matrix.digest }}
@@ -132,12 +133,12 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.goreleaser.outputs.image_subjects) }}
     steps:
-      - uses: docker/login-action@v3.3.0
+      - uses: docker/login-action@v3.4.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: sigstore/cosign-installer@v3.8.2
       - name: verify image
         env:
           IMAGE: ${{ matrix.image }}

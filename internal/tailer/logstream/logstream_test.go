@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/google/mtail/internal/tailer/logstream"
+	"github.com/jaqx0r/mtail/internal/tailer/logstream"
 )
 
 func TestNewErrors(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/mtail/internal/waker"
+	"github.com/jaqx0r/mtail/internal/waker"
 )
 
 func TestTimedWakerWakes(t *testing.T) {

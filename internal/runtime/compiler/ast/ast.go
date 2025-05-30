@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/runtime/compiler/position"
-	"github.com/google/mtail/internal/runtime/compiler/symbol"
-	"github.com/google/mtail/internal/runtime/compiler/types"
+	"github.com/jaqx0r/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/position"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/symbol"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/types"
 )
 
 type Node interface {

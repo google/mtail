@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_cross_binary", "go_library")
+
+go_library(
+    name = "mtail_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/jaqx0r/mtail/cmd/mtail",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//internal/exporter",
+        "//internal/metrics",
+        "//internal/mtail",
+        "//internal/waker",
+        "@com_github_golang_glog//:glog",
+        "@io_opencensus_go//trace",
+    ],
+)
+
+go_binary(
+    name = "mtail",
+    embed = [":mtail_lib"],
+    visibility = ["//visibility:public"],
+    x_defs = {
+        "main.Branch": "{STABLE_GIT_BRANCH}",
+        "main.Version": "{STABLE_GIT_VERSION}",
+        "main.Revision": "{STABLE_GIT_REVISION}",
+        "main.EmbedLabel": "{BUILD_EMBED_LABEL}",
+    },
+)

@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/metrics/datum"
-	"github.com/google/mtail/internal/testutil"
-	"github.com/google/mtail/internal/waker"
+	"github.com/jaqx0r/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/metrics/datum"
+	"github.com/jaqx0r/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/waker"
 )
 
 const defaultDoOrTimeoutDeadline = 10 * time.Second

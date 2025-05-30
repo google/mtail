@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/mtail"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/mtail"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 func TestBadProgramFailsCompilation(t *testing.T) {

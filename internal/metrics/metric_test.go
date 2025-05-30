@@ -13,8 +13,8 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/google/mtail/internal/metrics/datum"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/metrics/datum"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 func TestKindType(t *testing.T) {

@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "mfmt_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/jaqx0r/mtail/cmd/mfmt",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//internal/runtime/compiler/checker",
+        "//internal/runtime/compiler/parser",
+        "@com_github_golang_glog//:glog",
+    ],
+)
+
+go_binary(
+    name = "mfmt",
+    embed = [":mfmt_lib"],
+    visibility = ["//visibility:public"],
+)

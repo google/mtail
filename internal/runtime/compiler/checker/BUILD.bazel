@@ -1,0 +1,32 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "checker",
+    srcs = ["checker.go"],
+    importpath = "github.com/jaqx0r/mtail/internal/runtime/compiler/checker",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/metrics",
+        "//internal/runtime/compiler/ast",
+        "//internal/runtime/compiler/errors",
+        "//internal/runtime/compiler/parser",
+        "//internal/runtime/compiler/symbol",
+        "//internal/runtime/compiler/types",
+        "@com_github_golang_glog//:glog",
+    ],
+)
+
+go_test(
+    name = "checker_test",
+    size = "small",
+    srcs = ["checker_test.go"],
+    deps = [
+        ":checker",
+        "//internal/runtime/compiler/ast",
+        "//internal/runtime/compiler/parser",
+        "//internal/runtime/compiler/symbol",
+        "//internal/runtime/compiler/types",
+        "//internal/testutil",
+        "@com_github_google_go_cmp//cmp/cmpopts",
+    ],
+)

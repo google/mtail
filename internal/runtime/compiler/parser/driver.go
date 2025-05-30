@@ -24,9 +24,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/runtime/compiler/ast"
-	"github.com/google/mtail/internal/runtime/compiler/errors"
-	"github.com/google/mtail/internal/runtime/compiler/position"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/ast"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/errors"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/position"
 )
 
 // Parse reads the program named name from the input, and if successful returns
@@ -35,7 +35,7 @@ func Parse(name string, input io.Reader) (ast.Node, error) {
 	p := newParser(name, input)
 	r := mtailParse(p)
 	if r != 0 || p.errors != nil {
-		return nil, p.errors
+		return nil, &p.errors
 	}
 	return p.root, nil
 }

@@ -14,7 +14,6 @@ foo.log
 /.*dep-stamp
 /cpu.out
 /mem.out
-/build
 /.ghi.yml
 /vm-fuzz.zip
 workdir/*
@@ -46,3 +45,7 @@ workdir/*
 /fuzzer.h
 /dist/
 /main.*.go
+/bazel-bin
+/bazel-mtail
+/bazel-out
+/bazel-testlogs

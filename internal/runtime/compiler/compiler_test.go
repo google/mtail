@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/mtail/internal/runtime/compiler"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 func makeCompiler(t *testing.T) *compiler.Compiler {

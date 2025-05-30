@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/exporter"
-	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/runtime"
-	"github.com/google/mtail/internal/tailer"
+	"github.com/jaqx0r/mtail/internal/exporter"
+	"github.com/jaqx0r/mtail/internal/logline"
+	"github.com/jaqx0r/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/runtime"
+	"github.com/jaqx0r/mtail/internal/tailer"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	vc "github.com/prometheus/client_golang/prometheus/collectors/version"
@@ -52,6 +52,7 @@ type Server struct {
 	buildInfo BuildInfo // go build information
 
 	programPath        string // path to programs to load
+	sourceMappingFile  string // path to source-to-program mapping file
 	oneShot            bool   // if set, mtail reads log files from the beginning, once, then exits
 	compileOnly        bool   // if set, mtail compiles programs then exit
 	httpDebugEndpoints bool   // if set, mtail will enable debug endpoints
@@ -64,11 +65,24 @@ var buildInfoOnce sync.Once
 // initRuntime constructs a new runtime and performs the initial load of program files in the program directory.
 func (m *Server) initRuntime() (err error) {
 	m.r, err = runtime.New(m.lines, &m.wg, m.programPath, m.store, m.rOpts...)
-	return
+	if err != nil {
+		return err
+	}
+	
+	// Load source mappings if configured
+	if m.sourceMappingFile != "" {
+		glog.Infof("Loading source mappings from %s", m.sourceMappingFile)
+		if err := m.r.LoadSourceMappingsFromFile(m.sourceMappingFile); err != nil {
+			return err
+		}
+	}
+	
+	return nil
 }
 
 // initExporter sets up an Exporter for this Server.
 func (m *Server) initExporter() (err error) {
+	m.eOpts = append(m.eOpts, exporter.Version(m.buildInfo.Version))
 	m.e, err = exporter.New(m.ctx, m.store, m.eOpts...)
 	if err != nil {
 		return err

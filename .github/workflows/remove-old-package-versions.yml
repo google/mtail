@@ -14,4 +14,4 @@ jobs:
         with:
           package-name: mtail
           package-type: container
-          min-versions-to-keep: 10
+          min-versions-to-keep: 50

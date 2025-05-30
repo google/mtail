@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/metrics/datum"
+	"github.com/jaqx0r/mtail/internal/metrics/datum"
 	"github.com/pkg/errors"
 )
 

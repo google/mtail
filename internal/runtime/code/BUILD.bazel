@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "code",
+    srcs = [
+        "instr.go",
+        "object.go",
+        "opcodes.go",
+    ],
+    importpath = "github.com/jaqx0r/mtail/internal/runtime/code",
+    visibility = ["//:__subpackages__"],
+    deps = ["//internal/metrics"],
+)
+
+go_test(
+    name = "code_test",
+    size = "small",
+    srcs = [
+        "instr_test.go",
+        "opcodes_test.go",
+    ],
+    embed = [":code"],
+    deps = ["//internal/testutil"],
+)

@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/runtime/code"
-	"github.com/google/mtail/internal/runtime/compiler/ast"
-	"github.com/google/mtail/internal/runtime/compiler/checker"
-	"github.com/google/mtail/internal/runtime/compiler/codegen"
-	"github.com/google/mtail/internal/runtime/compiler/opt"
-	"github.com/google/mtail/internal/runtime/compiler/parser"
+	"github.com/jaqx0r/mtail/internal/runtime/code"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/ast"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/checker"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/codegen"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/opt"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/parser"
 )
 
 type Compiler struct {

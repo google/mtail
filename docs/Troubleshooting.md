@@ -14,19 +14,19 @@ Please when reporting a problem, include the `mtail` version:
 
 ## `go get` or build problems
 
-### `package github.com/google/mtail: no Go files`
+### `package github.com/jaqx0r/mtail: no Go files`
 
 You're using go 1.11 or higher, which now starts to use go modules, and doesn't like source code layouts like `mtail` which doesn't have any Go files in the top directory.
 
 Either set `GO111MODULE=on` environment variable first, or `go get` the binary directly:
 
-`go get github.com/google/mtail/cmd/mtail`
+`go get github.com/jaqx0r/mtail/cmd/mtail`
 
 vs
 
 ```
-GO111MODULE=on go get -u github.com/google/mtail
-cd $GOPATH/src/github.com/google/mtail
+GO111MODULE=on go get -u github.com/jaqx0r/mtail
+cd $GOPATH/src/github.com/jaqx0r/mtail
 make install
 ```
 
@@ -95,7 +95,7 @@ You can transcode these back to their names by doing a conversion from the
 int32 value in hex provided in the stack, e.g.: 0x61706163 -> 'apac' (probably
 an apache log program); 0x7273796e -> 'rsyn' (probably an rsyncd log program)
 
-Obvious problems seen in the goroutine stack dump are long-waiting gorotines, usually on mutexes.
+Obvious problems seen in the goroutine stack dump are long-waiting goroutines, usually on mutexes.
 (they show their block time in minutes, e.g. `goroutine 38 [semacquire, 1580
 minutes]:`) which usually also manifest as a logjam (no pun intended) in the
 loader, tailer, and watcher goroutines (in state 'chan send').

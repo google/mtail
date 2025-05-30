@@ -10,7 +10,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/google/mtail/internal/logline"
+	"github.com/jaqx0r/mtail/internal/logline"
 )
 
 // logLines counts the number of lines read per log file.

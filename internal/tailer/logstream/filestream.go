@@ -13,8 +13,8 @@ import (
 	"syscall"
 
 	"github.com/golang/glog"
-	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/internal/waker"
+	"github.com/jaqx0r/mtail/internal/logline"
+	"github.com/jaqx0r/mtail/internal/waker"
 )
 
 // fileTruncates counts the truncations of a file stream.

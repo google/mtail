@@ -1,0 +1,5 @@
+# Get workspace status information to stamp into the build.
+build --workspace_status_command=build/workspace_status.sh
+
+# Enable build stamping to inject the workspace status variables.
+build --stamp

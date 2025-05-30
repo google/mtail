@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/mtail/internal/runtime/code"
-	"github.com/google/mtail/internal/runtime/compiler/ast"
-	"github.com/google/mtail/internal/runtime/compiler/checker"
-	"github.com/google/mtail/internal/runtime/compiler/codegen"
-	"github.com/google/mtail/internal/runtime/compiler/parser"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/runtime/code"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/ast"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/checker"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/codegen"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/parser"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 var codegenTestDebug = flag.Bool("codegen_test_debug", false, "Log ASTs and debugging information ")

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/mtail/internal/runtime/compiler/position"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/position"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 type lexerTest struct {

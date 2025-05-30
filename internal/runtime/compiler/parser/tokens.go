@@ -6,7 +6,7 @@ package parser
 import (
 	"fmt"
 
-	"github.com/google/mtail/internal/runtime/compiler/position"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/position"
 )
 
 // Kind enumerates the types of lexical tokens in a mtail program.

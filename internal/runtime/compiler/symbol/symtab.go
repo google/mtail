@@ -7,8 +7,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/google/mtail/internal/runtime/compiler/position"
-	"github.com/google/mtail/internal/runtime/compiler/types"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/position"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/types"
 )
 
 // Kind enumerates the kind of a Symbol.

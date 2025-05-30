@@ -1,15 +1,18 @@
-name: CI
+name: ci
+
 on:
   push:
     tags:
-      - v*
     branches:
       - main
   pull_request:
   merge_group:
+  workflow_dispatch:
+
 env:
   GOPROXY: "https://proxy.golang.org"
 
+# Lock down default permissions to no permissions.
 permissions:
   # none-all, which doesn't exist, but
   # https://docs.github.com/en/actions/reference/authentication-in-a-workflow#using-the-github_token-in-a-workflow
@@ -19,88 +22,37 @@ permissions:
 
 jobs:
   test:
-    strategy:
-      matrix:
-        # macos-latest is slow and has weird test failures with unixgram message sizes, so it's been disabled.
-        # Sync with matrix in ci-done.yml        
-        runs-on: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.runs-on }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-      - name: install deps
-        run: go mod download
-      - name: build
-        run: make --debug all
-      - name: test
-        run: |
-          mkdir -p test-results
-          # Don't use GITHUB_SHA as we need the head of the branch, not the
-          # secret merge commit of the PR itself.  https://help.github.com/en/actions/automating-your-workflow-with-github-actions/events-that-trigger-workflows#pull-request-event-pull_request
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-             echo ${{ github.event.pull_request.head.sha }}  > test-results/sha-number
-          else
-             echo ${{ github.sha }} > test-results/sha-number
-          fi
-          make --debug junit-regtest TESTCOVERPROFILE=coverprofile
-        shell: bash
-      - uses: codecov/codecov-action@v4
-        if: always()
-        with:
-          file: coverprofile
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ matrix.runs-on }}
-          path: test-results/
-
-  container:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # so that we get tags
-      - run: make --debug container
-
-  gosec:
-    runs-on: ubuntu-latest
-    # gosec is regularly broken and reporting false positives, don't let it interfere
-    continue-on-error: true
     permissions:
-      security-events: write
+      # publish-unit-test-result-action writes a comment to the PR
+      pull-requests: write
+      # and writes to the checks API
+      checks: write
     steps:
       - uses: actions/checkout@v4
-      - uses: securego/gosec@master
+      - uses: bazel-contrib/setup-bazel@0.15.0
         with:
-          # we let the report trigger content trigger a failure using the GitHub Security features.
-          args: '-no-fail -exclude-generated -fmt sarif -out results.sarif -tags fuzz ./...'
-      - uses: github/codeql-action/upload-sarif@v3
+          # Avoid downloading Bazel each time
+          bazelisk-cache: true
+          # Store build cache per workflow
+          disk-cache: ${{ github.workflow }}
+          # Share repository cache between workflows
+          repository-cache: true
+      - run: bazel build //...
+      - name: bazel test
+        run: bazel coverage --test_output=all --combined_report=lcov --instrument_test_targets --nocache_test_results --instrumentation_filter="^//" //...
+      - name: output bazel paths for test and coverage
+        if: always()
+        id: bazel_info
+        run: |
+          bazel info bazel-testlogs output_path | sed -e 's/: /=/' >> $GITHUB_OUTPUT
+      - uses: EnricoMi/publish-unit-test-result-action/linux@v2
+        if: always()
         with:
-          # Path to SARIF file relative to the root of the repository
-          sarif_file: results.sarif
-
-
-  fuzz:
-    runs-on: ubuntu-latest
-    container:
-      image: gcr.io/oss-fuzz-base/base-builder
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+          files: ${{ steps.bazel_info.outputs.bazel-testlogs }}/**/test.xml
+      - uses: codecov/codecov-action@v5
+        if: always()
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          go-version: '^1.x'
-      - uses: actions/cache@v4
-        id: cache
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: install deps
-        if: steps.cache.output.cache-hit != 'true'
-        run: make --debug install_deps
-      - name: local fuzz regtest
-        run: make --debug CXX=clang LIB_FUZZING_ENGINE=-fsanitize=fuzzer fuzz-regtest
+          files: ${{ steps.bazel_info.outputs.output_path }}/_coverage/_coverage_report.dat

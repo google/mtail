@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/google/mtail/internal/runtime/compiler/parser"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/parser"
 )
 
 var (

@@ -48,23 +48,17 @@ GOFILES=$(shell find . -name '*.go' -a ! -name '*_test.go')
 
 GOTESTFILES=$(shell find . -name '*_test.go')
 
-GOGENFILES=internal/runtime/compiler/parser/parser.go\
-	internal/mtail/logo.ico.go
+GOGENFILES=internal/runtime/compiler/parser/parser.go
 
 
 CLEANFILES+=\
 	internal/runtime/compiler/parser/parser.go\
 	internal/runtime/compiler/parser/y.output\
-	internal/mtail/logo.ico.go\
 	internal/mtail/logo.ico\
 
 # A place to install tool dependencies.
 GOBIN ?= $(firstword $(subst :, ,$(shell go env GOPATH)))/bin
 export PATH := $(GOBIN):$(PATH)
-
-TOGO = $(GOBIN)/togo
-$(TOGO):
-	go install github.com/flazz/togo@latest
 
 GOYACC = $(GOBIN)/goyacc
 $(GOYACC):
@@ -143,10 +137,6 @@ internal/runtime/compiler/parser/parser.go: internal/runtime/compiler/parser/par
 
 internal/mtail/logo.ico: logo.png
 	/usr/bin/convert $< -define icon:auto-resize=64,48,32,16 $@ || touch $@
-
-internal/mtail/logo.ico.go: | internal/mtail/logo.ico $(TOGO)
-	togo -pkg mtail -name logoFavicon -input internal/mtail/logo.ico
-
 
 ###
 ## Emit the current toolchain version at the start of every goal, if that goal depends on this.

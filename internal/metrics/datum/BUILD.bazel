@@ -1,0 +1,26 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "datum",
+    srcs = [
+        "buckets.go",
+        "datum.go",
+        "float.go",
+        "int.go",
+        "string.go",
+    ],
+    importpath = "github.com/jaqx0r/mtail/internal/metrics/datum",
+    visibility = ["//:__subpackages__"],
+)
+
+go_test(
+    name = "datum_test",
+    size = "small",
+    srcs = [
+        "buckets_test.go",
+        "datum_test.go",
+        "int_test.go",
+    ],
+    embed = [":datum"],
+    deps = ["//internal/testutil"],
+)

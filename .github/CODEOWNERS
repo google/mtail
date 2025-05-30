@@ -1,1 +1,6 @@
+# All files are by default owned unless a more specific rule set below.
 * @jaqx0r
+
+# Don't automatically assign reviewers for PRs that only modify these files.
+go.mod
+go.sum

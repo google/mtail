@@ -1,0 +1,38 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "runtime",
+    srcs = [
+        "httpstatus.go",
+        "options.go",
+        "runtime.go",
+    ],
+    importpath = "github.com/jaqx0r/mtail/internal/runtime",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/logline",
+        "//internal/metrics",
+        "//internal/runtime/compiler",
+        "//internal/runtime/vm",
+        "@com_github_golang_glog//:glog",
+        "@com_github_pkg_errors//:errors",
+        "@com_github_prometheus_client_golang//prometheus",
+    ],
+)
+
+go_test(
+    name = "runtime_test",
+    size = "small",
+    srcs = [
+        "runtime_integration_test.go",
+        "runtime_test.go",
+    ],
+    embed = [":runtime"],
+    deps = [
+        "//internal/logline",
+        "//internal/metrics",
+        "//internal/metrics/datum",
+        "//internal/testutil",
+        "@com_github_golang_glog//:glog",
+    ],
+)

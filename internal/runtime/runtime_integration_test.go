@@ -11,10 +11,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/google/mtail/internal/logline"
-	"github.com/google/mtail/internal/metrics"
-	"github.com/google/mtail/internal/metrics/datum"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/logline"
+	"github.com/jaqx0r/mtail/internal/metrics"
+	"github.com/jaqx0r/mtail/internal/metrics/datum"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 var vmTests = []struct {

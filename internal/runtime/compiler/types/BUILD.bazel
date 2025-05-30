@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "types",
+    srcs = [
+        "regexp.go",
+        "types.go",
+    ],
+    importpath = "github.com/jaqx0r/mtail/internal/runtime/compiler/types",
+    visibility = ["//:__subpackages__"],
+    deps = ["@com_github_golang_glog//:glog"],
+)
+
+go_test(
+    name = "types_test",
+    size = "small",
+    srcs = ["types_test.go"],
+    embed = [":types"],
+    deps = ["//internal/testutil"],
+)

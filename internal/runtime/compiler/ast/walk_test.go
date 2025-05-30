@@ -6,11 +6,11 @@ package ast_test
 import (
 	"testing"
 
-	"github.com/google/mtail/internal/runtime/compiler/ast"
-	"github.com/google/mtail/internal/runtime/compiler/parser"
-	"github.com/google/mtail/internal/runtime/compiler/position"
-	"github.com/google/mtail/internal/runtime/compiler/types"
-	"github.com/google/mtail/internal/testutil"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/ast"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/parser"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/position"
+	"github.com/jaqx0r/mtail/internal/runtime/compiler/types"
+	"github.com/jaqx0r/mtail/internal/testutil"
 )
 
 type testNode struct{}

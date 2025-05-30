@@ -5,7 +5,7 @@
 By default any compile errors are logged to the standard log `/tmp/mtail.INFO`
 unless otherwise redirected.  (You can emit to standard out with
 `--logtostderr` flag.)  Program errors are also printed on the HTTP status
-handler, by default at porrt 3903.
+handler, by default at port 3903.
 
 If you want more debugging information, `mtail` provides a few flags to assist with testing your program in standalone mode.
 
@@ -40,7 +40,7 @@ mtail --one_shot --progs ./progs --logs testdata/foo.log
 
 If you wish, send a PR containing your program, some sample input, and a golden
 output to be run as a test in
-http://github.com/google/mtail/blob/main/ex_test.go to ensure that mtail
+http://github.com/jaqx0r/mtail/blob/main/ex_test.go to ensure that mtail
 never breaks your program (or that your program gets any updates if the
 language changes.)
 
