@@ -85,6 +85,9 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 		return newDgramStream(ctx, wg, waker, u.Scheme, u.Host, oneShot)
 	case "", "file":
 		path = u.Path
+		if u.RawFragment != "" {
+			path += "#" + u.RawFragment
+		}
 	}
 	if IsStdinPattern(path) {
 		fi, err := os.Stdin.Stat()
