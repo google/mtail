@@ -118,3 +118,5 @@ If you have any questions, please use the [GitHub Discussions Q&A](https://githu
 We also have an email list : https://groups.google.com/forum/#!forum/mtail-users
 
 For any defects please [file a new issue](https://github.com/google/mtail/issues/new).
+
+<!-- ci-probe 2026-02-20 mtail -->
