@@ -23,7 +23,7 @@ jobs:
       pull-requests: write
     steps:
       - run: |
-          gh api graphql -f pullRequestId="${{ github.event.pull_request.node_id }}" -f query='
+          gh api graphql -f pullRequestId="${GITHUB_EVENT_PULL_REQUEST_NODE_ID}" -f query='
           mutation EnablePullRequestAutoMerge($pullRequestId: ID!) {
             enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId}) {
               clientMutationId
@@ -32,6 +32,7 @@ jobs:
           '
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_PULL_REQUEST_NODE_ID: ${{ github.event.pull_request.node_id }}
 
   wait-on-checks:
     needs: enable-automerge
