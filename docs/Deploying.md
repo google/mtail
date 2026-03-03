@@ -67,6 +67,16 @@ default.
 Example: `mtail --progs /etc/mtail --logs /var/log/syslog --poll_interval 250ms
 --poll_log_interval 250ms`
 
+### Consume data in Apache Kafka
+
+Use `--logs` flag to read data from Apache Kafka.
+
+You need to convert kafka configuration into URL format.
+
+You can refer to [parseKafkaURL](../internal//tailer/logstream/kafka.go#L26) function to write URL.
+
+Example: `mtail --progs /etc/mtail --logs "kafka://test-group@localhost:9092/test-topic"`
+
 ### Setting garbage collection intervals
 
 `mtail` accumulates metrics and log files during its operation. By default,

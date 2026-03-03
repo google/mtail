@@ -3,13 +3,13 @@ RUN apk add --update git make
 WORKDIR /go/src/github.com/google/mtail
 COPY . /go/src/github.com/google/mtail
 RUN  make depclean && make install_deps && PREFIX=/go make STATIC=y -B install
-
+RUN apk add -U --no-cache ca-certificates
 
 FROM scratch
 COPY --from=builder /go/bin/mtail /usr/bin/mtail
+COPY --from=alpine /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ENTRYPOINT ["/usr/bin/mtail"]
 EXPOSE 3903
-WORKDIR /tmp
 
 
 ARG version=0.0.0-local

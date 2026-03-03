@@ -194,7 +194,7 @@ func (t *Tailer) AddPattern(pattern string) error {
 	default:
 		glog.V(2).Infof("AddPattern(%v): %v in path pattern %q, treating as path", pattern, ErrUnsupportedURLScheme, u.Scheme)
 		// Leave path alone per log message
-	case "unix", "unixgram", "tcp", "udp":
+	case "unix", "unixgram", "tcp", "udp", logstream.KafkaScheme, logstream.AWS3Scheme:
 		// Keep the scheme.
 		glog.V(2).Infof("AddPattern(%v): is a socket", path)
 		return t.TailPath(path)
