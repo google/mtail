@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/mtail/internal/runtime/compiler"
 	"github.com/google/mtail/internal/runtime/vm"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -114,6 +115,18 @@ func LogRuntimeErrors() Option {
 func TraceExecution() Option {
 	return func(r *Runtime) error {
 		r.trace = true
+		return nil
+	}
+}
+
+// UnmappedSourceBehavior sets how to handle log lines from sources that have no mapping.
+// Valid values are "all" (default) or "none".
+func UnmappedSourceBehavior(behavior string) Option {
+	return func(r *Runtime) error {
+		if behavior != "all" && behavior != "none" {
+			return errors.Errorf("invalid unmapped behavior: %s (must be 'all' or 'none')", behavior)
+		}
+		r.unmappedBehavior = behavior
 		return nil
 	}
 }
