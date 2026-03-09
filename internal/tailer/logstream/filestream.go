@@ -124,8 +124,20 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 					}
 					// Close this stream.
 					return
+				} else {
+					glog.Infof("stream(%s): read error: %v", fs.sourcename, err)
+					// We got unknown stream read error != syscall.ESTALE which currently we don't know how to handle.
+					// Those might be read error: (is a directory|bad file descriptor|...) etc.
+					// Without this patch mtail istarting to loop on broken fds that are gone/incorrect,
+					// start consuming a lot of CPU cycles, and can't handle signals besides SIGKILL.
+					// If we end up in such unrecovarable/unhandled (for now) situation, it is better to use fail fast approach.
+					// We close the reader and the tailer for this source and let the tailer pick-up the new file(s) if any on its own later.
+					// Those read error: (is directory|bad file descriptor) can happen if we mtail files under mounts, and mounts are gone.
+					// Those might be docker/container/etc. setups where mtail is running on host.
+					lr.Finish(ctx)
+					close(fs.lines)
+					return
 				}
-				glog.Infof("stream(%s): read error: %v", fs.sourcename, err)
 			}
 
 			// If we have read no bytes and are at EOF, check for truncation and rotation.
