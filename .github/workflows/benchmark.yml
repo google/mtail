@@ -7,6 +7,8 @@ on:
       # Record on merges to main
       - main
 
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -14,6 +16,8 @@ concurrency:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
       - uses: bazel-contrib/setup-bazel@0.19.0
