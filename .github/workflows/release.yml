@@ -142,7 +142,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: sigstore/cosign-installer@v4.1.1
+      - uses: sigstore/cosign-installer@v4.1.2
       - name: verify image
         env:
           IMAGE: ${{ matrix.image }}
