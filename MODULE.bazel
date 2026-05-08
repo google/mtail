@@ -12,7 +12,7 @@ go_sdk.from_file(go_mod = "//:go.mod")
 # Like golangci-lint, but integrated into the build.
 go_sdk.nogo(nogo = "//:nogo")
 
-bazel_dep(name = "gazelle", version = "0.50.0")
+bazel_dep(name = "gazelle", version = "0.51.0")
 
 # Update dependencies with
 # `bazel run //:gazelle`.
