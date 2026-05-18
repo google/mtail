@@ -46,7 +46,7 @@ pull = use_repo_rule("@rules_img//img:pull.bzl", "pull")
 
 pull(
     name = "distroless_base",
-    digest = "sha256:c83f022002fc917a92501a8c30c605efdad3010157ba2c8998a2cbf213299201",
+    digest = "sha256:f2df8702d4dcc45ce76df6cbc14ad1975fcf88a04bd0e8947b6194264f9ab75e",
     layer_handling = "lazy",
     registry = "gcr.io",
     repository = "distroless/base",
