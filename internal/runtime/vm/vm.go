@@ -968,24 +968,22 @@ func (v *VM) ProcessLogLine(_ context.Context, line *logline.LogLine) {
 		v.input = nil
 		v.t = nil
 	}()
-	t := new(thread)
-	t.matched = false
-	v.t = t
+	v.t = new(thread)
+	v.t.matched = false
 	v.input = line
-	t.stack = make([]interface{}, 0)
-	t.matches = make(map[int][]string, len(v.re))
+	v.t.stack = make([]interface{}, 0)
+	v.t.matches = make(map[int][]string, len(v.re))
 	for {
-		if t.pc >= len(v.prog) {
+		if v.t.pc >= len(v.prog) {
 			return
 		}
 		if v.trace != nil {
-			v.trace = append(v.trace, t.pc)
+			v.trace = append(v.trace, v.t.pc)
 		}
-		i := v.prog[t.pc]
-		t.pc++
-		v.execute(t, i)
+		i := v.prog[v.t.pc]
+		v.t.pc++
+		v.execute(v.t, i)
 		if v.terminate {
-			// Terminate only stops this invocation on this line of input; reset the terminate flag.
 			v.terminate = false
 			return
 		}
