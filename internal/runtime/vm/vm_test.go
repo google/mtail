@@ -6,8 +6,11 @@ package vm
 import (
 	"context"
 	"regexp"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/jaqx0r/mtail/internal/logline"
 	"github.com/jaqx0r/mtail/internal/metrics"
@@ -925,6 +928,60 @@ func TestTimestampInstr(t *testing.T) {
 	tos = time.Unix(v.t.Pop().(int64), 0).UTC()
 	if tos != newT {
 		t.Errorf("Expecting timestamp to be %s, was %s", newT, tos)
+	}
+}
+
+func TestProcessLogLineDoesNotPinLargeCaptureGroup(t *testing.T) {
+	// Build a program that matches a regex, captures a substring, and stores it
+	// as a metric label key via Dload.  The stored key must not pin the original
+	// log line's backing array.
+	re := regexp.MustCompile(`.(KEY).`)
+
+	m := []*metrics.Metric{
+		metrics.NewMetric("m", "tst", metrics.Counter, metrics.Int, "label"),
+	}
+	prog := []code.Instr{
+		{code.Match, 0, 0},
+		{code.Push, 0, 0},
+		{code.Capref, 1, 0},
+		{code.Mload, 0, 0},
+		{code.Dload, 1, 0},
+	}
+	obj := &code.Object{
+		Metrics: m,
+		Program: prog,
+		Regexps: []*regexp.Regexp{re},
+	}
+	v := New("leaktest", obj, true, nil, false, false)
+
+	// Allocate a large log line (~200KB).  The regex `.(KEY).` matches
+	// "aKEYb" and captures "KEY".  Save the data pointer of the capture to
+	// compare against the stored label value later.
+	const offset = 100000
+	large := strings.Repeat("x", offset) + "aKEYb" + strings.Repeat("y", 100000)
+	capture := large[offset+1 : offset+4] // "KEY" — shares backing with large
+	origPtr := unsafe.StringData(capture)
+
+	v.ProcessLogLine(context.Background(), logline.New(context.Background(), "test", 0, large))
+	runtime.KeepAlive(large) // ensure large survives until ProcessLogLine completes
+
+	// Retrieve the stored label value.
+	lv := m[0].FindLabelValueOrNil([]string{"KEY"})
+	if lv == nil {
+		t.Fatal("label value not found")
+	}
+	stored := lv.Labels[0]
+
+	// Drop all references to the large backing array.  If strings.Clone was not
+	// used, the stored key still pins the original backing array via the shared
+	// data pointer.
+	large = ""
+	runtime.GC()
+
+	// If the stored key shares the original backing array, its data pointer
+	// matches.  If strings.Clone allocated a fresh copy, they differ.
+	if unsafe.StringData(stored) == origPtr {
+		t.Error("stored label key shares backing array with original log line; Dload should use strings.Clone to detach it")
 	}
 }
 

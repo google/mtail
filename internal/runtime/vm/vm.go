@@ -748,7 +748,7 @@ func (v *VM) execute(t *thread, i code.Instr) {
 				return
 			}
 			// fmt.Printf("s: %v\n", s)
-			keys[a] = s
+			keys[a] = strings.Clone(s)
 			// fmt.Printf("Keys: %v\n", keys)
 		}
 		// fmt.Printf("Keys: %v\n", keys)
