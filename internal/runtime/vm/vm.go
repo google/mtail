@@ -964,6 +964,10 @@ func (v *VM) ProcessLogLine(_ context.Context, line *logline.LogLine) {
 	defer func() {
 		LineProcessingDurations.WithLabelValues(v.name).Observe(time.Since(start).Seconds())
 	}()
+	defer func() {
+		v.input = nil
+		v.t = nil
+	}()
 	t := new(thread)
 	t.matched = false
 	v.t = t

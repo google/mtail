@@ -927,3 +927,17 @@ func TestTimestampInstr(t *testing.T) {
 		t.Errorf("Expecting timestamp to be %s, was %s", newT, tos)
 	}
 }
+
+func TestProcessLogLineClearsInput(t *testing.T) {
+	obj := &code.Object{Program: []code.Instr{}} // empty program returns immediately
+	v := New("leaktest", obj, true, nil, false, false)
+	line := logline.New(context.Background(), "test", 0, "hello world")
+
+	v.ProcessLogLine(context.Background(), line)
+	if v.input != nil {
+		t.Error("v.input was not cleared after ProcessLogLine returned")
+	}
+	if v.t != nil {
+		t.Error("v.t was not cleared after ProcessLogLine returned")
+	}
+}
