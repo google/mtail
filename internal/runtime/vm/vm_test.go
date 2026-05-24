@@ -784,7 +784,10 @@ func TestDatumSetInstrs(t *testing.T) {
 }
 
 func TestStrptimeWithTimezone(t *testing.T) {
-	loc, _ := time.LoadLocation("Europe/Berlin")
+	loc, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Skip("Skipping, timezone database not available:", err)
+	}
 	obj := &code.Object{Program: []code.Instr{{code.Strptime, 0, 0}}}
 	vm := New("strptimezone", obj, true, loc, false, false)
 	vm.t = new(thread)
