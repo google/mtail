@@ -32,7 +32,7 @@ func TestSocketStreamReadCompletedBecauseSocketClosed(t *testing.T) {
 				tmpDir := testutil.TestTempDir(t)
 				addr = filepath.Join(tmpDir, "sock")
 			case "tcp":
-				addr = fmt.Sprintf("[::]:%d", testutil.FreePort(t))
+				addr = fmt.Sprintf("127.0.0.1:%d", testutil.FreePort(t))
 			default:
 				t.Fatalf("bad scheme %s", scheme)
 			}
@@ -83,7 +83,7 @@ func TestSocketStreamReadCompletedBecauseCancel(t *testing.T) {
 				tmpDir := testutil.TestTempDir(t)
 				addr = filepath.Join(tmpDir, "sock")
 			case "tcp":
-				addr = fmt.Sprintf("[::]:%d", testutil.FreePort(t))
+				addr = fmt.Sprintf("127.0.0.1:%d", testutil.FreePort(t))
 			default:
 				t.Fatalf("bad scheme %s", scheme)
 			}
