@@ -19,7 +19,6 @@ AmbientCapabilities=
 CapabilityBoundingSet=
 KeyringMode=private
 LockPersonality=yes
-LockPersonality=yes
 MemoryDenyWriteExecute=yes
 MountFlags=private
 NoNewPrivileges=yes
@@ -40,7 +39,7 @@ RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
 SystemCallArchitectures=native
-SystemCallFilter=@basic-io @file-system @io-event @ipc @network-io @signal clone kill madvise setrlimit tgkill uname
+SystemCallFilter=@default
 
 [Install]
 WantedBy=multi-user.target
