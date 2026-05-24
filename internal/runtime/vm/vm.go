@@ -41,12 +41,24 @@ var (
 	}, []string{"prog"})
 )
 
+type matchResult struct {
+	text    string
+	indices []int
+}
+
+func (m matchResult) captureGroup(n int) string {
+	if m.indices[2*n] == -1 {
+		return ""
+	}
+	return m.text[m.indices[2*n]:m.indices[2*n+1]]
+}
+
 type thread struct {
-	pc      int              // Program counter.
-	matched bool             // Flag set if any match has been found.
-	matches map[int][]string // Match result variables.
-	time    time.Time        // Time register.
-	stack   []interface{}    // Data stack.
+	pc      int                 // Program counter.
+	matched bool                // Flag set if any match has been found.
+	matches map[int]matchResult // Match result variables, accessed as text[indices[n]:indices[n+1]].
+	time    time.Time           // Time register.
+	stack   []interface{}       // Data stack.
 }
 
 // VM describes the virtual machine for each program.  It contains virtual
@@ -360,8 +372,11 @@ func (v *VM) execute(t *thread, i code.Instr) {
 		// Store the results in the operandth element of the stack,
 		// where i.opnd == the matched re index
 		index := i.Operand.(int)
-		t.matches[index] = v.re[index].FindStringSubmatch(v.input.Line)
-		t.Push(t.matches[index] != nil)
+		t.matches[index] = matchResult{
+			text:    v.input.Line,
+			indices: v.re[index].FindStringSubmatchIndex(v.input.Line),
+		}
+		t.Push(t.matches[index].indices != nil)
 
 	case code.Smatch:
 		// match regex against item on the stack
@@ -371,8 +386,11 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			v.errorf("+%v", err)
 			return
 		}
-		t.matches[index] = v.re[index].FindStringSubmatch(line)
-		t.Push(t.matches[index] != nil)
+		t.matches[index] = matchResult{
+			text:    line,
+			indices: v.re[index].FindStringSubmatchIndex(line),
+		}
+		t.Push(t.matches[index].indices != nil)
 
 	case code.Cmp:
 		// Compare two elements on the stack.
@@ -580,7 +598,8 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			}
 			re := int(val)
 			// Store the result from the re'th index at the s'th index
-			ts = t.matches[re][s]
+			m := t.matches[re]
+			ts = m.captureGroup(s)
 		}
 		if cached, ok := v.timeMemos.Get(ts); !ok {
 			tm := v.ParseTime(layout, ts)
@@ -624,11 +643,16 @@ func (v *VM) execute(t *thread, i code.Instr) {
 			v.errorf("Invalid operand %v, not an int", i.Operand)
 			return
 		}
-		if len(t.matches[re]) <= op {
-			v.errorf("Not enough capture groups matched from %v to select %dth", t.matches[re], op)
+		m, ok := t.matches[re]
+		if !ok {
+			v.errorf("No match result for regex index %d", re)
 			return
 		}
-		t.Push(t.matches[re][op])
+		if len(m.indices) < 2*(op+1) {
+			v.errorf("Not enough capture groups matched from %d indices to select %dth", len(m.indices)/2, op)
+			return
+		}
+		t.Push(m.captureGroup(op))
 
 	case code.Str:
 		// Put a string constant onto the stack
@@ -1015,7 +1039,7 @@ func New(name string, obj *code.Object, syslogUseCurrentYear bool, loc *time.Loc
 		threadPool: sync.Pool{
 			New: func() any {
 				return &thread{
-					matches: make(map[int][]string, len(obj.Regexps)),
+					matches: make(map[int]matchResult, len(obj.Regexps)),
 					stack:   make([]interface{}, 0),
 				}
 			},
