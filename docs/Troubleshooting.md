@@ -73,20 +73,20 @@ or a memory profile:
 
 There are many good guides on using the profiling tool:
 
- * https://software.intel.com/en-us/blogs/2014/05/10/debugging-performance-issues-in-go-programs is one such guide.
+* https://software.intel.com/en-us/blogs/2014/05/10/debugging-performance-issues-in-go-programs is one such guide.
 
 
 The goroutine stack dump can also help explain what is happening at the moment.
 
 http://localhost:3903/debug/pprof/goroutine?debug=2 shows the full goroutine stack dump.
 
- * `(*Watcher).readEvents` reads events from the filesystem
- * `(*Tailer).run` processes log change events; `.read` reads the latest log lines
- * `(*Loader).processEvents` handles filesystem event changes regarding new program text
- * `(*Loader).processLines` handles new lines coming from the log tailer
- * `(*MtailServer).WaitForShutdown` waits for the other components to terminate
- * `(*Exporter).StartMetricPush` exists if there are any push collectors (e.g. Graphite) to push to
- * `(*Exporter).HandlePrometheusMetrics` exists if an existing Prometheus pull collection is going on
+* `(*Watcher).readEvents` reads events from the filesystem
+* `(*Tailer).run` processes log change events; `.read` reads the latest log lines
+* `(*Loader).processEvents` handles filesystem event changes regarding new program text
+* `(*Loader).processLines` handles new lines coming from the log tailer
+* `(*MtailServer).WaitForShutdown` waits for the other components to terminate
+* `(*Exporter).StartMetricPush` exists if there are any push collectors (e.g. Graphite) to push to
+* `(*Exporter).HandlePrometheusMetrics` exists if an existing Prometheus pull collection is going on
 
 There is one `(*VM).Run` stack per program.  These are opaque to the goroutine
 stack dump as they execute the bytecode.  However, the second argument to `Run`
@@ -99,6 +99,68 @@ Obvious problems seen in the goroutine stack dump are long-waiting goroutines, u
 (they show their block time in minutes, e.g. `goroutine 38 [semacquire, 1580
 minutes]:`) which usually also manifest as a logjam (no pun intended) in the
 loader, tailer, and watcher goroutines (in state 'chan send').
+
+### Simulating production for memory profiling
+
+To analyse memory allocations under realistic load:
+
+1.  Build mtail:
+    ```
+    bazel build //cmd/mtail
+    ```
+
+2.  Start mtail with example programs and a temporary log file:
+    ```
+    touch /tmp/mtail_pprof_log
+    bazel-bin/cmd/mtail/mtail_/mtail \
+      --progs examples/ \
+      --logs /tmp/mtail_pprof_log \
+      --poll_interval 50ms \
+      --logtostderr \
+      --stderrthreshold 0 &
+    ```
+
+3.  Feed test log data in a loop to simulate continuous traffic:
+    ```
+    while true; do
+      cat internal/mtail/testdata/*.log >> /tmp/mtail_pprof_log
+      sleep 6
+    done &
+    ```
+
+4.  Capture an allocation profile with `go tool pprof`:
+    ```
+    go tool pprof -alloc_space -top \
+      http://localhost:3903/debug/pprof/allocs
+    ```
+    Use `-seconds 30` for a delta profile (allocations within a 30 s window),
+    or omit it for a cumulative profile since process start.
+
+5.  Drill into specific functions:
+    ```
+    go tool pprof -alloc_space -list 'ProcessLogLine' \
+      http://localhost:3903/debug/pprof/allocs
+    go tool pprof -alloc_space -peek 'execute' \
+      http://localhost:3903/debug/pprof/allocs
+    ```
+
+### Known allocation hot spots
+
+As of v3.2.52, the cumulative `alloc_space` profile shows that roughly 60 % of
+heap allocations occur on the per-log-line hot path in `ProcessLogLine` and
+`execute` (`internal/runtime/vm/vm.go`).
+
+| Function | Flat alloc | Key lines |
+|---|---|---|
+| `VM.ProcessLogLine` | ~28 % | `v.t = new(thread)` (4.5 MB) — new thread per line; `t.matches = make(...)` (12.5 MB) — match map per line |
+| `VM.execute` | ~17 % | `t.matches[index] = v.re[index].FindStringSubmatch(...)` (7 MB) — regex submatch allocations inside `code.Match` |
+| `Runtime.CompileAndRun` | ~9 % | One-shot startup cost from program loading, parsing, type checking, and code generation |
+
+The single biggest allocation is `t.matches = make(map[int][]string, len(v.re))`
+in `ProcessLogLine`: a pre-sized map to hold regex capture group results,
+recreated from scratch on every log line.  An object pool (`sync.Pool`) for
+`thread` structs and their match maps would eliminate the bulk of hot-path
+allocations.
 
 ## Distributed Tracing
 

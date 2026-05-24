@@ -63,6 +63,8 @@ type VM struct {
 
 	timeMemos *lru.Cache // memo of time string parse results
 
+	threadPool sync.Pool // pool of re-used thread structs
+
 	t *thread // Current thread of execution
 
 	input *logline.LogLine // Log line input to this round of execution.
@@ -966,13 +968,20 @@ func (v *VM) ProcessLogLine(_ context.Context, line *logline.LogLine) {
 	}()
 	defer func() {
 		v.input = nil
-		v.t = nil
+		if v.t != nil {
+			v.t.pc = 0
+			v.t.matched = false
+			v.t.time = time.Time{}
+			v.t.stack = v.t.stack[:0]
+			for k := range v.t.matches {
+				delete(v.t.matches, k)
+			}
+			v.threadPool.Put(v.t)
+			v.t = nil
+		}
 	}()
-	v.t = new(thread)
-	v.t.matched = false
+	v.t = v.threadPool.Get().(*thread)
 	v.input = line
-	v.t.stack = make([]interface{}, 0)
-	v.t.matches = make(map[int][]string, len(v.re))
 	for {
 		if v.t.pc >= len(v.prog) {
 			return
@@ -1003,6 +1012,14 @@ func New(name string, obj *code.Object, syslogUseCurrentYear bool, loc *time.Loc
 		syslogUseCurrentYear: syslogUseCurrentYear,
 		loc:                  loc,
 		logRuntimeErrors:     log,
+		threadPool: sync.Pool{
+			New: func() any {
+				return &thread{
+					matches: make(map[int][]string, len(obj.Regexps)),
+					stack:   make([]interface{}, 0),
+				}
+			},
+		},
 	}
 	if trace {
 		v.trace = make([]int, 0, len(v.prog))
