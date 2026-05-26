@@ -6,7 +6,9 @@ package exporter
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -352,6 +354,141 @@ func TestWritePrometheus(t *testing.T) {
 			testutil.FatalIfErr(t, err)
 			testutil.ExpectNoDiff(t, tc.expected, buf.String())
 
+			e.Stop()
+		})
+	}
+}
+
+func BenchmarkWritePrometheus(b *testing.B) {
+	for _, n := range []int{100, 1000, 10000} {
+		b.Run(fmt.Sprintf("labelvalues=%d", n), func(b *testing.B) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			ms := metrics.NewStore()
+			m := metrics.NewMetric("test_metric", "test", metrics.Counter, metrics.Int, "id")
+			for i := 0; i < n; i++ {
+				d, err := m.GetDatum(strconv.Itoa(i))
+				if err != nil {
+					b.Fatal(err)
+				}
+				datum.SetInt(d, int64(i), time.Now())
+			}
+			if err := ms.Add(m); err != nil {
+				b.Fatal(err)
+			}
+
+			opts := []Option{Hostname("gunstar"), OmitProgLabel()}
+			e, err := New(ctx, ms, opts...)
+			if err != nil {
+				b.Fatal(err)
+			}
+			var buf bytes.Buffer
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				buf.Reset()
+				if err := e.Write(&buf); err != nil {
+					b.Fatal(err)
+				}
+			}
+			e.Stop()
+		})
+	}
+	for _, n := range []int{100, 1000, 10000} {
+		b.Run(fmt.Sprintf("metrics=%d", n), func(b *testing.B) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			ms := metrics.NewStore()
+			for i := 0; i < n; i++ {
+				m := metrics.NewMetric(fmt.Sprintf("metric_%d", i), "test", metrics.Counter, metrics.Int)
+				d, err := m.GetDatum()
+				if err != nil {
+					b.Fatal(err)
+				}
+				datum.SetInt(d, int64(i), time.Now())
+				if err := ms.Add(m); err != nil {
+					b.Fatal(err)
+				}
+			}
+
+			opts := []Option{Hostname("gunstar"), OmitProgLabel()}
+			e, err := New(ctx, ms, opts...)
+			if err != nil {
+				b.Fatal(err)
+			}
+			var buf bytes.Buffer
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				buf.Reset()
+				if err := e.Write(&buf); err != nil {
+					b.Fatal(err)
+				}
+			}
+			e.Stop()
+		})
+	}
+}
+
+func TestWritePrometheusManyLabelValues(t *testing.T) {
+	counts := []int{100, 1000, 10000}
+	if testing.Short() {
+		counts = []int{100}
+	}
+	for _, n := range counts {
+		t.Run(fmt.Sprintf("count=%d", n), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			ms := metrics.NewStore()
+			m := metrics.NewMetric("test_metric", "test", metrics.Counter, metrics.Int, "id")
+			for i := 0; i < n; i++ {
+				d, err := m.GetDatum(strconv.Itoa(i))
+				testutil.FatalIfErr(t, err)
+				datum.SetInt(d, int64(i), time.Now())
+			}
+			testutil.FatalIfErr(t, ms.Add(m))
+
+			opts := []Option{Hostname("gunstar"), OmitProgLabel()}
+			e, err := New(ctx, ms, opts...)
+			testutil.FatalIfErr(t, err)
+
+			var buf bytes.Buffer
+			err = e.Write(&buf)
+			testutil.FatalIfErr(t, err)
+			t.Logf("Wrote %d bytes for %d label values", buf.Len(), n)
+			e.Stop()
+		})
+	}
+}
+
+func TestWritePrometheusManyMetrics(t *testing.T) {
+	counts := []int{100, 1000, 10000}
+	if testing.Short() {
+		counts = []int{100}
+	}
+	for _, n := range counts {
+		t.Run(fmt.Sprintf("count=%d", n), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			ms := metrics.NewStore()
+			for i := 0; i < n; i++ {
+				m := metrics.NewMetric(fmt.Sprintf("metric_%d", i), "test", metrics.Counter, metrics.Int)
+				d, err := m.GetDatum()
+				testutil.FatalIfErr(t, err)
+				datum.SetInt(d, int64(i), time.Now())
+				testutil.FatalIfErr(t, ms.Add(m))
+			}
+
+			opts := []Option{Hostname("gunstar"), OmitProgLabel()}
+			e, err := New(ctx, ms, opts...)
+			testutil.FatalIfErr(t, err)
+
+			var buf bytes.Buffer
+			err = e.Write(&buf)
+			testutil.FatalIfErr(t, err)
+			t.Logf("Wrote %d bytes for %d metrics", buf.Len(), n)
 			e.Stop()
 		})
 	}
