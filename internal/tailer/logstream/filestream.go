@@ -20,6 +20,11 @@ import (
 // fileTruncates counts the truncations of a file stream.
 var fileTruncates = expvar.NewMap("file_truncates_total")
 
+// newLogFileReader returns the reader a file stream reads log data from.
+// Tests replace it to inject read errors that a real filesystem won't produce
+// on demand, like ESTALE.
+var newLogFileReader = func(f *os.File) io.Reader { return f }
+
 // fileStream streams log lines from a regular file on the file system.  These
 // log files are appended to by another process, and are either rotated or
 // truncated by that (or yet another) process.  Rotation implies that a new
@@ -40,7 +45,7 @@ type fileStream struct {
 }
 
 // newFileStream creates a new log stream from a regular file.
-func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, fi os.FileInfo, oneShot OneShotMode) (LogStream, error) {
+func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname string, oneShot OneShotMode) (LogStream, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	fs := &fileStream{
 		cancel:   cancel,
@@ -52,13 +57,13 @@ func newFileStream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, p
 	}
 	// Stream from the start of the file when in one shot mode.
 	streamFromStart := oneShot == OneShotEnabled
-	if err := fs.stream(ctx, wg, waker, fi, oneShot, streamFromStart); err != nil {
+	if err := fs.stream(ctx, wg, waker, oneShot, streamFromStart); err != nil {
 		return nil, err
 	}
 	return fs, nil
 }
 
-func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, fi os.FileInfo, oneShot OneShotMode, streamFromStart bool) error {
+func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, oneShot OneShotMode, streamFromStart bool) error {
 	fd, err := os.OpenFile(fs.pathname, os.O_RDONLY, 0o600)
 	if err != nil {
 		logErrors.Add(fs.sourcename, 1)
@@ -66,6 +71,17 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 	}
 	logOpens.Add(fs.sourcename, 1)
 	glog.V(2).Infof("stream(%s): opened new file", fs.sourcename)
+	// Rotation is detected by comparing against the file this stream is
+	// reading, not against the file the caller last saw.
+	fi, err := fd.Stat()
+	if err != nil {
+		logErrors.Add(fs.sourcename, 1)
+		if err := fd.Close(); err != nil {
+			logErrors.Add(fs.sourcename, 1)
+			glog.Infof("stream(%s): closing file: %v", fs.sourcename, err)
+		}
+		return err
+	}
 	if !streamFromStart {
 		// Normal operation for first stream is to ignore the past, and seek to
 		// EOF immediately to start tailing.
@@ -80,7 +96,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 		glog.V(2).Infof("stream(%s): seeked to end", fs.sourcename)
 	}
 
-	lr := NewLineReader(fs.sourcename, fs.lines, fd, defaultReadBufferSize, fs.cancel)
+	lr := NewLineReader(fs.sourcename, fs.lines, newLogFileReader(fd), defaultReadBufferSize, fs.cancel)
 
 	started := make(chan struct{})
 	var total int
@@ -118,9 +134,23 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				// retryable.
 				if errors.Is(err, syscall.ESTALE) {
 					glog.Infof("stream(%s): reopening stream due to %s", fs.sourcename, err)
+					// The reopened file can be stale as well, so wait for the
+					// next wakeup instead of reopening in a tight loop.
+					select {
+					case <-ctx.Done():
+						lr.Finish(ctx)
+						close(fs.lines)
+						return
+					case <-waker.Wake():
+					}
 					// streamFromStart always true on a stream reopen
-					if nerr := fs.stream(ctx, wg, waker, fi, oneShot, true); nerr != nil {
+					if nerr := fs.stream(ctx, wg, waker, oneShot, true); nerr != nil {
 						glog.Infof("stream(%s): new stream: %v", fs.sourcename, nerr)
+						// Nothing owns the lines channel now, so close it to
+						// tell the Tailer this source is finished and can be
+						// tailed again.
+						lr.Finish(ctx)
+						close(fs.lines)
 					}
 					// Close this stream.
 					return
@@ -155,7 +185,7 @@ func (fs *fileStream) stream(ctx context.Context, wg *sync.WaitGroup, waker wake
 				if !os.SameFile(fi, newfi) {
 					glog.V(2).Infof("stream(%s): adding a new file routine", fs.sourcename)
 					// Stream from start always true on a stream reopen
-					if err := fs.stream(ctx, wg, waker, newfi, oneShot, true); err != nil {
+					if err := fs.stream(ctx, wg, waker, oneShot, true); err != nil {
 						glog.Info("stream(%s): new stream: %v", fs.sourcename, err)
 					}
 					// We're at EOF so there's nothing left to read here.
