@@ -101,7 +101,7 @@ func New(ctx context.Context, wg *sync.WaitGroup, waker waker.Waker, pathname st
 	}
 	switch m := fi.Mode(); {
 	case m.IsRegular():
-		return newFileStream(ctx, wg, waker, path, fi, oneShot)
+		return newFileStream(ctx, wg, waker, path, oneShot)
 	case m&os.ModeType == os.ModeNamedPipe:
 		return newFifoStream(ctx, wg, waker, path, fi)
 	// TODO(jaq): in order to listen on an existing socket filepath, we must unlink and recreate it
