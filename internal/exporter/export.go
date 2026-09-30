@@ -17,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/golang/glog"
 	"github.com/google/mtail/internal/metrics"
@@ -154,6 +155,32 @@ func (e *Exporter) SetOption(options ...Option) error {
 	return nil
 }
 
+// sanitizeLabel replaces whitespace and control characters in a label key or
+// value with rep. Label values are derived from log line contents (for example
+// an HTTP User-Agent captured with [[:print:]]+, or getfilename()), so a space
+// or newline in that data would otherwise split a graphite/statsd/collectd line
+// into extra fields or a whole extra record, letting a crafted log line spoof or
+// inject metrics on the wire. The separator replacement above only covers ksep
+// and sep, so these characters have to be handled here as well.
+func sanitizeLabel(s, rep string) string {
+	if strings.IndexFunc(s, isUnsafeLabelRune) < 0 {
+		return s
+	}
+	var b strings.Builder
+	for _, r := range s {
+		if isUnsafeLabelRune(r) {
+			b.WriteString(rep)
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+func isUnsafeLabelRune(r rune) bool {
+	return unicode.IsControl(r) || unicode.IsSpace(r)
+}
+
 // formatLabels converts a metric name and key-value map of labels to a single
 // string for exporting to the correct output format for each export target.
 // ksep and sep mark what to use for key/val separator, and between label separators respoectively.
@@ -168,8 +195,8 @@ func formatLabels(name string, m map[string]string, ksep, sep, rep string) strin
 		sort.Strings(keys)
 		var s []string
 		for _, k := range keys {
-			k1 := strings.ReplaceAll(strings.ReplaceAll(k, ksep, rep), sep, rep)
-			v1 := strings.ReplaceAll(strings.ReplaceAll(m[k], ksep, rep), sep, rep)
+			k1 := sanitizeLabel(strings.ReplaceAll(strings.ReplaceAll(k, ksep, rep), sep, rep), rep)
+			v1 := sanitizeLabel(strings.ReplaceAll(strings.ReplaceAll(m[k], ksep, rep), sep, rep), rep)
 			s = append(s, fmt.Sprintf("%s%s%s", k1, ksep, v1))
 		}
 		return r + sep + strings.Join(s, sep)

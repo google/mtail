@@ -160,6 +160,33 @@ func TestMetricToGraphite(t *testing.T) {
 	testutil.ExpectNoDiff(t, expected, r)
 }
 
+func TestFormatLabelsSanitizesWhitespace(t *testing.T) {
+	*graphitePrefix = ""
+	ts, terr := time.Parse("2006/01/02 15:04:05", "2012/07/24 10:14:00")
+	if terr != nil {
+		t.Errorf("time parse error: %s", terr)
+	}
+
+	// A label value derived from a log line (e.g. an HTTP User-Agent) that
+	// carries a space and an embedded newline must not split the graphite line
+	// into extra fields or an injected second record.
+	m := metrics.NewMetric("bar", "prog", metrics.Gauge, metrics.Int, "ua")
+	d, _ := m.GetDatum("Mozilla 5.0\ninjected.metric 999 1")
+	datum.SetInt(d, 37, ts)
+	r := FakeSocketWrite(metricToGraphite, m)
+	expected := []string{"prog.bar.ua.Mozilla_5_0_injected_metric_999_1 37 1343124840\n"}
+	testutil.ExpectNoDiff(t, expected, r)
+	for _, line := range r {
+		if strings.Count(line, "\n") != 1 {
+			t.Errorf("graphite line contains injected record: %q", line)
+		}
+		path := strings.SplitN(line, " ", 2)[0]
+		if strings.ContainsAny(path, " \t\r\n") {
+			t.Errorf("graphite metric path contains whitespace: %q", line)
+		}
+	}
+}
+
 func TestMetricToStatsd(t *testing.T) {
 	*statsdPrefix = ""
 	ts, terr := time.Parse("2006/01/02 15:04:05", "2012/07/24 10:14:00")
