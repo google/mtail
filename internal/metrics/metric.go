@@ -116,6 +116,18 @@ func newMetric(keyLen int) *Metric {
 	}
 }
 
+// MarshalJSON returns a JSON encoding of the Metric.  It holds the read lock so
+// that the LabelValues slice is read consistently while another goroutine may
+// be appending a new label value under the write lock.
+func (m *Metric) MarshalJSON() ([]byte, error) {
+	m.RLock()
+	defer m.RUnlock()
+	// alias drops Metric's methods (including this one) to avoid recursion while
+	// keeping the exact same field layout and json tags.
+	type alias Metric
+	return json.Marshal((*alias)(m))
+}
+
 // buildLabelValueKey returns a unique key for the given labels.
 func buildLabelValueKey(labels []string) string {
 	var buf strings.Builder
@@ -182,12 +194,14 @@ func (m *Metric) GetDatum(labelvalues ...string) (d datum.Datum, err error) {
 
 // RemoveOldestDatum scans the Metric's LabelValues for the Datum with the oldest timestamp, and removes it.
 func (m *Metric) RemoveOldestDatum() {
+	m.RLock()
 	var oldestLV *LabelValue
 	for _, lv := range m.LabelValues {
 		if oldestLV == nil || lv.Value.TimeUTC().Before(oldestLV.Value.TimeUTC()) {
 			oldestLV = lv
 		}
 	}
+	m.RUnlock()
 	if oldestLV != nil {
 		glog.V(1).Infof("removeOldest: removing oldest LV: %v", oldestLV)
 		err := m.RemoveDatum(oldestLV.Labels...)
