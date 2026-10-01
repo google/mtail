@@ -157,22 +157,32 @@ func (s *Store) Gc() error {
 	glog.Info("Running Store.Expire()")
 	now := time.Now()
 	return s.Range(func(m *Metric) error {
-		if m.Limit > 0 && len(m.LabelValues) >= m.Limit {
-			for i := len(m.LabelValues); i > m.Limit; i-- {
-				m.RemoveOldestDatum()
-			}
-		}
-		for i := 0; i < len(m.LabelValues); i++ {
-			lv := m.LabelValues[i]
+		// Read the mutable LabelValues under the metric's read lock so we don't
+		// race with a concurrent GetDatum appending a new label value.  The
+		// Remove* helpers below take the write lock themselves, so collect the
+		// work to do first and release the lock before calling them.
+		m.RLock()
+		numLabels := len(m.LabelValues)
+		limit := m.Limit
+		var expired [][]string
+		for _, lv := range m.LabelValues {
 			if lv.Expiry <= 0 {
 				continue
 			}
 			if now.Sub(lv.Value.TimeUTC()) > lv.Expiry {
-				err := m.RemoveDatum(lv.Labels...)
-				if err != nil {
-					return err
-				}
-				i--
+				expired = append(expired, lv.Labels)
+			}
+		}
+		m.RUnlock()
+
+		if limit > 0 {
+			for i := numLabels; i > limit; i-- {
+				m.RemoveOldestDatum()
+			}
+		}
+		for _, labels := range expired {
+			if err := m.RemoveDatum(labels...); err != nil {
+				return err
 			}
 		}
 		return nil
